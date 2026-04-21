@@ -1,0 +1,419 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-cinzel: var(--font-cinzel);
+  --font-karla:  var(--font-karla);
+
+  --color-sg-bg:          #000000;
+  --color-sg-text:        #f0ede8;
+  --color-sg-muted:       #8a8880;
+  --color-sg-gold:        #f0c040;
+  --color-sg-gold-hover:  #ffd966;
+  --color-sg-teal:        #00c8b4;
+  --color-sg-surface:     rgba(255,255,255,0.04);
+  --color-sg-border:      rgba(255,255,255,0.08);
+  --color-sg-gold-border: rgba(240,192,64,0.38);
+}
+
+body {
+  background: #000000;
+  color: #f0ede8;
+  font-family: var(--font-karla), system-ui, sans-serif;
+  font-weight: 300;
+  line-height: 1.75;
+}
+
+.font-cinzel { font-family: var(--font-cinzel), serif; }
+.font-karla  { font-family: var(--font-karla), system-ui, sans-serif; }
+
+/* ── Buttons ── */
+.btn-gold {
+  font-family: var(--font-karla), sans-serif;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #000000;
+  background: #f0c040;
+  border: 1px solid #f0c040;
+  padding: 0.75rem 2rem;
+  transition: background 0.22s, color 0.22s, border-color 0.22s, transform 0.22s;
+  cursor: pointer;
+}
+.btn-gold:hover  { background: transparent; color: #f0c040; transform: translateY(-2px); }
+.btn-gold:disabled { opacity: 0.45; pointer-events: none; }
+
+.btn-ghost {
+  font-family: var(--font-karla), sans-serif;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #f0ede8;
+  background: transparent;
+  border: 1px solid rgba(240,237,232,0.35);
+  padding: 0.75rem 2rem;
+  transition: border-color 0.22s, color 0.22s, transform 0.22s;
+  cursor: pointer;
+}
+.btn-ghost:hover { border-color: #f0ede8; transform: translateY(-2px); }
+
+/* ── Surfaces & inputs ── */
+.sg-card  { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+
+.sg-input {
+  font-family: var(--font-karla), sans-serif;
+  font-weight: 300;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #f0ede8;
+  padding: 0.75rem 1rem;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.sg-input:focus       { border-color: rgba(240,192,64,0.6); }
+.sg-input::placeholder { color: #8a8880; }
+
+.sg-eyebrow {
+  font-family: var(--font-karla), sans-serif;
+  font-weight: 600;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.30em;
+  color: #00c8b4;
+}
+
+/* ════════════════════════════════════════
+   CARD BORDER STYLES
+   ════════════════════════════════════════ */
+
+/* Prismatic: spinning conic ring (sits behind the image) */
+@property --prismatic-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes prismaticSpin {
+  from { --prismatic-angle: 0deg; }
+  to   { --prismatic-angle: 360deg; }
+}
+.border-prismatic {
+  background: conic-gradient(
+    from var(--prismatic-angle),
+    #ff0080, #ff8c00, #ffe600, #00ff88, #00cfff, #8a5cf7, #ff0080
+  );
+  animation: prismaticSpin 3s linear infinite;
+}
+
+/* Void: outer darkness glow */
+.border-void-outer {
+  filter: drop-shadow(0 0 10px rgba(60, 0, 80, 0.7));
+}
+
+/* ════════════════════════════════════════
+   CARD ART EFFECTS
+   ════════════════════════════════════════ */
+
+/* Rainbow: hue-rotate animation on the <img> */
+@keyframes hueRotate {
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(360deg); }
+}
+.art-rainbow { animation: hueRotate 4s linear infinite; }
+
+/* Ghost: washed-out bright filter */
+.art-ghost  { filter: brightness(1.8) saturate(0.1); }
+
+/* Shadow: near-silhouette */
+.art-shadow { filter: brightness(0.25) saturate(0); }
+
+/* Ghost border: spinning pearlescent white ring */
+@property --ghost-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes ghostReflect {
+  from { --ghost-angle: 0deg; }
+  to   { --ghost-angle: 360deg; }
+}
+.border-ghost {
+  background: conic-gradient(
+    from var(--ghost-angle),
+    rgba(255,255,255,0.35),
+    rgba(255,255,255,1),
+    rgba(210,230,255,0.75),
+    rgba(255,255,255,0.55),
+    rgba(220,240,255,0.9),
+    rgba(255,255,255,0.8),
+    rgba(255,255,255,0.35)
+  );
+  animation: ghostReflect 4s linear infinite;
+}
+
+/* Ghost overlay: blue-gray shimmer strip sweeping across (multiply over bright = visible tint) */
+@keyframes ghostShimmer {
+  0%   { transform: translateX(-250%) skewX(-12deg); }
+  100% { transform: translateX(500%) skewX(-12deg); }
+}
+.art-ghost-overlay {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(180,210,255,0.55) 40%,
+    rgba(200,230,255,0.75) 50%,
+    rgba(180,210,255,0.55) 60%,
+    transparent
+  );
+  mix-blend-mode: multiply;
+  animation: ghostShimmer 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Shadow overlay: white shimmer strip sweeping across (screen over dark = visible highlight) */
+@keyframes shadowShimmer {
+  0%   { transform: translateX(-250%) skewX(-12deg); }
+  100% { transform: translateX(500%) skewX(-12deg); }
+}
+.art-shadow-overlay {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255,255,255,0.30) 40%,
+    rgba(255,255,255,0.55) 50%,
+    rgba(255,255,255,0.30) 60%,
+    transparent
+  );
+  mix-blend-mode: screen;
+  animation: shadowShimmer 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Holographic: spinning conic overlay with color blend */
+@property --holo-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes holoSpin {
+  from { --holo-angle: 0deg; }
+  to   { --holo-angle: 360deg; }
+}
+.art-holographic {
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(
+    from var(--holo-angle),
+    rgba(255,0,128,0.35), rgba(255,140,0,0.35), rgba(255,230,0,0.35),
+    rgba(0,255,136,0.35), rgba(0,207,255,0.35), rgba(138,92,247,0.35),
+    rgba(255,0,128,0.35)
+  );
+  mix-blend-mode: color;
+  animation: holoSpin 6s linear infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ════════════════════════════════════════
+   MYTHIC EDITIONS  (1 / 500)
+   ════════════════════════════════════════ */
+
+/* ── Kraken Edition ── */
+@property --kraken-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes krakenSpin {
+  from { --kraken-angle: 0deg; }
+  to   { --kraken-angle: 360deg; }
+}
+.border-kraken-outer {
+  filter: drop-shadow(0 0 14px rgba(0,190,145,0.6));
+  border-radius: 50%;
+}
+.border-kraken {
+  background: conic-gradient(
+    from var(--kraken-angle),
+    #020a14, #003850, #006878, #00cc99,
+    #005568, #001828, #004458, #00bb88, #020a14
+  );
+  animation: krakenSpin 6s linear infinite;
+}
+.art-kraken { filter: hue-rotate(175deg) brightness(0.72) saturate(2); }
+@keyframes bioGlow {
+  0%, 100% { opacity: 0.25; }
+  50%       { opacity: 0.65; }
+}
+.art-kraken-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 65%, rgba(0,200,150,0.45) 0%, rgba(0,100,80,0.15) 45%, transparent 70%);
+  mix-blend-mode: screen;
+  animation: bioGlow 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── Davy Jones ── */
+@property --davy-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes davySpin {
+  from { --davy-angle: 0deg; }
+  to   { --davy-angle: 360deg; }
+}
+.border-davy-jones-outer {
+  filter: drop-shadow(0 0 10px rgba(10,30,110,0.55));
+  border-radius: 50%;
+}
+.border-davy-jones {
+  background: conic-gradient(
+    from var(--davy-angle),
+    #010108, #020218, #03032a, #020218, #010108, #030325, #010108
+  );
+  animation: davySpin 15s linear infinite;
+}
+.art-davy-jones { filter: brightness(0.13) saturate(0); }
+@keyframes davyGlow {
+  0%, 100% { opacity: 0.1; }
+  50%       { opacity: 0.45; }
+}
+.art-davy-jones-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(20,55,130,0.75) 0%, rgba(10,30,80,0.3) 45%, transparent 70%);
+  mix-blend-mode: screen;
+  animation: davyGlow 7s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── Golden Age ── */
+@property --golden-age-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes goldenAgeSpin {
+  from { --golden-age-angle: 0deg; }
+  to   { --golden-age-angle: 360deg; }
+}
+.border-golden-age-outer {
+  filter: drop-shadow(0 0 12px rgba(220,170,20,0.55));
+  border-radius: 50%;
+}
+.border-golden-age {
+  background: conic-gradient(
+    from var(--golden-age-angle),
+    #7a5010, #f0c040, #ffd700, #e8b030,
+    #8b6018, #d4a020, #ffd060, #7a5010
+  );
+  animation: goldenAgeSpin 3s linear infinite;
+}
+.art-golden-age { filter: sepia(0.6) brightness(1.12) saturate(1.4) hue-rotate(-5deg); }
+@keyframes goldShimmer {
+  0%   { transform: translateX(-250%) skewX(-12deg); }
+  100% { transform: translateX(500%) skewX(-12deg); }
+}
+.art-golden-age-overlay {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 45%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255,220,60,0.35) 35%,
+    rgba(255,245,110,0.65) 50%,
+    rgba(255,220,60,0.35) 65%,
+    transparent
+  );
+  mix-blend-mode: screen;
+  animation: goldShimmer 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── Storm ── */
+@property --storm-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes stormSpin {
+  from { --storm-angle: 0deg; }
+  to   { --storm-angle: 360deg; }
+}
+.border-storm-outer {
+  filter: drop-shadow(0 0 10px rgba(60,100,200,0.5));
+  border-radius: 50%;
+}
+.border-storm {
+  background: conic-gradient(
+    from var(--storm-angle),
+    #0f1520, #2a3a55, #4a6080,
+    #2a3a55, #0f1520, #1e2e45, #4060a0, #0f1520
+  );
+  animation: stormSpin 4s linear infinite;
+}
+.art-storm { filter: saturate(0.2) brightness(0.88) hue-rotate(205deg) contrast(1.1); }
+/* Double-flash at ~85–87 % of a 7 s cycle; keyframe steps are <0.1 % apart = instant flash */
+@keyframes lightning {
+  0%,    84.9%, 85.5%, 86.4%, 87.3%, 100% { opacity: 0;    }
+  85%,   86%,   87%                        { opacity: 0.95; }
+  85.25%,86.2%                             { opacity: 0.45; }
+}
+.art-storm-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 45% 20%,
+    rgba(230,240,255,0.95) 0%,
+    rgba(140,170,255,0.5) 30%,
+    transparent 65%
+  );
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: lightning 7s linear infinite;
+  pointer-events: none;
+}
+
+/* ── Wanted ── */
+.border-wanted-outer {
+  filter: drop-shadow(0 0 6px rgba(90,55,20,0.45));
+  border-radius: 50%;
+}
+.border-wanted {
+  /* static aged-paper ring — no spin */
+  background: conic-gradient(
+    #a07840, #c8a060, #b08840, #d4b070,
+    #8a6030, #c09850, #a07840
+  );
+}
+.art-wanted { filter: sepia(0.95) brightness(0.9) contrast(1.1) saturate(0.75); }
+
+/* ── Card flip animation ── */
+.flip-card { perspective: 1000px; }
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(0.4,0,0.2,1);
+  transform-style: preserve-3d;
+}
+.flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+.flip-card-front,
+.flip-card-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-card-back { transform: rotateY(180deg); }
