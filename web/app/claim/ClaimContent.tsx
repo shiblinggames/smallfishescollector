@@ -32,7 +32,7 @@ export default function ClaimContent() {
           setStatus('sending_magic_link')
           await supabase.auth.signInWithOtp({
             email: emailParam,
-            options: { emailRedirectTo: `${location.origin}/auth/callback` },
+            options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://seasthebooty.com'}/auth/callback` },
           })
           setStatus('magic_link_sent')
         } else {
