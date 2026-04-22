@@ -101,7 +101,7 @@ export default function PackStats({ stats, history }: { stats: PackStats; histor
                     <HistoryCardDot key={i} dropWeight={c.dropWeight} variantName={c.variantName} />
                   ))}
                 </div>
-                <p className="font-karla font-300 text-[0.62rem] text-[#8a8880] whitespace-nowrap">
+                <p className="font-karla font-300 text-[0.62rem] text-[#8a8880] text-right" style={{ minWidth: '5.5rem' }}>
                   {rarityFromWeight(Math.min(...entry.cards.map((c) => c.dropWeight)))}
                 </p>
               </div>
