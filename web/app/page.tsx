@@ -37,7 +37,7 @@ export default async function HomePage() {
 
         <div className="border-t border-[rgba(255,255,255,0.06)] pt-8 space-y-2">
           <p className="font-karla font-300 text-[#8a8880] text-xs uppercase tracking-[0.14em]">
-            Follow us for pack giveaways
+            Follow us for more chances to win!
           </p>
           <div className="flex justify-center gap-6">
             <a href="https://www.instagram.com/shiblinggames/" target="_blank" rel="noopener noreferrer"
