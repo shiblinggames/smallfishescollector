@@ -19,7 +19,6 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
   const [cards, setCards] = useState<DrawnCard[]>([])
   const [flipped, setFlipped] = useState<boolean[]>([])
   const [loading, setLoading] = useState(false)
-  const [currentIndex, setCurrentIndex] = useState(0)
 
   async function openPack() {
     if (packs <= 0 || loading) return
@@ -36,24 +35,30 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
 
     setCards(drawn)
     setFlipped(new Array(5).fill(false))
-    setCurrentIndex(0)
     setPacks((p) => p - 1)
     setPhase('reveal')
     setLoading(false)
   }
 
-  function flipNext() {
-    if (currentIndex >= cards.length) return
-    setFlipped((prev) => { const n = [...prev]; n[currentIndex] = true; return n })
-    setCurrentIndex((i) => i + 1)
-    if (currentIndex === cards.length - 1) setTimeout(() => setPhase('done'), 700)
+  function flipCard(i: number) {
+    if (flipped[i]) return
+    setFlipped((prev) => {
+      const n = [...prev]
+      n[i] = true
+      if (n.every(Boolean)) setTimeout(() => setPhase('done'), 700)
+      return n
+    })
+  }
+
+  function flipAll() {
+    setFlipped(new Array(cards.length).fill(true))
+    setTimeout(() => setPhase('done'), 700)
   }
 
   function reset() {
     setPhase('idle')
     setCards([])
     setFlipped([])
-    setCurrentIndex(0)
     router.refresh()
   }
 
@@ -92,9 +97,9 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
         {cards.map((card, i) => (
           <div
             key={i}
-            className={`flip-card ${flipped[i] ? 'flipped' : ''} ${i === currentIndex && !flipped[i] ? 'cursor-pointer' : 'cursor-default'}`}
+            className={`flip-card select-none ${flipped[i] ? 'flipped' : 'cursor-pointer'}`}
             style={{ width: 160, height: 200 }}
-            onClick={() => { if (i === currentIndex && !flipped[i]) flipNext() }}
+            onClick={() => flipCard(i)}
           >
             <div className="flip-card-inner w-full h-full">
               <div className="flip-card-front w-full h-full bg-black border border-[rgba(255,255,255,0.08)] flex flex-col items-center justify-center gap-3">
@@ -102,9 +107,7 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
                   <path d="M4 16C4 16 8 6 16 6C24 6 28 16 28 16C28 16 24 26 16 26C8 26 4 16 4 16Z" stroke="#8a8880" strokeWidth="1.6" fill="none"/>
                   <circle cx="16" cy="16" r="4" stroke="#f0c040" strokeWidth="1.6" fill="none"/>
                 </svg>
-                {i === currentIndex && (
-                  <p className="sg-eyebrow text-[0.6rem]">Reveal</p>
-                )}
+                <p className="sg-eyebrow text-[0.6rem]">Reveal</p>
               </div>
               <div className="flip-card-back w-full h-full bg-black flex items-center justify-center p-3">
                 <FishCard
@@ -121,9 +124,9 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
         ))}
       </div>
 
-      {currentIndex < cards.length ? (
-        <button onClick={flipNext} className="btn-gold">
-          Reveal · {currentIndex + 1} of {cards.length}
+      {phase !== 'done' && flipped.some((f) => !f) ? (
+        <button onClick={flipAll} className="btn-gold">
+          Reveal All
         </button>
       ) : phase === 'done' ? (
         <div className="flex gap-4 flex-wrap justify-center">
