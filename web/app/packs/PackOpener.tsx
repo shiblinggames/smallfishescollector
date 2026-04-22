@@ -38,6 +38,7 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
     setPacks((p) => p - 1)
     setPhase('reveal')
     setLoading(false)
+    router.refresh()
   }
 
   function flipCard(i: number) {
