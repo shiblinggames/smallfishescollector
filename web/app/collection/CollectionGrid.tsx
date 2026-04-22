@@ -113,10 +113,10 @@ interface ZoneConfig {
 }
 
 const ZONES: ZoneConfig[] = [
-  { id: 'shallows',    bgFrom: '#071f30', bgTo: '#0a2840', tierFilter: 1 },
-  { id: 'open-waters', bgFrom: '#0a2840', bgTo: '#061628', tierFilter: 2 },
-  { id: 'deep',        bgFrom: '#061628', bgTo: '#030a14', tierFilter: 3 },
-  { id: 'abyss',       bgFrom: '#030a14', bgTo: '#010204', glowColor: 'rgba(80,0,180,0.10)', tierFilter: null },
+  { id: 'shallows',    bgFrom: '#000000', bgTo: '#04111d', tierFilter: 1 },
+  { id: 'open-waters', bgFrom: '#04111d', bgTo: '#020a14', tierFilter: 2 },
+  { id: 'deep',        bgFrom: '#020a14', bgTo: '#010509', tierFilter: 3 },
+  { id: 'abyss',       bgFrom: '#010509', bgTo: '#000000', glowColor: 'rgba(60,0,140,0.07)', tierFilter: null },
 ]
 
 export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId }: Props) {
@@ -161,7 +161,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
   return (
     <div>
       {/* Stats + filters fade into first zone */}
-      <div style={{ background: 'linear-gradient(to bottom, #000000 0%, #071f30 100%)' }}>
+      <div style={{ background: 'linear-gradient(to bottom, #000000 0%, #04111d 100%)' }}>
 
       {/* Stats */}
       <div className="px-6 pb-8 text-center">
