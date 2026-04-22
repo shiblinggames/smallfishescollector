@@ -48,7 +48,7 @@ export async function openPack(): Promise<OpenPackResponse> {
     .select('id, card_id, variant_name, border_style, art_effect, drop_weight, cards(id, name, slug, filename, tier)')
 
   const variants = (variantRows ?? []) as unknown as CardVariant[]
-  const isGodPack = Math.random() < 1 / 1000
+  const isGodPack = Math.random() < 1 // 100% for testing
   const forceLegendary = (profile.packs_since_legendary ?? 0) >= 20
   const drawn = isGodPack ? drawGodPack(variants) : drawPack(variants, forceLegendary)
 

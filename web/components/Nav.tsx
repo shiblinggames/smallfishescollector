@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function Nav({ packsAvailable }: { packsAvailable?: number }) {
   const router = useRouter()
+  const pathname = usePathname()
 
   async function signOut() {
     const supabase = createClient()
@@ -21,16 +22,16 @@ export default function Nav({ packsAvailable }: { packsAvailable?: number }) {
       </Link>
 
       <div className="flex-1 flex gap-2 text-xs font-karla font-600 uppercase tracking-[0.12em]">
-        <Link href="/packs" className="py-2 px-2 text-[#8a8880] hover:text-[#f0ede8] active:text-[#f0ede8] transition-colors duration-200">
+        <Link href="/packs" className={`py-2 px-2 transition-colors duration-200 ${pathname === '/packs' ? 'text-[#f0ede8]' : 'text-[#8a8880] hover:text-[#f0ede8]'}`}>
           Packs
           {packsAvailable !== undefined && packsAvailable > 0 && (
             <span className="ml-1.5 text-[#f0c040]">· {packsAvailable}</span>
           )}
         </Link>
-        <Link href="/collection" className="py-2 px-2 text-[#8a8880] hover:text-[#f0ede8] active:text-[#f0ede8] transition-colors duration-200">
+        <Link href="/collection" className={`py-2 px-2 transition-colors duration-200 ${pathname === '/collection' ? 'text-[#f0ede8]' : 'text-[#8a8880] hover:text-[#f0ede8]'}`}>
           Collection
         </Link>
-        <Link href="/redeem" className="py-2 px-2 text-[#8a8880] hover:text-[#f0ede8] active:text-[#f0ede8] transition-colors duration-200">
+        <Link href="/redeem" className={`py-2 px-2 transition-colors duration-200 ${pathname === '/redeem' ? 'text-[#f0ede8]' : 'text-[#8a8880] hover:text-[#f0ede8]'}`}>
           Redeem
         </Link>
       </div>
