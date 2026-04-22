@@ -59,8 +59,11 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants 
           {uniqueVariantsOwned} <span className="text-[#8a8880] font-400 text-lg">/ {totalVariants}</span>
         </p>
         <p className="sg-eyebrow mb-1">Variants Collected</p>
-        <p className="font-karla font-300 text-[#8a8880] text-xs tracking-wide mb-4">
+        <p className="font-karla font-300 text-[#8a8880] text-xs tracking-wide mb-1">
           {fishDiscovered} of {allCards.length} fish discovered
+        </p>
+        <p className="font-karla font-300 text-[#8a8880] text-xs tracking-wide mb-4">
+          Click any card to see the variants you own
         </p>
         <div className="w-64 h-px bg-[rgba(255,255,255,0.08)] mx-auto overflow-hidden">
           <div
@@ -145,7 +148,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants 
               Close
             </button>
 
-            <p className="sg-eyebrow text-center mb-1">Variants</p>
+            <p className="sg-eyebrow text-center mb-1">Variants You Own</p>
             <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-8">
               {modal.card.name}
             </p>
