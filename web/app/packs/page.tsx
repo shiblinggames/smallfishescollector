@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import PackOpener from './PackOpener'
 import PackStatsToggle from './PackStatsToggle'
-import PackInfo from './PackInfo'
 import { getPackStats, getPackHistory } from './stats'
 
 export default async function PacksPage() {
@@ -30,7 +29,9 @@ export default async function PacksPage() {
         </h1>
         <PackOpener packsAvailable={packsAvailable} />
         {stats && <PackStatsToggle stats={stats} history={history} />}
-        <PackInfo />
+        <a href="/guide" className="mt-16 font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors">
+          How It Works →
+        </a>
       </main>
     </>
   )
