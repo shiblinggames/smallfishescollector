@@ -1,10 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import FishCard from '@/components/FishCard'
 import type { Card } from '@/lib/types'
 import type { OwnedEntry } from './page'
 import { rarityFromWeight } from '@/lib/variants'
+
+const STORAGE_KEY = 'sf-featured-variants'
+
+function loadPinned(): Record<number, number> {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') } catch { return {} }
+}
+function savePinned(pinned: Record<number, number>) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(pinned))
+}
 
 interface Props {
   allCards: Card[]
@@ -36,6 +45,20 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants 
   const [rarityFilter, setRarityFilter] = useState('')
   const [variantFilter, setVariantFilter] = useState('')
   const [modal, setModal] = useState<ModalCard | null>(null)
+  const [pinnedVariants, setPinnedVariants] = useState<Record<number, number>>({})
+
+  useEffect(() => { setPinnedVariants(loadPinned()) }, [])
+
+  function pinVariant(cardId: number, variantId: number) {
+    const updated = { ...pinnedVariants, [cardId]: variantId }
+    setPinnedVariants(updated)
+    savePinned(updated)
+  }
+
+  function displayEntry(cardId: number, entries: OwnedEntry[]): OwnedEntry {
+    const pinned = pinnedVariants[cardId]
+    return entries.find((e) => e.variantId === pinned) ?? bestEntry(entries)
+  }
 
   const allVariantNames = Array.from(new Set(
     Object.values(ownedByCardId).flatMap((entries) => entries.map((e) => e.variantName))
@@ -104,7 +127,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants 
         {filtered.map((card) => {
           const entries = ownedByCardId[card.id] ?? []
           const isOwned = entries.length > 0
-          const best = isOwned ? bestEntry(entries) : null
+          const best = isOwned ? displayEntry(card.id, entries) : null
 
           return (
             <div key={card.id} className="flex flex-col items-center gap-2">
@@ -157,18 +180,28 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants 
               {modal.entries
                 .slice()
                 .sort((a, b) => (VARIANT_RANK[b.variantName] ?? 0) - (VARIANT_RANK[a.variantName] ?? 0))
-                .map((e) => (
-                  <div key={e.variantId}>
-                    <FishCard
-                      name={modal.card.name}
-                      filename={modal.card.filename}
-                      borderStyle={e.borderStyle}
-                      artEffect={e.artEffect}
-                      variantName={e.variantName}
-                      dropWeight={e.dropWeight}
-                    />
-                  </div>
-                ))}
+                .map((e) => {
+                  const isFeatured = displayEntry(modal.card.id, modal.entries).variantId === e.variantId
+                  return (
+                    <div key={e.variantId} className="flex flex-col items-center gap-2">
+                      <FishCard
+                        name={modal.card.name}
+                        filename={modal.card.filename}
+                        borderStyle={e.borderStyle}
+                        artEffect={e.artEffect}
+                        variantName={e.variantName}
+                        dropWeight={e.dropWeight}
+                      />
+                      <button
+                        onClick={() => pinVariant(modal.card.id, e.variantId)}
+                        className="font-karla font-600 text-[0.62rem] uppercase tracking-[0.12em] transition-colors"
+                        style={{ color: isFeatured ? '#f0c040' : '#8a8880' }}
+                      >
+                        {isFeatured ? '★ Featured' : 'Feature'}
+                      </button>
+                    </div>
+                  )
+                })}
             </div>
           </div>
         </div>
