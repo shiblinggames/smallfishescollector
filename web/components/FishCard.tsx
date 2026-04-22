@@ -207,7 +207,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
                 {rarity}
               </p>
             )}
-            {isPrismaticLabel || isLegendary ? (
+            {isPrismaticLabel ? (
               <p className="font-karla font-600 text-[0.72rem] uppercase tracking-[0.10em] whitespace-nowrap"
                  style={{
                    background: 'linear-gradient(90deg,#ff0080,#ff8c00,#ffe600,#00ff88,#00cfff,#8a5cf7)',
