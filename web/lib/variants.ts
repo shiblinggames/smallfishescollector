@@ -20,7 +20,7 @@ export const VARIANT_RARITY: Record<string, string> = {
   'Davy Jones':  'Mythic',
   'Golden Age':  'Mythic',
   'Wanted':      'Mythic',
-  'Storm':       'Mythic',
+  'Maelstrom':       'Mythic',
 }
 
 export function rarityFromVariant(variantName: string, dropWeight: number): string {

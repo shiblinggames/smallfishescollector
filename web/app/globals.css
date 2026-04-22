@@ -382,7 +382,7 @@ body {
   pointer-events: none;
 }
 
-/* ── Storm ── */
+/* ── Maelstrom ── */
 @property --storm-angle {
   syntax: '<angle>';
   inherits: false;

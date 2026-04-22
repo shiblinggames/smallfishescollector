@@ -13,7 +13,7 @@ function weightedPick(variants: CardVariant[]): CardVariant {
 
 const GOD_PACK_ELIGIBLE = new Set([
   'Pearl', 'Holographic', 'Ghost', 'Shadow', 'Prismatic',
-  'Kraken', 'Davy Jones', 'Golden Age', 'Wanted', 'Storm',
+  'Kraken', 'Davy Jones', 'Golden Age', 'Wanted', 'Maelstrom',
 ])
 
 // Custom weights per variant for god pack draws (independent of regular drop_weight)
@@ -27,7 +27,7 @@ const GOD_PACK_WEIGHTS: Record<string, number> = {
   'Davy Jones':      3,
   'Golden Age':      3,
   'Wanted':          3,
-  'Storm':           3,
+  'Maelstrom':           3,
 }
 
 export function drawGodPack(variants: CardVariant[]): DrawnCard[] {
