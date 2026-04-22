@@ -58,10 +58,10 @@ export default function GuidePage() {
             <p className="font-cinzel font-700 text-[#f0ede8] text-base mb-4">How to Get Packs</p>
             <div className="flex flex-col gap-3 text-sm font-karla font-300 text-[#8a8880] leading-relaxed">
               <p>
-                Purchase the <span className="text-[#f0ede8] font-400">Small Fishes board game</span> from our website and you'll receive a code to unlock packs — sent to you after purchase, not in the box.
+                Every purchase from the <span className="text-[#f0ede8] font-400">Shibling Shop</span> includes digital packs — sent to you after purchase with a redeem code. The board game carries the most packs, but every product contributes to your collection.
               </p>
               <p>
-                Additional packs are distributed through <span className="text-[#f0ede8] font-400">redeem codes</span> — handed out at events, giveaways, and through our community channels.
+                Packs are also distributed through <span className="text-[#f0ede8] font-400">redeem codes</span> — handed out at events, giveaways, and through our community channels.
               </p>
               <div className="flex flex-col gap-2 pt-2">
                 <a
