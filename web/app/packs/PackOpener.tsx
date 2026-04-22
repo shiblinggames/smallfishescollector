@@ -236,7 +236,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
               onMouseLeave={(e) => handleMouseLeave(e, i)}
             >
             <div className="flip-card-inner w-full h-full">
-              <div className="flip-card-front w-full h-full bg-black border-2 border-[rgba(255,255,255,0.08)] flex flex-col items-center justify-center gap-3">
+              <div className="flip-card-front w-full h-full bg-black border-[3px] border-[rgba(255,255,255,0.08)] flex flex-col items-center justify-center gap-3">
                 <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
                   <path d="M4 16C4 16 8 6 16 6C24 6 28 16 28 16C28 16 24 26 16 26C8 26 4 16 4 16Z" stroke="#8a8880" strokeWidth="1.6" fill="none"/>
                   <circle cx="16" cy="16" r="4" stroke="#f0c040" strokeWidth="1.6" fill="none"/>
