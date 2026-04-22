@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import PackOpener from './PackOpener'
-import PackStats from './PackStats'
+import PackStatsToggle from './PackStatsToggle'
 import { getPackStats, getPackHistory } from './stats'
 
 export default async function PacksPage() {
@@ -28,7 +28,7 @@ export default async function PacksPage() {
           Open Pack.
         </h1>
         <PackOpener packsAvailable={packsAvailable} />
-        {stats && <PackStats stats={stats} history={history} />}
+        {stats && <PackStatsToggle stats={stats} history={history} />}
       </main>
     </>
   )
