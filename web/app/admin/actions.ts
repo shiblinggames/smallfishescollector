@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers'
 import crypto from 'crypto'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 function adminHash() {
   return crypto.createHash('sha256').update(process.env.ADMIN_PASSWORD ?? '').digest('hex')
@@ -43,7 +43,7 @@ export async function generateTokens(
 
   if (rows.length === 0) return { results: [], error: 'No valid rows found. Format: email, packs' }
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const results: { email: string; packs: number; token: string }[] = []
 
   for (const row of rows) {
@@ -54,7 +54,8 @@ export async function generateTokens(
       packs_to_grant: row.packs,
       expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     })
-    if (!error) results.push({ email: row.email, packs: row.packs, token })
+    if (error) return { results, error: `Failed on ${row.email}: ${error.message}` }
+    results.push({ email: row.email, packs: row.packs, token })
   }
 
   return { results }
