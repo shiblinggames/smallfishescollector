@@ -7,6 +7,7 @@ import type { OwnedEntry } from './page'
 import { rarityFromVariant } from '@/lib/variants'
 
 const STORAGE_KEY = 'sf-featured-variants'
+const ABYSS_FISH = new Set(['Catfish', 'Doby Mick'])
 
 function loadPinned(): Record<number, number> {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') } catch { return {} }
@@ -30,19 +31,19 @@ interface ModalCard {
 const RARITIES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic']
 
 const VARIANT_RANK: Record<string, number> = {
-  'Davy Jones':     13,
-  'Maelstrom':          12,
-  'Kraken':         11,
-  'Golden Age':     10,
-  'Wanted':          9,
-  'Prismatic':       8,
-  'Shadow':          7,
-  'Ghost':           6,
-  'Holographic':     5,
-  'Pearl':           4,
-  'Gold':            3,
-  'Silver':          2,
-  'Standard':        1,
+  'Davy Jones':  13,
+  'Maelstrom':   12,
+  'Kraken':      11,
+  'Golden Age':  10,
+  'Wanted':       9,
+  'Prismatic':    8,
+  'Shadow':       7,
+  'Ghost':        6,
+  'Holographic':  5,
+  'Pearl':        4,
+  'Gold':         3,
+  'Silver':       2,
+  'Standard':     1,
 }
 
 function bestEntry(entries: OwnedEntry[]): OwnedEntry {
@@ -103,10 +104,24 @@ function Dropdown({ value, onChange, options }: {
   )
 }
 
+interface ZoneConfig {
+  id: string
+  bgFrom: string
+  bgTo: string
+  glowColor?: string
+  tierFilter: number | null
+}
+
+const ZONES: ZoneConfig[] = [
+  { id: 'shallows',    bgFrom: '#071f30', bgTo: '#0a2840', tierFilter: 1 },
+  { id: 'open-waters', bgFrom: '#0a2840', bgTo: '#061628', tierFilter: 2 },
+  { id: 'deep',        bgFrom: '#061628', bgTo: '#030a14', tierFilter: 3 },
+  { id: 'abyss',       bgFrom: '#030a14', bgTo: '#010204', glowColor: 'rgba(80,0,180,0.10)', tierFilter: null },
+]
+
 export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId }: Props) {
-  const [tierFilter, setTierFilter]     = useState('')
   const [rarityFilter, setRarityFilter] = useState('')
-  const [variantFilter, setVariantFilter] = useState('')
+  const [variantFilter, setVariantFilter]   = useState('')
   const [modal, setModal] = useState<ModalCard | null>(null)
   const [pinnedVariants, setPinnedVariants] = useState<Record<number, number>>({})
 
@@ -127,29 +142,32 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
     Object.values(ownedByCardId).flatMap((entries) => entries.map((e) => e.variantName))
   )).sort()
 
-  const filtered = allCards.filter((card) => {
-    if (tierFilter && card.tier !== parseInt(tierFilter)) return false
+  const fishDiscovered  = allCards.filter((c) => ownedByCardId[c.id]?.length > 0).length
+  const uniqueVariantsOwned = Object.values(ownedByCardId).reduce((sum, entries) => sum + entries.length, 0)
+  const hasActiveFilter = !!(rarityFilter || variantFilter)
+
+  function cardMatchesFilter(card: Card): boolean {
     const entries = ownedByCardId[card.id] ?? []
     if (rarityFilter && !entries.some((e) => rarityFromVariant(e.variantName, e.dropWeight) === rarityFilter)) return false
     if (variantFilter && !entries.some((e) => e.variantName === variantFilter)) return false
     return true
-  })
-  const fishDiscovered = allCards.filter((c) => ownedByCardId[c.id]?.length > 0).length
-  const uniqueVariantsOwned = Object.values(ownedByCardId).reduce((sum, entries) => sum + entries.length, 0)
+  }
+
+  function zoneAllCards(zone: ZoneConfig): Card[] {
+    if (zone.id === 'abyss') return allCards.filter((c) => ABYSS_FISH.has(c.name))
+    return allCards.filter((c) => c.tier === zone.tierFilter && !ABYSS_FISH.has(c.name))
+  }
 
   return (
     <div>
       {/* Stats */}
-      <div className="mb-8 text-center">
+      <div className="px-6 pb-8 text-center">
         <p className="font-cinzel font-700 text-[#f0c040] text-2xl mb-1">
           {uniqueVariantsOwned} <span className="text-[#8a8880] font-400 text-lg">/ {totalVariants}</span>
         </p>
         <p className="sg-eyebrow mb-1">Variants Collected</p>
-        <p className="font-karla font-300 text-[#8a8880] text-xs tracking-wide mb-1">
-          {fishDiscovered} of {allCards.length} fish discovered
-        </p>
         <p className="font-karla font-300 text-[#8a8880] text-xs tracking-wide mb-4">
-          Click any card to see the variants you own
+          {fishDiscovered} of {allCards.length} fish discovered
         </p>
         <div className="w-64 h-px bg-[rgba(255,255,255,0.08)] mx-auto overflow-hidden">
           <div
@@ -160,17 +178,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap justify-center gap-3 mb-10">
-        <Dropdown
-          value={tierFilter}
-          onChange={setTierFilter}
-          options={[
-            { label: 'All Tiers', value: '' },
-            { label: 'Tier 1', value: '1' },
-            { label: 'Tier 2', value: '2' },
-            { label: 'Tier 3', value: '3' },
-          ]}
-        />
+      <div className="flex flex-wrap justify-center gap-3 px-6 pb-12">
         <Dropdown
           value={rarityFilter}
           onChange={setRarityFilter}
@@ -181,9 +189,9 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           onChange={setVariantFilter}
           options={[{ label: 'All Variants', value: '' }, ...allVariantNames.map((v) => ({ label: v, value: v }))]}
         />
-        {(tierFilter || rarityFilter || variantFilter) && (
+        {hasActiveFilter && (
           <button
-            onClick={() => { setTierFilter(''); setRarityFilter(''); setVariantFilter('') }}
+            onClick={() => { setRarityFilter(''); setVariantFilter('') }}
             className="font-karla font-300 text-[0.7rem] uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors px-2"
           >
             Clear
@@ -191,35 +199,60 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
         )}
       </div>
 
-      {/* Grid */}
-      <div className="flex flex-wrap justify-center gap-7">
-        {filtered.map((card) => {
-          const entries = ownedByCardId[card.id] ?? []
-          const isOwned = entries.length > 0
-          const best = isOwned ? displayEntry(card.id, entries) : null
+      {/* Depth zones */}
+      {ZONES.map((zone) => {
+        const cards = zoneAllCards(zone)
+        const visibleCards = hasActiveFilter ? cards.filter(cardMatchesFilter) : cards
+        if (hasActiveFilter && visibleCards.length === 0) return null
 
-          return (
-            <div key={card.id} className="flex flex-col items-center gap-2">
+        return (
+          <section
+            key={zone.id}
+            className="w-full relative"
+            style={{
+              background: `linear-gradient(to bottom, ${zone.bgFrom}, ${zone.bgTo})`,
+              paddingTop: zone.id === 'abyss' ? '5rem' : '4rem',
+              paddingBottom: zone.id === 'abyss' ? '6rem' : '4rem',
+            }}
+          >
+            {zone.glowColor && (
               <div
-                className={`relative ${isOwned ? 'cursor-pointer' : ''}`}
-                onClick={() => isOwned && setModal({ card, entries })}
-              >
-                <FishCard
-                  name={card.name}
-                  filename={card.filename}
-                  borderStyle={best?.borderStyle ?? 'standard'}
-                  artEffect={best?.artEffect ?? 'normal'}
-                  unowned={!isOwned}
-                />
-              </div>
+                className="absolute inset-0 pointer-events-none"
+                style={{ background: `radial-gradient(ellipse 70% 50% at 50% 40%, ${zone.glowColor} 0%, transparent 70%)` }}
+              />
+            )}
 
-              <p className="font-karla font-300 text-[0.62rem] text-[#8a8880] tracking-wide">
-                {entries.length} <span className="text-[#555350]">/ {totalVariantsByCardId[card.id] ?? '?'}</span>
-              </p>
+            {/* Cards */}
+            <div className="flex flex-wrap justify-center gap-7 px-6">
+              {visibleCards.map((card) => {
+                const entries = ownedByCardId[card.id] ?? []
+                const isOwned = entries.length > 0
+                const best = isOwned ? displayEntry(card.id, entries) : null
+
+                return (
+                  <div key={card.id} className="flex flex-col items-center gap-2">
+                    <div
+                      className={`relative ${isOwned ? 'cursor-pointer' : ''}`}
+                      onClick={() => isOwned && setModal({ card, entries })}
+                    >
+                      <FishCard
+                        name={card.name}
+                        filename={card.filename}
+                        borderStyle={best?.borderStyle ?? 'standard'}
+                        artEffect={best?.artEffect ?? 'normal'}
+                        unowned={!isOwned}
+                      />
+                    </div>
+                    <p className="font-karla font-300 text-[0.62rem] text-[#8a8880] tracking-wide">
+                      {entries.length} <span className="text-[#555350]">/ {totalVariantsByCardId[card.id] ?? '?'}</span>
+                    </p>
+                  </div>
+                )
+              })}
             </div>
-          )
-        })}
-      </div>
+          </section>
+        )
+      })}
 
       {/* Variant detail modal */}
       {modal && (
@@ -241,9 +274,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
             </button>
 
             <p className="sg-eyebrow text-center mb-1">Variants You Own</p>
-            <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-2">
-              {modal.card.name}
-            </p>
+            <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-2">{modal.card.name}</p>
             <p className="font-karla font-300 text-[#8a8880] text-center text-xs tracking-wide mb-8">
               Click a variant to display it in your collection
             </p>

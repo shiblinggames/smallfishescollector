@@ -62,12 +62,14 @@ export default async function CollectionPage() {
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} />
-      <main className="min-h-screen px-6 py-14">
-        <p className="sg-eyebrow text-center mb-3">Your Cards</p>
-        <h1 className="font-cinzel font-700 text-[#f0ede8] text-center leading-[0.92] tracking-[-0.01em] mb-12"
-            style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}>
-          Collection.
-        </h1>
+      <main className="min-h-screen">
+        <div className="px-6 pt-14 pb-12">
+          <p className="sg-eyebrow text-center mb-3">Your Cards</p>
+          <h1 className="font-cinzel font-700 text-[#f0ede8] text-center leading-[0.92] tracking-[-0.01em]"
+              style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}>
+            Collection.
+          </h1>
+        </div>
         <CollectionGrid
           allCards={(allCards ?? []) as Card[]}
           ownedByCardId={ownedByCardId}
