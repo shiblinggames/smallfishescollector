@@ -1,18 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import GoogleButton from '@/components/GoogleButton'
 
 export default function LoginForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') ?? '/packs'
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -20,14 +18,33 @@ export default function LoginForm() {
     setError(null)
     setLoading(true)
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      },
+    })
     if (error) {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push(next)
-      router.refresh()
+      setSent(true)
     }
+  }
+
+  if (sent) {
+    return (
+      <div className="sg-card p-8 text-center space-y-3">
+        <p className="sg-eyebrow">Check Your Email</p>
+        <p className="font-karla font-400 text-[#f0ede8] leading-relaxed">
+          We sent a sign-in link to{' '}
+          <span className="text-[#f0c040]">{email}</span>.
+        </p>
+        <p className="font-karla font-300 text-[#8a8880] text-sm">
+          Click the link in the email to sign in. You can close this tab.
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -50,28 +67,9 @@ export default function LoginForm() {
         />
       </div>
 
-      <div className="space-y-1.5">
-        <label className="sg-eyebrow block">Password</label>
-        <input
-          type="password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="sg-input"
-          placeholder="••••••••"
-        />
-      </div>
-
       <button type="submit" disabled={loading} className="btn-gold w-full">
-        {loading ? 'Signing In…' : 'Sign In'}
+        {loading ? 'Sending…' : 'Send Sign-In Link'}
       </button>
-
-      <p className="text-center text-xs font-karla text-[#8a8880] tracking-wide">
-        No account?{' '}
-        <Link href="/register" className="text-[#f0c040] hover:text-[#ffd966] transition-colors">
-          Create one
-        </Link>
-      </p>
 
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px bg-[rgba(255,255,255,0.08)]" />
