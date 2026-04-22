@@ -94,7 +94,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
     frame = (
       <div className="relative" style={{ width: D, height: D, borderRadius: '50%' }}>
         <div className="absolute inset-0 border-prismatic" style={{ borderRadius: '50%' }} />
-        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)' }}>
+        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}>
           {imageContent}
         </div>
       </div>
@@ -103,7 +103,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
     frame = (
       <div className="relative" style={{ width: D, height: D, borderRadius: '50%' }}>
         <div className="absolute inset-0 border-pearl" style={{ borderRadius: '50%' }} />
-        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)' }}>
+        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}>
           {imageContent}
         </div>
       </div>
@@ -113,7 +113,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
     frame = (
       <div className="relative" style={{ width: D, height: D, borderRadius: '50%' }}>
         <div className="absolute inset-0 border-ghost" style={{ borderRadius: '50%' }} />
-        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)' }}>
+        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}>
           {imageContent}
         </div>
       </div>
@@ -122,7 +122,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
     frame = (
       <div className="border-kraken-outer relative" style={{ width: D, height: D }}>
         <div className="absolute inset-0 border-kraken" style={{ borderRadius: '50%' }} />
-        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)' }}>
+        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}>
           {imageContent}
           <div className="art-kraken-overlay" />
         </div>
@@ -132,7 +132,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
     frame = (
       <div className="border-davy-jones-outer relative" style={{ width: D, height: D }}>
         <div className="absolute inset-0 border-davy-jones" style={{ borderRadius: '50%' }} />
-        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)' }}>
+        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}>
           {imageContent}
           <div className="art-davy-jones-overlay" />
         </div>
@@ -142,7 +142,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
     frame = (
       <div className="border-golden-age-outer relative" style={{ width: D, height: D }}>
         <div className="absolute inset-0 border-golden-age" style={{ borderRadius: '50%' }} />
-        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)' }}>
+        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}>
           {imageContent}
           <div className="art-golden-age-overlay" />
         </div>
@@ -152,7 +152,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
     frame = (
       <div className="border-storm-outer relative" style={{ width: D, height: D }}>
         <div className="absolute inset-0 border-storm" style={{ borderRadius: '50%' }} />
-        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)' }}>
+        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}>
           {imageContent}
           <div className="art-storm-overlay" />
         </div>
@@ -162,7 +162,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
     frame = (
       <div className="border-wanted-outer relative" style={{ width: D, height: D }}>
         <div className="absolute inset-0 border-wanted" style={{ borderRadius: '50%' }} />
-        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)' }}>
+        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}>
           {imageContent}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <span className="font-cinzel font-900 text-[0.85rem] tracking-[0.22em] uppercase rotate-[-18deg]"
@@ -177,7 +177,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
     // Outer glow wrapper so drop-shadow bleeds outside the clipped circle
     frame = (
       <div className="border-void-outer" style={{ width: D, height: D, borderRadius: '50%' }}>
-        <div className="relative w-full h-full overflow-hidden" style={{ borderRadius: '50%' }}>
+        <div className="relative w-full h-full overflow-hidden" style={{ borderRadius: '50%', transform: 'translateZ(0)', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}>
           {imageContent}
           <div className="absolute inset-0 pointer-events-none"
                style={{ borderRadius: '50%', boxShadow: insetShadow.void }} />
