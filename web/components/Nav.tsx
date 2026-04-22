@@ -20,24 +20,24 @@ export default function Nav({ packsAvailable }: { packsAvailable?: number }) {
         Small Fishes
       </Link>
 
-      <div className="flex-1 flex gap-6 text-xs font-karla font-600 uppercase tracking-[0.12em]">
-        <Link href="/packs" className="text-[#8a8880] hover:text-[#f0ede8] transition-colors duration-200">
+      <div className="flex-1 flex gap-2 text-xs font-karla font-600 uppercase tracking-[0.12em]">
+        <Link href="/packs" className="py-2 px-2 text-[#8a8880] hover:text-[#f0ede8] active:text-[#f0ede8] transition-colors duration-200">
           Packs
           {packsAvailable !== undefined && packsAvailable > 0 && (
             <span className="ml-1.5 text-[#f0c040]">· {packsAvailable}</span>
           )}
         </Link>
-        <Link href="/collection" className="text-[#8a8880] hover:text-[#f0ede8] transition-colors duration-200">
+        <Link href="/collection" className="py-2 px-2 text-[#8a8880] hover:text-[#f0ede8] active:text-[#f0ede8] transition-colors duration-200">
           Collection
         </Link>
-        <Link href="/redeem" className="text-[#8a8880] hover:text-[#f0ede8] transition-colors duration-200">
+        <Link href="/redeem" className="py-2 px-2 text-[#8a8880] hover:text-[#f0ede8] active:text-[#f0ede8] transition-colors duration-200">
           Redeem
         </Link>
       </div>
 
       <button
         onClick={signOut}
-        className="text-[0.68rem] font-karla font-600 uppercase tracking-[0.20em] text-[#8a8880] hover:text-[#f0ede8] transition-colors duration-200"
+        className="py-2 px-2 text-[0.68rem] font-karla font-600 uppercase tracking-[0.20em] text-[#8a8880] hover:text-[#f0ede8] active:text-[#f0ede8] transition-colors duration-200"
       >
         Sign Out
       </button>
