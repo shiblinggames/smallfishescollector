@@ -4,6 +4,7 @@ export function rarityFromWeight(dropWeight: number): string {
   if (dropWeight >= 12) return 'Rare'
   if (dropWeight >= 4)  return 'Epic'
   if (dropWeight >= 1)  return 'Legendary'
+  if (dropWeight >= 0.3) return 'Legendary'
   return 'Mythic'
 }
 
