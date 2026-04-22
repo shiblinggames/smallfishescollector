@@ -17,7 +17,7 @@ export default async function PacksPage() {
     getPackHistory(),
   ])
 
-  if (packHistoryCount === 0) redirect('/guide')
+  if (packHistoryCount === 0 && packsAvailable > 0) redirect('/guide')
 
   const packsAvailable = profile?.packs_available ?? 0
 
