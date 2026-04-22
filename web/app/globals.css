@@ -422,6 +422,21 @@ body {
   border: 1px solid rgba(255,255,255,0.08);
 }
 
+/* ── New card badge ── */
+@keyframes new-badge-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.new-badge {
+  font-family: var(--font-karla), sans-serif;
+  font-weight: 600;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.20em;
+  color: #00c8b4;
+  animation: new-badge-in 0.3s ease-out forwards;
+}
+
 /* ── Reveal glow effects ── */
 @keyframes reveal-glow-epic {
   0%   { filter: drop-shadow(0 0 22px rgba(168,85,247,0.95)); }

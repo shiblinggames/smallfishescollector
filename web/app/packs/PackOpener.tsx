@@ -24,6 +24,7 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
   const [flash, setFlash] = useState<{ type: string; key: number } | null>(null)
   const [prize, setPrize] = useState<{ cardName: string; variantName: string; prizeCode: string } | null>(null)
   const [loading, setLoading] = useState(false)
+  const [newVariantIds, setNewVariantIds] = useState<Set<number>>(new Set())
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
 
   function getInner(i: number) {
@@ -85,6 +86,7 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
     }
     await supabase.from('profiles').update({ packs_available: packs - 1 }).eq('id', user.id)
 
+    setNewVariantIds(new Set(newCards.map((d) => d.variantId)))
     setCards(drawn)
     setFlipped(new Array(5).fill(false))
     setGlowClasses(new Array(5).fill(''))
@@ -170,6 +172,7 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
     setGlowClasses([])
     setFlash(null)
     setPrize(null)
+    setNewVariantIds(new Set())
     router.refresh()
   }
 
@@ -215,15 +218,15 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
       )}
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-8">
         {cards.map((card, i) => (
-          <div
-            key={i}
-            ref={(el) => { cardRefs.current[i] = el }}
-            className={`flip-card select-none ${flipped[i] ? 'flipped' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
-            style={{ width: 160, height: 248 }}
-            onClick={() => flipCard(i)}
-            onMouseMove={(e) => handleMouseMove(e, i)}
-            onMouseLeave={(e) => handleMouseLeave(e, i)}
-          >
+          <div key={i} className="flex flex-col items-center gap-2">
+            <div
+              ref={(el) => { cardRefs.current[i] = el }}
+              className={`flip-card select-none ${flipped[i] ? 'flipped' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
+              style={{ width: 160, height: 248 }}
+              onClick={() => flipCard(i)}
+              onMouseMove={(e) => handleMouseMove(e, i)}
+              onMouseLeave={(e) => handleMouseLeave(e, i)}
+            >
             <div className="flip-card-inner w-full h-full">
               <div className="flip-card-front w-full h-full bg-black border border-[rgba(255,255,255,0.08)] flex flex-col items-center justify-center gap-3">
                 <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
@@ -243,6 +246,10 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
                 />
               </div>
             </div>
+            </div>
+            {flipped[i] && newVariantIds.has(card.variantId) && (
+              <p className="new-badge">New</p>
+            )}
           </div>
         ))}
       </div>
