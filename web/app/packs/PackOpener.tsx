@@ -49,33 +49,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
   const [isGodPack, setIsGodPack] = useState(false)
   const [shockwaveCards, setShockwaveCards] = useState<Set<number>>(new Set())
   const [mythicFeatured, setMythicFeatured] = useState<number | null>(null)
-  const [shareCopied, setShareCopied] = useState(false)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
-
-  const SHARE_RARITIES = new Set(['Mythic', 'Legendary'])
-
-  function bestShareCard(): DrawnCard | null {
-    for (const rarity of ['Mythic', 'Legendary']) {
-      const found = cards.find((c) => rarityFromVariant(c.variantName, c.dropWeight) === rarity)
-      if (found) return found
-    }
-    return null
-  }
-
-  async function handleShare() {
-    const card = bestShareCard()
-    if (!card) return
-    const rarity = rarityFromVariant(card.variantName, card.dropWeight)
-    const text = `Just pulled a ${rarity} ${card.variantName} ${card.name} in Small Fishes 🎣`
-    const url = window.location.origin
-    if (navigator.share) {
-      try { await navigator.share({ title: 'Small Fishes', text, url }) } catch {}
-    } else {
-      await navigator.clipboard.writeText(`${text} — ${url}`)
-      setShareCopied(true)
-      setTimeout(() => setShareCopied(false), 2000)
-    }
-  }
 
   function getInner(i: number) {
     return cardRefs.current[i]?.querySelector('.flip-card-inner') as HTMLElement | null
@@ -344,11 +318,6 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
             <button onClick={() => router.push('/collection')} className="btn-ghost">
               View Collection
             </button>
-            {bestShareCard() && (
-              <button onClick={handleShare} className="btn-ghost">
-                {shareCopied ? 'Copied!' : 'Share Pull'}
-              </button>
-            )}
           </div>
           {packs === 0 && (
             <a
