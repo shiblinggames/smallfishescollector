@@ -132,7 +132,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
       card_name: card.name,
       variant_name: card.variantName,
     })
-    if (!error) setPrize({ cardName: card.name, variantName: card.variantName, prizeCode: code })
+    if (!error) setTimeout(() => setPrize({ cardName: card.name, variantName: card.variantName, prizeCode: code }), 2500)
   }
 
   function glowClassFor(rarity: string) {
