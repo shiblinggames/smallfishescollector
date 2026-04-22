@@ -23,6 +23,10 @@ body {
   line-height: 1.75;
 }
 
+@media (max-width: 639px) {
+  main { padding-bottom: 5rem; }
+}
+
 .font-cinzel { font-family: var(--font-cinzel), serif; }
 .font-karla  { font-family: var(--font-karla), system-ui, sans-serif; }
 

@@ -87,8 +87,6 @@ export default function Nav({ packsAvailable }: { packsAvailable?: number }) {
         })}
       </div>
 
-      {/* Spacer so content doesn't hide behind bottom bar on mobile */}
-      <div className="sm:hidden h-16" />
     </>
   )
 }
