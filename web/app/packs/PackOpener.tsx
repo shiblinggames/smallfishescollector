@@ -318,11 +318,13 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
                 {loading ? 'Fishing…' : `Open Another · ${packs} Left`}
               </button>
             )}
-            <button onClick={() => router.push('/collection')} className="btn-ghost">
-              View Collection
-            </button>
+            {!loading && (
+              <button onClick={() => router.push('/collection')} className="btn-ghost">
+                View Collection
+              </button>
+            )}
           </div>
-          {packs === 0 && (
+          {!loading && packs === 0 && (
             <a
               href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game"
               target="_blank" rel="noopener noreferrer"
