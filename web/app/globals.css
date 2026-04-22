@@ -127,7 +127,7 @@ body {
 .art-rainbow { animation: hueRotate 4s linear infinite; }
 
 /* Ghost: washed-out bright filter */
-.art-ghost  { filter: brightness(1.8) saturate(0.1); }
+.art-ghost  { filter: brightness(2.8) saturate(0.05) contrast(0.85); }
 
 /* Shadow: near-silhouette */
 .art-shadow { filter: brightness(0.25) saturate(0); }
@@ -193,12 +193,12 @@ body {
   background: linear-gradient(
     to right,
     transparent,
-    rgba(180,210,255,0.55) 40%,
-    rgba(200,230,255,0.75) 50%,
-    rgba(180,210,255,0.55) 60%,
+    rgba(200,220,255,0.45) 40%,
+    rgba(220,235,255,0.70) 50%,
+    rgba(200,220,255,0.45) 60%,
     transparent
   );
-  mix-blend-mode: multiply;
+  mix-blend-mode: screen;
   animation: ghostShimmer 4s ease-in-out infinite;
   pointer-events: none;
 }
