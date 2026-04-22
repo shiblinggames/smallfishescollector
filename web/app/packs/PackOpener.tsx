@@ -247,7 +247,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
               onMouseLeave={(e) => handleMouseLeave(e, i)}
             >
             <div className="flip-card-inner w-full h-full">
-              <div className="flip-card-front w-full h-full border-[3px] border-[rgba(255,255,255,0.08)] flex flex-col items-center justify-center gap-3" style={{ background: 'rgba(8, 12, 40, 0.55)' }}>
+              <div className="flip-card-front w-full h-full border-[3px] border-[rgba(255,255,255,0.08)] flex flex-col items-center justify-center gap-3" style={{ background: 'rgba(8, 12, 40, 0.25)' }}>
                 <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
                   {/* Hook shaft — curves down then bends into the barb */}
                   <path d="M18 4 C18 4 18 18 18 22 C18 27 13 29 10 26 C7 23 9 19 12 19"
