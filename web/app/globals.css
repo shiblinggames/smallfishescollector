@@ -229,7 +229,7 @@ body {
    MYTHIC EDITIONS  (1 / 500)
    ════════════════════════════════════════ */
 
-/* ── Kraken Edition ── */
+/* ── Kraken ── */
 @property --kraken-angle {
   syntax: '<angle>';
   inherits: false;

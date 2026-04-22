@@ -107,7 +107,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
     router.refresh()
   }
 
-  const PRIZE_VARIANTS = new Set(['Davy Jones', 'Golden Age', 'Kraken Edition', 'Wanted', 'Storm'])
+  const PRIZE_VARIANTS = new Set(['Davy Jones', 'Golden Age', 'Kraken', 'Wanted', 'Storm'])
 
   function isPrizeCard(card: DrawnCard) {
     return (card.name === 'Catfish' || card.name === 'Doby Mick') && PRIZE_VARIANTS.has(card.variantName)

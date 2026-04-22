@@ -32,7 +32,7 @@ const RARITIES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic']
 const VARIANT_RANK: Record<string, number> = {
   'Davy Jones':     12,
   'Storm':          11,
-  'Kraken Edition': 10,
+  'Kraken': 10,
   'Golden Age':      9,
   'Wanted':          8,
   'Prismatic':       7,
