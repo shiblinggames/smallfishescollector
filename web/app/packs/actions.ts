@@ -48,7 +48,7 @@ export async function openPack(): Promise<OpenPackResponse> {
 
   const variants = (variantRows ?? []) as unknown as CardVariant[]
   const isGodPack = Math.random() < 1 / 1000
-  const forceLegendary = (profile.packs_since_legendary ?? 0) >= 50
+  const forceLegendary = (profile.packs_since_legendary ?? 0) >= 20
   const drawn = isGodPack ? drawGodPack(variants) : drawPack(variants, forceLegendary)
 
   // Check what the user already owns

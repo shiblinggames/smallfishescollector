@@ -56,7 +56,7 @@ export function drawPack(variants: CardVariant[], forceLegendary = false): Drawn
     }
   }
 
-  // Pity: guarantee a Legendary or better (drop_weight < 1) after 50 packs
+  // Tide: guarantee a Legendary or better (drop_weight < 1) after 20 packs
   if (forceLegendary && drawn.every((d) => d.dropWeight >= 1)) {
     const legendaryPool = variants.filter((v) => v.drop_weight < 1)
     if (legendaryPool.length > 0) {

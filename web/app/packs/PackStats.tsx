@@ -1,7 +1,7 @@
 import { rarityFromWeight, RARITY_COLOR } from '@/lib/variants'
 import type { PackStats, PackHistoryEntry } from './stats'
 
-const PITY_CAP = 50
+const PITY_CAP = 20
 
 function TideBar({ count }: { count: number }) {
   const pct = Math.min((count / PITY_CAP) * 100, 100)
