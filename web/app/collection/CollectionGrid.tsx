@@ -9,6 +9,7 @@ import { rarityFromWeight } from '@/lib/variants'
 interface Props {
   allCards: Card[]
   ownedByCardId: Record<number, OwnedEntry[]>
+  totalVariants: number
 }
 
 interface ModalCard {
@@ -34,31 +35,29 @@ function bestEntry(entries: OwnedEntry[]): OwnedEntry {
 }
 
 
-export default function CollectionGrid({ allCards, ownedByCardId }: Props) {
+export default function CollectionGrid({ allCards, ownedByCardId, totalVariants }: Props) {
   const [activeTier, setActiveTier] = useState(0)
   const [modal, setModal] = useState<ModalCard | null>(null)
 
   const filtered = activeTier === 0 ? allCards : allCards.filter((c) => c.tier === activeTier)
-  const ownedCount = allCards.filter((c) => ownedByCardId[c.id]?.length > 0).length
-  const totalVariantsOwned = Object.values(ownedByCardId).reduce(
-    (sum, entries) => sum + entries.reduce((s, e) => s + e.count, 0), 0
-  )
+  const fishDiscovered = allCards.filter((c) => ownedByCardId[c.id]?.length > 0).length
+  const uniqueVariantsOwned = Object.values(ownedByCardId).reduce((sum, entries) => sum + entries.length, 0)
 
   return (
     <div>
       {/* Stats */}
       <div className="mb-8 text-center">
         <p className="font-cinzel font-700 text-[#f0c040] text-2xl mb-1">
-          {ownedCount} <span className="text-[#8a8880] font-400 text-lg">/ {allCards.length}</span>
+          {uniqueVariantsOwned} <span className="text-[#8a8880] font-400 text-lg">/ {totalVariants}</span>
         </p>
-        <p className="sg-eyebrow mb-1">Cards Collected</p>
+        <p className="sg-eyebrow mb-1">Variants Collected</p>
         <p className="font-karla font-300 text-[#8a8880] text-xs tracking-wide mb-4">
-          {totalVariantsOwned} total variants
+          {fishDiscovered} of {allCards.length} fish discovered
         </p>
         <div className="w-64 h-px bg-[rgba(255,255,255,0.08)] mx-auto overflow-hidden">
           <div
             className="h-full bg-[#f0c040] transition-all duration-700"
-            style={{ width: `${(ownedCount / allCards.length) * 100}%` }}
+            style={{ width: `${totalVariants > 0 ? (uniqueVariantsOwned / totalVariants) * 100 : 0}%` }}
           />
         </div>
       </div>

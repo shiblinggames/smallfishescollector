@@ -18,13 +18,14 @@ export default async function CollectionPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: allCards }, { data: owned }, { data: profile }] = await Promise.all([
+  const [{ data: allCards }, { data: owned }, { data: profile }, { count: totalVariants }] = await Promise.all([
     supabase.from('cards').select('*').order('tier').order('name'),
     supabase
       .from('user_collection')
       .select('card_variant_id, card_variants(id, variant_name, border_style, art_effect, drop_weight, card_id)')
       .eq('user_id', user.id),
     supabase.from('profiles').select('packs_available').eq('id', user.id).single(),
+    supabase.from('card_variants').select('*', { count: 'exact', head: true }),
   ])
 
   // Build map: card_id → OwnedEntry[] (one entry per unique variant, with count for dupes)
@@ -64,6 +65,7 @@ export default async function CollectionPage() {
         <CollectionGrid
           allCards={(allCards ?? []) as Card[]}
           ownedByCardId={ownedByCardId}
+          totalVariants={totalVariants ?? 0}
         />
       </main>
     </>
