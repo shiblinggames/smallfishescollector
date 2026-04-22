@@ -30,10 +30,9 @@ export default function ClaimContent() {
       if (!user) {
         if (emailParam) {
           setStatus('sending_magic_link')
-          const next = encodeURIComponent(`/claim?token=${token}`)
           await supabase.auth.signInWithOtp({
             email: emailParam,
-            options: { emailRedirectTo: `${location.origin}/auth/callback?next=${next}` },
+            options: { emailRedirectTo: `${location.origin}/auth/callback` },
           })
           setStatus('magic_link_sent')
         } else {
@@ -98,7 +97,7 @@ export default function ClaimContent() {
           <span className="text-[#f0c040]">{emailParam}</span>.
         </p>
         <p className="font-karla font-300 text-[#8a8880] text-sm">
-          Click the link to finish claiming your packs.
+          Click the sign-in link, then come back and click your claim link again to get your packs.
         </p>
       </div>
     )
