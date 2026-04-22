@@ -229,8 +229,8 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           onClick={() => setModal(null)}
         >
           <div
-            className="max-w-lg w-full p-8 relative max-h-[85vh] overflow-y-auto"
-            style={{ background: '#0e0e0e', border: '1px solid rgba(255,255,255,0.1)' }}
+            className="max-w-lg w-full p-8 relative max-h-[85vh] overflow-y-auto scrollbar-hide"
+            style={{ background: '#0e0e0e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10 }}
             onClick={(e) => e.stopPropagation()}
           >
             <button

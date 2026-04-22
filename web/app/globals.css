@@ -62,6 +62,8 @@ body {
 
 /* ── Surfaces & inputs ── */
 .sg-card  { background: rgba(255,255,255,0.04); border: 3px solid rgba(255,255,255,0.08); border-radius: 10px; }
+.scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
 
 .sg-input {
   font-family: var(--font-karla), sans-serif;
