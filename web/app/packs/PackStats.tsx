@@ -3,13 +3,14 @@ import type { PackStats, PackHistoryEntry } from './stats'
 
 const PITY_CAP = 50
 
-function PityBar({ count }: { count: number }) {
+function TideBar({ count }: { count: number }) {
   const pct = Math.min((count / PITY_CAP) * 100, 100)
   const color = pct >= 80 ? '#f0c040' : pct >= 50 ? '#a78bfa' : '#8a8880'
+  const remaining = PITY_CAP - count
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between items-baseline">
-        <p className="font-karla font-300 text-[0.68rem] uppercase tracking-[0.12em] text-[#8a8880]">Pity</p>
+        <p className="font-karla font-300 text-[0.68rem] uppercase tracking-[0.12em] text-[#8a8880]">The Tide</p>
         <p className="font-karla font-600 text-[0.68rem]" style={{ color }}>
           {count} <span className="font-300 text-[#8a8880]">/ {PITY_CAP}</span>
         </p>
@@ -18,7 +19,9 @@ function PityBar({ count }: { count: number }) {
         <div className="h-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
       </div>
       <p className="font-karla font-300 text-[0.6rem] text-[#8a8880]">
-        {count >= PITY_CAP ? 'Legendary guaranteed next pack' : `Legendary guaranteed in ${PITY_CAP - count} pack${PITY_CAP - count === 1 ? '' : 's'}`}
+        {count >= PITY_CAP
+          ? 'The tide is turning — Legendary guaranteed next pack'
+          : `The tide turns in ${remaining} pack${remaining === 1 ? '' : 's'}`}
       </p>
     </div>
   )
@@ -74,7 +77,7 @@ export default function PackStats({ stats, history }: { stats: PackStats; histor
             </>
           )}
         </div>
-        <PityBar count={stats.packsSinceLegendary} />
+        <TideBar count={stats.packsSinceLegendary} />
       </div>
 
       {/* Pull history */}
