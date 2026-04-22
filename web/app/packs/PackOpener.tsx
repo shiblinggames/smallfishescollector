@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { drawPack } from '@/lib/drawPack'
+import { rarityFromWeight } from '@/lib/variants'
 import FishCard from '@/components/FishCard'
 import type { CardVariant, DrawnCard } from '@/lib/types'
 
@@ -18,6 +19,8 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
   const [phase, setPhase] = useState<'idle' | 'reveal' | 'done'>('idle')
   const [cards, setCards] = useState<DrawnCard[]>([])
   const [flipped, setFlipped] = useState<boolean[]>([])
+  const [glowClasses, setGlowClasses] = useState<string[]>([])
+  const [flash, setFlash] = useState<{ type: string; key: number } | null>(null)
   const [loading, setLoading] = useState(false)
 
   async function openPack() {
@@ -35,14 +38,32 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
 
     setCards(drawn)
     setFlipped(new Array(5).fill(false))
+    setGlowClasses(new Array(5).fill(''))
+    setFlash(null)
     setPacks((p) => p - 1)
     setPhase('reveal')
     setLoading(false)
     router.refresh()
   }
 
+  function glowClassFor(rarity: string) {
+    if (rarity === 'Mythic')    return 'reveal-glow-mythic'
+    if (rarity === 'Legendary') return 'reveal-glow-legendary'
+    if (rarity === 'Epic')      return 'reveal-glow-epic'
+    return ''
+  }
+
+  function triggerFlash(rarity: string) {
+    if (['Mythic', 'Legendary', 'Epic'].includes(rarity)) {
+      setFlash({ type: rarity.toLowerCase(), key: Date.now() })
+    }
+  }
+
   function flipCard(i: number) {
     if (flipped[i]) return
+    const rarity = rarityFromWeight(cards[i].dropWeight)
+    setGlowClasses((prev) => { const n = [...prev]; n[i] = glowClassFor(rarity); return n })
+    triggerFlash(rarity)
     setFlipped((prev) => {
       const n = [...prev]
       n[i] = true
@@ -52,6 +73,11 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
   }
 
   function flipAll() {
+    const rarities = cards.map((c) => rarityFromWeight(c.dropWeight))
+    const priority = ['Mythic', 'Legendary', 'Epic']
+    const top = priority.find((r) => rarities.includes(r))
+    if (top) triggerFlash(top)
+    setGlowClasses(rarities.map(glowClassFor))
     setFlipped(new Array(cards.length).fill(true))
     setTimeout(() => setPhase('done'), 700)
   }
@@ -60,6 +86,8 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
     setPhase('idle')
     setCards([])
     setFlipped([])
+    setGlowClasses([])
+    setFlash(null)
     router.refresh()
   }
 
@@ -94,12 +122,13 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
 
   return (
     <div className="flex flex-col items-center gap-10">
-      <div className="flex flex-wrap justify-center gap-5">
+      {flash && <div key={flash.key} className={`reveal-flash reveal-flash-${flash.type}`} />}
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-8">
         {cards.map((card, i) => (
           <div
             key={i}
-            className={`flip-card select-none ${flipped[i] ? 'flipped' : 'cursor-pointer'}`}
-            style={{ width: 160, height: 200 }}
+            className={`flip-card select-none ${flipped[i] ? 'flipped' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
+            style={{ width: 160, height: 248 }}
             onClick={() => flipCard(i)}
           >
             <div className="flip-card-inner w-full h-full">
