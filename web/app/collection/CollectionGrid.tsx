@@ -183,8 +183,11 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants 
             </button>
 
             <p className="sg-eyebrow text-center mb-1">Variants You Own</p>
-            <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-8">
+            <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-2">
               {modal.card.name}
+            </p>
+            <p className="font-karla font-300 text-[#8a8880] text-center text-xs tracking-wide mb-8">
+              Click a variant to display it in your collection
             </p>
 
             <div className="flex flex-wrap justify-center gap-6">
