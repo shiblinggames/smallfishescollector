@@ -216,12 +216,12 @@ body {
   background: linear-gradient(
     to right,
     transparent,
-    rgba(255,255,255,0.10) 40%,
-    rgba(255,255,255,0.20) 50%,
-    rgba(255,255,255,0.10) 60%,
+    rgba(0,0,0,0.35) 40%,
+    rgba(0,0,0,0.60) 50%,
+    rgba(0,0,0,0.35) 60%,
     transparent
   );
-  mix-blend-mode: screen;
+  mix-blend-mode: multiply;
   animation: shadowShimmer 6s ease-in-out infinite;
   pointer-events: none;
 }
