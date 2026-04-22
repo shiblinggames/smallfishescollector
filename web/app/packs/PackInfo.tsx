@@ -72,7 +72,7 @@ export default function PackInfo() {
       <AccordionItem title="How to Get Packs">
         <div className="flex flex-col gap-4 text-sm">
           <p className="font-karla font-300 text-[#8a8880] leading-relaxed">
-            Packs come with the <span className="text-[#f0ede8] font-400">physical card game</span>. Each copy includes a code to unlock your digital collection.
+            Purchase the <span className="text-[#f0ede8] font-400">Small Fishes board game</span> from our website and you'll receive a code to unlock packs — sent to you after purchase, not in the box.
           </p>
           <p className="font-karla font-300 text-[#8a8880] leading-relaxed">
             Additional packs are distributed through <span className="text-[#f0ede8] font-400">redeem codes</span> — handed out at events, giveaways, and through our community channels.
