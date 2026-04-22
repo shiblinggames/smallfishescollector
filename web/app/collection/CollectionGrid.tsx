@@ -106,17 +106,14 @@ function Dropdown({ value, onChange, options }: {
 
 interface ZoneConfig {
   id: string
-  bgFrom: string
-  bgTo: string
-  glowColor?: string
   tierFilter: number | null
 }
 
 const ZONES: ZoneConfig[] = [
-  { id: 'shallows',    bgFrom: '#000000', bgTo: '#04111d', tierFilter: 1 },
-  { id: 'open-waters', bgFrom: '#04111d', bgTo: '#020a14', tierFilter: 2 },
-  { id: 'deep',        bgFrom: '#020a14', bgTo: '#010509', tierFilter: 3 },
-  { id: 'abyss',       bgFrom: '#010509', bgTo: '#000000', glowColor: 'rgba(60,0,140,0.07)', tierFilter: null },
+  { id: 'shallows',    tierFilter: 1 },
+  { id: 'open-waters', tierFilter: 2 },
+  { id: 'deep',        tierFilter: 3 },
+  { id: 'abyss',       tierFilter: null },
 ]
 
 export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId }: Props) {
@@ -160,9 +157,6 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
 
   return (
     <div>
-      {/* Stats + filters fade into first zone */}
-      <div style={{ background: 'linear-gradient(to bottom, #000000 0%, #04111d 100%)' }}>
-
       {/* Stats */}
       <div className="px-6 pb-8 text-center">
         <p className="font-cinzel font-700 text-[#f0c040] text-2xl mb-1">
@@ -202,8 +196,6 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
         )}
       </div>
 
-      </div>{/* end gradient wrapper */}
-
       {/* Depth zones */}
       {ZONES.map((zone) => {
         const cards = zoneAllCards(zone)
@@ -213,20 +205,13 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
         return (
           <section
             key={zone.id}
-            className="w-full relative"
+            className="w-full"
             style={{
-              background: `linear-gradient(to bottom, ${zone.bgFrom}, ${zone.bgTo})`,
-              paddingTop: zone.id === 'abyss' ? '5rem' : '4rem',
-              paddingBottom: zone.id === 'abyss' ? '6rem' : '4rem',
+              borderTop: '1px solid rgba(255,255,255,0.06)',
+              paddingTop: '4rem',
+              paddingBottom: '4rem',
             }}
           >
-            {zone.glowColor && (
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{ background: `radial-gradient(ellipse 70% 50% at 50% 40%, ${zone.glowColor} 0%, transparent 70%)` }}
-              />
-            )}
-
             {/* Cards */}
             <div className="flex flex-wrap justify-center gap-7 px-6">
               {visibleCards.map((card) => {
