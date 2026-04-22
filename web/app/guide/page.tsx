@@ -20,6 +20,8 @@ export default function GuidePage() {
           How It Works.
         </h1>
 
+        <a href="/packs" className="btn-gold mb-12">Open Packs</a>
+
         <div className="w-full max-w-2xl flex flex-col gap-6">
 
           <div className="sg-card px-8 py-7">
