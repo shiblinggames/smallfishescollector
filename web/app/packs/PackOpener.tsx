@@ -59,8 +59,10 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
     router.refresh()
   }
 
+  const PRIZE_VARIANTS = new Set(['Davy Jones', 'Golden Age', 'Kraken Edition', 'Wanted', 'Storm'])
+
   function isPrizeCard(card: DrawnCard) {
-    return card.dropWeight < 1 && (card.name === 'Catfish' || card.name === 'Doby Mick')
+    return (card.name === 'Catfish' || card.name === 'Doby Mick') && PRIZE_VARIANTS.has(card.variantName)
   }
 
   function generatePrizeCode() {
