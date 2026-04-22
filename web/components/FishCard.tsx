@@ -165,8 +165,8 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
         <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%' }}>
           {imageContent}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="font-cinzel font-700 text-[1.1rem] tracking-[0.22em] uppercase rotate-[-18deg]"
-                  style={{ color: 'rgba(160,15,15,0.92)', border: '3px solid rgba(155,20,20,0.88)', padding: '0.15em 0.5em', mixBlendMode: 'multiply', textShadow: '0 0 8px rgba(200,30,30,0.4)' }}>
+            <span className="font-cinzel font-900 text-[0.85rem] tracking-[0.22em] uppercase rotate-[-18deg]"
+                  style={{ color: 'rgba(160,10,10,0.98)', border: '3px solid rgba(155,15,15,0.96)', padding: '0.15em 0.5em', mixBlendMode: 'multiply', textShadow: '0 0 4px rgba(180,20,20,0.6)', fontWeight: 900 }}>
               Wanted
             </span>
           </div>
