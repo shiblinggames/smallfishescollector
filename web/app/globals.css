@@ -216,9 +216,9 @@ body {
   background: linear-gradient(
     to right,
     transparent,
-    rgba(255,255,255,0.30) 40%,
-    rgba(255,255,255,0.55) 50%,
-    rgba(255,255,255,0.30) 60%,
+    rgba(255,255,255,0.10) 40%,
+    rgba(255,255,255,0.20) 50%,
+    rgba(255,255,255,0.10) 60%,
     transparent
   );
   mix-blend-mode: screen;
