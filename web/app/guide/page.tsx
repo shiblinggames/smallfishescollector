@@ -24,7 +24,9 @@ export default function GuidePage() {
 
         <div className="w-full max-w-2xl flex flex-col gap-6">
 
-          <div className="sg-card px-8 py-7">
+          <div className="sg-card overflow-hidden">
+            <img src="/packopening.png" alt="Pack opening" className="w-full object-cover" />
+            <div className="px-8 py-7">
             <p className="font-cinzel font-700 text-[#f0ede8] text-base mb-4">What's in a Pack</p>
             <div className="flex flex-col gap-3 text-sm font-karla font-300 text-[#8a8880] leading-relaxed">
               <p>
@@ -37,6 +39,7 @@ export default function GuidePage() {
                 Pulling the rarest cards can unlock <span className="text-[#f0ede8] font-400">special real-world rewards</span> — including
                 discount codes and merch. Keep an eye out when something extraordinary lands.
               </p>
+            </div>
             </div>
           </div>
 
