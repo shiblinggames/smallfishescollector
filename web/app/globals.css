@@ -143,13 +143,13 @@ body {
 .border-pearl {
   background: conic-gradient(
     from var(--pearl-angle),
-    rgba(255,245,220,0.9),
-    rgba(255,210,200,0.85),
-    rgba(220,200,255,0.75),
-    rgba(255,230,180,0.9),
-    rgba(200,230,220,0.75),
-    rgba(255,220,210,0.85),
-    rgba(255,245,220,0.9)
+    #ffe8c0,
+    #ffb8c8,
+    #c8b0ff,
+    #b0e8dc,
+    #ffe0a0,
+    #ffb8d8,
+    #ffe8c0
   );
   animation: pearlReflect 5s linear infinite;
 }
