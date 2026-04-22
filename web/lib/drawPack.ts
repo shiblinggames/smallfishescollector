@@ -10,11 +10,34 @@ function weightedPick(variants: CardVariant[]): CardVariant {
   return variants[variants.length - 1]
 }
 
+const GOD_PACK_ELIGIBLE = new Set([
+  'Holographic', 'Ghost', 'Shadow', 'Prismatic',
+  'Kraken Edition', 'Davy Jones', 'Golden Age', 'Wanted', 'Storm',
+])
+
+// Custom weights per variant for god pack draws (independent of regular drop_weight)
+const GOD_PACK_WEIGHTS: Record<string, number> = {
+  'Holographic':    26,
+  'Ghost':          23,
+  'Shadow':         21,
+  'Prismatic':      15,
+  'Kraken Edition':  3,
+  'Davy Jones':      3,
+  'Golden Age':      3,
+  'Wanted':          3,
+  'Storm':           3,
+}
+
 export function drawGodPack(variants: CardVariant[]): DrawnCard[] {
-  const godPool = variants.filter((v) => v.drop_weight <= 6)
+  const godPool = variants
+    .filter((v) => GOD_PACK_ELIGIBLE.has(v.variant_name))
+    .map((v) => ({ ...v, drop_weight: GOD_PACK_WEIGHTS[v.variant_name] ?? v.drop_weight }))
   const drawn: DrawnCard[] = []
   for (let i = 0; i < 5; i++) {
-    drawn.push(toDrawn(weightedPick(godPool)))
+    // Restore original drop_weight so displayed % chance reflects the real odds
+    const picked = weightedPick(godPool)
+    const original = variants.find((v) => v.id === picked.id)!
+    drawn.push(toDrawn(original))
   }
   return drawn
 }
