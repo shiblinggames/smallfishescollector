@@ -3,7 +3,7 @@
 import { useActionState, useRef } from 'react'
 import { generateTokens } from './actions'
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://smallfishescollector.vercel.app'
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://seasthebooty.com'
 
 type Result = { email: string; packs: number; token: string }
 type State = { results: Result[]; error?: string }
