@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import FishCard from '@/components/FishCard'
 import type { Card } from '@/lib/types'
 import type { OwnedEntry } from './page'
@@ -50,7 +50,57 @@ function bestEntry(entries: OwnedEntry[]): OwnedEntry {
   )
 }
 
-const selectClass = 'bg-black border border-[rgba(240,237,232,0.35)] rounded-[10px] text-[#f0ede8] font-karla font-600 text-[0.8125rem] uppercase tracking-[0.12em] px-8 py-3 min-w-[10rem] cursor-pointer hover:border-[#f0ede8] transition-colors focus:outline-none focus:border-[#f0c040]'
+function Dropdown({ value, onChange, options }: {
+  value: string
+  onChange: (v: string) => void
+  options: { label: string; value: string }[]
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const current = options.find((o) => o.value === value) ?? options[0]
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="btn-ghost flex items-center justify-between gap-4 min-w-[10rem]"
+      >
+        <span>{current.label}</span>
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ opacity: 0.5, flexShrink: 0 }}>
+          <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      {open && (
+        <div
+          className="absolute top-full mt-2 left-0 z-50 min-w-full py-1.5"
+          style={{ background: '#0e0e0e', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10 }}
+        >
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className="w-full text-left px-5 py-2.5 font-karla font-400 text-xs uppercase tracking-[0.12em] transition-colors whitespace-nowrap"
+              style={{ color: opt.value === value ? '#f0c040' : '#f0ede8' }}
+              onMouseEnter={(e) => { if (opt.value !== value) (e.currentTarget as HTMLButtonElement).style.color = '#f0c040' }}
+              onMouseLeave={(e) => { if (opt.value !== value) (e.currentTarget as HTMLButtonElement).style.color = '#f0ede8' }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId }: Props) {
   const [tierFilter, setTierFilter]     = useState('')
@@ -110,20 +160,26 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
 
       {/* Filters */}
       <div className="flex flex-wrap justify-center gap-3 mb-10">
-        <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value)} className={selectClass}>
-          <option value="">All Tiers</option>
-          <option value="1">Tier 1</option>
-          <option value="2">Tier 2</option>
-          <option value="3">Tier 3</option>
-        </select>
-        <select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} className={selectClass}>
-          <option value="">All Rarities</option>
-          {RARITIES.map((r) => <option key={r} value={r}>{r}</option>)}
-        </select>
-        <select value={variantFilter} onChange={(e) => setVariantFilter(e.target.value)} className={selectClass}>
-          <option value="">All Variants</option>
-          {allVariantNames.map((v) => <option key={v} value={v}>{v}</option>)}
-        </select>
+        <Dropdown
+          value={tierFilter}
+          onChange={setTierFilter}
+          options={[
+            { label: 'All Tiers', value: '' },
+            { label: 'Tier 1', value: '1' },
+            { label: 'Tier 2', value: '2' },
+            { label: 'Tier 3', value: '3' },
+          ]}
+        />
+        <Dropdown
+          value={rarityFilter}
+          onChange={setRarityFilter}
+          options={[{ label: 'All Rarities', value: '' }, ...RARITIES.map((r) => ({ label: r, value: r }))]}
+        />
+        <Dropdown
+          value={variantFilter}
+          onChange={setVariantFilter}
+          options={[{ label: 'All Variants', value: '' }, ...allVariantNames.map((v) => ({ label: v, value: v }))]}
+        />
         {(tierFilter || rarityFilter || variantFilter) && (
           <button
             onClick={() => { setTierFilter(''); setRarityFilter(''); setVariantFilter('') }}
