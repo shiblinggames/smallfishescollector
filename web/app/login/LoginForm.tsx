@@ -79,7 +79,7 @@ export default function LoginForm() {
         <div className="flex-1 h-px bg-[rgba(255,255,255,0.08)]" />
       </div>
 
-      <GoogleButton />
+      <GoogleButton next={next} />
     </form>
   )
 }
