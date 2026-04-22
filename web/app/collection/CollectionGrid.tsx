@@ -194,22 +194,24 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants 
                 .map((e) => {
                   const isFeatured = displayEntry(modal.card.id, modal.entries).variantId === e.variantId
                   return (
-                    <div key={e.variantId} className="flex flex-col items-center gap-2">
-                      <FishCard
-                        name={modal.card.name}
-                        filename={modal.card.filename}
-                        borderStyle={e.borderStyle}
-                        artEffect={e.artEffect}
-                        variantName={e.variantName}
-                        dropWeight={e.dropWeight}
-                      />
-                      <button
-                        onClick={() => pinVariant(modal.card.id, e.variantId)}
-                        className="font-karla font-600 text-[0.62rem] uppercase tracking-[0.12em] transition-colors"
-                        style={{ color: isFeatured ? '#f0c040' : '#8a8880' }}
+                    <div
+                      key={e.variantId}
+                      className="flex flex-col items-center gap-2 cursor-pointer"
+                      onClick={() => pinVariant(modal.card.id, e.variantId)}
+                    >
+                      <div
+                        className="rounded-full transition-all duration-200"
+                        style={isFeatured ? { outline: '2px solid #f0c040', outlineOffset: '5px' } : {}}
                       >
-                        {isFeatured ? '★ Featured' : 'Feature'}
-                      </button>
+                        <FishCard
+                          name={modal.card.name}
+                          filename={modal.card.filename}
+                          borderStyle={e.borderStyle}
+                          artEffect={e.artEffect}
+                          variantName={e.variantName}
+                          dropWeight={e.dropWeight}
+                        />
+                      </div>
                     </div>
                   )
                 })}
