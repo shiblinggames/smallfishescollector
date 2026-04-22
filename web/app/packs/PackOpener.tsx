@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { rarityFromWeight } from '@/lib/variants'
 import FishCard from '@/components/FishCard'
 import PrizeModal from '@/components/PrizeModal'
