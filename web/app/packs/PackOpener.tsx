@@ -12,8 +12,6 @@ import type { OpenPackResponse } from './actions'
 
 function cardBackBorderStyle(borderStyle: BorderStyle): React.CSSProperties {
   switch (borderStyle) {
-    case 'silver':      return { borderColor: 'rgba(156,163,175,0.45)' }
-    case 'gold':        return { borderColor: 'rgba(240,192,64,0.45)' }
     case 'void':        return { borderColor: 'rgba(168,85,247,0.45)' }
     case 'kraken':      return { borderColor: 'rgba(0,204,153,0.45)' }
     case 'davy-jones':  return { borderColor: 'rgba(30,106,144,0.45)' }
