@@ -7,8 +7,28 @@ import { rarityFromWeight } from '@/lib/variants'
 import FishCard from '@/components/FishCard'
 import PrizeModal from '@/components/PrizeModal'
 import { openPack as openPackAction } from './actions'
-import type { DrawnCard } from '@/lib/types'
+import type { DrawnCard, BorderStyle } from '@/lib/types'
 import type { OpenPackResponse } from './actions'
+
+function cardBackBorderStyle(borderStyle: BorderStyle): React.CSSProperties {
+  switch (borderStyle) {
+    case 'silver':      return { borderColor: 'rgba(156,163,175,0.45)' }
+    case 'gold':        return { borderColor: 'rgba(240,192,64,0.45)' }
+    case 'void':        return { borderColor: 'rgba(168,85,247,0.45)' }
+    case 'kraken':      return { borderColor: 'rgba(0,204,153,0.45)' }
+    case 'davy-jones':  return { borderColor: 'rgba(30,106,144,0.45)' }
+    case 'golden-age':  return { borderColor: 'rgba(232,184,48,0.45)' }
+    case 'storm':       return { borderColor: 'rgba(74,136,200,0.45)' }
+    case 'wanted':      return { borderColor: 'rgba(170,64,16,0.45)' }
+    case 'prismatic':   return {
+      borderColor: 'transparent',
+      backgroundImage: 'linear-gradient(#000 0 0), linear-gradient(90deg,#ff0080,#ff8c00,#ffe600,#00ff88,#00cfff,#8a5cf7)',
+      backgroundOrigin: 'padding-box, border-box',
+      backgroundClip: 'padding-box, border-box',
+    }
+    default:            return {}
+  }
+}
 
 interface Props {
   packsAvailable: number
@@ -223,7 +243,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
                 </svg>
                 <p className="sg-eyebrow text-[0.6rem]">Reveal</p>
               </div>
-              <div className="flip-card-back w-full h-full bg-black flex items-center justify-center p-3">
+              <div className="flip-card-back w-full h-full bg-black flex items-center justify-center p-3" style={cardBackBorderStyle(card.borderStyle)}>
                 <FishCard
                   name={card.name}
                   filename={card.filename}
