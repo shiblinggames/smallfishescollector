@@ -19,7 +19,7 @@ function AccordionItem({ title, children }: { title: string; children: React.Rea
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-8 py-5 text-left"
       >
-        <p className="sg-eyebrow">{title}</p>
+        <p className="sg-eyebrow" style={{ color: '#f0ede8' }}>{title}</p>
         <svg
           width="14" height="14" viewBox="0 0 14 14" fill="none"
           className="flex-shrink-0 transition-transform duration-200"
