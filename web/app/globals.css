@@ -535,6 +535,16 @@ body {
   54%  { opacity: 0.38; }
   100% { opacity: 0; }
 }
+@keyframes reveal-flash-godpack {
+  0%   { opacity: 1; }
+  18%  { opacity: 0.88; }
+  100% { opacity: 0; }
+}
+@keyframes godpack-title {
+  0%   { opacity: 0; transform: scale(0.88) translateY(6px); }
+  30%  { opacity: 1; transform: scale(1.04) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
 .reveal-flash {
   position: fixed;
   inset: 0;
@@ -544,3 +554,5 @@ body {
 .reveal-flash-epic      { background: radial-gradient(ellipse at center, rgba(168,85,247,0.28) 0%, transparent 70%);                                                    animation: reveal-flash              0.9s ease-out forwards; }
 .reveal-flash-legendary { background: radial-gradient(ellipse at center, rgba(255,200,64,0.38) 0%, rgba(255,0,128,0.12) 50%, transparent 70%);                         animation: reveal-flash              1.2s ease-out forwards; }
 .reveal-flash-mythic    { background: radial-gradient(ellipse at center, rgba(255,255,255,0.65) 0%, rgba(0,220,165,0.3) 40%, rgba(248,192,64,0.1) 65%, transparent 80%); animation: reveal-flash-mythic-pulse 2.2s ease-out forwards; }
+.reveal-flash-godpack   { background: radial-gradient(ellipse 80% 60% at 50% 38%, rgba(255,255,255,1) 0%, rgba(255,245,180,0.75) 18%, rgba(255,210,80,0.35) 40%, rgba(255,180,0,0.12) 60%, transparent 78%); animation: reveal-flash-godpack 4s ease-out forwards; }
+.godpack-title { animation: godpack-title 1.0s cubic-bezier(0.16,1,0.3,1) forwards; }

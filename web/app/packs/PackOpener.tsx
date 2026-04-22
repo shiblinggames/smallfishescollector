@@ -101,7 +101,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
     setCards(result.drawn)
     setFlipped(new Array(5).fill(false))
     setGlowClasses(new Array(5).fill(''))
-    setFlash(result.isGodPack ? { type: 'mythic', key: Date.now() } : null)
+    setFlash(result.isGodPack ? { type: 'godpack', key: Date.now() } : null)
     setPacks(result.packsRemaining ?? packs - 1)
     setPhase('reveal')
     setLoading(false)
@@ -229,9 +229,9 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
         />
       )}
       {isGodPack && (
-        <div className="text-center">
-          <p className="font-cinzel font-900 tracking-[0.2em] uppercase text-sm"
-             style={{ background: 'linear-gradient(90deg,#ff0080,#ff8c00,#ffe600,#00ff88,#00cfff,#8a5cf7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+        <div className="text-center godpack-title">
+          <p className="font-cinzel font-700 tracking-[0.35em] uppercase"
+             style={{ fontSize: 'clamp(1.1rem, 3vw, 1.6rem)', color: '#fff8e8', textShadow: '0 0 24px rgba(255,220,120,0.9), 0 0 60px rgba(255,200,60,0.5), 0 0 100px rgba(255,180,0,0.3)' }}>
             God Pack
           </p>
         </div>
