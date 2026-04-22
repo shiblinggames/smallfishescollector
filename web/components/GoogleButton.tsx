@@ -5,12 +5,9 @@ import { createClient } from '@/lib/supabase/client'
 export default function GoogleButton({ next }: { next?: string }) {
   async function signInWithGoogle() {
     const supabase = createClient()
-    const callbackUrl = next
-      ? `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`
-      : `${location.origin}/auth/callback`
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: callbackUrl },
+      options: { redirectTo: `${location.origin}/auth/callback?next=%2Fpacks` },
     })
   }
 
