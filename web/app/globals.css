@@ -281,15 +281,15 @@ body {
   );
   animation: krakenSpin 5s linear infinite;
 }
-.art-kraken { filter: hue-rotate(175deg) brightness(0.80) saturate(2.2); }
+.art-kraken { filter: hue-rotate(175deg) brightness(0.55) saturate(4.0) contrast(1.3); }
 @keyframes bioGlow {
-  0%, 100% { opacity: 0.45; }
-  50%       { opacity: 0.90; }
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 1.0; }
 }
 .art-kraken-overlay {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 65%, rgba(0,210,160,0.6) 0%, rgba(0,120,90,0.25) 45%, transparent 70%);
+  background: radial-gradient(ellipse at 50% 60%, rgba(0,230,170,0.75) 0%, rgba(0,160,110,0.45) 40%, rgba(0,80,60,0.2) 65%, transparent 80%);
   mix-blend-mode: screen;
   animation: bioGlow 3s ease-in-out infinite;
   pointer-events: none;
