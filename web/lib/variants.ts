@@ -33,7 +33,7 @@ export const RARITY_COLOR: Record<string, string> = {
   Rare:      '#60a5fa',
   Epic:      '#a78bfa',
   Legendary: '#f0c040',
-  Mythic:    '#00cc99',
+  Mythic:    '#ff3838',
 }
 
 export const IS_LEGENDARY_RARITY = (rarity: string) => rarity === 'Legendary'

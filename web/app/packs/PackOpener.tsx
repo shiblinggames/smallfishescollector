@@ -47,6 +47,8 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
   const [loading, setLoading] = useState(false)
   const [newVariantIds, setNewVariantIds] = useState<Set<number>>(new Set())
   const [isGodPack, setIsGodPack] = useState(false)
+  const [shockwaveCards, setShockwaveCards] = useState<Set<number>>(new Set())
+  const [mythicFeatured, setMythicFeatured] = useState<number | null>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
 
   function getInner(i: number) {
@@ -156,6 +158,12 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
     setGlowClasses((prev) => { const n = [...prev]; n[i] = glowClassFor(rarity); return n })
     triggerFlash(rarity)
     checkPrize(cards[i])
+    if (rarity === 'Mythic') {
+      setMythicFeatured(i)
+      setShockwaveCards((prev) => new Set([...prev, i]))
+      setTimeout(() => setMythicFeatured(null), 2500)
+      setTimeout(() => setShockwaveCards((prev) => { const n = new Set(prev); n.delete(i); return n }), 1600)
+    }
     setFlipped((prev) => {
       const n = [...prev]
       n[i] = true
@@ -185,6 +193,8 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
     setPrize(null)
     setIsGodPack(false)
     setNewVariantIds(new Set())
+    setShockwaveCards(new Set())
+    setMythicFeatured(null)
     router.refresh()
   }
 
@@ -242,7 +252,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
             <div
               ref={(el) => { cardRefs.current[i] = el }}
               className={`flip-card select-none ${flipped[i] ? 'flipped' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
-              style={{ width: 160, height: 248 }}
+              style={{ width: 160, height: 248, opacity: mythicFeatured !== null && mythicFeatured !== i ? 0.2 : 1, transition: 'opacity 0.3s ease' }}
               onClick={() => flipCard(i)}
               onMouseMove={(e) => handleMouseMove(e, i)}
               onMouseLeave={(e) => handleMouseLeave(e, i)}
@@ -271,6 +281,13 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
                 />
               </div>
             </div>
+            {shockwaveCards.has(i) && (
+              <>
+                <div className="shockwave-ring" />
+                <div className="shockwave-ring shockwave-ring-2" />
+                <div className="shockwave-ring shockwave-ring-3" />
+              </>
+            )}
             </div>
             {flipped[i] && newVariantIds.has(card.variantId) && (
               <p className="new-badge">New</p>
