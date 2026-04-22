@@ -17,12 +17,7 @@ interface ModalCard {
   entries: OwnedEntry[]
 }
 
-const TABS = [
-  { label: 'All',    tier: 0 },
-  { label: 'Tier 1', tier: 1 },
-  { label: 'Tier 2', tier: 2 },
-  { label: 'Tier 3', tier: 3 },
-]
+const RARITIES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic']
 
 const VARIANT_RANK: Record<string, number> = {
   Prismatic: 7, Shadow: 6, Ghost: 5, Holographic: 4, Gold: 3, Silver: 2, Standard: 1,
@@ -34,12 +29,25 @@ function bestEntry(entries: OwnedEntry[]): OwnedEntry {
   )
 }
 
+const selectClass = 'bg-black border border-[rgba(255,255,255,0.12)] text-[#f0ede8] font-karla font-400 text-xs uppercase tracking-[0.12em] px-3 py-2 appearance-none cursor-pointer hover:border-[rgba(255,255,255,0.3)] transition-colors focus:outline-none focus:border-[#f0c040]'
 
 export default function CollectionGrid({ allCards, ownedByCardId, totalVariants }: Props) {
-  const [activeTier, setActiveTier] = useState(0)
+  const [tierFilter, setTierFilter]     = useState('')
+  const [rarityFilter, setRarityFilter] = useState('')
+  const [variantFilter, setVariantFilter] = useState('')
   const [modal, setModal] = useState<ModalCard | null>(null)
 
-  const filtered = activeTier === 0 ? allCards : allCards.filter((c) => c.tier === activeTier)
+  const allVariantNames = Array.from(new Set(
+    Object.values(ownedByCardId).flatMap((entries) => entries.map((e) => e.variantName))
+  )).sort()
+
+  const filtered = allCards.filter((card) => {
+    if (tierFilter && card.tier !== parseInt(tierFilter)) return false
+    const entries = ownedByCardId[card.id] ?? []
+    if (rarityFilter && !entries.some((e) => rarityFromWeight(e.dropWeight) === rarityFilter)) return false
+    if (variantFilter && !entries.some((e) => e.variantName === variantFilter)) return false
+    return true
+  })
   const fishDiscovered = allCards.filter((c) => ownedByCardId[c.id]?.length > 0).length
   const uniqueVariantsOwned = Object.values(ownedByCardId).reduce((sum, entries) => sum + entries.length, 0)
 
@@ -62,21 +70,30 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants 
         </div>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex justify-center gap-3 mb-10">
-        {TABS.map((tab) => (
+      {/* Filters */}
+      <div className="flex flex-wrap justify-center gap-3 mb-10">
+        <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value)} className={selectClass}>
+          <option value="">All Tiers</option>
+          <option value="1">Tier 1</option>
+          <option value="2">Tier 2</option>
+          <option value="3">Tier 3</option>
+        </select>
+        <select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} className={selectClass}>
+          <option value="">All Rarities</option>
+          {RARITIES.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <select value={variantFilter} onChange={(e) => setVariantFilter(e.target.value)} className={selectClass}>
+          <option value="">All Variants</option>
+          {allVariantNames.map((v) => <option key={v} value={v}>{v}</option>)}
+        </select>
+        {(tierFilter || rarityFilter || variantFilter) && (
           <button
-            key={tab.tier}
-            onClick={() => setActiveTier(tab.tier)}
-            className={`font-karla font-600 text-xs uppercase tracking-[0.20em] px-4 py-2 border transition-colors duration-200 ${
-              activeTier === tab.tier
-                ? 'border-[#f0c040] text-[#f0c040]'
-                : 'border-[rgba(255,255,255,0.08)] text-[#8a8880] hover:border-[rgba(255,255,255,0.20)] hover:text-[#f0ede8]'
-            }`}
+            onClick={() => { setTierFilter(''); setRarityFilter(''); setVariantFilter('') }}
+            className="font-karla font-300 text-[0.7rem] uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors px-2"
           >
-            {tab.label}
+            Clear
           </button>
-        ))}
+        )}
       </div>
 
       {/* Grid */}
