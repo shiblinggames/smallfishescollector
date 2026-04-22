@@ -215,7 +215,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
           </p>
           {packs > 0 ? (
             <button onClick={openPack} disabled={loading} className="btn-gold">
-              {loading ? 'Drawing…' : 'Open Pack'}
+              {loading ? 'Fishing…' : 'Open Pack'}
             </button>
           ) : (
             <div className="flex flex-col items-center gap-4">
@@ -315,7 +315,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
           <div className="flex gap-4 flex-wrap justify-center">
             {packs > 0 && (
               <button onClick={openPack} disabled={loading} className="btn-gold">
-                {loading ? 'Drawing…' : `Open Another · ${packs} Left`}
+                {loading ? 'Fishing…' : `Open Another · ${packs} Left`}
               </button>
             )}
             <button onClick={() => router.push('/collection')} className="btn-ghost">
