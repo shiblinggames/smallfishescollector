@@ -30,9 +30,10 @@ export default function ClaimContent() {
       if (!user) {
         if (emailParam) {
           setStatus('sending_magic_link')
+          const claimRedirect = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://seasthebooty.com'}/auth/callback?next=${encodeURIComponent(`/claim?token=${token}`)}`
           await supabase.auth.signInWithOtp({
             email: emailParam,
-            options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://seasthebooty.com'}/auth/callback` },
+            options: { emailRedirectTo: claimRedirect },
           })
           setStatus('magic_link_sent')
         } else {
