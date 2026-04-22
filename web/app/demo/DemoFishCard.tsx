@@ -38,6 +38,7 @@ const variantLabelColor: Record<BorderStyle, string> = {
   standard:      '#8a8880',
   silver:        '#9ca3af',
   gold:          '#f0c040',
+  pearl:         '#e8d5b0',
   prismatic:     'transparent',
   void:          '#a855f7',
   kraken:        '#00cc99',
