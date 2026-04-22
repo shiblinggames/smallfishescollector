@@ -505,10 +505,9 @@ body {
   100% { filter: drop-shadow(0 0 0px rgba(168,85,247,0)); }
 }
 @keyframes reveal-glow-legendary {
-  0%   { filter: drop-shadow(0 0 28px rgba(255,0,128,1)); }
-  30%  { filter: drop-shadow(0 0 28px rgba(255,140,0,0.9)); }
-  65%  { filter: drop-shadow(0 0 22px rgba(0,255,136,0.7)); }
-  100% { filter: drop-shadow(0 0 0px rgba(255,215,0,0)); }
+  0%   { filter: drop-shadow(0 0 32px rgba(255,210,60,1)); }
+  50%  { filter: drop-shadow(0 0 20px rgba(255,190,40,0.65)); }
+  100% { filter: drop-shadow(0 0 0px rgba(255,200,60,0)); }
 }
 @keyframes reveal-glow-mythic {
   0%   { filter: drop-shadow(0 0 90px rgba(255,255,255,1))   drop-shadow(0 0 45px rgba(0,220,165,0.95)); transform: scale(1.14); }
