@@ -416,6 +416,8 @@ body {
   inset: 0;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  border-radius: 10px;
+  overflow: hidden;
 }
 .flip-card-back {
   transform: rotateY(180deg);
