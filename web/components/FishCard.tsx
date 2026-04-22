@@ -213,6 +213,8 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
       return { background: RAINBOW, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }
     if (isHolographicLabel)
       return { background: HOLO_SHIMMER, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }
+    if (borderStyle === 'silver') return { color: '#9ca3af' }
+    if (borderStyle === 'gold')   return { color: '#f0c040' }
     if (artEffect === 'ghost')   return { color: '#a8c8f0' }
     if (artEffect === 'shadow')  return { color: '#9b7fe8' }
     if (borderStyle === 'pearl') return { color: '#e8d5b0' }
