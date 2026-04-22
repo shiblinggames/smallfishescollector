@@ -43,9 +43,9 @@ export default function PrizeModal({ cardName, variantName, prizeCode, onClose }
 
         <p className="font-karla font-300 text-[#8a8880] text-sm leading-relaxed">
           Reach out to us at{' '}
-          <a href="https://shiblinggames.com" target="_blank" rel="noopener noreferrer"
+          <a href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game" target="_blank" rel="noopener noreferrer"
              className="text-[#f0c040] hover:text-[#ffd966] transition-colors">
-            shiblinggames.com
+            shiblingshop.com
           </a>{' '}
           with this code to claim your prize.
         </p>

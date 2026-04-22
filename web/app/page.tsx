@@ -25,9 +25,9 @@ export default async function HomePage() {
           special editions — with a real chance to win prizes and discounts.
         </p>
 
-        <a href="https://shiblinggames.com" target="_blank" rel="noopener noreferrer"
+        <a href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game" target="_blank" rel="noopener noreferrer"
            className="inline-block font-karla font-600 text-[0.7rem] uppercase tracking-[0.14em] text-[#f0c040] hover:text-[#ffd966] transition-colors mb-10">
-          Buy the Game at shiblinggames.com →
+          Buy the Game →
         </a>
 
         <div className="flex gap-4 justify-center mb-12">

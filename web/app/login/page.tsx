@@ -22,12 +22,12 @@ export default function LoginPage() {
             Chance to win special prizes and discounts.
           </p>
           <a
-            href="https://shiblinggames.com"
+            href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block mt-2 font-karla font-600 text-[0.7rem] uppercase tracking-[0.12em] text-[#f0c040] hover:text-[#ffd966] transition-colors"
           >
-            Buy the Game at shiblinggames.com →
+            Buy the Game →
           </a>
         </div>
 
