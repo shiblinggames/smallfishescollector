@@ -2,13 +2,14 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { drawPack } from '@/lib/drawPack'
+import { drawPack, drawGodPack } from '@/lib/drawPack'
 import type { CardVariant, DrawnCard } from '@/lib/types'
 
 export interface OpenPackResponse {
   drawn?: DrawnCard[]
   newVariantIds?: number[]
   packsRemaining?: number
+  isGodPack?: boolean
   error?: string
 }
 
@@ -45,7 +46,8 @@ export async function openPack(): Promise<OpenPackResponse> {
     .select('id, card_id, variant_name, border_style, art_effect, drop_weight, cards(id, name, slug, filename, tier)')
 
   const variants = (variantRows ?? []) as unknown as CardVariant[]
-  const drawn = drawPack(variants)
+  const isGodPack = Math.random() < 1 / 1000
+  const drawn = isGodPack ? drawGodPack(variants) : drawPack(variants)
 
   // Check what the user already owns
   const { data: existing } = await admin
@@ -66,5 +68,6 @@ export async function openPack(): Promise<OpenPackResponse> {
     drawn,
     newVariantIds: newCards.map((d) => d.variantId),
     packsRemaining: decremented.packs_available,
+    isGodPack,
   }
 }

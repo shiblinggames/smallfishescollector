@@ -45,6 +45,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
   const [prize, setPrize] = useState<{ cardName: string; variantName: string; prizeCode: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const [newVariantIds, setNewVariantIds] = useState<Set<number>>(new Set())
+  const [isGodPack, setIsGodPack] = useState(false)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
 
   function getInner(i: number) {
@@ -95,10 +96,11 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
     }
 
     setNewVariantIds(new Set(result.newVariantIds ?? []))
+    setIsGodPack(result.isGodPack ?? false)
     setCards(result.drawn)
     setFlipped(new Array(5).fill(false))
     setGlowClasses(new Array(5).fill(''))
-    setFlash(null)
+    setFlash(result.isGodPack ? { type: 'mythic', key: Date.now() } : null)
     setPacks(result.packsRemaining ?? packs - 1)
     setPhase('reveal')
     setLoading(false)
@@ -180,6 +182,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
     setGlowClasses([])
     setFlash(null)
     setPrize(null)
+    setIsGodPack(false)
     setNewVariantIds(new Set())
     router.refresh()
   }
@@ -223,6 +226,14 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
           prizeCode={prize.prizeCode}
           onClose={() => setPrize(null)}
         />
+      )}
+      {isGodPack && (
+        <div className="text-center">
+          <p className="font-cinzel font-900 tracking-[0.2em] uppercase text-sm"
+             style={{ background: 'linear-gradient(90deg,#ff0080,#ff8c00,#ffe600,#00ff88,#00cfff,#8a5cf7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            God Pack
+          </p>
+        </div>
       )}
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-8">
         {cards.map((card, i) => (

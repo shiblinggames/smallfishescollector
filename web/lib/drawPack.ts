@@ -10,6 +10,15 @@ function weightedPick(variants: CardVariant[]): CardVariant {
   return variants[variants.length - 1]
 }
 
+export function drawGodPack(variants: CardVariant[]): DrawnCard[] {
+  const godPool = variants.filter((v) => v.drop_weight <= 6)
+  const drawn: DrawnCard[] = []
+  for (let i = 0; i < 5; i++) {
+    drawn.push(toDrawn(weightedPick(godPool)))
+  }
+  return drawn
+}
+
 export function drawPack(variants: CardVariant[]): DrawnCard[] {
   const drawn: DrawnCard[] = []
   for (let i = 0; i < 5; i++) {
