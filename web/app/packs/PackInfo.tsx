@@ -42,12 +42,18 @@ export default function PackInfo() {
     <div className="w-full max-w-2xl mt-20 flex flex-col gap-3">
 
       <AccordionItem title="What's in a Pack">
-        <p className="font-karla font-300 text-[#8a8880] text-sm leading-relaxed">
-          Each pack contains <span className="text-[#f0ede8] font-400">5 cards</span> drawn from the full pool of fish and variants.
-          Every pack is guaranteed to include at least one <span className="text-[#60a5fa] font-400">Rare</span> or better.
-          After 20 packs without a Legendary, the tide turns — your next pack is guaranteed a{' '}
-          <span className="text-[#f0c040] font-400">Legendary</span> or better.
-        </p>
+        <div className="flex flex-col gap-3 text-sm font-karla font-300 text-[#8a8880] leading-relaxed">
+          <p>
+            Each pack contains <span className="text-[#f0ede8] font-400">5 cards</span> drawn from the full pool of fish and variants.
+            Every pack is guaranteed to include at least one <span className="text-[#60a5fa] font-400">Rare</span> or better.
+            After 20 packs without a Legendary, the tide turns — your next pack is guaranteed a{' '}
+            <span className="text-[#f0c040] font-400">Legendary</span> or better.
+          </p>
+          <p>
+            Pulling the rarest cards can unlock <span className="text-[#f0ede8] font-400">special real-world rewards</span> — including
+            discount codes and merch. Keep an eye out when something extraordinary lands.
+          </p>
+        </div>
       </AccordionItem>
 
       <AccordionItem title="Rarity Guide">
