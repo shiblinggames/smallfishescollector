@@ -18,7 +18,7 @@ export default async function CollectionPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: allCards }, { data: owned }, { data: profile }, { count: totalVariants }] = await Promise.all([
+  const [{ data: allCards }, { data: owned }, { data: profile }, { count: totalVariants }, { data: allVariants }] = await Promise.all([
     supabase.from('cards').select('*').order('tier').order('name'),
     supabase
       .from('user_collection')
@@ -26,7 +26,13 @@ export default async function CollectionPage() {
       .eq('user_id', user.id),
     supabase.from('profiles').select('packs_available').eq('id', user.id).single(),
     supabase.from('card_variants').select('*', { count: 'exact', head: true }),
+    supabase.from('card_variants').select('card_id'),
   ])
+
+  const totalVariantsByCardId: Record<number, number> = {}
+  for (const v of allVariants ?? []) {
+    totalVariantsByCardId[v.card_id] = (totalVariantsByCardId[v.card_id] ?? 0) + 1
+  }
 
   // Build map: card_id → OwnedEntry[] (one entry per unique variant, with count for dupes)
   const ownedByCardId: Record<number, OwnedEntry[]> = {}
@@ -66,6 +72,7 @@ export default async function CollectionPage() {
           allCards={(allCards ?? []) as Card[]}
           ownedByCardId={ownedByCardId}
           totalVariants={totalVariants ?? 0}
+          totalVariantsByCardId={totalVariantsByCardId}
         />
       </main>
     </>

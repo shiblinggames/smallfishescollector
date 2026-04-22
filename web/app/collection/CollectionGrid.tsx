@@ -19,6 +19,7 @@ interface Props {
   allCards: Card[]
   ownedByCardId: Record<number, OwnedEntry[]>
   totalVariants: number
+  totalVariantsByCardId: Record<number, number>
 }
 
 interface ModalCard {
@@ -51,7 +52,7 @@ function bestEntry(entries: OwnedEntry[]): OwnedEntry {
 
 const selectClass = 'bg-black border border-[rgba(255,255,255,0.12)] text-[#f0ede8] font-karla font-400 text-xs uppercase tracking-[0.12em] px-3 py-2 appearance-none cursor-pointer hover:border-[rgba(255,255,255,0.3)] transition-colors focus:outline-none focus:border-[#f0c040]'
 
-export default function CollectionGrid({ allCards, ownedByCardId, totalVariants }: Props) {
+export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId }: Props) {
   const [tierFilter, setTierFilter]     = useState('')
   const [rarityFilter, setRarityFilter] = useState('')
   const [variantFilter, setVariantFilter] = useState('')
@@ -155,8 +156,8 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants 
                 />
               </div>
 
-              <p className="font-karla font-300 text-[0.68rem] text-[#8a8880] tracking-[0.20em] uppercase">
-                T{card.tier}
+              <p className="font-karla font-300 text-[0.62rem] text-[#8a8880] tracking-wide">
+                {entries.length} <span className="text-[#555350]">/ {totalVariantsByCardId[card.id] ?? '?'}</span>
               </p>
             </div>
           )
