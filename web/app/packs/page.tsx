@@ -25,7 +25,7 @@ export default async function PacksPage() {
         <p className="sg-eyebrow text-center mb-3">Booster Packs</p>
         <h1 className="font-cinzel font-700 text-[#f0ede8] text-center leading-[0.92] tracking-[-0.01em] mb-12"
             style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}>
-          Open Pack.
+          Go Fishing.
         </h1>
         <PackOpener packsAvailable={packsAvailable} />
         {stats && <PackStatsToggle stats={stats} history={history} />}
