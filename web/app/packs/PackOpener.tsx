@@ -249,10 +249,15 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
             <div className="flip-card-inner w-full h-full">
               <div className="flip-card-front w-full h-full bg-black border-[3px] border-[rgba(255,255,255,0.08)] flex flex-col items-center justify-center gap-3">
                 <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                  <path d="M4 16C4 16 8 6 16 6C24 6 28 16 28 16C28 16 24 26 16 26C8 26 4 16 4 16Z" stroke="#8a8880" strokeWidth="1.6" fill="none"/>
-                  <circle cx="16" cy="16" r="4" stroke="#f0c040" strokeWidth="1.6" fill="none"/>
+                  {/* Hook shaft — curves down then bends into the barb */}
+                  <path d="M18 4 C18 4 18 18 18 22 C18 27 13 29 10 26 C7 23 9 19 12 19"
+                        stroke="#8a8880" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+                  {/* Barb tip */}
+                  <path d="M12 19 L10 17" stroke="#f0c040" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+                  {/* Eye of the hook */}
+                  <circle cx="18" cy="5" r="2.2" stroke="#8a8880" strokeWidth="1.6" fill="none"/>
                 </svg>
-                <p className="sg-eyebrow text-[0.6rem]">Reveal</p>
+                <p className="sg-eyebrow text-[0.6rem]">Open</p>
               </div>
               <div className="flip-card-back w-full h-full bg-black flex items-center justify-center p-3" style={cardBackBorderStyle(card.borderStyle, card.artEffect)}>
                 <FishCard
@@ -275,7 +280,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
 
       {phase !== 'done' && flipped.some((f) => !f) ? (
         <button onClick={flipAll} className="btn-gold">
-          Reveal All
+          Open All
         </button>
       ) : phase === 'done' ? (
         <div className="flex gap-4 flex-wrap justify-center">
