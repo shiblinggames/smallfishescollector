@@ -10,11 +10,14 @@ export default async function PacksPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, stats, history] = await Promise.all([
+  const [{ data: profile }, { count: packHistoryCount }, stats, history] = await Promise.all([
     supabase.from('profiles').select('packs_available').eq('id', user.id).single(),
+    supabase.from('pack_history').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     getPackStats(),
     getPackHistory(),
   ])
+
+  if (packHistoryCount === 0) redirect('/guide')
 
   const packsAvailable = profile?.packs_available ?? 0
 

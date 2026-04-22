@@ -90,6 +90,12 @@ export default function GuidePage() {
             </div>
           </div>
 
+          <div className="flex justify-center pt-2">
+            <a href="/packs" className="btn-gold">
+              Open Packs
+            </a>
+          </div>
+
         </div>
       </main>
     </>
