@@ -257,7 +257,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
                   {/* Eye of the hook */}
                   <circle cx="18" cy="5" r="2.2" stroke="#8a8880" strokeWidth="1.6" fill="none"/>
                 </svg>
-                <p className="sg-eyebrow text-[0.6rem]">Open</p>
+                <p className="sg-eyebrow text-[0.6rem]" style={{ color: '#8a8880' }}>Open</p>
               </div>
               <div className="flip-card-back w-full h-full bg-black flex items-center justify-center p-3" style={cardBackBorderStyle(card.borderStyle, card.artEffect)}>
                 <FishCard
