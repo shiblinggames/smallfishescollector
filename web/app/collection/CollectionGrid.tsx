@@ -102,7 +102,6 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants 
           const entries = ownedByCardId[card.id] ?? []
           const isOwned = entries.length > 0
           const best = isOwned ? bestEntry(entries) : null
-          const totalOwned = entries.reduce((s, e) => s + e.count, 0)
 
           return (
             <div key={card.id} className="flex flex-col items-center gap-2">
@@ -117,11 +116,6 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants 
                   artEffect={best?.artEffect ?? 'normal'}
                   unowned={!isOwned}
                 />
-                {totalOwned > 1 && (
-                  <span className="absolute -top-1 -right-1 bg-[#f0c040] text-black font-karla font-600 text-[0.6rem] w-5 h-5 flex items-center justify-center">
-                    {totalOwned}
-                  </span>
-                )}
               </div>
 
               <p className="font-karla font-300 text-[0.68rem] text-[#8a8880] tracking-[0.20em] uppercase">
@@ -135,11 +129,13 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants 
       {/* Variant detail modal */}
       {modal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: 'rgba(0,0,0,0.94)', backdropFilter: 'blur(8px)' }}
           onClick={() => setModal(null)}
         >
           <div
-            className="sg-card max-w-lg w-full p-8 relative"
+            className="max-w-lg w-full p-8 relative"
+            style={{ background: '#0e0e0e', border: '1px solid rgba(255,255,255,0.1)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -159,7 +155,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants 
                 .slice()
                 .sort((a, b) => (VARIANT_RANK[b.variantName] ?? 0) - (VARIANT_RANK[a.variantName] ?? 0))
                 .map((e) => (
-                  <div key={e.variantId} className="relative">
+                  <div key={e.variantId}>
                     <FishCard
                       name={modal.card.name}
                       filename={modal.card.filename}
@@ -168,11 +164,6 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants 
                       variantName={e.variantName}
                       dropWeight={e.dropWeight}
                     />
-                    {e.count > 1 && (
-                      <span className="absolute -top-1 -right-1 bg-[#f0c040] text-black font-karla font-600 text-[0.6rem] w-5 h-5 flex items-center justify-center">
-                        ×{e.count}
-                      </span>
-                    )}
                   </div>
                 ))}
             </div>
