@@ -33,9 +33,20 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
     if (!user) { router.push('/login'); return }
 
     const drawn = drawPack(variants)
-    await supabase.from('user_collection').insert(
-      drawn.map((d) => ({ user_id: user.id, card_variant_id: d.variantId }))
-    )
+
+    const { data: existing } = await supabase
+      .from('user_collection')
+      .select('card_variant_id')
+      .eq('user_id', user.id)
+
+    const ownedIds = new Set((existing ?? []).map((r) => r.card_variant_id))
+    const newCards = drawn.filter((d) => !ownedIds.has(d.variantId))
+
+    if (newCards.length > 0) {
+      await supabase.from('user_collection').insert(
+        newCards.map((d) => ({ user_id: user.id, card_variant_id: d.variantId }))
+      )
+    }
     await supabase.from('profiles').update({ packs_available: packs - 1 }).eq('id', user.id)
 
     setCards(drawn)
