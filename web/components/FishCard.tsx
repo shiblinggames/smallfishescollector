@@ -205,11 +205,14 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
   const isMythic    = rarity ? IS_MYTHIC_RARITY(rarity)    : false
   const mythicGrad  = mythicGradient[borderStyle]
 
-  const RAINBOW = 'linear-gradient(90deg,#ff0080,#ff8c00,#ffe600,#00ff88,#00cfff,#8a5cf7)'
+  const RAINBOW      = 'linear-gradient(90deg,#ff0080,#ff8c00,#ffe600,#00ff88,#00cfff,#8a5cf7)'
+  const HOLO_SHIMMER = 'linear-gradient(90deg,#c8d0e0,#e8e0f0,#c8ddf8,#dcd0f0,#f0e4d0,#c8d0e0)'
 
   function variantNameStyle(): React.CSSProperties {
-    if (isPrismaticLabel || isHolographicLabel)
+    if (isPrismaticLabel)
       return { background: RAINBOW, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }
+    if (isHolographicLabel)
+      return { background: HOLO_SHIMMER, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }
     if (artEffect === 'ghost')   return { color: '#a8c8f0' }
     if (artEffect === 'shadow')  return { color: '#9b7fe8' }
     if (borderStyle === 'pearl') return { color: '#e8d5b0' }
