@@ -284,7 +284,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
               Open Another · {packs} Left
             </button>
           )}
-          <button onClick={reset} className="btn-ghost">
+          <button onClick={() => router.push('/collection')} className="btn-ghost">
             View Collection
           </button>
         </div>
