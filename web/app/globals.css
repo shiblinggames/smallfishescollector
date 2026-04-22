@@ -407,6 +407,7 @@ body {
   height: 100%;
   transition: transform 0.6s cubic-bezier(0.4,0,0.2,1);
   transform-style: preserve-3d;
+  will-change: transform;
 }
 .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
 .flip-card-front,
@@ -416,7 +417,10 @@ body {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
-.flip-card-back { transform: rotateY(180deg); }
+.flip-card-back {
+  transform: rotateY(180deg);
+  border: 1px solid rgba(255,255,255,0.08);
+}
 
 /* ── Reveal glow effects ── */
 @keyframes reveal-glow-epic {

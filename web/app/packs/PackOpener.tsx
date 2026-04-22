@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { drawPack } from '@/lib/drawPack'
@@ -24,6 +24,42 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
   const [flash, setFlash] = useState<{ type: string; key: number } | null>(null)
   const [prize, setPrize] = useState<{ cardName: string; variantName: string; prizeCode: string } | null>(null)
   const [loading, setLoading] = useState(false)
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([])
+
+  function getInner(i: number) {
+    return cardRefs.current[i]?.querySelector('.flip-card-inner') as HTMLElement | null
+  }
+
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>, i: number) {
+    if (flipped[i]) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = (e.clientX - rect.left) / rect.width
+    const y = (e.clientY - rect.top) / rect.height
+    const rotX = (0.5 - y) * 14
+    const rotY = (x - 0.5) * 14
+    const inner = getInner(i)
+    if (inner) {
+      inner.style.transition = 'transform 0.08s ease-out'
+      inner.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) translateY(-6px) scale(1.03)`
+    }
+  }
+
+  function handleMouseLeave(e: React.MouseEvent<HTMLDivElement>, i: number) {
+    if (flipped[i]) return
+    const inner = getInner(i)
+    if (inner) {
+      inner.style.transition = 'transform 0.4s ease-out'
+      inner.style.transform = ''
+    }
+  }
+
+  function resetTilt(i: number) {
+    const inner = getInner(i)
+    if (inner) {
+      inner.style.transition = ''
+      inner.style.transform = ''
+    }
+  }
 
   async function openPack() {
     if (packs <= 0 || loading) return
@@ -102,6 +138,7 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
 
   function flipCard(i: number) {
     if (flipped[i]) return
+    resetTilt(i)
     const rarity = rarityFromWeight(cards[i].dropWeight)
     setGlowClasses((prev) => { const n = [...prev]; n[i] = glowClassFor(rarity); return n })
     triggerFlash(rarity)
@@ -115,6 +152,7 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
   }
 
   function flipAll() {
+    cards.forEach((_, i) => resetTilt(i))
     const rarities = cards.map((c) => rarityFromWeight(c.dropWeight))
     const priority = ['Mythic', 'Legendary', 'Epic']
     const top = priority.find((r) => rarities.includes(r))
@@ -179,9 +217,12 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
         {cards.map((card, i) => (
           <div
             key={i}
+            ref={(el) => { cardRefs.current[i] = el }}
             className={`flip-card select-none ${flipped[i] ? 'flipped' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
             style={{ width: 160, height: 248 }}
             onClick={() => flipCard(i)}
+            onMouseMove={(e) => handleMouseMove(e, i)}
+            onMouseLeave={(e) => handleMouseLeave(e, i)}
           >
             <div className="flip-card-inner w-full h-full">
               <div className="flip-card-front w-full h-full bg-black border border-[rgba(255,255,255,0.08)] flex flex-col items-center justify-center gap-3">
