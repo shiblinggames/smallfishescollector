@@ -14,13 +14,13 @@ export default function AdminDashboard() {
   const [state, action, pending] = useActionState(generateTokens, INITIAL)
   const copiedRef = useRef(false)
 
-  function claimUrl(token: string) {
-    return `${BASE_URL}/claim?token=${token}`
+  function claimUrl(token: string, email: string) {
+    return `${BASE_URL}/claim?token=${token}&email=${encodeURIComponent(email)}`
   }
 
   function copyAll() {
     const text = state.results
-      .map((r) => `${r.email}\t${r.packs} pack${r.packs !== 1 ? 's' : ''}\t${claimUrl(r.token)}`)
+      .map((r) => `${r.email}\t${r.packs} pack${r.packs !== 1 ? 's' : ''}\t${claimUrl(r.token, r.email)}`)
       .join('\n')
     navigator.clipboard.writeText(text)
     copiedRef.current = true
@@ -66,13 +66,13 @@ export default function AdminDashboard() {
               <div key={r.token} className="flex items-center gap-3 border border-[rgba(255,255,255,0.06)] px-4 py-3">
                 <div className="flex-1 min-w-0">
                   <p className="font-karla font-400 text-[#f0ede8] text-sm truncate">{r.email}</p>
-                  <p className="font-karla font-300 text-[#8a8880] text-xs truncate">{claimUrl(r.token)}</p>
+                  <p className="font-karla font-300 text-[#8a8880] text-xs truncate">{claimUrl(r.token, r.email)}</p>
                 </div>
                 <span className="font-karla font-600 text-[#f0c040] text-sm shrink-0">
                   {r.packs}p
                 </span>
                 <button
-                  onClick={() => navigator.clipboard.writeText(claimUrl(r.token))}
+                  onClick={() => navigator.clipboard.writeText(claimUrl(r.token, r.email))}
                   className="font-karla font-600 text-[0.65rem] uppercase tracking-[0.10em] text-[#8a8880] hover:text-[#f0ede8] transition-colors shrink-0"
                 >
                   Copy
