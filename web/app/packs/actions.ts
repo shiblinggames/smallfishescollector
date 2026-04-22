@@ -1,0 +1,75 @@
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { drawPack } from '@/lib/drawPack'
+import type { CardVariant, DrawnCard } from '@/lib/types'
+
+export interface OpenPackResult {
+  drawn: DrawnCard[]
+  newVariantIds: number[]
+  packsRemaining: number
+  error?: never
+}
+
+export interface OpenPackError {
+  error: string
+  drawn?: never
+}
+
+export async function openPack(): Promise<OpenPackResult | OpenPackError> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+
+  // Read current pack count
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('packs_available')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.packs_available <= 0) return { error: 'No packs available' }
+
+  // Atomically decrement — optimistic lock ensures no double-spend
+  const { data: decremented } = await admin
+    .from('profiles')
+    .update({ packs_available: profile.packs_available - 1 })
+    .eq('id', user.id)
+    .eq('packs_available', profile.packs_available)
+    .select('packs_available')
+    .single()
+
+  if (!decremented) return { error: 'No packs available' }
+
+  // Fetch variants server-side
+  const { data: variantRows } = await admin
+    .from('card_variants')
+    .select('id, card_id, variant_name, border_style, art_effect, drop_weight, cards(id, name, slug, filename, tier)')
+
+  const variants = (variantRows ?? []) as unknown as CardVariant[]
+  const drawn = drawPack(variants)
+
+  // Check what the user already owns
+  const { data: existing } = await admin
+    .from('user_collection')
+    .select('card_variant_id')
+    .eq('user_id', user.id)
+
+  const ownedIds = new Set((existing ?? []).map((r) => r.card_variant_id))
+  const newCards = drawn.filter((d) => !ownedIds.has(d.variantId))
+
+  if (newCards.length > 0) {
+    await admin.from('user_collection').insert(
+      newCards.map((d) => ({ user_id: user.id, card_variant_id: d.variantId }))
+    )
+  }
+
+  return {
+    drawn,
+    newVariantIds: newCards.map((d) => d.variantId),
+    packsRemaining: decremented.packs_available,
+  }
+}

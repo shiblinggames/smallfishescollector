@@ -2,19 +2,17 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { drawPack } from '@/lib/drawPack'
 import { rarityFromWeight } from '@/lib/variants'
 import FishCard from '@/components/FishCard'
 import PrizeModal from '@/components/PrizeModal'
-import type { CardVariant, DrawnCard } from '@/lib/types'
+import { openPack as openPackAction } from './actions'
+import type { DrawnCard } from '@/lib/types'
 
 interface Props {
   packsAvailable: number
-  variants: CardVariant[]
 }
 
-export default function PackOpener({ packsAvailable: initialPacks, variants }: Props) {
+export default function PackOpener({ packsAvailable: initialPacks }: Props) {
   const router = useRouter()
   const [packs, setPacks] = useState(initialPacks)
   const [phase, setPhase] = useState<'idle' | 'reveal' | 'done'>('idle')
@@ -65,33 +63,21 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
   async function openPack() {
     if (packs <= 0 || loading) return
     setLoading(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/login'); return }
 
-    const drawn = drawPack(variants)
+    const result = await openPackAction()
 
-    const { data: existing } = await supabase
-      .from('user_collection')
-      .select('card_variant_id')
-      .eq('user_id', user.id)
-
-    const ownedIds = new Set((existing ?? []).map((r) => r.card_variant_id))
-    const newCards = drawn.filter((d) => !ownedIds.has(d.variantId))
-
-    if (newCards.length > 0) {
-      await supabase.from('user_collection').insert(
-        newCards.map((d) => ({ user_id: user.id, card_variant_id: d.variantId }))
-      )
+    if (result.error) {
+      setLoading(false)
+      if (result.error === 'Unauthorized') router.push('/login')
+      return
     }
-    await supabase.from('profiles').update({ packs_available: packs - 1 }).eq('id', user.id)
 
-    setNewVariantIds(new Set(newCards.map((d) => d.variantId)))
-    setCards(drawn)
+    setNewVariantIds(new Set(result.newVariantIds))
+    setCards(result.drawn)
     setFlipped(new Array(5).fill(false))
     setGlowClasses(new Array(5).fill(''))
     setFlash(null)
-    setPacks((p) => p - 1)
+    setPacks(result.packsRemaining)
     setPhase('reveal')
     setLoading(false)
     router.refresh()

@@ -2,17 +2,17 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import PackOpener from './PackOpener'
-import type { CardVariant } from '@/lib/types'
 
 export default async function PacksPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, { data: variants }] = await Promise.all([
-    supabase.from('profiles').select('packs_available').eq('id', user.id).single(),
-    supabase.from('card_variants').select('id, card_id, variant_name, border_style, art_effect, drop_weight, cards(id, name, slug, filename, tier)'),
-  ])
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('packs_available')
+    .eq('id', user.id)
+    .single()
 
   const packsAvailable = profile?.packs_available ?? 0
 
@@ -25,10 +25,7 @@ export default async function PacksPage() {
             style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}>
           Open Pack.
         </h1>
-        <PackOpener
-          packsAvailable={packsAvailable}
-          variants={(variants ?? []) as unknown as CardVariant[]}
-        />
+        <PackOpener packsAvailable={packsAvailable} />
       </main>
     </>
   )
