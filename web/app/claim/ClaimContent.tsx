@@ -5,12 +5,13 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-type Status = 'loading' | 'success' | 'needs_login' | 'error'
+type Status = 'loading' | 'success' | 'needs_login' | 'sending_magic_link' | 'magic_link_sent' | 'error'
 
 export default function ClaimContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const token = searchParams.get('token')
+  const emailParam = searchParams.get('email')
   const [status, setStatus] = useState<Status>('loading')
   const [packs, setPacks] = useState(0)
   const [errorMsg, setErrorMsg] = useState('')
@@ -27,7 +28,17 @@ export default function ClaimContent() {
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
-        setStatus('needs_login')
+        if (emailParam) {
+          setStatus('sending_magic_link')
+          const next = encodeURIComponent(`/claim?token=${token}`)
+          await supabase.auth.signInWithOtp({
+            email: emailParam,
+            options: { emailRedirectTo: `${location.origin}/auth/callback?next=${next}` },
+          })
+          setStatus('magic_link_sent')
+        } else {
+          setStatus('needs_login')
+        }
         return
       }
 
@@ -66,6 +77,29 @@ export default function ClaimContent() {
     return (
       <div className="sg-card p-8 text-center">
         <p className="font-karla font-300 text-[#8a8880] text-sm">Validating link…</p>
+      </div>
+    )
+  }
+
+  if (status === 'sending_magic_link') {
+    return (
+      <div className="sg-card p-8 text-center">
+        <p className="font-karla font-300 text-[#8a8880] text-sm">Sending sign-in link…</p>
+      </div>
+    )
+  }
+
+  if (status === 'magic_link_sent') {
+    return (
+      <div className="sg-card p-8 text-center space-y-3">
+        <p className="sg-eyebrow">Check Your Email</p>
+        <p className="font-karla font-400 text-[#f0ede8] leading-relaxed">
+          We sent a sign-in link to{' '}
+          <span className="text-[#f0c040]">{emailParam}</span>.
+        </p>
+        <p className="font-karla font-300 text-[#8a8880] text-sm">
+          Click the link to finish claiming your packs.
+        </p>
       </div>
     )
   }
