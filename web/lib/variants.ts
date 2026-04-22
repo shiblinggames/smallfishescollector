@@ -29,11 +29,11 @@ export function rarityFromVariant(variantName: string, dropWeight: number): stri
 
 export const RARITY_COLOR: Record<string, string> = {
   Common:    '#8a8880',
-  Uncommon:  '#9ca3af',
-  Rare:      '#f0c040',
+  Uncommon:  '#4ade80',
+  Rare:      '#60a5fa',
   Epic:      '#a78bfa',
-  Legendary: '#f0c040', // uses gradient separately
-  Mythic:    '#00cc99', // overridden per-edition in components
+  Legendary: '#f0c040',
+  Mythic:    '#00cc99',
 }
 
 export const IS_LEGENDARY_RARITY = (rarity: string) => rarity === 'Legendary'
