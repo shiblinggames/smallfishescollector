@@ -160,6 +160,9 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
 
   return (
     <div>
+      {/* Stats + filters fade into first zone */}
+      <div style={{ background: 'linear-gradient(to bottom, #000000 0%, #071f30 100%)' }}>
+
       {/* Stats */}
       <div className="px-6 pb-8 text-center">
         <p className="font-cinzel font-700 text-[#f0c040] text-2xl mb-1">
@@ -198,6 +201,8 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           </button>
         )}
       </div>
+
+      </div>{/* end gradient wrapper */}
 
       {/* Depth zones */}
       {ZONES.map((zone) => {
