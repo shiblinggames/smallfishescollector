@@ -207,7 +207,6 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
             key={zone.id}
             className="w-full"
             style={{
-              borderTop: '1px solid rgba(255,255,255,0.06)',
               paddingTop: '4rem',
               paddingBottom: '4rem',
             }}
