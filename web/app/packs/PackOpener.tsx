@@ -89,6 +89,9 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
   async function openPack() {
     if (packs <= 0 || loading) return
     setLoading(true)
+    setPrize(null)
+    setShockwaveCards(new Set())
+    setMythicFeatured(null)
 
     const result: OpenPackResponse = await openPackAction()
 
@@ -311,8 +314,8 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
         <div className="flex flex-col items-center gap-4">
           <div className="flex gap-4 flex-wrap justify-center">
             {packs > 0 && (
-              <button onClick={() => setPhase('idle')} className="btn-gold">
-                Open Another · {packs} Left
+              <button onClick={openPack} disabled={loading} className="btn-gold">
+                {loading ? 'Drawing…' : `Open Another · ${packs} Left`}
               </button>
             )}
             <button onClick={() => router.push('/collection')} className="btn-ghost">
