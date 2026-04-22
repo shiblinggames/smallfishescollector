@@ -50,7 +50,7 @@ function bestEntry(entries: OwnedEntry[]): OwnedEntry {
   )
 }
 
-const selectClass = 'bg-black border border-[rgba(255,255,255,0.12)] text-[#f0ede8] font-karla font-400 text-xs uppercase tracking-[0.12em] px-3 py-2 appearance-none cursor-pointer hover:border-[rgba(255,255,255,0.3)] transition-colors focus:outline-none focus:border-[#f0c040]'
+const selectClass = 'bg-black border border-[rgba(240,237,232,0.35)] rounded-[10px] text-[#f0ede8] font-karla font-600 text-[0.8125rem] uppercase tracking-[0.12em] px-8 py-3 min-w-[10rem] cursor-pointer hover:border-[#f0ede8] transition-colors focus:outline-none focus:border-[#f0c040]'
 
 export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId }: Props) {
   const [tierFilter, setTierFilter]     = useState('')
