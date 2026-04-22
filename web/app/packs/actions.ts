@@ -5,19 +5,14 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { drawPack } from '@/lib/drawPack'
 import type { CardVariant, DrawnCard } from '@/lib/types'
 
-export interface OpenPackResult {
-  drawn: DrawnCard[]
-  newVariantIds: number[]
-  packsRemaining: number
-  error?: never
+export interface OpenPackResponse {
+  drawn?: DrawnCard[]
+  newVariantIds?: number[]
+  packsRemaining?: number
+  error?: string
 }
 
-export interface OpenPackError {
-  error: string
-  drawn?: never
-}
-
-export async function openPack(): Promise<OpenPackResult | OpenPackError> {
+export async function openPack(): Promise<OpenPackResponse> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }

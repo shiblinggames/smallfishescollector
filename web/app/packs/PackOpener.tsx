@@ -7,6 +7,7 @@ import FishCard from '@/components/FishCard'
 import PrizeModal from '@/components/PrizeModal'
 import { openPack as openPackAction } from './actions'
 import type { DrawnCard } from '@/lib/types'
+import type { OpenPackResponse } from './actions'
 
 interface Props {
   packsAvailable: number
@@ -64,20 +65,20 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
     if (packs <= 0 || loading) return
     setLoading(true)
 
-    const result = await openPackAction()
+    const result: OpenPackResponse = await openPackAction()
 
-    if (result.error) {
+    if (result.error || !result.drawn) {
       setLoading(false)
       if (result.error === 'Unauthorized') router.push('/login')
       return
     }
 
-    setNewVariantIds(new Set(result.newVariantIds))
+    setNewVariantIds(new Set(result.newVariantIds ?? []))
     setCards(result.drawn)
     setFlipped(new Array(5).fill(false))
     setGlowClasses(new Array(5).fill(''))
     setFlash(null)
-    setPacks(result.packsRemaining)
+    setPacks(result.packsRemaining ?? packs - 1)
     setPhase('reveal')
     setLoading(false)
     router.refresh()
