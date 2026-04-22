@@ -25,7 +25,7 @@ const variantLabelColor: Record<BorderStyle, string> = {
   prismatic:     'transparent', // uses gradient via inline style
   void:          '#a855f7',
   kraken:        '#00cc99',
-  'davy-jones':  '#1e6a90',
+  'davy-jones':  '#2a5fff',
   'golden-age':  '#e8b830',
   storm:         '#4a88c8',
   wanted:        '#aa4010',
