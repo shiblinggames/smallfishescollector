@@ -40,6 +40,16 @@ export default function GuidePage() {
             </div>
           </div>
 
+          <div className="sg-card overflow-hidden">
+            <img src="/collection.png" alt="Collection page" className="w-full object-cover" />
+            <div className="px-8 py-7">
+              <p className="font-cinzel font-700 text-[#f0ede8] text-base mb-4">Your Collection</p>
+              <p className="font-karla font-300 text-[#8a8880] text-sm leading-relaxed">
+                Every card you pull is saved to your <span className="text-[#f0ede8] font-400">personal collection</span>. Browse all the fish across every rarity and variant — cards you haven't collected yet appear as mysteries, giving you something to hunt for. The rarer the variant, the harder it is to find.
+              </p>
+            </div>
+          </div>
+
           <div className="sg-card px-8 py-7">
             <p className="font-cinzel font-700 text-[#f0ede8] text-base mb-5">Rarity Guide</p>
             <div className="flex flex-col gap-3">
