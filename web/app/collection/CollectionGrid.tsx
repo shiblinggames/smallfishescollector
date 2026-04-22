@@ -29,7 +29,18 @@ interface ModalCard {
 const RARITIES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic']
 
 const VARIANT_RANK: Record<string, number> = {
-  Prismatic: 7, Shadow: 6, Ghost: 5, Holographic: 4, Gold: 3, Silver: 2, Standard: 1,
+  'Davy Jones':     12,
+  'Storm':          11,
+  'Kraken Edition': 10,
+  'Golden Age':      9,
+  'Wanted':          8,
+  'Prismatic':       7,
+  'Shadow':          6,
+  'Ghost':           5,
+  'Holographic':     4,
+  'Gold':            3,
+  'Silver':          2,
+  'Standard':        1,
 }
 
 function bestEntry(entries: OwnedEntry[]): OwnedEntry {
