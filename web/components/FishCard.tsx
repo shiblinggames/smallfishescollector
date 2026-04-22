@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
-import { rarityFromWeight, RARITY_COLOR, IS_LEGENDARY_RARITY, IS_MYTHIC_RARITY } from '@/lib/variants'
+import { rarityFromVariant, RARITY_COLOR, IS_LEGENDARY_RARITY, IS_MYTHIC_RARITY } from '@/lib/variants'
 
 interface Props {
   name: string
@@ -21,6 +21,7 @@ const variantLabelColor: Record<BorderStyle, string> = {
   standard:      '#8a8880',
   silver:        '#9ca3af',
   gold:          '#f0c040',
+  pearl:         '#e8d5b0',
   prismatic:     'transparent', // uses gradient via inline style
   void:          '#a855f7',
   kraken:        '#00cc99',
@@ -93,6 +94,15 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
     frame = (
       <div className="relative" style={{ width: D, height: D, borderRadius: '50%' }}>
         <div className="absolute inset-0 border-prismatic" style={{ borderRadius: '50%' }} />
+        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%' }}>
+          {imageContent}
+        </div>
+      </div>
+    )
+  } else if (borderStyle === 'pearl' && !unowned) {
+    frame = (
+      <div className="relative" style={{ width: D, height: D, borderRadius: '50%' }}>
+        <div className="absolute inset-0 border-pearl" style={{ borderRadius: '50%' }} />
         <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%' }}>
           {imageContent}
         </div>
@@ -188,7 +198,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
 
   const isPrismaticLabel = borderStyle === 'prismatic' && !unowned
   const labelColor = variantLabelColor[borderStyle]
-  const rarity = dropWeight != null ? rarityFromWeight(dropWeight) : null
+  const rarity = dropWeight != null ? rarityFromVariant(variantName ?? '', dropWeight) : null
   const rarityColor = rarity ? RARITY_COLOR[rarity] : '#8a8880'
   const isLegendary = rarity ? IS_LEGENDARY_RARITY(rarity) : false
   const isMythic    = rarity ? IS_MYTHIC_RARITY(rarity)    : false

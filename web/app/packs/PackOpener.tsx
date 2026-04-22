@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { rarityFromWeight } from '@/lib/variants'
+import { rarityFromVariant } from '@/lib/variants'
 import FishCard from '@/components/FishCard'
 import PrizeModal from '@/components/PrizeModal'
 import { openPack as openPackAction } from './actions'
@@ -14,6 +14,7 @@ function cardBackBorderStyle(borderStyle: BorderStyle, artEffect: ArtEffect): Re
   if (artEffect === 'ghost')  return { borderColor: 'rgba(200,210,220,0.45)' }
   if (artEffect === 'shadow') return { borderColor: 'rgba(168,85,247,0.45)' }
   switch (borderStyle) {
+    case 'pearl':       return { borderColor: 'rgba(232,213,175,0.45)' }
     case 'void':        return { borderColor: 'rgba(168,85,247,0.45)' }
     case 'kraken':      return { borderColor: 'rgba(0,204,153,0.45)' }
     case 'davy-jones':  return { borderColor: 'rgba(30,106,144,0.45)' }
@@ -151,7 +152,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
   function flipCard(i: number) {
     if (flipped[i]) return
     resetTilt(i)
-    const rarity = rarityFromWeight(cards[i].dropWeight)
+    const rarity = rarityFromVariant(cards[i].variantName, cards[i].dropWeight)
     setGlowClasses((prev) => { const n = [...prev]; n[i] = glowClassFor(rarity); return n })
     triggerFlash(rarity)
     checkPrize(cards[i])
@@ -165,7 +166,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
 
   function flipAll() {
     cards.forEach((_, i) => resetTilt(i))
-    const rarities = cards.map((c) => rarityFromWeight(c.dropWeight))
+    const rarities = cards.map((c) => rarityFromVariant(c.variantName, c.dropWeight))
     const priority = ['Mythic', 'Legendary', 'Epic']
     const top = priority.find((r) => rarities.includes(r))
     if (top) triggerFlash(top)

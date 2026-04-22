@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { drawPack, drawGodPack } from '@/lib/drawPack'
-import { rarityFromWeight } from '@/lib/variants'
+import { rarityFromVariant } from '@/lib/variants'
 import type { CardVariant, DrawnCard } from '@/lib/types'
 
 export interface OpenPackResponse {
@@ -68,7 +68,7 @@ export async function openPack(): Promise<OpenPackResponse> {
   }
 
   // Update tide counter — reset if any card displays as Legendary or Mythic
-  const hitLegendary = drawn.some((d) => ['Legendary', 'Mythic'].includes(rarityFromWeight(d.dropWeight)))
+  const hitLegendary = drawn.some((d) => ['Legendary', 'Mythic'].includes(rarityFromVariant(d.variantName, d.dropWeight)))
   await admin
     .from('profiles')
     .update({ packs_since_legendary: hitLegendary ? 0 : (profile.packs_since_legendary ?? 0) + 1 })

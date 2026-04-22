@@ -1,4 +1,4 @@
-export type BorderStyle = 'standard' | 'silver' | 'gold' | 'prismatic' | 'void' | 'kraken' | 'davy-jones' | 'golden-age' | 'storm' | 'wanted'
+export type BorderStyle = 'standard' | 'silver' | 'gold' | 'pearl' | 'prismatic' | 'void' | 'kraken' | 'davy-jones' | 'golden-age' | 'storm' | 'wanted'
 export type ArtEffect  = 'normal' | 'holographic' | 'rainbow' | 'ghost' | 'shadow' | 'kraken' | 'davy-jones' | 'golden-age' | 'storm' | 'wanted'
 
 export interface Card {

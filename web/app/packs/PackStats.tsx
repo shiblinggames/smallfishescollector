@@ -1,4 +1,4 @@
-import { rarityFromWeight, RARITY_COLOR } from '@/lib/variants'
+import { rarityFromVariant, RARITY_COLOR } from '@/lib/variants'
 import type { PackStats, PackHistoryEntry } from './stats'
 
 const PITY_CAP = 20
@@ -37,7 +37,7 @@ function StatItem({ label, value }: { label: string; value: string }) {
 }
 
 function HistoryCardDot({ dropWeight, variantName }: { dropWeight: number; variantName: string }) {
-  const rarity = rarityFromWeight(dropWeight)
+  const rarity = rarityFromVariant(variantName, dropWeight)
   const color = RARITY_COLOR[rarity] ?? '#8a8880'
   return (
     <div
@@ -63,9 +63,9 @@ export default function PackStats({ stats, history }: { stats: PackStats; histor
               <div className="text-center">
                 <p
                   className="font-cinzel font-700 text-lg leading-none mb-1"
-                  style={{ color: RARITY_COLOR[rarityFromWeight(stats.rarestPull.dropWeight)] ?? '#8a8880' }}
+                  style={{ color: RARITY_COLOR[rarityFromVariant(stats.rarestPull.variantName, stats.rarestPull.dropWeight)] ?? '#8a8880' }}
                 >
-                  {rarityFromWeight(stats.rarestPull.dropWeight)}
+                  {rarityFromVariant(stats.rarestPull.variantName, stats.rarestPull.dropWeight)}
                 </p>
                 <p className="font-karla font-300 text-[0.62rem] uppercase tracking-[0.12em] text-[#8a8880]">
                   Rarest Pull
@@ -102,7 +102,7 @@ export default function PackStats({ stats, history }: { stats: PackStats; histor
                   ))}
                 </div>
                 <p className="font-karla font-300 text-[0.62rem] text-[#8a8880] text-right" style={{ minWidth: '5.5rem' }}>
-                  {rarityFromWeight(Math.min(...entry.cards.map((c) => c.dropWeight)))}
+                  {(() => { const best = entry.cards.reduce((a, b) => a.dropWeight <= b.dropWeight ? a : b); return rarityFromVariant(best.variantName, best.dropWeight) })()}
                 </p>
               </div>
             ))}

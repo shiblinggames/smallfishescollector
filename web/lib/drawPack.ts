@@ -1,4 +1,5 @@
 import type { CardVariant, DrawnCard, BorderStyle, ArtEffect } from './types'
+import { VARIANT_RARITY } from './variants'
 
 function weightedPick(variants: CardVariant[]): CardVariant {
   const total = variants.reduce((sum, v) => sum + v.drop_weight, 0)
@@ -11,17 +12,18 @@ function weightedPick(variants: CardVariant[]): CardVariant {
 }
 
 const GOD_PACK_ELIGIBLE = new Set([
-  'Holographic', 'Ghost', 'Shadow', 'Prismatic',
+  'Pearl', 'Holographic', 'Ghost', 'Shadow', 'Prismatic',
   'Kraken', 'Davy Jones', 'Golden Age', 'Wanted', 'Storm',
 ])
 
 // Custom weights per variant for god pack draws (independent of regular drop_weight)
 const GOD_PACK_WEIGHTS: Record<string, number> = {
-  'Holographic':    26,
-  'Ghost':          23,
-  'Shadow':         21,
-  'Prismatic':      15,
-  'Kraken':  3,
+  'Pearl':          20,
+  'Holographic':    20,
+  'Ghost':          18,
+  'Shadow':         16,
+  'Prismatic':      12,
+  'Kraken':          3,
   'Davy Jones':      3,
   'Golden Age':      3,
   'Wanted':          3,
@@ -56,9 +58,9 @@ export function drawPack(variants: CardVariant[], forceLegendary = false): Drawn
     }
   }
 
-  // Tide: guarantee a Legendary or better (drop_weight < 1) after 20 packs
-  if (forceLegendary && drawn.every((d) => d.dropWeight >= 1)) {
-    const legendaryPool = variants.filter((v) => v.drop_weight < 1)
+  // Tide: guarantee a Legendary or better after 20 packs
+  if (forceLegendary && drawn.every((d) => !['Legendary', 'Mythic'].includes(VARIANT_RARITY[d.variantName] ?? ''))) {
+    const legendaryPool = variants.filter((v) => ['Legendary', 'Mythic'].includes(VARIANT_RARITY[v.variant_name] ?? ''))
     if (legendaryPool.length > 0) {
       drawn[3] = toDrawn(weightedPick(legendaryPool))
     }

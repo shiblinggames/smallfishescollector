@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import FishCard from '@/components/FishCard'
 import type { Card } from '@/lib/types'
 import type { OwnedEntry } from './page'
-import { rarityFromWeight } from '@/lib/variants'
+import { rarityFromVariant } from '@/lib/variants'
 
 const STORAGE_KEY = 'sf-featured-variants'
 
@@ -30,15 +30,16 @@ interface ModalCard {
 const RARITIES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic']
 
 const VARIANT_RANK: Record<string, number> = {
-  'Davy Jones':     12,
-  'Storm':          11,
-  'Kraken': 10,
-  'Golden Age':      9,
-  'Wanted':          8,
-  'Prismatic':       7,
-  'Shadow':          6,
-  'Ghost':           5,
-  'Holographic':     4,
+  'Davy Jones':     13,
+  'Storm':          12,
+  'Kraken':         11,
+  'Golden Age':     10,
+  'Wanted':          9,
+  'Prismatic':       8,
+  'Shadow':          7,
+  'Ghost':           6,
+  'Holographic':     5,
+  'Pearl':           4,
   'Gold':            3,
   'Silver':          2,
   'Standard':        1,
@@ -129,7 +130,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
   const filtered = allCards.filter((card) => {
     if (tierFilter && card.tier !== parseInt(tierFilter)) return false
     const entries = ownedByCardId[card.id] ?? []
-    if (rarityFilter && !entries.some((e) => rarityFromWeight(e.dropWeight) === rarityFilter)) return false
+    if (rarityFilter && !entries.some((e) => rarityFromVariant(e.variantName, e.dropWeight) === rarityFilter)) return false
     if (variantFilter && !entries.some((e) => e.variantName === variantFilter)) return false
     return true
   })

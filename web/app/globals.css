@@ -130,6 +130,30 @@ body {
 /* Shadow: near-silhouette */
 .art-shadow { filter: brightness(0.25) saturate(0); }
 
+/* Pearl border: warm iridescent spinning ring — cream, rose, champagne */
+@property --pearl-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes pearlReflect {
+  from { --pearl-angle: 0deg; }
+  to   { --pearl-angle: 360deg; }
+}
+.border-pearl {
+  background: conic-gradient(
+    from var(--pearl-angle),
+    rgba(255,245,220,0.9),
+    rgba(255,210,200,0.85),
+    rgba(220,200,255,0.75),
+    rgba(255,230,180,0.9),
+    rgba(200,230,220,0.75),
+    rgba(255,220,210,0.85),
+    rgba(255,245,220,0.9)
+  );
+  animation: pearlReflect 5s linear infinite;
+}
+
 /* Ghost border: spinning pearlescent white ring */
 @property --ghost-angle {
   syntax: '<angle>';
