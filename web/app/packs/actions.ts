@@ -46,7 +46,7 @@ export async function openPack(): Promise<OpenPackResponse> {
     .select('id, card_id, variant_name, border_style, art_effect, drop_weight, cards(id, name, slug, filename, tier)')
 
   const variants = (variantRows ?? []) as unknown as CardVariant[]
-  const isGodPack = Math.random() < 1 / 1000
+  const isGodPack = Math.random() < 1 / 1 // TESTING: revert to 1/1000
   const drawn = isGodPack ? drawGodPack(variants) : drawPack(variants)
 
   // Check what the user already owns
