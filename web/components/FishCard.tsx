@@ -200,34 +200,39 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
       <div className="text-center">
         <p className="font-karla font-400 text-sm text-[#f0ede8]">{unowned ? '???' : name}</p>
         {variantName && !unowned && (
-          isPrismaticLabel ? (
-            <p className="font-karla font-600 text-[0.6rem] uppercase tracking-[0.10em] whitespace-nowrap"
-               style={{
-                 background: 'linear-gradient(90deg,#ff0080,#ff8c00,#ffe600,#00ff88,#00cfff,#8a5cf7)',
-                 WebkitBackgroundClip: 'text',
-                 WebkitTextFillColor: 'transparent',
-               }}>
-              {rarity && `${rarity} · `}{variantName}
-            </p>
-          ) : isMythic && mythicGrad ? (
-            <p className="font-karla font-600 text-[0.6rem] uppercase tracking-[0.10em] whitespace-nowrap"
-               style={{ background: mythicGrad, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              {`${rarity} · ${variantName}`}
-            </p>
-          ) : (
-            <p className="font-karla font-600 text-[0.6rem] uppercase tracking-[0.10em] whitespace-nowrap"
-               style={
-                 isLegendary
-                   ? {
-                       background: 'linear-gradient(90deg,#ff0080,#ff8c00,#ffe600,#00ff88,#00cfff,#8a5cf7)',
-                       WebkitBackgroundClip: 'text',
-                       WebkitTextFillColor: 'transparent',
-                     }
-                   : { color: isMythic ? labelColor : (rarity ? rarityColor : labelColor) }
-               }>
-              {rarity ? `${rarity} · ${variantName}` : variantName}
-            </p>
-          )
+          <>
+            {rarity && (
+              <p className="font-karla font-600 text-[0.72rem] uppercase tracking-[0.10em]"
+                 style={{ color: rarityColor }}>
+                {rarity}
+              </p>
+            )}
+            {isPrismaticLabel || isLegendary ? (
+              <p className="font-karla font-600 text-[0.72rem] uppercase tracking-[0.10em] whitespace-nowrap"
+                 style={{
+                   background: 'linear-gradient(90deg,#ff0080,#ff8c00,#ffe600,#00ff88,#00cfff,#8a5cf7)',
+                   WebkitBackgroundClip: 'text',
+                   WebkitTextFillColor: 'transparent',
+                 }}>
+                {variantName}
+              </p>
+            ) : isMythic && mythicGrad ? (
+              <p className="font-karla font-600 text-[0.72rem] uppercase tracking-[0.10em] whitespace-nowrap"
+                 style={{ background: mythicGrad, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                {variantName}
+              </p>
+            ) : (
+              <p className="font-karla font-600 text-[0.72rem] uppercase tracking-[0.10em] whitespace-nowrap"
+                 style={{ color: isMythic ? labelColor : (rarity ? rarityColor : labelColor) }}>
+                {variantName}
+              </p>
+            )}
+            {dropWeight != null && (
+              <p className="font-karla font-300 text-[0.62rem] text-[#8a8880] mt-0.5">
+                {dropWeight < 1 ? `${dropWeight.toFixed(2)}% chance` : dropWeight < 10 ? `${dropWeight.toFixed(1)}% chance` : `${Math.round(dropWeight)}% chance`}
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>
