@@ -10,6 +10,7 @@ export interface OpenPackResponse {
   newVariantIds?: number[]
   packsRemaining?: number
   isGodPack?: boolean
+  packsSinceLegendary?: number
   error?: string
 }
 
@@ -23,7 +24,7 @@ export async function openPack(): Promise<OpenPackResponse> {
   // Read current pack count
   const { data: profile } = await admin
     .from('profiles')
-    .select('packs_available')
+    .select('packs_available, packs_since_legendary')
     .eq('id', user.id)
     .single()
 
@@ -47,7 +48,8 @@ export async function openPack(): Promise<OpenPackResponse> {
 
   const variants = (variantRows ?? []) as unknown as CardVariant[]
   const isGodPack = Math.random() < 1 / 1000
-  const drawn = isGodPack ? drawGodPack(variants) : drawPack(variants)
+  const forceLegendary = (profile.packs_since_legendary ?? 0) >= 50
+  const drawn = isGodPack ? drawGodPack(variants) : drawPack(variants, forceLegendary)
 
   // Check what the user already owns
   const { data: existing } = await admin
@@ -64,10 +66,25 @@ export async function openPack(): Promise<OpenPackResponse> {
     )
   }
 
+  // Update pity counter — reset if a Legendary/Mythic dropped, else increment
+  const hitLegendary = drawn.some((d) => d.dropWeight < 1)
+  await admin
+    .from('profiles')
+    .update({ packs_since_legendary: hitLegendary ? 0 : (profile.packs_since_legendary ?? 0) + 1 })
+    .eq('id', user.id)
+
+  // Record pack history
+  await admin.from('pack_history').insert({
+    user_id: user.id,
+    cards: drawn,
+    was_god_pack: isGodPack,
+  })
+
   return {
     drawn,
     newVariantIds: newCards.map((d) => d.variantId),
     packsRemaining: decremented.packs_available,
     isGodPack,
+    packsSinceLegendary: hitLegendary ? 0 : (profile.packs_since_legendary ?? 0) + 1,
   }
 }

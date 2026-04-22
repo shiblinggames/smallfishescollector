@@ -42,7 +42,7 @@ export function drawGodPack(variants: CardVariant[]): DrawnCard[] {
   return drawn
 }
 
-export function drawPack(variants: CardVariant[]): DrawnCard[] {
+export function drawPack(variants: CardVariant[], forceLegendary = false): DrawnCard[] {
   const drawn: DrawnCard[] = []
   for (let i = 0; i < 5; i++) {
     drawn.push(toDrawn(weightedPick(variants)))
@@ -53,6 +53,14 @@ export function drawPack(variants: CardVariant[]): DrawnCard[] {
     const rarePool = variants.filter((v) => v.drop_weight <= 12)
     if (rarePool.length > 0) {
       drawn[3] = toDrawn(weightedPick(rarePool))
+    }
+  }
+
+  // Pity: guarantee a Legendary or better (drop_weight < 1) after 50 packs
+  if (forceLegendary && drawn.every((d) => d.dropWeight >= 1)) {
+    const legendaryPool = variants.filter((v) => v.drop_weight < 1)
+    if (legendaryPool.length > 0) {
+      drawn[3] = toDrawn(weightedPick(legendaryPool))
     }
   }
 
