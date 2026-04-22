@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { drawPack } from '@/lib/drawPack'
 import { rarityFromWeight } from '@/lib/variants'
 import FishCard from '@/components/FishCard'
+import PrizeModal from '@/components/PrizeModal'
 import type { CardVariant, DrawnCard } from '@/lib/types'
 
 interface Props {
@@ -21,6 +22,7 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
   const [flipped, setFlipped] = useState<boolean[]>([])
   const [glowClasses, setGlowClasses] = useState<string[]>([])
   const [flash, setFlash] = useState<{ type: string; key: number } | null>(null)
+  const [prize, setPrize] = useState<{ cardName: string; variantName: string; prizeCode: string } | null>(null)
   const [loading, setLoading] = useState(false)
 
   async function openPack() {
@@ -46,6 +48,32 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
     router.refresh()
   }
 
+  function isPrizeCard(card: DrawnCard) {
+    return card.dropWeight < 1 && (card.name === 'Catfish' || card.name === 'Doby Mick')
+  }
+
+  function generatePrizeCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    const rand = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+    return `WIN-${rand}`
+  }
+
+  async function checkPrize(card: DrawnCard) {
+    if (!isPrizeCard(card)) return
+    const code = generatePrizeCode()
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { error } = await supabase.from('prize_claims').insert({
+      user_id: user.id,
+      prize_code: code,
+      card_variant_id: card.variantId,
+      card_name: card.name,
+      variant_name: card.variantName,
+    })
+    if (!error) setPrize({ cardName: card.name, variantName: card.variantName, prizeCode: code })
+  }
+
   function glowClassFor(rarity: string) {
     if (rarity === 'Mythic')    return 'reveal-glow-mythic'
     if (rarity === 'Legendary') return 'reveal-glow-legendary'
@@ -64,6 +92,7 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
     const rarity = rarityFromWeight(cards[i].dropWeight)
     setGlowClasses((prev) => { const n = [...prev]; n[i] = glowClassFor(rarity); return n })
     triggerFlash(rarity)
+    checkPrize(cards[i])
     setFlipped((prev) => {
       const n = [...prev]
       n[i] = true
@@ -79,6 +108,7 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
     if (top) triggerFlash(top)
     setGlowClasses(rarities.map(glowClassFor))
     setFlipped(new Array(cards.length).fill(true))
+    cards.forEach((card) => checkPrize(card))
     setTimeout(() => setPhase('done'), 700)
   }
 
@@ -88,6 +118,7 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
     setFlipped([])
     setGlowClasses([])
     setFlash(null)
+    setPrize(null)
     router.refresh()
   }
 
@@ -123,6 +154,14 @@ export default function PackOpener({ packsAvailable: initialPacks, variants }: P
   return (
     <div className="flex flex-col items-center gap-10">
       {flash && <div key={flash.key} className={`reveal-flash reveal-flash-${flash.type}`} />}
+      {prize && (
+        <PrizeModal
+          cardName={prize.cardName}
+          variantName={prize.variantName}
+          prizeCode={prize.prizeCode}
+          onClose={() => setPrize(null)}
+        />
+      )}
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-8">
         {cards.map((card, i) => (
           <div
