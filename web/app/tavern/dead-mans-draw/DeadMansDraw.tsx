@@ -282,6 +282,44 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
           )}
         </div>
 
+        {/* How to Play */}
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '1rem' }}>
+          <p className="font-cinzel font-700 text-[#f0ede8] mb-3" style={{ fontSize: '0.85rem' }}>How to Play</p>
+          <div className="flex flex-col gap-2.5">
+            {[
+              { label: 'Draw', text: 'Flip cards one at a time from the deck into your draw pile.' },
+              { label: 'Bust', text: 'If you flip a card whose species is already in your draw pile, you BUST — losing every card you drew this turn.' },
+              { label: 'Bank', text: `Hit Bank to permanently score your draw pile before you bust. First to ${WIN_SCORE} points wins.` },
+              { label: 'Push it', text: 'The more you draw before banking, the more you score — but the higher the bust risk. Stop too early and the AI will outpace you.' },
+            ].map(({ label, text }) => (
+              <div key={label} className="flex gap-2.5">
+                <span className="font-karla font-700 text-[#f0c040] shrink-0" style={{ fontSize: '0.72rem', paddingTop: 1 }}>{label}</span>
+                <span className="font-karla text-[#8a8880]" style={{ fontSize: '0.75rem', lineHeight: 1.55 }}>{text}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '0.875rem', paddingTop: '0.875rem' }}>
+            <p className="font-karla font-600 text-[#9a9488] mb-2" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Power Fish</p>
+            <div className="flex flex-col gap-1.5">
+              {[
+                { name: 'Kraken', effect: 'Forces you to keep drawing — cannot bank until resolved.' },
+                { name: 'Manta Ray', effect: 'Cancels the previous card\'s power (including Kraken).' },
+                { name: 'Piranha', effect: 'Steals the highest-value card from the opponent\'s bank.' },
+                { name: 'Hammerhead', effect: 'Destroys the highest-value card in the opponent\'s bank.' },
+                { name: 'Whale Shark', effect: 'Shields your bank from the next Piranha or Hammerhead.' },
+                { name: 'Clownfish', effect: 'Doubles the point value of the previous card in the draw pile.' },
+                { name: 'Anglerfish', effect: 'Reveals the next card in the deck for 2 seconds.' },
+                { name: 'Orca', effect: 'Draws 2 cards simultaneously — keep both or discard both.' },
+              ].map(({ name, effect }) => (
+                <div key={name} className="flex gap-2">
+                  <span className="font-karla font-600 text-[#c8c4bc] shrink-0" style={{ fontSize: '0.7rem', minWidth: 90 }}>{name}</span>
+                  <span className="font-karla text-[#6a6764]" style={{ fontSize: '0.7rem', lineHeight: 1.5 }}>{effect}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-3">
           {(Object.entries(OPPONENTS) as [Personality, typeof OPPONENTS[Personality]][]).map(([key, op]) => (
             <button

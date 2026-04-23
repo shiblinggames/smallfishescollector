@@ -27,7 +27,7 @@ export interface GS {
   message: string
 }
 
-export const WIN_SCORE = 15
+export const WIN_SCORE = 30
 export const ENTRY_FEE = 20
 
 export const OPPONENTS: Record<Personality, { name: string; label: string; difficulty: string; payout: number }> = {
