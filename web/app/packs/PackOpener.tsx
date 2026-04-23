@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { rarityFromVariant } from '@/lib/variants'
 import FishCard from '@/components/FishCard'
 import PrizeModal from '@/components/PrizeModal'
-import { openPack as openPackAction, buyPackWithDoubloons } from './actions'
+import { openPack as openPackAction, buyPacksWithDoubloons } from './actions'
 import type { DrawnCard, BorderStyle, ArtEffect } from '@/lib/types'
 import type { OpenPackResponse } from './actions'
 
@@ -219,10 +219,10 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
     router.refresh()
   }
 
-  async function handleBuyWithDoubloons() {
+  async function handleBuyWithDoubloons(count: 1 | 10) {
     if (buyingWithDoubloons) return
     setBuyingWithDoubloons(true)
-    const result = await buyPackWithDoubloons()
+    const result = await buyPacksWithDoubloons(count)
     if (!('error' in result)) {
       setPacks(result.packsAvailable)
       setDoubloons(result.doubloons)
@@ -262,13 +262,20 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
             </div>
           )}
         </div>
-        {/* Doubloon balance + buy button */}
+        {/* Doubloon balance + buy buttons */}
         <div className="flex flex-col items-center gap-2">
           <p className="font-karla font-600 text-[#f0c040] text-sm tracking-wide">{doubloons.toLocaleString()} ⟡</p>
-          {doubloons >= 150 && (
-            <button onClick={handleBuyWithDoubloons} disabled={buyingWithDoubloons} className="btn-ghost text-xs disabled:opacity-50">
-              {buyingWithDoubloons ? '…' : 'Buy Pack · 150 ⟡'}
-            </button>
+          {doubloons >= 200 && (
+            <div className="flex gap-2">
+              <button onClick={() => handleBuyWithDoubloons(1)} disabled={buyingWithDoubloons} className="btn-ghost text-xs disabled:opacity-50">
+                {buyingWithDoubloons ? '…' : 'Buy 1 · 200 ⟡'}
+              </button>
+              {doubloons >= 1500 && (
+                <button onClick={() => handleBuyWithDoubloons(10)} disabled={buyingWithDoubloons} className="btn-ghost text-xs disabled:opacity-50">
+                  Buy 10 · 1,500 ⟡
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>

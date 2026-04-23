@@ -7,9 +7,10 @@ import { rarityFromVariant } from '@/lib/variants'
 import { revalidatePath } from 'next/cache'
 import type { CardVariant, DrawnCard } from '@/lib/types'
 
-const PACK_COST_DOUBLOONS = 150
+const PACK_COSTS: Record<number, number> = { 1: 200, 10: 1500 }
 
-export async function buyPackWithDoubloons(): Promise<{ packsAvailable: number; doubloons: number } | { error: string }> {
+export async function buyPacksWithDoubloons(count: 1 | 10): Promise<{ packsAvailable: number; doubloons: number } | { error: string }> {
+  const cost = PACK_COSTS[count]
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -21,14 +22,14 @@ export async function buyPackWithDoubloons(): Promise<{ packsAvailable: number; 
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.doubloons < PACK_COST_DOUBLOONS) return { error: 'Not enough doubloons' }
+  if (!profile || profile.doubloons < cost) return { error: 'Not enough doubloons' }
 
-  const newDoubloons = profile.doubloons - PACK_COST_DOUBLOONS
-  const newPacks = profile.packs_available + 1
+  const newDoubloons = profile.doubloons - cost
+  const newPacks = profile.packs_available + count
 
   await Promise.all([
     admin.from('profiles').update({ doubloons: newDoubloons, packs_available: newPacks }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -PACK_COST_DOUBLOONS, reason: 'Bought pack with doubloons' }),
+    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -cost, reason: `Bought ${count} pack${count > 1 ? 's' : ''} with doubloons` }),
   ])
 
   revalidatePath('/packs')
