@@ -20,12 +20,7 @@ function ActiveHookBadge({ hookTier }: { hookTier: number }) {
         <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
         <circle cx="12" cy="3" r="2" fill="#6a6764" stroke="none"/>
       </svg>
-      <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.62rem' }}>
-        {hook.name}
-        {hook.luckScore > 0 && (
-          <span style={{ color: '#4a4845' }}> · {hook.luckLabel} deep luck</span>
-        )}
-      </p>
+      <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.62rem' }}>{hook.name}</p>
     </a>
   )
 }

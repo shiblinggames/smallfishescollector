@@ -12,6 +12,7 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
   const [doubloons, setDoubloons] = useState(initialDoubloons)
   const [isPending, startTransition] = useTransition()
   const [hookError, setHookError] = useState<string | null>(null)
+  const [tooltipTier, setTooltipTier] = useState<number | null>(null)
 
   // Redeem state
   const [code, setCode] = useState('')
@@ -112,70 +113,98 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
             const owned = hook.tier <= hookTier
             const isActive = hook.tier === hookTier
             const locked = hook.tier > hookTier + 1
+            const showTooltip = tooltipTier === hook.tier
+            const c = hook.color
+
+            const isNext = hook.tier === hookTier + 1
+            const clickable = isNext && canAfford && !isPending
 
             return (
               <div
                 key={hook.tier}
+                onClick={clickable ? handleBuyHook : undefined}
                 style={{
-                  background: isActive ? 'rgba(240,192,64,0.06)' : owned ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${isActive ? 'rgba(240,192,64,0.35)' : owned ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.05)'}`,
+                  background: owned ? `${c}0d` : isNext && canAfford ? `${c}08` : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${owned ? `${c}55` : isNext && canAfford ? `${c}40` : 'rgba(255,255,255,0.05)'}`,
+                  boxShadow: isActive ? `0 0 16px ${c}18` : isNext && canAfford ? `0 0 12px ${c}12` : 'none',
                   borderRadius: 12,
                   padding: '0.75rem 0.875rem',
-                  opacity: locked ? 0.35 : 1,
+                  opacity: locked ? 0.3 : isPending && isNext ? 0.6 : 1,
+                  cursor: clickable ? 'pointer' : 'default',
+                  transition: 'box-shadow 0.2s ease, opacity 0.15s ease',
                 }}
               >
                 <div className="flex items-center gap-3">
-                  <HookIcon active={isActive} owned={owned} />
+                  <HookIcon tier={hook.tier} color={c} owned={owned} isActive={isActive} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.85rem' }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: owned ? '#f0ede8' : '#6a6764' }}>
                         {hook.name}
                       </p>
                       {isActive && (
-                        <span className="font-karla font-600 uppercase tracking-[0.12em] text-[#f0c040]" style={{ fontSize: '0.52rem' }}>Active</span>
+                        <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: c }}>Active</span>
                       )}
                       {owned && !isActive && (
                         <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80]" style={{ fontSize: '0.52rem' }}>Owned</span>
                       )}
                     </div>
                     <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.7rem' }}>{hook.description}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <p className="font-karla font-300 text-[#4a4845] uppercase tracking-[0.10em]" style={{ fontSize: '0.58rem' }}>Deep luck</p>
-                      <LuckBar score={hook.luckScore} />
-                      <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: hook.luckScore === 0 ? '#4a4845' : '#8a8880' }}>
-                        {hook.luckLabel}
+
+                    {isNext && (
+                      <p className="font-karla font-600 mt-1" style={{ fontSize: '0.65rem', color: canAfford ? c : '#6a6764' }}>
+                        {isPending ? 'Upgrading…' : canAfford ? '↑ Tap to upgrade' : `${(hook.cost - doubloons).toLocaleString()} ⟡ short`}
                       </p>
-                    </div>
+                    )}
+
+                    {showTooltip && (
+                      <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+                        {[
+                          { label: 'Shallows', value: hook.weights.shallows, color: '#60a5fa' },
+                          { label: 'Open Waters', value: hook.weights.openWaters, color: '#4ade80' },
+                          { label: 'Deep', value: hook.weights.deep, color: '#a78bfa' },
+                          { label: 'Abyss', value: hook.weights.abyss, color: '#f0c040' },
+                        ].map(({ label, value, color }) => (
+                          <div key={label} className="flex items-center justify-between gap-2">
+                            <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.65rem' }}>{label}</p>
+                            <p className="font-karla font-600" style={{ fontSize: '0.65rem', color }}>{(value * 100).toFixed(1)}%</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  {!owned && (
-                    <p className="font-cinzel font-700 text-[#f0c040] shrink-0" style={{ fontSize: '0.8rem' }}>
-                      {hook.cost.toLocaleString()} ⟡
+
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    {!owned && (
+                      <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.8rem' }}>
+                        {hook.cost.toLocaleString()} ⟡
+                      </p>
+                    )}
+                    <p className="font-karla font-600" style={{ fontSize: '0.65rem', color: owned ? c : '#4a4845' }}>
+                      {hook.deepChance}% deep
                     </p>
-                  )}
+                    <button
+                      onClick={() => setTooltipTier(showTooltip ? null : hook.tier)}
+                      onMouseEnter={() => setTooltipTier(hook.tier)}
+                      onMouseLeave={() => setTooltipTier(null)}
+                      className="transition-colors"
+                      style={{ color: showTooltip ? '#8a8880' : '#4a4845', lineHeight: 1 }}
+                      aria-label="Show zone breakdown"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="8.5"/>
+                        <line x1="12" y1="12" x2="12" y2="16"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             )
           })}
         </div>
 
-        {nextHook ? (
-          <div className="flex flex-col items-center gap-2">
-            <button
-              onClick={handleBuyHook}
-              disabled={isPending || !canAfford}
-              className="btn-gold w-full disabled:opacity-40"
-              style={{ cursor: canAfford ? 'pointer' : 'default' }}
-            >
-              {isPending ? 'Buying…' : `Upgrade to ${nextHook.name} · ${nextHook.cost.toLocaleString()} ⟡`}
-            </button>
-            {!canAfford && (
-              <p className="font-karla font-300 text-[#6a6764] text-xs">
-                You need {(nextHook.cost - doubloons).toLocaleString()} more ⟡
-              </p>
-            )}
-            {hookError && <p className="font-karla font-300 text-red-400 text-xs">{hookError}</p>}
-          </div>
-        ) : (
+        {hookError && <p className="font-karla font-300 text-red-400 text-xs text-center mb-2">{hookError}</p>}
+        {!nextHook && (
           <p className="font-karla font-300 text-[#8a8880] text-sm text-center">
             You have the best hook in the sea.
           </p>
@@ -185,36 +214,83 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
   )
 }
 
-function LuckBar({ score }: { score: number }) {
-  return (
-    <div className="flex gap-0.5">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div
-          key={i}
-          style={{
-            width: 6, height: 6, borderRadius: 1.5,
-            background: i < score ? '#f0c040' : 'rgba(255,255,255,0.08)',
-          }}
-        />
-      ))}
-    </div>
-  )
-}
+function HookIcon({ tier, color, owned, isActive }: { tier: number; color: string; owned: boolean; isActive: boolean }) {
+  const stroke = owned ? color : '#4a4845'
+  const fill = owned ? color : '#4a4845'
+  const bg = owned ? `${color}12` : 'rgba(255,255,255,0.03)'
+  const border = owned ? `${color}35` : 'rgba(255,255,255,0.06)'
 
-function HookIcon({ active, owned }: { active: boolean; owned: boolean }) {
-  const color = active ? '#f0c040' : owned ? '#8a8880' : '#4a4845'
+  const icons: Record<number, React.ReactNode> = {
+    0: ( // Rusty — simple rough hook
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3v9"/>
+        <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
+        <circle cx="12" cy="3" r="1.2" fill={fill} stroke="none"/>
+        <circle cx="9" cy="7" r="0.5" fill={stroke} stroke="none" opacity="0.5"/>
+        <circle cx="13" cy="10" r="0.4" fill={stroke} stroke="none" opacity="0.4"/>
+      </svg>
+    ),
+    1: ( // Bent — angled shank
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M13 3 L13 8 L11 12"/>
+        <path d="M11 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
+        <circle cx="13" cy="3" r="1.3" fill={fill} stroke="none"/>
+      </svg>
+    ),
+    2: ( // Iron — barbed hook
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3v9"/>
+        <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
+        <path d="M9.5 15.5 L7.5 13.5"/>
+        <circle cx="12" cy="3" r="1.3" fill={fill} stroke="none"/>
+      </svg>
+    ),
+    3: ( // Steel — ring on shank
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3v9"/>
+        <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
+        <ellipse cx="12" cy="7" rx="2.5" ry="1" strokeWidth="1.4"/>
+        <circle cx="12" cy="3" r="1.3" fill={fill} stroke="none"/>
+      </svg>
+    ),
+    4: ( // Gold — ornate loop top
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 5v7"/>
+        <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
+        <path d="M9 3 C9 1.5 15 1.5 15 3 C15 4.5 12 5 12 5"/>
+        <path d="M9.5 15.5 L7.5 13.5"/>
+      </svg>
+    ),
+    5: ( // Enchanted — sparkles
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3v9"/>
+        <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
+        <circle cx="12" cy="3" r="1.3" fill={fill} stroke="none"/>
+        <circle cx="17" cy="5" r="0.8" fill={fill} stroke="none" opacity="0.7"/>
+        <circle cx="15" cy="9" r="0.6" fill={fill} stroke="none" opacity="0.5"/>
+        <circle cx="7" cy="7" r="0.7" fill={fill} stroke="none" opacity="0.6"/>
+      </svg>
+    ),
+    6: ( // Legendary — trident tip
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 5v7"/>
+        <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
+        <path d="M9 2 L12 5 L15 2"/>
+        <path d="M9 2 L9 4M15 2 L15 4"/>
+        <path d="M9.5 15.5 L7.5 13.5"/>
+      </svg>
+    ),
+  }
+
   return (
     <div style={{
-      width: 36, height: 36, borderRadius: 9, flexShrink: 0,
-      background: active ? 'rgba(240,192,64,0.08)' : 'rgba(255,255,255,0.04)',
-      border: `1px solid ${active ? 'rgba(240,192,64,0.2)' : 'rgba(255,255,255,0.06)'}`,
+      width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+      background: bg,
+      border: `1px solid ${border}`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: isActive ? `0 0 10px ${color}25` : 'none',
     }}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2v10"/>
-        <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
-        <circle cx="12" cy="3" r="1.5" fill={color} stroke="none"/>
-      </svg>
+      {icons[tier]}
     </div>
   )
 }
