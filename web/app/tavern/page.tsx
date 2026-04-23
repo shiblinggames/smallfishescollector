@@ -2,16 +2,20 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import CrownAndAnchor from './CrownAndAnchor'
+import FishOfTheDay from './FishOfTheDay'
 import { getDailyWagered } from './actions'
+import { getDailyFishPuzzle, getAllFishNames } from './fishActions'
 
 export default async function TavernPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, dailyWagered] = await Promise.all([
+  const [{ data: profile }, dailyWagered, puzzleResult, allFishNames] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
     getDailyWagered(),
+    getDailyFishPuzzle(),
+    getAllFishNames(),
   ])
 
   return (
@@ -30,14 +34,42 @@ export default async function TavernPage() {
           </p>
         </div>
 
-        <div className="px-6 py-6">
-          <div className="max-w-sm mx-auto">
-            <p className="sg-eyebrow mb-6 text-center" style={{ color: '#9a9488' }}>Crown &amp; Anchor</p>
+        <div className="px-6 flex flex-col gap-14 pb-12">
+
+          {/* Fish of the Day */}
+          <div className="max-w-sm mx-auto w-full">
+            <div className="mb-6 text-center">
+              <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Daily</p>
+              <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.1rem' }}>Fish of the Day</p>
+              <p className="font-karla font-300 text-[#8a8880] text-xs mt-1">
+                Four clues. Four guesses. One fish.
+              </p>
+            </div>
+            {'error' in puzzleResult ? (
+              <p className="font-karla text-[#8a8880] text-sm text-center">{puzzleResult.error}</p>
+            ) : (
+              <FishOfTheDay initialPuzzle={puzzleResult} allFishNames={allFishNames} />
+            )}
+          </div>
+
+          {/* Divider */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
+
+          {/* Crown & Anchor */}
+          <div className="max-w-sm mx-auto w-full">
+            <div className="mb-6 text-center">
+              <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Dice Game</p>
+              <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.1rem' }}>Crown &amp; Anchor</p>
+              <p className="font-karla font-300 text-[#8a8880] text-xs mt-1">
+                500 ⟡ daily limit
+              </p>
+            </div>
             <CrownAndAnchor
               doubloons={profile?.doubloons ?? 0}
               dailyWagered={dailyWagered}
             />
           </div>
+
         </div>
       </main>
     </>
