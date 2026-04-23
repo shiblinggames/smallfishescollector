@@ -1,41 +1,15 @@
-import type { CardVariant, DrawnCard, BorderStyle, ArtEffect } from './types'
-import { VARIANT_RARITY } from './variants'
+import type { CardVariant, DrawnCard, BorderStyle, ArtEffect, Zone } from './types'
+import { RARITY_TIERS, VARIANT_RARITY } from './variants'
 import { getHook } from './hooks'
 import type { HookDef } from './hooks'
 
-const ABYSS_FISH = new Set(['Catfish', 'Doby Mick'])
-
-function weightedPick(variants: CardVariant[]): CardVariant {
-  const total = variants.reduce((sum, v) => sum + v.drop_weight, 0)
-  let r = Math.random() * total
-  for (const v of variants) {
-    r -= v.drop_weight
-    if (r <= 0) return v
-  }
-  return variants[variants.length - 1]
-}
-
-function pickZone(w: HookDef['weights']): 'shallows' | 'openWaters' | 'deep' | 'abyss' {
-  const r = Math.random()
-  if (r < w.abyss) return 'abyss'
-  if (r < w.abyss + w.deep) return 'deep'
-  if (r < w.abyss + w.deep + w.openWaters) return 'openWaters'
-  return 'shallows'
-}
-
-function zonePool(variants: CardVariant[], zone: 'shallows' | 'openWaters' | 'deep' | 'abyss'): CardVariant[] {
-  switch (zone) {
-    case 'shallows':   return variants.filter(v => v.cards!.tier === 1)
-    case 'openWaters': return variants.filter(v => v.cards!.tier === 2)
-    case 'deep':       return variants.filter(v => v.cards!.tier === 3 && !ABYSS_FISH.has(v.cards!.name))
-    case 'abyss':      return variants.filter(v => ABYSS_FISH.has(v.cards!.name))
-  }
-}
-
-const GOD_PACK_ELIGIBLE = new Set([
-  'Pearl', 'Holographic', 'Ghost', 'Shadow', 'Prismatic',
-  'Kraken', 'Davy Jones', 'Golden Age', 'Wanted', 'Maelstrom',
-])
+// God pack eligible = Epic and above. Derives automatically from RARITY_TIERS.
+const GOD_PACK_RARITY_NAMES = new Set(['Epic', 'Legendary', 'Mythic'])
+const GOD_PACK_ELIGIBLE = new Set(
+  RARITY_TIERS
+    .filter(t => GOD_PACK_RARITY_NAMES.has(t.name))
+    .flatMap(t => [...t.variants])
+)
 
 const GOD_PACK_WEIGHTS: Record<string, number> = {
   'Pearl':       20,
@@ -48,6 +22,28 @@ const GOD_PACK_WEIGHTS: Record<string, number> = {
   'Golden Age':   3,
   'Wanted':       3,
   'Maelstrom':    3,
+}
+
+function weightedPick(variants: CardVariant[]): CardVariant {
+  const total = variants.reduce((sum, v) => sum + v.drop_weight, 0)
+  let r = Math.random() * total
+  for (const v of variants) {
+    r -= v.drop_weight
+    if (r <= 0) return v
+  }
+  return variants[variants.length - 1]
+}
+
+function pickZone(w: HookDef['weights']): Zone {
+  const r = Math.random()
+  if (r < w.abyss) return 'abyss'
+  if (r < w.abyss + w.deep) return 'deep'
+  if (r < w.abyss + w.deep + w.openWaters) return 'open_waters'
+  return 'shallows'
+}
+
+function zonePool(variants: CardVariant[], zone: Zone): CardVariant[] {
+  return variants.filter(v => v.cards!.zone === zone)
 }
 
 export function drawGodPack(variants: CardVariant[]): DrawnCard[] {

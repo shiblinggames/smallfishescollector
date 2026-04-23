@@ -186,17 +186,20 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
     if (!error) setTimeout(() => setPrize({ cardName: card.name, variantName: card.variantName, prizeCode: code }), 2500)
   }
 
+  // To add reveal effects for a new rarity, add one entry here.
+  const RARITY_EFFECTS: Record<string, { glow: string; flash: string }> = {
+    Epic:      { glow: 'reveal-glow-epic',      flash: 'epic'      },
+    Legendary: { glow: 'reveal-glow-legendary', flash: 'legendary' },
+    Mythic:    { glow: 'reveal-glow-mythic',    flash: 'mythic'    },
+  }
+
   function glowClassFor(rarity: string) {
-    if (rarity === 'Mythic')    return 'reveal-glow-mythic'
-    if (rarity === 'Legendary') return 'reveal-glow-legendary'
-    if (rarity === 'Epic')      return 'reveal-glow-epic'
-    return ''
+    return RARITY_EFFECTS[rarity]?.glow ?? ''
   }
 
   function triggerFlash(rarity: string) {
-    if (['Mythic', 'Legendary', 'Epic'].includes(rarity)) {
-      setFlash({ type: rarity.toLowerCase(), key: Date.now() })
-    }
+    const fx = RARITY_EFFECTS[rarity]
+    if (fx) setFlash({ type: fx.flash, key: Date.now() })
   }
 
   function flipCard(i: number) {

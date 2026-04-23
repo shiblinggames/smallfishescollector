@@ -1,12 +1,15 @@
 export type BorderStyle = 'standard' | 'silver' | 'gold' | 'pearl' | 'prismatic' | 'void' | 'kraken' | 'davy-jones' | 'golden-age' | 'storm' | 'wanted'
 export type ArtEffect  = 'normal' | 'holographic' | 'rainbow' | 'ghost' | 'shadow' | 'kraken' | 'davy-jones' | 'golden-age' | 'storm' | 'wanted'
 
+export type Zone = 'shallows' | 'open_waters' | 'deep' | 'abyss'
+
 export interface Card {
   id: number
   name: string
   slug: string
   filename: string
   tier: 1 | 2 | 3
+  zone: Zone
 }
 
 export interface CardVariant {
