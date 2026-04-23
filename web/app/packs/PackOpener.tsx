@@ -269,12 +269,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/booster.png" alt="Booster Pack" style={{ width: '100%', height: 'auto', display: 'block' }} />
-              {loading && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.45)', borderRadius: 8 }}>
-                  <p style={{ fontFamily: 'var(--font-karla)', fontSize: '0.85rem', color: '#f0c040' }}>Fishing…</p>
-                </div>
-              )}
+              <img src="/booster.png" alt="Booster Pack" style={{ width: '100%', height: 'auto', display: 'block', opacity: loading ? 0.5 : 1, transition: 'opacity 0.2s ease' }} />
             </button>
           </div>
 
@@ -325,14 +320,9 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
     return (
       <>
         <div className="flip-card-inner w-full h-full">
-          <div className="flip-card-front w-full h-full border-[3px] border-[rgba(255,255,255,0.08)] flex flex-col items-center justify-center gap-3" style={{ background: 'rgba(8, 12, 40, 0.25)' }}>
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <path d="M18 4 C18 4 18 18 18 22 C18 27 13 29 10 26 C7 23 9 19 12 19"
-                    stroke="#8a8880" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
-              <path d="M12 19 L10 17" stroke="#f0c040" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
-              <circle cx="18" cy="5" r="2.2" stroke="#8a8880" strokeWidth="1.6" fill="none"/>
-            </svg>
-            <p className="sg-eyebrow text-[0.6rem]" style={{ color: '#8a8880' }}>Open</p>
+          <div className="flip-card-front w-full h-full overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/cardback.png" alt="" className="w-full h-full object-cover" />
           </div>
           <div className="flip-card-back w-full h-full bg-black flex items-center justify-center p-3" style={cardBackBorderStyle(card.borderStyle, card.artEffect)}>
             <FishCard name={card.name} filename={card.filename} borderStyle={card.borderStyle} artEffect={card.artEffect} variantName={card.variantName} dropWeight={card.dropWeight} />

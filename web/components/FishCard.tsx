@@ -62,9 +62,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
   const src = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${filename}`
 
   const imageContent = unowned ? (
-    <div className="w-full h-full bg-[#0a0a0a] flex items-center justify-center">
-      <span className="font-karla font-300 text-xs text-[#3a3a3a] tracking-widest uppercase">???</span>
-    </div>
+    <img src="/cardback.png" alt="" className="w-full h-full object-cover" />
   ) : (
     <>
       <Image
