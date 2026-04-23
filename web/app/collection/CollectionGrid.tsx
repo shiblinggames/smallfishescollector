@@ -264,10 +264,10 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
         <p className="font-karla font-300 text-[#8a8880] text-xs tracking-wide mb-2">
           {fishDiscovered} of {allCards.length} fish discovered
         </p>
-        <div className="w-64 h-px bg-[rgba(255,255,255,0.08)] mx-auto overflow-hidden mb-4">
+        <div className="w-64 h-2 rounded-full mx-auto overflow-hidden mb-4" style={{ background: 'rgba(255,255,255,0.08)' }}>
           <div
-            className="h-full bg-[#f0c040] transition-all duration-700"
-            style={{ width: `${totalVariants > 0 ? (uniqueVariantsOwned / totalVariants) * 100 : 0}%` }}
+            className="h-full rounded-full transition-all duration-700"
+            style={{ width: `${totalVariants > 0 ? (uniqueVariantsOwned / totalVariants) * 100 : 0}%`, background: 'linear-gradient(to right, #d4a800, #f0c040)' }}
           />
         </div>
         {/* Doubloon balance */}
