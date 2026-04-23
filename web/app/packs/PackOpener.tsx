@@ -407,8 +407,8 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
       <div key={i} className="flex flex-col items-center gap-2">
         <div
           ref={(el) => { cardRefs.current[i] = el }}
-          className={`flip-card select-none ${flipped[i] ? 'flipped' : loading ? '' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
-          style={{ width: 160, height: 248, opacity: mythicFeatured !== null && mythicFeatured !== i ? 0.2 : 1, transition: 'opacity 0.3s ease' }}
+          className={`flip-card pack-card-size select-none ${flipped[i] ? 'flipped' : loading ? '' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
+          style={{ opacity: mythicFeatured !== null && mythicFeatured !== i ? 0.2 : 1, transition: 'opacity 0.3s ease' }}
           onClick={() => flipCard(i)}
           onMouseMove={(e) => handleMouseMove(e, i)}
           onMouseLeave={(e) => handleMouseLeave(e, i)}

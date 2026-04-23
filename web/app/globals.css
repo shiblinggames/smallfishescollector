@@ -470,6 +470,10 @@ body {
 }
 .art-wanted { filter: sepia(0.95) brightness(0.9) contrast(1.1) saturate(0.75); }
 
+/* ── Pack card responsive size ── */
+.pack-card-size { width: 160px; height: 248px; }
+@media (min-width: 640px) { .pack-card-size { width: 210px; height: 325px; } }
+
 /* ── Daily bonus toast ── */
 @keyframes fadeInDown {
   from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
