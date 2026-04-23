@@ -40,12 +40,12 @@ export const IS_LEGENDARY_RARITY = (rarity: string) => rarity === 'Legendary'
 export const IS_MYTHIC_RARITY    = (rarity: string) => rarity === 'Mythic'
 
 export const DOUBLOON_VALUE: Record<string, number> = {
-  Common:    5,
-  Uncommon:  15,
-  Rare:      40,
-  Epic:      100,
-  Legendary: 300,
-  Mythic:    800,
+  Common:    2,
+  Uncommon:  5,
+  Rare:      10,
+  Epic:      25,
+  Legendary: 75,
+  Mythic:    250,
 }
 
 export function doubloonValueFor(variantName: string, dropWeight: number): number {
