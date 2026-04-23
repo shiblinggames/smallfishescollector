@@ -28,10 +28,15 @@ export default async function MarketplacePage() {
           <MarketRedeemBar />
         </div>
 
-        <div className="px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-12 max-w-4xl mx-auto">
+        <div className="px-6 pb-12 max-w-4xl mx-auto flex flex-col gap-8">
+
+          {/* Upgrades */}
+          <div>
+            <p className="font-karla font-600 uppercase tracking-[0.14em] text-[#6a6764] mb-3" style={{ fontSize: '0.65rem' }}>Upgrades</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ShopCard
             href="/marketplace/tackle-shop"
-            eyebrow="Upgrades"
+            eyebrow="Tackle Shop"
             name="Tackle Shop"
             description="Upgrade your hook to fish in deeper waters and improve your odds on rare pulls."
             items={[
@@ -43,7 +48,7 @@ export default async function MarketplacePage() {
           />
           <ShopCard
             href="/marketplace/shipyard"
-            eyebrow="Upgrades"
+            eyebrow="Shipyard"
             name="Shipyard"
             description="Upgrade your ship to earn more doubloons from your daily bonus."
             items={[
@@ -53,6 +58,11 @@ export default async function MarketplacePage() {
             ]}
             icon={<ShipIcon />}
           />
+            </div>
+          </div>
+
+          {/* Standalone cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ShopCard
             href="https://shiblingshop.com/products/small-fishes-premium-membership"
             eyebrow="Support Us"
@@ -84,6 +94,8 @@ export default async function MarketplacePage() {
             icon={<BoxIcon />}
             external
           />
+          </div>
+
         </div>
       </main>
     </>
