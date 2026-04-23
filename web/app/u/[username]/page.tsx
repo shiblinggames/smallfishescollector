@@ -11,7 +11,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
-    admin.from('profiles').select('id, username, showcase_variant_ids').ilike('username', username).single(),
+    admin.from('profiles').select('id, username, showcase_variant_ids, is_premium, premium_expires_at').ilike('username', username).single(),
   ])
 
   if (!profile) notFound()
@@ -67,6 +67,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           username={profile.username}
           showcaseVariants={showcaseVariants}
           stats={{ packsOpened: packsOpened ?? 0, completionPct }}
+          isPremium={
+            !!profile.is_premium &&
+            !!profile.premium_expires_at &&
+            new Date(profile.premium_expires_at) > new Date()
+          }
         />
       </main>
     </>
