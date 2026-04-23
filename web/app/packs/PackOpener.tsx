@@ -237,17 +237,17 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
           {/* Booster pack */}
           <div className="relative" style={{ marginTop: packs > 1 ? 16 : 0 }}>
             {packs > 2 && (
-              <img src="/booster.png" alt="" aria-hidden className="absolute inset-0 w-full h-full object-contain" style={{ transform: 'translateY(14px) translateX(8px) rotate(2.5deg)', opacity: 0.5, pointerEvents: 'none' }} />
+              <img src="/booster.png" alt="" aria-hidden className="absolute inset-0 w-full h-auto" style={{ transform: 'translateY(14px) translateX(8px) rotate(2.5deg)', opacity: 0.5, pointerEvents: 'none' }} />
             )}
             {packs > 1 && (
-              <img src="/booster.png" alt="" aria-hidden className="absolute inset-0 w-full h-full object-contain" style={{ transform: 'translateY(7px) translateX(4px) rotate(1.2deg)', opacity: 0.7, pointerEvents: 'none' }} />
+              <img src="/booster.png" alt="" aria-hidden className="absolute inset-0 w-full h-auto" style={{ transform: 'translateY(7px) translateX(4px) rotate(1.2deg)', opacity: 0.7, pointerEvents: 'none' }} />
             )}
             <button
               onClick={packs > 0 ? openPack : undefined}
               disabled={loading || packs === 0}
               className="relative block select-none"
               style={{
-                width: 300, height: 420,
+                width: 'min(80vw, 360px)',
                 cursor: packs > 0 && !loading ? 'pointer' : 'default',
                 background: 'none',
                 border: 'none',
@@ -266,7 +266,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/booster.png" alt="Booster Pack" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+              <img src="/booster.png" alt="Booster Pack" style={{ width: '100%', height: 'auto', display: 'block' }} />
               {loading && (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.45)', borderRadius: 8 }}>
                   <p style={{ fontFamily: 'var(--font-karla)', fontSize: '0.85rem', color: '#f0c040' }}>Fishing…</p>
