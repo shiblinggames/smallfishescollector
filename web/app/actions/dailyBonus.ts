@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-export const DAILY_BONUS = 50
+const DAILY_BONUS = 50
 
 export async function claimDailyBonus(): Promise<{ claimed: boolean; doubloons?: number }> {
   const supabase = await createClient()

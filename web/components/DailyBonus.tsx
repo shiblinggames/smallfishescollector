@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { claimDailyBonus, DAILY_BONUS } from '@/app/actions/dailyBonus'
+import { claimDailyBonus } from '@/app/actions/dailyBonus'
+
+const DAILY_BONUS = 50
 
 export default function DailyBonus() {
   const [show, setShow] = useState(false)
