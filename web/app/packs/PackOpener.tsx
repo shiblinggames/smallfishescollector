@@ -89,6 +89,9 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
   async function openPack() {
     if (packs <= 0 || loading) return
     setLoading(true)
+    setCards([])
+    setFlipped([])
+    setGlowClasses([])
     setPrize(null)
     setShockwaveCards(new Set())
     setMythicFeatured(null)
