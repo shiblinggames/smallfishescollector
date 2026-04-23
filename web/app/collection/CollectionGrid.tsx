@@ -23,33 +23,33 @@ function getRank(owned: number) {
 }
 function RankIcon({ name, color }: { name: string; color: string }) {
   if (name === 'Captain') return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 11l9-8 9 8"/><path d="M5 9v10h14V9"/><path d="M9 21v-6h6v6"/>
     </svg>
   )
   if (name === 'Quartermaster') return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/>
       <line x1="12" y1="3" x2="12" y2="10"/><line x1="12" y1="14" x2="12" y2="21"/>
       <line x1="3" y1="12" x2="10" y2="12"/><line x1="14" y1="12" x2="21" y2="12"/>
     </svg>
   )
   if (name === 'Second Mate') return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>
       <line x1="12" y1="3" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="21"/>
       <line x1="3" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="21" y2="12"/>
     </svg>
   )
   if (name === 'Officer') return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 2L12 6M12 18L12 22M2 12L6 12M18 12L22 12"/>
       <path d="M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>
       <circle cx="12" cy="12" r="4"/>
     </svg>
   )
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="5" r="2"/><path d="M12 7v10M8 17c0 0 1 2 4 2s4-2 4-2M7 11h10"/>
       <path d="M7 17c-2-1-3-3-3-5h3M17 17c2-1 3-3 3-5h-3"/>
     </svg>
@@ -252,20 +252,20 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
             background: 'rgba(255,255,255,0.03)',
             border: '1px solid rgba(255,255,255,0.07)',
             borderRadius: statsOpen ? '12px 12px 0 0' : 12,
-            padding: '0.75rem 1rem',
+            padding: '1rem 1.125rem',
             transition: 'border-radius 0.2s ease',
           }}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3.5">
             <RankIcon name={rank.name} color={rank.color} />
             <div className="flex-1">
-              <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#9a9488]" style={{ fontSize: '0.52rem' }}>Rank</p>
-              <p className="font-cinzel font-700" style={{ color: rank.color, fontSize: '0.95rem', lineHeight: 1.1 }}>{rank.name}</p>
+              <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#9a9488]" style={{ fontSize: '0.62rem' }}>Rank</p>
+              <p className="font-cinzel font-700" style={{ color: rank.color, fontSize: '1.2rem', lineHeight: 1.1 }}>{rank.name}</p>
             </div>
-            <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.68rem' }}>
+            <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.78rem' }}>
               {uniqueVariantsOwned}<span style={{ color: '#4a4845' }}> / {totalVariants} variants</span>
             </p>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, transition: 'transform 0.2s ease', transform: statsOpen ? 'rotate(180deg)' : '' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, transition: 'transform 0.2s ease', transform: statsOpen ? 'rotate(180deg)' : '' }}>
               <path d="M6 9l6 6 6-6"/>
             </svg>
           </div>
