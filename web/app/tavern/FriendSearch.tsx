@@ -8,8 +8,9 @@ interface Result {
   username: string
 }
 
-export default function FriendSearch({ currentUsername }: { currentUsername?: string }) {
+export default function FriendSearch() {
   const [query, setQuery] = useState('')
+  const [lastQuery, setLastQuery] = useState('')
   const [results, setResults] = useState<Result[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
@@ -19,6 +20,7 @@ export default function FriendSearch({ currentUsername }: { currentUsername?: st
     if (!query.trim()) return
     setLoading(true)
     setSearched(true)
+    setLastQuery(query.trim())
     const data = await searchUsers(query.trim())
     setResults(data)
     setLoading(false)
@@ -42,9 +44,9 @@ export default function FriendSearch({ currentUsername }: { currentUsername?: st
         </button>
       </form>
 
-      {currentUsername && (
+      {lastQuery && !loading && (
         <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.65rem' }}>
-          Your username: <Link href={`/u/${currentUsername}`} className="text-[#f0ede8] hover:text-[#f0c040] transition-colors">{currentUsername}</Link>
+          Last search: <span className="text-[#8a8880]">{lastQuery}</span>
         </p>
       )}
 

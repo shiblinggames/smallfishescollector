@@ -638,27 +638,27 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                     const selectedIdx = selectedShowcase.indexOf(card.variantId)
                     const isSelected = selectedIdx !== -1
                     return (
-                      <button
-                        key={card.variantId}
-                        onClick={() => toggleShowcaseCard(card.variantId)}
-                        disabled={!isSelected && selectedShowcase.length >= 5}
-                        className="relative transition-opacity disabled:opacity-25"
-                        style={isSelected ? { outline: '2px solid #f0c040', outlineOffset: '5px', borderRadius: '50%' } : {}}
-                      >
-                        <FishCard
-                          name={card.name}
-                          filename={card.filename}
-                          borderStyle={card.borderStyle as any}
-                          artEffect={card.artEffect as any}
-                          variantName={card.variantName}
-                          dropWeight={card.dropWeight}
-                        />
+                      <div key={card.variantId} className="relative">
+                        <div
+                          className={`rounded-full transition-all duration-200 ${!isSelected && selectedShowcase.length >= 5 ? 'opacity-25' : 'cursor-pointer'}`}
+                          style={isSelected ? { outline: '2px solid #f0c040', outlineOffset: '5px' } : {}}
+                          onClick={() => (!isSelected && selectedShowcase.length >= 5) ? undefined : toggleShowcaseCard(card.variantId)}
+                        >
+                          <FishCard
+                            name={card.name}
+                            filename={card.filename}
+                            borderStyle={card.borderStyle as any}
+                            artEffect={card.artEffect as any}
+                            variantName={card.variantName}
+                            dropWeight={card.dropWeight}
+                          />
+                        </div>
                         {isSelected && (
-                          <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#f0c040' }}>
+                          <div className="absolute top-0 right-0 w-5 h-5 rounded-full flex items-center justify-center pointer-events-none" style={{ background: '#f0c040' }}>
                             <span className="font-karla font-700 text-black" style={{ fontSize: '0.6rem' }}>{selectedIdx + 1}</span>
                           </div>
                         )}
-                      </button>
+                      </div>
                     )
                   })}
                 </div>
