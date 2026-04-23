@@ -27,6 +27,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full bg-[#000000] text-[#f0ede8] font-karla">
         <DailyBonus />
         {children}
+        <footer className="pb-28 sm:pb-10 pt-6 text-center">
+          <p className="font-karla font-300 text-[#3a3835]" style={{ fontSize: '0.65rem' }}>
+            &copy; {new Date().getFullYear()} Shibling Games LLC
+          </p>
+        </footer>
       </body>
     </html>
   )
