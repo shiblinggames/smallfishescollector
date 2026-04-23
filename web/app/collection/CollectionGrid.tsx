@@ -78,6 +78,7 @@ interface Props {
   username: string
   usernameChanged: boolean
   showcaseVariantIds: number[]
+  isPremium: boolean
 }
 
 interface ModalCard {
@@ -151,7 +152,7 @@ function LockedVariant({ variantName, dropWeight }: { variantName: string; dropW
   )
 }
 
-export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId, allVariantsByCardId, doubloons: initialDoubloons, username: initialUsername, usernameChanged: initialUsernameChanged, showcaseVariantIds: initialShowcaseIds }: Props) {
+export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId, allVariantsByCardId, doubloons: initialDoubloons, username: initialUsername, usernameChanged: initialUsernameChanged, showcaseVariantIds: initialShowcaseIds, isPremium }: Props) {
   const [modal, setModal] = useState<ModalCard | null>(null)
   const [pinnedVariants, setPinnedVariants] = useState<Record<number, number>>({})
   const [doubloons, setDoubloons] = useState(initialDoubloons)
@@ -327,16 +328,26 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
         >
           <div className="flex items-center gap-3.5">
             <RankIcon name={rank.name} color={rank.color} />
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#9a9488]" style={{ fontSize: '0.62rem' }}>{rank.name}</p>
-              <Link
-                href={`/u/${username}`}
-                className="font-cinzel font-700 hover:opacity-80 transition-opacity"
-                style={{ color: rank.color, fontSize: '1.2rem', lineHeight: 1.1 }}
-                onClick={e => e.stopPropagation()}
-              >
-                {username}
-              </Link>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link
+                  href={`/u/${username}`}
+                  className="font-cinzel font-700 hover:opacity-80 transition-opacity"
+                  style={{ color: rank.color, fontSize: '1.2rem', lineHeight: 1.1 }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  {username}
+                </Link>
+                {isPremium && (
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full shrink-0" style={{ background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.3)' }}>
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#f0c040' }}>Member</span>
+                  </div>
+                )}
+              </div>
             </div>
             <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.78rem' }}>
               {uniqueVariantsOwned}<span style={{ color: '#6a6764' }}> / {totalVariants} variants</span>
