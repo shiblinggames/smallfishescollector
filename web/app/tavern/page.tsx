@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
+import FriendSearch from './FriendSearch'
 
 export default async function TavernPage() {
   const supabase = await createClient()
@@ -10,7 +11,7 @@ export default async function TavernPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('packs_available, doubloons, fotd_streak')
+    .select('packs_available, doubloons, fotd_streak, username')
     .eq('id', user.id)
     .single()
 
@@ -18,6 +19,10 @@ export default async function TavernPage() {
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0 pt-6">
+        <div className="px-6 max-w-4xl mx-auto mb-6">
+          <FriendSearch currentUsername={profile?.username ?? undefined} />
+        </div>
+
         <div className="px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-12 max-w-4xl mx-auto">
           <GameCard
             href="/tavern/fish-of-the-day"
