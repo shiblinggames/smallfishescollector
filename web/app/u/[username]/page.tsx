@@ -11,31 +11,40 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
-    admin.from('profiles').select('id, username, username_changed, showcase_variant_id').ilike('username', username).single(),
+    admin.from('profiles').select('id, username, showcase_variant_ids').ilike('username', username).single(),
   ])
 
   if (!profile) notFound()
 
-  const isOwnProfile = user?.id === profile.id
+  const showcaseIds: number[] = (profile.showcase_variant_ids as number[] | null) ?? []
 
-  // Fetch showcase card (explicit or rarest pull fallback)
-  let showcaseVariant: unknown = null
-  if (profile.showcase_variant_id) {
+  // Fetch showcase cards — use saved IDs or fall back to top 5 rarest pulls
+  let showcaseVariants: unknown[] = []
+  if (showcaseIds.length > 0) {
     const { data } = await admin
       .from('card_variants')
       .select('id, variant_name, border_style, art_effect, drop_weight, cards(name, filename)')
-      .eq('id', profile.showcase_variant_id)
-      .single()
-    showcaseVariant = data
+      .in('id', showcaseIds)
+    // Preserve saved order
+    const byId = Object.fromEntries((data ?? []).map((v: any) => [v.id, v]))
+    showcaseVariants = showcaseIds.map(id => byId[id]).filter(Boolean)
   } else {
     const { data } = await admin
       .from('user_collection')
       .select('card_variants(id, variant_name, border_style, art_effect, drop_weight, cards(name, filename))')
       .eq('user_id', profile.id)
       .order('card_variants(drop_weight)', { ascending: true })
-      .limit(1)
-      .single()
-    showcaseVariant = (data as any)?.card_variants ?? null
+      .limit(20)
+    // Deduplicate by variant id, take top 5
+    const seen = new Set()
+    for (const row of data ?? []) {
+      const cv = (row as any).card_variants
+      if (cv && !seen.has(cv.id)) {
+        seen.add(cv.id)
+        showcaseVariants.push(cv)
+        if (showcaseVariants.length >= 5) break
+      }
+    }
   }
 
   // Stats
@@ -47,22 +56,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const ownedVariants = new Set(ownedRows?.map((r: any) => r.card_variant_id)).size
   const completionPct = totalVariants ? Math.round((ownedVariants / totalVariants) * 100) : 0
 
-  // Own profile: fetch owned cards for showcase picker (deduplicated, rarest first)
-  let ownedCards: unknown[] = []
-  if (isOwnProfile) {
-    const { data } = await admin
-      .from('user_collection')
-      .select('card_variants(id, variant_name, border_style, art_effect, drop_weight, cards(name, filename))')
-      .eq('user_id', profile.id)
-      .order('card_variants(drop_weight)', { ascending: true })
-    const seen = new Set()
-    ownedCards = (data ?? []).reduce((acc: unknown[], row: any) => {
-      const cv = row.card_variants
-      if (cv && !seen.has(cv.id)) { seen.add(cv.id); acc.push(cv) }
-      return acc
-    }, [])
-  }
-
   // Nav data
   const { data: navProfile } = user ? await admin.from('profiles').select('packs_available').eq('id', user.id).single() : { data: null }
 
@@ -71,10 +64,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       <Nav packsAvailable={navProfile?.packs_available ?? undefined} />
       <main className="min-h-screen pb-24 sm:pb-0 pt-10">
         <ProfileClient
-          profile={{ id: profile.id, username: profile.username, username_changed: profile.username_changed ?? false }}
-          showcaseVariant={showcaseVariant}
-          isOwnProfile={isOwnProfile}
-          ownedCards={ownedCards}
+          username={profile.username}
+          showcaseVariants={showcaseVariants}
           stats={{ packsOpened: packsOpened ?? 0, completionPct }}
         />
       </main>

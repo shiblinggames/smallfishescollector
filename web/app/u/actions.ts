@@ -23,6 +23,7 @@ export async function updateUsername(username: string): Promise<{ error?: string
   }
 
   revalidatePath('/u/' + clean)
+  revalidatePath('/collection')
   return {}
 }
 
@@ -34,24 +35,32 @@ export async function checkUsername(username: string): Promise<{ available: bool
   return { available: !data }
 }
 
-export async function updateShowcase(variantId: number): Promise<{ error?: string }> {
+export async function updateShowcase(variantIds: number[]): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const admin = createAdminClient()
-  const { data: owned } = await admin
-    .from('user_collection')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('card_variant_id', variantId)
-    .limit(1)
-    .single()
-  if (!owned) return { error: 'You don\'t own that card.' }
+  const ids = variantIds.slice(0, 5)
 
-  const { error } = await admin.from('profiles').update({ showcase_variant_id: variantId }).eq('id', user.id)
-  if (error) return { error: 'Something went wrong.' }
+  if (ids.length > 0) {
+    const admin = createAdminClient()
+    const { data: owned } = await admin
+      .from('user_collection')
+      .select('card_variant_id')
+      .eq('user_id', user.id)
+      .in('card_variant_id', ids)
+    const ownedIds = new Set((owned ?? []).map((r: any) => r.card_variant_id))
+    if (!ids.every(id => ownedIds.has(id))) return { error: 'You don\'t own one of those cards.' }
 
+    const { error } = await admin.from('profiles').update({ showcase_variant_ids: ids }).eq('id', user.id)
+    if (error) return { error: 'Something went wrong.' }
+  } else {
+    const admin = createAdminClient()
+    const { error } = await admin.from('profiles').update({ showcase_variant_ids: null }).eq('id', user.id)
+    if (error) return { error: 'Something went wrong.' }
+  }
+
+  revalidatePath('/collection')
   return {}
 }
 
@@ -60,7 +69,7 @@ export async function searchUsers(query: string): Promise<{ username: string; sh
   const admin = createAdminClient()
   const { data } = await admin
     .from('profiles')
-    .select('username, showcase_variant_id')
+    .select('username, showcase_variant_ids')
     .ilike('username', `${query.toLowerCase()}%`)
     .limit(6)
 
@@ -68,11 +77,12 @@ export async function searchUsers(query: string): Promise<{ username: string; sh
 
   const results = await Promise.all(data.map(async (p) => {
     let variant = null
-    if (p.showcase_variant_id) {
+    const ids: number[] = p.showcase_variant_ids ?? []
+    if (ids.length > 0) {
       const { data: cv } = await admin
         .from('card_variants')
         .select('variant_name, border_style, art_effect, drop_weight, cards(name, filename)')
-        .eq('id', p.showcase_variant_id)
+        .eq('id', ids[0])
         .single()
       variant = cv
     }

@@ -34,7 +34,7 @@ export default async function CollectionPage() {
       .from('user_collection')
       .select('id, card_variant_id, card_variants(id, variant_name, border_style, art_effect, drop_weight, card_id)')
       .eq('user_id', user.id),
-    supabase.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, username, username_changed, showcase_variant_ids').eq('id', user.id).single(),
     supabase.from('card_variants').select('*', { count: 'exact', head: true }),
     supabase.from('card_variants').select('id, variant_name, border_style, art_effect, drop_weight, card_id'),
   ])
@@ -91,6 +91,9 @@ export default async function CollectionPage() {
           totalVariantsByCardId={totalVariantsByCardId}
           allVariantsByCardId={allVariantsByCardId}
           doubloons={profile?.doubloons ?? 0}
+          username={profile?.username ?? ''}
+          usernameChanged={profile?.username_changed ?? false}
+          showcaseVariantIds={(profile?.showcase_variant_ids as number[] | null) ?? []}
         />
       </main>
     </>

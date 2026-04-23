@@ -7,6 +7,8 @@ import type { OwnedEntry, AllVariantEntry } from './page'
 import { rarityFromVariant, RARITY_COLOR, doubloonValueFor } from '@/lib/variants'
 import { sellDuplicate, sellAllDuplicates, getDuplicatesBreakdown } from './actions'
 import type { DuplicateBreakdownItem } from './actions'
+import { updateUsername, updateShowcase } from '@/app/u/actions'
+import Link from 'next/link'
 
 const RANKS = [
   { name: 'Crewmate',      min: 0,   color: '#8a8880', next: 25  },
@@ -73,11 +75,24 @@ interface Props {
   totalVariantsByCardId: Record<number, number>
   allVariantsByCardId: Record<number, AllVariantEntry[]>
   doubloons: number
+  username: string
+  usernameChanged: boolean
+  showcaseVariantIds: number[]
 }
 
 interface ModalCard {
   card: Card
   entries: OwnedEntry[]
+}
+
+interface PickerCard {
+  variantId: number
+  variantName: string
+  borderStyle: string
+  artEffect: string
+  dropWeight: number
+  name: string
+  filename: string
 }
 
 const VARIANT_RANK: Record<string, number> = {
@@ -101,7 +116,6 @@ function bestEntry(entries: OwnedEntry[]): OwnedEntry {
     (VARIANT_RANK[e.variantName] ?? 0) > (VARIANT_RANK[best.variantName] ?? 0) ? e : best
   )
 }
-
 
 interface ZoneConfig {
   id: string
@@ -137,7 +151,7 @@ function LockedVariant({ variantName, dropWeight }: { variantName: string; dropW
   )
 }
 
-export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId, allVariantsByCardId, doubloons: initialDoubloons }: Props) {
+export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId, allVariantsByCardId, doubloons: initialDoubloons, username: initialUsername, usernameChanged: initialUsernameChanged, showcaseVariantIds: initialShowcaseIds }: Props) {
   const [modal, setModal] = useState<ModalCard | null>(null)
   const [pinnedVariants, setPinnedVariants] = useState<Record<number, number>>({})
   const [doubloons, setDoubloons] = useState(initialDoubloons)
@@ -148,7 +162,62 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
   const [isPending, startTransition] = useTransition()
   const [statsOpen, setStatsOpen] = useState(false)
 
+  // Profile edit state
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [username, setUsername] = useState(initialUsername)
+  const [usernameChanged, setUsernameChanged] = useState(initialUsernameChanged)
+  const [usernameInput, setUsernameInput] = useState('')
+  const [usernameError, setUsernameError] = useState('')
+  const [showUsernameForm, setShowUsernameForm] = useState(false)
+  const [selectedShowcase, setSelectedShowcase] = useState<number[]>(initialShowcaseIds)
+  const [profilePending, startProfileTransition] = useTransition()
+
   useEffect(() => { setPinnedVariants(loadPinned()) }, [])
+
+  // Build sorted picker cards from owned collection
+  const pickerCards: PickerCard[] = allCards.flatMap(card => {
+    const entries = ownedState[card.id] ?? []
+    return entries.map(e => ({
+      variantId: e.variantId,
+      variantName: e.variantName,
+      borderStyle: e.borderStyle,
+      artEffect: e.artEffect,
+      dropWeight: e.dropWeight,
+      name: card.name,
+      filename: card.filename,
+    }))
+  }).sort((a, b) => a.dropWeight - b.dropWeight)
+
+  function toggleShowcaseCard(variantId: number) {
+    setSelectedShowcase(prev => {
+      if (prev.includes(variantId)) return prev.filter(id => id !== variantId)
+      if (prev.length >= 5) return prev
+      return [...prev, variantId]
+    })
+  }
+
+  function handleSaveShowcase() {
+    startProfileTransition(async () => {
+      await updateShowcase(selectedShowcase)
+      setProfileOpen(false)
+    })
+  }
+
+  function handleSaveUsername(e: React.FormEvent) {
+    e.preventDefault()
+    setUsernameError('')
+    startProfileTransition(async () => {
+      const result = await updateUsername(usernameInput)
+      if (result.error) {
+        setUsernameError(result.error)
+      } else {
+        setUsername(usernameInput.trim().toLowerCase())
+        setUsernameChanged(true)
+        setShowUsernameForm(false)
+        setUsernameInput('')
+      }
+    })
+  }
 
   function pinVariant(cardId: number, variantId: number) {
     const updated = { ...pinnedVariants, [cardId]: variantId }
@@ -218,7 +287,6 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
       const result = await sellAllDuplicates()
       if ('error' in result) return
       setDoubloons((d) => d + result.earned)
-      // Remove all extra copies from local state
       setOwnedState((prev) => {
         const updated: typeof prev = {}
         for (const [cardId, entries] of Object.entries(prev)) {
@@ -243,8 +311,27 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
 
   return (
     <div>
-      {/* Collapsible rank header */}
+      {/* Profile + rank header */}
       <div className="px-6 pb-4 max-w-sm mx-auto">
+
+        {/* Username row */}
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>Your Profile</p>
+            <Link href={`/u/${username}`} className="font-cinzel font-700 text-[#f0ede8] hover:text-[#f0c040] transition-colors" style={{ fontSize: '1.1rem' }}>
+              {username}
+            </Link>
+          </div>
+          <button
+            onClick={() => { setProfileOpen(true); setShowUsernameForm(false); setUsernameError('') }}
+            className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] hover:text-[#8a8880] transition-colors border border-[rgba(255,255,255,0.1)] rounded-lg px-3 py-1.5"
+            style={{ fontSize: '0.6rem' }}
+          >
+            Edit Profile
+          </button>
+        </div>
+
+        {/* Rank collapsible */}
         <button
           onClick={() => setStatsOpen(v => !v)}
           className="w-full text-left"
@@ -274,7 +361,6 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
 
         {statsOpen && (
           <div style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${rank.name === 'Crewmate' ? 'rgba(255,255,255,0.07)' : rank.color + '40'}`, borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '0.875rem 1rem' }}>
-            {/* Rank progress */}
             <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden', marginBottom: '0.4rem' }}>
               <div style={{ height: '100%', width: `${progressPct}%`, background: rank.color, borderRadius: 2, opacity: 0.8 }} />
             </div>
@@ -285,8 +371,6 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
             ) : (
               <p className="font-karla text-[#8a8880]" style={{ fontSize: '0.7rem', marginBottom: '0.75rem' }}>Maximum rank achieved</p>
             )}
-
-            {/* Extra stats */}
             <div className="flex items-center justify-between">
               <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.7rem' }}>
                 {fishDiscovered} of {allCards.length} fish discovered
@@ -314,7 +398,6 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
       {/* Depth zones */}
       {ZONES.map((zone) => {
         const cards = zoneAllCards(zone)
-
         return (
           <section key={zone.id} className="w-full" style={{ paddingTop: '1.5rem', paddingBottom: '1.5rem' }}>
             <div className="flex flex-wrap justify-center gap-7 px-6">
@@ -322,7 +405,6 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                 const entries = ownedState[card.id] ?? []
                 const isOwned = entries.length > 0
                 const best = isOwned ? displayEntry(card.id, entries) : null
-
                 return (
                   <div key={card.id} className="flex flex-col items-center gap-2">
                     <div
@@ -366,13 +448,11 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
             >
               Close
             </button>
-
             <p className="sg-eyebrow text-center mb-1">Variants</p>
             <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-2">{modal.card.name}</p>
             <p className="font-karla font-300 text-[#8a8880] text-center text-xs tracking-wide mb-8">
               Tap an owned variant to display it in your collection
             </p>
-
             <div className="flex flex-wrap justify-center gap-6">
               {(allVariantsByCardId[modal.card.id] ?? [])
                 .slice()
@@ -438,10 +518,8 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
             >
               Close
             </button>
-
             <p className="sg-eyebrow text-center mb-1">Sell All Duplicates</p>
             <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-8">Liquidate</p>
-
             {!breakdown ? (
               <p className="text-center font-karla font-300 text-[#8a8880] text-sm">Loading…</p>
             ) : breakdown.length === 0 ? (
@@ -465,12 +543,10 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                     )
                   })}
                 </div>
-
                 <div className="flex items-center justify-between mb-6 pt-2">
                   <p className="font-karla font-600 text-sm text-[#f0ede8] uppercase tracking-[0.10em]">Total</p>
                   <p className="font-cinzel font-700 text-[#f0c040] text-xl">{breakdownTotal.toLocaleString()} ⟡</p>
                 </div>
-
                 <button
                   onClick={handleSellAll}
                   disabled={isPending}
@@ -480,6 +556,167 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                 </button>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Profile edit modal */}
+      {profileOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(8px)' }}
+          onClick={() => setProfileOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm bg-[#0a0a0a] border border-[rgba(255,255,255,0.1)] rounded-t-2xl sm:rounded-2xl overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[rgba(255,255,255,0.06)]">
+              <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.65rem' }}>Edit Profile</p>
+              <button onClick={() => setProfileOpen(false)} className="font-karla font-300 text-[#6a6764] hover:text-[#8a8880] text-xs transition-colors">
+                Close
+              </button>
+            </div>
+
+            <div className="overflow-y-auto scrollbar-hide max-h-[75vh] p-5 flex flex-col gap-6">
+
+              {/* Username section */}
+              <div>
+                <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-3" style={{ fontSize: '0.6rem' }}>Username</p>
+                {showUsernameForm ? (
+                  <form onSubmit={handleSaveUsername} className="flex flex-col gap-2">
+                    <input
+                      type="text"
+                      value={usernameInput}
+                      onChange={e => setUsernameInput(e.target.value)}
+                      placeholder="new username"
+                      className="sg-input font-karla font-600 tracking-[0.12em] text-sm w-full"
+                      maxLength={20}
+                      autoFocus
+                      spellCheck={false}
+                    />
+                    {usernameError && <p className="font-karla font-300 text-red-400 text-xs">{usernameError}</p>}
+                    <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.6rem' }}>3–20 characters. Letters, numbers, underscores. One time only.</p>
+                    <div className="flex gap-2">
+                      <button type="submit" disabled={profilePending} className="btn-gold text-xs" style={{ padding: '0.4rem 1rem' }}>
+                        {profilePending ? '…' : 'Save'}
+                      </button>
+                      <button type="button" onClick={() => { setShowUsernameForm(false); setUsernameError('') }} className="btn-ghost text-xs" style={{ padding: '0.4rem 1rem' }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>{username}</p>
+                    {!usernameChanged && (
+                      <button
+                        onClick={() => setShowUsernameForm(true)}
+                        className="font-karla font-300 text-[#6a6764] hover:text-[#8a8880] transition-colors"
+                        style={{ fontSize: '0.62rem' }}
+                      >
+                        Change (once)
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Showcase section */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>Top 5 Showcase</p>
+                  <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.62rem' }}>
+                    <span style={{ color: selectedShowcase.length === 5 ? '#f0c040' : '#f0ede8' }}>{selectedShowcase.length}</span> / 5 selected
+                  </p>
+                </div>
+
+                {/* Selected order preview */}
+                {selectedShowcase.length > 0 && (
+                  <div className="flex gap-2 mb-4 flex-wrap">
+                    {selectedShowcase.map((id, idx) => {
+                      const card = pickerCards.find(c => c.variantId === id)
+                      if (!card) return null
+                      return (
+                        <div key={id} className="flex flex-col items-center gap-1">
+                          <div className="relative" style={{ width: 52, height: 80 }}>
+                            <FishCard
+                              name={card.name}
+                              filename={card.filename}
+                              borderStyle={card.borderStyle as any}
+                              artEffect={card.artEffect as any}
+                              variantName={card.variantName}
+                              dropWeight={card.dropWeight}
+                            />
+                            <div className="absolute -top-1 -left-1 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: '#f0c040' }}>
+                              <span className="font-karla font-700 text-black" style={{ fontSize: '0.55rem' }}>{idx + 1}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                    <button
+                      onClick={() => setSelectedShowcase([])}
+                      className="font-karla font-300 text-[#6a6764] hover:text-[#8a8880] transition-colors self-center"
+                      style={{ fontSize: '0.6rem' }}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+
+                {pickerCards.length === 0 ? (
+                  <p className="font-karla font-300 text-[#6a6764] text-xs">Open some packs first!</p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-3">
+                    {pickerCards.map(card => {
+                      const selectedIdx = selectedShowcase.indexOf(card.variantId)
+                      const isSelected = selectedIdx !== -1
+                      const rarity = rarityFromVariant(card.variantName, card.dropWeight)
+                      const rc = RARITY_COLOR[rarity] ?? '#8a8880'
+                      return (
+                        <button
+                          key={card.variantId}
+                          onClick={() => toggleShowcaseCard(card.variantId)}
+                          disabled={!isSelected && selectedShowcase.length >= 5}
+                          className="flex flex-col items-center gap-1.5 transition-opacity disabled:opacity-30"
+                        >
+                          <div className="relative" style={{ width: 80, height: 124 }}>
+                            <FishCard
+                              name={card.name}
+                              filename={card.filename}
+                              borderStyle={card.borderStyle as any}
+                              artEffect={card.artEffect as any}
+                              variantName={card.variantName}
+                              dropWeight={card.dropWeight}
+                            />
+                            {isSelected && (
+                              <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#f0c040' }}>
+                                <span className="font-karla font-700 text-black" style={{ fontSize: '0.6rem' }}>{selectedIdx + 1}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-center">
+                            <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.6rem' }}>{card.name}</p>
+                            <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: rc }}>{rarity}</p>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Save button */}
+              <button
+                onClick={handleSaveShowcase}
+                disabled={profilePending}
+                className="btn-gold w-full disabled:opacity-50"
+              >
+                {profilePending ? 'Saving…' : 'Save Showcase'}
+              </button>
+            </div>
           </div>
         </div>
       )}
