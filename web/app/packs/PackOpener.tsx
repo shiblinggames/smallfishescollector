@@ -54,6 +54,7 @@ interface Props {
 
 export default function PackOpener({ packsAvailable: initialPacks, doubloons: initialDoubloons, hookTier }: Props) {
   const router = useRouter()
+  const packButtonRef = useRef<HTMLButtonElement>(null)
   const [packs, setPacks] = useState(initialPacks)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
   const [phase, setPhase] = useState<'idle' | 'reveal' | 'done'>('idle')
@@ -121,6 +122,10 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
 
   async function openPack() {
     if (packs <= 0 || loading) return
+    if (packButtonRef.current) {
+      packButtonRef.current.style.transform = ''
+      packButtonRef.current.style.filter = ''
+    }
     setLoading(true)
     setFlipped(new Array(cards.length || 5).fill(false))
     setGlowClasses(new Array(cards.length || 5).fill(''))
@@ -262,6 +267,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
               <img src="/booster.png" alt="" aria-hidden className="absolute inset-0 w-full h-auto" style={{ transform: 'translateY(7px) translateX(4px) rotate(1.2deg)', opacity: 0.7, pointerEvents: 'none' }} />
             )}
             <button
+              ref={packButtonRef}
               onClick={packs > 0 ? openPack : undefined}
               disabled={loading || packs === 0}
               className="relative block select-none"
@@ -341,7 +347,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
         <div className="flip-card-inner w-full h-full">
           <div className="flip-card-front w-full h-full overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/cardback.png" alt="" className="w-full h-full object-cover" style={{ opacity: 0.55 }} />
+            <img src="/cardback.png" alt="" className="w-full h-full object-cover" />
           </div>
           <div className="flip-card-back w-full h-full bg-black flex items-center justify-center p-3" style={cardBackBorderStyle(card.borderStyle, card.artEffect)}>
             <FishCard name={card.name} filename={card.filename} borderStyle={card.borderStyle} artEffect={card.artEffect} variantName={card.variantName} dropWeight={card.dropWeight} />
@@ -511,14 +517,6 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
         {cards.map((card, i) => renderCard(card, i))}
       </div>
 
-      {/* Mobile done state */}
-      {phase === 'done' && packs > 0 && (
-        <div className="sm:hidden flex flex-col items-center gap-3 w-full px-4">
-          <button onClick={openPack} disabled={loading} className="btn-gold w-full">
-            {loading ? 'Fishing…' : `Open Another · ${packs} Left`}
-          </button>
-        </div>
-      )}
 
       {/* Desktop: in flow */}
       {phase !== 'done' && flipped.some((f) => !f) ? (

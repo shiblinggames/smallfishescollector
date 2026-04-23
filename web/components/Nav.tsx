@@ -101,7 +101,15 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
         {links.map(({ href, label, badge, icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
-            <Link key={href} href={href} className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-colors duration-200 relative ${active ? 'text-[#f0ede8]' : 'text-[#8a8880]'}`}>
+            <Link
+              key={href}
+              href={href}
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 relative select-none ${active ? 'text-[#f0ede8]' : 'text-[#8a8880]'}`}
+              style={{ transition: 'color 0.2s, transform 0.08s, opacity 0.08s' }}
+              onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.82)'; e.currentTarget.style.opacity = '0.7' }}
+              onPointerUp={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.opacity = '' }}
+              onPointerLeave={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.opacity = '' }}
+            >
               {icon}
               <span className="text-[0.58rem] font-karla font-600 uppercase tracking-[0.10em]">{label}</span>
               {badge && (
