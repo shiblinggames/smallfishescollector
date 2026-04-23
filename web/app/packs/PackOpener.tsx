@@ -288,20 +288,31 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
   }
 
   function renderOpenAllFlank() {
-    if (!someUnflipped) return <div className="flex-1" />
+    const isDone = phase === 'done'
+    const show = someUnflipped || (isDone && packs > 0)
     return (
-      <div
-        onClick={flipAll}
-        className="flex-1 flex items-center justify-center cursor-pointer active:opacity-60 transition-opacity"
-        style={{ height: 248 }}
-      >
-        <p className="font-karla font-600 uppercase text-[#8a8880] text-center leading-tight" style={{ fontSize: '0.55rem', letterSpacing: '0.18em', writingMode: 'vertical-lr' }}>Open All</p>
+      <div className="flex-1 flex items-center justify-center" style={{ height: 248 }}>
+        {show && (
+          <button
+            onClick={isDone ? openPack : flipAll}
+            disabled={isDone && loading}
+            className="w-[4.5rem] h-[4.5rem] rounded-full flex items-center justify-center select-none touch-manipulation"
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.13)', transition: 'transform 0.07s ease, background 0.07s ease' }}
+            onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.86)'; e.currentTarget.style.background = 'rgba(255,255,255,0.12)' }}
+            onPointerUp={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.background = '' }}
+            onPointerLeave={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.background = '' }}
+          >
+            <span className="font-karla font-700 uppercase text-[#f0ede8] text-center leading-snug" style={{ fontSize: '0.48rem', letterSpacing: '0.13em' }}>
+              {isDone ? <>Open<br/>Another</> : <>Open<br/>All</>}
+            </span>
+          </button>
+        )}
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col items-center gap-4 sm:gap-10 pb-28 sm:pb-0">
+    <div className="flex flex-col items-center gap-4 sm:gap-10 pb-20 sm:pb-0">
       {flash && <div key={flash.key} className={`reveal-flash reveal-flash-${flash.type}`} />}
       {prize && (
         <PrizeModal
@@ -336,19 +347,6 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
       {/* Desktop: flex-wrap all cards */}
       <div className="hidden sm:flex flex-wrap justify-center gap-x-4 gap-y-8">
         {cards.map((card, i) => renderCard(card, i))}
-      </div>
-
-      {/* Mobile: fixed above bottom tab bar — done state only */}
-      <div className="sm:hidden fixed bottom-16 left-0 right-0 px-6 pt-8 pb-3" style={{ background: 'linear-gradient(to top, #000 60%, transparent)' }}>
-        {phase === 'done' && (
-          <div className="flex gap-3 w-full">
-            {packs > 0 && (
-              <button onClick={openPack} disabled={loading} className="btn-gold w-full">
-                {loading ? 'Fishing…' : `Open Another · ${packs} Left`}
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Desktop: in flow */}
