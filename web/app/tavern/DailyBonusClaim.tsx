@@ -33,6 +33,7 @@ export default function DailyBonusClaim({
       border: `1px solid ${claimed ? 'rgba(255,255,255,0.08)' : 'rgba(240,192,64,0.22)'}`,
       borderRadius: '16px',
       padding: '1.25rem',
+      opacity: claimed ? 0.7 : 1,
     }}>
       <div className="flex items-start gap-4">
         <div style={{

@@ -89,14 +89,10 @@ export default async function TavernPage() {
 
         <div className="px-6 pb-16 text-center">
           <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.75rem' }}>
-            Need more packs?{' '}
-            <a
-              href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game"
-              target="_blank" rel="noopener noreferrer"
-              className="text-[#f0c040] hover:text-[#f5d060] transition-colors"
-            >
-              Get the game at the Shibling Shop →
-            </a>
+            Enjoying the game?{' '}
+            <Link href="/marketplace" className="text-[#f0c040] hover:text-[#f5d060] transition-colors">
+              Support our indie studio with a membership →
+            </Link>
           </p>
         </div>
       </main>
@@ -158,17 +154,21 @@ function GameCard({ href, eyebrow, name, description, rules, icon, streak, compl
           <path d="M9 18l6-6-6-6"/>
         </svg>
       </div>
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', margin: '1rem 0 0.75rem' }} />
-      <ul className="flex flex-col gap-1.5">
-        {rules.map((rule, i) => (
-          <li key={i} className="flex items-start gap-2">
-            <span style={{ color: '#4a4845', fontSize: '0.65rem', lineHeight: '1.6rem' }}>—</span>
-            <span className="font-karla text-[#6a6764]" style={{ fontSize: '0.78rem', lineHeight: 1.55 }}>{rule}</span>
-          </li>
-        ))}
-      </ul>
+      {!completed && (
+        <>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', margin: '1rem 0 0.75rem' }} />
+          <ul className="flex flex-col gap-1.5">
+            {rules.map((rule, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <span style={{ color: '#4a4845', fontSize: '0.65rem', lineHeight: '1.6rem' }}>—</span>
+                <span className="font-karla text-[#6a6764]" style={{ fontSize: '0.78rem', lineHeight: 1.55 }}>{rule}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       {completed && completedNote && (
-        <p className="font-karla mt-3" style={{ fontSize: '0.72rem', color: '#6a6764' }}>
+        <p className="font-karla mt-3" style={{ fontSize: '0.78rem', color: '#8a8880', lineHeight: 1.5 }}>
           {completedNote}
         </p>
       )}
