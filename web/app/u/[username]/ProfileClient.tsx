@@ -2,7 +2,6 @@
 
 import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
-import { rarityFromVariant, RARITY_COLOR } from '@/lib/variants'
 
 interface CardVariant {
   id: number
@@ -28,20 +27,27 @@ export default function ProfileClient({ username, showcaseVariants, stats }: Pro
       {/* Username */}
       <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.4rem' }}>{username}</p>
 
-      {/* Showcase cards — horizontal scroll */}
+      {/* Showcase cards — 1-2-2 pyramid */}
       {variants.length > 0 ? (
         <div className="w-full">
-          <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-3 text-center" style={{ fontSize: '0.6rem' }}>Top Catches</p>
-          <div
-            className="flex gap-3 overflow-x-auto scrollbar-hide pb-1"
-            style={{ justifyContent: variants.length < 3 ? 'center' : 'flex-start' }}
-          >
-            {variants.map((cv) => {
-              const rarity = rarityFromVariant(cv.variant_name, cv.drop_weight)
-              const rc = RARITY_COLOR[rarity] ?? '#8a8880'
-              return (
-                <div key={cv.id} className="flex flex-col items-center gap-2 shrink-0">
-                  <div style={{ width: 100, height: 155 }}>
+          <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-4 text-center" style={{ fontSize: '0.6rem' }}>Top Catches</p>
+          <div className="flex flex-col items-center gap-4">
+            {/* Row 1: first card (rarest), largest */}
+            <div style={{ width: 130, height: 201 }}>
+              <FishCard
+                name={variants[0].cards.name}
+                filename={variants[0].cards.filename}
+                borderStyle={variants[0].border_style}
+                artEffect={variants[0].art_effect}
+                variantName={variants[0].variant_name}
+                dropWeight={variants[0].drop_weight}
+              />
+            </div>
+            {/* Row 2: cards 2-3 */}
+            {variants.length > 1 && (
+              <div className="flex gap-4 justify-center">
+                {variants.slice(1, 3).map(cv => (
+                  <div key={cv.id} style={{ width: 110, height: 170 }}>
                     <FishCard
                       name={cv.cards.name}
                       filename={cv.cards.filename}
@@ -51,13 +57,26 @@ export default function ProfileClient({ username, showcaseVariants, stats }: Pro
                       dropWeight={cv.drop_weight}
                     />
                   </div>
-                  <div className="text-center">
-                    <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.65rem' }}>{cv.cards.name}</p>
-                    <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: rc }}>{rarity}</p>
+                ))}
+              </div>
+            )}
+            {/* Row 3: cards 4-5 */}
+            {variants.length > 3 && (
+              <div className="flex gap-4 justify-center">
+                {variants.slice(3, 5).map(cv => (
+                  <div key={cv.id} style={{ width: 110, height: 170 }}>
+                    <FishCard
+                      name={cv.cards.name}
+                      filename={cv.cards.filename}
+                      borderStyle={cv.border_style}
+                      artEffect={cv.art_effect}
+                      variantName={cv.variant_name}
+                      dropWeight={cv.drop_weight}
+                    />
                   </div>
-                </div>
-              )
-            })}
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ) : (
