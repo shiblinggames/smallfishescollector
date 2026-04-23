@@ -35,7 +35,7 @@ export default function FriendSearch() {
   }
 
   return (
-    <div className="sg-card px-5 py-4 space-y-3">
+    <div className="sg-card px-5 py-3 space-y-2">
       <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.65rem' }}>Find a Crew Member</p>
       <form onSubmit={handleSearch} className="flex gap-2">
         <input

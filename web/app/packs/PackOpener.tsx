@@ -288,7 +288,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
               onPointerLeave={e => {
                 if (e.pointerType === 'touch') return
                 e.currentTarget.style.transform = ''
-                e.currentTarget.style.filter = ''
+                e.currentTarget.style.filter = packs === 0 ? 'grayscale(0.5) opacity(0.5)' : ''
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

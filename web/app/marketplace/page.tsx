@@ -61,13 +61,13 @@ export default async function MarketplacePage() {
           />
           <ShopCard
             href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game"
-            eyebrow="Physical Game"
+            eyebrow="Board Game"
             name="Small Fishes: Seas the Booty"
             description="Enjoying the digital game? Try the physical board game — each purchase comes with 20 digital packs."
             items={[
-              'Strategy card game for 2–4 players',
-              'Every purchase includes 20 digital packs',
-              'Available at the Shibling Shop',
+              'Strategy card game for 2–6 players',
+              'Features the same great art',
+              '$29.99',
             ]}
             icon={<BoxIcon />}
             external

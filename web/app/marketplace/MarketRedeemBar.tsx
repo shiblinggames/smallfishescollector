@@ -46,7 +46,7 @@ export default function MarketRedeemBar() {
   }
 
   return (
-    <div className="sg-card px-5 py-4 space-y-3">
+    <div className="sg-card px-5 py-3 space-y-2">
       <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.65rem' }}>Pack Code</p>
       <form onSubmit={handleRedeem} className="flex gap-2">
         <input
@@ -58,7 +58,7 @@ export default function MarketRedeemBar() {
           spellCheck={false}
           maxLength={30}
         />
-        <button type="submit" disabled={status === 'loading'} className="btn-gold shrink-0" style={{ padding: '0 1.25rem' }}>
+        <button type="submit" disabled={status === 'loading'} className="btn-ghost text-xs shrink-0" style={{ padding: '0 1rem' }}>
           {status === 'loading' ? '…' : 'Redeem'}
         </button>
       </form>
