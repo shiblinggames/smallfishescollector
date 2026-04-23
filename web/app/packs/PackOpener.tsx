@@ -280,12 +280,13 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
                 transition: 'transform 0.15s ease, filter 0.15s ease',
                 filter: packs === 0 ? 'grayscale(0.5) opacity(0.5)' : undefined,
               }}
-              onMouseEnter={e => {
-                if (packs === 0 || loading) return
+              onPointerEnter={e => {
+                if (e.pointerType === 'touch' || packs === 0 || loading) return
                 e.currentTarget.style.transform = 'translateY(-6px) scale(1.03)'
                 e.currentTarget.style.filter = 'drop-shadow(0 20px 40px rgba(0,0,0,0.6)) drop-shadow(0 0 20px rgba(30,100,220,0.25))'
               }}
-              onMouseLeave={e => {
+              onPointerLeave={e => {
+                if (e.pointerType === 'touch') return
                 e.currentTarget.style.transform = ''
                 e.currentTarget.style.filter = ''
               }}
