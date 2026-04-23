@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { rollDice, SYMBOLS, DAILY_CAP, MAX_BET, MIN_BET } from './actions'
-import type { Symbol, RollResult } from './actions'
+import { rollDice } from './actions'
+import type { RollResult } from './actions'
+import { SYMBOLS, DAILY_CAP, MAX_BET, MIN_BET } from './constants'
+import type { Symbol } from './constants'
 
 const SYMBOL_LABEL: Record<Symbol, string> = {
   anchor:  'Anchor',

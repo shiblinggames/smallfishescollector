@@ -3,13 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-
-export const SYMBOLS = ['anchor', 'crown', 'heart', 'diamond', 'spade', 'club'] as const
-export type Symbol = typeof SYMBOLS[number]
-
-const DAILY_CAP = 500
-const MAX_BET   = 200
-const MIN_BET   = 10
+import { SYMBOLS, DAILY_CAP, MAX_BET, MIN_BET } from './constants'
+import type { Symbol } from './constants'
 
 function randomSymbol(): Symbol {
   return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]
@@ -84,4 +79,3 @@ export async function rollDice(symbol: Symbol, wager: number): Promise<RollResul
   return { result, matches, payout, net, newDoubloons, dailyWagered: totalWagered + wager }
 }
 
-export { DAILY_CAP, MAX_BET, MIN_BET }
