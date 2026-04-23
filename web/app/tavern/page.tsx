@@ -64,7 +64,8 @@ export default async function TavernPage() {
             rules={[
               'Draw cards one at a time — duplicate species = bust',
               'Power fish trigger special effects',
-              `First to ${15} points wins · entry 20 ⟡`,
+              'First to 30 points wins',
+              'First game free daily · 20 ⟡ after',
             ]}
             icon={<SkullIcon />}
           />
