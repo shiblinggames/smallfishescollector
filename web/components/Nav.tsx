@@ -64,7 +64,7 @@ export default function Nav({ packsAvailable }: { packsAvailable?: number }) {
         {/* Desktop links */}
         <div className="hidden sm:flex flex-1 ml-8 gap-2 text-xs font-karla font-600 uppercase tracking-[0.12em]">
           {links.map(({ href, label, badge }) => (
-            <Link key={href} href={href} className={`py-2 px-2 transition-colors duration-200 ${pathname === href ? 'text-[#f0ede8]' : 'text-[#8a8880] hover:text-[#f0ede8]'}`}>
+            <Link key={href} href={href} className={`py-2 px-2 transition-colors duration-200 ${pathname === href || pathname.startsWith(href + '/') ? 'text-[#f0ede8]' : 'text-[#8a8880] hover:text-[#f0ede8]'}`}>
               {label}
               {badge && <span className="ml-1.5 text-[#f0c040]">· {badge}</span>}
             </Link>
@@ -82,7 +82,7 @@ export default function Nav({ packsAvailable }: { packsAvailable?: number }) {
       {/* Mobile bottom tab bar */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-black border-t border-[rgba(255,255,255,0.08)] flex">
         {links.map(({ href, label, badge, icon }) => {
-          const active = pathname === href
+          const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link key={href} href={href} className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-colors duration-200 relative ${active ? 'text-[#f0ede8]' : 'text-[#8a8880]'}`}>
               {icon}
