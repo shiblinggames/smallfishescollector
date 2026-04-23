@@ -160,7 +160,7 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
 
       {/* Symbol picker */}
       <div className="flex flex-col items-center gap-3 w-full">
-        <p className="sg-eyebrow">Pick a Symbol</p>
+        <p className="sg-eyebrow" style={{ color: '#9a9488' }}>Pick a Symbol</p>
         <div className="grid grid-cols-3 gap-3 w-full">
           {SYMBOLS.map((s) => (
             <button
@@ -205,7 +205,7 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
 
       {/* Bet selector */}
       <div className="flex flex-col items-center gap-3 w-full">
-        <p className="sg-eyebrow">Your Bet</p>
+        <p className="sg-eyebrow" style={{ color: '#9a9488' }}>Your Bet</p>
         <div className="flex gap-2 flex-wrap justify-center">
           {BET_PRESETS.map((amt) => {
             const disabled = amt > Math.min(doubloons, dailyRemaining)

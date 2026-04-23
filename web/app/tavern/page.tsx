@@ -32,7 +32,7 @@ export default async function TavernPage() {
 
         <div className="px-6 py-6">
           <div className="max-w-sm mx-auto">
-            <p className="sg-eyebrow mb-6 text-center">Crown &amp; Anchor</p>
+            <p className="sg-eyebrow mb-6 text-center" style={{ color: '#9a9488' }}>Crown &amp; Anchor</p>
             <CrownAndAnchor
               doubloons={profile?.doubloons ?? 0}
               dailyWagered={dailyWagered}
