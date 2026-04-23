@@ -239,6 +239,76 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
     )
   }
 
+  const someUnflipped = flipped.some(f => !f)
+
+  function renderFlipInner(card: DrawnCard, i: number) {
+    return (
+      <>
+        <div className="flip-card-inner w-full h-full">
+          <div className="flip-card-front w-full h-full border-[3px] border-[rgba(255,255,255,0.08)] flex flex-col items-center justify-center gap-3" style={{ background: 'rgba(8, 12, 40, 0.25)' }}>
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path d="M18 4 C18 4 18 18 18 22 C18 27 13 29 10 26 C7 23 9 19 12 19"
+                    stroke="#8a8880" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+              <path d="M12 19 L10 17" stroke="#f0c040" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+              <circle cx="18" cy="5" r="2.2" stroke="#8a8880" strokeWidth="1.6" fill="none"/>
+            </svg>
+            <p className="sg-eyebrow text-[0.6rem]" style={{ color: '#8a8880' }}>Open</p>
+          </div>
+          <div className="flip-card-back w-full h-full bg-black flex items-center justify-center p-3" style={cardBackBorderStyle(card.borderStyle, card.artEffect)}>
+            <FishCard name={card.name} filename={card.filename} borderStyle={card.borderStyle} artEffect={card.artEffect} variantName={card.variantName} dropWeight={card.dropWeight} />
+          </div>
+        </div>
+        {shockwaveCards.has(i) && (
+          <>
+            <div className="shockwave-ring" />
+            <div className="shockwave-ring shockwave-ring-2" />
+            <div className="shockwave-ring shockwave-ring-3" />
+          </>
+        )}
+      </>
+    )
+  }
+
+  function renderCard(card: DrawnCard, i: number) {
+    return (
+      <div key={i} className="flex flex-col items-center gap-2">
+        <div
+          ref={(el) => { cardRefs.current[i] = el }}
+          className={`flip-card select-none ${flipped[i] ? 'flipped' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
+          style={{ width: 160, height: 248, opacity: mythicFeatured !== null && mythicFeatured !== i ? 0.2 : 1, transition: 'opacity 0.3s ease' }}
+          onClick={() => flipCard(i)}
+          onMouseMove={(e) => handleMouseMove(e, i)}
+          onMouseLeave={(e) => handleMouseLeave(e, i)}
+        >
+          {renderFlipInner(card, i)}
+        </div>
+        {flipped[i] && newVariantIds.has(card.variantId) && <p className="new-badge">New</p>}
+      </div>
+    )
+  }
+
+  function renderOpenAllFlank() {
+    return (
+      <div
+        onClick={someUnflipped ? flipAll : undefined}
+        className={`flex-1 flex flex-col items-center justify-center gap-2 rounded-xl transition-colors ${someUnflipped ? 'border border-[rgba(255,255,255,0.07)] cursor-pointer active:bg-white/5' : ''}`}
+        style={{ height: 248 }}
+      >
+        {someUnflipped && (
+          <>
+            <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
+              <path d="M18 4 C18 4 18 18 18 22 C18 27 13 29 10 26 C7 23 9 19 12 19"
+                    stroke="#8a8880" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+              <path d="M12 19 L10 17" stroke="#f0c040" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+              <circle cx="18" cy="5" r="2.2" stroke="#8a8880" strokeWidth="1.6" fill="none"/>
+            </svg>
+            <p className="font-karla font-600 uppercase text-center text-[#8a8880] leading-tight" style={{ fontSize: '0.52rem', letterSpacing: '0.15em' }}>Open<br/>All</p>
+          </>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-10 pb-28 sm:pb-0">
       {flash && <div key={flash.key} className={`reveal-flash reveal-flash-${flash.type}`} />}
@@ -258,61 +328,28 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
           </p>
         </div>
       )}
-      <div className="flex flex-wrap justify-center gap-x-2 gap-y-2 sm:gap-x-4 sm:gap-y-8">
-        {cards.map((card, i) => (
-          <div key={i} className="flex flex-col items-center gap-2">
-            <div
-              ref={(el) => { cardRefs.current[i] = el }}
-              className={`flip-card select-none ${flipped[i] ? 'flipped' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
-              style={{ width: 160, height: 248, opacity: mythicFeatured !== null && mythicFeatured !== i ? 0.2 : 1, transition: 'opacity 0.3s ease' }}
-              onClick={() => flipCard(i)}
-              onMouseMove={(e) => handleMouseMove(e, i)}
-              onMouseLeave={(e) => handleMouseLeave(e, i)}
-            >
-            <div className="flip-card-inner w-full h-full">
-              <div className="flip-card-front w-full h-full border-[3px] border-[rgba(255,255,255,0.08)] flex flex-col items-center justify-center gap-3" style={{ background: 'rgba(8, 12, 40, 0.25)' }}>
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                  {/* Hook shaft — curves down then bends into the barb */}
-                  <path d="M18 4 C18 4 18 18 18 22 C18 27 13 29 10 26 C7 23 9 19 12 19"
-                        stroke="#8a8880" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
-                  {/* Barb tip */}
-                  <path d="M12 19 L10 17" stroke="#f0c040" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
-                  {/* Eye of the hook */}
-                  <circle cx="18" cy="5" r="2.2" stroke="#8a8880" strokeWidth="1.6" fill="none"/>
-                </svg>
-                <p className="sg-eyebrow text-[0.6rem]" style={{ color: '#8a8880' }}>Open</p>
-              </div>
-              <div className="flip-card-back w-full h-full bg-black flex items-center justify-center p-3" style={cardBackBorderStyle(card.borderStyle, card.artEffect)}>
-                <FishCard
-                  name={card.name}
-                  filename={card.filename}
-                  borderStyle={card.borderStyle}
-                  artEffect={card.artEffect}
-                  variantName={card.variantName}
-                  dropWeight={card.dropWeight}
-                />
-              </div>
-            </div>
-            {shockwaveCards.has(i) && (
-              <>
-                <div className="shockwave-ring" />
-                <div className="shockwave-ring shockwave-ring-2" />
-                <div className="shockwave-ring shockwave-ring-3" />
-              </>
-            )}
-            </div>
-            {flipped[i] && newVariantIds.has(card.variantId) && (
-              <p className="new-badge">New</p>
-            )}
+      {/* Mobile: 2×2 grid + flanked 5th card */}
+      <div className="sm:hidden flex flex-col items-center gap-2 w-full">
+        <div className="flex justify-center gap-2">
+          {cards.slice(0, 4).map((card, i) => renderCard(card, i))}
+        </div>
+        {cards[4] && (
+          <div className="flex items-center gap-2 w-full">
+            {renderOpenAllFlank()}
+            {renderCard(cards[4], 4)}
+            {renderOpenAllFlank()}
           </div>
-        ))}
+        )}
       </div>
 
-      {/* Mobile: fixed above bottom tab bar */}
+      {/* Desktop: flex-wrap all cards */}
+      <div className="hidden sm:flex flex-wrap justify-center gap-x-4 gap-y-8">
+        {cards.map((card, i) => renderCard(card, i))}
+      </div>
+
+      {/* Mobile: fixed above bottom tab bar — done state only */}
       <div className="sm:hidden fixed bottom-16 left-0 right-0 px-6 pt-8 pb-3" style={{ background: 'linear-gradient(to top, #000 60%, transparent)' }}>
-        {phase !== 'done' && flipped.some((f) => !f) ? (
-          <button onClick={flipAll} className="btn-gold w-full">Open All</button>
-        ) : phase === 'done' ? (
+        {phase === 'done' && (
           <div className="flex gap-3 w-full">
             {packs > 0 && (
               <button onClick={openPack} disabled={loading} className="btn-gold w-full">
@@ -320,7 +357,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
               </button>
             )}
           </div>
-        ) : null}
+        )}
       </div>
 
       {/* Desktop: in flow */}
