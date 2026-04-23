@@ -3,8 +3,21 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkAchievements } from '@/lib/checkAchievements'
+import { getTodaysFishPuzzle } from './fish-of-the-day/generate'
+import { FISH_SPECIES } from '@/lib/fish-species'
 
 const DOUBLOON_REWARDS = [100, 75, 50, 25]
+
+export interface FishAnswer {
+  common_name: string
+  scientific_name: string | null
+  fun_fact: string
+  habitat?: string
+  diet?: string
+  size?: string
+  conservation_status?: string
+  range?: string
+}
 
 export interface FishPuzzleState {
   date: string
@@ -15,11 +28,7 @@ export interface FishPuzzleState {
   doubloons_awarded: number
   streak: number
   longestStreak: number
-  answer?: {
-    common_name: string
-    scientific_name: string | null
-    fun_fact: string
-  }
+  answer?: FishAnswer
 }
 
 function milestoneBonus(streak: number): number {
@@ -29,22 +38,6 @@ function milestoneBonus(streak: number): number {
   return 0
 }
 
-
-async function getTodaysFish(admin: ReturnType<typeof createAdminClient>, today: string) {
-  const { data: scheduled } = await admin
-    .from('daily_fish')
-    .select('fish(*)')
-    .eq('date', today)
-    .single()
-
-  if (scheduled?.fish) return scheduled.fish as any
-
-  const dayNumber = Math.floor(new Date(today + 'T00:00:00Z').getTime() / 86400000)
-  const { data: allFish } = await admin.from('fish').select('*').order('id')
-  if (!allFish?.length) return null
-  return allFish[dayNumber % allFish.length]
-}
-
 export async function getDailyFishPuzzle(): Promise<FishPuzzleState | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -52,7 +45,7 @@ export async function getDailyFishPuzzle(): Promise<FishPuzzleState | { error: s
 
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
-  const fish = await getTodaysFish(admin, today)
+  const fish = await getTodaysFishPuzzle()
   if (!fish) return { error: 'No fish available' }
 
   const [{ data: attempt }, { data: profile }] = await Promise.all([
@@ -81,6 +74,11 @@ export async function getDailyFishPuzzle(): Promise<FishPuzzleState | { error: s
       common_name: fish.common_name,
       scientific_name: fish.scientific_name,
       fun_fact: fish.fun_fact,
+      habitat: fish.habitat,
+      diet: fish.diet,
+      size: fish.size,
+      conservation_status: fish.conservation_status,
+      range: fish.range,
     } : undefined,
   }
 }
@@ -93,7 +91,7 @@ export async function submitFishGuess(guessName: string): Promise<{
   streak?: number
   milestoneReward?: number
   newAchievements?: string[]
-  answer?: { common_name: string; scientific_name: string | null; fun_fact: string }
+  answer?: FishAnswer
 } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -101,7 +99,7 @@ export async function submitFishGuess(guessName: string): Promise<{
 
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
-  const fish = await getTodaysFish(admin, today)
+  const fish = await getTodaysFishPuzzle()
   if (!fish) return { error: 'No fish today' }
 
   const { data: existing } = await admin
@@ -132,7 +130,17 @@ export async function submitFishGuess(guessName: string): Promise<{
   const allClues = [fish.clue_1, fish.clue_2, fish.clue_3, fish.clue_4]
   const nextClue = !correct && newGuesses.length < 4 ? allClues[newGuesses.length] : undefined
 
-  // Update streak + doubloons when puzzle completes
+  const answer: FishAnswer = {
+    common_name: fish.common_name,
+    scientific_name: fish.scientific_name,
+    fun_fact: fish.fun_fact,
+    habitat: fish.habitat,
+    diet: fish.diet,
+    size: fish.size,
+    conservation_status: fish.conservation_status,
+    range: fish.range,
+  }
+
   if (isOver) {
     const { data: profile } = await admin
       .from('profiles')
@@ -187,7 +195,7 @@ export async function submitFishGuess(guessName: string): Promise<{
         streak: newStreak,
         milestoneReward: bonus > 0 ? bonus : undefined,
         newAchievements,
-        answer: { common_name: fish.common_name, scientific_name: fish.scientific_name, fun_fact: fish.fun_fact },
+        answer,
       }
     }
   }
@@ -197,16 +205,10 @@ export async function submitFishGuess(guessName: string): Promise<{
     doubloons: correct ? guessDoubloons : undefined,
     nextClue,
     isOver,
-    answer: isOver ? {
-      common_name: fish.common_name,
-      scientific_name: fish.scientific_name,
-      fun_fact: fish.fun_fact,
-    } : undefined,
+    answer: isOver ? answer : undefined,
   }
 }
 
 export async function getAllFishNames(): Promise<string[]> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('fish').select('common_name').order('common_name')
-  return (data ?? []).map(r => r.common_name)
+  return [...FISH_SPECIES].sort()
 }

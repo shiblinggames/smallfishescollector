@@ -1,0 +1,26 @@
+export const FISH_SPECIES = [
+  'Albacore Tuna', 'Alligator Gar', 'Arapaima', 'Archerfish',
+  'Atlantic Bluefin Tuna', 'Atlantic Cod', 'Atlantic Halibut', 'Atlantic Herring',
+  'Atlantic Mackerel', 'Atlantic Salmon', 'Barramundi',
+  'Big-Eye Tuna', 'Black Drum', 'Blacktip Shark', 'Blue Catfish', 'Blue Marlin',
+  'Blue Tang', 'Bluefish', 'Bonefish', 'Brook Trout', 'Brown Trout', 'Bull Shark',
+  'Channel Catfish', 'Chinook Salmon', 'Clownfish', 'Coelacanth', 'Coho Salmon',
+  'Common Carp', 'Electric Eel', 'European Anchovy', 'European Eel',
+  'Flathead Catfish', 'Flounder', 'Flying Fish', 'Giant Trevally',
+  'Goliath Grouper', 'Grass Carp', 'Great Barracuda', 'Great White Shark',
+  'Greater Amberjack', 'Haddock', 'Hammerhead Shark', 'Jack Crevalle',
+  'King Mackerel', 'Lake Trout', 'Largemouth Bass', 'Lionfish',
+  'Mahi-Mahi', 'Manta Ray', 'Moray Eel', 'Mudskipper', 'Muskellunge',
+  'Nassau Grouper', 'Needlefish', 'Northern Pike', 'Oarfish', 'Ocean Sunfish',
+  'Pacific Cod', 'Pacific Halibut', 'Pacific Sardine', 'Permit', 'Pickerel',
+  'Pink Salmon', 'Pollock', 'Pompano', 'Pufferfish', 'Rainbow Trout',
+  'Red Drum', 'Red Snapper', 'Redfish', 'Roosterfish',
+  'Sailfish', 'Seahorse', 'Sheepshead', 'Skipjack Tuna',
+  'Smallmouth Bass', 'Snook', 'Sockeye Salmon', 'Spanish Mackerel',
+  'Spotted Eagle Ray', 'Spotted Seatrout', 'Steelhead Trout', 'Stingray',
+  'Striped Bass', 'Striped Marlin', 'Sturgeon', 'Swordfish',
+  'Tarpon', 'Tiger Shark', 'Triggerfish', 'Trumpetfish', 'Turbot',
+  'Wahoo', 'Walleye', 'Whale Shark', 'White Marlin', 'Yellowfin Tuna',
+] as const
+
+export type FishSpecies = typeof FISH_SPECIES[number]

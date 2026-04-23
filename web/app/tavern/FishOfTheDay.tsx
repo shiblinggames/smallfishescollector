@@ -11,7 +11,7 @@ function nextMilestone(streak: number): { day: number; reward: number } {
   if (next30 < next7) return { day: next30, reward: 150 }
   return { day: next7, reward: 50 }
 }
-import type { FishPuzzleState } from './fishActions'
+import type { FishPuzzleState, FishAnswer } from './fishActions'
 
 const DOUBLOON_REWARDS = [100, 75, 50, 25]
 
@@ -191,40 +191,17 @@ export default function FishOfTheDay({
 
       {/* Result */}
       {puzzle.isOver && puzzle.answer && (
-        <div style={{
-          background: puzzle.solved ? 'rgba(240,192,64,0.07)' : 'rgba(255,255,255,0.03)',
-          border: `1px solid ${puzzle.solved ? 'rgba(240,192,64,0.25)' : 'rgba(255,255,255,0.08)'}`,
-          borderRadius: '12px',
-          padding: '1.125rem',
-        }}>
-          <p className="font-cinzel font-700" style={{ color: puzzle.solved ? '#f0c040' : '#f0ede8', fontSize: '1rem', marginBottom: '0.2rem' }}>
-            {puzzle.solved ? puzzle.answer.common_name : `It was the ${puzzle.answer.common_name}`}
-          </p>
-          {puzzle.answer.scientific_name && (
-            <p className="font-karla" style={{ fontStyle: 'italic', color: '#8a8880', fontSize: '0.72rem', marginBottom: '0.6rem' }}>
-              {puzzle.answer.scientific_name}
-            </p>
-          )}
-          <p className="font-karla" style={{ color: '#c8c4bc', fontSize: '0.8rem', lineHeight: 1.55 }}>
-            {puzzle.answer.fun_fact}
-          </p>
-          {puzzle.solved && puzzle.doubloons_awarded > 0 && (
-            <p className="font-karla font-600" style={{ color: '#f0c040', fontSize: '0.8rem', marginTop: '0.625rem' }}>
-              +{puzzle.doubloons_awarded} ⟡
-            </p>
-          )}
-          {milestoneReward && (
-            <p className="font-karla font-600" style={{ color: '#34d399', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-              +{milestoneReward} ⟡ — {puzzle.streak}-day streak milestone!
-            </p>
-          )}
-          <p className="font-karla" style={{ color: '#6a6764', fontSize: '0.68rem', marginTop: '0.75rem' }}>
-            Come back tomorrow for a new fish.
-          </p>
-        </div>
+        <AnswerCard
+          answer={puzzle.answer}
+          solved={puzzle.solved}
+          doubloonsAwarded={puzzle.doubloons_awarded}
+          streak={puzzle.streak}
+          milestoneReward={milestoneReward}
+        />
       )}
 
       {/* Picker */}
+
       {!puzzle.isOver && (
         <div className="flex flex-col gap-3">
           <div className="relative">
@@ -299,6 +276,85 @@ export default function FishOfTheDay({
           </p>
         </div>
       )}
+    </div>
+  )
+}
+
+const DETAIL_ROWS: { key: keyof FishAnswer; label: string }[] = [
+  { key: 'habitat',             label: 'Habitat' },
+  { key: 'range',               label: 'Range' },
+  { key: 'diet',                label: 'Diet' },
+  { key: 'size',                label: 'Size' },
+  { key: 'conservation_status', label: 'Conservation' },
+]
+
+function AnswerCard({ answer, solved, doubloonsAwarded, streak, milestoneReward }: {
+  answer: FishAnswer
+  solved: boolean
+  doubloonsAwarded: number
+  streak: number
+  milestoneReward?: number
+}) {
+  return (
+    <div style={{
+      background: solved ? 'rgba(240,192,64,0.06)' : 'rgba(255,255,255,0.03)',
+      border: `1px solid ${solved ? 'rgba(240,192,64,0.22)' : 'rgba(255,255,255,0.08)'}`,
+      borderRadius: '14px',
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{ padding: '1.125rem 1.125rem 0.875rem' }}>
+        <p className="font-cinzel font-700" style={{ color: solved ? '#f0c040' : '#f0ede8', fontSize: '1.1rem', marginBottom: '0.2rem' }}>
+          {solved ? answer.common_name : `It was the ${answer.common_name}`}
+        </p>
+        {answer.scientific_name && (
+          <p className="font-karla" style={{ fontStyle: 'italic', color: '#8a8880', fontSize: '0.72rem', marginBottom: '0.75rem' }}>
+            {answer.scientific_name}
+          </p>
+        )}
+        <p className="font-karla" style={{ color: '#c8c4bc', fontSize: '0.82rem', lineHeight: 1.6 }}>
+          {answer.fun_fact}
+        </p>
+        {solved && doubloonsAwarded > 0 && (
+          <p className="font-karla font-600" style={{ color: '#f0c040', fontSize: '0.8rem', marginTop: '0.625rem' }}>
+            +{doubloonsAwarded} ⟡
+          </p>
+        )}
+        {milestoneReward && (
+          <p className="font-karla font-600" style={{ color: '#34d399', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+            +{milestoneReward} ⟡ — {streak}-day streak milestone!
+          </p>
+        )}
+      </div>
+
+      {/* Detail rows */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        {DETAIL_ROWS.map(({ key, label }) => {
+          const val = answer[key]
+          if (!val) return null
+          return (
+            <div
+              key={key}
+              className="flex gap-3"
+              style={{
+                padding: '0.55rem 1.125rem',
+                borderBottom: '1px solid rgba(255,255,255,0.04)',
+              }}
+            >
+              <p className="font-karla font-600 uppercase tracking-[0.10em] shrink-0" style={{ fontSize: '0.58rem', color: '#6a6764', width: 80, paddingTop: 2 }}>
+                {label}
+              </p>
+              <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a0a09a', lineHeight: 1.5 }}>
+                {val}
+              </p>
+            </div>
+          )
+        })}
+      </div>
+
+      <p className="font-karla" style={{ color: '#6a6764', fontSize: '0.68rem', padding: '0.75rem 1.125rem' }}>
+        Come back tomorrow for a new fish.
+      </p>
     </div>
   )
 }
