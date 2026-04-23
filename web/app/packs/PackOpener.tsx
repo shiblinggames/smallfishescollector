@@ -309,7 +309,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
           ) : (
             <div className="flex flex-col items-center gap-3 mt-2">
               <p className="font-karla font-300 text-[#8a8880] text-sm">No packs available.</p>
-              <a href="/tavern" className="btn-gold">Go to the Tavern</a>
+              <a href="/tavern" className="btn-ghost">Go to the Tavern</a>
               <a href="/redeem" className="text-[#f0c040] hover:text-[#ffd966] text-xs font-karla font-600 uppercase tracking-[0.12em] transition-colors">
                 Redeem a Code
               </a>
@@ -525,12 +525,12 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
 
       {/* Desktop: in flow */}
       {phase !== 'done' && flipped.some((f) => !f) ? (
-        <button onClick={flipAll} className="hidden sm:block btn-gold">Open All</button>
+        <button onClick={flipAll} className="hidden sm:block btn-ghost">Open All</button>
       ) : phase === 'done' ? (
         <div className="hidden sm:flex flex-col items-center gap-4">
           <div className="flex gap-4 flex-wrap justify-center">
             {packs > 0 && (
-              <button onClick={openPack} disabled={loading} className="btn-gold">
+              <button onClick={openPack} disabled={loading} className="btn-ghost">
                 {loading ? 'Fishing…' : `Open Another · ${packs} Left`}
               </button>
             )}
