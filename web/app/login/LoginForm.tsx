@@ -67,7 +67,7 @@ export default function LoginForm() {
         />
       </div>
 
-      <button type="submit" disabled={loading} className="btn-gold w-full">
+      <button type="submit" disabled={loading} className="btn-ghost w-full">
         {loading ? 'Sending…' : 'Send Sign-In Link'}
       </button>
 

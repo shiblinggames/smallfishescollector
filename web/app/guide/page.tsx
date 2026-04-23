@@ -26,7 +26,7 @@ export default function GuidePage() {
           Small Fishes is a digital collectible card game built around real fish. Open packs, build your collection, and earn doubloons playing daily games in the Tavern.
         </p>
 
-        <Link href="/packs" className="btn-gold mb-14">Start Opening Packs</Link>
+        <Link href="/packs" className="btn-ghost mb-14">Play Now</Link>
 
         <div className="w-full max-w-2xl flex flex-col gap-5">
 
@@ -194,7 +194,7 @@ export default function GuidePage() {
           </Section>
 
           <div className="flex justify-center pt-4">
-            <Link href="/packs" className="btn-gold">Open Packs</Link>
+            <Link href="/packs" className="btn-ghost">Play Now</Link>
           </div>
 
         </div>

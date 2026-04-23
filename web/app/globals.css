@@ -32,6 +32,7 @@ body {
 
 /* ── Buttons ── */
 .btn-gold {
+  display: inline-block;
   font-family: var(--font-karla), sans-serif;
   font-weight: 600;
   font-size: 0.8125rem;
@@ -42,6 +43,8 @@ body {
   border: 1px solid #f0c040;
   border-radius: 10px;
   padding: 0.75rem 2rem;
+  text-decoration: none;
+  text-align: center;
   transition: background 0.22s, color 0.22s, border-color 0.22s, transform 0.22s;
   cursor: pointer;
 }
@@ -49,6 +52,7 @@ body {
 .btn-gold:disabled { opacity: 0.45; pointer-events: none; }
 
 .btn-ghost {
+  display: inline-block;
   font-family: var(--font-karla), sans-serif;
   font-weight: 600;
   font-size: 0.8125rem;
@@ -59,6 +63,8 @@ body {
   border: 1px solid rgba(240,237,232,0.35);
   border-radius: 10px;
   padding: 0.75rem 2rem;
+  text-decoration: none;
+  text-align: center;
   transition: border-color 0.22s, color 0.22s, transform 0.22s;
   cursor: pointer;
 }
