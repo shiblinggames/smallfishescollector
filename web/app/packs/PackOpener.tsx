@@ -235,19 +235,19 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
       <div className="flex flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-4">
           {/* Booster pack */}
-          <div className="relative" style={{ marginTop: packs > 1 ? 12 : 0 }}>
+          <div className="relative" style={{ marginTop: packs > 1 ? 16 : 0 }}>
             {packs > 2 && (
-              <img src="/booster.png" alt="" aria-hidden className="absolute inset-0 w-full h-full object-contain" style={{ transform: 'translateY(10px) translateX(6px) rotate(2.5deg)', opacity: 0.5, pointerEvents: 'none' }} />
+              <img src="/booster.png" alt="" aria-hidden className="absolute inset-0 w-full h-full object-contain" style={{ transform: 'translateY(14px) translateX(8px) rotate(2.5deg)', opacity: 0.5, pointerEvents: 'none' }} />
             )}
             {packs > 1 && (
-              <img src="/booster.png" alt="" aria-hidden className="absolute inset-0 w-full h-full object-contain" style={{ transform: 'translateY(5px) translateX(3px) rotate(1.2deg)', opacity: 0.7, pointerEvents: 'none' }} />
+              <img src="/booster.png" alt="" aria-hidden className="absolute inset-0 w-full h-full object-contain" style={{ transform: 'translateY(7px) translateX(4px) rotate(1.2deg)', opacity: 0.7, pointerEvents: 'none' }} />
             )}
             <button
               onClick={packs > 0 ? openPack : undefined}
               disabled={loading || packs === 0}
               className="relative block select-none"
               style={{
-                width: 210, height: 315,
+                width: 300, height: 420,
                 cursor: packs > 0 && !loading ? 'pointer' : 'default',
                 background: 'none',
                 border: 'none',
