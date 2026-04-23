@@ -310,12 +310,25 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
             onClick={isDone ? openPack : flipAll}
             disabled={isDone && loading}
             className="w-[4.5rem] h-[4.5rem] rounded-full flex items-center justify-center select-none touch-manipulation"
-            style={{ background: '#f0c040', transition: 'transform 0.07s ease, filter 0.07s ease' }}
-            onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.86)'; e.currentTarget.style.filter = 'brightness(1.15)' }}
-            onPointerUp={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.filter = '' }}
-            onPointerLeave={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.filter = '' }}
+            style={{
+              background: 'linear-gradient(to bottom, #ffd84d, #e8aa00)',
+              boxShadow: '0 5px 0 #9a6e00, 0 8px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.4)',
+              transition: 'transform 0.07s ease, box-shadow 0.07s ease',
+            }}
+            onPointerDown={(e) => {
+              e.currentTarget.style.transform = 'translateY(4px)'
+              e.currentTarget.style.boxShadow = '0 1px 0 #9a6e00, 0 2px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4)'
+            }}
+            onPointerUp={(e) => {
+              e.currentTarget.style.transform = ''
+              e.currentTarget.style.boxShadow = '0 5px 0 #9a6e00, 0 8px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.4)'
+            }}
+            onPointerLeave={(e) => {
+              e.currentTarget.style.transform = ''
+              e.currentTarget.style.boxShadow = '0 5px 0 #9a6e00, 0 8px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.4)'
+            }}
           >
-            <span className="font-karla font-700 uppercase text-black text-center leading-snug" style={{ fontSize: '0.62rem', letterSpacing: '0.10em' }}>
+            <span className="font-karla font-700 uppercase text-black text-center leading-snug" style={{ fontSize: '0.62rem', letterSpacing: '0.10em', textShadow: '0 1px 0 rgba(255,255,255,0.3)' }}>
               {isDone ? <>Open<br/>Another</> : <>Open<br/>All</>}
             </span>
           </button>
