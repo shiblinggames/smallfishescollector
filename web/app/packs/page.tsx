@@ -21,12 +21,14 @@ export default async function PacksPage() {
   return (
     <>
       <Nav packsAvailable={packsAvailable} />
-      <main className="min-h-screen px-6 py-14 flex flex-col items-center">
-        <p className="sg-eyebrow text-center mb-3">Booster Packs</p>
-        <h1 className="font-cinzel font-700 text-[#f0ede8] text-center leading-[0.92] tracking-[-0.01em] mb-12"
-            style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}>
-          Go Fishing.
-        </h1>
+      <main className="min-h-screen px-6 py-4 sm:py-14 flex flex-col items-center">
+        <div className="hidden sm:contents">
+          <p className="sg-eyebrow text-center mb-3">Booster Packs</p>
+          <h1 className="font-cinzel font-700 text-[#f0ede8] text-center leading-[0.92] tracking-[-0.01em] mb-12"
+              style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}>
+            Go Fishing.
+          </h1>
+        </div>
         <PackOpener packsAvailable={packsAvailable} />
         {stats && <PackStatsToggle stats={stats} history={history} />}
         <a href="/guide" className="mt-16 font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors">

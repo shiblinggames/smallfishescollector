@@ -118,7 +118,7 @@ export default function DemoPackOpener({ variants }: Props) {
           <div
             key={i}
             className={`flip-card select-none ${flipped[i] ? 'flipped' : ''} ${i === currentIndex && !flipped[i] ? 'cursor-pointer' : 'cursor-default'}`}
-            style={{ width: 160, height: 200 }}
+            style={{ width: 160, height: 248 }}
             onClick={() => { if (i === currentIndex && !flipped[i]) flipNext() }}
           >
             <div className="flip-card-inner w-full h-full">

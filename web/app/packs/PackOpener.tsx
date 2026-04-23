@@ -240,7 +240,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-10">
+    <div className="flex flex-col items-center gap-4 sm:gap-10">
       {flash && <div key={flash.key} className={`reveal-flash reveal-flash-${flash.type}`} />}
       {prize && (
         <PrizeModal
@@ -258,13 +258,13 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
           </p>
         </div>
       )}
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-8">
+      <div className="flex flex-wrap justify-center gap-x-2 gap-y-2 sm:gap-x-4 sm:gap-y-8">
         {cards.map((card, i) => (
           <div key={i} className="flex flex-col items-center gap-2">
             <div
               ref={(el) => { cardRefs.current[i] = el }}
-              className={`flip-card select-none ${flipped[i] ? 'flipped' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
-              style={{ width: 160, height: 248, opacity: mythicFeatured !== null && mythicFeatured !== i ? 0.2 : 1, transition: 'opacity 0.3s ease' }}
+              className={`flip-card pack-flip-card select-none ${flipped[i] ? 'flipped' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
+              style={{ opacity: mythicFeatured !== null && mythicFeatured !== i ? 0.2 : 1, transition: 'opacity 0.3s ease' }}
               onClick={() => flipCard(i)}
               onMouseMove={(e) => handleMouseMove(e, i)}
               onMouseLeave={(e) => handleMouseLeave(e, i)}
