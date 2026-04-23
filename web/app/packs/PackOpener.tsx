@@ -191,7 +191,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
   }
 
   function flipCard(i: number) {
-    if (flipped[i]) return
+    if (flipped[i] || loading) return
     resetTilt(i)
     const rarity = rarityFromVariant(cards[i].variantName, cards[i].dropWeight)
     setGlowClasses((prev) => { const n = [...prev]; n[i] = glowClassFor(rarity); return n })
@@ -363,7 +363,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
       <div key={i} className="flex flex-col items-center gap-2">
         <div
           ref={(el) => { cardRefs.current[i] = el }}
-          className={`flip-card select-none ${flipped[i] ? 'flipped' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
+          className={`flip-card select-none ${flipped[i] ? 'flipped' : loading ? '' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
           style={{ width: 160, height: 248, opacity: mythicFeatured !== null && mythicFeatured !== i ? 0.2 : 1, transition: 'opacity 0.3s ease' }}
           onClick={() => flipCard(i)}
           onMouseMove={(e) => handleMouseMove(e, i)}
@@ -378,13 +378,14 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
 
   function renderOpenAllButton() {
     const isDone = phase === 'done'
-    const show = someUnflipped || (isDone && packs > 0)
+    const outOfPacks = isDone && packs === 0
+    const show = someUnflipped || (isDone && packs > 0) || outOfPacks
     return (
       <div className="flex-1 flex items-center justify-center" style={{ height: 248 }}>
         {show && (
           <button
-            onClick={isDone ? openPack : flipAll}
-            disabled={isDone && loading}
+            onClick={outOfPacks ? reset : isDone ? openPack : flipAll}
+            disabled={isDone && loading && !outOfPacks}
             className="w-[4.5rem] h-[4.5rem] rounded-full flex items-center justify-center select-none touch-manipulation"
             style={{
               background: 'rgba(255,255,255,0.10)',
@@ -410,7 +411,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
             }}
           >
             <span className="font-karla font-900 uppercase text-[#f0ede8] text-center leading-snug" style={{ fontSize: '0.68rem', letterSpacing: '0.10em' }}>
-              {isDone ? <>Open<br/>Another</> : <>Open<br/>All</>}
+              {outOfPacks ? <>Buy<br/>More</> : isDone ? <>Open<br/>Another</> : <>Open<br/>All</>}
             </span>
           </button>
         )}
@@ -511,19 +512,11 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
       </div>
 
       {/* Mobile done state */}
-      {phase === 'done' && (
+      {phase === 'done' && packs > 0 && (
         <div className="sm:hidden flex flex-col items-center gap-3 w-full px-4">
-          {packs > 0 && (
-            <button onClick={openPack} disabled={loading} className="btn-gold w-full">
-              {loading ? 'Fishing…' : `Open Another · ${packs} Left`}
-            </button>
-          )}
-          <button onClick={() => router.push('/collection')} className="btn-ghost w-full">
-            View Collection
+          <button onClick={openPack} disabled={loading} className="btn-gold w-full">
+            {loading ? 'Fishing…' : `Open Another · ${packs} Left`}
           </button>
-          {packs === 0 && (
-            <a href="/tavern" className="btn-gold w-full">Go to the Tavern</a>
-          )}
         </div>
       )}
 
