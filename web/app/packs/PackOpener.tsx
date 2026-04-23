@@ -265,18 +265,24 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
         {/* Doubloon balance + buy buttons */}
         <div className="flex flex-col items-center gap-2">
           <p className="font-karla font-600 text-[#f0c040] text-sm tracking-wide">{doubloons.toLocaleString()} ⟡</p>
-          {doubloons >= 200 && (
-            <div className="flex gap-2">
-              <button onClick={() => handleBuyWithDoubloons(1)} disabled={buyingWithDoubloons} className="btn-ghost text-xs disabled:opacity-50">
-                {buyingWithDoubloons ? '…' : 'Buy 1 · 200 ⟡'}
-              </button>
-              {doubloons >= 1500 && (
-                <button onClick={() => handleBuyWithDoubloons(10)} disabled={buyingWithDoubloons} className="btn-ghost text-xs disabled:opacity-50">
-                  Buy 10 · 1,500 ⟡
-                </button>
-              )}
-            </div>
-          )}
+          <div className="flex gap-2">
+            <button
+              onClick={() => doubloons >= 200 && handleBuyWithDoubloons(1)}
+              disabled={buyingWithDoubloons}
+              className="btn-ghost text-xs transition-opacity"
+              style={{ opacity: doubloons >= 200 ? 1 : 0.35, cursor: doubloons >= 200 ? 'pointer' : 'default' }}
+            >
+              {buyingWithDoubloons ? '…' : 'Buy 1 · 200 ⟡'}
+            </button>
+            <button
+              onClick={() => doubloons >= 1500 && handleBuyWithDoubloons(10)}
+              disabled={buyingWithDoubloons}
+              className="btn-ghost text-xs transition-opacity"
+              style={{ opacity: doubloons >= 1500 ? 1 : 0.35, cursor: doubloons >= 1500 ? 'pointer' : 'default' }}
+            >
+              Buy 10 · 1,500 ⟡
+            </button>
+          </div>
         </div>
       </div>
     )
