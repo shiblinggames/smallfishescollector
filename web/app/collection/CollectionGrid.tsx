@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useTransition } from 'react'
 import FishCard from '@/components/FishCard'
 import type { Card } from '@/lib/types'
 import type { OwnedEntry, AllVariantEntry } from './page'
-import { rarityFromVariant, RARITY_COLOR } from '@/lib/variants'
+import { rarityFromVariant, RARITY_COLOR, doubloonValueFor } from '@/lib/variants'
+import { sellDuplicate, sellAllDuplicates, getDuplicatesBreakdown } from './actions'
+import type { DuplicateBreakdownItem } from './actions'
 
 const STORAGE_KEY = 'sf-featured-variants'
 const ABYSS_FISH = new Set(['Catfish', 'Doby Mick'])
@@ -22,6 +24,7 @@ interface Props {
   totalVariants: number
   totalVariantsByCardId: Record<number, number>
   allVariantsByCardId: Record<number, AllVariantEntry[]>
+  doubloons: number
 }
 
 interface ModalCard {
@@ -139,11 +142,17 @@ function LockedVariant({ variantName, dropWeight }: { variantName: string; dropW
   )
 }
 
-export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId, allVariantsByCardId }: Props) {
+export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId, allVariantsByCardId, doubloons: initialDoubloons }: Props) {
   const [rarityFilter, setRarityFilter] = useState('')
-  const [variantFilter, setVariantFilter]   = useState('')
+  const [variantFilter, setVariantFilter] = useState('')
   const [modal, setModal] = useState<ModalCard | null>(null)
   const [pinnedVariants, setPinnedVariants] = useState<Record<number, number>>({})
+  const [doubloons, setDoubloons] = useState(initialDoubloons)
+  const [ownedState, setOwnedState] = useState(ownedByCardId)
+  const [liquidateOpen, setLiquidateOpen] = useState(false)
+  const [breakdown, setBreakdown] = useState<DuplicateBreakdownItem[] | null>(null)
+  const [breakdownTotal, setBreakdownTotal] = useState(0)
+  const [isPending, startTransition] = useTransition()
 
   useEffect(() => { setPinnedVariants(loadPinned()) }, [])
 
@@ -159,15 +168,16 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
   }
 
   const allVariantNames = Array.from(new Set(
-    Object.values(ownedByCardId).flatMap((entries) => entries.map((e) => e.variantName))
+    Object.values(ownedState).flatMap((entries) => entries.map((e) => e.variantName))
   )).sort()
 
-  const fishDiscovered  = allCards.filter((c) => ownedByCardId[c.id]?.length > 0).length
-  const uniqueVariantsOwned = Object.values(ownedByCardId).reduce((sum, entries) => sum + entries.length, 0)
+  const fishDiscovered = allCards.filter((c) => ownedState[c.id]?.length > 0).length
+  const uniqueVariantsOwned = Object.values(ownedState).reduce((sum, entries) => sum + entries.length, 0)
+  const totalDupes = Object.values(ownedState).reduce((sum, entries) => sum + entries.reduce((s, e) => s + (e.count - 1), 0), 0)
   const hasActiveFilter = !!(rarityFilter || variantFilter)
 
   function cardMatchesFilter(card: Card): boolean {
-    const entries = ownedByCardId[card.id] ?? []
+    const entries = ownedState[card.id] ?? []
     if (rarityFilter && !entries.some((e) => rarityFromVariant(e.variantName, e.dropWeight) === rarityFilter)) return false
     if (variantFilter && !entries.some((e) => e.variantName === variantFilter)) return false
     return true
@@ -178,6 +188,71 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
     return allCards.filter((c) => c.tier === zone.tierFilter && !ABYSS_FISH.has(c.name))
   }
 
+  function handleSellDuplicate(entry: OwnedEntry, cardId: number) {
+    const rowIdToSell = entry.rowIds[entry.rowIds.length - 1]
+    startTransition(async () => {
+      const result = await sellDuplicate(rowIdToSell, entry.variantName, entry.dropWeight)
+      if ('error' in result) return
+      setDoubloons((d) => d + result.earned)
+      setOwnedState((prev) => {
+        const updated = { ...prev }
+        const entries = updated[cardId].map((e) =>
+          e.variantId !== entry.variantId ? e : {
+            ...e,
+            count: e.count - 1,
+            rowIds: e.rowIds.slice(0, -1),
+          }
+        )
+        updated[cardId] = entries
+        return updated
+      })
+      setModal((m) => {
+        if (!m || m.card.id !== cardId) return m
+        const newEntries = m.entries.map((e) =>
+          e.variantId !== entry.variantId ? e : {
+            ...e,
+            count: e.count - 1,
+            rowIds: e.rowIds.slice(0, -1),
+          }
+        )
+        return { ...m, entries: newEntries }
+      })
+    })
+  }
+
+  function openLiquidateModal() {
+    setLiquidateOpen(true)
+    setBreakdown(null)
+    startTransition(async () => {
+      const result = await getDuplicatesBreakdown()
+      if ('error' in result) return
+      setBreakdown(result.items)
+      setBreakdownTotal(result.total)
+    })
+  }
+
+  function handleSellAll() {
+    startTransition(async () => {
+      const result = await sellAllDuplicates()
+      if ('error' in result) return
+      setDoubloons((d) => d + result.earned)
+      // Remove all extra copies from local state
+      setOwnedState((prev) => {
+        const updated: typeof prev = {}
+        for (const [cardId, entries] of Object.entries(prev)) {
+          updated[Number(cardId)] = entries.map((e) => ({
+            ...e,
+            count: 1,
+            rowIds: e.rowIds.slice(0, 1),
+          }))
+        }
+        return updated
+      })
+      setLiquidateOpen(false)
+      setModal(null)
+    })
+  }
+
   return (
     <div>
       {/* Stats */}
@@ -186,14 +261,29 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           {uniqueVariantsOwned} <span className="text-[#8a8880] font-400 text-lg">/ {totalVariants}</span>
         </p>
         <p className="sg-eyebrow mb-1">Variants Collected</p>
-        <p className="font-karla font-300 text-[#8a8880] text-xs tracking-wide mb-4">
+        <p className="font-karla font-300 text-[#8a8880] text-xs tracking-wide mb-2">
           {fishDiscovered} of {allCards.length} fish discovered
         </p>
-        <div className="w-64 h-px bg-[rgba(255,255,255,0.08)] mx-auto overflow-hidden">
+        <div className="w-64 h-px bg-[rgba(255,255,255,0.08)] mx-auto overflow-hidden mb-4">
           <div
             className="h-full bg-[#f0c040] transition-all duration-700"
             style={{ width: `${totalVariants > 0 ? (uniqueVariantsOwned / totalVariants) * 100 : 0}%` }}
           />
+        </div>
+        {/* Doubloon balance */}
+        <div className="flex items-center justify-center gap-3">
+          <p className="font-karla font-600 text-[#f0c040] text-sm tracking-wide">
+            {doubloons.toLocaleString()} ⟡
+          </p>
+          {totalDupes > 0 && (
+            <button
+              onClick={openLiquidateModal}
+              disabled={isPending}
+              className="font-karla font-600 text-[0.65rem] uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors border border-[rgba(255,255,255,0.1)] rounded px-2.5 py-1"
+            >
+              Sell All Dupes · {totalDupes}
+            </button>
+          )}
         </div>
       </div>
 
@@ -226,18 +316,10 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
         if (hasActiveFilter && visibleCards.length === 0) return null
 
         return (
-          <section
-            key={zone.id}
-            className="w-full"
-            style={{
-              paddingTop: '1.5rem',
-              paddingBottom: '1.5rem',
-            }}
-          >
-            {/* Cards */}
+          <section key={zone.id} className="w-full" style={{ paddingTop: '1.5rem', paddingBottom: '1.5rem' }}>
             <div className="flex flex-wrap justify-center gap-7 px-6">
               {visibleCards.map((card) => {
-                const entries = ownedByCardId[card.id] ?? []
+                const entries = ownedState[card.id] ?? []
                 const isOwned = entries.length > 0
                 const best = isOwned ? displayEntry(card.id, entries) : null
 
@@ -285,10 +367,10 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
               Close
             </button>
 
-            <p className="sg-eyebrow text-center mb-1">Variants You Own</p>
+            <p className="sg-eyebrow text-center mb-1">Variants</p>
             <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-2">{modal.card.name}</p>
             <p className="font-karla font-300 text-[#8a8880] text-center text-xs tracking-wide mb-8">
-              Click a variant to display it in your collection
+              Tap an owned variant to display it in your collection
             </p>
 
             <div className="flex flex-wrap justify-center gap-6">
@@ -299,15 +381,13 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                   const owned = modal.entries.find((e) => e.variantId === v.id)
                   if (!owned) return <LockedVariant key={v.id} variantName={v.variantName} dropWeight={v.dropWeight} />
                   const isFeatured = displayEntry(modal.card.id, modal.entries).variantId === owned.variantId
+                  const dupeCount = owned.count - 1
                   return (
-                    <div
-                      key={owned.variantId}
-                      className="flex flex-col items-center gap-2 cursor-pointer"
-                      onClick={() => pinVariant(modal.card.id, owned.variantId)}
-                    >
+                    <div key={owned.variantId} className="flex flex-col items-center gap-2">
                       <div
-                        className="rounded-full transition-all duration-200"
+                        className="cursor-pointer rounded-full transition-all duration-200"
                         style={isFeatured ? { outline: '2px solid #f0c040', outlineOffset: '5px' } : {}}
+                        onClick={() => pinVariant(modal.card.id, owned.variantId)}
                       >
                         <FishCard
                           name={modal.card.name}
@@ -318,10 +398,88 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                           dropWeight={owned.dropWeight}
                         />
                       </div>
+                      {dupeCount > 0 && (
+                        <div className="flex flex-col items-center gap-1">
+                          <p className="font-karla font-300 text-[0.62rem] text-[#8a8880]">
+                            {dupeCount} duplicate{dupeCount > 1 ? 's' : ''}
+                          </p>
+                          <button
+                            onClick={() => handleSellDuplicate(owned, modal.card.id)}
+                            disabled={isPending}
+                            className="font-karla font-600 text-[0.6rem] uppercase tracking-[0.12em] text-[#f0c040] hover:text-[#ffd966] transition-colors disabled:opacity-50"
+                          >
+                            Sell 1 · +{doubloonValueFor(owned.variantName, owned.dropWeight)} ⟡
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Liquidate modal */}
+      {liquidateOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: 'rgba(0,0,0,0.94)', backdropFilter: 'blur(8px)' }}
+          onClick={() => setLiquidateOpen(false)}
+        >
+          <div
+            className="max-w-lg w-full p-8 relative max-h-[85vh] overflow-y-auto scrollbar-hide"
+            style={{ background: '#0e0e0e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setLiquidateOpen(false)}
+              className="absolute top-4 right-4 font-karla font-300 text-[#8a8880] hover:text-[#f0ede8] text-xs uppercase tracking-widest transition-colors"
+            >
+              Close
+            </button>
+
+            <p className="sg-eyebrow text-center mb-1">Sell All Duplicates</p>
+            <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-8">Liquidate</p>
+
+            {!breakdown ? (
+              <p className="text-center font-karla font-300 text-[#8a8880] text-sm">Loading…</p>
+            ) : breakdown.length === 0 ? (
+              <p className="text-center font-karla font-300 text-[#8a8880] text-sm">No duplicates to sell.</p>
+            ) : (
+              <>
+                <div className="flex flex-col gap-2 mb-8">
+                  {breakdown.map((item, i) => {
+                    const rarity = rarityFromVariant(item.variantName, item.dropWeight)
+                    return (
+                      <div key={i} className="flex items-center justify-between gap-4 py-2 border-b border-[rgba(255,255,255,0.05)]">
+                        <div>
+                          <p className="font-karla font-600 text-xs text-[#f0ede8]">{item.cardName} · {item.variantName}</p>
+                          <p className="font-karla font-300 text-[0.62rem] mt-0.5" style={{ color: RARITY_COLOR[rarity] }}>{rarity}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-karla font-300 text-[0.62rem] text-[#8a8880]">{item.extraCopies}× dupe</p>
+                          <p className="font-karla font-600 text-xs text-[#f0c040]">+{item.doubloons} ⟡</p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="flex items-center justify-between mb-6 pt-2">
+                  <p className="font-karla font-600 text-sm text-[#f0ede8] uppercase tracking-[0.10em]">Total</p>
+                  <p className="font-cinzel font-700 text-[#f0c040] text-xl">{breakdownTotal.toLocaleString()} ⟡</p>
+                </div>
+
+                <button
+                  onClick={handleSellAll}
+                  disabled={isPending}
+                  className="btn-gold w-full disabled:opacity-50"
+                >
+                  {isPending ? 'Selling…' : `Confirm · Sell ${breakdown.reduce((s, i) => s + i.extraCopies, 0)} Cards`}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

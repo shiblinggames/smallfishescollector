@@ -11,6 +11,7 @@ export interface OwnedEntry {
   artEffect: ArtEffect
   dropWeight: number
   count: number
+  rowIds: number[]
 }
 
 export interface AllVariantEntry {
@@ -30,9 +31,9 @@ export default async function CollectionPage() {
     supabase.from('cards').select('*').order('tier').order('name'),
     supabase
       .from('user_collection')
-      .select('card_variant_id, card_variants(id, variant_name, border_style, art_effect, drop_weight, card_id)')
+      .select('id, card_variant_id, card_variants(id, variant_name, border_style, art_effect, drop_weight, card_id)')
       .eq('user_id', user.id),
-    supabase.from('profiles').select('packs_available').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
     supabase.from('card_variants').select('*', { count: 'exact', head: true }),
     supabase.from('card_variants').select('id, variant_name, border_style, art_effect, drop_weight, card_id'),
   ])
@@ -51,7 +52,7 @@ export default async function CollectionPage() {
     })
   }
 
-  // Build map: card_id → OwnedEntry[] (one entry per unique variant, with count for dupes)
+  // Build map: card_id → OwnedEntry[] (one entry per unique variant, with count + rowIds for dupes)
   const ownedByCardId: Record<number, OwnedEntry[]> = {}
 
   for (const row of owned ?? []) {
@@ -64,6 +65,7 @@ export default async function CollectionPage() {
     const existing = ownedByCardId[v.card_id].find((e) => e.variantId === v.id)
     if (existing) {
       existing.count++
+      existing.rowIds.push(row.id)
     } else {
       ownedByCardId[v.card_id].push({
         variantId:   v.id,
@@ -72,6 +74,7 @@ export default async function CollectionPage() {
         artEffect:   v.art_effect as ArtEffect,
         dropWeight:  v.drop_weight,
         count:       1,
+        rowIds:      [row.id],
       })
     }
   }
@@ -93,6 +96,7 @@ export default async function CollectionPage() {
           totalVariants={totalVariants ?? 0}
           totalVariantsByCardId={totalVariantsByCardId}
           allVariantsByCardId={allVariantsByCardId}
+          doubloons={profile?.doubloons ?? 0}
         />
       </main>
     </>

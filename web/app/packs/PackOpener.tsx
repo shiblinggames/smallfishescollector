@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { rarityFromVariant } from '@/lib/variants'
 import FishCard from '@/components/FishCard'
 import PrizeModal from '@/components/PrizeModal'
-import { openPack as openPackAction } from './actions'
+import { openPack as openPackAction, buyPackWithDoubloons } from './actions'
 import type { DrawnCard, BorderStyle, ArtEffect } from '@/lib/types'
 import type { OpenPackResponse } from './actions'
 
@@ -33,11 +33,13 @@ function cardBackBorderStyle(borderStyle: BorderStyle, artEffect: ArtEffect): Re
 
 interface Props {
   packsAvailable: number
+  doubloons: number
 }
 
-export default function PackOpener({ packsAvailable: initialPacks }: Props) {
+export default function PackOpener({ packsAvailable: initialPacks, doubloons: initialDoubloons }: Props) {
   const router = useRouter()
   const [packs, setPacks] = useState(initialPacks)
+  const [doubloons, setDoubloons] = useState(initialDoubloons)
   const [phase, setPhase] = useState<'idle' | 'reveal' | 'done'>('idle')
   const [cards, setCards] = useState<DrawnCard[]>([])
   const [flipped, setFlipped] = useState<boolean[]>([])
@@ -216,6 +218,17 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
     router.refresh()
   }
 
+  async function handleBuyWithDoubloons() {
+    if (loading) return
+    setLoading(true)
+    const result = await buyPackWithDoubloons()
+    if (!('error' in result)) {
+      setPacks(result.packsAvailable)
+      setDoubloons(result.doubloons)
+    }
+    setLoading(false)
+  }
+
   if (phase === 'idle') {
     return (
       <div className="flex flex-col items-center gap-8">
@@ -246,6 +259,15 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
                 Redeem a Code
               </a>
             </div>
+          )}
+        </div>
+        {/* Doubloon balance + buy button */}
+        <div className="flex flex-col items-center gap-2">
+          <p className="font-karla font-600 text-[#f0c040] text-sm tracking-wide">{doubloons.toLocaleString()} ⟡</p>
+          {doubloons >= 150 && (
+            <button onClick={handleBuyWithDoubloons} disabled={loading} className="btn-ghost text-xs disabled:opacity-50">
+              Buy Pack · 150 ⟡
+            </button>
           )}
         </div>
       </div>

@@ -11,12 +11,13 @@ export default async function PacksPage() {
   if (!user) redirect('/login')
 
   const [{ data: profile }, stats, history] = await Promise.all([
-    supabase.from('profiles').select('packs_available').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
     getPackStats(),
     getPackHistory(),
   ])
 
   const packsAvailable = profile?.packs_available ?? 0
+  const doubloons = profile?.doubloons ?? 0
 
   return (
     <>
@@ -29,7 +30,7 @@ export default async function PacksPage() {
             Go Fishing.
           </h1>
         </div>
-        <PackOpener packsAvailable={packsAvailable} />
+        <PackOpener packsAvailable={packsAvailable} doubloons={doubloons} />
         {stats && <PackStatsToggle stats={stats} history={history} />}
         <a href="/guide" className="mt-16 font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors">
           How It Works →

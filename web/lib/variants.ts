@@ -38,3 +38,17 @@ export const RARITY_COLOR: Record<string, string> = {
 
 export const IS_LEGENDARY_RARITY = (rarity: string) => rarity === 'Legendary'
 export const IS_MYTHIC_RARITY    = (rarity: string) => rarity === 'Mythic'
+
+export const DOUBLOON_VALUE: Record<string, number> = {
+  Common:    5,
+  Uncommon:  15,
+  Rare:      40,
+  Epic:      100,
+  Legendary: 300,
+  Mythic:    800,
+}
+
+export function doubloonValueFor(variantName: string, dropWeight: number): number {
+  const rarity = rarityFromVariant(variantName, dropWeight)
+  return DOUBLOON_VALUE[rarity] ?? 5
+}

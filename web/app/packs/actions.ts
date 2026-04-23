@@ -4,7 +4,36 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { drawPack, drawGodPack } from '@/lib/drawPack'
 import { rarityFromVariant } from '@/lib/variants'
+import { revalidatePath } from 'next/cache'
 import type { CardVariant, DrawnCard } from '@/lib/types'
+
+const PACK_COST_DOUBLOONS = 150
+
+export async function buyPackWithDoubloons(): Promise<{ packsAvailable: number; doubloons: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('doubloons, packs_available')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.doubloons < PACK_COST_DOUBLOONS) return { error: 'Not enough doubloons' }
+
+  const newDoubloons = profile.doubloons - PACK_COST_DOUBLOONS
+  const newPacks = profile.packs_available + 1
+
+  await Promise.all([
+    admin.from('profiles').update({ doubloons: newDoubloons, packs_available: newPacks }).eq('id', user.id),
+    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -PACK_COST_DOUBLOONS, reason: 'Bought pack with doubloons' }),
+  ])
+
+  revalidatePath('/packs')
+  return { packsAvailable: newPacks, doubloons: newDoubloons }
+}
 
 export interface OpenPackResponse {
   drawn?: DrawnCard[]
@@ -52,7 +81,7 @@ export async function openPack(): Promise<OpenPackResponse> {
   const forceLegendary = (profile.packs_since_legendary ?? 0) >= 20
   const drawn = isGodPack ? drawGodPack(variants) : drawPack(variants, forceLegendary)
 
-  // Check what the user already owns
+  // Check what the user already owns (for new badge)
   const { data: existing } = await admin
     .from('user_collection')
     .select('card_variant_id')
@@ -61,11 +90,10 @@ export async function openPack(): Promise<OpenPackResponse> {
   const ownedIds = new Set((existing ?? []).map((r) => r.card_variant_id))
   const newCards = drawn.filter((d) => !ownedIds.has(d.variantId))
 
-  if (newCards.length > 0) {
-    await admin.from('user_collection').insert(
-      newCards.map((d) => ({ user_id: user.id, card_variant_id: d.variantId }))
-    )
-  }
+  // Always insert all drawn cards — dupes accumulate as extra rows
+  await admin.from('user_collection').insert(
+    drawn.map((d) => ({ user_id: user.id, card_variant_id: d.variantId }))
+  )
 
   // Update tide counter — reset if any card displays as Legendary or Mythic
   const hitLegendary = drawn.some((d) => ['Legendary', 'Mythic'].includes(rarityFromVariant(d.variantName, d.dropWeight)))
