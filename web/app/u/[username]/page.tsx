@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import Nav from '@/components/Nav'
 import ProfileClient from './ProfileClient'
 import { notFound } from 'next/navigation'
+import { ACHIEVEMENT_MAP } from '@/lib/achievements'
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
@@ -45,13 +46,14 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     }
   }
 
-  // Stats
-  const [{ count: packsOpened }, { count: totalVariants }, { data: ownedRows }] = await Promise.all([
+  // Stats + achievements
+  const [{ count: packsOpened }, { count: totalVariants }, { data: ownedRows }, { data: achievementRows }] = await Promise.all([
     admin.from('pack_history').select('*', { count: 'exact', head: true }).eq('user_id', profile.id),
     admin.from('card_variants').select('*', { count: 'exact', head: true }),
     admin.from('user_collection')
       .select('card_variant_id, card_variants(card_id, drop_weight, variant_name, cards(name))')
       .eq('user_id', profile.id),
+    admin.from('user_achievements').select('achievement_key, unlocked_at').eq('user_id', profile.id).order('unlocked_at'),
   ])
 
   const seenVariants = new Set<number>()
@@ -71,6 +73,10 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const ownedVariants = seenVariants.size
   const fishDiscovered = seenCards.size
   const completionPct = totalVariants ? Math.round((ownedVariants / totalVariants) * 100) : 0
+
+  const achievements = (achievementRows ?? [])
+    .map(r => ACHIEVEMENT_MAP[r.achievement_key])
+    .filter(Boolean)
 
   // Nav data
   const { data: navProfile } = user ? await admin.from('profiles').select('packs_available').eq('id', user.id).single() : { data: null }
@@ -95,6 +101,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             fotdStreak: profile.fotd_streak ?? 0,
             rarestPull,
           }}
+          achievements={achievements}
         />
       </main>
     </>

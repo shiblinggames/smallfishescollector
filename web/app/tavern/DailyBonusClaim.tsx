@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { claimDailyBonus } from '@/app/actions/dailyBonus'
+import AchievementToast from '@/components/AchievementToast'
 
 export default function DailyBonusClaim({
   alreadyClaimed: initialClaimed,
@@ -15,6 +16,7 @@ export default function DailyBonusClaim({
   const [claimed, setClaimed] = useState(initialClaimed)
   const [loading, setLoading] = useState(false)
   const [justClaimed, setJustClaimed] = useState(false)
+  const [achievementKeys, setAchievementKeys] = useState<string[]>([])
 
   async function handleClaim() {
     if (claimed || loading) return
@@ -23,11 +25,14 @@ export default function DailyBonusClaim({
     if (result.claimed) {
       setClaimed(true)
       setJustClaimed(true)
+      if (result.newAchievements?.length) setAchievementKeys(result.newAchievements)
     }
     setLoading(false)
   }
 
   return (
+    <>
+    <AchievementToast keys={achievementKeys} onDone={() => setAchievementKeys([])} />
     <div style={{
       background: 'rgba(255,255,255,0.04)',
       border: `1px solid ${claimed ? 'rgba(255,255,255,0.08)' : 'rgba(240,192,64,0.22)'}`,
@@ -94,6 +99,7 @@ export default function DailyBonusClaim({
         </>
       )}
     </div>
+    </>
   )
 }
 

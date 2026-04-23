@@ -6,6 +6,7 @@ import { drawPack, drawGodPack } from '@/lib/drawPack'
 import { rarityFromVariant } from '@/lib/variants'
 import { revalidatePath } from 'next/cache'
 import type { CardVariant, DrawnCard } from '@/lib/types'
+import { checkAchievements } from '@/lib/checkAchievements'
 
 const PACK_COSTS: Record<number, number> = { 1: 200, 10: 1500 }
 
@@ -58,6 +59,7 @@ export interface OpenPackResponse {
   isGodPack?: boolean
   packsSinceLegendary?: number
   rankUp?: { rank: string; bonus: number }
+  newAchievements?: string[]
   error?: string
 }
 
@@ -141,6 +143,8 @@ export async function openPack(): Promise<OpenPackResponse> {
   }
   await Promise.all(writes)
 
+  const newAchievements = await checkAchievements(user.id, { type: 'pack', drawn })
+
   return {
     drawn,
     newVariantIds: newCards.map((d) => d.variantId),
@@ -148,5 +152,6 @@ export async function openPack(): Promise<OpenPackResponse> {
     isGodPack,
     packsSinceLegendary: hitLegendary ? 0 : (profile.packs_since_legendary ?? 0) + 1,
     rankUp: rankUp ? { rank: rankUp.name, bonus: rankUp.bonus } : undefined,
+    newAchievements,
   }
 }

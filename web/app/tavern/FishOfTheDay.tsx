@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { submitFishGuess } from './fishActions'
+import AchievementToast from '@/components/AchievementToast'
 
 function nextMilestone(streak: number): { day: number; reward: number } {
   if (streak < 3) return { day: 3, reward: 25 }
@@ -27,6 +28,7 @@ export default function FishOfTheDay({
   const [showDropdown, setShowDropdown] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [milestoneReward, setMilestoneReward] = useState<number | undefined>(undefined)
+  const [achievementKeys, setAchievementKeys] = useState<string[]>([])
 
   const alreadyGuessed = new Set(puzzle.guesses.map(g => g.toLowerCase()))
   const filteredFish = allFishNames.filter(n =>
@@ -58,6 +60,7 @@ export default function FishOfTheDay({
       if ('error' in result) return
 
       if (result.milestoneReward) setMilestoneReward(result.milestoneReward)
+      if (result.newAchievements?.length) setAchievementKeys(result.newAchievements)
 
       setPuzzle(prev => ({
         ...prev,
@@ -81,6 +84,7 @@ export default function FishOfTheDay({
 
   return (
     <div className="flex flex-col gap-5 w-full max-w-sm mx-auto">
+      <AchievementToast keys={achievementKeys} onDone={() => setAchievementKeys([])} />
 
       {/* Streak */}
       {puzzle.streak > 0 && (

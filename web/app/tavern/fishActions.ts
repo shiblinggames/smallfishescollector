@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkAchievements } from '@/lib/checkAchievements'
 
 const DOUBLOON_REWARDS = [100, 75, 50, 25]
 
@@ -91,6 +92,7 @@ export async function submitFishGuess(guessName: string): Promise<{
   isOver: boolean
   streak?: number
   milestoneReward?: number
+  newAchievements?: string[]
   answer?: { common_name: string; scientific_name: string | null; fun_fact: string }
 } | { error: string }> {
   const supabase = await createClient()
@@ -171,6 +173,12 @@ export async function submitFishGuess(guessName: string): Promise<{
       }
       await Promise.all(writes)
 
+      const newAchievements = await checkAchievements(user.id, {
+        type: 'fotd',
+        streak: newStreak,
+        guessCount: correct ? guessIndex + 1 : 4,
+      })
+
       return {
         correct,
         doubloons: correct ? guessDoubloons : undefined,
@@ -178,6 +186,7 @@ export async function submitFishGuess(guessName: string): Promise<{
         isOver,
         streak: newStreak,
         milestoneReward: bonus > 0 ? bonus : undefined,
+        newAchievements,
         answer: { common_name: fish.common_name, scientific_name: fish.scientific_name, fun_fact: fish.fun_fact },
       }
     }

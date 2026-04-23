@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { SYMBOLS, DAILY_CAP, MAX_BET, MIN_BET } from './constants'
 import type { Symbol } from './constants'
+import { checkAchievements } from '@/lib/checkAchievements'
 
 function randomSymbol(): Symbol {
   return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]
@@ -31,6 +32,7 @@ export interface RollResult {
   net: number
   newDoubloons: number
   dailyWagered: number
+  newAchievements?: string[]
 }
 
 export async function rollDice(symbol: Symbol, wager: number): Promise<RollResult | { error: string }> {
@@ -75,7 +77,9 @@ export async function rollDice(symbol: Symbol, wager: number): Promise<RollResul
     }),
   ])
 
+  const newAchievements = await checkAchievements(user.id, { type: 'crown', matches })
+
   revalidatePath('/tavern')
-  return { result, matches, payout, net, newDoubloons, dailyWagered: totalWagered + wager }
+  return { result, matches, payout, net, newDoubloons, dailyWagered: totalWagered + wager, newAchievements }
 }
 

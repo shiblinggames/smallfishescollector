@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
+import type { Achievement } from '@/lib/achievements'
 
 interface CardVariant {
   id: number
@@ -27,9 +28,10 @@ interface Props {
   showcaseVariants: unknown[]
   stats: Stats
   isPremium?: boolean
+  achievements?: Achievement[]
 }
 
-export default function ProfileClient({ username, showcaseVariants, stats, isPremium }: Props) {
+export default function ProfileClient({ username, showcaseVariants, stats, isPremium, achievements = [] }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [statsOpen, setStatsOpen] = useState(false)
 
@@ -140,8 +142,60 @@ export default function ProfileClient({ username, showcaseVariants, stats, isPre
         </div>
       )}
 
+      {/* Achievements */}
+      {achievements.length > 0 && (
+        <div className="w-full">
+          <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-4 text-center" style={{ fontSize: '0.6rem' }}>
+            Achievements · {achievements.length}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {achievements.map(a => (
+              <div
+                key={a.key}
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: '10px',
+                  padding: '0.625rem 0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.625rem',
+                }}
+              >
+                <div style={{
+                  width: 28, height: 28, flexShrink: 0,
+                  background: 'rgba(240,192,64,0.08)',
+                  border: '1px solid rgba(240,192,64,0.18)',
+                  borderRadius: '7px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#f0c040',
+                }}>
+                  <AchievementIcon icon={a.icon} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <p className="font-karla font-700 text-[#f0ede8]" style={{ fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</p>
+                  <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.6rem', lineHeight: 1.4 }}>{a.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   )
+}
+
+function AchievementIcon({ icon }: { icon: string }) {
+  const s = 13
+  if (icon === 'pack') return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9.5" y1="14.5" x2="14.5" y2="14.5"/></svg>
+  if (icon === 'fish') return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6.5 12c.94-3.46 4.94-6 10.5-6-3 3.46-3 8.54 0 12-5.56 0-9.56-2.54-10.5-6z"/><path d="M18 6L2 12l16 6"/></svg>
+  if (icon === 'star') return <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+  if (icon === 'anchor') return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="22"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
+  if (icon === 'coin') return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v2m0 8v2m-3-7h6"/></svg>
+  if (icon === 'crown') return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 19l3-10 4.5 4.5L12 4l2.5 9.5L19 9l3 10H2z"/></svg>
+  if (icon === 'scroll') return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4V4h16v5h-2"/><path d="M6 4v5a6 6 0 0 0 12 0V4"/><line x1="12" y1="15" x2="12" y2="19"/><line x1="8" y1="19" x2="16" y2="19"/></svg>
 }
 
 function StatRow({ label, value }: { label: string; value: string }) {

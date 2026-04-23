@@ -5,6 +5,7 @@ import { rollDice } from './actions'
 import type { RollResult } from './actions'
 import { SYMBOLS, DAILY_CAP, MAX_BET, MIN_BET } from './constants'
 import type { Symbol } from './constants'
+import AchievementToast from '@/components/AchievementToast'
 
 const SYMBOL_LABEL: Record<Symbol, string> = {
   anchor:  'Anchor',
@@ -120,6 +121,7 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
   const [diceResult, setDiceResult] = useState<Symbol[]>(['anchor', 'crown', 'heart'])
   const [lastResult, setLastResult] = useState<RollResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [achievementKeys, setAchievementKeys] = useState<string[]>([])
 
   const dailyRemaining = DAILY_CAP - dailyWagered
   const canRoll = selected !== null && wager >= MIN_BET && wager <= Math.min(MAX_BET, doubloons, dailyRemaining) && !rolling && dailyRemaining > 0
@@ -139,6 +141,7 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
     }
 
     setDiceResult(result.result)
+    if (result.newAchievements?.length) setAchievementKeys(result.newAchievements)
     // Stagger die landing
     setTimeout(() => setRolling(false), 1200)
     setTimeout(() => {
@@ -150,6 +153,7 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
 
   return (
     <div className="flex flex-col items-center gap-8 w-full max-w-sm mx-auto">
+      <AchievementToast keys={achievementKeys} onDone={() => setAchievementKeys([])} />
       {/* Balance + daily cap */}
       <div className="text-center">
         <p className="font-cinzel font-700 text-[#f0c040] text-2xl">{doubloons.toLocaleString()} ⟡</p>

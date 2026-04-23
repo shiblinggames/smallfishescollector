@@ -10,6 +10,7 @@ import { openPack as openPackAction, buyPacksWithDoubloons } from './actions'
 import type { DrawnCard, BorderStyle, ArtEffect } from '@/lib/types'
 import type { OpenPackResponse } from './actions'
 import { getHook } from '@/lib/hooks'
+import AchievementToast from '@/components/AchievementToast'
 
 function ActiveHookBadge({ hookTier }: { hookTier: number }) {
   const hook = getHook(hookTier)
@@ -72,6 +73,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
   const [mythicFeatured, setMythicFeatured] = useState<number | null>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
   const [swapped, setSwapped] = useState(false)
+  const [achievementKeys, setAchievementKeys] = useState<string[]>([])
 
   useEffect(() => {
     if (localStorage.getItem('packOpenSide') === 'left') setSwapped(true)
@@ -144,6 +146,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
     setNewVariantIds(new Set(result.newVariantIds ?? []))
     setIsGodPack(result.isGodPack ?? false)
     setRankUp(result.rankUp ?? null)
+    if (result.newAchievements?.length) setAchievementKeys(result.newAchievements)
     setCards(result.drawn)
     setFlipped(new Array(5).fill(false))
     setGlowClasses(new Array(5).fill(''))
@@ -450,6 +453,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
 
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-10 pb-20 sm:pb-0">
+      <AchievementToast keys={achievementKeys} onDone={() => setAchievementKeys([])} />
       {flash && <div key={flash.key} className={`reveal-flash reveal-flash-${flash.type}`} />}
       {prize && (
         <PrizeModal
