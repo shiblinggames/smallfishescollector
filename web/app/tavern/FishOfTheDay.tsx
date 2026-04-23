@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { submitFishGuess } from './fishActions'
+import { submitFishGuess, nextMilestone } from './fishActions'
 import type { FishPuzzleState } from './fishActions'
 
 const DOUBLOON_REWARDS = [100, 75, 50, 25]
@@ -18,6 +18,7 @@ export default function FishOfTheDay({
   const [selected, setSelected] = useState<string | null>(null)
   const [showDropdown, setShowDropdown] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [milestoneReward, setMilestoneReward] = useState<number | undefined>(undefined)
 
   const alreadyGuessed = new Set(puzzle.guesses.map(g => g.toLowerCase()))
   const filteredFish = allFishNames.filter(n =>
@@ -48,12 +49,15 @@ export default function FishOfTheDay({
       const result = await submitFishGuess(guessing)
       if ('error' in result) return
 
+      if (result.milestoneReward) setMilestoneReward(result.milestoneReward)
+
       setPuzzle(prev => ({
         ...prev,
         guesses: [...prev.guesses, guessing],
         solved: result.correct,
         isOver: result.isOver,
         doubloons_awarded: result.doubloons ?? prev.doubloons_awarded,
+        streak: result.streak ?? prev.streak,
         cluesRevealed: result.nextClue
           ? [...prev.cluesRevealed, result.nextClue]
           : prev.cluesRevealed,
@@ -64,9 +68,46 @@ export default function FishOfTheDay({
 
   const guessIndex = puzzle.guesses.length
   const reward = DOUBLOON_REWARDS[guessIndex] ?? 0
+  const next = nextMilestone(puzzle.streak)
+  const daysToNext = next.day - puzzle.streak
 
   return (
     <div className="flex flex-col gap-5 w-full max-w-sm mx-auto">
+
+      {/* Streak */}
+      {puzzle.streak > 0 && (
+        <div style={{
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: '10px',
+          padding: '0.625rem 0.875rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <div>
+            <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#9a9488]" style={{ fontSize: '0.55rem' }}>
+              Current Streak
+            </p>
+            <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.1rem', lineHeight: 1 }}>
+              {puzzle.streak} <span className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.7rem' }}>
+                {puzzle.streak === 1 ? 'day' : 'days'}
+              </span>
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#9a9488]" style={{ fontSize: '0.55rem' }}>
+              Next reward
+            </p>
+            <p className="font-karla text-[#f0c040]" style={{ fontSize: '0.72rem' }}>
+              Day {next.day} · +{next.reward} ⟡
+            </p>
+            <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.62rem' }}>
+              {daysToNext === 1 ? 'tomorrow!' : `${daysToNext} days away`}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Clues */}
       <div className="flex flex-col gap-2.5">
@@ -158,6 +199,11 @@ export default function FishOfTheDay({
           {puzzle.solved && puzzle.doubloons_awarded > 0 && (
             <p className="font-karla font-600" style={{ color: '#f0c040', fontSize: '0.8rem', marginTop: '0.625rem' }}>
               +{puzzle.doubloons_awarded} ⟡
+            </p>
+          )}
+          {milestoneReward && (
+            <p className="font-karla font-600" style={{ color: '#34d399', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+              +{milestoneReward} ⟡ — {puzzle.streak}-day streak milestone!
             </p>
           )}
           <p className="font-karla" style={{ color: '#6a6764', fontSize: '0.68rem', marginTop: '0.75rem' }}>
