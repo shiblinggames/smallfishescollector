@@ -450,19 +450,38 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
           </p>
         </div>
       )}
-      {rankUp && (
-        <div className="text-center px-6" style={{ animation: 'fadeInUp 0.5s ease' }}>
-          <p className="font-karla font-600 uppercase tracking-[0.18em] text-[#a78bfa]" style={{ fontSize: '0.6rem', marginBottom: 2 }}>
-            Rank Up
-          </p>
-          <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.1rem' }}>
-            {rankUp.rank}
-          </p>
-          <p className="font-karla font-600 text-[#f0c040]" style={{ fontSize: '0.85rem', marginTop: 2 }}>
-            +{rankUp.bonus.toLocaleString()} ⟡
-          </p>
-        </div>
-      )}
+      {rankUp && (() => {
+        const RANK_COLORS: Record<string, string> = {
+          'Officer': '#4ade80',
+          'Second Mate': '#60a5fa',
+          'Quartermaster': '#a78bfa',
+          'Captain': '#f0c040',
+        }
+        const c = RANK_COLORS[rankUp.rank] ?? '#f0ede8'
+        const rgb = c === '#4ade80' ? '74,222,128' : c === '#60a5fa' ? '96,165,250' : c === '#a78bfa' ? '167,139,250' : '240,192,64'
+        return (
+          <div className="w-full max-w-xs mx-auto px-6">
+            <div style={{
+              background: `linear-gradient(135deg, rgba(${rgb},0.12), rgba(${rgb},0.05))`,
+              border: `1px solid rgba(${rgb},0.5)`,
+              borderRadius: 14,
+              padding: '1.125rem 1.25rem',
+              boxShadow: `0 0 40px rgba(${rgb},0.2), 0 0 80px rgba(${rgb},0.08)`,
+              textAlign: 'center',
+            }}>
+              <p className="font-karla font-700 uppercase tracking-[0.25em]" style={{ fontSize: '0.58rem', color: c, marginBottom: 6, opacity: 0.8 }}>
+                ✦ Rank Up ✦
+              </p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', lineHeight: 1.1, marginBottom: 6, color: c, textShadow: `0 0 24px rgba(${rgb},0.6)` }}>
+                {rankUp.rank}
+              </p>
+              <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.05rem', textShadow: '0 0 16px rgba(240,192,64,0.4)' }}>
+                +{rankUp.bonus.toLocaleString()} ⟡
+              </p>
+            </div>
+          </div>
+        )
+      })()}
       {/* Mobile: 2×2 grid + flanked 5th card */}
       <div className="sm:hidden flex flex-col items-center gap-2 w-full">
         <div className="grid grid-cols-2 gap-2">

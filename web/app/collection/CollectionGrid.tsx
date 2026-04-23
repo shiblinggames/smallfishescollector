@@ -249,8 +249,9 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           onClick={() => setStatsOpen(v => !v)}
           className="w-full text-left"
           style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.07)',
+            background: rank.name === 'Crewmate' ? 'rgba(255,255,255,0.03)' : `rgba(${rank.name === 'Officer' ? '74,222,128' : rank.name === 'Second Mate' ? '96,165,250' : rank.name === 'Quartermaster' ? '167,139,250' : '240,192,64'},0.05)`,
+            border: `1px solid ${rank.name === 'Crewmate' ? 'rgba(255,255,255,0.07)' : rank.color + '40'}`,
+            boxShadow: rank.name === 'Crewmate' ? 'none' : `0 0 20px ${rank.color}10`,
             borderRadius: statsOpen ? '12px 12px 0 0' : 12,
             padding: '1rem 1.125rem',
             transition: 'border-radius 0.2s ease',
@@ -272,7 +273,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
         </button>
 
         {statsOpen && (
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '0.875rem 1rem' }}>
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${rank.name === 'Crewmate' ? 'rgba(255,255,255,0.07)' : rank.color + '40'}`, borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '0.875rem 1rem' }}>
             {/* Rank progress */}
             <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden', marginBottom: '0.4rem' }}>
               <div style={{ height: '100%', width: `${progressPct}%`, background: rank.color, borderRadius: 2, opacity: 0.8 }} />
