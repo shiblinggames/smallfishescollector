@@ -44,6 +44,7 @@ export default function FriendSearch() {
           onChange={e => setQuery(e.target.value)}
           placeholder="username"
           className="sg-input font-karla font-600 tracking-[0.12em] text-sm flex-1"
+          style={{ padding: '0.5rem 1rem' }}
           spellCheck={false}
           maxLength={30}
         />

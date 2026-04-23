@@ -55,6 +55,7 @@ export default function MarketRedeemBar() {
           onChange={e => setCode(e.target.value)}
           placeholder="FISH-XXXXX"
           className="sg-input font-karla font-600 tracking-[0.16em] text-center text-sm uppercase flex-1"
+          style={{ padding: '0.5rem 1rem' }}
           spellCheck={false}
           maxLength={30}
         />
