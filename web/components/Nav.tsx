@@ -16,6 +16,16 @@ export default function Nav({ packsAvailable }: { packsAvailable?: number }) {
   }
 
   const links = [
+    { href: '/tavern', label: 'Tavern', badge: null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 3h14l-1 9H6L5 3z"/>
+          <path d="M18 6h2a1 1 0 011 1v3a1 1 0 01-1 1h-2"/>
+          <path d="M6 21h12M8 17v4M16 17v4"/>
+          <path d="M6 12c0 3 2 5 6 5s6-2 6-5"/>
+        </svg>
+      )
+    },
     { href: '/packs', label: 'Packs', badge: packsAvailable && packsAvailable > 0 ? packsAvailable : null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -38,16 +48,6 @@ export default function Nav({ packsAvailable }: { packsAvailable?: number }) {
           <rect x="2" y="7" width="20" height="14" rx="2"/>
           <path d="M16 7V5a2 2 0 00-4 0v2M8 7V5a2 2 0 00-4 0v2"/>
           <line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
-        </svg>
-      )
-    },
-    { href: '/tavern', label: 'Tavern', badge: null,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 3h14l-1 9H6L5 3z"/>
-          <path d="M18 6h2a1 1 0 011 1v3a1 1 0 01-1 1h-2"/>
-          <path d="M6 21h12M8 17v4M16 17v4"/>
-          <path d="M6 12c0 3 2 5 6 5s6-2 6-5"/>
         </svg>
       )
     },
