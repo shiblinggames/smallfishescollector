@@ -190,19 +190,12 @@ export default function ProfileSection({ username: initialUsername, usernameChan
                     {pickerCards.map(card => {
                       const selectedIdx = selectedShowcase.indexOf(card.variantId)
                       const isSelected = selectedIdx !== -1
-                      const isDisabled = !isSelected && selectedShowcase.length >= 5
                       return (
                         <div key={card.variantId} className="relative">
                           <div
-                            onClick={() => isDisabled ? undefined : toggleCard(card.variantId)}
-                            className="transition-all duration-200"
-                            style={{
-                              cursor: isDisabled ? 'default' : 'pointer',
-                              opacity: isDisabled ? 0.25 : 1,
-                              outline: isSelected ? '2px solid #f0c040' : 'none',
-                              outlineOffset: 5,
-                              borderRadius: '50%',
-                            }}
+                            className={`rounded-full transition-all duration-200 ${!isSelected && selectedShowcase.length >= 5 ? 'opacity-25' : 'cursor-pointer'}`}
+                            style={isSelected ? { outline: '2px solid #f0c040', outlineOffset: '5px' } : {}}
+                            onClick={() => (!isSelected && selectedShowcase.length >= 5) ? undefined : toggleCard(card.variantId)}
                           >
                             <FishCard
                               name={card.name}
