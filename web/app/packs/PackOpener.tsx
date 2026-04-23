@@ -47,6 +47,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
   const [flash, setFlash] = useState<{ type: string; key: number } | null>(null)
   const [prize, setPrize] = useState<{ cardName: string; variantName: string; prizeCode: string } | null>(null)
   const [loading, setLoading] = useState(false)
+  const [buyingWithDoubloons, setBuyingWithDoubloons] = useState(false)
   const [newVariantIds, setNewVariantIds] = useState<Set<number>>(new Set())
   const [isGodPack, setIsGodPack] = useState(false)
   const [shockwaveCards, setShockwaveCards] = useState<Set<number>>(new Set())
@@ -219,14 +220,14 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
   }
 
   async function handleBuyWithDoubloons() {
-    if (loading) return
-    setLoading(true)
+    if (buyingWithDoubloons) return
+    setBuyingWithDoubloons(true)
     const result = await buyPackWithDoubloons()
     if (!('error' in result)) {
       setPacks(result.packsAvailable)
       setDoubloons(result.doubloons)
     }
-    setLoading(false)
+    setBuyingWithDoubloons(false)
   }
 
   if (phase === 'idle') {
@@ -265,8 +266,8 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
         <div className="flex flex-col items-center gap-2">
           <p className="font-karla font-600 text-[#f0c040] text-sm tracking-wide">{doubloons.toLocaleString()} ⟡</p>
           {doubloons >= 150 && (
-            <button onClick={handleBuyWithDoubloons} disabled={loading} className="btn-ghost text-xs disabled:opacity-50">
-              Buy Pack · 150 ⟡
+            <button onClick={handleBuyWithDoubloons} disabled={buyingWithDoubloons} className="btn-ghost text-xs disabled:opacity-50">
+              {buyingWithDoubloons ? '…' : 'Buy Pack · 150 ⟡'}
             </button>
           )}
         </div>
