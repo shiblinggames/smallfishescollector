@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { searchUsers } from '@/app/u/actions'
 import Link from 'next/link'
+
+const LAST_QUERY_KEY = 'sf-last-crew-search'
 
 interface Result {
   username: string
@@ -15,12 +17,18 @@ export default function FriendSearch() {
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
 
+  useEffect(() => {
+    const saved = localStorage.getItem(LAST_QUERY_KEY)
+    if (saved) setLastQuery(saved)
+  }, [])
+
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault()
     if (!query.trim()) return
     setLoading(true)
     setSearched(true)
     setLastQuery(query.trim())
+    localStorage.setItem(LAST_QUERY_KEY, query.trim())
     const data = await searchUsers(query.trim())
     setResults(data)
     setLoading(false)

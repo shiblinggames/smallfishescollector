@@ -11,7 +11,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
-    admin.from('profiles').select('id, username, showcase_variant_ids, is_premium, premium_expires_at').ilike('username', username).single(),
+    admin.from('profiles').select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fotd_streak').ilike('username', username).single(),
   ])
 
   if (!profile) notFound()
@@ -25,7 +25,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       .from('card_variants')
       .select('id, variant_name, border_style, art_effect, drop_weight, cards(name, filename)')
       .in('id', showcaseIds)
-    // Preserve saved order
     const byId = Object.fromEntries((data ?? []).map((v: any) => [v.id, v]))
     showcaseVariants = showcaseIds.map(id => byId[id]).filter(Boolean)
   } else {
@@ -35,7 +34,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       .eq('user_id', profile.id)
       .order('card_variants(drop_weight)', { ascending: true })
       .limit(20)
-    // Deduplicate by variant id, take top 5
     const seen = new Set()
     for (const row of data ?? []) {
       const cv = (row as any).card_variants
@@ -51,9 +49,27 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const [{ count: packsOpened }, { count: totalVariants }, { data: ownedRows }] = await Promise.all([
     admin.from('pack_history').select('*', { count: 'exact', head: true }).eq('user_id', profile.id),
     admin.from('card_variants').select('*', { count: 'exact', head: true }),
-    admin.from('user_collection').select('card_variant_id').eq('user_id', profile.id),
+    admin.from('user_collection')
+      .select('card_variant_id, card_variants(card_id, drop_weight, variant_name, cards(name))')
+      .eq('user_id', profile.id),
   ])
-  const ownedVariants = new Set(ownedRows?.map((r: any) => r.card_variant_id)).size
+
+  const seenVariants = new Set<number>()
+  const seenCards = new Set<number>()
+  let rarestPull: { variantName: string; cardName: string; dropWeight: number } | null = null
+
+  for (const row of ownedRows ?? []) {
+    const cv = (row as any).card_variants
+    if (!cv) continue
+    seenVariants.add(row.card_variant_id)
+    seenCards.add(cv.card_id)
+    if (!rarestPull || cv.drop_weight < rarestPull.dropWeight) {
+      rarestPull = { variantName: cv.variant_name, cardName: cv.cards?.name ?? '', dropWeight: cv.drop_weight }
+    }
+  }
+
+  const ownedVariants = seenVariants.size
+  const fishDiscovered = seenCards.size
   const completionPct = totalVariants ? Math.round((ownedVariants / totalVariants) * 100) : 0
 
   // Nav data
@@ -66,12 +82,19 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         <ProfileClient
           username={profile.username}
           showcaseVariants={showcaseVariants}
-          stats={{ packsOpened: packsOpened ?? 0, completionPct }}
           isPremium={
             !!profile.is_premium &&
             !!profile.premium_expires_at &&
             new Date(profile.premium_expires_at) > new Date()
           }
+          stats={{
+            packsOpened: packsOpened ?? 0,
+            completionPct,
+            fishDiscovered,
+            uniqueVariants: ownedVariants,
+            fotdStreak: profile.fotd_streak ?? 0,
+            rarestPull,
+          }}
         />
       </main>
     </>
