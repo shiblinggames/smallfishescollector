@@ -28,13 +28,6 @@ function milestoneBonus(streak: number): number {
   return 0
 }
 
-export function nextMilestone(streak: number): { day: number; reward: number } {
-  if (streak < 3) return { day: 3, reward: 25 }
-  const next7 = Math.ceil((streak + 1) / 7) * 7
-  const next30 = Math.ceil((streak + 1) / 30) * 30
-  if (next30 < next7) return { day: next30, reward: 150 }
-  return { day: next7, reward: 50 }
-}
 
 async function getTodaysFish(admin: ReturnType<typeof createAdminClient>, today: string) {
   const { data: scheduled } = await admin

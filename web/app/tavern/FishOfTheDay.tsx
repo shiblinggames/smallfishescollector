@@ -1,7 +1,15 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { submitFishGuess, nextMilestone } from './fishActions'
+import { submitFishGuess } from './fishActions'
+
+function nextMilestone(streak: number): { day: number; reward: number } {
+  if (streak < 3) return { day: 3, reward: 25 }
+  const next7 = Math.ceil((streak + 1) / 7) * 7
+  const next30 = Math.ceil((streak + 1) / 30) * 30
+  if (next30 < next7) return { day: next30, reward: 150 }
+  return { day: next7, reward: 50 }
+}
 import type { FishPuzzleState } from './fishActions'
 
 const DOUBLOON_REWARDS = [100, 75, 50, 25]
