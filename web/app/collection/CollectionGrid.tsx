@@ -181,7 +181,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
   return (
     <div>
       {/* Stats */}
-      <div className="px-6 pb-8 text-center">
+      <div className="px-6 pb-4 text-center">
         <p className="font-cinzel font-700 text-[#f0c040] text-2xl mb-1">
           {uniqueVariantsOwned} <span className="text-[#8a8880] font-400 text-lg">/ {totalVariants}</span>
         </p>
@@ -198,7 +198,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap justify-center gap-3 px-6 pb-12">
+      <div className="flex flex-wrap justify-center gap-3 px-6 pb-5">
         <Dropdown
           value={rarityFilter}
           onChange={setRarityFilter}
@@ -230,8 +230,8 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
             key={zone.id}
             className="w-full"
             style={{
-              paddingTop: '4rem',
-              paddingBottom: '4rem',
+              paddingTop: '1.5rem',
+              paddingBottom: '1.5rem',
             }}
           >
             {/* Cards */}
