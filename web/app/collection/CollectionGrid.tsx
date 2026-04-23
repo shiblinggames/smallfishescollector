@@ -8,6 +8,54 @@ import { rarityFromVariant, RARITY_COLOR, doubloonValueFor } from '@/lib/variant
 import { sellDuplicate, sellAllDuplicates, getDuplicatesBreakdown } from './actions'
 import type { DuplicateBreakdownItem } from './actions'
 
+const RANKS = [
+  { name: 'Crewmate',      min: 0,   color: '#8a8880', next: 25  },
+  { name: 'Officer',       min: 25,  color: '#4ade80', next: 75  },
+  { name: 'Second Mate',   min: 75,  color: '#60a5fa', next: 150 },
+  { name: 'Quartermaster', min: 150, color: '#a78bfa', next: 250 },
+  { name: 'Captain',       min: 250, color: '#f0c040', next: null },
+]
+function getRank(owned: number) {
+  for (let i = RANKS.length - 1; i >= 0; i--) {
+    if (owned >= RANKS[i].min) return RANKS[i]
+  }
+  return RANKS[0]
+}
+function RankIcon({ name, color }: { name: string; color: string }) {
+  if (name === 'Captain') return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 11l9-8 9 8"/><path d="M5 9v10h14V9"/><path d="M9 21v-6h6v6"/>
+    </svg>
+  )
+  if (name === 'Quartermaster') return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/>
+      <line x1="12" y1="3" x2="12" y2="10"/><line x1="12" y1="14" x2="12" y2="21"/>
+      <line x1="3" y1="12" x2="10" y2="12"/><line x1="14" y1="12" x2="21" y2="12"/>
+    </svg>
+  )
+  if (name === 'Second Mate') return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>
+      <line x1="12" y1="3" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="21"/>
+      <line x1="3" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="21" y2="12"/>
+    </svg>
+  )
+  if (name === 'Officer') return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2L12 6M12 18L12 22M2 12L6 12M18 12L22 12"/>
+      <path d="M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>
+      <circle cx="12" cy="12" r="4"/>
+    </svg>
+  )
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="5" r="2"/><path d="M12 7v10M8 17c0 0 1 2 4 2s4-2 4-2M7 11h10"/>
+      <path d="M7 17c-2-1-3-3-3-5h3M17 17c2-1 3-3 3-5h-3"/>
+    </svg>
+  )
+}
+
 const STORAGE_KEY = 'sf-featured-variants'
 const ABYSS_FISH = new Set(['Catfish', 'Doby Mick'])
 
@@ -153,6 +201,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
   const [breakdown, setBreakdown] = useState<DuplicateBreakdownItem[] | null>(null)
   const [breakdownTotal, setBreakdownTotal] = useState(0)
   const [isPending, startTransition] = useTransition()
+  const [statsOpen, setStatsOpen] = useState(false)
 
   useEffect(() => { setPinnedVariants(loadPinned()) }, [])
 
@@ -253,38 +302,79 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
     })
   }
 
+  const rank = getRank(uniqueVariantsOwned)
+  const progressPct = rank.next
+    ? Math.min(((uniqueVariantsOwned - rank.min) / (rank.next - rank.min)) * 100, 100)
+    : 100
+  const nextRankName = rank.next ? RANKS[RANKS.findIndex(r => r.name === rank.name) + 1].name : null
+
   return (
     <div>
-      {/* Stats */}
-      <div className="px-6 pb-4 text-center">
-        <p className="font-cinzel font-700 text-[#f0c040] text-2xl mb-1">
-          {uniqueVariantsOwned} <span className="text-[#8a8880] font-400 text-lg">/ {totalVariants}</span>
-        </p>
-        <p className="sg-eyebrow mb-1">Variants Collected</p>
-        <p className="font-karla font-300 text-[#8a8880] text-xs tracking-wide mb-2">
-          {fishDiscovered} of {allCards.length} fish discovered
-        </p>
-        <div className="w-64 h-2 rounded-full mx-auto overflow-hidden mb-4" style={{ background: 'rgba(255,255,255,0.08)' }}>
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${totalVariants > 0 ? (uniqueVariantsOwned / totalVariants) * 100 : 0}%`, background: 'linear-gradient(to right, #d4a800, #f0c040)' }}
-          />
-        </div>
-        {/* Doubloon balance */}
-        <div className="flex items-center justify-center gap-3">
-          <p className="font-karla font-600 text-[#f0c040] text-sm tracking-wide">
-            {doubloons.toLocaleString()} ⟡
-          </p>
-          {totalDupes > 0 && (
-            <button
-              onClick={openLiquidateModal}
-              disabled={isPending}
-              className="font-karla font-600 text-[0.65rem] uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors border border-[rgba(255,255,255,0.1)] rounded px-2.5 py-1"
-            >
-              Sell All Dupes · {totalDupes}
-            </button>
-          )}
-        </div>
+      {/* Collapsible rank header */}
+      <div className="px-6 pb-4 max-w-sm mx-auto">
+        <button
+          onClick={() => setStatsOpen(v => !v)}
+          className="w-full text-left"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: statsOpen ? '12px 12px 0 0' : 12,
+            padding: '0.75rem 1rem',
+            transition: 'border-radius 0.2s ease',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <RankIcon name={rank.name} color={rank.color} />
+            <div className="flex-1">
+              <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#9a9488]" style={{ fontSize: '0.52rem' }}>Rank</p>
+              <p className="font-cinzel font-700" style={{ color: rank.color, fontSize: '0.95rem', lineHeight: 1.1 }}>{rank.name}</p>
+            </div>
+            <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.7rem' }}>
+              {uniqueVariantsOwned}<span style={{ color: '#4a4845' }}> / {totalVariants}</span>
+            </p>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, transition: 'transform 0.2s ease', transform: statsOpen ? 'rotate(180deg)' : '' }}>
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </div>
+        </button>
+
+        {statsOpen && (
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '0.875rem 1rem' }}>
+            {/* Rank progress */}
+            <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden', marginBottom: '0.4rem' }}>
+              <div style={{ height: '100%', width: `${progressPct}%`, background: rank.color, borderRadius: 2, opacity: 0.8 }} />
+            </div>
+            {nextRankName ? (
+              <p className="font-karla text-[#4a4845]" style={{ fontSize: '0.6rem', marginBottom: '0.75rem' }}>
+                {rank.next! - uniqueVariantsOwned} more to reach {nextRankName}
+              </p>
+            ) : (
+              <p className="font-karla text-[#4a4845]" style={{ fontSize: '0.6rem', marginBottom: '0.75rem' }}>Maximum rank achieved</p>
+            )}
+
+            {/* Extra stats */}
+            <div className="flex items-center justify-between">
+              <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.7rem' }}>
+                {fishDiscovered} of {allCards.length} fish discovered
+              </p>
+              <div className="flex items-center gap-2">
+                <p className="font-karla font-600 text-[#f0c040]" style={{ fontSize: '0.75rem' }}>
+                  {doubloons.toLocaleString()} ⟡
+                </p>
+                {totalDupes > 0 && (
+                  <button
+                    onClick={openLiquidateModal}
+                    disabled={isPending}
+                    className="font-karla font-600 uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors border border-[rgba(255,255,255,0.1)] rounded px-2 py-0.5"
+                    style={{ fontSize: '0.6rem' }}
+                  >
+                    Sell Dupes · {totalDupes}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Filters */}
