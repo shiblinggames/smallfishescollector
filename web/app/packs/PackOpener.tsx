@@ -288,23 +288,14 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
   }
 
   function renderOpenAllFlank() {
+    if (!someUnflipped) return <div className="flex-1" />
     return (
       <div
-        onClick={someUnflipped ? flipAll : undefined}
-        className={`flex-1 flex flex-col items-center justify-center gap-2 rounded-xl transition-colors ${someUnflipped ? 'border border-[rgba(255,255,255,0.07)] cursor-pointer active:bg-white/5' : ''}`}
+        onClick={flipAll}
+        className="flex-1 flex items-center justify-center cursor-pointer active:opacity-60 transition-opacity"
         style={{ height: 248 }}
       >
-        {someUnflipped && (
-          <>
-            <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-              <path d="M18 4 C18 4 18 18 18 22 C18 27 13 29 10 26 C7 23 9 19 12 19"
-                    stroke="#8a8880" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
-              <path d="M12 19 L10 17" stroke="#f0c040" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
-              <circle cx="18" cy="5" r="2.2" stroke="#8a8880" strokeWidth="1.6" fill="none"/>
-            </svg>
-            <p className="font-karla font-600 uppercase text-center text-[#8a8880] leading-tight" style={{ fontSize: '0.52rem', letterSpacing: '0.15em' }}>Open<br/>All</p>
-          </>
-        )}
+        <p className="font-karla font-600 uppercase text-[#8a8880] text-center leading-tight" style={{ fontSize: '0.55rem', letterSpacing: '0.18em', writingMode: 'vertical-lr' }}>Open All</p>
       </div>
     )
   }
