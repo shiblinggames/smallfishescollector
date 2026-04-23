@@ -260,10 +260,10 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
         <div className="flex flex-col items-center gap-4">
           {/* Booster pack */}
           <div className="relative" style={{ marginTop: packs > 1 ? 16 : 0 }}>
-            {packs > 2 && (
+            {packs > 2 && !loading && (
               <img src="/booster.png" alt="" aria-hidden className="absolute inset-0 w-full h-auto" style={{ transform: 'translateY(14px) translateX(8px) rotate(2.5deg)', opacity: 0.5, pointerEvents: 'none' }} />
             )}
-            {packs > 1 && (
+            {packs > 1 && !loading && (
               <img src="/booster.png" alt="" aria-hidden className="absolute inset-0 w-full h-auto" style={{ transform: 'translateY(7px) translateX(4px) rotate(1.2deg)', opacity: 0.7, pointerEvents: 'none' }} />
             )}
             <button
