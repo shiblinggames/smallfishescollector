@@ -30,7 +30,7 @@ export default async function TavernPage() {
           </p>
         </div>
 
-        <div className="px-6 flex flex-col gap-4 pb-12 max-w-sm mx-auto">
+        <div className="px-6 grid grid-cols-1 sm:grid-cols-2 gap-4 pb-12 max-w-2xl mx-auto">
           <GameCard
             href="/tavern/fish-of-the-day"
             eyebrow="Daily Puzzle"
