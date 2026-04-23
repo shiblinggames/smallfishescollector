@@ -169,10 +169,16 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
 
       {/* Mobile top strip */}
       <div className="sm:hidden bg-black border-b border-[rgba(255,255,255,0.08)] px-4 py-2 flex justify-between items-center relative z-50" ref={menuRef}>
+        <Link href="/" className="font-cinzel font-700 text-[#f0ede8] tracking-wide text-xs uppercase">
+          Small Fishes
+        </Link>
+
         <div className="flex items-center gap-3">
-          <Link href="/" className="font-cinzel font-700 text-[#f0ede8] tracking-wide text-xs uppercase">
-            Small Fishes
-          </Link>
+          {doubloons !== undefined && (
+            <span className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.875rem' }}>
+              {doubloons.toLocaleString()} ⟡
+            </span>
+          )}
           {/* Hamburger */}
           <button
             onClick={() => setMenuOpen(o => !o)}
@@ -185,12 +191,6 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
             <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#8a8880', borderRadius: 1, transition: 'background 0.15s' }} />
           </button>
         </div>
-
-        {doubloons !== undefined && (
-          <span className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.875rem' }}>
-            {doubloons.toLocaleString()} ⟡
-          </span>
-        )}
 
         {/* Dropdown */}
         {menuOpen && (

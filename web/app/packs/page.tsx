@@ -21,7 +21,7 @@ export default async function PacksPage() {
 
   return (
     <>
-      <Nav packsAvailable={packsAvailable} />
+      <Nav packsAvailable={packsAvailable} doubloons={doubloons} />
       <main className="min-h-screen px-6 py-4 sm:py-0 flex flex-col items-center sm:justify-center">
         <PackOpener packsAvailable={packsAvailable} doubloons={doubloons} hookTier={profile?.hook_tier ?? 0} />
         {stats && <PackStatsToggle stats={stats} history={history} hookTier={profile?.hook_tier ?? 0} />}

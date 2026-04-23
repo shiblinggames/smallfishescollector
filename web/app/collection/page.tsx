@@ -82,7 +82,7 @@ export default async function CollectionPage() {
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
       <main className="min-h-screen pt-6">
         <CollectionGrid
           allCards={(allCards ?? []) as Card[]}
