@@ -47,7 +47,8 @@ export async function getTodaysQuiz(): Promise<QuizData | null> {
       messages: [{ role: 'user', content: USER_PROMPT }],
     })
 
-    const text = (message.content[0] as { type: string; text: string }).text.trim()
+    const raw = (message.content[0] as { type: string; text: string }).text.trim()
+    const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
     const quiz: QuizData = JSON.parse(text)
 
     if (
