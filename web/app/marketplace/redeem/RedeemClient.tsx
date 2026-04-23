@@ -57,7 +57,7 @@ export default function RedeemClient() {
           placeholder="FISH-XXXXX"
           spellCheck={false}
         />
-        <button type="submit" disabled={status === 'loading'} className="btn-gold shrink-0" style={{ padding: '0 1.25rem' }}>
+        <button type="submit" disabled={status === 'loading'} className="btn-ghost shrink-0" style={{ padding: '0 1.25rem' }}>
           {status === 'loading' ? '…' : 'Redeem'}
         </button>
       </div>

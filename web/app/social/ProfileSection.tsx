@@ -120,7 +120,7 @@ export default function ProfileSection({ username: initialUsername, usernameChan
                   3–20 characters · letters, numbers, underscores · one time only
                 </p>
                 <div className="flex gap-2">
-                  <button type="submit" disabled={pending} className="btn-gold text-xs" style={{ padding: '0.4rem 1rem' }}>
+                  <button type="submit" disabled={pending} className="btn-ghost text-xs" style={{ padding: '0.4rem 1rem' }}>
                     {pending ? '…' : 'Save'}
                   </button>
                   <button type="button" onClick={() => { setShowUsernameForm(false); setUsernameError('') }} className="btn-ghost text-xs" style={{ padding: '0.4rem 1rem' }}>
@@ -225,7 +225,7 @@ export default function ProfileSection({ username: initialUsername, usernameChan
             </div>
 
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '1rem 2rem' }}>
-              <button onClick={handleSaveShowcase} disabled={pending} className="btn-gold w-full disabled:opacity-30">
+              <button onClick={handleSaveShowcase} disabled={pending} className="btn-ghost w-full disabled:opacity-30">
                 {pending ? 'Saving…' : 'Save Showcase'}
               </button>
             </div>

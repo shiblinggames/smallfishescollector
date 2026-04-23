@@ -236,7 +236,7 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
       <button
         onClick={handleRoll}
         disabled={!canRoll}
-        className="btn-gold w-full disabled:opacity-30"
+        className="btn-ghost w-full disabled:opacity-30"
       >
         {rolling ? 'Rolling…' : `Roll · ${wager} ⟡`}
       </button>

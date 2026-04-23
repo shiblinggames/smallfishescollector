@@ -31,7 +31,7 @@ export default async function HomePage() {
         </a>
 
         <div className="flex gap-4 justify-center mb-12">
-          <Link href="/login" className="btn-gold">Sign In</Link>
+          <Link href="/login" className="btn-ghost">Sign In</Link>
           <Link href="/register" className="btn-ghost">Create Account</Link>
         </div>
 

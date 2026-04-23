@@ -111,7 +111,7 @@ export default function ClaimContent() {
         <p className="font-karla font-400 text-[#f0ede8] text-sm leading-relaxed">
           Sign in to claim your booster packs.
         </p>
-        <Link href={loginUrl} className="btn-gold block w-full text-center">
+        <Link href={loginUrl} className="btn-ghost block w-full text-center">
           Sign In
         </Link>
       </div>
@@ -125,7 +125,7 @@ export default function ClaimContent() {
           <p className="font-cinzel font-700 text-[#f0c040] text-lg">✦ {packs} Pack{packs !== 1 ? 's' : ''} Added</p>
           <p className="font-karla font-300 text-[#8a8880] text-xs tracking-wide">Ready to open in your account</p>
         </div>
-        <button onClick={() => router.push('/packs')} className="btn-gold w-full">
+        <button onClick={() => router.push('/packs')} className="btn-ghost w-full">
           Open Packs
         </button>
       </div>

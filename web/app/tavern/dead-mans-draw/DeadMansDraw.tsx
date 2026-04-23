@@ -314,7 +314,7 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
         <button
           onClick={handleStart}
           disabled={!selectedOpponent || starting || (!freeGame && doubloons < ENTRY_FEE)}
-          className="btn-gold w-full disabled:opacity-30"
+          className="btn-ghost w-full disabled:opacity-30"
         >
           {starting ? 'Entering…' : freeGame ? 'Enter Free' : `Enter · ${ENTRY_FEE} ⟡`}
         </button>
@@ -389,7 +389,7 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
             </p>
           )}
         </div>
-        <button onClick={playAgain} className="btn-gold w-full">Play Again</button>
+        <button onClick={playAgain} className="btn-ghost w-full">Play Again</button>
       </div>
     )
   }
@@ -460,7 +460,7 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
             {gs.orcaChoice.map(card => <CardChip key={card.id} card={card} />)}
           </div>
           <div className="flex gap-2">
-            <button onClick={orcaKeep} className="btn-gold flex-1" style={{ fontSize: '0.8rem', padding: '0.5rem' }}>Keep Both</button>
+            <button onClick={orcaKeep} className="btn-ghost flex-1" style={{ fontSize: '0.8rem', padding: '0.5rem' }}>Keep Both</button>
             <button onClick={orcaDiscard} style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#8a8880', fontFamily: 'var(--font-karla)', fontWeight: 600, fontSize: '0.8rem', padding: '0.5rem', cursor: 'pointer' }}>Discard Both</button>
           </div>
         </div>
@@ -483,7 +483,7 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
         <button
           onClick={drawCard}
           disabled={gs.currentTurn !== 'player' || !!gs.orcaChoice || aiRunning.current}
-          className="btn-gold flex-1 disabled:opacity-30"
+          className="btn-ghost flex-1 disabled:opacity-30"
         >
           {gs.currentTurn === 'ai' ? 'AI thinking…' : gs.mustDraw ? 'Draw (forced)' : 'Draw'}
         </button>

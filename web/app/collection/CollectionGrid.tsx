@@ -591,7 +591,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                 <button
                   onClick={handleSellAll}
                   disabled={isPending}
-                  className="btn-gold w-full disabled:opacity-50"
+                  className="btn-ghost w-full disabled:opacity-50"
                 >
                   {isPending ? 'Selling…' : `Confirm · Sell ${breakdown.reduce((s, i) => s + i.extraCopies, 0)} Cards`}
                 </button>
@@ -643,7 +643,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                     {usernameError && <p className="font-karla font-300 text-red-400 text-xs">{usernameError}</p>}
                     <p className="font-karla font-300 text-[#6a6764] text-center" style={{ fontSize: '0.6rem' }}>3–20 characters · letters, numbers, underscores · one time only</p>
                     <div className="flex gap-2">
-                      <button type="submit" disabled={profilePending} className="btn-gold text-xs" style={{ padding: '0.4rem 1rem' }}>
+                      <button type="submit" disabled={profilePending} className="btn-ghost text-xs" style={{ padding: '0.4rem 1rem' }}>
                         {profilePending ? '…' : 'Save'}
                       </button>
                       <button type="button" onClick={() => { setShowUsernameForm(false); setUsernameError('') }} className="btn-ghost text-xs" style={{ padding: '0.4rem 1rem' }}>
@@ -717,7 +717,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
               <button
                 onClick={handleSaveShowcase}
                 disabled={profilePending}
-                className="btn-gold w-full disabled:opacity-50"
+                className="btn-ghost w-full disabled:opacity-50"
               >
                 {profilePending ? 'Saving…' : 'Save Showcase'}
               </button>

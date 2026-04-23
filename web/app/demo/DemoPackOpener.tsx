@@ -102,7 +102,7 @@ export default function DemoPackOpener({ variants }: Props) {
           <p className="font-cinzel font-700 text-[#f0ede8] text-xl mb-8">
             {PACK_NAMES[packIndex]}
           </p>
-          <button onClick={openPack} className="btn-gold">Open Pack</button>
+          <button onClick={openPack} className="btn-ghost">Open Pack</button>
         </div>
         <p className="font-karla font-300 text-[#8a8880] text-xs tracking-wide">
           CSS effects only · No account needed
@@ -145,7 +145,7 @@ export default function DemoPackOpener({ variants }: Props) {
       </div>
 
       {currentIndex < cards.length ? (
-        <button onClick={flipNext} className="btn-gold">
+        <button onClick={flipNext} className="btn-ghost">
           Reveal · {currentIndex + 1} of {cards.length}
         </button>
       ) : phase === 'done' ? (

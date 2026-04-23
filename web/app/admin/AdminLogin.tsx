@@ -30,7 +30,7 @@ export default function AdminLogin() {
           autoFocus
         />
       </div>
-      <button type="submit" disabled={pending} className="btn-gold w-full">
+      <button type="submit" disabled={pending} className="btn-ghost w-full">
         {pending ? 'Checking…' : 'Enter'}
       </button>
     </form>

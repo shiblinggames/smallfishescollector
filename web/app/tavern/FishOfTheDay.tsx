@@ -266,7 +266,7 @@ export default function FishOfTheDay({
           <button
             onClick={handleGuess}
             disabled={!selected || isPending}
-            className="btn-gold w-full disabled:opacity-30"
+            className="btn-ghost w-full disabled:opacity-30"
           >
             {isPending ? 'Checking…' : `Guess · ${reward} ⟡ if correct`}
           </button>

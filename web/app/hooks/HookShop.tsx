@@ -92,7 +92,7 @@ export default function HookShop({ hookTier: initialTier, doubloons: initialDoub
           <button
             onClick={handleBuy}
             disabled={isPending || !canAfford}
-            className="btn-gold w-full disabled:opacity-40"
+            className="btn-ghost w-full disabled:opacity-40"
             style={{ cursor: canAfford ? 'pointer' : 'default' }}
           >
             {isPending

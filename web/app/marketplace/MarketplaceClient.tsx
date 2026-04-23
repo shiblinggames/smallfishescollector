@@ -136,7 +136,7 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
             placeholder="FISH-XXXXX"
             spellCheck={false}
           />
-          <button type="submit" disabled={redeemStatus === 'loading'} className="btn-gold shrink-0" style={{ padding: '0 1.25rem' }}>
+          <button type="submit" disabled={redeemStatus === 'loading'} className="btn-ghost shrink-0" style={{ padding: '0 1.25rem' }}>
             {redeemStatus === 'loading' ? '…' : 'Redeem'}
           </button>
         </form>
