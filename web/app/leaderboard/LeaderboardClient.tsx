@@ -26,10 +26,10 @@ interface Props {
 }
 
 const TABS = [
-  { key: 'packs',        label: 'Packs',        unit: (n: number) => `${n.toLocaleString()} packs` },
   { key: 'collection',   label: 'Collection',   unit: (n: number) => `${n.toLocaleString()} cards` },
-  { key: 'streak',       label: 'Streak',       unit: (n: number) => `${n} days` },
   { key: 'achievements', label: 'Achievements', unit: (n: number) => `${n} / 25` },
+  { key: 'packs',        label: 'Packs',        unit: (n: number) => `${n.toLocaleString()} packs` },
+  { key: 'streak',       label: 'Streak',       unit: (n: number) => `${n} days` },
 ] as const
 
 type TabKey = typeof TABS[number]['key']
@@ -41,7 +41,7 @@ const RANK_COLORS: Record<number, { color: string; label: string }> = {
 }
 
 export default function LeaderboardClient({ packs, collection, streak, achievements, myScores, currentUserId }: Props) {
-  const [activeTab, setActiveTab] = useState<TabKey>('packs')
+  const [activeTab, setActiveTab] = useState<TabKey>('collection')
 
   const dataMap: Record<TabKey, LeaderboardEntry[]> = { packs, collection, streak, achievements }
   const myScoreMap: Record<TabKey, number> = {
