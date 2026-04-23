@@ -311,27 +311,8 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
 
   return (
     <div>
-      {/* Profile + rank header */}
+      {/* Rank / profile header */}
       <div className="px-6 pb-4 max-w-sm mx-auto">
-
-        {/* Username row */}
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>Your Profile</p>
-            <Link href={`/u/${username}`} className="font-cinzel font-700 text-[#f0ede8] hover:text-[#f0c040] transition-colors" style={{ fontSize: '1.1rem' }}>
-              {username}
-            </Link>
-          </div>
-          <button
-            onClick={() => { setProfileOpen(true); setShowUsernameForm(false); setUsernameError('') }}
-            className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] hover:text-[#8a8880] transition-colors border border-[rgba(255,255,255,0.1)] rounded-lg px-3 py-1.5"
-            style={{ fontSize: '0.6rem' }}
-          >
-            Edit Profile
-          </button>
-        </div>
-
-        {/* Rank collapsible */}
         <button
           onClick={() => setStatsOpen(v => !v)}
           className="w-full text-left"
@@ -347,8 +328,15 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           <div className="flex items-center gap-3.5">
             <RankIcon name={rank.name} color={rank.color} />
             <div className="flex-1">
-              <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#9a9488]" style={{ fontSize: '0.62rem' }}>Rank</p>
-              <p className="font-cinzel font-700" style={{ color: rank.color, fontSize: '1.2rem', lineHeight: 1.1 }}>{rank.name}</p>
+              <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#9a9488]" style={{ fontSize: '0.62rem' }}>{rank.name}</p>
+              <Link
+                href={`/u/${username}`}
+                className="font-cinzel font-700 hover:opacity-80 transition-opacity"
+                style={{ color: rank.color, fontSize: '1.2rem', lineHeight: 1.1 }}
+                onClick={e => e.stopPropagation()}
+              >
+                {username}
+              </Link>
             </div>
             <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.78rem' }}>
               {uniqueVariantsOwned}<span style={{ color: '#6a6764' }}> / {totalVariants} variants</span>
@@ -390,6 +378,15 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                   </button>
                 )}
               </div>
+            </div>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '0.75rem', paddingTop: '0.75rem' }}>
+              <button
+                onClick={() => { setProfileOpen(true); setShowUsernameForm(false); setUsernameError('') }}
+                className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] hover:text-[#8a8880] transition-colors"
+                style={{ fontSize: '0.6rem' }}
+              >
+                Edit Profile →
+              </button>
             </div>
           </div>
         )}

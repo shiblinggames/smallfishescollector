@@ -31,49 +31,45 @@ export default function ProfileClient({ username, showcaseVariants, stats }: Pro
       {variants.length > 0 ? (
         <div className="w-full">
           <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-4 text-center" style={{ fontSize: '0.6rem' }}>Top Catches</p>
-          <div className="flex flex-col items-center gap-4">
-            {/* Row 1: first card (rarest), largest */}
-            <div style={{ width: 130, height: 201 }}>
-              <FishCard
-                name={variants[0].cards.name}
-                filename={variants[0].cards.filename}
-                borderStyle={variants[0].border_style}
-                artEffect={variants[0].art_effect}
-                variantName={variants[0].variant_name}
-                dropWeight={variants[0].drop_weight}
-              />
-            </div>
+          <div className="flex flex-col items-center gap-6">
+            {/* Row 1: first card */}
+            <FishCard
+              name={variants[0].cards.name}
+              filename={variants[0].cards.filename}
+              borderStyle={variants[0].border_style}
+              artEffect={variants[0].art_effect}
+              variantName={variants[0].variant_name}
+              dropWeight={variants[0].drop_weight}
+            />
             {/* Row 2: cards 2-3 */}
             {variants.length > 1 && (
-              <div className="flex gap-4 justify-center">
+              <div className="flex gap-6 justify-center">
                 {variants.slice(1, 3).map(cv => (
-                  <div key={cv.id} style={{ width: 110, height: 170 }}>
-                    <FishCard
-                      name={cv.cards.name}
-                      filename={cv.cards.filename}
-                      borderStyle={cv.border_style}
-                      artEffect={cv.art_effect}
-                      variantName={cv.variant_name}
-                      dropWeight={cv.drop_weight}
-                    />
-                  </div>
+                  <FishCard
+                    key={cv.id}
+                    name={cv.cards.name}
+                    filename={cv.cards.filename}
+                    borderStyle={cv.border_style}
+                    artEffect={cv.art_effect}
+                    variantName={cv.variant_name}
+                    dropWeight={cv.drop_weight}
+                  />
                 ))}
               </div>
             )}
             {/* Row 3: cards 4-5 */}
             {variants.length > 3 && (
-              <div className="flex gap-4 justify-center">
+              <div className="flex gap-6 justify-center">
                 {variants.slice(3, 5).map(cv => (
-                  <div key={cv.id} style={{ width: 110, height: 170 }}>
-                    <FishCard
-                      name={cv.cards.name}
-                      filename={cv.cards.filename}
-                      borderStyle={cv.border_style}
-                      artEffect={cv.art_effect}
-                      variantName={cv.variant_name}
-                      dropWeight={cv.drop_weight}
-                    />
-                  </div>
+                  <FishCard
+                    key={cv.id}
+                    name={cv.cards.name}
+                    filename={cv.cards.filename}
+                    borderStyle={cv.border_style}
+                    artEffect={cv.art_effect}
+                    variantName={cv.variant_name}
+                    dropWeight={cv.drop_weight}
+                  />
                 ))}
               </div>
             )}
