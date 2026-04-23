@@ -42,6 +42,18 @@ export default async function MarketplacePage() {
             icon={<HookIcon />}
           />
           <ShopCard
+            href="/marketplace/shipyard"
+            eyebrow="Upgrades"
+            name="Shipyard"
+            description="Upgrade your ship to earn more doubloons from your daily bonus."
+            items={[
+              'Bigger ships earn more doubloons daily',
+              'Up to +125 ⟡ per day at max tier',
+              'Buy with doubloons earned daily',
+            ]}
+            icon={<ShipIcon />}
+          />
+          <ShopCard
             href="https://shiblingshop.com/products/small-fishes-premium-membership"
             eyebrow="Support Us"
             name="Small Fishes Membership"
@@ -143,6 +155,19 @@ function ShopCard({
     return <a href={href} target="_blank" rel="noopener noreferrer" style={cardStyle}>{inner}</a>
   }
   return <Link href={href} style={cardStyle}>{inner}</Link>
+}
+
+function ShipIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 17 C4 21 20 21 22 17"/>
+      <path d="M3 17 L5 12 L19 12 L21 17"/>
+      <line x1="11" y1="12" x2="11" y2="4"/>
+      <path d="M11 4 L18 9 L11 12"/>
+      <line x1="7" y1="12" x2="7" y2="7"/>
+      <path d="M7 7 L11 9 L7 11"/>
+    </svg>
+  )
 }
 
 function HookIcon() {
