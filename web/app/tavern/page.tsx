@@ -30,7 +30,7 @@ export default async function TavernPage() {
           </p>
         </div>
 
-        <div className="px-6 grid grid-cols-1 sm:grid-cols-2 gap-4 pb-12 max-w-2xl mx-auto">
+        <div className="px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-12 max-w-4xl mx-auto">
           <GameCard
             href="/tavern/fish-of-the-day"
             eyebrow="Daily Puzzle"
@@ -55,6 +55,18 @@ export default async function TavernPage() {
               '500 ⟡ daily wagering limit',
             ]}
             icon={<AnchorIcon />}
+          />
+          <GameCard
+            href="/tavern/dead-mans-draw"
+            eyebrow="Card Game"
+            name="Dead Man's Draw"
+            description="Push your luck. Draw cards and bank before you bust."
+            rules={[
+              'Draw cards one at a time — duplicate species = bust',
+              'Power fish trigger special effects',
+              `First to ${15} points wins · entry 20 ⟡`,
+            ]}
+            icon={<SkullIcon />}
           />
         </div>
       </main>
@@ -129,6 +141,17 @@ function AnchorIcon() {
       <circle cx="12" cy="5" r="2"/>
       <path d="M12 7v10M8 17c0 0 1 2 4 2s4-2 4-2M7 11h10"/>
       <path d="M7 17c-2-1-3-3-3-5h3M17 17c2-1 3-3 3-5h-3"/>
+    </svg>
+  )
+}
+
+function SkullIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 22h6M12 22v-4"/>
+      <path d="M5 12a7 7 0 0 1 14 0c0 3-1.5 5-3.5 6H8.5C6.5 17 5 15 5 12z"/>
+      <circle cx="9.5" cy="11.5" r="1" fill="currentColor" stroke="none"/>
+      <circle cx="14.5" cy="11.5" r="1" fill="currentColor" stroke="none"/>
     </svg>
   )
 }
