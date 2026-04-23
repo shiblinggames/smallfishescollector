@@ -10,7 +10,7 @@ export default async function TavernPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('packs_available, doubloons')
+    .select('packs_available, doubloons, fotd_streak')
     .eq('id', user.id)
     .single()
 
@@ -43,6 +43,7 @@ export default async function TavernPage() {
               'New fish every day',
             ]}
             icon={<FishIcon />}
+            streak={profile?.fotd_streak ?? 0}
           />
           <GameCard
             href="/tavern/crown-and-anchor"
@@ -75,13 +76,14 @@ export default async function TavernPage() {
   )
 }
 
-function GameCard({ href, eyebrow, name, description, rules, icon }: {
+function GameCard({ href, eyebrow, name, description, rules, icon, streak }: {
   href: string
   eyebrow: string
   name: string
   description: string
   rules: string[]
   icon: React.ReactNode
+  streak?: number
 }) {
   return (
     <Link href={href} style={{
@@ -108,6 +110,11 @@ function GameCard({ href, eyebrow, name, description, rules, icon }: {
           <p className="sg-eyebrow mb-0.5" style={{ color: '#9a9488' }}>{eyebrow}</p>
           <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>{name}</p>
           <p className="font-karla text-[#8a8880] mt-1" style={{ fontSize: '0.8rem', lineHeight: 1.5 }}>{description}</p>
+          {streak != null && streak > 0 && (
+            <p className="font-karla font-600 mt-1.5" style={{ fontSize: '0.72rem', color: '#f0c040' }}>
+              {streak} day streak
+            </p>
+          )}
         </div>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 6 }}>
           <path d="M9 18l6-6-6-6"/>
