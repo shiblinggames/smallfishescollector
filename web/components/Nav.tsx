@@ -55,6 +55,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
 
   const desktopOnlyLinks = [
     { href: '/achievements', label: 'Achievements', badge: null },
+    { href: '/leaderboard',  label: 'Leaderboard',  badge: null },
   ]
 
   const links = [
