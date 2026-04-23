@@ -289,7 +289,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
               disabled={loading || packs === 0}
               className="relative block select-none"
               style={{
-                width: 'min(80vw, 360px)',
+                width: 'min(80vw, 480px)',
                 cursor: packs > 0 && !loading ? 'pointer' : 'default',
                 background: 'none',
                 border: 'none',
@@ -362,7 +362,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
             background: 'rgba(255,255,255,0.03)',
             border: '1px solid rgba(255,255,255,0.07)',
             textDecoration: 'none',
-            width: 'min(80vw, 360px)',
+            width: 'min(80vw, 480px)',
           }}
         >
           <div className="flex-1 min-w-0">
