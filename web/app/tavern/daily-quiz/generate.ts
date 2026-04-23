@@ -65,7 +65,9 @@ export async function getTodaysQuiz(): Promise<QuizData | null> {
     await admin.from('daily_quiz').insert({ date: today, ...quiz })
 
     return quiz
-  } catch {
+  } catch (err) {
+    console.error('[daily-quiz] generation failed:', err)
+
     // Fall back to yesterday's quiz if generation fails
     const { data: fallback } = await admin
       .from('daily_quiz')
