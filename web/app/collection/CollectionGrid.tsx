@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import FishCard from '@/components/FishCard'
 import type { Card } from '@/lib/types'
-import type { OwnedEntry } from './page'
-import { rarityFromVariant } from '@/lib/variants'
+import type { OwnedEntry, AllVariantEntry } from './page'
+import { rarityFromVariant, RARITY_COLOR } from '@/lib/variants'
 
 const STORAGE_KEY = 'sf-featured-variants'
 const ABYSS_FISH = new Set(['Catfish', 'Doby Mick'])
@@ -21,6 +21,7 @@ interface Props {
   ownedByCardId: Record<number, OwnedEntry[]>
   totalVariants: number
   totalVariantsByCardId: Record<number, number>
+  allVariantsByCardId: Record<number, AllVariantEntry[]>
 }
 
 interface ModalCard {
@@ -116,7 +117,29 @@ const ZONES: ZoneConfig[] = [
   { id: 'abyss',       tierFilter: null },
 ]
 
-export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId }: Props) {
+const D = 140
+
+function LockedVariant({ variantName, dropWeight }: { variantName: string; dropWeight: number }) {
+  const rarity = rarityFromVariant(variantName, dropWeight)
+  const rarityColor = RARITY_COLOR[rarity]
+  return (
+    <div className="flex flex-col items-center gap-1.5 opacity-40">
+      <div style={{ width: D, height: D, borderRadius: '50%', background: '#080808', border: '2px dashed rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <div className="text-center">
+        <p className="font-karla font-400 text-sm text-[#f0ede8]">Not Found</p>
+        <p className="font-karla font-600 text-[0.72rem] uppercase tracking-[0.10em] mt-0.5" style={{ color: rarityColor }}>{rarity}</p>
+        <p className="font-karla font-600 text-[0.72rem] uppercase tracking-[0.10em] text-[#8a8880]">{variantName}</p>
+      </div>
+    </div>
+  )
+}
+
+export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId, allVariantsByCardId }: Props) {
   const [rarityFilter, setRarityFilter] = useState('')
   const [variantFilter, setVariantFilter]   = useState('')
   const [modal, setModal] = useState<ModalCard | null>(null)
@@ -269,16 +292,18 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
             </p>
 
             <div className="flex flex-wrap justify-center gap-6">
-              {modal.entries
+              {(allVariantsByCardId[modal.card.id] ?? [])
                 .slice()
                 .sort((a, b) => (VARIANT_RANK[b.variantName] ?? 0) - (VARIANT_RANK[a.variantName] ?? 0))
-                .map((e) => {
-                  const isFeatured = displayEntry(modal.card.id, modal.entries).variantId === e.variantId
+                .map((v) => {
+                  const owned = modal.entries.find((e) => e.variantId === v.id)
+                  if (!owned) return <LockedVariant key={v.id} variantName={v.variantName} dropWeight={v.dropWeight} />
+                  const isFeatured = displayEntry(modal.card.id, modal.entries).variantId === owned.variantId
                   return (
                     <div
-                      key={e.variantId}
+                      key={owned.variantId}
                       className="flex flex-col items-center gap-2 cursor-pointer"
-                      onClick={() => pinVariant(modal.card.id, e.variantId)}
+                      onClick={() => pinVariant(modal.card.id, owned.variantId)}
                     >
                       <div
                         className="rounded-full transition-all duration-200"
@@ -287,10 +312,10 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                         <FishCard
                           name={modal.card.name}
                           filename={modal.card.filename}
-                          borderStyle={e.borderStyle}
-                          artEffect={e.artEffect}
-                          variantName={e.variantName}
-                          dropWeight={e.dropWeight}
+                          borderStyle={owned.borderStyle}
+                          artEffect={owned.artEffect}
+                          variantName={owned.variantName}
+                          dropWeight={owned.dropWeight}
                         />
                       </div>
                     </div>

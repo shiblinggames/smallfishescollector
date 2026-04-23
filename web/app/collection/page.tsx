@@ -13,12 +13,20 @@ export interface OwnedEntry {
   count: number
 }
 
+export interface AllVariantEntry {
+  id: number
+  variantName: string
+  borderStyle: BorderStyle
+  artEffect: ArtEffect
+  dropWeight: number
+}
+
 export default async function CollectionPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: allCards }, { data: owned }, { data: profile }, { count: totalVariants }, { data: allVariants }] = await Promise.all([
+  const [{ data: allCards }, { data: owned }, { data: profile }, { count: totalVariants }, { data: allVariantsRaw }] = await Promise.all([
     supabase.from('cards').select('*').order('tier').order('name'),
     supabase
       .from('user_collection')
@@ -26,12 +34,21 @@ export default async function CollectionPage() {
       .eq('user_id', user.id),
     supabase.from('profiles').select('packs_available').eq('id', user.id).single(),
     supabase.from('card_variants').select('*', { count: 'exact', head: true }),
-    supabase.from('card_variants').select('card_id'),
+    supabase.from('card_variants').select('id, variant_name, border_style, art_effect, drop_weight, card_id'),
   ])
 
   const totalVariantsByCardId: Record<number, number> = {}
-  for (const v of allVariants ?? []) {
+  const allVariantsByCardId: Record<number, AllVariantEntry[]> = {}
+  for (const v of allVariantsRaw ?? []) {
     totalVariantsByCardId[v.card_id] = (totalVariantsByCardId[v.card_id] ?? 0) + 1
+    if (!allVariantsByCardId[v.card_id]) allVariantsByCardId[v.card_id] = []
+    allVariantsByCardId[v.card_id].push({
+      id:          v.id,
+      variantName: v.variant_name,
+      borderStyle: v.border_style as BorderStyle,
+      artEffect:   v.art_effect as ArtEffect,
+      dropWeight:  v.drop_weight,
+    })
   }
 
   // Build map: card_id → OwnedEntry[] (one entry per unique variant, with count for dupes)
@@ -75,6 +92,7 @@ export default async function CollectionPage() {
           ownedByCardId={ownedByCardId}
           totalVariants={totalVariants ?? 0}
           totalVariantsByCardId={totalVariantsByCardId}
+          allVariantsByCardId={allVariantsByCardId}
         />
       </main>
     </>
