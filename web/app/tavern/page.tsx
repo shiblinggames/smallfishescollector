@@ -1,28 +1,36 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
 import FriendSearch from './FriendSearch'
 import DailyBonusClaim from './DailyBonusClaim'
+import { getDailyWagered } from './actions'
+import { DAILY_CAP } from './constants'
 
 export default async function TavernPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('packs_available, doubloons, fotd_streak, last_daily_claim, is_premium, premium_expires_at')
-    .eq('id', user.id)
-    .single()
-
+  const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
+
+  const [{ data: profile }, { data: fotdAttempt }, dailyWagered] = await Promise.all([
+    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, is_premium, premium_expires_at').eq('id', user.id).single(),
+    admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
+    getDailyWagered(),
+  ])
+
   const alreadyClaimed = profile?.last_daily_claim === today
   const isPremium =
     !!profile?.is_premium &&
     !!profile?.premium_expires_at &&
     new Date(profile.premium_expires_at) > new Date()
   const bonusAmount = isPremium ? 100 : 50
+
+  const fotdDone = !!fotdAttempt && (fotdAttempt.solved || (fotdAttempt.guesses?.length ?? 0) >= 4)
+  const crownCapReached = dailyWagered >= DAILY_CAP
 
   return (
     <>
@@ -47,6 +55,8 @@ export default async function TavernPage() {
             ]}
             icon={<FishIcon />}
             streak={profile?.fotd_streak ?? 0}
+            completed={fotdDone}
+            completedNote="You've played today. Come back tomorrow for a new fish."
           />
           <GameCard
             href="/tavern/crown-and-anchor"
@@ -59,6 +69,8 @@ export default async function TavernPage() {
               '500 ⟡ daily wagering limit',
             ]}
             icon={<AnchorIcon />}
+            completed={crownCapReached}
+            completedNote="You've hit the 500 ⟡ daily limit. Come back tomorrow."
           />
           <GameCard
             href="/tavern/dead-mans-draw"
@@ -92,7 +104,7 @@ export default async function TavernPage() {
   )
 }
 
-function GameCard({ href, eyebrow, name, description, rules, icon, streak }: {
+function GameCard({ href, eyebrow, name, description, rules, icon, streak, completed, completedNote }: {
   href: string
   eyebrow: string
   name: string
@@ -100,33 +112,43 @@ function GameCard({ href, eyebrow, name, description, rules, icon, streak }: {
   rules: string[]
   icon: React.ReactNode
   streak?: number
+  completed?: boolean
+  completedNote?: string
 }) {
   return (
     <Link href={href} style={{
       display: 'block',
       background: 'rgba(255,255,255,0.04)',
-      border: '1px solid rgba(255,255,255,0.08)',
+      border: `1px solid ${completed ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.08)'}`,
       borderRadius: '16px',
       padding: '1.25rem',
       textDecoration: 'none',
+      opacity: completed ? 0.7 : 1,
     }}>
       <div className="flex items-start gap-4">
         <div style={{
           width: 48, height: 48,
-          background: 'rgba(240,192,64,0.08)',
-          border: '1px solid rgba(240,192,64,0.18)',
+          background: completed ? 'rgba(255,255,255,0.03)' : 'rgba(240,192,64,0.08)',
+          border: `1px solid ${completed ? 'rgba(255,255,255,0.07)' : 'rgba(240,192,64,0.18)'}`,
           borderRadius: '12px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
-          color: '#f0c040',
+          color: completed ? '#4a4845' : '#f0c040',
         }}>
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="sg-eyebrow mb-0.5" style={{ color: '#9a9488' }}>{eyebrow}</p>
+          <div className="flex items-center gap-2 mb-0.5">
+            <p className="sg-eyebrow" style={{ color: '#9a9488' }}>{eyebrow}</p>
+            {completed && (
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+            )}
+          </div>
           <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>{name}</p>
           <p className="font-karla text-[#8a8880] mt-1" style={{ fontSize: '0.8rem', lineHeight: 1.5 }}>{description}</p>
-          {streak != null && streak > 0 && (
+          {!completed && streak != null && streak > 0 && (
             <p className="font-karla font-600 mt-1.5" style={{ fontSize: '0.72rem', color: '#f0c040' }}>
               {streak} day streak
             </p>
@@ -145,6 +167,11 @@ function GameCard({ href, eyebrow, name, description, rules, icon, streak }: {
           </li>
         ))}
       </ul>
+      {completed && completedNote && (
+        <p className="font-karla mt-3" style={{ fontSize: '0.72rem', color: '#6a6764' }}>
+          {completedNote}
+        </p>
+      )}
     </Link>
   )
 }
