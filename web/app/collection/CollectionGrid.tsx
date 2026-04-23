@@ -565,17 +565,19 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           onClick={() => setProfileOpen(false)}
         >
           <div
-            className="max-w-lg w-full p-8 relative max-h-[85vh] overflow-y-auto scrollbar-hide"
+            className="max-w-lg w-full relative max-h-[85vh] flex flex-col"
             style={{ background: '#0e0e0e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10 }}
             onClick={e => e.stopPropagation()}
           >
             <button
               onClick={() => setProfileOpen(false)}
               className="absolute top-4 right-4 font-karla font-300 text-[#8a8880] hover:text-[#f0ede8] text-xs uppercase tracking-widest transition-colors"
+              style={{ zIndex: 1 }}
             >
               Close
             </button>
 
+            <div className="overflow-y-auto scrollbar-hide p-8 flex-1">
             <p className="sg-eyebrow text-center mb-1">Profile</p>
             <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-2">{username}</p>
 
@@ -665,7 +667,9 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
               )}
             </div>
 
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', marginTop: '2rem', paddingTop: '1.5rem' }}>
+            </div>
+
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '1rem 2rem' }}>
               <button
                 onClick={handleSaveShowcase}
                 disabled={profilePending}
