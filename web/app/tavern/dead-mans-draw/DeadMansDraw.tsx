@@ -62,12 +62,13 @@ const INITIAL_GS: GS = {
   peekCard: null, orcaChoice: null, message: '',
 }
 
-export default function DeadMansDraw({ initialDoubloons }: { initialDoubloons: number }) {
+export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFreeGame }: { initialDoubloons: number; hasFreeGame: boolean }) {
   const [phase, setPhase] = useState<'select' | 'playing' | 'gameover'>('select')
   const [personality, setPersonality] = useState<Personality>('balanced')
   const [selectedOpponent, setSelectedOpponent] = useState<Personality | null>(null)
   const [gs, setGs] = useState<GS>(INITIAL_GS)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
+  const [freeGame, setFreeGame] = useState(initialFreeGame)
   const [winner, setWinner] = useState<'player' | 'ai' | null>(null)
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
@@ -246,6 +247,7 @@ export default function DeadMansDraw({ initialDoubloons }: { initialDoubloons: n
       return
     }
     setDoubloons(result.newDoubloons)
+    if ('wasFree' in result && result.wasFree) setFreeGame(false)
     setPersonality(selectedOpponent)
     setGs({ ...INITIAL_GS, deck: buildDeck(), message: 'Draw your first card.' })
     setWinner(null)
@@ -273,6 +275,11 @@ export default function DeadMansDraw({ initialDoubloons }: { initialDoubloons: n
         <div className="text-center">
           <p className="font-karla text-[#8a8880] text-xs mb-1">Balance</p>
           <p className="font-cinzel font-700 text-[#f0c040] text-xl">{doubloons.toLocaleString()} ⟡</p>
+          {freeGame && (
+            <p className="font-karla font-600 text-[#34d399] mt-1" style={{ fontSize: '0.75rem' }}>
+              Free game available today
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-3">
@@ -306,10 +313,10 @@ export default function DeadMansDraw({ initialDoubloons }: { initialDoubloons: n
 
         <button
           onClick={handleStart}
-          disabled={!selectedOpponent || starting || doubloons < ENTRY_FEE}
+          disabled={!selectedOpponent || starting || (!freeGame && doubloons < ENTRY_FEE)}
           className="btn-gold w-full disabled:opacity-30"
         >
-          {starting ? 'Entering…' : `Enter · ${ENTRY_FEE} ⟡`}
+          {starting ? 'Entering…' : freeGame ? 'Enter Free' : `Enter · ${ENTRY_FEE} ⟡`}
         </button>
 
         <p className="font-karla text-center text-[#6a6764]" style={{ fontSize: '0.7rem' }}>

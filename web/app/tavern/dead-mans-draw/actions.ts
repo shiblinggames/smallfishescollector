@@ -11,14 +11,36 @@ const PAYOUTS: Record<Personality, number> = {
   greedy:   50,
 }
 
-export async function payEntryFee(): Promise<{ newDoubloons: number } | { error: string }> {
+export async function checkFreeGame(): Promise<boolean> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('last_free_dmd_game').eq('id', user.id).single()
+  if (!profile) return false
+
+  const today = new Date().toISOString().split('T')[0]
+  return profile.last_free_dmd_game !== today
+}
+
+export async function payEntryFee(): Promise<{ newDoubloons: number; wasFree: boolean } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
+  const { data: profile } = await admin.from('profiles').select('doubloons, last_free_dmd_game').eq('id', user.id).single()
   if (!profile) return { error: 'Profile not found' }
+
+  const today = new Date().toISOString().split('T')[0]
+  const isFree = profile.last_free_dmd_game !== today
+
+  if (isFree) {
+    await admin.from('profiles').update({ last_free_dmd_game: today }).eq('id', user.id)
+    return { newDoubloons: profile.doubloons, wasFree: true }
+  }
+
   if (profile.doubloons < ENTRY_FEE) return { error: `Not enough doubloons — you need ${ENTRY_FEE} ⟡ to enter.` }
 
   const newDoubloons = profile.doubloons - ENTRY_FEE
@@ -30,7 +52,7 @@ export async function payEntryFee(): Promise<{ newDoubloons: number } | { error:
       reason: "Dead Man's Draw: entry fee",
     }),
   ])
-  return { newDoubloons }
+  return { newDoubloons, wasFree: false }
 }
 
 export async function collectWinnings(personality: Personality): Promise<{ newDoubloons: number } | { error: string }> {

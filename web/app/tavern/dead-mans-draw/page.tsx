@@ -3,17 +3,17 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
 import DeadMansDraw from './DeadMansDraw'
+import { checkFreeGame } from './actions'
 
 export default async function DeadMansDrawPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('packs_available, doubloons')
-    .eq('id', user.id)
-    .single()
+  const [{ data: profile }, hasFreeGame] = await Promise.all([
+    supabase.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
+    checkFreeGame(),
+  ])
 
   return (
     <>
@@ -39,7 +39,7 @@ export default async function DeadMansDrawPage() {
         </div>
 
         <div className="px-6 pb-12 max-w-sm mx-auto">
-          <DeadMansDraw initialDoubloons={profile?.doubloons ?? 0} />
+          <DeadMansDraw initialDoubloons={profile?.doubloons ?? 0} hasFreeGame={hasFreeGame} />
         </div>
       </main>
     </>
