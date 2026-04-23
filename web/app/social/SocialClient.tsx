@@ -4,12 +4,21 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { searchUsers } from '@/app/u/actions'
 import { addCrewMember, removeCrewMember, type CrewMember } from './actions'
+import ProfileSection, { type PickerCard } from './ProfileSection'
 
 interface SearchResult {
   username: string
 }
 
-export default function SocialClient({ initialCrew }: { initialCrew: CrewMember[] }) {
+interface Props {
+  initialCrew: CrewMember[]
+  username: string
+  usernameChanged: boolean
+  showcaseVariantIds: number[]
+  pickerCards: PickerCard[]
+}
+
+export default function SocialClient({ initialCrew, username, usernameChanged, showcaseVariantIds, pickerCards }: Props) {
   const [crew, setCrew] = useState<CrewMember[]>(initialCrew)
   const crewSet = new Set(crew.map(m => m.username.toLowerCase()))
 
@@ -50,6 +59,14 @@ export default function SocialClient({ initialCrew }: { initialCrew: CrewMember[
 
   return (
     <div className="px-6 max-w-sm mx-auto flex flex-col gap-8 pb-24 sm:pb-12">
+
+      {/* Profile */}
+      <ProfileSection
+        username={username}
+        usernameChanged={usernameChanged}
+        showcaseVariantIds={showcaseVariantIds}
+        pickerCards={pickerCards}
+      />
 
       {/* Search */}
       <div>
