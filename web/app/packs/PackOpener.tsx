@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { rarityFromVariant } from '@/lib/variants'
@@ -50,6 +50,19 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
   const [shockwaveCards, setShockwaveCards] = useState<Set<number>>(new Set())
   const [mythicFeatured, setMythicFeatured] = useState<number | null>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
+  const [swapped, setSwapped] = useState(false)
+
+  useEffect(() => {
+    if (localStorage.getItem('packOpenSide') === 'left') setSwapped(true)
+  }, [])
+
+  function toggleSwap() {
+    setSwapped(prev => {
+      const next = !prev
+      localStorage.setItem('packOpenSide', next ? 'left' : 'right')
+      return next
+    })
+  }
 
   function getInner(i: number) {
     return cardRefs.current[i]?.querySelector('.flip-card-inner') as HTMLElement | null
@@ -287,7 +300,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
     )
   }
 
-  function renderOpenAllFlank() {
+  function renderOpenAllButton() {
     const isDone = phase === 'done'
     const show = someUnflipped || (isDone && packs > 0)
     return (
@@ -297,16 +310,38 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
             onClick={isDone ? openPack : flipAll}
             disabled={isDone && loading}
             className="w-[4.5rem] h-[4.5rem] rounded-full flex items-center justify-center select-none touch-manipulation"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.13)', transition: 'transform 0.07s ease, background 0.07s ease' }}
-            onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.86)'; e.currentTarget.style.background = 'rgba(255,255,255,0.12)' }}
-            onPointerUp={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.background = '' }}
-            onPointerLeave={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.background = '' }}
+            style={{ background: '#f0c040', transition: 'transform 0.07s ease, filter 0.07s ease' }}
+            onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.86)'; e.currentTarget.style.filter = 'brightness(1.15)' }}
+            onPointerUp={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.filter = '' }}
+            onPointerLeave={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.filter = '' }}
           >
-            <span className="font-karla font-700 uppercase text-[#f0ede8] text-center leading-snug" style={{ fontSize: '0.48rem', letterSpacing: '0.13em' }}>
+            <span className="font-karla font-700 uppercase text-black text-center leading-snug" style={{ fontSize: '0.48rem', letterSpacing: '0.13em' }}>
               {isDone ? <>Open<br/>Another</> : <>Open<br/>All</>}
             </span>
           </button>
         )}
+      </div>
+    )
+  }
+
+  function renderPackCount() {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-1" style={{ height: 248 }}>
+        <span className="font-cinzel font-700 text-[#f0ede8] leading-none" style={{ fontSize: '1.5rem' }}>{packs}</span>
+        <span className="font-karla font-600 uppercase text-[#8a8880] text-center leading-tight" style={{ fontSize: '0.45rem', letterSpacing: '0.13em' }}>packs<br/>left</span>
+        <button
+          onClick={toggleSwap}
+          className="mt-3 touch-manipulation"
+          style={{ color: '#8a8880', opacity: 0.5 }}
+          onPointerDown={(e) => { e.currentTarget.style.opacity = '1' }}
+          onPointerUp={(e) => { e.currentTarget.style.opacity = '0.5' }}
+          onPointerLeave={(e) => { e.currentTarget.style.opacity = '0.5' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M7 16H17M17 16L14 13M17 16L14 19"/>
+            <path d="M17 8H7M7 8L10 5M7 8L10 11"/>
+          </svg>
+        </button>
       </div>
     )
   }
@@ -337,9 +372,9 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
         </div>
         {cards[4] && (
           <div className="flex items-center gap-2 w-full">
-            {renderOpenAllFlank()}
+            {swapped ? renderOpenAllButton() : renderPackCount()}
             {renderCard(cards[4], 4)}
-            {renderOpenAllFlank()}
+            {swapped ? renderPackCount() : renderOpenAllButton()}
           </div>
         )}
       </div>
