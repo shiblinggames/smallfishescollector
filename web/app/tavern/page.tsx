@@ -74,6 +74,19 @@ export default async function TavernPage() {
             completedNote="You've played today. Come back tomorrow for a new fish."
           />
           <GameCard
+            href="/tavern/daily-quiz"
+            eyebrow="Daily Quiz"
+            name="Fish Trivia"
+            description="Answer one fish and ocean question per day."
+            rules={[
+              'One question generated fresh every day',
+              '50 ⟡ for a correct answer',
+            ]}
+            icon={<QuizIcon />}
+            completed={quizDone}
+            completedNote="You've answered today. Come back tomorrow for a new question."
+          />
+          <GameCard
             href="/tavern/crown-and-anchor"
             eyebrow="Dice Game"
             name="Crown & Anchor"
@@ -99,19 +112,6 @@ export default async function TavernPage() {
               'First game free daily · 20 ⟡ after',
             ]}
             icon={<SkullIcon />}
-          />
-          <GameCard
-            href="/tavern/daily-quiz"
-            eyebrow="Daily Quiz"
-            name="Fish Trivia"
-            description="Answer one fish and ocean question per day."
-            rules={[
-              'One question generated fresh every day',
-              '50 ⟡ for a correct answer',
-            ]}
-            icon={<QuizIcon />}
-            completed={quizDone}
-            completedNote="You've answered today. Come back tomorrow for a new question."
           />
         </div>
 

@@ -132,17 +132,22 @@ export default function ProfileSection({ username: initialUsername, usernameChan
           )}
 
           {/* Showcase row */}
-          <div className="flex items-center justify-between px-4 py-3">
-            <p className="font-karla font-600 uppercase tracking-[0.10em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>
-              Showcase · {selectedShowcase.length} / 5
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between mb-1">
+              <p className="font-karla font-600 uppercase tracking-[0.10em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>
+                Showcase · {selectedShowcase.length} / 5
+              </p>
+              <button
+                onClick={() => setModalOpen(true)}
+                className="font-karla font-600 uppercase tracking-[0.10em] text-[#f0c040] hover:opacity-80 transition-opacity"
+                style={{ fontSize: '0.6rem' }}
+              >
+                Edit
+              </button>
+            </div>
+            <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.72rem', lineHeight: 1.5 }}>
+              Your top 5 rarest catches shown on your public profile. Edit to choose which fish to highlight.
             </p>
-            <button
-              onClick={() => setModalOpen(true)}
-              className="font-karla font-600 uppercase tracking-[0.10em] text-[#f0c040] hover:opacity-80 transition-opacity"
-              style={{ fontSize: '0.6rem' }}
-            >
-              Edit
-            </button>
           </div>
         </div>
       </div>
