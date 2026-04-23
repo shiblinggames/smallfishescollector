@@ -76,6 +76,9 @@ export default function GuidePage() {
               <p>
                 Packs are also distributed through <span className="text-[#f0ede8] font-400">redeem codes</span> — handed out at events, giveaways, and through our community channels.
               </p>
+              <p>
+                You can also spend <span className="text-[#f0c040] font-400">doubloons ⟡</span> to purchase packs directly — earned through games in the Tavern.
+              </p>
               <div className="flex flex-col gap-2 pt-2">
                 <a
                   href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game"
@@ -86,6 +89,9 @@ export default function GuidePage() {
                 </a>
                 <a href="/redeem" className="font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#f0c040] hover:text-[#ffd966] transition-colors">
                   Redeem a Code →
+                </a>
+                <a href="/tavern" className="font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#f0c040] hover:text-[#ffd966] transition-colors">
+                  Earn Doubloons in the Tavern →
                 </a>
                 <a
                   href="https://www.instagram.com/shiblinggames/"
@@ -100,6 +106,37 @@ export default function GuidePage() {
                   className="font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors"
                 >
                   TikTok →
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="sg-card px-8 py-7">
+            <p className="font-cinzel font-700 text-[#f0ede8] text-base mb-4">The Tavern</p>
+            <div className="flex flex-col gap-3 text-sm font-karla font-300 text-[#8a8880] leading-relaxed">
+              <p>
+                The <span className="text-[#f0ede8] font-400">Tavern</span> is where you play to earn. Win games, build streaks, and collect <span className="text-[#f0c040] font-400">doubloons ⟡</span> — the in-game currency you can spend on more packs.
+              </p>
+              <p>
+                Three games are available, each with their own rules and rewards:
+              </p>
+              <div className="flex flex-col gap-2.5 pt-1">
+                <div>
+                  <p className="font-karla font-600 text-[#f0ede8] text-xs uppercase tracking-[0.10em] mb-0.5">Fish of the Day</p>
+                  <p>A daily puzzle — identify the mystery fish using up to four progressive clues. Solve it in one guess for 100 ⟡, down to 25 ⟡ on your last. Play every day to build a streak and earn milestone bonuses.</p>
+                </div>
+                <div>
+                  <p className="font-karla font-600 text-[#f0ede8] text-xs uppercase tracking-[0.10em] mb-0.5">Crown & Anchor</p>
+                  <p>A classic dice game. Pick a symbol, place your wager, and roll three dice. Match one for 1×, two for 2×, three for 3× your bet. 500 ⟡ daily wagering limit.</p>
+                </div>
+                <div>
+                  <p className="font-karla font-600 text-[#f0ede8] text-xs uppercase tracking-[0.10em] mb-0.5">Dead Man's Draw</p>
+                  <p>A push-your-luck card game. Draw cards and bank your points before a duplicate species busts your hand. First to 30 points wins. First game each day is free — 20 ⟡ to enter after that.</p>
+                </div>
+              </div>
+              <div className="pt-2">
+                <a href="/tavern" className="font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#f0c040] hover:text-[#ffd966] transition-colors">
+                  Go to the Tavern →
                 </a>
               </div>
             </div>
