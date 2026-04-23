@@ -32,17 +32,9 @@ export default async function PacksPage() {
         </div>
         <PackOpener packsAvailable={packsAvailable} doubloons={doubloons} />
         {stats && <PackStatsToggle stats={stats} history={history} />}
-        <div className="mt-16 flex flex-col items-center gap-3">
-          <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.75rem' }}>
-            Need more doubloons?{' '}
-            <a href="/tavern" className="text-[#f0c040] hover:text-[#f5d060] transition-colors">
-              Earn them in the Tavern →
-            </a>
-          </p>
-          <a href="/guide" className="font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors">
-            How It Works →
-          </a>
-        </div>
+        <a href="/guide" className="mt-16 font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors">
+          How It Works →
+        </a>
       </main>
     </>
   )

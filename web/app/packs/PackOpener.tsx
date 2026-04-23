@@ -282,9 +282,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
           ) : (
             <div className="flex flex-col items-center gap-3 mt-2">
               <p className="font-karla font-300 text-[#8a8880] text-sm">No packs available.</p>
-              <a href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game" target="_blank" rel="noopener noreferrer" className="btn-gold">
-                Get the Game
-              </a>
+              <a href="/tavern" className="btn-gold">Go to the Tavern</a>
               <a href="/redeem" className="text-[#f0c040] hover:text-[#ffd966] text-xs font-karla font-600 uppercase tracking-[0.12em] transition-colors">
                 Redeem a Code
               </a>
@@ -468,6 +466,23 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
         {cards.map((card, i) => renderCard(card, i))}
       </div>
 
+      {/* Mobile done state */}
+      {phase === 'done' && (
+        <div className="sm:hidden flex flex-col items-center gap-3 w-full px-4">
+          {packs > 0 && (
+            <button onClick={openPack} disabled={loading} className="btn-gold w-full">
+              {loading ? 'Fishing…' : `Open Another · ${packs} Left`}
+            </button>
+          )}
+          <button onClick={() => router.push('/collection')} className="btn-ghost w-full">
+            View Collection
+          </button>
+          {packs === 0 && (
+            <a href="/tavern" className="btn-gold w-full">Go to the Tavern</a>
+          )}
+        </div>
+      )}
+
       {/* Desktop: in flow */}
       {phase !== 'done' && flipped.some((f) => !f) ? (
         <button onClick={flipAll} className="hidden sm:block btn-gold">Open All</button>
@@ -486,12 +501,8 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
             )}
           </div>
           {!loading && packs === 0 && (
-            <a
-              href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game"
-              target="_blank" rel="noopener noreferrer"
-              className="font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#f0c040] hover:text-[#ffd966] transition-colors"
-            >
-              Out of packs — get the game →
+            <a href="/tavern" className="font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#f0c040] hover:text-[#ffd966] transition-colors">
+              Earn doubloons in the Tavern →
             </a>
           )}
         </div>

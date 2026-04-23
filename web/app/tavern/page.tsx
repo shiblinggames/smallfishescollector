@@ -71,6 +71,19 @@ export default async function TavernPage() {
             icon={<SkullIcon />}
           />
         </div>
+
+        <div className="px-6 pb-16 text-center">
+          <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.75rem' }}>
+            Need more packs?{' '}
+            <a
+              href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game"
+              target="_blank" rel="noopener noreferrer"
+              className="text-[#f0c040] hover:text-[#f5d060] transition-colors"
+            >
+              Get the game at the Shibling Shop →
+            </a>
+          </p>
+        </div>
       </main>
     </>
   )
