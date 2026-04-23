@@ -240,7 +240,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-4 sm:gap-10">
+    <div className="flex flex-col items-center gap-4 sm:gap-10 pb-28 sm:pb-0">
       {flash && <div key={flash.key} className={`reveal-flash reveal-flash-${flash.type}`} />}
       {prize && (
         <PrizeModal
@@ -263,8 +263,8 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
           <div key={i} className="flex flex-col items-center gap-2">
             <div
               ref={(el) => { cardRefs.current[i] = el }}
-              className={`flip-card pack-flip-card select-none ${flipped[i] ? 'flipped' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
-              style={{ opacity: mythicFeatured !== null && mythicFeatured !== i ? 0.2 : 1, transition: 'opacity 0.3s ease' }}
+              className={`flip-card select-none ${flipped[i] ? 'flipped' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
+              style={{ width: 160, height: 248, opacity: mythicFeatured !== null && mythicFeatured !== i ? 0.2 : 1, transition: 'opacity 0.3s ease' }}
               onClick={() => flipCard(i)}
               onMouseMove={(e) => handleMouseMove(e, i)}
               onMouseLeave={(e) => handleMouseLeave(e, i)}
@@ -308,12 +308,31 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
         ))}
       </div>
 
+      {/* Mobile: fixed above bottom tab bar */}
+      <div className="sm:hidden fixed bottom-16 left-0 right-0 px-6 pt-8 pb-3" style={{ background: 'linear-gradient(to top, #000 60%, transparent)' }}>
+        {phase !== 'done' && flipped.some((f) => !f) ? (
+          <button onClick={flipAll} className="btn-gold w-full">Open All</button>
+        ) : phase === 'done' ? (
+          <div className="flex gap-3 w-full">
+            {packs > 0 && (
+              <button onClick={openPack} disabled={loading} className="btn-gold flex-1 min-w-0">
+                {loading ? 'Fishing…' : `Open Another · ${packs} Left`}
+              </button>
+            )}
+            {!loading && (
+              <button onClick={() => router.push('/collection')} className="btn-ghost flex-1 min-w-0">
+                View Collection
+              </button>
+            )}
+          </div>
+        ) : null}
+      </div>
+
+      {/* Desktop: in flow */}
       {phase !== 'done' && flipped.some((f) => !f) ? (
-        <button onClick={flipAll} className="btn-gold">
-          Open All
-        </button>
+        <button onClick={flipAll} className="hidden sm:block btn-gold">Open All</button>
       ) : phase === 'done' ? (
-        <div className="flex flex-col items-center gap-4">
+        <div className="hidden sm:flex flex-col items-center gap-4">
           <div className="flex gap-4 flex-wrap justify-center">
             {packs > 0 && (
               <button onClick={openPack} disabled={loading} className="btn-gold">

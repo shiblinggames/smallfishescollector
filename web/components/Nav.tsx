@@ -45,8 +45,8 @@ export default function Nav({ packsAvailable }: { packsAvailable?: number }) {
 
   return (
     <>
-      {/* Top bar */}
-      <nav className="bg-black border-b border-[rgba(255,255,255,0.08)] px-6 py-4 flex items-center justify-between">
+      {/* Top bar — hidden on mobile (bottom tab bar handles nav) */}
+      <nav className="hidden sm:flex bg-black border-b border-[rgba(255,255,255,0.08)] px-6 py-4 items-center justify-between">
         <Link href="/" className="font-cinzel font-700 text-[#f0ede8] tracking-wide text-sm uppercase">
           Small Fishes
         </Link>

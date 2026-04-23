@@ -465,10 +465,6 @@ body {
 
 /* ── Card flip animation ── */
 .flip-card { perspective: 1000px; position: relative; }
-.pack-flip-card { width: 160px; height: 248px; }
-@media (max-width: 639px) {
-  .pack-flip-card { width: 155px; height: 195px; }
-}
 .flip-card-inner {
   position: relative;
   width: 100%;
