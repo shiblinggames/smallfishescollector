@@ -42,21 +42,12 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
         </svg>
       )
     },
-    { href: '/hooks', label: 'Hooks', badge: null,
+    { href: '/marketplace', label: 'Market', badge: null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 2v10"/>
           <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
           <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
-        </svg>
-      )
-    },
-    { href: '/redeem', label: 'Redeem', badge: null,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="7" width="20" height="14" rx="2"/>
-          <path d="M16 7V5a2 2 0 00-4 0v2M8 7V5a2 2 0 00-4 0v2"/>
-          <line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
         </svg>
       )
     },

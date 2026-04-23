@@ -11,7 +11,7 @@ export default async function PacksPage() {
   if (!user) redirect('/login')
 
   const [{ data: profile }, stats, history] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, hook_tier').eq('id', user.id).single(),
     getPackStats(),
     getPackHistory(),
   ])
@@ -23,7 +23,7 @@ export default async function PacksPage() {
     <>
       <Nav packsAvailable={packsAvailable} />
       <main className="min-h-screen px-6 py-4 sm:py-0 flex flex-col items-center sm:justify-center">
-        <PackOpener packsAvailable={packsAvailable} doubloons={doubloons} />
+        <PackOpener packsAvailable={packsAvailable} doubloons={doubloons} hookTier={profile?.hook_tier ?? 0} />
         {stats && <PackStatsToggle stats={stats} history={history} />}
         <a href="/guide" className="mt-16 font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors">
           How It Works →

@@ -9,6 +9,26 @@ import PrizeModal from '@/components/PrizeModal'
 import { openPack as openPackAction, buyPacksWithDoubloons } from './actions'
 import type { DrawnCard, BorderStyle, ArtEffect } from '@/lib/types'
 import type { OpenPackResponse } from './actions'
+import { getHook } from '@/lib/hooks'
+
+function ActiveHookBadge({ hookTier }: { hookTier: number }) {
+  const hook = getHook(hookTier)
+  return (
+    <a href="/marketplace" className="flex items-center gap-1.5 transition-opacity hover:opacity-80" style={{ textDecoration: 'none' }}>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6a6764" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2v10"/>
+        <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
+        <circle cx="12" cy="3" r="2" fill="#6a6764" stroke="none"/>
+      </svg>
+      <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.62rem' }}>
+        {hook.name}
+        {hook.luckScore > 0 && (
+          <span style={{ color: '#4a4845' }}> · {hook.luckLabel} deep luck</span>
+        )}
+      </p>
+    </a>
+  )
+}
 
 function cardBackBorderStyle(borderStyle: BorderStyle, artEffect: ArtEffect): React.CSSProperties {
   if (artEffect === 'ghost')  return { borderColor: 'rgba(200,210,220,0.45)' }
@@ -34,9 +54,10 @@ function cardBackBorderStyle(borderStyle: BorderStyle, artEffect: ArtEffect): Re
 interface Props {
   packsAvailable: number
   doubloons: number
+  hookTier: number
 }
 
-export default function PackOpener({ packsAvailable: initialPacks, doubloons: initialDoubloons }: Props) {
+export default function PackOpener({ packsAvailable: initialPacks, doubloons: initialDoubloons, hookTier }: Props) {
   const router = useRouter()
   const [packs, setPacks] = useState(initialPacks)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
@@ -274,9 +295,12 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
           </div>
 
           {packs > 0 ? (
-            <p className="font-karla text-[#6a6764] text-xs uppercase tracking-[0.12em]">
-              {packs} {packs === 1 ? 'pack' : 'packs'} available — click to open
-            </p>
+            <div className="flex flex-col items-center gap-1.5">
+              <p className="font-karla text-[#6a6764] text-xs uppercase tracking-[0.12em]">
+                {packs} {packs === 1 ? 'pack' : 'packs'} available — click to open
+              </p>
+              <ActiveHookBadge hookTier={hookTier} />
+            </div>
           ) : (
             <div className="flex flex-col items-center gap-3 mt-2">
               <p className="font-karla font-300 text-[#8a8880] text-sm">No packs available.</p>
