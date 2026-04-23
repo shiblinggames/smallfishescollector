@@ -365,7 +365,6 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
             width: 'min(80vw, 360px)',
           }}
         >
-          <img src="/booster.png" alt="" aria-hidden style={{ width: 44, height: 'auto', flexShrink: 0 }} />
           <div className="flex-1 min-w-0">
             <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#f0ede8]" style={{ fontSize: '0.7rem' }}>Visit the Market</p>
             <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.65rem', marginTop: 2 }}>Upgrade your hook &amp; ship for better pulls</p>
