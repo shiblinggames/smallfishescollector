@@ -47,7 +47,17 @@ export default function DailyBonusClaim({
           {claimed ? <CheckIcon /> : <CoinIcon />}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="sg-eyebrow mb-0.5" style={{ color: '#9a9488' }}>Daily Bonus</p>
+          <div className="flex items-center gap-2 mb-0.5">
+            <p className="sg-eyebrow" style={{ color: '#9a9488' }}>Daily Bonus</p>
+            {isPremium && (
+              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.3)' }}>
+                <svg width="7" height="7" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: '#f0c040' }}>Member</span>
+              </div>
+            )}
+          </div>
           <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>
             {justClaimed ? `+${bonusAmount} ⟡ Claimed` : claimed ? 'Claimed' : `+${bonusAmount} ⟡`}
           </p>
