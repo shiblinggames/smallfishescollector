@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
+import MarketRedeemBar from './MarketRedeemBar'
 
 export default async function MarketplacePage() {
   const supabase = await createClient()
@@ -23,6 +24,10 @@ export default async function MarketplacePage() {
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0 pt-6">
+        <div className="px-6 max-w-4xl mx-auto mb-6">
+          <MarketRedeemBar />
+        </div>
+
         <div className="px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-12 max-w-4xl mx-auto">
           <ShopCard
             href="/marketplace/tackle-shop"
@@ -35,17 +40,6 @@ export default async function MarketplacePage() {
               'Buy with doubloons earned daily',
             ]}
             icon={<HookIcon />}
-          />
-          <ShopCard
-            href="/marketplace/redeem"
-            eyebrow="Pack Codes"
-            name="Redeem a Code"
-            description="Got a code from a physical pack or promo? Enter it here for free packs."
-            items={[
-              'Codes included with physical packs',
-              'Promo and event codes',
-            ]}
-            icon={<CodeIcon />}
           />
           <ShopCard
             href="https://shiblingshop.com/products/small-fishes-premium-membership"
@@ -63,6 +57,19 @@ export default async function MarketplacePage() {
             }
             icon={<StarIcon />}
             badge={isPremium ? 'Member' : undefined}
+            external
+          />
+          <ShopCard
+            href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game"
+            eyebrow="Physical Game"
+            name="Small Fishes: Seas the Booty"
+            description="Enjoying the digital game? Try the physical board game — each purchase comes with 20 digital packs."
+            items={[
+              'Strategy card game for 2–4 players',
+              'Every purchase includes 20 digital packs',
+              'Available at the Shibling Shop',
+            ]}
+            icon={<BoxIcon />}
             external
           />
         </div>
@@ -148,19 +155,19 @@ function HookIcon() {
   )
 }
 
-function CodeIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="5" width="18" height="14" rx="2"/>
-      <path d="M7 9l3 3-3 3M13 15h4"/>
-    </svg>
-  )
-}
-
 function StarIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none">
       <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+    </svg>
+  )
+}
+
+function BoxIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+      <path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/>
     </svg>
   )
 }
