@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-export default function Nav({ packsAvailable }: { packsAvailable?: number }) {
+export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: number; doubloons?: number }) {
   const router = useRouter()
   const pathname = usePathname()
 
@@ -71,13 +71,30 @@ export default function Nav({ packsAvailable }: { packsAvailable?: number }) {
           ))}
         </div>
 
-        <button
-          onClick={signOut}
-          className="py-2 px-2 text-[0.68rem] font-karla font-600 uppercase tracking-[0.20em] text-[#8a8880] hover:text-[#f0ede8] active:text-[#f0ede8] transition-colors duration-200"
-        >
-          Sign Out
-        </button>
+        <div className="flex items-center gap-4">
+          {doubloons !== undefined && (
+            <span className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.875rem' }}>
+              {doubloons.toLocaleString()} ⟡
+            </span>
+          )}
+          <button
+            onClick={signOut}
+            className="py-2 px-2 text-[0.68rem] font-karla font-600 uppercase tracking-[0.20em] text-[#8a8880] hover:text-[#f0ede8] active:text-[#f0ede8] transition-colors duration-200"
+          >
+            Sign Out
+          </button>
+        </div>
       </nav>
+
+      {/* Mobile doubloon strip */}
+      {doubloons !== undefined && (
+        <div className="sm:hidden bg-black border-b border-[rgba(255,255,255,0.08)] px-6 py-2 flex justify-between items-center">
+          <span className="font-cinzel font-700 text-[#f0ede8] tracking-wide text-xs uppercase">Small Fishes</span>
+          <span className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.875rem' }}>
+            {doubloons.toLocaleString()} ⟡
+          </span>
+        </div>
+      )}
 
       {/* Mobile bottom tab bar */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-black border-t border-[rgba(255,255,255,0.08)] flex">

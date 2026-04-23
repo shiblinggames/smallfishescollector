@@ -17,7 +17,7 @@ export default async function DeadMansDrawPage() {
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0">
         <div className="px-6 pt-6 pb-2">
           <Link

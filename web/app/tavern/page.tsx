@@ -10,13 +10,13 @@ export default async function TavernPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('packs_available')
+    .select('packs_available, doubloons')
     .eq('id', user.id)
     .single()
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0">
         <div className="px-6 pt-8 pb-5 text-center">
           <h1
