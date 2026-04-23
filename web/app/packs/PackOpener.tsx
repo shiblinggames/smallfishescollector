@@ -322,7 +322,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
         <div className="flip-card-inner w-full h-full">
           <div className="flip-card-front w-full h-full overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/cardback.png" alt="" className="w-full h-full object-cover" />
+            <img src="/cardback.png" alt="" className="w-full h-full object-cover" style={{ opacity: 0.55 }} />
           </div>
           <div className="flip-card-back w-full h-full bg-black flex items-center justify-center p-3" style={cardBackBorderStyle(card.borderStyle, card.artEffect)}>
             <FishCard name={card.name} filename={card.filename} borderStyle={card.borderStyle} artEffect={card.artEffect} variantName={card.variantName} dropWeight={card.dropWeight} />
@@ -517,11 +517,6 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
             {packs > 0 && (
               <button onClick={openPack} disabled={loading} className="btn-gold">
                 {loading ? 'Fishing…' : `Open Another · ${packs} Left`}
-              </button>
-            )}
-            {!loading && (
-              <button onClick={() => router.push('/collection')} className="btn-ghost">
-                View Collection
               </button>
             )}
           </div>
