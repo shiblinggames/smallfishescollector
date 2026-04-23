@@ -264,7 +264,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
               <p className="font-cinzel font-700" style={{ color: rank.color, fontSize: '1.2rem', lineHeight: 1.1 }}>{rank.name}</p>
             </div>
             <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.78rem' }}>
-              {uniqueVariantsOwned}<span style={{ color: '#4a4845' }}> / {totalVariants} variants</span>
+              {uniqueVariantsOwned}<span style={{ color: '#6a6764' }}> / {totalVariants} variants</span>
             </p>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, transition: 'transform 0.2s ease', transform: statsOpen ? 'rotate(180deg)' : '' }}>
               <path d="M6 9l6 6 6-6"/>
@@ -279,11 +279,11 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
               <div style={{ height: '100%', width: `${progressPct}%`, background: rank.color, borderRadius: 2, opacity: 0.8 }} />
             </div>
             {nextRankName ? (
-              <p className="font-karla text-[#4a4845]" style={{ fontSize: '0.6rem', marginBottom: '0.75rem' }}>
+              <p className="font-karla text-[#8a8880]" style={{ fontSize: '0.7rem', marginBottom: '0.75rem' }}>
                 {rank.next! - uniqueVariantsOwned} more to reach {nextRankName}
               </p>
             ) : (
-              <p className="font-karla text-[#4a4845]" style={{ fontSize: '0.6rem', marginBottom: '0.75rem' }}>Maximum rank achieved</p>
+              <p className="font-karla text-[#8a8880]" style={{ fontSize: '0.7rem', marginBottom: '0.75rem' }}>Maximum rank achieved</p>
             )}
 
             {/* Extra stats */}
