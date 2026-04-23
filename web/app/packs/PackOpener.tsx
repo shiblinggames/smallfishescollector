@@ -315,13 +315,8 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
         ) : phase === 'done' ? (
           <div className="flex gap-3 w-full">
             {packs > 0 && (
-              <button onClick={openPack} disabled={loading} className="btn-gold flex-1 min-w-0">
+              <button onClick={openPack} disabled={loading} className="btn-gold w-full">
                 {loading ? 'Fishing…' : `Open Another · ${packs} Left`}
-              </button>
-            )}
-            {!loading && (
-              <button onClick={() => router.push('/collection')} className="btn-ghost flex-1 min-w-0">
-                View Collection
               </button>
             )}
           </div>
