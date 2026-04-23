@@ -1,4 +1,4 @@
-export type AchievementCategory = 'packs' | 'collection' | 'fotd' | 'tavern' | 'bonus' | 'membership'
+export type AchievementCategory = 'packs' | 'collection' | 'fotd' | 'tavern' | 'bonus' | 'doubloons' | 'membership'
 export type AchievementIcon = 'pack' | 'fish' | 'star' | 'anchor' | 'coin' | 'crown' | 'scroll' | 'trophy'
 
 export interface Achievement {
@@ -39,6 +39,12 @@ export const ACHIEVEMENTS: Achievement[] = [
   // Daily bonus
   { key: 'bonus_first', name: 'Pocket Change',   description: 'Claim your first daily bonus', category: 'bonus', icon: 'coin' },
   { key: 'bonus_7',     name: 'Weekly Regular',  description: 'Claim 7 daily bonuses',        category: 'bonus', icon: 'coin' },
+
+  // Doubloons
+  { key: 'doubloons_1k',   name: 'Coin Purse',    description: 'Earn 1,000 doubloons in total',    category: 'doubloons', icon: 'coin' },
+  { key: 'doubloons_5k',   name: 'Treasure Chest', description: 'Earn 5,000 doubloons in total',    category: 'doubloons', icon: 'coin' },
+  { key: 'doubloons_25k',  name: 'Sunken Hoard',   description: 'Earn 25,000 doubloons in total',   category: 'doubloons', icon: 'coin' },
+  { key: 'doubloons_100k', name: 'Pirate King',    description: 'Earn 100,000 doubloons in total',  category: 'doubloons', icon: 'trophy' },
 
   // Membership
   { key: 'member', name: 'Crew Member', description: 'Become a Small Fishes Member', category: 'membership', icon: 'crown' },

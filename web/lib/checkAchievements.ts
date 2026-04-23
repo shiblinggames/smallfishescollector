@@ -133,5 +133,22 @@ export async function checkAchievements(userId: string, trigger: AchievementTrig
     if (needs('member')) await award(['member'])
   }
 
+  // Doubloon milestones — checked on every trigger
+  const doubloonKeys = ['doubloons_1k', 'doubloons_5k', 'doubloons_25k', 'doubloons_100k']
+  if (doubloonKeys.some(needs)) {
+    const { data: txns } = await admin
+      .from('doubloon_transactions')
+      .select('amount')
+      .eq('user_id', userId)
+      .gt('amount', 0)
+    const totalEarned = (txns ?? []).reduce((sum: number, r: any) => sum + r.amount, 0)
+    const keys: string[] = []
+    if (totalEarned >= 1000)   keys.push('doubloons_1k')
+    if (totalEarned >= 5000)   keys.push('doubloons_5k')
+    if (totalEarned >= 25000)  keys.push('doubloons_25k')
+    if (totalEarned >= 100000) keys.push('doubloons_100k')
+    await award(keys.filter(needs))
+  }
+
   return toAward
 }

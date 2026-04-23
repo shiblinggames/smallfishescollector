@@ -10,10 +10,11 @@ const CATEGORY_LABELS: Record<AchievementCategory, string> = {
   fotd:       'Fish of the Day',
   tavern:     'Tavern',
   bonus:      'Daily Bonus',
+  doubloons:  'Doubloons',
   membership: 'Membership',
 }
 
-const CATEGORY_ORDER: AchievementCategory[] = ['packs', 'collection', 'fotd', 'tavern', 'bonus', 'membership']
+const CATEGORY_ORDER: AchievementCategory[] = ['packs', 'collection', 'fotd', 'tavern', 'bonus', 'doubloons', 'membership']
 
 const ICON_SVG: Record<string, React.ReactNode> = {
   pack: (
