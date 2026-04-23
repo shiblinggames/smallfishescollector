@@ -39,7 +39,7 @@ export async function getPackStats(): Promise<PackStats | null> {
     { data: profile },
     { data: rarestRow },
     { count: totalVariants },
-    { count: ownedVariants },
+    { data: ownedRows },
   ] = await Promise.all([
     admin.from('pack_history').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     admin.from('profiles').select('packs_since_legendary').eq('id', user.id).single(),
@@ -51,16 +51,17 @@ export async function getPackStats(): Promise<PackStats | null> {
       .limit(1)
       .single(),
     admin.from('card_variants').select('*', { count: 'exact', head: true }),
-    admin.from('user_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    admin.from('user_collection').select('card_variant_id').eq('user_id', user.id),
   ])
 
+  const ownedVariants = new Set(ownedRows?.map(r => r.card_variant_id)).size
   const rv = rarestRow?.card_variants as unknown as { variant_name: string; drop_weight: number; cards: { name: string } } | null
 
   return {
     totalPacksOpened: totalPacksOpened ?? 0,
     packsSinceLegendary: profile?.packs_since_legendary ?? 0,
     rarestPull: rv ? { name: rv.cards.name, variantName: rv.variant_name, dropWeight: rv.drop_weight } : null,
-    completionPct: totalVariants ? Math.round(((ownedVariants ?? 0) / totalVariants) * 100) : 0,
+    completionPct: totalVariants ? Math.round((ownedVariants / totalVariants) * 100) : 0,
   }
 }
 
