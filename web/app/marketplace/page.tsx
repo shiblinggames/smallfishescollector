@@ -17,18 +17,7 @@ export default async function MarketplacePage() {
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
-      <main className="min-h-screen pb-24 sm:pb-0">
-        <div className="px-6 pt-8 pb-5 text-center">
-          <h1
-            className="font-cinzel font-700 text-[#f0ede8] leading-[0.92] tracking-[-0.01em]"
-            style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}
-          >
-            Marketplace.
-          </h1>
-          <p className="font-karla font-300 text-[#8a8880] text-sm mt-3">
-            Upgrades and codes.
-          </p>
-        </div>
+      <main className="min-h-screen pb-24 sm:pb-0 pt-6">
         <MarketplaceClient
           hookTier={profile?.hook_tier ?? 0}
           doubloons={profile?.doubloons ?? 0}

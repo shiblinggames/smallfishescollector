@@ -15,12 +15,12 @@ function ActiveHookBadge({ hookTier }: { hookTier: number }) {
   const hook = getHook(hookTier)
   return (
     <a href="/marketplace" className="flex items-center gap-1.5 transition-opacity hover:opacity-80" style={{ textDecoration: 'none' }}>
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6a6764" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8a8880" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2v10"/>
         <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
-        <circle cx="12" cy="3" r="2" fill="#6a6764" stroke="none"/>
+        <circle cx="12" cy="3" r="2" fill="#8a8880" stroke="none"/>
       </svg>
-      <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.62rem' }}>{hook.name}</p>
+      <p className="font-karla text-[#8a8880]" style={{ fontSize: '0.62rem' }}>{hook.name}</p>
     </a>
   )
 }
@@ -291,7 +291,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
 
           {packs > 0 ? (
             <div className="flex flex-col items-center gap-1.5">
-              <p className="font-karla text-[#6a6764] text-xs uppercase tracking-[0.12em]">
+              <p className="font-karla text-[#a0a09a] text-xs uppercase tracking-[0.12em]">
                 {packs} {packs === 1 ? 'pack' : 'packs'} available — click to open
               </p>
               <ActiveHookBadge hookTier={hookTier} />

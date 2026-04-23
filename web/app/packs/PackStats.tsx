@@ -1,4 +1,5 @@
 import { rarityFromVariant, RARITY_COLOR } from '@/lib/variants'
+import { getHook, HOOKS } from '@/lib/hooks'
 import type { PackStats, PackHistoryEntry } from './stats'
 
 const PITY_CAP = 20
@@ -48,7 +49,10 @@ function HistoryCardDot({ dropWeight, variantName }: { dropWeight: number; varia
   )
 }
 
-export default function PackStats({ stats, history }: { stats: PackStats; history: PackHistoryEntry[] }) {
+export default function PackStats({ stats, history, hookTier }: { stats: PackStats; history: PackHistoryEntry[]; hookTier: number }) {
+  const hook = getHook(hookTier)
+  const luckPct = Math.round((hook.deepChance - HOOKS[0].deepChance) / (HOOKS[HOOKS.length - 1].deepChance - HOOKS[0].deepChance) * 100)
+
   return (
     <div className="w-full max-w-sm space-y-6 mt-2">
       {/* Stats row */}
@@ -78,6 +82,15 @@ export default function PackStats({ stats, history }: { stats: PackStats; histor
           )}
         </div>
         <TideBar count={stats.packsSinceLegendary} />
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.875rem' }}>
+          <div className="flex items-center justify-between">
+            <p className="font-karla font-300 text-[0.68rem] uppercase tracking-[0.12em] text-[#8a8880]">Active Hook</p>
+            <div className="flex items-center gap-2">
+              <p className="font-karla font-600 text-[0.68rem]" style={{ color: hook.color }}>{hook.name}</p>
+              <p className="font-karla font-300 text-[0.68rem] text-[#6a6764]">· {luckPct}% luck</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Pull history */}

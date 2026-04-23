@@ -24,7 +24,7 @@ export default async function PacksPage() {
       <Nav packsAvailable={packsAvailable} />
       <main className="min-h-screen px-6 py-4 sm:py-0 flex flex-col items-center sm:justify-center">
         <PackOpener packsAvailable={packsAvailable} doubloons={doubloons} hookTier={profile?.hook_tier ?? 0} />
-        {stats && <PackStatsToggle stats={stats} history={history} />}
+        {stats && <PackStatsToggle stats={stats} history={history} hookTier={profile?.hook_tier ?? 0} />}
         <a href="/guide" className="mt-16 font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors">
           How It Works →
         </a>
