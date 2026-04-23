@@ -107,13 +107,13 @@ function ShopCard({
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <p className="sg-eyebrow" style={{ color: '#9a9488' }}>{eyebrow}</p>
+          <p className="sg-eyebrow mb-0.5" style={{ color: '#9a9488' }}>{eyebrow}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>{name}</p>
             {badge && (
-              <span className="font-karla font-700 uppercase tracking-[0.12em] text-[#f0c040]" style={{ fontSize: '0.5rem' }}>{badge}</span>
+              <span className="font-karla font-700 uppercase tracking-[0.12em] text-[#f0c040] shrink-0" style={{ fontSize: '0.5rem' }}>{badge}</span>
             )}
           </div>
-          <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>{name}</p>
           <p className="font-karla text-[#8a8880] mt-1" style={{ fontSize: '0.8rem', lineHeight: 1.5 }}>{description}</p>
         </div>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 6 }}>

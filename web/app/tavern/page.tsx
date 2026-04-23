@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
 import FriendSearch from './FriendSearch'
+import DailyBonusClaim from './DailyBonusClaim'
 
 export default async function TavernPage() {
   const supabase = await createClient()
@@ -11,9 +12,17 @@ export default async function TavernPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('packs_available, doubloons, fotd_streak')
+    .select('packs_available, doubloons, fotd_streak, last_daily_claim, is_premium, premium_expires_at')
     .eq('id', user.id)
     .single()
+
+  const today = new Date().toISOString().split('T')[0]
+  const alreadyClaimed = profile?.last_daily_claim === today
+  const isPremium =
+    !!profile?.is_premium &&
+    !!profile?.premium_expires_at &&
+    new Date(profile.premium_expires_at) > new Date()
+  const bonusAmount = isPremium ? 100 : 50
 
   return (
     <>
@@ -24,6 +33,7 @@ export default async function TavernPage() {
         </div>
 
         <div className="px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-12 max-w-4xl mx-auto">
+          <DailyBonusClaim alreadyClaimed={alreadyClaimed} bonusAmount={bonusAmount} isPremium={isPremium} />
           <GameCard
             href="/tavern/fish-of-the-day"
             eyebrow="Daily Puzzle"
