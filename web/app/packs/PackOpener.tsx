@@ -233,27 +233,103 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
   if (phase === 'idle') {
     return (
       <div className="flex flex-col items-center gap-8">
-        <div className="sg-card px-16 py-12 text-center">
-          <p className="sg-eyebrow mb-3">Available</p>
-          <p className="font-cinzel font-900 text-[#f0ede8] leading-none mb-1"
-             style={{ fontSize: 'clamp(3.5rem, 10vw, 6rem)' }}>
-            {packs}
-          </p>
-          <p className="font-karla font-300 text-[#8a8880] text-sm mb-10 tracking-wide">
-            {packs === 1 ? 'pack' : 'packs'}
-          </p>
-          {packs > 0 ? (
-            <button onClick={openPack} disabled={loading} className="btn-gold">
-              {loading ? 'Fishing…' : 'Open Pack'}
+        <div className="flex flex-col items-center gap-4">
+          {/* Booster pack */}
+          <div className="relative" style={{ marginTop: packs > 1 ? 12 : 0 }}>
+            {packs > 2 && (
+              <div className="absolute inset-0" style={{ borderRadius: 14, transform: 'translateY(10px) translateX(5px) rotate(2deg)', background: 'rgba(13,26,60,0.9)', border: '1px solid rgba(240,192,64,0.12)' }} />
+            )}
+            {packs > 1 && (
+              <div className="absolute inset-0" style={{ borderRadius: 14, transform: 'translateY(5px) translateX(2.5px) rotate(1deg)', background: 'rgba(13,26,60,0.95)', border: '1px solid rgba(240,192,64,0.18)' }} />
+            )}
+            <button
+              onClick={packs > 0 ? openPack : undefined}
+              disabled={loading || packs === 0}
+              className="relative block select-none"
+              style={{
+                width: 210, height: 315,
+                borderRadius: 14,
+                cursor: packs > 0 && !loading ? 'pointer' : 'default',
+                overflow: 'hidden',
+                background: 'linear-gradient(160deg, #0c1a35 0%, #091428 35%, #0b2252 65%, #0d1830 100%)',
+                border: '1px solid rgba(240,192,64,0.32)',
+                boxShadow: '0 16px 60px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.08)',
+                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+              }}
+              onMouseEnter={e => {
+                if (packs === 0 || loading) return
+                e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)'
+                e.currentTarget.style.boxShadow = '0 24px 70px rgba(0,0,0,0.8), 0 0 30px rgba(240,192,64,0.12), inset 0 1px 0 rgba(255,255,255,0.08)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = ''
+                e.currentTarget.style.boxShadow = '0 16px 60px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.08)'
+              }}
+            >
+              {/* Foil shimmer */}
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, transparent 25%, rgba(240,192,64,0.04) 50%, transparent 75%)', pointerEvents: 'none' }} />
+
+              {/* Tear strip */}
+              <div style={{ height: 32, background: 'rgba(240,192,64,0.07)', borderBottom: '1px dashed rgba(240,192,64,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="rgba(240,192,64,0.4)" strokeWidth="2.5" strokeLinecap="round"><path d="M18 8l-6 6-6-6"/></svg>
+                <span style={{ fontFamily: 'var(--font-karla)', fontWeight: 600, fontSize: '0.45rem', color: 'rgba(240,192,64,0.4)', letterSpacing: '0.25em', textTransform: 'uppercase' }}>open here</span>
+                <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="rgba(240,192,64,0.4)" strokeWidth="2.5" strokeLinecap="round"><path d="M18 8l-6 6-6-6"/></svg>
+              </div>
+
+              {/* Art area */}
+              <div style={{ height: 162, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(ellipse at 50% 60%, rgba(0,70,160,0.28) 0%, transparent 70%)' }}>
+                {/* Wave */}
+                <svg style={{ position: 'absolute', bottom: 0, left: 0, right: 0, opacity: 0.14 }} viewBox="0 0 210 55" preserveAspectRatio="none" width="210" height="55">
+                  <path d="M0 35 Q52 15 105 35 Q158 55 210 35 L210 55 L0 55Z" fill="#f0c040"/>
+                  <path d="M0 45 Q52 28 105 45 Q158 62 210 45 L210 55 L0 55Z" fill="rgba(30,100,220,0.6)"/>
+                </svg>
+                {/* Fish */}
+                <svg width="80" height="80" viewBox="0 0 64 64" fill="none" style={{ opacity: 0.9, filter: 'drop-shadow(0 0 14px rgba(240,192,64,0.28))' }}>
+                  <path d="M5 32C14 16 26 10 38 10C50 10 60 18 60 32C60 46 50 54 38 54C26 54 14 48 5 32Z" stroke="rgba(240,192,64,0.65)" strokeWidth="1.4" fill="rgba(240,192,64,0.04)"/>
+                  <circle cx="51" cy="25" r="2.8" fill="rgba(240,192,64,0.7)"/>
+                  <path d="M5 32C-1 26 -1 20 5 20" stroke="rgba(240,192,64,0.65)" strokeWidth="1.4" strokeLinecap="round"/>
+                  <path d="M32 16 Q38 32 32 48" stroke="rgba(240,192,64,0.14)" strokeWidth="1.2" fill="none"/>
+                  <path d="M22 19 Q28 32 22 45" stroke="rgba(240,192,64,0.1)" strokeWidth="1.2" fill="none"/>
+                </svg>
+                {/* Sparkles */}
+                <div style={{ position: 'absolute', top: 18, right: 26, width: 4, height: 4, borderRadius: '50%', background: 'rgba(240,192,64,0.5)', boxShadow: '0 0 7px rgba(240,192,64,0.7)' }}/>
+                <div style={{ position: 'absolute', top: 36, right: 40, width: 2.5, height: 2.5, borderRadius: '50%', background: 'rgba(240,192,64,0.3)' }}/>
+                <div style={{ position: 'absolute', top: 28, left: 30, width: 3, height: 3, borderRadius: '50%', background: 'rgba(240,192,64,0.28)', boxShadow: '0 0 5px rgba(240,192,64,0.4)' }}/>
+                <div style={{ position: 'absolute', top: 50, left: 44, width: 2, height: 2, borderRadius: '50%', background: 'rgba(240,192,64,0.2)' }}/>
+              </div>
+
+              {/* Divider */}
+              <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, rgba(240,192,64,0.2), transparent)' }} />
+
+              {/* Branding */}
+              <div style={{ padding: '14px 18px 8px' }}>
+                <p style={{ fontFamily: 'var(--font-cinzel)', fontWeight: 700, fontSize: '1.05rem', color: '#f0c040', letterSpacing: '0.02em', marginBottom: 3 }}>
+                  Small Fishes
+                </p>
+                <p style={{ fontFamily: 'var(--font-karla)', fontWeight: 300, fontSize: '0.58rem', color: '#6a6764', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+                  Collector's Edition
+                </p>
+                {loading && (
+                  <p style={{ fontFamily: 'var(--font-karla)', fontSize: '0.75rem', color: '#f0c040', marginTop: 10 }}>Fishing…</p>
+                )}
+              </div>
+
+              {/* Bottom strip */}
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 42, background: 'rgba(240,192,64,0.06)', borderTop: '1px solid rgba(240,192,64,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px' }}>
+                <span style={{ fontFamily: 'var(--font-karla)', fontSize: '0.56rem', color: '#6a6764', textTransform: 'uppercase', letterSpacing: '0.14em' }}>5 cards</span>
+                <span style={{ fontFamily: 'var(--font-karla)', fontWeight: 600, fontSize: '0.56rem', color: 'rgba(240,192,64,0.55)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Booster Pack</span>
+              </div>
             </button>
+          </div>
+
+          {packs > 0 ? (
+            <p className="font-karla text-[#6a6764] text-xs uppercase tracking-[0.12em]">
+              {packs} {packs === 1 ? 'pack' : 'packs'} available — click to open
+            </p>
           ) : (
-            <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-3 mt-2">
               <p className="font-karla font-300 text-[#8a8880] text-sm">No packs available.</p>
-              <a
-                href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game"
-                target="_blank" rel="noopener noreferrer"
-                className="btn-gold"
-              >
+              <a href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game" target="_blank" rel="noopener noreferrer" className="btn-gold">
                 Get the Game
               </a>
               <a href="/redeem" className="text-[#f0c040] hover:text-[#ffd966] text-xs font-karla font-600 uppercase tracking-[0.12em] transition-colors">
@@ -262,6 +338,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
             </div>
           )}
         </div>
+
         {/* Doubloon balance + buy buttons */}
         <div className="flex flex-col items-center gap-2">
           <p className="font-karla font-600 text-[#f0c040] text-sm tracking-wide">{doubloons.toLocaleString()} ⟡</p>
