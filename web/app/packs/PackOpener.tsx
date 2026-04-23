@@ -74,6 +74,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
   const [swapped, setSwapped] = useState(false)
   const [achievementKeys, setAchievementKeys] = useState<string[]>([])
+  const pendingAchievements = useRef<string[]>([])
 
   useEffect(() => {
     if (localStorage.getItem('packOpenSide') === 'left') setSwapped(true)
@@ -146,7 +147,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
     setNewVariantIds(new Set(result.newVariantIds ?? []))
     setIsGodPack(result.isGodPack ?? false)
     setRankUp(result.rankUp ?? null)
-    if (result.newAchievements?.length) setAchievementKeys(result.newAchievements)
+    pendingAchievements.current = result.newAchievements ?? []
     setCards(result.drawn)
     setFlipped(new Array(5).fill(false))
     setGlowClasses(new Array(5).fill(''))
@@ -214,7 +215,13 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
     setFlipped((prev) => {
       const n = [...prev]
       n[i] = true
-      if (n.every(Boolean)) setTimeout(() => setPhase('done'), 700)
+      if (n.every(Boolean)) setTimeout(() => {
+        setPhase('done')
+        if (pendingAchievements.current.length) {
+          setAchievementKeys(pendingAchievements.current)
+          pendingAchievements.current = []
+        }
+      }, 700)
       return n
     })
   }
@@ -228,7 +235,13 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
     setGlowClasses(rarities.map(glowClassFor))
     setFlipped(new Array(cards.length).fill(true))
     cards.forEach((card) => checkPrize(card))
-    setTimeout(() => setPhase('done'), 700)
+    setTimeout(() => {
+      setPhase('done')
+      if (pendingAchievements.current.length) {
+        setAchievementKeys(pendingAchievements.current)
+        pendingAchievements.current = []
+      }
+    }, 700)
   }
 
   function reset() {
@@ -243,6 +256,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
     setNewVariantIds(new Set())
     setShockwaveCards(new Set())
     setMythicFeatured(null)
+    pendingAchievements.current = []
     router.refresh()
   }
 
