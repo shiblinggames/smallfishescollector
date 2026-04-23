@@ -463,6 +463,12 @@ body {
 }
 .art-wanted { filter: sepia(0.95) brightness(0.9) contrast(1.1) saturate(0.75); }
 
+/* ── Daily bonus toast ── */
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
 /* ── Card flip animation ── */
 .flip-card { perspective: 1000px; position: relative; }
 .flip-card-inner {

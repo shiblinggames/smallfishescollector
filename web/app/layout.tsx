@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Cinzel, Karla } from 'next/font/google'
 import './globals.css'
+import DailyBonus from '@/components/DailyBonus'
 
 const cinzel = Cinzel({
   subsets: ['latin'],
@@ -23,7 +24,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`h-full ${cinzel.variable} ${karla.variable}`}>
-      <body className="min-h-full bg-[#000000] text-[#f0ede8] font-karla">{children}</body>
+      <body className="min-h-full bg-[#000000] text-[#f0ede8] font-karla">
+        <DailyBonus />
+        {children}
+      </body>
     </html>
   )
 }
