@@ -118,6 +118,7 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
 
             const isNext = hook.tier === hookTier + 1
             const clickable = isNext && canAfford && !isPending
+            const luckPct = Math.round((hook.deepChance - HOOKS[0].deepChance) / (HOOKS[HOOKS.length - 1].deepChance - HOOKS[0].deepChance) * 100)
 
             return (
               <div
@@ -134,7 +135,7 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
                   transition: 'box-shadow 0.2s ease, opacity 0.15s ease',
                 }}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3">
                   <HookIcon tier={hook.tier} color={c} owned={owned} isActive={isActive} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
@@ -155,22 +156,6 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
                         {isPending ? 'Upgrading…' : canAfford ? '↑ Tap to upgrade' : `${(hook.cost - doubloons).toLocaleString()} ⟡ short`}
                       </p>
                     )}
-
-                    {showTooltip && (
-                      <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
-                        {[
-                          { label: 'Shallows', value: hook.weights.shallows, color: '#60a5fa' },
-                          { label: 'Open Waters', value: hook.weights.openWaters, color: '#4ade80' },
-                          { label: 'Deep', value: hook.weights.deep, color: '#a78bfa' },
-                          { label: 'Abyss', value: hook.weights.abyss, color: '#f0c040' },
-                        ].map(({ label, value, color }) => (
-                          <div key={label} className="flex items-center justify-between gap-2">
-                            <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.65rem' }}>{label}</p>
-                            <p className="font-karla font-600" style={{ fontSize: '0.65rem', color }}>{(value * 100).toFixed(1)}%</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
@@ -180,10 +165,10 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
                       </p>
                     )}
                     <p className="font-karla font-600" style={{ fontSize: '0.65rem', color: owned ? c : '#4a4845' }}>
-                      {hook.deepChance}% deep
+                      {luckPct}% luck
                     </p>
                     <button
-                      onClick={() => setTooltipTier(showTooltip ? null : hook.tier)}
+                      onClick={(e) => { e.stopPropagation(); setTooltipTier(showTooltip ? null : hook.tier) }}
                       onMouseEnter={() => setTooltipTier(hook.tier)}
                       onMouseLeave={() => setTooltipTier(null)}
                       className="transition-colors"
@@ -198,6 +183,22 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
                     </button>
                   </div>
                 </div>
+
+                {showTooltip && (
+                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1" style={{ paddingLeft: 50 }}>
+                    {[
+                      { label: 'Shallows', value: hook.weights.shallows, color: '#60a5fa' },
+                      { label: 'Open Waters', value: hook.weights.openWaters, color: '#4ade80' },
+                      { label: 'Deep', value: hook.weights.deep, color: '#a78bfa' },
+                      { label: 'Abyss', value: hook.weights.abyss, color: '#f0c040' },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} className="flex items-center justify-between gap-2">
+                        <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.65rem' }}>{label}</p>
+                        <p className="font-karla font-600" style={{ fontSize: '0.65rem', color }}>{(value * 100).toFixed(1)}%</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )
           })}
