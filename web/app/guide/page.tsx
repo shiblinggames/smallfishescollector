@@ -7,7 +7,7 @@ const RARITIES = [
   { label: 'Rare',      color: '#60a5fa', chance: '~12%',   note: 'Gold variant' },
   { label: 'Epic',      color: '#a78bfa', chance: '~4%',    note: 'Pearl or Holographic' },
   { label: 'Legendary', color: '#f0c040', chance: '~0.5%',  note: 'Ghost, Shadow, or Prismatic' },
-  { label: 'Mythic',    color: '#ff3838', chance: '~0.1%',  note: 'Named variants — rarest of all' },
+  { label: 'Mythic',    color: '#ff3838', chance: '~0.2%',  note: 'Named variants — rarest of all' },
 ]
 
 export default function GuidePage() {
