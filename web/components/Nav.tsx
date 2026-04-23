@@ -72,6 +72,14 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   ]
 
   const mobileMenuLinks = [
+    { href: '/social', label: 'Social',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/>
+        </svg>
+      )
+    },
     { href: '/achievements', label: 'Achievements',
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -95,6 +103,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   const desktopOnlyLinks = [
     { href: '/achievements', label: 'Achievements', badge: null },
     { href: '/leaderboard',  label: 'Leaderboard',  badge: null },
+    { href: '/social',       label: 'Social',        badge: null },
   ]
 
   const links = [

@@ -78,12 +78,20 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     .map(r => ACHIEVEMENT_MAP[r.achievement_key])
     .filter(Boolean)
 
-  // Nav data
-  const { data: navProfile } = user ? await admin.from('profiles').select('packs_available').eq('id', user.id).single() : { data: null }
+  // Nav data + crew status
+  const [{ data: navProfile }, crewRow] = await Promise.all([
+    user ? admin.from('profiles').select('packs_available, doubloons').eq('id', user.id).single() : Promise.resolve({ data: null }),
+    user && user.id !== profile.id
+      ? admin.from('crew').select('follower_id').eq('follower_id', user.id).eq('following_id', profile.id).single()
+      : Promise.resolve({ data: null }),
+  ])
+
+  const isOwnProfile = !!user && user.id === profile.id
+  const isInCrew = !!crewRow.data
 
   return (
     <>
-      <Nav packsAvailable={navProfile?.packs_available ?? undefined} />
+      <Nav packsAvailable={navProfile?.packs_available ?? undefined} doubloons={navProfile?.doubloons ?? undefined} />
       <main className="min-h-screen pb-24 sm:pb-0 pt-10">
         <ProfileClient
           username={profile.username}
@@ -102,6 +110,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             rarestPull,
           }}
           achievements={achievements}
+          isOwnProfile={isOwnProfile}
+          isInCrew={isInCrew}
         />
       </main>
     </>

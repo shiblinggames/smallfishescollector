@@ -3,7 +3,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
-import FriendSearch from './FriendSearch'
 import { getDailyWagered } from './actions'
 import { DAILY_CAP } from './constants'
 import { getShip } from '@/lib/ships'
@@ -43,10 +42,6 @@ export default async function TavernPage() {
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0 pt-6">
-        <div className="px-6 max-w-4xl mx-auto mb-6">
-          <FriendSearch />
-        </div>
-
         <div className="px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-12 max-w-4xl mx-auto">
           <GameCard
             href="/tavern/daily-bonus"

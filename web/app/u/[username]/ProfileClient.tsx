@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import type { Achievement } from '@/lib/achievements'
+import { addCrewMember, removeCrewMember } from '@/app/social/actions'
 
 interface CardVariant {
   id: number
@@ -29,11 +30,27 @@ interface Props {
   stats: Stats
   isPremium?: boolean
   achievements?: Achievement[]
+  isOwnProfile?: boolean
+  isInCrew?: boolean
 }
 
-export default function ProfileClient({ username, showcaseVariants, stats, isPremium, achievements = [] }: Props) {
+export default function ProfileClient({ username, showcaseVariants, stats, isPremium, achievements = [], isOwnProfile, isInCrew: initialIsInCrew }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [statsOpen, setStatsOpen] = useState(false)
+  const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
+  const [crewPending, startCrewTransition] = useTransition()
+
+  function toggleCrew() {
+    startCrewTransition(async () => {
+      if (inCrew) {
+        await removeCrewMember(username)
+        setInCrew(false)
+      } else {
+        await addCrewMember(username)
+        setInCrew(true)
+      }
+    })
+  }
 
   return (
     <div className="flex flex-col items-center gap-8 px-6 max-w-sm mx-auto">
@@ -41,14 +58,31 @@ export default function ProfileClient({ username, showcaseVariants, stats, isPre
       {/* Username + member badge */}
       <div className="flex flex-col items-center gap-2">
         <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.4rem' }}>{username}</p>
-        {isPremium && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.3)' }}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#f0c040' }}>Member</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {isPremium && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.3)' }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#f0c040' }}>Member</span>
+            </div>
+          )}
+          {!isOwnProfile && (
+            <button
+              onClick={toggleCrew}
+              disabled={crewPending}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-karla font-600 uppercase tracking-[0.12em] transition-all disabled:opacity-40"
+              style={{
+                fontSize: '0.6rem',
+                background: inCrew ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${inCrew ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.12)'}`,
+                color: inCrew ? '#4ade80' : '#8a8880',
+              }}
+            >
+              {crewPending ? '…' : inCrew ? '✓ In Your Crew' : '+ Add to Crew'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
