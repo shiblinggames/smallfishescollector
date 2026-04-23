@@ -390,17 +390,50 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                 )}
               </div>
             </div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '0.75rem', paddingTop: '0.75rem' }}>
-              <button
-                onClick={() => { setProfileOpen(true); setShowUsernameForm(false); setUsernameError('') }}
-                className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] hover:text-[#8a8880] transition-colors"
-                style={{ fontSize: '0.6rem' }}
-              >
-                Edit Profile →
-              </button>
-            </div>
           </div>
         )}
+      </div>
+
+      {/* Always-visible action row */}
+      <div className="px-6 max-w-sm mx-auto flex gap-2 mb-4">
+        <button
+          onClick={() => { setProfileOpen(true); setShowUsernameForm(false); setUsernameError('') }}
+          className="flex-1 flex items-center justify-center gap-2 transition-colors"
+          style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '10px',
+            padding: '0.75rem 1rem',
+          }}
+          onPointerDown={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
+          onPointerUp={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+          onPointerLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a8880" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+          </svg>
+          <span className="font-karla font-600 uppercase tracking-[0.12em] text-[#8a8880]" style={{ fontSize: '0.62rem' }}>Edit Profile</span>
+        </button>
+        <a
+          href="/achievements"
+          className="flex-1 flex items-center justify-center gap-2 transition-colors"
+          style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '10px',
+            padding: '0.75rem 1rem',
+            textDecoration: 'none',
+          }}
+          onPointerDown={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
+          onPointerUp={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+          onPointerLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a8880" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 9H4V4h16v5h-2"/><path d="M6 4v5a6 6 0 0 0 12 0V4"/>
+            <line x1="12" y1="15" x2="12" y2="19"/><line x1="8" y1="19" x2="16" y2="19"/>
+          </svg>
+          <span className="font-karla font-600 uppercase tracking-[0.12em] text-[#8a8880]" style={{ fontSize: '0.62rem' }}>Achievements</span>
+        </a>
       </div>
 
       {/* Depth zones */}

@@ -87,7 +87,16 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
 
   let frame: React.ReactNode
 
-  if (borderStyle === 'prismatic' && !unowned) {
+  if (unowned) {
+    frame = (
+      <div style={{ width: D, height: D, borderRadius: '50%', background: '#080808', border: '2px dashed rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+    )
+  } else if (borderStyle === 'prismatic') {
     // Spinning conic ring behind the image
     frame = (
       <div className="relative" style={{ width: D, height: D, borderRadius: '50%' }}>
@@ -194,8 +203,8 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
     )
   }
 
-  const isPrismaticLabel    = borderStyle === 'prismatic'    && !unowned
-  const isHolographicLabel  = artEffect  === 'holographic'  && !unowned
+  const isPrismaticLabel   = borderStyle === 'prismatic'
+  const isHolographicLabel = artEffect === 'holographic'
   const labelColor = variantLabelColor[borderStyle]
   const rarity = dropWeight != null ? rarityFromVariant(variantName ?? '', dropWeight) : null
   const rarityColor = rarity ? RARITY_COLOR[rarity] : '#8a8880'
