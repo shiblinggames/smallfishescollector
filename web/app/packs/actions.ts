@@ -36,12 +36,28 @@ export async function buyPacksWithDoubloons(count: 1 | 10): Promise<{ packsAvail
   return { packsAvailable: newPacks, doubloons: newDoubloons }
 }
 
+const RANK_THRESHOLDS = [
+  { name: 'Crewmate',      min: 0,   bonus: 0     },
+  { name: 'Officer',       min: 25,  bonus: 200   },
+  { name: 'Second Mate',   min: 75,  bonus: 500   },
+  { name: 'Quartermaster', min: 150, bonus: 1500  },
+  { name: 'Captain',       min: 250, bonus: 5000  },
+]
+
+function getRankIndex(uniqueVariants: number): number {
+  for (let i = RANK_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (uniqueVariants >= RANK_THRESHOLDS[i].min) return i
+  }
+  return 0
+}
+
 export interface OpenPackResponse {
   drawn?: DrawnCard[]
   newVariantIds?: number[]
   packsRemaining?: number
   isGodPack?: boolean
   packsSinceLegendary?: number
+  rankUp?: { rank: string; bonus: number }
   error?: string
 }
 
@@ -55,7 +71,7 @@ export async function openPack(): Promise<OpenPackResponse> {
   // Read current pack count
   const { data: profile } = await admin
     .from('profiles')
-    .select('packs_available, packs_since_legendary')
+    .select('packs_available, packs_since_legendary, doubloons, highest_rank_claimed')
     .eq('id', user.id)
     .single()
 
@@ -96,19 +112,34 @@ export async function openPack(): Promise<OpenPackResponse> {
     drawn.map((d) => ({ user_id: user.id, card_variant_id: d.variantId }))
   )
 
-  // Update tide counter — reset if any card displays as Legendary or Mythic
-  const hitLegendary = drawn.some((d) => ['Legendary', 'Mythic'].includes(rarityFromVariant(d.variantName, d.dropWeight)))
-  await admin
-    .from('profiles')
-    .update({ packs_since_legendary: hitLegendary ? 0 : (profile.packs_since_legendary ?? 0) + 1 })
-    .eq('id', user.id)
+  // Check for rank-up
+  const newUniqueCount = ownedIds.size + newCards.length
+  const oldRankIndex = profile.highest_rank_claimed ?? 0
+  const newRankIndex = getRankIndex(newUniqueCount)
+  const rankUp = newRankIndex > oldRankIndex ? RANK_THRESHOLDS[newRankIndex] : null
 
-  // Record pack history
-  await admin.from('pack_history').insert({
-    user_id: user.id,
-    cards: drawn,
-    was_god_pack: isGodPack,
-  })
+  // Update tide counter + rank + doubloons
+  const hitLegendary = drawn.some((d) => ['Legendary', 'Mythic'].includes(rarityFromVariant(d.variantName, d.dropWeight)))
+  const profileUpdates: Record<string, unknown> = {
+    packs_since_legendary: hitLegendary ? 0 : (profile.packs_since_legendary ?? 0) + 1,
+  }
+  if (rankUp) {
+    profileUpdates.highest_rank_claimed = newRankIndex
+    profileUpdates.doubloons = (profile.doubloons ?? 0) + rankUp.bonus
+  }
+
+  const writes: any[] = [
+    admin.from('profiles').update(profileUpdates).eq('id', user.id),
+    admin.from('pack_history').insert({ user_id: user.id, cards: drawn, was_god_pack: isGodPack }),
+  ]
+  if (rankUp && rankUp.bonus > 0) {
+    writes.push(admin.from('doubloon_transactions').insert({
+      user_id: user.id,
+      amount: rankUp.bonus,
+      reason: `Rank up: ${rankUp.name}`,
+    }))
+  }
+  await Promise.all(writes)
 
   return {
     drawn,
@@ -116,5 +147,6 @@ export async function openPack(): Promise<OpenPackResponse> {
     packsRemaining: decremented.packs_available,
     isGodPack,
     packsSinceLegendary: hitLegendary ? 0 : (profile.packs_since_legendary ?? 0) + 1,
+    rankUp: rankUp ? { rank: rankUp.name, bonus: rankUp.bonus } : undefined,
   }
 }

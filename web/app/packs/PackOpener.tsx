@@ -50,6 +50,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
   const [buyingWithDoubloons, setBuyingWithDoubloons] = useState(false)
   const [newVariantIds, setNewVariantIds] = useState<Set<number>>(new Set())
   const [isGodPack, setIsGodPack] = useState(false)
+  const [rankUp, setRankUp] = useState<{ rank: string; bonus: number } | null>(null)
   const [shockwaveCards, setShockwaveCards] = useState<Set<number>>(new Set())
   const [mythicFeatured, setMythicFeatured] = useState<number | null>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
@@ -121,6 +122,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
 
     setNewVariantIds(new Set(result.newVariantIds ?? []))
     setIsGodPack(result.isGodPack ?? false)
+    setRankUp(result.rankUp ?? null)
     setCards(result.drawn)
     setFlipped(new Array(5).fill(false))
     setGlowClasses(new Array(5).fill(''))
@@ -213,6 +215,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
     setFlash(null)
     setPrize(null)
     setIsGodPack(false)
+    setRankUp(null)
     setNewVariantIds(new Set())
     setShockwaveCards(new Set())
     setMythicFeatured(null)
@@ -444,6 +447,19 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
           <p className="font-cinzel font-700 tracking-[0.35em] uppercase"
              style={{ fontSize: 'clamp(1.1rem, 3vw, 1.6rem)', color: '#fff8e8', textShadow: '0 0 24px rgba(255,220,120,0.9), 0 0 60px rgba(255,200,60,0.5), 0 0 100px rgba(255,180,0,0.3)' }}>
             God Pack
+          </p>
+        </div>
+      )}
+      {rankUp && (
+        <div className="text-center px-6" style={{ animation: 'fadeInUp 0.5s ease' }}>
+          <p className="font-karla font-600 uppercase tracking-[0.18em] text-[#a78bfa]" style={{ fontSize: '0.6rem', marginBottom: 2 }}>
+            Rank Up
+          </p>
+          <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.1rem' }}>
+            {rankUp.rank}
+          </p>
+          <p className="font-karla font-600 text-[#f0c040]" style={{ fontSize: '0.85rem', marginTop: 2 }}>
+            +{rankUp.bonus.toLocaleString()} ⟡
           </p>
         </div>
       )}
