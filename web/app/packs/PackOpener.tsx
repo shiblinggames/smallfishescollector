@@ -330,7 +330,7 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
       )}
       {/* Mobile: 2×2 grid + flanked 5th card */}
       <div className="sm:hidden flex flex-col items-center gap-2 w-full">
-        <div className="flex justify-center gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {cards.slice(0, 4).map((card, i) => renderCard(card, i))}
         </div>
         {cards[4] && (
