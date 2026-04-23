@@ -311,24 +311,24 @@ export default function PackOpener({ packsAvailable: initialPacks }: Props) {
             disabled={isDone && loading}
             className="w-[4.5rem] h-[4.5rem] rounded-full flex items-center justify-center select-none touch-manipulation"
             style={{
-              background: 'linear-gradient(145deg, #ffe066 0%, #f0b800 100%)',
-              boxShadow: '0 4px 20px rgba(240,184,0,0.45), 0 2px 8px rgba(0,0,0,0.35)',
+              background: '#f0ede8',
+              boxShadow: '0 4px 20px rgba(240,237,232,0.2), 0 2px 8px rgba(0,0,0,0.4)',
               transition: 'transform 0.1s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.1s ease',
             }}
             onPointerDown={(e) => {
               e.currentTarget.style.transform = 'scale(0.91)'
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(240,184,0,0.3), 0 1px 3px rgba(0,0,0,0.3)'
+              e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.4)'
             }}
             onPointerUp={(e) => {
               e.currentTarget.style.transform = ''
-              e.currentTarget.style.boxShadow = '0 4px 20px rgba(240,184,0,0.45), 0 2px 8px rgba(0,0,0,0.35)'
+              e.currentTarget.style.boxShadow = '0 4px 20px rgba(240,237,232,0.2), 0 2px 8px rgba(0,0,0,0.4)'
             }}
             onPointerLeave={(e) => {
               e.currentTarget.style.transform = ''
-              e.currentTarget.style.boxShadow = '0 4px 20px rgba(240,184,0,0.45), 0 2px 8px rgba(0,0,0,0.35)'
+              e.currentTarget.style.boxShadow = '0 4px 20px rgba(240,237,232,0.2), 0 2px 8px rgba(0,0,0,0.4)'
             }}
           >
-            <span className="font-karla font-700 uppercase text-black text-center leading-snug" style={{ fontSize: '0.62rem', letterSpacing: '0.10em' }}>
+            <span className="font-karla font-900 uppercase text-black text-center leading-snug" style={{ fontSize: '0.68rem', letterSpacing: '0.10em' }}>
               {isDone ? <>Open<br/>Another</> : <>Open<br/>All</>}
             </span>
           </button>
