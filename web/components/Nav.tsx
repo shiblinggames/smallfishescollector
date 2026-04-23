@@ -15,6 +15,48 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
     router.refresh()
   }
 
+  const mobileLinks = [
+    { href: '/tavern', label: 'Tavern', badge: null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 3h14l-1 9H6L5 3z"/>
+          <path d="M18 6h2a1 1 0 011 1v3a1 1 0 01-1 1h-2"/>
+          <path d="M6 21h12M8 17v4M16 17v4"/>
+          <path d="M6 12c0 3 2 5 6 5s6-2 6-5"/>
+        </svg>
+      )
+    },
+    { href: '/packs', label: 'Packs', badge: packsAvailable && packsAvailable > 0 ? packsAvailable : null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="8" y="3" width="12" height="16" rx="1.5"/>
+          <rect x="4" y="6" width="12" height="16" rx="1.5"/>
+        </svg>
+      )
+    },
+    { href: '/collection', label: 'Collection', badge: null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/>
+          <circle cx="8" cy="16" r="3"/><circle cx="16" cy="16" r="3"/>
+        </svg>
+      )
+    },
+    { href: '/marketplace', label: 'Market', badge: null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2v10"/>
+          <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
+          <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
+        </svg>
+      )
+    },
+  ]
+
+  const desktopOnlyLinks = [
+    { href: '/achievements', label: 'Achievements', badge: null },
+  ]
+
   const links = [
     { href: '/tavern', label: 'Tavern', badge: null,
       icon: (
@@ -63,7 +105,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
 
         {/* Desktop links */}
         <div className="hidden sm:flex flex-1 ml-8 gap-2 text-xs font-karla font-600 uppercase tracking-[0.12em]">
-          {links.map(({ href, label, badge }) => (
+          {[...links, ...desktopOnlyLinks].map(({ href, label, badge }) => (
             <Link key={href} href={href} className={`py-2 px-2 transition-colors duration-200 ${pathname === href || pathname.startsWith(href + '/') ? 'text-[#f0ede8]' : 'text-[#8a8880] hover:text-[#f0ede8]'}`}>
               {label}
               {badge && <span className="ml-1.5 text-[#f0c040]">· {badge}</span>}
@@ -98,7 +140,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
 
       {/* Mobile bottom tab bar */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-black border-t border-[rgba(255,255,255,0.08)] flex">
-        {links.map(({ href, label, badge, icon }) => {
+        {mobileLinks.map(({ href, label, badge, icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link

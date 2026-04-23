@@ -145,9 +145,14 @@ export default function ProfileClient({ username, showcaseVariants, stats, isPre
       {/* Achievements */}
       {achievements.length > 0 && (
         <div className="w-full">
-          <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-4 text-center" style={{ fontSize: '0.6rem' }}>
-            Achievements · {achievements.length}
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>
+              Achievements · {achievements.length}
+            </p>
+            <a href="/achievements" className="font-karla font-600 text-[#6a6764] hover:text-[#f0c040] transition-colors" style={{ fontSize: '0.6rem' }}>
+              View all →
+            </a>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             {achievements.map(a => (
               <div
