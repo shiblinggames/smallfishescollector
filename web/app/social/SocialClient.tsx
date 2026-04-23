@@ -16,9 +16,10 @@ interface Props {
   usernameChanged: boolean
   showcaseVariantIds: number[]
   pickerCards: PickerCard[]
+  isPremium: boolean
 }
 
-export default function SocialClient({ initialCrew, username, usernameChanged, showcaseVariantIds, pickerCards }: Props) {
+export default function SocialClient({ initialCrew, username, usernameChanged, showcaseVariantIds, pickerCards, isPremium }: Props) {
   const [crew, setCrew] = useState<CrewMember[]>(initialCrew)
   const crewSet = new Set(crew.map(m => m.username.toLowerCase()))
 
@@ -58,15 +59,20 @@ export default function SocialClient({ initialCrew, username, usernameChanged, s
   }
 
   return (
-    <div className="px-6 max-w-sm mx-auto flex flex-col gap-8 pb-24 sm:pb-12">
+    <div className="px-6 max-w-4xl mx-auto pb-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 items-start">
 
-      {/* Profile */}
-      <ProfileSection
-        username={username}
-        usernameChanged={usernameChanged}
-        showcaseVariantIds={showcaseVariantIds}
-        pickerCards={pickerCards}
-      />
+        {/* Left: profile */}
+        <ProfileSection
+          username={username}
+          usernameChanged={usernameChanged}
+          showcaseVariantIds={showcaseVariantIds}
+          pickerCards={pickerCards}
+          isPremium={isPremium}
+        />
+
+        {/* Right: search + crew */}
+        <div className="flex flex-col gap-8">
 
       {/* Search */}
       <div>
@@ -169,6 +175,8 @@ export default function SocialClient({ initialCrew, username, usernameChanged, s
         )}
       </div>
 
+        </div>{/* end right column */}
+      </div>{/* end grid */}
     </div>
   )
 }

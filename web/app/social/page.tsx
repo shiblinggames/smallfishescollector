@@ -15,7 +15,7 @@ export default async function SocialPage() {
   const admin = createAdminClient()
 
   const [{ data: profile }, crew, { data: ownedRows }] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, username, username_changed, showcase_variant_ids').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at').eq('id', user.id).single(),
     getCrew(),
     admin.from('user_collection')
       .select('card_variant_id, card_variants(id, variant_name, border_style, art_effect, drop_weight, cards(name, filename))')
@@ -47,8 +47,8 @@ export default async function SocialPage() {
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
-      <main className="min-h-screen pt-8">
-        <div className="px-6 max-w-sm mx-auto mb-6">
+      <main className="min-h-screen pt-8 pb-24 sm:pb-0">
+        <div className="px-6 max-w-4xl mx-auto mb-6">
           <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Social</p>
           <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.4rem' }}>Your Crew</h1>
         </div>
@@ -58,6 +58,11 @@ export default async function SocialPage() {
           usernameChanged={profile?.username_changed ?? false}
           showcaseVariantIds={(profile?.showcase_variant_ids as number[] | null) ?? []}
           pickerCards={pickerCards}
+          isPremium={
+            !!profile?.is_premium &&
+            !!profile?.premium_expires_at &&
+            new Date(profile.premium_expires_at) > new Date()
+          }
         />
       </main>
     </>
