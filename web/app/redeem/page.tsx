@@ -69,7 +69,7 @@ export default function RedeemPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <Nav />
-      <main className="flex-1 flex items-center justify-center px-6 pb-24 sm:pb-0">
+      <main className="flex-1 flex flex-col items-center px-6 pt-14 pb-24 sm:pb-14">
         <div className="w-full max-w-sm">
           <p className="sg-eyebrow text-center mb-4">Pack Code</p>
           <h1 className="font-cinzel font-700 text-[#f0ede8] text-center leading-[0.92] tracking-[-0.01em] mb-10"
