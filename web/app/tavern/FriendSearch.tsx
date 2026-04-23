@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { searchUsers } from '@/app/u/actions'
 import Link from 'next/link'
 
 interface Result {
@@ -19,13 +19,8 @@ export default function FriendSearch({ currentUsername }: { currentUsername?: st
     if (!query.trim()) return
     setLoading(true)
     setSearched(true)
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('profiles')
-      .select('username')
-      .ilike('username', `${query.trim().toLowerCase()}%`)
-      .limit(6)
-    setResults(data ?? [])
+    const data = await searchUsers(query.trim())
+    setResults(data)
     setLoading(false)
   }
 
