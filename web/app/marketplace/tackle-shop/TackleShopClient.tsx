@@ -28,8 +28,8 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
   const canAfford = nextHook ? doubloons >= nextHook.cost : false
 
   return (
-    <div className="px-6 max-w-sm mx-auto">
-      <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-3" style={{ fontSize: '0.65rem' }}>
+    <div className="px-6 max-w-sm sm:max-w-2xl mx-auto">
+      <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-3 text-[0.65rem] sm:text-xs">
         Tackle Shop
       </p>
       <div className="flex flex-col gap-2.5 mb-6">
@@ -48,35 +48,35 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
             <div
               key={hook.tier}
               onClick={clickable ? handleBuyHook : undefined}
+              className="p-3 sm:p-5"
               style={{
                 background: owned ? `${c}0d` : isNext && canAfford ? `${c}08` : 'rgba(255,255,255,0.02)',
                 border: `1px solid ${owned ? `${c}55` : isNext && canAfford ? `${c}40` : 'rgba(255,255,255,0.05)'}`,
                 boxShadow: isActive ? `0 0 16px ${c}18` : isNext && canAfford ? `0 0 12px ${c}12` : 'none',
                 borderRadius: 12,
-                padding: '0.75rem 0.875rem',
                 opacity: locked ? 0.3 : isPending && isNext ? 0.6 : 1,
                 cursor: clickable ? 'pointer' : 'default',
                 transition: 'box-shadow 0.2s ease, opacity 0.15s ease',
               }}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 sm:gap-5">
                 <HookIcon tier={hook.tier} color={c} owned={owned} isActive={isActive} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: owned ? '#f0ede8' : '#6a6764' }}>
+                    <p className="font-cinzel font-700 text-sm sm:text-base" style={{ color: owned ? '#f0ede8' : '#6a6764' }}>
                       {hook.name}
                     </p>
                     {isActive && (
-                      <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: c }}>Active</span>
+                      <span className="font-karla font-600 uppercase tracking-[0.12em] text-[0.52rem] sm:text-[0.6rem]" style={{ color: c }}>Active</span>
                     )}
                     {owned && !isActive && (
-                      <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80]" style={{ fontSize: '0.52rem' }}>Owned</span>
+                      <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80] text-[0.52rem] sm:text-[0.6rem]">Owned</span>
                     )}
                   </div>
-                  <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.7rem' }}>{hook.description}</p>
+                  <p className="font-karla font-300 text-[#6a6764] text-xs sm:text-sm">{hook.description}</p>
 
                   {isNext && (
-                    <p className="font-karla font-600 mt-1" style={{ fontSize: '0.65rem', color: canAfford ? c : '#6a6764' }}>
+                    <p className="font-karla font-600 mt-1 text-xs sm:text-sm" style={{ color: canAfford ? c : '#6a6764' }}>
                       {isPending ? 'Upgrading…' : canAfford ? '↑ Tap to upgrade' : `${(hook.cost - doubloons).toLocaleString()} ⟡ short`}
                     </p>
                   )}
@@ -84,11 +84,11 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
 
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                   {!owned && (
-                    <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.8rem' }}>
+                    <p className="font-cinzel font-700 text-[#f0c040] text-sm sm:text-base">
                       {hook.cost.toLocaleString()} ⟡
                     </p>
                   )}
-                  <p className="font-karla font-600" style={{ fontSize: '0.65rem', color: owned ? c : '#4a4845' }}>
+                  <p className="font-karla font-600 text-xs sm:text-sm" style={{ color: owned ? c : '#4a4845' }}>
                     {luckPct}% luck
                   </p>
                   <button
@@ -99,7 +99,7 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
                     style={{ color: showTooltip ? '#8a8880' : '#4a4845', lineHeight: 1 }}
                     aria-label="Show zone breakdown"
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                       <circle cx="12" cy="12" r="10"/>
                       <line x1="12" y1="8" x2="12" y2="8.5"/>
                       <line x1="12" y1="12" x2="12" y2="16"/>
@@ -109,7 +109,7 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
               </div>
 
               {showTooltip && (
-                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1" style={{ paddingLeft: 50 }}>
+                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 sm:gap-x-8 sm:gap-y-1.5" style={{ paddingLeft: 50 }}>
                   {[
                     { label: 'Shallows', value: hook.weights.shallows, color: '#60a5fa' },
                     { label: 'Open Waters', value: hook.weights.openWaters, color: '#4ade80' },
@@ -117,8 +117,8 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
                     { label: 'Abyss', value: hook.weights.abyss, color: '#f0c040' },
                   ].map(({ label, value, color }) => (
                     <div key={label} className="flex items-center justify-between gap-2">
-                      <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.65rem' }}>{label}</p>
-                      <p className="font-karla font-600" style={{ fontSize: '0.65rem', color }}>{(value * 100).toFixed(1)}%</p>
+                      <p className="font-karla font-300 text-[#6a6764] text-[0.65rem] sm:text-xs">{label}</p>
+                      <p className="font-karla font-600 text-[0.65rem] sm:text-xs" style={{ color }}>{(value * 100).toFixed(1)}%</p>
                     </div>
                   ))}
                 </div>
@@ -146,7 +146,7 @@ function HookIcon({ tier, color, owned, isActive }: { tier: number; color: strin
 
   const icons: Record<number, React.ReactNode> = {
     0: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 3v9"/>
         <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
         <circle cx="12" cy="3" r="1.2" fill={fill} stroke="none"/>
@@ -155,14 +155,14 @@ function HookIcon({ tier, color, owned, isActive }: { tier: number; color: strin
       </svg>
     ),
     1: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M13 3 L13 8 L11 12"/>
         <path d="M11 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
         <circle cx="13" cy="3" r="1.3" fill={fill} stroke="none"/>
       </svg>
     ),
     2: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 3v9"/>
         <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
         <path d="M9.5 15.5 L7.5 13.5"/>
@@ -170,7 +170,7 @@ function HookIcon({ tier, color, owned, isActive }: { tier: number; color: strin
       </svg>
     ),
     3: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 3v9"/>
         <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
         <ellipse cx="12" cy="7" rx="2.5" ry="1" strokeWidth="1.4"/>
@@ -178,7 +178,7 @@ function HookIcon({ tier, color, owned, isActive }: { tier: number; color: strin
       </svg>
     ),
     4: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 5v7"/>
         <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
         <path d="M9 3 C9 1.5 15 1.5 15 3 C15 4.5 12 5 12 5"/>
@@ -186,7 +186,7 @@ function HookIcon({ tier, color, owned, isActive }: { tier: number; color: strin
       </svg>
     ),
     5: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 3v9"/>
         <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
         <circle cx="12" cy="3" r="1.3" fill={fill} stroke="none"/>
@@ -196,7 +196,7 @@ function HookIcon({ tier, color, owned, isActive }: { tier: number; color: strin
       </svg>
     ),
     6: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 5v7"/>
         <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
         <path d="M9 2 L12 5 L15 2"/>
@@ -207,13 +207,15 @@ function HookIcon({ tier, color, owned, isActive }: { tier: number; color: strin
   }
 
   return (
-    <div style={{
-      width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-      background: bg,
-      border: `1px solid ${border}`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      boxShadow: isActive ? `0 0 10px ${color}25` : 'none',
-    }}>
+    <div
+      className="w-[38px] h-[38px] sm:w-12 sm:h-12 shrink-0 flex items-center justify-center p-2 sm:p-2.5"
+      style={{
+        borderRadius: 10,
+        background: bg,
+        border: `1px solid ${border}`,
+        boxShadow: isActive ? `0 0 10px ${color}25` : 'none',
+      }}
+    >
       {icons[tier]}
     </div>
   )
