@@ -2,11 +2,29 @@
 
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: number; doubloons?: number }) {
   const router = useRouter()
   const pathname = usePathname()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Close on outside tap
+  useEffect(() => {
+    if (!menuOpen) return
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [menuOpen])
+
+  // Close on navigation
+  useEffect(() => { setMenuOpen(false) }, [pathname])
 
   async function signOut() {
     const supabase = createClient()
@@ -48,6 +66,27 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
           <path d="M12 2v10"/>
           <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
           <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
+        </svg>
+      )
+    },
+  ]
+
+  const mobileMenuLinks = [
+    { href: '/achievements', label: 'Achievements',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 9H4V4h16v5h-2"/>
+          <path d="M6 4v5a6 6 0 0 0 12 0V4"/>
+          <line x1="12" y1="15" x2="12" y2="19"/><line x1="8" y1="19" x2="16" y2="19"/>
+        </svg>
+      )
+    },
+    { href: '/leaderboard', label: 'Leaderboard',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="14" width="5" height="7" rx="1"/>
+          <rect x="9.5" y="9" width="5" height="12" rx="1"/>
+          <rect x="17" y="4" width="5" height="17" rx="1"/>
         </svg>
       )
     },
@@ -98,13 +137,12 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
 
   return (
     <>
-      {/* Top bar — hidden on mobile (bottom tab bar handles nav) */}
+      {/* Desktop top bar */}
       <nav className="hidden sm:flex bg-black border-b border-[rgba(255,255,255,0.08)] px-6 py-4 items-center justify-between">
         <Link href="/" className="font-cinzel font-700 text-[#f0ede8] tracking-wide text-sm uppercase">
           Small Fishes
         </Link>
 
-        {/* Desktop links */}
         <div className="hidden sm:flex flex-1 ml-8 gap-2 text-xs font-karla font-600 uppercase tracking-[0.12em]">
           {[...links, ...desktopOnlyLinks].map(({ href, label, badge }) => (
             <Link key={href} href={href} className={`py-2 px-2 transition-colors duration-200 ${pathname === href || pathname.startsWith(href + '/') ? 'text-[#f0ede8]' : 'text-[#8a8880] hover:text-[#f0ede8]'}`}>
@@ -129,15 +167,74 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
         </div>
       </nav>
 
-      {/* Mobile doubloon strip */}
-      {doubloons !== undefined && (
-        <div className="sm:hidden bg-black border-b border-[rgba(255,255,255,0.08)] px-6 py-2 flex justify-between items-center">
-          <span className="font-cinzel font-700 text-[#f0ede8] tracking-wide text-xs uppercase">Small Fishes</span>
+      {/* Mobile top strip */}
+      <div className="sm:hidden bg-black border-b border-[rgba(255,255,255,0.08)] px-4 py-2 flex justify-between items-center relative z-50" ref={menuRef}>
+        <div className="flex items-center gap-3">
+          <Link href="/" className="font-cinzel font-700 text-[#f0ede8] tracking-wide text-xs uppercase">
+            Small Fishes
+          </Link>
+          {/* Hamburger */}
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            className="flex flex-col items-center justify-center gap-[4px] w-7 h-7 rounded-md transition-colors"
+            style={{ background: menuOpen ? 'rgba(255,255,255,0.08)' : 'transparent', border: 'none' }}
+            aria-label="Menu"
+          >
+            <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#8a8880', borderRadius: 1, transition: 'background 0.15s' }} />
+            <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#8a8880', borderRadius: 1, transition: 'background 0.15s' }} />
+            <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#8a8880', borderRadius: 1, transition: 'background 0.15s' }} />
+          </button>
+        </div>
+
+        {doubloons !== undefined && (
           <span className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.875rem' }}>
             {doubloons.toLocaleString()} ⟡
           </span>
-        </div>
-      )}
+        )}
+
+        {/* Dropdown */}
+        {menuOpen && (
+          <div
+            className="absolute top-full left-0 right-0"
+            style={{
+              background: '#0a0a0a',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+            }}
+          >
+            {mobileMenuLinks.map(({ href, label, icon }) => {
+              const active = pathname === href || pathname.startsWith(href + '/')
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className="flex items-center gap-3 px-5 py-3.5"
+                  style={{
+                    color: active ? '#f0ede8' : '#8a8880',
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    textDecoration: 'none',
+                  }}
+                >
+                  <span style={{ color: active ? '#f0c040' : '#4a4845' }}>{icon}</span>
+                  <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem' }}>{label}</span>
+                </Link>
+              )
+            })}
+            <button
+              onClick={signOut}
+              className="w-full flex items-center gap-3 px-5 py-3.5"
+              style={{ color: '#6a6764', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem' }}>Sign Out</span>
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Mobile bottom tab bar */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-black border-t border-[rgba(255,255,255,0.08)] flex">
@@ -164,7 +261,6 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
           )
         })}
       </div>
-
     </>
   )
 }
