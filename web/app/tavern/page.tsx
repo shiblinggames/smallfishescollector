@@ -4,9 +4,9 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
 import FriendSearch from './FriendSearch'
-import DailyBonusClaim from './DailyBonusClaim'
 import { getDailyWagered } from './actions'
 import { DAILY_CAP } from './constants'
+import { getShip } from '@/lib/ships'
 
 export default async function TavernPage() {
   const supabase = await createClient()
@@ -17,17 +17,22 @@ export default async function TavernPage() {
   const today = new Date().toISOString().split('T')[0]
 
   const [{ data: profile }, { data: fotdAttempt }, dailyWagered] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, is_premium, premium_expires_at').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_ship_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
   ])
 
-  const alreadyClaimed = profile?.last_daily_claim === today
   const isPremium =
     !!profile?.is_premium &&
     !!profile?.premium_expires_at &&
     new Date(profile.premium_expires_at) > new Date()
-  const bonusAmount = isPremium ? 100 : 50
+
+  const ship = getShip(profile?.ship_tier ?? 0)
+  const baseAmount = isPremium ? 100 : 50
+  const allClaimed =
+    profile?.last_daily_claim === today &&
+    profile?.last_ship_claim === today &&
+    (!isPremium || profile?.last_pack_claim === today)
 
   const fotdDone = !!fotdAttempt && (fotdAttempt.solved || (fotdAttempt.guesses?.length ?? 0) >= 4)
   const crownCapReached = dailyWagered >= DAILY_CAP
@@ -41,7 +46,20 @@ export default async function TavernPage() {
         </div>
 
         <div className="px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-12 max-w-4xl mx-auto">
-          <DailyBonusClaim alreadyClaimed={alreadyClaimed} bonusAmount={bonusAmount} isPremium={isPremium} />
+          <GameCard
+            href="/tavern/daily-bonus"
+            eyebrow="Daily Bonus"
+            name={allClaimed ? 'Claimed' : `${baseAmount + ship.dailyBonus} ⟡ Available`}
+            description="Claim your daily doubloons, ship earnings, and member pack."
+            rules={[
+              `${baseAmount} ⟡ base daily bonus`,
+              ...(ship.dailyBonus > 0 ? [`+${ship.dailyBonus} ⟡ from your ${ship.name}`] : []),
+              ...(isPremium ? ['1 free pack daily'] : ['Upgrade for a free daily pack']),
+            ]}
+            icon={<CoinIcon />}
+            completed={allClaimed}
+            completedNote="All daily rewards claimed. Come back tomorrow."
+          />
           <GameCard
             href="/tavern/fish-of-the-day"
             eyebrow="Daily Puzzle"
@@ -173,6 +191,15 @@ function GameCard({ href, eyebrow, name, description, rules, icon, streak, compl
         </p>
       )}
     </Link>
+  )
+}
+
+function CoinIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 7v1.5M12 15.5V17M9.5 9.5C9.5 8.4 10.6 8 12 8s2.5.6 2.5 1.8c0 2.4-5 2-5 4.4C9.5 15.4 10.6 16 12 16s2.5-.5 2.5-1.7"/>
+    </svg>
   )
 }
 

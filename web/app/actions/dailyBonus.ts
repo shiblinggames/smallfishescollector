@@ -3,7 +3,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkAchievements } from '@/lib/checkAchievements'
-import { getShip } from '@/lib/ships'
 
 const DAILY_BONUS = 50
 const PREMIUM_DAILY_BONUS = 100
@@ -18,7 +17,7 @@ export async function claimDailyBonus(): Promise<{ claimed: boolean; doubloons?:
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, last_daily_claim, packs_available, is_premium, premium_expires_at, ship_tier')
+    .select('doubloons, last_daily_claim, is_premium, premium_expires_at')
     .eq('id', user.id)
     .single()
 
@@ -28,20 +27,11 @@ export async function claimDailyBonus(): Promise<{ claimed: boolean; doubloons?:
     !!profile.premium_expires_at &&
     new Date(profile.premium_expires_at) > new Date()
 
-  const shipBonus = getShip(profile.ship_tier ?? 0).dailyBonus
-  const bonus = (isPremium ? PREMIUM_DAILY_BONUS : DAILY_BONUS) + shipBonus
+  const bonus = isPremium ? PREMIUM_DAILY_BONUS : DAILY_BONUS
   const newDoubloons = (profile.doubloons ?? 0) + bonus
 
-  const updates: Record<string, unknown> = {
-    doubloons: newDoubloons,
-    last_daily_claim: today,
-  }
-  if (isPremium) {
-    updates.packs_available = (profile.packs_available ?? 0) + 1
-  }
-
   await Promise.all([
-    admin.from('profiles').update(updates).eq('id', user.id),
+    admin.from('profiles').update({ doubloons: newDoubloons, last_daily_claim: today }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: bonus,
