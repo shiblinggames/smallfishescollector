@@ -560,41 +560,42 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
       {/* Profile edit modal */}
       {profileOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-          style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(8px)' }}
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: 'rgba(0,0,0,0.94)', backdropFilter: 'blur(8px)' }}
           onClick={() => setProfileOpen(false)}
         >
           <div
-            className="w-full max-w-sm bg-[#0a0a0a] border border-[rgba(255,255,255,0.1)] rounded-t-2xl sm:rounded-2xl overflow-hidden"
+            className="max-w-lg w-full p-8 relative max-h-[85vh] overflow-y-auto scrollbar-hide"
+            style={{ background: '#0e0e0e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10 }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[rgba(255,255,255,0.06)]">
-              <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.65rem' }}>Edit Profile</p>
-              <button onClick={() => setProfileOpen(false)} className="font-karla font-300 text-[#6a6764] hover:text-[#8a8880] text-xs transition-colors">
-                Close
-              </button>
-            </div>
+            <button
+              onClick={() => setProfileOpen(false)}
+              className="absolute top-4 right-4 font-karla font-300 text-[#8a8880] hover:text-[#f0ede8] text-xs uppercase tracking-widest transition-colors"
+            >
+              Close
+            </button>
 
-            <div className="overflow-y-auto scrollbar-hide max-h-[75vh] p-5 flex flex-col gap-6">
+            <p className="sg-eyebrow text-center mb-1">Profile</p>
+            <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-2">{username}</p>
 
-              {/* Username section */}
-              <div>
-                <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-3" style={{ fontSize: '0.6rem' }}>Username</p>
+            {/* Username change */}
+            {!usernameChanged && (
+              <div className="flex justify-center mb-6">
                 {showUsernameForm ? (
-                  <form onSubmit={handleSaveUsername} className="flex flex-col gap-2">
+                  <form onSubmit={handleSaveUsername} className="flex flex-col items-center gap-2 w-full max-w-xs">
                     <input
                       type="text"
                       value={usernameInput}
                       onChange={e => setUsernameInput(e.target.value)}
                       placeholder="new username"
-                      className="sg-input font-karla font-600 tracking-[0.12em] text-sm w-full"
+                      className="sg-input font-karla font-600 tracking-[0.12em] text-sm w-full text-center"
                       maxLength={20}
                       autoFocus
                       spellCheck={false}
                     />
                     {usernameError && <p className="font-karla font-300 text-red-400 text-xs">{usernameError}</p>}
-                    <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.6rem' }}>3–20 characters. Letters, numbers, underscores. One time only.</p>
+                    <p className="font-karla font-300 text-[#6a6764] text-center" style={{ fontSize: '0.6rem' }}>3–20 characters · letters, numbers, underscores · one time only</p>
                     <div className="flex gap-2">
                       <button type="submit" disabled={profilePending} className="btn-gold text-xs" style={{ padding: '0.4rem 1rem' }}>
                         {profilePending ? '…' : 'Save'}
@@ -605,107 +606,66 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                     </div>
                   </form>
                 ) : (
-                  <div className="flex items-center justify-between">
-                    <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>{username}</p>
-                    {!usernameChanged && (
-                      <button
-                        onClick={() => setShowUsernameForm(true)}
-                        className="font-karla font-300 text-[#6a6764] hover:text-[#8a8880] transition-colors"
-                        style={{ fontSize: '0.62rem' }}
-                      >
-                        Change (once)
-                      </button>
-                    )}
-                  </div>
+                  <button
+                    onClick={() => setShowUsernameForm(true)}
+                    className="font-karla font-300 text-[#6a6764] hover:text-[#8a8880] transition-colors text-xs tracking-wide"
+                  >
+                    Change username (once)
+                  </button>
                 )}
               </div>
+            )}
 
-              {/* Showcase section */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>Top 5 Showcase</p>
-                  <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.62rem' }}>
-                    <span style={{ color: selectedShowcase.length === 5 ? '#f0c040' : '#f0ede8' }}>{selectedShowcase.length}</span> / 5 selected
-                  </p>
-                </div>
-
-                {/* Selected order preview */}
+            {/* Showcase picker */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '1.5rem', marginTop: usernameChanged ? '1.5rem' : 0 }}>
+              <p className="font-karla font-300 text-[#8a8880] text-center text-xs tracking-wide mb-2">
+                Tap to select your top 5 showcase catches
+              </p>
+              <p className="font-karla font-300 text-center mb-8" style={{ fontSize: '0.7rem', color: selectedShowcase.length === 5 ? '#f0c040' : '#6a6764' }}>
+                {selectedShowcase.length} / 5 selected
                 {selectedShowcase.length > 0 && (
-                  <div className="flex gap-2 mb-4 flex-wrap">
-                    {selectedShowcase.map((id, idx) => {
-                      const card = pickerCards.find(c => c.variantId === id)
-                      if (!card) return null
-                      return (
-                        <div key={id} className="flex flex-col items-center gap-1">
-                          <div className="relative" style={{ width: 52, height: 80 }}>
-                            <FishCard
-                              name={card.name}
-                              filename={card.filename}
-                              borderStyle={card.borderStyle as any}
-                              artEffect={card.artEffect as any}
-                              variantName={card.variantName}
-                              dropWeight={card.dropWeight}
-                            />
-                            <div className="absolute -top-1 -left-1 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: '#f0c040' }}>
-                              <span className="font-karla font-700 text-black" style={{ fontSize: '0.55rem' }}>{idx + 1}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                    <button
-                      onClick={() => setSelectedShowcase([])}
-                      className="font-karla font-300 text-[#6a6764] hover:text-[#8a8880] transition-colors self-center"
-                      style={{ fontSize: '0.6rem' }}
-                    >
-                      Clear
-                    </button>
-                  </div>
+                  <button onClick={() => setSelectedShowcase([])} className="ml-3 text-[#6a6764] hover:text-[#8a8880] transition-colors">
+                    Clear
+                  </button>
                 )}
+              </p>
 
-                {pickerCards.length === 0 ? (
-                  <p className="font-karla font-300 text-[#6a6764] text-xs">Open some packs first!</p>
-                ) : (
-                  <div className="grid grid-cols-3 gap-3">
-                    {pickerCards.map(card => {
-                      const selectedIdx = selectedShowcase.indexOf(card.variantId)
-                      const isSelected = selectedIdx !== -1
-                      const rarity = rarityFromVariant(card.variantName, card.dropWeight)
-                      const rc = RARITY_COLOR[rarity] ?? '#8a8880'
-                      return (
-                        <button
-                          key={card.variantId}
-                          onClick={() => toggleShowcaseCard(card.variantId)}
-                          disabled={!isSelected && selectedShowcase.length >= 5}
-                          className="flex flex-col items-center gap-1.5 transition-opacity disabled:opacity-30"
-                        >
-                          <div className="relative" style={{ width: 80, height: 124 }}>
-                            <FishCard
-                              name={card.name}
-                              filename={card.filename}
-                              borderStyle={card.borderStyle as any}
-                              artEffect={card.artEffect as any}
-                              variantName={card.variantName}
-                              dropWeight={card.dropWeight}
-                            />
-                            {isSelected && (
-                              <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#f0c040' }}>
-                                <span className="font-karla font-700 text-black" style={{ fontSize: '0.6rem' }}>{selectedIdx + 1}</span>
-                              </div>
-                            )}
+              {pickerCards.length === 0 ? (
+                <p className="font-karla font-300 text-[#6a6764] text-xs text-center">Open some packs first!</p>
+              ) : (
+                <div className="flex flex-wrap justify-center gap-6">
+                  {pickerCards.map(card => {
+                    const selectedIdx = selectedShowcase.indexOf(card.variantId)
+                    const isSelected = selectedIdx !== -1
+                    return (
+                      <button
+                        key={card.variantId}
+                        onClick={() => toggleShowcaseCard(card.variantId)}
+                        disabled={!isSelected && selectedShowcase.length >= 5}
+                        className="relative transition-opacity disabled:opacity-25"
+                        style={isSelected ? { outline: '2px solid #f0c040', outlineOffset: '5px', borderRadius: '50%' } : {}}
+                      >
+                        <FishCard
+                          name={card.name}
+                          filename={card.filename}
+                          borderStyle={card.borderStyle as any}
+                          artEffect={card.artEffect as any}
+                          variantName={card.variantName}
+                          dropWeight={card.dropWeight}
+                        />
+                        {isSelected && (
+                          <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#f0c040' }}>
+                            <span className="font-karla font-700 text-black" style={{ fontSize: '0.6rem' }}>{selectedIdx + 1}</span>
                           </div>
-                          <div className="text-center">
-                            <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.6rem' }}>{card.name}</p>
-                            <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: rc }}>{rarity}</p>
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
 
-              {/* Save button */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', marginTop: '2rem', paddingTop: '1.5rem' }}>
               <button
                 onClick={handleSaveShowcase}
                 disabled={profilePending}
