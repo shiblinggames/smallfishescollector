@@ -36,6 +36,7 @@ export default function PreparePage({ zone, zoneConfig, shipStats, shipTier, dou
   const [crew, setCrew] = useState<CrewLoadout>(emptyLoadout())
   const [pickerStat, setPickerStat] = useState<Stat | null>(null)
   const [pickerSlot, setPickerSlot] = useState<0 | 1>(0)
+  const [infoStat, setInfoStat] = useState<Stat | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const totalSlots = shipStats.crewSlots
@@ -150,20 +151,27 @@ export default function PreparePage({ zone, zoneConfig, shipStats, shipTier, dou
                   borderBottom: i < STATS.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none',
                 }}
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-center gap-3">
                   {/* Stat label */}
                   <div style={{ width: 80, flexShrink: 0 }}>
-                    <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#f0ede8' }}>
-                      {STAT_ICONS[stat]} {STAT_LABELS[stat]}
-                    </p>
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#f0ede8' }}>
+                        {STAT_ICONS[stat]} {STAT_LABELS[stat]}
+                      </p>
+                      <button
+                        onClick={() => setInfoStat(stat)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#4a4845', lineHeight: 1, flexShrink: 0 }}
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                        </svg>
+                      </button>
+                    </div>
                     <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0c040' }}>
                       {effective}
                       {bonus > 0 && (
                         <span style={{ fontSize: '0.62rem', color: '#4ade80', marginLeft: 3 }}>+{bonus}</span>
                       )}
-                    </p>
-                    <p className="font-karla" style={{ fontSize: '0.52rem', color: '#4a4845', lineHeight: 1.45, marginTop: 3 }}>
-                      {STAT_DESCRIPTIONS[stat]}
                     </p>
                   </div>
 
@@ -266,6 +274,33 @@ export default function PreparePage({ zone, zoneConfig, shipStats, shipTier, dou
           Crew are never lost or captured — they always return safely.
         </p>
       </div>
+
+      {/* Stat info modal */}
+      {infoStat && (
+        <div
+          onClick={() => setInfoStat(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60, padding: '1.5rem' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: '#1c1917', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 18, padding: '1.5rem', width: '100%', maxWidth: '22rem' }}
+          >
+            <p className="font-cinzel font-700 text-[#f0ede8] mb-3" style={{ fontSize: '1rem' }}>
+              {STAT_ICONS[infoStat]} {STAT_LABELS[infoStat]}
+            </p>
+            <p className="font-karla text-[#a0a09a] mb-5" style={{ fontSize: '0.82rem', lineHeight: 1.65 }}>
+              {STAT_DESCRIPTIONS[infoStat]}
+            </p>
+            <button
+              onClick={() => setInfoStat(null)}
+              style={{ width: '100%', padding: '0.625rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, cursor: 'pointer', color: '#a0a09a', fontSize: '0.72rem' }}
+              className="font-karla font-600"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Crew picker modal */}
       {pickerStat && (

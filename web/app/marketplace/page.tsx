@@ -50,11 +50,11 @@ export default async function MarketplacePage() {
                 href="/marketplace/shipyard"
                 eyebrow="Shipyard"
                 title="Shipyard"
-                description="Earn more doubloons from your daily bonus."
+                description="Upgrade your ship to take on more dangerous expeditions."
                 info={[
-                  'Bigger ships earn more doubloons daily',
-                  'Up to +125 ⟡ per day at max tier',
-                  'Buy with doubloons earned daily',
+                  'Better ships unlock harder zones and bigger rewards',
+                  'More crew slots for stronger voyage loadouts',
+                  'Bigger ships also earn more doubloons daily',
                 ]}
                 icon={<ShipIcon />}
               />

@@ -3,7 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
-import { ZONES, ZONE_ORDER, EXPEDITION_SHIP_STATS, STAT_ICONS, STAT_LABELS, STAT_DESCRIPTIONS, type Expedition } from '@/lib/expeditions'
+import { ZONES, ZONE_ORDER, EXPEDITION_SHIP_STATS, type Expedition } from '@/lib/expeditions'
+import ShipInfoPanel from './ShipInfoPanel'
 import ZoneCard from './ZoneCard'
 
 export default async function ExpeditionsPage() {
@@ -106,51 +107,7 @@ export default async function ExpeditionsPage() {
           )}
 
           {/* Ship info */}
-          {(() => {
-            const ship = EXPEDITION_SHIP_STATS[shipTier]
-            const stats = ['combat', 'navigation', 'durability', 'speed', 'luck'] as const
-            return (
-              <div
-                style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: 12,
-                  padding: '0.875rem 1rem',
-                  marginBottom: '1.25rem',
-                }}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#6a6764', marginBottom: 2 }}>
-                      Your Ship
-                    </p>
-                    <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.88rem' }}>
-                      {ship.name}
-                    </p>
-                  </div>
-                  <Link
-                    href="/marketplace/shipyard"
-                    className="font-karla font-600 uppercase tracking-[0.08em]"
-                    style={{ fontSize: '0.52rem', color: '#6a6764', textDecoration: 'none' }}
-                  >
-                    Upgrade →
-                  </Link>
-                </div>
-                <div className="grid grid-cols-5 gap-2">
-                  {stats.map(stat => (
-                    <div key={stat} title={STAT_DESCRIPTIONS[stat]} style={{ textAlign: 'center' }}>
-                      <p style={{ fontSize: '0.75rem', marginBottom: 2 }}>{STAT_ICONS[stat]}</p>
-                      <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.82rem' }}>{ship[stat]}</p>
-                      <p className="font-karla" style={{ fontSize: '0.48rem', color: '#4a4845', marginTop: 1 }}>{STAT_LABELS[stat]}</p>
-                    </div>
-                  ))}
-                </div>
-                <p className="font-karla" style={{ fontSize: '0.52rem', color: '#4a4845', marginTop: 8 }}>
-                  {ship.crewSlots} crew slots · hover a stat to see what it does
-                </p>
-              </div>
-            )
-          })()}
+          <ShipInfoPanel ship={EXPEDITION_SHIP_STATS[shipTier]} />
 
           {/* Zone grid */}
           <div className="grid grid-cols-2 gap-3 pb-12">
