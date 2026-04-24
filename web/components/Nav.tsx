@@ -19,8 +19,8 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
       if (!user) { console.log('[badge] no user'); return }
       Promise.all([
         supabase.from('profiles').select('last_daily_claim').eq('id', user.id).single(),
-        supabase.from('quiz_answers').select('id').eq('user_id', user.id).eq('date', today).single(),
-        supabase.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
+        supabase.from('quiz_answers').select('id').eq('date', today).maybeSingle(),
+        supabase.from('daily_fish_attempts').select('solved, guesses').eq('date', today).maybeSingle(),
       ]).then(([{ data: profile }, { data: quiz }, { data: fotd }]) => {
         const bonusDone = profile?.last_daily_claim === today
         const quizDone = !!quiz
