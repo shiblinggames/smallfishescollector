@@ -1,5 +1,5 @@
 import type { BorderStyle, ArtEffect } from '@/lib/types'
-import { rarityFromWeight, RARITY_COLOR, IS_LEGENDARY_RARITY, IS_MYTHIC_RARITY } from '@/lib/variants'
+import { rarityFromVariant, RARITY_COLOR, IS_LEGENDARY_RARITY, IS_MYTHIC_RARITY, IS_DIVINE_RARITY } from '@/lib/variants'
 
 interface Props {
   name: string
@@ -46,6 +46,7 @@ const variantLabelColor: Record<BorderStyle, string> = {
   'golden-age':  '#e8b830',
   storm:         '#4a88c8',
   wanted:        '#aa4010',
+  god:           '#fffdf0',
 }
 
 const mythicGradient: Partial<Record<BorderStyle, string>> = {
@@ -54,10 +55,11 @@ const mythicGradient: Partial<Record<BorderStyle, string>> = {
 }
 
 export default function DemoFishCard({ name, tier, borderStyle, artEffect, variantName, dropWeight }: Props) {
-  const rarity = rarityFromWeight(dropWeight)
+  const rarity = rarityFromVariant(variantName, dropWeight)
   const isPrismatic = borderStyle === 'prismatic'
   const isLegendary = IS_LEGENDARY_RARITY(rarity)
   const isMythic    = IS_MYTHIC_RARITY(rarity)
+  const isDivine    = IS_DIVINE_RARITY(rarity)
   const mythicGrad  = mythicGradient[borderStyle]
   const labelText = `${rarity} · ${variantName}`
   const art = (
@@ -131,6 +133,17 @@ export default function DemoFishCard({ name, tier, borderStyle, artEffect, varia
         </div>
       </div>
     )
+  } else if (borderStyle === 'god') {
+    frame = (
+      <div className="border-god-outer relative" style={{ width: D, height: D }}>
+        <div className="absolute inset-0 border-god" style={{ borderRadius: '50%' }} />
+        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%' }}>
+          {art}
+          <div className="art-divine-overlay" />
+          <div className="art-divine-overlay-2" />
+        </div>
+      </div>
+    )
   } else if (borderStyle === 'wanted') {
     frame = (
       <div className="border-wanted-outer relative" style={{ width: D, height: D }}>
@@ -176,13 +189,14 @@ export default function DemoFishCard({ name, tier, borderStyle, artEffect, varia
       {frame}
       <div className="text-center">
         <p className="font-karla font-400 text-sm text-[#f0ede8]">{name}</p>
-        {isPrismatic || isLegendary ? (
+        {isDivine ? (
           <p className="font-karla font-600 text-[0.6rem] uppercase tracking-[0.10em] whitespace-nowrap"
-             style={{
-               background: 'linear-gradient(90deg,#ff0080,#ff8c00,#ffe600,#00ff88,#00cfff,#8a5cf7)',
-               WebkitBackgroundClip: 'text',
-               WebkitTextFillColor: 'transparent',
-             }}>
+             style={{ background: 'linear-gradient(90deg,#fffdf0,#ffe899,#fffdf0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            {labelText}
+          </p>
+        ) : isPrismatic || isLegendary ? (
+          <p className="font-karla font-600 text-[0.6rem] uppercase tracking-[0.10em] whitespace-nowrap"
+             style={{ background: 'linear-gradient(90deg,#ff0080,#ff8c00,#ffe600,#00ff88,#00cfff,#8a5cf7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             {labelText}
           </p>
         ) : isMythic && mythicGrad ? (
