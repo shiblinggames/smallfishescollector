@@ -18,7 +18,7 @@ export default async function TavernPage() {
   const today = new Date().toISOString().split('T')[0]
 
   const [{ data: profile }, { data: fotdAttempt }, dailyWagered, { data: quizAnswer }, bounties, { data: todayExpedition }] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_ship_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_ship_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, fishing_date, fishing_casts').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
     admin.from('quiz_answers').select('correct').eq('user_id', user.id).eq('date', today).single(),
@@ -44,6 +44,10 @@ export default async function TavernPage() {
   const bountyProgress = bounties?.progress
   const bountyCount = bountyProgress ? Object.values(bountyProgress).filter(Boolean).length : 0
   const bountyAllDone = bountyCount === 4
+
+  const fishingCastsUsed = profile?.fishing_date === today ? (profile?.fishing_casts ?? 0) : 0
+  const fishingCastsLeft = 20 - fishingCastsUsed
+  const fishingDone = fishingCastsLeft <= 0
 
   const expeditionStatus = todayExpedition?.status ?? null
   const expeditionDone = expeditionStatus === 'completed' || expeditionStatus === 'failed'
@@ -155,6 +159,20 @@ export default async function TavernPage() {
             ]}
             icon={<SkullIcon />}
           />
+          <GameCard
+            href="/tavern/fishing"
+            eyebrow="Grind"
+            title="Drop a Line"
+            statusText={fishingDone ? 'Come back tomorrow' : `${fishingCastsLeft} casts remaining`}
+            info={[
+              '20 casts per day — cast anytime',
+              'Time your reel for better catches',
+              'Better hooks earn more per cast',
+              'Upgrade your hook at the Tackle Shop',
+            ]}
+            icon={<HookIcon />}
+            completed={fishingDone}
+          />
         </div>
 
         <div className="px-6 pb-16 text-center">
@@ -228,6 +246,16 @@ function ShipIcon() {
       <path d="M12 2v11"/>
       <path d="M5 10l7 4 7-4"/>
       <path d="M8 6l4-4 4 4"/>
+    </svg>
+  )
+}
+
+function HookIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v9"/>
+      <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
+      <circle cx="12" cy="3" r="1.2" fill="currentColor" stroke="none"/>
     </svg>
   )
 }
