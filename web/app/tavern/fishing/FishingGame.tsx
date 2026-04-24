@@ -63,8 +63,8 @@ function DialSVG({
   fish?: boolean
 }) {
   const needleTipY = CY - (INNER_R - 8)
-  const perfectZone = zones.find(z => z.type === 'perfect')
-  const penaltyZone = zones.find(z => z.type === 'penalty')
+  const perfectZone  = zones.find(z => z.type === 'perfect')
+  const penaltyZones = zones.filter(z => z.type === 'penalty')
 
   return (
     <div style={{ position: 'relative', width: '100%', maxWidth: 240, margin: '0 auto' }}>
@@ -80,10 +80,10 @@ function DialSVG({
             const mid = polar(OUTER_R + 14, (perfectZone.from + perfectZone.to) / 2)
             return <text x={mid.x.toFixed(2)} y={mid.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill={perfectZone.color} fontSize="10" opacity="0.95">✦</text>
           })()}
-          {penaltyZone && (() => {
-            const mid = polar(OUTER_R + 14, (penaltyZone.from + penaltyZone.to) / 2)
-            return <text x={mid.x.toFixed(2)} y={mid.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill={penaltyZone.color} fontSize="9" opacity="0.85">✕</text>
-          })()}
+          {penaltyZones.map((pz, i) => {
+            const mid = polar(OUTER_R + 14, (pz.from + pz.to) / 2)
+            return <text key={i} x={mid.x.toFixed(2)} y={mid.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill={pz.color} fontSize="9" opacity="0.85">✕</text>
+          })}
         </g>
         <circle cx={CX} cy={CY} r={INNER_R - 2} fill="rgba(0,0,0,0.55)" />
         <g transform={`rotate(${angle}, ${CX}, ${CY})`}>
