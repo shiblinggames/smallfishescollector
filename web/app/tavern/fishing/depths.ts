@@ -17,6 +17,8 @@ export interface DepthDef {
   snagDeg: number
   catchQuality: number
   perfectQuality: number
+  speedMin: number    // deg/sec
+  speedMax: number
 }
 
 // Catch zone centered at 97.5°, Snag centered at 262.5°
@@ -24,10 +26,10 @@ const CATCH_CENTER = 97.5
 const SNAG_CENTER  = 262.5
 
 export const DEPTHS: DepthDef[] = [
-  { id: 0, name: 'Shallows',    color: '#60a5fa', catchDeg: 120, perfectDeg: 24, snagDeg:  35, catchQuality:  4, perfectQuality:  8 },
-  { id: 1, name: 'Open Waters', color: '#34d399', catchDeg:  80, perfectDeg: 18, snagDeg:  50, catchQuality:  8, perfectQuality: 14 },
-  { id: 2, name: 'Deep',        color: '#a78bfa', catchDeg:  50, perfectDeg: 12, snagDeg:  65, catchQuality: 12, perfectQuality: 18 },
-  { id: 3, name: 'Abyss',       color: '#f87171', catchDeg:  28, perfectDeg:  6, snagDeg:  80, catchQuality: 16, perfectQuality: 20 },
+  { id: 0, name: 'Shallows',    color: '#60a5fa', catchDeg: 120, perfectDeg: 24, snagDeg:  35, catchQuality:  4, perfectQuality:  8, speedMin:  40, speedMax:  65 },
+  { id: 1, name: 'Open Waters', color: '#34d399', catchDeg:  80, perfectDeg: 18, snagDeg:  50, catchQuality:  8, perfectQuality: 14, speedMin:  65, speedMax: 105 },
+  { id: 2, name: 'Deep',        color: '#a78bfa', catchDeg:  50, perfectDeg: 12, snagDeg:  65, catchQuality: 12, perfectQuality: 18, speedMin: 100, speedMax: 150 },
+  { id: 3, name: 'Abyss',       color: '#f87171', catchDeg:  28, perfectDeg:  6, snagDeg:  80, catchQuality: 16, perfectQuality: 20, speedMin: 150, speedMax: 210 },
 ]
 
 export function buildZones(d: DepthDef): ZoneDef[] {

@@ -35,8 +35,8 @@ function arcPath(startDeg: number, endDeg: number): string {
   ].join(' ')
 }
 
-function getZone(zones: ZoneDef[], deg: number): ZoneDef {
-  const a = ((deg % 360) + 360) % 360
+function getZone(zones: ZoneDef[], deg: number, rotation = 0): ZoneDef {
+  const a = (((deg - rotation) % 360) + 360) % 360
   return zones.find(z => a >= z.from && a < z.to) ?? zones[0]
 }
 
@@ -50,12 +50,14 @@ const ZONE_LEGEND = [
 function DialSVG({
   zones,
   angle,
+  rotation = 0,
   needleColor,
   zoneOpacityFn,
   fish = true,
 }: {
   zones: ZoneDef[]
   angle: number
+  rotation?: number
   needleColor: string
   zoneOpacityFn: (z: ZoneDef) => number
   fish?: boolean
@@ -68,18 +70,21 @@ function DialSVG({
     <div style={{ position: 'relative', width: '100%', maxWidth: 240, margin: '0 auto' }}>
       <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block' }}>
         <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.45)" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
-        {zones.map((zone, i) => (
-          <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
-            fillOpacity={zoneOpacityFn(zone)} style={{ transition: 'fill-opacity 0.08s' }} />
-        ))}
-        {perfectZone && (() => {
-          const mid = polar(OUTER_R + 14, (perfectZone.from + perfectZone.to) / 2)
-          return <text x={mid.x.toFixed(2)} y={mid.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill={perfectZone.color} fontSize="10" opacity="0.95">✦</text>
-        })()}
-        {penaltyZone && (() => {
-          const mid = polar(OUTER_R + 14, (penaltyZone.from + penaltyZone.to) / 2)
-          return <text x={mid.x.toFixed(2)} y={mid.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill={penaltyZone.color} fontSize="9" opacity="0.85">✕</text>
-        })()}
+        {/* Zone ring rotated by random offset each cast */}
+        <g transform={`rotate(${rotation}, ${CX}, ${CY})`}>
+          {zones.map((zone, i) => (
+            <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
+              fillOpacity={zoneOpacityFn(zone)} style={{ transition: 'fill-opacity 0.08s' }} />
+          ))}
+          {perfectZone && (() => {
+            const mid = polar(OUTER_R + 14, (perfectZone.from + perfectZone.to) / 2)
+            return <text x={mid.x.toFixed(2)} y={mid.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill={perfectZone.color} fontSize="10" opacity="0.95">✦</text>
+          })()}
+          {penaltyZone && (() => {
+            const mid = polar(OUTER_R + 14, (penaltyZone.from + penaltyZone.to) / 2)
+            return <text x={mid.x.toFixed(2)} y={mid.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill={penaltyZone.color} fontSize="9" opacity="0.85">✕</text>
+          })()}
+        </g>
         <circle cx={CX} cy={CY} r={INNER_R - 2} fill="rgba(0,0,0,0.55)" />
         <g transform={`rotate(${angle}, ${CX}, ${CY})`}>
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={needleColor} strokeWidth="10" strokeOpacity="0.12" strokeLinecap="round" />
@@ -111,13 +116,16 @@ export default function FishingGame({
   const [castsUsed, setCastsUsed]   = useState(initialCastsUsed)
   const [, startTransition]         = useTransition()
 
-  const angleRef      = useRef(270)
-  const speedRef      = useRef(80)
-  const phaseRef      = useRef<Phase>('ready')
-  const animRef       = useRef<ReturnType<typeof setInterval> | null>(null)
-  const tickRef       = useRef(0)
-  const nextChgRef    = useRef(40)
-  const castDepthRef  = useRef(0)
+  const angleRef        = useRef(270)
+  const speedRef        = useRef(80)
+  const phaseRef        = useRef<Phase>('ready')
+  const animRef         = useRef<ReturnType<typeof setInterval> | null>(null)
+  const tickRef         = useRef(0)
+  const nextChgRef      = useRef(40)
+  const castDepthRef    = useRef(0)
+  const castRotationRef = useRef(0)
+
+  const [zoneRotation, setZoneRotation] = useState(0)
 
   const hook      = HOOKS[Math.min(hookTier, HOOKS.length - 1)]
   const castsLeft = MAX_CASTS - castsUsed
@@ -144,7 +152,8 @@ export default function FishingGame({
       angleRef.current = (angleRef.current + speedRef.current / 20) % 360
       tickRef.current++
       if (tickRef.current >= nextChgRef.current) {
-        speedRef.current = 55 + Math.random() * 55
+        const d = DEPTHS[castDepthRef.current]
+        speedRef.current = d.speedMin + Math.random() * (d.speedMax - d.speedMin)
         nextChgRef.current = tickRef.current + 25 + Math.floor(Math.random() * 25)
       }
       setAngle(angleRef.current)
@@ -155,9 +164,13 @@ export default function FishingGame({
   function handleCast() {
     if (castsLeft <= 0 || (phase !== 'ready' && phase !== 'result')) return
     castDepthRef.current = selectedDepth
-    angleRef.current = Math.random() * 360
-    speedRef.current = 65 + Math.random() * 45
-    tickRef.current  = 0
+    const d   = DEPTHS[selectedDepth]
+    const rot = Math.floor(Math.random() * 360)
+    castRotationRef.current = rot
+    setZoneRotation(rot)
+    angleRef.current   = Math.random() * 360
+    speedRef.current   = d.speedMin + Math.random() * (d.speedMax - d.speedMin)
+    tickRef.current    = 0
     nextChgRef.current = 30 + Math.floor(Math.random() * 20)
     setAngle(angleRef.current)
     setResult(null)
@@ -168,7 +181,7 @@ export default function FishingGame({
     if (phase !== 'active') return
     phaseRef.current = 'result'
     if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
-    const zone = getZone(activeZones, angleRef.current)
+    const zone = getZone(activeZones, angleRef.current, castRotationRef.current)
     const castsToConsume = zone.type === 'penalty' ? Math.min(2, MAX_CASTS - castsUsed) : 1
     const newLocalCasts  = Math.min(castsUsed + castsToConsume, MAX_CASTS)
     setCastsUsed(newLocalCasts)
@@ -183,7 +196,7 @@ export default function FishingGame({
     })
   }
 
-  const currentZone  = getZone(activeZones, angle)
+  const currentZone  = getZone(activeZones, angle, castRotationRef.current)
   const resultZone   = result ? DEPTHS.find(() => true) : null // only for type narrowing
   void resultZone
 
@@ -198,7 +211,7 @@ export default function FishingGame({
   function zoneOpacity(zone: ZoneDef): number {
     if (phase === 'active') return currentZone === zone ? 0.82 : zone.type === 'perfect' ? 0.45 : zone.type === 'penalty' ? 0.32 : 0.18
     if (phase === 'result' && result) {
-      const hitZone = getZone(activeZones, angleRef.current)
+      const hitZone = getZone(activeZones, angleRef.current, castRotationRef.current)
       return hitZone === zone ? 0.85 : 0.1
     }
     return 0.22
@@ -371,7 +384,7 @@ export default function FishingGame({
               </AnimatePresence>
             </div>
 
-            <DialSVG zones={activeZones} angle={angle} needleColor={activeNeedleColor()} zoneOpacityFn={zoneOpacity} />
+            <DialSVG zones={activeZones} angle={angle} rotation={zoneRotation} needleColor={activeNeedleColor()} zoneOpacityFn={zoneOpacity} />
 
             <motion.button
               onPointerDown={e => { e.preventDefault(); handleReelIn() }}
@@ -396,7 +409,7 @@ export default function FishingGame({
             exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
             className="flex flex-col gap-4 items-center"
           >
-            <DialSVG zones={activeZones} angle={angle} needleColor={activeNeedleColor()} zoneOpacityFn={zoneOpacity} />
+            <DialSVG zones={activeZones} angle={angle} rotation={zoneRotation} needleColor={activeNeedleColor()} zoneOpacityFn={zoneOpacity} />
 
             {/* Result card */}
             {result && (
