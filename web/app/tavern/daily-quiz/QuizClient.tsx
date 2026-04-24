@@ -1,8 +1,69 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { submitQuizAnswer, type SubmitResult } from './actions'
 import type { QuizData } from './generate'
+
+function RewardToast({ reward, onDone }: { reward: number; onDone: () => void }) {
+  const [visible, setVisible] = useState(false)
+  const onDoneRef = useRef(onDone)
+  onDoneRef.current = onDone
+
+  useEffect(() => {
+    const show = setTimeout(() => setVisible(true), 50)
+    const hide = setTimeout(() => setVisible(false), 2800)
+    const exit = setTimeout(() => onDoneRef.current(), 3300)
+    return () => { clearTimeout(show); clearTimeout(hide); clearTimeout(exit) }
+  }, [])
+
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: '7rem',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      zIndex: 1000,
+      pointerEvents: 'none',
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.65rem',
+        padding: '0.7rem 1rem',
+        background: 'rgba(20,18,16,0.96)',
+        border: '1px solid rgba(240,192,64,0.35)',
+        borderRadius: '12px',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+        whiteSpace: 'nowrap',
+        transition: 'opacity 0.4s ease, transform 0.4s ease',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(8px)',
+      }}>
+        <div style={{
+          width: 32, height: 32, flexShrink: 0,
+          background: 'rgba(240,192,64,0.1)',
+          border: '1px solid rgba(240,192,64,0.25)',
+          borderRadius: '8px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#f0c040',
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 7v1.5M12 15.5V17M9.5 9.5C9.5 8.4 10.6 8 12 8s2.5.6 2.5 1.8c0 2.4-5 2-5 4.4C9.5 15.4 10.6 16 12 16s2.5-.5 2.5-1.7"/>
+          </svg>
+        </div>
+        <div>
+          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#f0c040', marginBottom: 1 }}>
+            Reward Earned
+          </p>
+          <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.88rem' }}>
+            +{reward} ⟡
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 interface Props {
   quiz: QuizData
@@ -23,6 +84,7 @@ export default function QuizClient({ quiz, previousAnswer }: Props) {
       : null
   )
   const [loading, setLoading] = useState(false)
+  const [showRewardToast, setShowRewardToast] = useState(false)
 
   const revealed = result !== null
 
@@ -36,6 +98,7 @@ export default function QuizClient({ quiz, previousAnswer }: Props) {
       return
     }
     setResult(res)
+    if (res.correct && res.reward > 0) setShowRewardToast(true)
     setLoading(false)
   }
 
@@ -76,6 +139,10 @@ export default function QuizClient({ quiz, previousAnswer }: Props) {
   const LETTERS = ['A', 'B', 'C', 'D']
 
   return (
+    <>
+    {showRewardToast && (
+      <RewardToast reward={result!.reward} onDone={() => setShowRewardToast(false)} />
+    )}
     <div className="px-6 max-w-xl mx-auto pb-24 sm:pb-12 pt-8">
       {/* Topic pill */}
       {quiz.topic && (
@@ -165,5 +232,6 @@ export default function QuizClient({ quiz, previousAnswer }: Props) {
         </p>
       )}
     </div>
+    </>
   )
 }
