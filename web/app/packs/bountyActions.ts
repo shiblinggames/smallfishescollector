@@ -1,10 +1,8 @@
-'use server'
-
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getWeekStart } from '@/lib/weekStart'
 
-const ABYSS_SLUGS = ['catfish', 'doby-mick']
+const ABYSS_SLUGS = ['Catfish', 'Doby_Mick']
 
 export interface BountyFish {
   cardId: number

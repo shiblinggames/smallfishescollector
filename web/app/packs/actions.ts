@@ -150,16 +150,21 @@ export async function openPack(): Promise<OpenPackResponse> {
 
   if (bountyRow) {
     const drawnCardIds = new Set(drawn.map((d) => d.cardId))
+    const completedMap = {
+      shallows:    existingProgress?.shallows_completed    ?? false,
+      open_waters: existingProgress?.open_waters_completed ?? false,
+      deep:        existingProgress?.deep_completed        ?? false,
+      abyss:       existingProgress?.abyss_completed       ?? false,
+    }
     const BOUNTY_CHECKS = [
-      { tier: 'shallows',     field: 'shallows',     cardId: bountyRow.shallows_card_id,     reward: 50,  packAwarded: false },
-      { tier: 'open_waters',  field: 'open_waters',  cardId: bountyRow.open_waters_card_id,  reward: 150, packAwarded: false },
-      { tier: 'deep',         field: 'deep',          cardId: bountyRow.deep_card_id,          reward: 300, packAwarded: false },
-      { tier: 'abyss',        field: 'abyss',         cardId: bountyRow.abyss_card_id,         reward: 500, packAwarded: true  },
-    ] as const
+      { tier: 'shallows',    field: 'shallows'    as const, cardId: bountyRow.shallows_card_id,    reward: 50,  packAwarded: false },
+      { tier: 'open_waters', field: 'open_waters' as const, cardId: bountyRow.open_waters_card_id, reward: 150, packAwarded: false },
+      { tier: 'deep',        field: 'deep'        as const, cardId: bountyRow.deep_card_id,         reward: 300, packAwarded: false },
+      { tier: 'abyss',       field: 'abyss'       as const, cardId: bountyRow.abyss_card_id,        reward: 500, packAwarded: true  },
+    ]
 
     for (const check of BOUNTY_CHECKS) {
-      const alreadyDone = existingProgress?.[`${check.field}_completed` as keyof typeof existingProgress]
-      if (!alreadyDone && drawnCardIds.has(check.cardId)) {
+      if (!completedMap[check.field] && drawnCardIds.has(check.cardId)) {
         const matchingCard = drawn.find((d) => d.cardId === check.cardId)
         bountyCompletions.push({ tier: check.tier, fishName: matchingCard?.name ?? '', reward: check.reward, packAwarded: check.packAwarded })
         bountyProgressUpdate[`${check.field}_completed`] = true
