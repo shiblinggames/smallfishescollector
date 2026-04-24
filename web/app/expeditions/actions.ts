@@ -225,9 +225,18 @@ export async function resolveChoice(
   }
 
   const isNavEvent = mechanics.stat === 'navigation'
+  const crewDurabilityBonus = (exp.crew_loadout.durability ?? []).reduce((s: number, c: { power: number }) => s + c.power, 0)
+  const hullMax = (EXPEDITION_SHIP_STATS[exp.ship_tier]?.durability ?? 3) + crewDurabilityBonus
 
-  if (success && isNavEvent) {
-    result.skipNextNode = true
+  if (success) {
+    if (isNavEvent) result.skipNextNode = true
+    if (['merchant_vessel', 'fishing_spot', 'cursed_treasure', 'cursed_cargo'].includes(eventNode.eventType)) {
+      result.lootBonus = eventNode.eventType === 'cursed_treasure' ? 0.3 : 0.2
+    } else if (eventNode.eventType === 'stranded_ship') {
+      result.hullRepair = Math.max(1, Math.ceil(hullMax * 0.25))
+    } else if (['hidden_cove', 'shipwreck_salvage'].includes(eventNode.eventType)) {
+      result.doubloonBonus = Math.floor(BASE_DOUBLOONS[exp.zone] * 0.2)
+    }
   }
 
   if (!success) {
@@ -237,7 +246,6 @@ export async function resolveChoice(
     } else {
       result.lootPenalty = 0.2
     }
-    // Navigation failure: queue a detour event if any remain
     if (isNavEvent) {
       const penaltyEventsUsed = (exp.events ?? []).filter(e => e.nodeIndex >= normalCount).length
       if (penaltyEventsUsed < 2) {
@@ -246,9 +254,7 @@ export async function resolveChoice(
     }
   }
 
-  const newHullDamage = (exp.hull_damage ?? 0) + (result.hullDamage ?? 0)
-  const crewDurabilityBonus = (exp.crew_loadout.durability ?? []).reduce((s: number, c: { power: number }) => s + c.power, 0)
-  const hullMax = (EXPEDITION_SHIP_STATS[exp.ship_tier]?.durability ?? 3) + crewDurabilityBonus
+  const newHullDamage = Math.max(0, (exp.hull_damage ?? 0) + (result.hullDamage ?? 0) - (result.hullRepair ?? 0))
   if (newHullDamage >= hullMax) {
     result.expeditionFailed = true
     result.failReason = 'Your ship could not take any more damage. You limp back to port.'
@@ -436,6 +442,13 @@ export async function resolveFinalLoot(
     .filter((e: EventResult) => e.lootPenalty)
     .reduce((acc: number, e: EventResult) => acc * (1 - (e.lootPenalty ?? 0)), 1)
 
+  const lootBonusMultiplier = completedEvents
+    .filter((e: EventResult) => e.lootBonus)
+    .reduce((acc: number, e: EventResult) => acc * (1 + (e.lootBonus ?? 0)), 1)
+
+  const totalDoubloonBonus = completedEvents
+    .reduce((acc: number, e: EventResult) => acc + (e.doubloonBonus ?? 0), 0)
+
   const totalCostPenalty = completedEvents
     .reduce((acc: number, e: EventResult) => acc + (e.costPenalty ?? 0), 0)
 
@@ -448,7 +461,7 @@ export async function resolveFinalLoot(
   else lootRarity = dropPool[0]
 
   const baseDoubloons = BASE_DOUBLOONS[exp.zone]
-  const doubloons = Math.max(10, Math.floor(baseDoubloons * (finalScore / 25) * lootPenaltyMultiplier) - totalCostPenalty)
+  const doubloons = Math.max(10, Math.floor(baseDoubloons * (finalScore / 25) * lootPenaltyMultiplier * lootBonusMultiplier) + totalDoubloonBonus - totalCostPenalty)
 
   // Award doubloons
   const { data: profileData } = await admin

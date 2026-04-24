@@ -112,6 +112,7 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
       if (result.crewRoll !== undefined) setPendingCrewRoll(result.crewRoll ?? 0)
       await new Promise(r => setTimeout(r, 1600))
       if (result.hullDamage) setHullDamage(prev => prev + result.hullDamage!)
+      if (result.hullRepair) setHullDamage(prev => Math.max(0, prev - result.hullRepair!))
       if (!isInPenalty && result.penaltyEventIndex !== undefined) {
         setPendingPenaltyEvent(eventSequence[result.penaltyEventIndex])
       }
@@ -713,6 +714,21 @@ function ResultCard({ result, shipTier }: { result: EventResult; shipTier: numbe
         {result.hullDamage ? (
           <p className="font-karla" style={{ fontSize: '0.68rem', color: '#f87171', marginTop: 10 }}>
             ⚠ Hull damaged (−{result.hullDamage})
+          </p>
+        ) : null}
+        {result.hullRepair ? (
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#60a5fa', marginTop: 10 }}>
+            ✦ Hull repaired (+{result.hullRepair})
+          </p>
+        ) : null}
+        {result.lootBonus ? (
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#4ade80', marginTop: 10 }}>
+            ✦ Loot bonus +{Math.round(result.lootBonus * 100)}%
+          </p>
+        ) : null}
+        {result.doubloonBonus ? (
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#f0c040', marginTop: 10 }}>
+            ✦ +{result.doubloonBonus} ⟡ found
           </p>
         ) : null}
         {result.skipNextNode && (

@@ -62,6 +62,22 @@ Cut anything that only describes a mood without adding new information.
 
 NO-ROLL CHOICE RULE: Every isNoRoll choice must include a "cost" field — doubloons deducted from the player's final loot. This represents paying your way out of risk. Scale costs by zone: coral_run 15–50, bertuna_triangle 50–150, sunken_reach 150–400, davy_jones_locker 400–800. The cost should feel proportionate to the danger being avoided.
 
+EVENT OUTCOME MECHANICS — your success/fail text must reflect these actual game consequences. Write them as narrative, never state the mechanic literally:
+
+SUCCESS consequences by event type:
+- merchant_vessel, fishing_spot, cursed_cargo: Player earns a loot bonus. Success text should imply an unexpectedly profitable exchange, an unusual catch, or cargo that turned out to be worth more than expected.
+- cursed_treasure: Player earns a larger loot bonus. Success text implies the curse worked in your favor — something twisted became something valuable.
+- stranded_ship: Player's hull is repaired. Success text should imply the rescued crew patching your hull, sharing materials, or fixing damage in exchange for help.
+- hidden_cove, shipwreck_salvage: Player finds extra doubloons. Success text should imply discovering cached coin, hidden valuables, or wreck salvage worth real money.
+- combat/durability events (rival_pirates, storm, sea_creature, etc.): No special mechanic — success just means you got through it. Keep it clean.
+- navigation events (fog, whirlpool, hidden_cove): Success means you charted through cleanly and skipped the next encounter. Success text can imply cutting a clever path or arriving ahead of schedule.
+
+FAIL consequences by event type:
+- combat or durability events: Hull takes structural damage. Fail text must mention the ship taking impact — a breach, cracked hull, water coming in, rigging torn. Not mood, actual damage.
+- navigation events: Forces a detour — an extra encounter ahead. Fail text should leave the crew lost, forced off-course, or pulled into worse waters.
+- luck events (merchant_vessel, fishing_spot, cursed_cargo, cursed_treasure): Loot opportunity lost. Fail text implies the deal collapsed, the catch was bad, or the cargo was worthless.
+- other events: Generic loot penalty. Fail text implies opportunity lost or resources wasted.
+
 CRISIS EVENT RULE: The final event in the sequence (marked as isCrisis: true) must always be LONG format. It is the climax of the expedition. Something real should be at stake. The choice must feel genuinely difficult with no obviously correct answer. The player should pause before clicking.
 
 WORLD FACTIONS — reference and vary these across events:
