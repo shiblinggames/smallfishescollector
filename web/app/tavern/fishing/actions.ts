@@ -3,10 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { MAX_CASTS } from './constants'
-
-// Max per day = 20 casts × quality 20 × multiplier
-// Tier 0 → ~40 ⟡/day max · Tier 6 → ~248 ⟡/day max
-const HOOK_MULTIPLIERS = [0.1, 0.15, 0.2, 0.27, 0.36, 0.47, 0.62]
+import { getHook } from '@/lib/hooks'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -40,8 +37,8 @@ export async function castLine(quality: number): Promise<
     return { error: 'No casts remaining today. Come back tomorrow.' }
   }
 
-  const hookTier = Math.min(profile.hook_tier ?? 0, HOOK_MULTIPLIERS.length - 1)
-  const multiplier = HOOK_MULTIPLIERS[hookTier]
+  const hookTier = profile.hook_tier ?? 0
+  const multiplier = getHook(hookTier).multiplier
   const earned = Math.max(1, Math.floor(q * multiplier))
 
   const newCastsUsed = castsUsed + 1
