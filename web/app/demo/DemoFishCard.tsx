@@ -24,7 +24,7 @@ const tierBg: Record<number, string> = {
 const artClass: Record<ArtEffect, string> = {
   normal: '', holographic: '', rainbow: 'art-rainbow', ghost: 'art-ghost', shadow: 'art-shadow',
   kraken: 'art-kraken', 'davy-jones': 'art-davy-jones', 'golden-age': 'art-golden-age',
-  storm: 'art-storm', wanted: 'art-wanted',
+  storm: 'art-storm', wanted: 'art-wanted', divine: 'art-divine',
 }
 
 const insetShadow: Partial<Record<BorderStyle, string>> = {
