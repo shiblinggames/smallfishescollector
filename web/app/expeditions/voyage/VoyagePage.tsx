@@ -70,6 +70,7 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
   const [phase, setPhase] = useState<Phase>({ type: 'event' })
   const [pendingRoll, setPendingRoll] = useState<number>(1)
   const [pendingCrewRoll, setPendingCrewRoll] = useState<number>(0)
+  const [pendingLootRoll, setPendingLootRoll] = useState<number>(1)
   const [lootResult, setLootResult] = useState<LootResult | null>(null)
   const [showStats, setShowStats] = useState(false)
 
@@ -124,7 +125,8 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
           setPhase({ type: 'event' })
           return
         }
-        await new Promise(r => setTimeout(r, 950))
+        setPendingLootRoll(loot.roll)
+        await new Promise(r => setTimeout(r, 1600))
         setLootResult(loot)
         setPhase({ type: 'loot-result', loot })
       })
@@ -202,13 +204,14 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
         )}
 
         {/* ── LOOT ROLLING ── */}
-        {phase.type === 'loot-rolling' && <LootRollingView />}
+        {phase.type === 'loot-rolling' && <LootRollingView pendingLootRoll={pendingLootRoll} />}
 
         {/* ── LOOT RESULT ── */}
         {phase.type === 'loot-result' && lootResult && (
           <LootResultView
             loot={lootResult}
             shipTier={expedition.ship_tier}
+            settledRoll={pendingLootRoll}
             onDone={() => router.push(`/expeditions/results?id=${expedition.id}`)}
           />
         )}
@@ -559,25 +562,29 @@ function ResultCard({ result, shipTier }: { result: EventResult; shipTier: numbe
   )
 }
 
-function LootRollingView() {
+function LootRollingView({ pendingLootRoll }: { pendingLootRoll: number }) {
   return (
     <div className="flex flex-col items-center gap-4 py-8">
       <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.2rem' }}>Final Haul</p>
+      <RollingDie finalRoll={pendingLootRoll} rolling={true} color="#4ade80" />
       <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.75rem' }}>Rolling luck...</p>
-      <RollingDie finalRoll={1} rolling={true} />
     </div>
   )
 }
 
-function LootResultView({ loot, shipTier, onDone }: { loot: LootResult; shipTier: number; onDone: () => void }) {
+function LootResultView({ loot, shipTier, settledRoll, onDone }: { loot: LootResult; shipTier: number; settledRoll: number; onDone: () => void }) {
   const shipFloor = shipTier + 1
 
   return (
     <div>
-      <p className="font-cinzel font-700 text-[#f0ede8] mb-4" style={{ fontSize: '1.2rem' }}>
-        Final Haul
-      </p>
+      <p className="font-cinzel font-700 text-[#f0ede8] mb-4" style={{ fontSize: '1.2rem' }}>Final Haul</p>
 
+      {/* Settled die — visual continuity from the rolling phase */}
+      <div className="flex justify-center mb-4">
+        <RollingDie finalRoll={settledRoll} rolling={false} color="#4ade80" />
+      </div>
+
+      {/* Roll breakdown */}
       <div
         style={{
           background: 'rgba(255,255,255,0.04)',
@@ -587,17 +594,51 @@ function LootResultView({ loot, shipTier, onDone }: { loot: LootResult; shipTier
           marginBottom: '1rem',
         }}
       >
-        <div className="flex items-center gap-2 mb-2">
-          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#6a6764' }}>🍀 Luck Roll</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: '#6a6764' }}>🍀 Luck Roll</p>
           {loot.successBonus > 0 && (
             <p className="font-karla" style={{ fontSize: '0.62rem', color: '#4ade80' }}>+{loot.successBonus} success bonus</p>
           )}
         </div>
-        <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.1rem' }}>
-          ship {loot.roll} ({shipFloor}–{loot.base}){(loot.crewBonus ?? 0) > 0 ? ` + crew ${loot.crewRoll} (1–${loot.crewBonus})` : ''} = {loot.total} → score {loot.finalScore}
-        </p>
+        <div className="flex items-end gap-3">
+          <div style={{ textAlign: 'center' }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1 }}>{loot.roll}</p>
+            <p className="font-karla" style={{ fontSize: '0.5rem', color: '#6a6764', marginTop: 2 }}>Ship</p>
+            <p className="font-karla" style={{ fontSize: '0.44rem', color: '#4a4845' }}>{shipFloor}–{loot.base}</p>
+          </div>
+          {(loot.crewBonus ?? 0) > 0 && (
+            <>
+              <p style={{ color: '#4a4845', fontSize: '0.9rem', paddingBottom: '1rem' }}>+</p>
+              <div style={{ textAlign: 'center' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#60a5fa', lineHeight: 1 }}>{loot.crewRoll}</p>
+                <p className="font-karla" style={{ fontSize: '0.5rem', color: '#6a6764', marginTop: 2 }}>Crew</p>
+                <p className="font-karla" style={{ fontSize: '0.44rem', color: '#4a4845' }}>1–{loot.crewBonus}</p>
+              </div>
+            </>
+          )}
+          <p style={{ color: '#4a4845', fontSize: '0.9rem', paddingBottom: '1rem' }}>=</p>
+          <div style={{ textAlign: 'center', flex: 1 }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', lineHeight: 1 }}>{loot.total}</p>
+            <p className="font-karla" style={{ fontSize: '0.5rem', color: '#6a6764', marginTop: 2 }}>Total</p>
+          </div>
+          {loot.successBonus > 0 && (
+            <>
+              <p style={{ color: '#4a4845', fontSize: '0.9rem', paddingBottom: '1rem' }}>+</p>
+              <div style={{ textAlign: 'center' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#4ade80', lineHeight: 1 }}>{loot.successBonus}</p>
+                <p className="font-karla" style={{ fontSize: '0.5rem', color: '#6a6764', marginTop: 2 }}>Bonus</p>
+              </div>
+            </>
+          )}
+          <p style={{ color: '#4a4845', fontSize: '0.9rem', paddingBottom: '1rem' }}>=</p>
+          <div style={{ textAlign: 'center' }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#4ade80', lineHeight: 1 }}>{loot.finalScore}</p>
+            <p className="font-karla" style={{ fontSize: '0.5rem', color: '#6a6764', marginTop: 2 }}>Score</p>
+          </div>
+        </div>
       </div>
 
+      {/* Doubloons earned */}
       <div
         style={{
           background: 'rgba(240,192,64,0.06)',
@@ -608,7 +649,8 @@ function LootResultView({ loot, shipTier, onDone }: { loot: LootResult; shipTier
           textAlign: 'center',
         }}
       >
-        <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.6rem' }}>
+        <p className="font-karla font-600 uppercase tracking-[0.1em] mb-1" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Doubloons Earned</p>
+        <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.8rem' }}>
           +{loot.doubloons.toLocaleString()} ⟡
         </p>
       </div>
