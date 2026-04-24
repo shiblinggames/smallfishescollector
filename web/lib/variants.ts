@@ -14,7 +14,8 @@ export const RARITY_TIERS: RarityTier[] = [
   { name: 'Rare',      color: '#60a5fa', doubloons: 10,  weightMin: 12,  variants: ['Gold'] },
   { name: 'Epic',      color: '#a78bfa', doubloons: 25,  weightMin: 4,   variants: ['Pearl', 'Holographic'] },
   { name: 'Legendary', color: '#f0c040', doubloons: 75,  weightMin: 0.3, variants: ['Ghost', 'Shadow', 'Prismatic'] },
-  { name: 'Mythic',    color: '#ff3838', doubloons: 250, weightMin: 0,   variants: ['Kraken', 'Davy Jones', 'Golden Age', 'Wanted', 'Maelstrom'] },
+  { name: 'Mythic',    color: '#ff3838', doubloons: 250,  weightMin: 0,  variants: ['Kraken', 'Davy Jones', 'Golden Age', 'Wanted', 'Maelstrom'] },
+  { name: 'Divine',   color: '#fffdf0', doubloons: 1000, weightMin: -1, variants: ['GOD'] },
 ]
 
 export const VARIANT_RARITY: Record<string, string> = Object.fromEntries(
@@ -39,6 +40,7 @@ export function rarityFromVariant(variantName: string, dropWeight: number): stri
 
 export const IS_LEGENDARY_RARITY = (rarity: string) => rarity === 'Legendary'
 export const IS_MYTHIC_RARITY    = (rarity: string) => rarity === 'Mythic'
+export const IS_DIVINE_RARITY    = (rarity: string) => rarity === 'Divine'
 
 export function doubloonValueFor(variantName: string, dropWeight: number): number {
   const rarity = rarityFromVariant(variantName, dropWeight)

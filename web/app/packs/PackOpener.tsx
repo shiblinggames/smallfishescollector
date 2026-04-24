@@ -37,6 +37,12 @@ function cardBackBorderStyle(borderStyle: BorderStyle, artEffect: ArtEffect): Re
     case 'golden-age':  return { borderColor: 'rgba(232,184,48,0.45)' }
     case 'storm':       return { borderColor: 'rgba(74,136,200,0.45)' }
     case 'wanted':      return { borderColor: 'rgba(170,64,16,0.45)' }
+    case 'god':         return {
+      borderColor: 'transparent',
+      backgroundImage: 'linear-gradient(#000 0 0), conic-gradient(#ffffff, #fff8d0, #ffe899, #fff4c0, #ffffff)',
+      backgroundOrigin: 'padding-box, border-box',
+      backgroundClip: 'padding-box, border-box',
+    }
     case 'prismatic':   return {
       borderColor: 'transparent',
       backgroundImage: 'linear-gradient(#000 0 0), linear-gradient(90deg,#ff0080,#ff8c00,#ffe600,#00ff88,#00cfff,#8a5cf7)',
@@ -158,7 +164,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
     router.refresh()
   }
 
-  const PRIZE_VARIANTS = new Set(['Davy Jones', 'Golden Age', 'Kraken', 'Wanted', 'Maelstrom'])
+  const PRIZE_VARIANTS = new Set(['Davy Jones', 'Golden Age', 'Kraken', 'Wanted', 'Maelstrom', 'GOD'])
 
   function isPrizeCard(card: DrawnCard) {
     return (card.name === 'Catfish' || card.name === 'Doby Mick') && PRIZE_VARIANTS.has(card.variantName)
@@ -191,6 +197,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
     Epic:      { glow: 'reveal-glow-epic',      flash: 'epic'      },
     Legendary: { glow: 'reveal-glow-legendary', flash: 'legendary' },
     Mythic:    { glow: 'reveal-glow-mythic',    flash: 'mythic'    },
+    Divine:    { glow: 'reveal-glow-divine',    flash: 'divine'    },
   }
 
   function glowClassFor(rarity: string) {
@@ -209,11 +216,11 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
     setGlowClasses((prev) => { const n = [...prev]; n[i] = glowClassFor(rarity); return n })
     triggerFlash(rarity)
     checkPrize(cards[i])
-    if (rarity === 'Mythic') {
+    if (rarity === 'Mythic' || rarity === 'Divine') {
       setMythicFeatured(i)
       setShockwaveCards((prev) => new Set([...prev, i]))
-      setTimeout(() => setMythicFeatured(null), 2500)
-      setTimeout(() => setShockwaveCards((prev) => { const n = new Set(prev); n.delete(i); return n }), 1600)
+      setTimeout(() => setMythicFeatured(null), rarity === 'Divine' ? 3500 : 2500)
+      setTimeout(() => setShockwaveCards((prev) => { const n = new Set(prev); n.delete(i); return n }), rarity === 'Divine' ? 2500 : 1600)
     }
     setFlipped((prev) => {
       const n = [...prev]
@@ -232,7 +239,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
   function flipAll() {
     cards.forEach((_, i) => resetTilt(i))
     const rarities = cards.map((c) => rarityFromVariant(c.variantName, c.dropWeight))
-    const priority = ['Mythic', 'Legendary', 'Epic']
+    const priority = ['Divine', 'Mythic', 'Legendary', 'Epic']
     const top = priority.find((r) => rarities.includes(r))
     if (top) triggerFlash(top)
     setGlowClasses(rarities.map(glowClassFor))
@@ -394,13 +401,23 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
             <FishCard name={card.name} filename={card.filename} borderStyle={card.borderStyle} artEffect={card.artEffect} variantName={card.variantName} dropWeight={card.dropWeight} />
           </div>
         </div>
-        {shockwaveCards.has(i) && (
-          <>
-            <div className="shockwave-ring" />
-            <div className="shockwave-ring shockwave-ring-2" />
-            <div className="shockwave-ring shockwave-ring-3" />
-          </>
-        )}
+        {shockwaveCards.has(i) && (() => {
+          const r = rarityFromVariant(card.variantName, card.dropWeight)
+          return r === 'Divine' ? (
+            <>
+              <div className="shockwave-ring shockwave-divine-1" />
+              <div className="shockwave-ring shockwave-divine-2" />
+              <div className="shockwave-ring shockwave-divine-3" />
+              <div className="shockwave-ring shockwave-divine-4" />
+            </>
+          ) : (
+            <>
+              <div className="shockwave-ring" />
+              <div className="shockwave-ring shockwave-ring-2" />
+              <div className="shockwave-ring shockwave-ring-3" />
+            </>
+          )
+        })()}
       </>
     )
   }

@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
-import { rarityFromVariant, RARITY_COLOR, IS_LEGENDARY_RARITY, IS_MYTHIC_RARITY } from '@/lib/variants'
+import { rarityFromVariant, RARITY_COLOR, IS_LEGENDARY_RARITY, IS_MYTHIC_RARITY, IS_DIVINE_RARITY } from '@/lib/variants'
 
 interface Props {
   name: string
@@ -29,6 +29,7 @@ const variantLabelColor: Record<BorderStyle, string> = {
   'golden-age':  '#e8b830',
   storm:         '#4a88c8',
   wanted:        '#aa4010',
+  god:           '#fffdf0',
 }
 
 const mythicGradient: Partial<Record<BorderStyle, string>> = {
@@ -56,6 +57,7 @@ const artImageClass: Record<ArtEffect, string> = {
   'golden-age': 'art-golden-age',
   storm:        'art-storm',
   wanted:       'art-wanted',
+  divine:       'art-divine',
 }
 
 export default function FishCard({ name, filename, borderStyle, artEffect, variantName, dropWeight, unowned, className = '' }: Props) {
@@ -180,6 +182,17 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
         </div>
       </div>
     )
+  } else if (borderStyle === 'god' && !unowned) {
+    frame = (
+      <div className="border-god-outer relative" style={{ width: D, height: D }}>
+        <div className="absolute inset-0 border-god" style={{ borderRadius: '50%' }} />
+        <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: '50%', transform: 'translateZ(0)', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}>
+          {imageContent}
+          <div className="art-divine-overlay" />
+          <div className="art-divine-overlay-2" />
+        </div>
+      </div>
+    )
   } else if (borderStyle === 'void' && !unowned) {
     // Outer glow wrapper so drop-shadow bleeds outside the clipped circle
     frame = (
@@ -210,12 +223,15 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
   const rarityColor = rarity ? RARITY_COLOR[rarity] : '#8a8880'
   const isLegendary = rarity ? IS_LEGENDARY_RARITY(rarity) : false
   const isMythic    = rarity ? IS_MYTHIC_RARITY(rarity)    : false
+  const isDivine    = rarity ? IS_DIVINE_RARITY(rarity)    : false
   const mythicGrad  = mythicGradient[borderStyle]
 
   const RAINBOW      = 'linear-gradient(90deg,#ff0080,#ff8c00,#ffe600,#00ff88,#00cfff,#8a5cf7)'
   const HOLO_SHIMMER = 'linear-gradient(90deg,#c8d0e0,#e8e0f0,#c8ddf8,#dcd0f0,#f0e4d0,#c8d0e0)'
 
   function variantNameStyle(): React.CSSProperties {
+    if (isDivine)
+      return { background: 'linear-gradient(90deg,#fffdf0,#ffe899,#fffdf0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }
     if (isPrismaticLabel)
       return { background: RAINBOW, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }
     if (isHolographicLabel)

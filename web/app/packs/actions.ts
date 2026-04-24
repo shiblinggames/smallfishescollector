@@ -121,7 +121,7 @@ export async function openPack(): Promise<OpenPackResponse> {
   const rankUp = newRankIndex > oldRankIndex ? RANK_THRESHOLDS[newRankIndex] : null
 
   // Update tide counter + rank + doubloons
-  const hitLegendary = drawn.some((d) => ['Legendary', 'Mythic'].includes(rarityFromVariant(d.variantName, d.dropWeight)))
+  const hitLegendary = drawn.some((d) => ['Legendary', 'Mythic', 'Divine'].includes(rarityFromVariant(d.variantName, d.dropWeight)))
   const profileUpdates: Record<string, unknown> = {
     packs_since_legendary: hitLegendary ? 0 : (profile.packs_since_legendary ?? 0) + 1,
   }

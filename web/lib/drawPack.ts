@@ -76,8 +76,8 @@ export function drawPack(variants: CardVariant[], forceLegendary = false, hookTi
   }
 
   // Tide: guarantee a Legendary or better after 20 packs
-  if (forceLegendary && drawn.every(d => !['Legendary', 'Mythic'].includes(VARIANT_RARITY[d.variantName] ?? ''))) {
-    const legendaryPool = variants.filter(v => ['Legendary', 'Mythic'].includes(VARIANT_RARITY[v.variant_name] ?? ''))
+  if (forceLegendary && drawn.every(d => !['Legendary', 'Mythic', 'Divine'].includes(VARIANT_RARITY[d.variantName] ?? ''))) {
+    const legendaryPool = variants.filter(v => ['Legendary', 'Mythic', 'Divine'].includes(VARIANT_RARITY[v.variant_name] ?? ''))
     if (legendaryPool.length > 0) drawn[3] = toDrawn(weightedPick(legendaryPool))
   }
 

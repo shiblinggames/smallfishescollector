@@ -595,3 +595,152 @@ body {
 }
 .shockwave-ring-2 { border-color: rgba(255,56,56,0.6); animation: shockwave 1.1s 0.18s ease-out both; }
 .shockwave-ring-3 { border-color: rgba(255,56,56,0.4); animation: shockwave 1.1s 0.36s ease-out both; }
+
+/* ════════════════════════════════════════
+   DIVINE EDITION  (GOD variant — Catfish / Doby Mick only)
+   ════════════════════════════════════════ */
+
+/* ── God border: warm white-gold halo ── */
+@property --god-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes godSpin {
+  from { --god-angle: 0deg; }
+  to   { --god-angle: 360deg; }
+}
+@keyframes godGlowBreathe {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 22px rgba(255,255,255,0.85))
+      drop-shadow(0 0 55px rgba(255,248,210,0.45))
+      drop-shadow(0 0 100px rgba(255,235,160,0.2));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 38px rgba(255,255,255,1.0))
+      drop-shadow(0 0 80px rgba(255,252,225,0.6))
+      drop-shadow(0 0 140px rgba(255,240,180,0.3));
+  }
+}
+.border-god-outer {
+  border-radius: 50%;
+  animation: godGlowBreathe 4s ease-in-out infinite;
+}
+.border-god {
+  background: conic-gradient(
+    from var(--god-angle),
+    #ffffff, #fff8d0, #ffe899, #fff4c0, #ffffff, #fffae8, #ffe8a0, #ffffff
+  );
+  animation: godSpin 6s linear infinite;
+}
+
+/* ── Divine art: washed celestial image + slow drifting light shaft ── */
+.art-divine { filter: brightness(1.35) saturate(0.6) contrast(1.05) sepia(0.08); }
+
+@keyframes divineShaft {
+  0%   { transform: translateX(-220%) skewX(-8deg); opacity: 0; }
+  8%   { opacity: 0.9; }
+  92%  { opacity: 0.75; }
+  100% { transform: translateX(480%) skewX(-8deg); opacity: 0; }
+}
+@keyframes divineShaft2 {
+  0%   { transform: translateX(-220%) skewX(-8deg); opacity: 0; }
+  8%   { opacity: 0.55; }
+  92%  { opacity: 0.45; }
+  100% { transform: translateX(480%) skewX(-8deg); opacity: 0; }
+}
+.art-divine-overlay {
+  position: absolute;
+  top: -20%; bottom: -20%; left: 0;
+  width: 24%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255,252,230,0.55) 35%,
+    rgba(255,255,255,0.85) 50%,
+    rgba(255,252,230,0.55) 65%,
+    transparent
+  );
+  mix-blend-mode: screen;
+  animation: divineShaft 9s ease-in-out infinite;
+  pointer-events: none;
+}
+.art-divine-overlay-2 {
+  position: absolute;
+  top: -20%; bottom: -20%; left: 0;
+  width: 14%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255,248,200,0.4) 35%,
+    rgba(255,255,240,0.6) 50%,
+    rgba(255,248,200,0.4) 65%,
+    transparent
+  );
+  mix-blend-mode: screen;
+  animation: divineShaft2 9s 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── Divine reveal glow ── */
+@keyframes reveal-glow-divine {
+  0%   {
+    filter:
+      drop-shadow(0 0 110px rgba(255,255,255,1.0))
+      drop-shadow(0 0 55px rgba(255,248,200,0.9))
+      drop-shadow(0 0 25px rgba(255,235,150,0.8));
+    transform: scale(1.18);
+  }
+  15%  {
+    filter:
+      drop-shadow(0 0 80px rgba(255,255,255,0.9))
+      drop-shadow(0 0 40px rgba(255,245,190,0.75));
+    transform: scale(1.10);
+  }
+  35%  {
+    filter:
+      drop-shadow(0 0 55px rgba(255,255,255,0.8))
+      drop-shadow(0 0 28px rgba(255,240,170,0.6));
+    transform: scale(1.07);
+  }
+  60%  {
+    filter:
+      drop-shadow(0 0 32px rgba(255,255,255,0.55))
+      drop-shadow(0 0 16px rgba(255,238,160,0.4));
+    transform: scale(1.03);
+  }
+  100% { filter: drop-shadow(0 0 0px rgba(255,255,255,0)); transform: scale(1); }
+}
+.reveal-glow-divine { animation: reveal-glow-divine 5.5s ease-out forwards; }
+
+/* ── Divine screen flash: sustained warm white, single gentle pulse ── */
+@keyframes reveal-flash-divine {
+  0%   { opacity: 1; }
+  20%  { opacity: 0.82; }
+  55%  { opacity: 0.42; }
+  80%  { opacity: 0.15; }
+  100% { opacity: 0; }
+}
+.reveal-flash-divine {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255,255,255,0.92) 0%,
+    rgba(255,252,220,0.65) 22%,
+    rgba(255,240,170,0.32) 45%,
+    rgba(255,228,140,0.12) 65%,
+    transparent 80%
+  );
+  animation: reveal-flash-divine 3.5s ease-out forwards;
+}
+
+/* ── Divine shockwave: 4 rings, white → warm gold, slow graceful expansion ── */
+@keyframes shockwave-divine {
+  0%   { transform: scale(1);   opacity: 0.9; }
+  100% { transform: scale(5.5); opacity: 0; }
+}
+.shockwave-divine-1 { border-color: rgba(255,255,255,0.9);   animation: shockwave-divine 1.6s ease-out both; }
+.shockwave-divine-2 { border-color: rgba(255,248,200,0.75);  animation: shockwave-divine 1.6s 0.22s ease-out both; }
+.shockwave-divine-3 { border-color: rgba(255,235,140,0.58);  animation: shockwave-divine 1.6s 0.44s ease-out both; }
+.shockwave-divine-4 { border-color: rgba(255,220,100,0.4);   animation: shockwave-divine 1.6s 0.66s ease-out both; }
