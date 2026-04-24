@@ -33,7 +33,7 @@ export default async function TavernPage() {
   const baseAmount = isPremium ? 100 : 50
   const allClaimed =
     profile?.last_daily_claim === today &&
-    profile?.last_ship_claim === today &&
+    ((profile?.ship_tier ?? 0) === 0 || profile?.last_ship_claim === today) &&
     (!isPremium || profile?.last_pack_claim === today)
 
   const fotdDone = !!fotdAttempt && (fotdAttempt.solved || (fotdAttempt.guesses?.length ?? 0) >= 4)
