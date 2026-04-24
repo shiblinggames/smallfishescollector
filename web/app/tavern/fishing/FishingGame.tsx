@@ -237,10 +237,12 @@ export default function FishingGame({
         </button>
       )}
 
-      {/* Reel In — color tracks current zone */}
+      {/* Reel In — onPointerDown fires immediately on touch (no 300ms tap delay) */}
       {phase === 'active' && (
-        <button onClick={handleReelIn} className="w-full font-karla font-700 uppercase tracking-[0.12em]"
-          style={{ padding: '0.875rem', background: `${currentZone.color}15`, border: `1px solid ${currentZone.color}45`, borderRadius: 12, cursor: 'pointer', fontSize: '0.72rem', color: currentZone.color, transition: 'background 0.05s, border-color 0.05s, color 0.05s' }}>
+        <button
+          onPointerDown={e => { e.preventDefault(); handleReelIn() }}
+          className="w-full font-karla font-700 uppercase tracking-[0.12em]"
+          style={{ padding: '0.875rem', background: `${currentZone.color}15`, border: `1px solid ${currentZone.color}45`, borderRadius: 12, cursor: 'pointer', fontSize: '0.72rem', color: currentZone.color, transition: 'background 0.05s, border-color 0.05s, color 0.05s', touchAction: 'manipulation' }}>
           Reel In!
         </button>
       )}
