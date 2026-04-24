@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { checkAchievements } from '@/lib/checkAchievements'
 import {
   ZONES, EXPEDITION_SHIP_STATS, BASE_DOUBLOONS,
   rollStat, getCrewPower,
@@ -496,6 +497,8 @@ export async function resolveFinalLoot(
       completed_at: new Date().toISOString(),
     }).eq('id', expeditionId),
   ])
+
+  await checkAchievements(user.id, { type: 'expedition', zone: exp.zone, status: 'completed' })
 
   revalidatePath('/expeditions')
   return loot

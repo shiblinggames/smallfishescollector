@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { MAX_CASTS } from './constants'
 import { DEPTHS } from './depths'
+import { checkAchievements } from '@/lib/checkAchievements'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -12,7 +13,7 @@ function today() {
 export async function castLine(
   result: 'perfect' | 'catch' | 'miss' | 'penalty',
   depthId: number,
-): Promise<{ earned: number; castsUsed: number } | { error: string }> {
+): Promise<{ earned: number; castsUsed: number; newAchievements: string[] } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -22,7 +23,7 @@ export async function castLine(
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, fishing_date, fishing_casts')
+    .select('doubloons, fishing_date, fishing_casts, fishing_abyss_streak')
     .eq('id', user.id)
     .single()
 
@@ -43,9 +44,13 @@ export async function castLine(
   const castsToConsume = result === 'penalty' ? Math.min(2, MAX_CASTS - castsUsed) : 1
   const newCastsUsed   = castsUsed + castsToConsume
 
+  const isAbyssPerfect = result === 'perfect' && depthId === 3
+  const newAbyssStreak = isAbyssPerfect ? (profile.fishing_abyss_streak ?? 0) + 1 : 0
+
   const profileUpdate: Record<string, unknown> = {
-    fishing_date:  date,
-    fishing_casts: newCastsUsed,
+    fishing_date:         date,
+    fishing_casts:        newCastsUsed,
+    fishing_abyss_streak: newAbyssStreak,
   }
   if (earned > 0) profileUpdate.doubloons = (profile.doubloons ?? 0) + earned
 
@@ -63,5 +68,12 @@ export async function castLine(
     await updateProfile
   }
 
-  return { earned, castsUsed: newCastsUsed }
+  const newAchievements = await checkAchievements(user.id, {
+    type:        'fishing',
+    result,
+    depthId,
+    abyssStreak: newAbyssStreak,
+  })
+
+  return { earned, castsUsed: newCastsUsed, newAchievements }
 }

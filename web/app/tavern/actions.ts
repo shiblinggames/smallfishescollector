@@ -77,7 +77,7 @@ export async function rollDice(symbol: Symbol, wager: number): Promise<RollResul
     }),
   ])
 
-  const newAchievements = await checkAchievements(user.id, { type: 'crown', matches })
+  const newAchievements = await checkAchievements(user.id, { type: 'crown', matches, wager })
 
   revalidatePath('/tavern')
   return { result, matches, payout, net, newDoubloons, dailyWagered: totalWagered + wager, newAchievements }

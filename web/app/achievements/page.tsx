@@ -9,13 +9,15 @@ const CATEGORY_LABELS: Record<AchievementCategory, string> = {
   packs:      'Packs',
   collection: 'Collection',
   fotd:       'Fish of the Day',
+  fishing:    'Drop a Line',
+  expedition: 'Expedition',
   tavern:     'Tavern',
   bonus:      'Daily Bonus',
   doubloons:  'Doubloons',
   membership: 'Membership',
 }
 
-const CATEGORY_ORDER: AchievementCategory[] = ['packs', 'collection', 'fotd', 'tavern', 'bonus', 'doubloons', 'membership']
+const CATEGORY_ORDER: AchievementCategory[] = ['packs', 'collection', 'fotd', 'fishing', 'expedition', 'tavern', 'bonus', 'doubloons', 'membership']
 
 export default async function AchievementsPage() {
   const supabase = await createClient()

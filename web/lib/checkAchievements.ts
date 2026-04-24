@@ -7,7 +7,9 @@ import type { DrawnCard } from '@/lib/types'
 export type AchievementTrigger =
   | { type: 'pack'; drawn: DrawnCard[] }
   | { type: 'fotd'; streak: number; guessCount: number }
-  | { type: 'crown'; matches: number }
+  | { type: 'crown'; matches: number; wager: number }
+  | { type: 'fishing'; result: 'perfect' | 'catch' | 'miss' | 'penalty'; depthId: number; abyssStreak: number }
+  | { type: 'expedition'; zone: string; status: 'completed' | 'failed' }
   | { type: 'bonus' }
   | { type: 'membership' }
 
@@ -110,7 +112,30 @@ export async function checkAchievements(userId: string, trigger: AchievementTrig
     const keys: string[] = []
     if (needs('crown_first')) keys.push('crown_first')
     if (trigger.matches === 3 && needs('crown_triple')) keys.push('crown_triple')
+    if (trigger.matches === 3 && trigger.wager >= 200 && needs('crown_all_in')) keys.push('crown_all_in')
     await award(keys)
+  }
+
+  if (trigger.type === 'fishing') {
+    const keys: string[] = []
+    const isCatch = trigger.result === 'catch' || trigger.result === 'perfect'
+    if (isCatch && needs('fishing_first_catch')) keys.push('fishing_first_catch')
+    if (trigger.result === 'perfect' && needs('fishing_perfect')) keys.push('fishing_perfect')
+    if (isCatch && trigger.depthId === 3 && needs('fishing_abyss')) keys.push('fishing_abyss')
+    if (trigger.abyssStreak >= 5 && needs('fishing_abyss_streak')) keys.push('fishing_abyss_streak')
+    await award(keys)
+  }
+
+  if (trigger.type === 'expedition') {
+    if (trigger.status === 'completed') {
+      const keys: string[] = []
+      if (needs('expedition_first')) keys.push('expedition_first')
+      if (trigger.zone === 'coral_run'          && needs('expedition_coral_run'))  keys.push('expedition_coral_run')
+      if (trigger.zone === 'bertuna_triangle'    && needs('expedition_bertuna'))    keys.push('expedition_bertuna')
+      if (trigger.zone === 'sunken_reach'        && needs('expedition_sunken'))     keys.push('expedition_sunken')
+      if (trigger.zone === 'davy_jones_locker'   && needs('expedition_davy_jones')) keys.push('expedition_davy_jones')
+      await award(keys)
+    }
   }
 
   if (trigger.type === 'bonus') {

@@ -53,6 +53,22 @@ const ICON_SVG: Record<string, React.ReactNode> = {
       <line x1="12" y1="15" x2="12" y2="19"/><line x1="8" y1="19" x2="16" y2="19"/>
     </svg>
   ),
+  hook: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v9"/>
+      <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
+      <circle cx="12" cy="3" r="1.2" fill="currentColor" stroke="none"/>
+    </svg>
+  ),
+  ship: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 17l1.5 3h15L21 17"/>
+      <path d="M3 17c2 1 4.5 1.5 9 1.5S19 18 21 17"/>
+      <path d="M12 2v11"/>
+      <path d="M5 10l7 4 7-4"/>
+      <path d="M8 6l4-4 4 4"/>
+    </svg>
+  ),
 }
 
 interface Category {
