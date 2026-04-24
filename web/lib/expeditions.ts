@@ -30,6 +30,7 @@ export type CrewLoadout = Record<Stat, CrewCard[]>
 export interface EventMechanics {
   stat: Stat | null
   difficultyTier: DifficultyTier
+  threshold?: number
 }
 
 export interface EventChoice {

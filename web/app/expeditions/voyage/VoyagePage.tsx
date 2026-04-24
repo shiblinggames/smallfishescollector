@@ -25,7 +25,7 @@ interface Props {
   totalEvents: number
 }
 
-function RollingDie({ finalRoll, rolling }: { finalRoll: number; rolling: boolean }) {
+function RollingDie({ finalRoll, rolling, color = '#f0c040' }: { finalRoll: number; rolling: boolean; color?: string }) {
   const [display, setDisplay] = useState(finalRoll)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -48,13 +48,13 @@ function RollingDie({ finalRoll, rolling }: { finalRoll: number; rolling: boolea
   return (
     <div style={{
       width: 64, height: 64,
-      background: 'rgba(240,192,64,0.1)',
-      border: `2px solid ${rolling ? 'rgba(240,192,64,0.4)' : 'rgba(240,192,64,0.2)'}`,
+      background: `${color}15`,
+      border: `2px solid ${rolling ? `${color}65` : `${color}30`}`,
       borderRadius: 14,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       transition: 'border-color 0.3s',
     }}>
-      <span className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0c040' }}>
+      <span className="font-cinzel font-700" style={{ fontSize: '1.6rem', color }}>
         {display}
       </span>
     </div>
@@ -69,12 +69,18 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
   const [currentNode, setCurrentNode] = useState(expedition.current_node)
   const [phase, setPhase] = useState<Phase>({ type: 'event' })
   const [pendingRoll, setPendingRoll] = useState<number>(1)
+  const [pendingCrewRoll, setPendingCrewRoll] = useState<number>(0)
   const [lootResult, setLootResult] = useState<LootResult | null>(null)
   const [showStats, setShowStats] = useState(false)
 
   const eventSequence = dailyContent.event_sequence
   const isFinalLootNode = currentNode >= eventSequence.length
   const currentEvent: EventNode | null = isFinalLootNode ? null : eventSequence[currentNode]
+
+  const currentStat = currentEvent?.mechanics.stat ?? null
+  const crewBonusForStat = currentStat
+    ? (expedition.crew_loadout[currentStat] ?? []).reduce((s, c) => s + c.power, 0)
+    : 0
 
   const hullMax = HULL_POINTS[expedition.ship_tier] ?? 3
   const shipStats = EXPEDITION_SHIP_STATS[expedition.ship_tier]
@@ -93,6 +99,7 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
 
       // Let the die settle, then linger on the final number before showing result
       if (result.roll !== undefined) setPendingRoll(result.roll)
+      if (result.crewRoll !== undefined) setPendingCrewRoll(result.crewRoll ?? 0)
       await new Promise(r => setTimeout(r, 1600))
       setPhase({ type: 'result', result })
 
@@ -185,6 +192,8 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
             phase={phase}
             result={activeResult}
             pendingRoll={pendingRoll}
+            pendingCrewRoll={pendingCrewRoll}
+            crewBonusForStat={crewBonusForStat}
             shipTier={expedition.ship_tier}
             onChoice={handleChoiceClick}
             onContinue={handleContinue}
@@ -273,12 +282,14 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
 }
 
 function EventCard({
-  event, phase, result, pendingRoll, shipTier, onChoice, onContinue, isPending,
+  event, phase, result, pendingRoll, pendingCrewRoll, crewBonusForStat, shipTier, onChoice, onContinue, isPending,
 }: {
   event: EventNode
   phase: Phase
   result: EventResult | null
   pendingRoll: number
+  pendingCrewRoll: number
+  crewBonusForStat: number
   shipTier: number
   onChoice: (i: number) => void
   onContinue: () => void
@@ -308,15 +319,25 @@ function EventCard({
         {event.flavor}
       </p>
 
-      {/* Stat being checked — hide once result is in */}
+      {/* Stat + threshold — hide once result is in */}
       {event.mechanics.stat && !showResult && (
-        <div className="flex items-center gap-1.5 mb-5">
-          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            Checking:
-          </p>
-          <p className="font-karla font-700" style={{ fontSize: '0.65rem', color: '#f0ede8' }}>
-            {STAT_ICONS[event.mechanics.stat]} {STAT_LABELS[event.mechanics.stat]}
-          </p>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-1.5">
+            <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              Checking:
+            </p>
+            <p className="font-karla font-700" style={{ fontSize: '0.65rem', color: '#f0ede8' }}>
+              {STAT_ICONS[event.mechanics.stat]} {STAT_LABELS[event.mechanics.stat]}
+            </p>
+          </div>
+          {event.mechanics.threshold !== undefined && (
+            <div style={{ textAlign: 'right' }}>
+              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Need to beat</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0c040' }}>
+                {event.mechanics.threshold}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -387,10 +408,24 @@ function EventCard({
         })}
       </div>
 
-      {/* Die — shown while rolling */}
+      {/* Dice — shown while rolling */}
       {rolling && (
         <div className="flex flex-col items-center gap-3 mt-6">
-          <RollingDie finalRoll={pendingRoll} rolling={true} />
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col items-center gap-1.5">
+              <RollingDie finalRoll={pendingRoll} rolling={true} color="#f0c040" />
+              <p className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#6a6764', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Ship</p>
+            </div>
+            {crewBonusForStat > 0 && (
+              <>
+                <p style={{ color: '#4a4845', fontSize: '1.1rem', paddingBottom: '1.4rem' }}>+</p>
+                <div className="flex flex-col items-center gap-1.5">
+                  <RollingDie finalRoll={pendingCrewRoll} rolling={true} color="#60a5fa" />
+                  <p className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#6a6764', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Crew</p>
+                </div>
+              </>
+            )}
+          </div>
           <p className="font-karla" style={{ fontSize: '0.68rem', color: '#6a6764' }}>Rolling...</p>
         </div>
       )}

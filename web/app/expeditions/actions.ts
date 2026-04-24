@@ -203,7 +203,7 @@ export async function resolveChoice(
   const mechanics = eventNode.mechanics
   const stat = mechanics.stat ?? 'luck'
   const [min, max] = zoneConfig.difficulty[mechanics.difficultyTier]
-  const threshold = Math.floor(Math.random() * (max - min + 1)) + min
+  const threshold = eventNode.mechanics.threshold ?? (Math.floor(Math.random() * (max - min + 1)) + min)
   const crewForStat = exp.crew_loadout[stat] ?? []
   const rollResult = rollStat(stat, crewForStat, exp.ship_tier)
   const success = rollResult.total >= threshold

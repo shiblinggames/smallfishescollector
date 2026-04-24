@@ -172,12 +172,20 @@ Make the crisis event feel earned after everything that came before it.`
     choices: Array<{ label: string; successText: string; failText: string; isNoRoll?: boolean; cost?: number }>
   }>
 
-  return parsed.map((event, i) => ({
-    ...event,
-    nodeIndex: i,
-    isCrisis: i === parsed.length - 1,
-    mechanics: EVENT_MECHANICS[event.eventType] ?? { stat: 'luck', difficultyTier: 'standard' },
-  }))
+  return parsed.map((event, i) => {
+    const mechanics = EVENT_MECHANICS[event.eventType] ?? { stat: 'luck', difficultyTier: 'standard' as const }
+    let threshold: number | undefined
+    if (mechanics.stat) {
+      const [min, max] = zoneConfig.difficulty[mechanics.difficultyTier]
+      threshold = Math.floor(Math.random() * (max - min + 1)) + min
+    }
+    return {
+      ...event,
+      nodeIndex: i,
+      isCrisis: i === parsed.length - 1,
+      mechanics: { ...mechanics, threshold },
+    }
+  })
 }
 
 export async function ensureDailyExpeditionContent(zone: ZoneKey, date: string): Promise<DailyExpeditionRow> {
