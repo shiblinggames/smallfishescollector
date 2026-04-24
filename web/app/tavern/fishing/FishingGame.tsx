@@ -229,13 +229,27 @@ export default function FishingGame({
             </div>
 
             {castsLeft > 0 && (
-              <button
-                onClick={handleCast}
-                className="w-full font-karla font-700 uppercase tracking-[0.14em]"
-                style={{ padding: '1rem', background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.22)', borderRadius: 14, cursor: 'pointer', fontSize: '0.74rem', color: '#60a5fa' }}
-              >
-                Cast Line
-              </button>
+              <div className="flex flex-col items-center gap-2 py-1">
+                <motion.button
+                  onClick={handleCast}
+                  className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                  style={{
+                    width: 88, height: 88,
+                    borderRadius: '50%',
+                    background: 'radial-gradient(ellipse at 40% 35%, rgba(96,165,250,0.28), rgba(96,165,250,0.09))',
+                    border: '1px solid rgba(96,165,250,0.4)',
+                    cursor: 'pointer',
+                    fontSize: '0.68rem',
+                    color: '#93c5fd',
+                    touchAction: 'manipulation',
+                    boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(96,165,250,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
+                  }}
+                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5), 0 0 22px rgba(96,165,250,0.22), inset 0 1px 0 rgba(255,255,255,0.1)' }}
+                  transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                >
+                  Cast Line
+                </motion.button>
+              </div>
             )}
 
             {castsLeft <= 0 && (
@@ -407,15 +421,15 @@ export default function FishingGame({
                     width: 88,
                     height: 88,
                     borderRadius: '50%',
-                    background: 'rgba(240,237,232,0.07)',
-                    border: '1px solid rgba(240,237,232,0.16)',
+                    background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
+                    border: '1px solid rgba(240,192,64,0.4)',
                     cursor: 'pointer',
                     fontSize: '0.68rem',
-                    color: '#f0ede8',
+                    color: '#f0c040',
                     touchAction: 'manipulation',
-                    boxShadow: '0 6px 0 rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)',
+                    boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
                   }}
-                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)' }}
+                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)' }}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                 >
                   Reel In
@@ -425,21 +439,33 @@ export default function FishingGame({
 
             {/* Cast again */}
             {phase === 'result' && (
-              <button
-                onClick={castsLeft > 0 ? handleCast : undefined}
-                className="w-full font-karla font-700 uppercase tracking-[0.14em]"
-                style={{
-                  padding: '1rem',
-                  background: castsLeft > 0 ? 'rgba(96,165,250,0.08)' : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${castsLeft > 0 ? 'rgba(96,165,250,0.22)' : 'rgba(255,255,255,0.08)'}`,
-                  borderRadius: 14,
-                  cursor: castsLeft > 0 ? 'pointer' : 'default',
-                  fontSize: '0.74rem',
-                  color: castsLeft > 0 ? '#60a5fa' : '#4a4845',
-                }}
-              >
-                {castsLeft > 0 ? 'Cast Again' : 'No casts remaining'}
-              </button>
+              <div className="flex flex-col items-center gap-2 py-1">
+                {castsLeft > 0 ? (
+                  <motion.button
+                    onClick={handleCast}
+                    className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                    style={{
+                      width: 88, height: 88,
+                      borderRadius: '50%',
+                      background: 'radial-gradient(ellipse at 40% 35%, rgba(96,165,250,0.28), rgba(96,165,250,0.09))',
+                      border: '1px solid rgba(96,165,250,0.4)',
+                      cursor: 'pointer',
+                      fontSize: '0.68rem',
+                      color: '#93c5fd',
+                      touchAction: 'manipulation',
+                      boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(96,165,250,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
+                    }}
+                    whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5), 0 0 22px rgba(96,165,250,0.22), inset 0 1px 0 rgba(255,255,255,0.1)' }}
+                    transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                  >
+                    Cast Again
+                  </motion.button>
+                ) : (
+                  <p className="font-karla text-center py-3" style={{ fontSize: '0.72rem', color: '#4a4845' }}>
+                    No casts remaining
+                  </p>
+                )}
+              </div>
             )}
           </motion.div>
         )}
