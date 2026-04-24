@@ -131,23 +131,56 @@ export default function ProfileSection({ username: initialUsername, usernameChan
             </div>
           )}
 
-          {/* Showcase row */}
-          <div className="px-4 py-3">
-            <div className="flex items-center justify-between mb-1">
-              <p className="font-karla font-600 uppercase tracking-[0.10em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>
-                Showcase · {selectedShowcase.length} / 5
-              </p>
+          {/* Showcase section */}
+          <div className="px-4 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.95rem' }}>Showcase</p>
+                <p className="font-karla font-600 text-[#6a6764]" style={{ fontSize: '0.72rem', marginTop: 2 }}>
+                  {selectedShowcase.length > 0 ? `${selectedShowcase.length} / 5 fish on your public profile` : 'Shown on your public profile'}
+                </p>
+              </div>
               <button
                 onClick={() => setModalOpen(true)}
-                className="font-karla font-600 uppercase tracking-[0.10em] text-[#f0c040] hover:opacity-80 transition-opacity"
-                style={{ fontSize: '0.6rem' }}
+                className="font-karla font-700 uppercase tracking-[0.12em] shrink-0"
+                style={{
+                  fontSize: '0.68rem', color: '#f0c040',
+                  padding: '0.4rem 0.9rem', borderRadius: '2rem',
+                  border: '1px solid rgba(240,192,64,0.35)',
+                  background: 'rgba(240,192,64,0.08)',
+                }}
               >
                 Edit
               </button>
             </div>
-            <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.72rem', lineHeight: 1.5 }}>
-              Your top 5 rarest catches shown on your public profile. Edit to choose which fish to highlight.
-            </p>
+
+            {(() => {
+              const showcaseCards = selectedShowcase
+                .map(id => pickerCards.find(c => c.variantId === id))
+                .filter((c): c is PickerCard => !!c)
+              return showcaseCards.length > 0 ? (
+                <div className="flex gap-2 justify-center flex-wrap">
+                  {showcaseCards.map(card => (
+                    <div key={card.variantId} style={{ width: 70, height: 70, overflow: 'hidden', flexShrink: 0, borderRadius: '50%' }}>
+                      <div style={{ transform: 'scale(0.5)', transformOrigin: 'top left', width: 140 }}>
+                        <FishCard
+                          name={card.name}
+                          filename={card.filename}
+                          borderStyle={card.borderStyle}
+                          artEffect={card.artEffect}
+                          variantName={card.variantName}
+                          dropWeight={card.dropWeight}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="font-karla font-600 text-center" style={{ fontSize: '0.78rem', color: '#4a4845', padding: '0.75rem 0' }}>
+                  No fish selected — tap Edit to choose your highlights
+                </p>
+              )
+            })()}
           </div>
         </div>
       </div>
