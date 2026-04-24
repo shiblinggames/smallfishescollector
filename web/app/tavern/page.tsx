@@ -17,12 +17,13 @@ export default async function TavernPage() {
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const [{ data: profile }, { data: fotdAttempt }, dailyWagered, { data: quizAnswer }, bounties] = await Promise.all([
+  const [{ data: profile }, { data: fotdAttempt }, dailyWagered, { data: quizAnswer }, bounties, { data: todayExpedition }] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_ship_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
     admin.from('quiz_answers').select('correct').eq('user_id', user.id).eq('date', today).single(),
     getWeeklyBounties(),
+    admin.from('expeditions').select('status, zone, loot').eq('user_id', user.id).eq('expedition_date', today).maybeSingle(),
   ])
 
   const isPremium =
@@ -43,6 +44,15 @@ export default async function TavernPage() {
   const bountyProgress = bounties?.progress
   const bountyCount = bountyProgress ? Object.values(bountyProgress).filter(Boolean).length : 0
   const bountyAllDone = bountyCount === 4
+
+  const expeditionStatus = todayExpedition?.status ?? null
+  const expeditionDone = expeditionStatus === 'completed' || expeditionStatus === 'failed'
+  const expeditionLoot = (todayExpedition?.loot as { doubloons?: number } | null)?.doubloons ?? 0
+  const expeditionStatusText =
+    expeditionStatus === 'completed' ? `Complete — ${expeditionLoot.toLocaleString()} ⟡ earned` :
+    expeditionStatus === 'failed' ? 'Failed — come back tomorrow' :
+    expeditionStatus === 'active' ? 'Expedition in progress' :
+    'Choose your zone · 1 per day'
 
   return (
     <>
@@ -88,6 +98,20 @@ export default async function TavernPage() {
             ]}
             icon={<QuizIcon />}
             completed={quizDone}
+          />
+          <GameCard
+            href="/expeditions"
+            eyebrow="Daily"
+            title="Expedition"
+            statusText={expeditionStatusText}
+            info={[
+              'Choose a zone and send your ship out',
+              'Assign crew to boost your stats',
+              'Pass events to earn doubloons and cards',
+              'One expedition per day',
+            ]}
+            icon={<ShipIcon />}
+            completed={expeditionDone}
           />
           {bounties && (
             <GameCard
@@ -192,6 +216,18 @@ function QuizIcon() {
       <circle cx="12" cy="12" r="9"/>
       <path d="M9.5 9a2.5 2.5 0 0 1 5 .5c0 2-2.5 2.5-2.5 4.5"/>
       <circle cx="12" cy="17.5" r="0.8" fill="currentColor" stroke="none"/>
+    </svg>
+  )
+}
+
+function ShipIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 17l1.5 3h15L21 17"/>
+      <path d="M3 17c2 1 4.5 1.5 9 1.5S19 18 21 17"/>
+      <path d="M12 2v11"/>
+      <path d="M5 10l7 4 7-4"/>
+      <path d="M8 6l4-4 4 4"/>
     </svg>
   )
 }

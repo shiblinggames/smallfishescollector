@@ -44,6 +44,7 @@ export default async function ExpeditionsPage() {
   const hasSpecialCrew = ownedSlugs.has('Catfish') || ownedSlugs.has('Doby_Mick')
 
   const activeExpedition = todayExpeditions.find(e => e.status === 'active') ?? null
+  const dailyUsed = todayExpeditions.some(e => e.status === 'completed' || e.status === 'failed')
 
   return (
     <>
@@ -57,7 +58,7 @@ export default async function ExpeditionsPage() {
               Expeditions
             </h1>
             <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.78rem' }}>
-              Send your ship into dangerous waters. One attempt per zone per day.
+              Send your ship into dangerous waters. One expedition per day — choose wisely.
             </p>
           </div>
 
@@ -117,6 +118,7 @@ export default async function ExpeditionsPage() {
                   shipTier={shipTier}
                   hasSpecialCrew={hasSpecialCrew}
                   doubloons={doubloons}
+                  dailyUsed={dailyUsed}
                 />
               )
             })}

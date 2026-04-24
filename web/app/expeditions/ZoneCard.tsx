@@ -10,15 +10,17 @@ interface Props {
   shipTier: number
   hasSpecialCrew: boolean
   doubloons: number
+  dailyUsed: boolean
 }
 
-export default function ZoneCard({ zoneKey, config, expedition, shipTier, hasSpecialCrew, doubloons }: Props) {
+export default function ZoneCard({ zoneKey, config, expedition, shipTier, hasSpecialCrew, doubloons, dailyUsed }: Props) {
   const router = useRouter()
 
   const tierLocked = shipTier < config.requiredShipTier
   const specialLocked = !!config.specialCrewRequired && !hasSpecialCrew
   const fundsLocked = !tierLocked && !specialLocked && doubloons < config.entryCost
-  const isLocked = tierLocked || specialLocked || fundsLocked
+  const dailyLocked = dailyUsed && !expedition
+  const isLocked = tierLocked || specialLocked || fundsLocked || dailyLocked
   const isActive = expedition?.status === 'active'
   const isCompleted = expedition?.status === 'completed'
   const isFailed = expedition?.status === 'failed'
@@ -51,6 +53,7 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, hasSpe
   if (tierLocked) { statusLabel = `Requires ${config.requiredShipTier === 6 ? 'Man-o-War' : ['Rowboat','Dinghy','Sloop','Schooner','Brigantine','Galleon','Man-o-War'][config.requiredShipTier]}`; statusColor = '#6a6764' }
   if (specialLocked) { statusLabel = 'Requires Catfish or Doby Mick'; statusColor = '#6a6764' }
   if (fundsLocked) { statusLabel = `Need ${config.entryCost} ⟡ to enter`; statusColor = '#6a6764' }
+  if (dailyLocked) { statusLabel = 'Daily attempt used — come back tomorrow'; statusColor = '#4a4845' }
 
   const dim = isLocked || isFailed
   const interactive = !isLocked

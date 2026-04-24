@@ -44,6 +44,19 @@ export async function startExpedition(
     const date = today()
     const zoneConfig = ZONES[zone]
 
+    const { data: existingToday } = await admin
+      .from('expeditions')
+      .select('id, status')
+      .eq('user_id', user.id)
+      .eq('expedition_date', date)
+      .limit(1)
+      .maybeSingle()
+
+    if (existingToday) {
+      if (existingToday.status === 'active') return { error: 'You already have an expedition in progress.' }
+      return { error: 'You have already used your daily expedition. Come back tomorrow.' }
+    }
+
     const { data: profile } = await admin
       .from('profiles')
       .select('doubloons, ship_tier')
