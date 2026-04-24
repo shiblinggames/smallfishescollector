@@ -123,13 +123,13 @@ export interface ZoneConfig {
 }
 
 export const EXPEDITION_SHIP_STATS: Record<number, ExpeditionShipStats> = {
-  0: { name: 'Rowboat',    combat: 1,  navigation: 1,  durability: 1,  speed: 2,  luck: 3,  crewSlots: 1  },
-  1: { name: 'Dinghy',     combat: 2,  navigation: 2,  durability: 2,  speed: 4,  luck: 4,  crewSlots: 2  },
-  2: { name: 'Sloop',      combat: 4,  navigation: 4,  durability: 3,  speed: 7,  luck: 5,  crewSlots: 3  },
-  3: { name: 'Schooner',   combat: 6,  navigation: 7,  durability: 5,  speed: 8,  luck: 6,  crewSlots: 4  },
-  4: { name: 'Brigantine', combat: 9,  navigation: 9,  durability: 8,  speed: 9,  luck: 7,  crewSlots: 5  },
-  5: { name: 'Galleon',    combat: 14, navigation: 12, durability: 13, speed: 8,  luck: 8,  crewSlots: 7  },
-  6: { name: 'Man-o-War',  combat: 20, navigation: 16, durability: 20, speed: 7,  luck: 10, crewSlots: 10 },
+  0: { name: 'Rowboat',    combat: 3,  navigation: 3,  durability: 3,  speed: 4,  luck: 4,  crewSlots: 1  },
+  1: { name: 'Dinghy',     combat: 5,  navigation: 5,  durability: 4,  speed: 6,  luck: 5,  crewSlots: 2  },
+  2: { name: 'Sloop',      combat: 7,  navigation: 8,  durability: 6,  speed: 10, luck: 7,  crewSlots: 3  },
+  3: { name: 'Schooner',   combat: 9,  navigation: 11, durability: 8,  speed: 13, luck: 9,  crewSlots: 4  },
+  4: { name: 'Brigantine', combat: 12, navigation: 13, durability: 11, speed: 15, luck: 12, crewSlots: 5  },
+  5: { name: 'Galleon',    combat: 16, navigation: 14, durability: 15, speed: 13, luck: 14, crewSlots: 7  },
+  6: { name: 'Man-o-War',  combat: 20, navigation: 17, durability: 20, speed: 11, luck: 18, crewSlots: 10 },
 }
 
 const CREW_POWER_TABLE: Record<string, Record<number, number>> = {
@@ -156,7 +156,7 @@ export const ZONES: Record<ZoneKey, ZoneConfig> = {
     requiredShipTier: 0,
     specialCrewRequired: null,
     length: 4,
-    difficulty: { easy: [8, 10], standard: [12, 14], crisis: [16, 18] },
+    difficulty: { easy: [2, 3], standard: [4, 6], crisis: [7, 10] },
     eventTypes: ['rival_pirates', 'mild_storm', 'merchant_vessel', 'stranded_ship', 'fog', 'fishing_spot', 'hidden_cove'],
     crisisTypes: ['storm', 'sea_creature'],
     drops: ['common', 'uncommon', 'rare'],
@@ -169,7 +169,7 @@ export const ZONES: Record<ZoneKey, ZoneConfig> = {
     requiredShipTier: 2,
     specialCrewRequired: null,
     length: 6,
-    difficulty: { easy: [12, 14], standard: [16, 18], crisis: [20, 22] },
+    difficulty: { easy: [5, 8], standard: [9, 13], crisis: [15, 20] },
     eventTypes: ['rival_pirates', 'ghost_ship', 'whirlpool', 'storm', 'sea_creature', 'cursed_cargo', 'merchant_vessel'],
     crisisTypes: ['ghost_ship', 'rival_pirates'],
     drops: ['uncommon', 'rare', 'epic'],
@@ -182,7 +182,7 @@ export const ZONES: Record<ZoneKey, ZoneConfig> = {
     requiredShipTier: 4,
     specialCrewRequired: null,
     length: 8,
-    difficulty: { easy: [16, 18], standard: [20, 23], crisis: [25, 28] },
+    difficulty: { easy: [8, 12], standard: [13, 18], crisis: [20, 26] },
     eventTypes: ['sea_monster', 'shipwreck_salvage', 'rival_pirates', 'cursed_ship', 'storm', 'whirlpool'],
     crisisTypes: ['kraken_warning', 'sea_monster'],
     drops: ['rare', 'epic', 'legendary'],
@@ -195,7 +195,7 @@ export const ZONES: Record<ZoneKey, ZoneConfig> = {
     requiredShipTier: 6,
     specialCrewRequired: ['Catfish', 'Doby_Mick'],
     length: 10,
-    difficulty: { easy: [20, 22], standard: [25, 28], crisis: [30, 35] },
+    difficulty: { easy: [12, 16], standard: [18, 24], crisis: [26, 32] },
     eventTypes: ['kraken_attack', 'ghost_armada', 'cursed_treasure', 'abyss_creature', 'void_storm', 'davy_jones_encounter'],
     crisisTypes: ['kraken_attack', 'davy_jones_encounter'],
     drops: ['legendary', 'mythic', 'divine'],
@@ -240,7 +240,9 @@ export function rollStat(stat: Stat, crewAssigned: CrewCard[], shipTier: number)
   const stats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
   const base = stats[stat]
   const crewBonus = crewAssigned.reduce((sum, card) => sum + card.power, 0)
-  const roll = Math.floor(Math.random() * base) + 1
+  // Floor = shipTier + 1, so higher-tier ships can't roll embarrassingly low
+  const floor = shipTier + 1
+  const roll = floor + Math.floor(Math.random() * Math.max(1, base - floor + 1))
   const crewRoll = crewBonus > 0 ? Math.floor(Math.random() * crewBonus) + 1 : 0
   return { base, crewBonus, roll, crewRoll, total: roll + crewRoll }
 }

@@ -297,8 +297,8 @@ export async function resolveFinalLoot(
 
   const dropPool = zoneConfig.drops
   let lootRarity: string
-  if (finalScore >= 35) lootRarity = dropPool[dropPool.length - 1]
-  else if (finalScore >= 22) lootRarity = dropPool[Math.floor(dropPool.length / 2)]
+  if (finalScore >= 25) lootRarity = dropPool[dropPool.length - 1]
+  else if (finalScore >= 15) lootRarity = dropPool[Math.floor(dropPool.length / 2)]
   else lootRarity = dropPool[0]
 
   const baseDoubloons = BASE_DOUBLOONS[exp.zone]

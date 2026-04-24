@@ -202,6 +202,7 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
           <ResultView
             event={currentEvent}
             result={rollingResult}
+            shipTier={expedition.ship_tier}
             onContinue={handleContinue}
           />
         )}
@@ -215,6 +216,7 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
         {phase.type === 'loot-result' && lootResult && (
           <LootResultView
             loot={lootResult}
+            shipTier={expedition.ship_tier}
             onDone={() => router.push(`/expeditions/results?id=${expedition.id}`)}
           />
         )}
@@ -379,7 +381,8 @@ function EventView({
   )
 }
 
-function ResultView({ event, result, onContinue }: { event: EventNode; result: EventResult; onContinue: () => void }) {
+function ResultView({ event, result, shipTier, onContinue }: { event: EventNode; result: EventResult; shipTier: number; onContinue: () => void }) {
+  const shipFloor = shipTier + 1
   const success = result.outcome === 'success'
 
   return (
@@ -411,13 +414,13 @@ function ResultView({ event, result, onContinue }: { event: EventNode; result: E
           <div className="flex items-center gap-2">
             <div style={{ flex: 1, textAlign: 'center' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0c040' }}>{result.roll}</p>
-              <p className="font-karla" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Ship (1d{result.base})</p>
+              <p className="font-karla" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Ship ({shipFloor}–{result.base})</p>
             </div>
             {(result.crewBonus ?? 0) > 0 && <>
               <p style={{ color: '#6a6764', fontSize: '0.8rem' }}>+</p>
               <div style={{ flex: 1, textAlign: 'center' }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#4ade80' }}>{result.crewRoll}</p>
-                <p className="font-karla" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Crew (1d{result.crewBonus})</p>
+                <p className="font-karla" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Crew (1–{result.crewBonus})</p>
               </div>
             </>}
             <p style={{ color: '#6a6764', fontSize: '0.8rem' }}>=</p>
@@ -481,7 +484,8 @@ function LootRollingView() {
   )
 }
 
-function LootResultView({ loot, onDone }: { loot: LootResult; onDone: () => void }) {
+function LootResultView({ loot, shipTier, onDone }: { loot: LootResult; shipTier: number; onDone: () => void }) {
+  const shipFloor = shipTier + 1
   const rarityColor = RARITY_COLORS[loot.lootRarity] ?? '#f0c040'
 
   return (
@@ -507,7 +511,7 @@ function LootResultView({ loot, onDone }: { loot: LootResult; onDone: () => void
           )}
         </div>
         <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.1rem' }}>
-          ship {loot.roll} (1d{loot.base}){(loot.crewBonus ?? 0) > 0 ? ` + crew ${loot.crewRoll} (1d${loot.crewBonus})` : ''} = {loot.total} → score {loot.finalScore}
+          ship {loot.roll} ({shipFloor}–{loot.base}){(loot.crewBonus ?? 0) > 0 ? ` + crew ${loot.crewRoll} (1–${loot.crewBonus})` : ''} = {loot.total} → score {loot.finalScore}
         </p>
       </div>
 
@@ -630,7 +634,8 @@ function StatsSheet({ expedition, shipStats, onClose }: {
             const base = shipStats[stat]
             const assigned = crew[stat] ?? []
             const crewTotal = assigned.reduce((s, c) => s + c.power, 0)
-            const minScore = 1 + (crewTotal > 0 ? 1 : 0)
+            const shipFloor = expedition.ship_tier + 1
+            const minScore = shipFloor + (crewTotal > 0 ? 1 : 0)
             const maxScore = base + crewTotal
 
             return (
@@ -651,7 +656,7 @@ function StatsSheet({ expedition, shipStats, onClose }: {
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <div style={{ background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.15)', borderRadius: 6, padding: '0.2rem 0.6rem', flexShrink: 0 }}>
-                    <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#f0c040' }}>Ship +{base}</p>
+                    <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#f0c040' }}>Ship {shipFloor}–{base}</p>
                   </div>
                   {assigned.map((card, i) => (
                     <div key={i} className="flex items-center gap-1.5" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '0.2rem 0.5rem', minWidth: 0 }}>
