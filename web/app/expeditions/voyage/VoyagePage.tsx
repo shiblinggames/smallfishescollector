@@ -538,36 +538,6 @@ function LootResultView({ loot, shipTier, onDone }: { loot: LootResult; shipTier
         </p>
       </div>
 
-      {/* Card reward */}
-      {loot.cardVariantId && loot.cardFilename && (
-        <div
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: `1px solid ${rarityColor}30`,
-            borderRadius: 12,
-            padding: '0.875rem',
-            marginBottom: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.875rem',
-          }}
-        >
-          <img
-            src={IMG_BASE + loot.cardFilename}
-            alt={loot.cardName ?? 'Card'}
-            style={{ width: 50, height: 50, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
-          />
-          <div>
-            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: rarityColor, marginBottom: 2 }}>
-              {loot.lootRarity.charAt(0).toUpperCase() + loot.lootRarity.slice(1)} · {loot.cardVariantName}
-            </p>
-            <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.9rem' }}>
-              {loot.cardName}
-            </p>
-          </div>
-        </div>
-      )}
-
       <button
         onClick={onDone}
         style={{

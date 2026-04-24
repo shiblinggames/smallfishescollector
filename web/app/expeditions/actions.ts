@@ -11,7 +11,6 @@ import {
 } from '@/lib/expeditions'
 import { ensureDailyExpeditionContent } from './generate'
 import { RARITY_TIERS } from '@/lib/variants'
-import type { CardVariant } from '@/lib/types'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -321,36 +320,6 @@ export async function resolveFinalLoot(
   const baseDoubloons = BASE_DOUBLOONS[exp.zone]
   const doubloons = Math.max(10, Math.floor(baseDoubloons * (finalScore / 25) * lootPenaltyMultiplier) - totalCostPenalty)
 
-  // Draw a card of the determined rarity
-  const { data: variantRows } = await admin
-    .from('card_variants')
-    .select('id, card_id, variant_name, border_style, art_effect, drop_weight, cards(id, name, slug, filename, tier, zone)')
-
-  const allVariants = (variantRows ?? []) as unknown as CardVariant[]
-  const targetRarityName = lootRarity.charAt(0).toUpperCase() + lootRarity.slice(1)
-  const validVariantNames = new Set(
-    RARITY_TIERS.find(t => t.name === targetRarityName)?.variants ?? []
-  )
-  const pool = allVariants.filter(v => validVariantNames.has(v.variant_name))
-
-  let cardVariantId: number | undefined
-  let cardName: string | undefined
-  let cardFilename: string | undefined
-  let cardVariantName: string | undefined
-
-  if (pool.length > 0) {
-    const picked = weightedPick(pool)
-    cardVariantId = picked.id
-    cardName = picked.cards?.name
-    cardFilename = picked.cards?.filename
-    cardVariantName = picked.variant_name
-
-    await admin.from('user_collection').insert({
-      user_id: user.id,
-      card_variant_id: picked.id,
-    })
-  }
-
   // Award doubloons
   const { data: profileData } = await admin
     .from('profiles')
@@ -369,10 +338,6 @@ export async function resolveFinalLoot(
     crewBonus: rollResult.crewBonus,
     finalScore,
     successBonus,
-    cardVariantId,
-    cardName,
-    cardFilename,
-    cardVariantName,
   }
 
   await Promise.all([

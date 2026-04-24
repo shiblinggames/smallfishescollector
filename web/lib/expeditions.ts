@@ -81,10 +81,6 @@ export interface LootResult {
   crewBonus: number
   finalScore: number
   successBonus: number
-  cardVariantId?: number
-  cardName?: string
-  cardFilename?: string
-  cardVariantName?: string
 }
 
 export interface Expedition {

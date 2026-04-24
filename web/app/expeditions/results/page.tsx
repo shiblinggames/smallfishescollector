@@ -4,11 +4,10 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
 import {
-  ZONES, EXPEDITION_SHIP_STATS, HULL_POINTS, STAT_LABELS, STAT_ICONS, RARITY_COLORS,
+  ZONES, EXPEDITION_SHIP_STATS, HULL_POINTS, STAT_LABELS, STAT_ICONS,
   type Expedition, type DailyExpeditionRow, type EventResult, type EventNode,
 } from '@/lib/expeditions'
 
-const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 
 export default async function ExpeditionsResultsPage({
   searchParams,
@@ -52,7 +51,6 @@ export default async function ExpeditionsResultsPage({
   const eventSequence: EventNode[] = (dailyRow?.event_sequence ?? []) as EventNode[]
   const successCount = events.filter(e => e.outcome === 'success').length
 
-  const rarityColor = loot?.lootRarity ? (RARITY_COLORS[loot.lootRarity] ?? '#f0c040') : '#6a6764'
 
   return (
     <>
@@ -97,23 +95,6 @@ export default async function ExpeditionsResultsPage({
                   </p>
                   <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764' }}>Doubloons</p>
                 </div>
-                {loot.cardFilename && loot.cardName && (
-                  <div className="flex items-center gap-2.5 flex-1">
-                    <img
-                      src={IMG_BASE + loot.cardFilename}
-                      alt={loot.cardName}
-                      style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
-                    />
-                    <div>
-                      <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: rarityColor, marginBottom: 2 }}>
-                        {loot.lootRarity.charAt(0).toUpperCase() + loot.lootRarity.slice(1)} · {loot.cardVariantName}
-                      </p>
-                      <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.88rem' }}>
-                        {loot.cardName}
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}
