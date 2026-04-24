@@ -231,8 +231,7 @@ export async function resolveChoice(
   }
 
   if (!success) {
-    const isHullEvent = ['storm', 'mild_storm', 'sea_monster', 'kraken_attack', 'kraken_warning',
-      'ghost_armada', 'abyss_creature', 'void_storm'].includes(eventNode.eventType)
+    const isHullEvent = mechanics.stat === 'combat' || mechanics.stat === 'durability'
     if (isHullEvent) {
       result.hullDamage = threshold - rollResult.total
     } else {
@@ -370,8 +369,7 @@ export async function resolvePenaltyEvent(
   }
 
   if (!success) {
-    const isHullEvent = ['storm', 'mild_storm', 'sea_monster', 'kraken_attack', 'kraken_warning',
-      'ghost_armada', 'abyss_creature', 'void_storm'].includes(eventNode.eventType)
+    const isHullEvent = mechanics.stat === 'combat' || mechanics.stat === 'durability'
     if (isHullEvent) {
       result.hullDamage = threshold - rollResult.total
     } else {
