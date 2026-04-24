@@ -103,6 +103,15 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   ]
 
   const mobileMenuLinks = [
+    { href: '/expeditions', label: 'Expeditions', badge: false,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 17c2 4 16 4 18 0"/><path d="M4 17L6 12l13 0 2 5"/>
+          <line x1="10" y1="12" x2="10" y2="4"/>
+          <path d="M10 4L17 9 10 12"/>
+        </svg>
+      )
+    },
     { href: '/social', label: 'Social', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -140,6 +149,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   ]
 
   const desktopOnlyLinks = [
+    { href: '/expeditions',  label: 'Expeditions',  badge: null },
     { href: '/achievements', label: 'Achievements', badge: achievementsBadge ? true : null },
     { href: '/leaderboard',  label: 'Leaderboard',  badge: null },
     { href: '/social',       label: 'Social',        badge: null },
