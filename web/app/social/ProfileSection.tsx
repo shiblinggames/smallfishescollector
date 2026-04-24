@@ -159,10 +159,10 @@ export default function ProfileSection({ username: initialUsername, usernameChan
                 .map(id => pickerCards.find(c => c.variantId === id))
                 .filter((c): c is PickerCard => !!c)
               return showcaseCards.length > 0 ? (
-                <div className="flex gap-2 justify-center flex-wrap">
+                <div className="flex gap-2 justify-center">
                   {showcaseCards.map(card => (
-                    <div key={card.variantId} style={{ width: 70, height: 70, overflow: 'hidden', flexShrink: 0, borderRadius: '50%' }}>
-                      <div style={{ transform: 'scale(0.5)', transformOrigin: 'top left', width: 140 }}>
+                    <div key={card.variantId} style={{ width: 64, height: 64, overflow: 'hidden', flexShrink: 0, borderRadius: '50%' }}>
+                      <div style={{ transform: 'scale(0.457)', transformOrigin: 'top left', width: 140 }}>
                         <FishCard
                           name={card.name}
                           filename={card.filename}
