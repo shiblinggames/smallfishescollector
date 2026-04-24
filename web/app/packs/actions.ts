@@ -9,7 +9,7 @@ import type { CardVariant, DrawnCard } from '@/lib/types'
 import { checkAchievements } from '@/lib/checkAchievements'
 import { getWeekStart } from '@/lib/weekStart'
 
-const PACK_COSTS: Record<number, number> = { 1: 200, 10: 1500 }
+const PACK_COSTS: Record<number, number> = { 1: 250, 10: 2000 }
 
 export async function buyPacksWithDoubloons(count: 1 | 10): Promise<{ packsAvailable: number; doubloons: number } | { error: string }> {
   const cost = PACK_COSTS[count]

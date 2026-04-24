@@ -360,20 +360,20 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
           <p className="font-karla font-600 text-[#f0c040] text-sm tracking-wide">{doubloons.toLocaleString()} ⟡</p>
           <div className="flex gap-2">
             <button
-              onClick={() => doubloons >= 200 && handleBuyWithDoubloons(1)}
+              onClick={() => doubloons >= 250 && handleBuyWithDoubloons(1)}
               disabled={buyingWithDoubloons}
               className="btn-ghost text-xs transition-opacity"
-              style={{ opacity: doubloons >= 200 ? 1 : 0.35, cursor: doubloons >= 200 ? 'pointer' : 'default' }}
+              style={{ opacity: doubloons >= 250 ? 1 : 0.35, cursor: doubloons >= 250 ? 'pointer' : 'default' }}
             >
-              {buyingWithDoubloons ? '…' : 'Buy 1 · 200 ⟡'}
+              {buyingWithDoubloons ? '…' : 'Buy 1 · 250 ⟡'}
             </button>
             <button
-              onClick={() => doubloons >= 1500 && handleBuyWithDoubloons(10)}
+              onClick={() => doubloons >= 2000 && handleBuyWithDoubloons(10)}
               disabled={buyingWithDoubloons}
               className="btn-ghost text-xs transition-opacity"
-              style={{ opacity: doubloons >= 1500 ? 1 : 0.35, cursor: doubloons >= 1500 ? 'pointer' : 'default' }}
+              style={{ opacity: doubloons >= 2000 ? 1 : 0.35, cursor: doubloons >= 2000 ? 'pointer' : 'default' }}
             >
-              Buy 10 · 1,500 ⟡
+              Buy 10 · 2,000 ⟡
             </button>
           </div>
         </div>
