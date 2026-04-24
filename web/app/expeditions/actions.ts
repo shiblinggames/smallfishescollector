@@ -182,6 +182,7 @@ export async function resolveChoice(
       outcome: 'success',
       text: choice.successText,
       noRoll: true,
+      ...(choice.cost ? { costPenalty: choice.cost } : {}),
     }
     await saveProgress(admin, expeditionId, nodeIndex, result, exp.events)
     return result
@@ -293,6 +294,9 @@ export async function resolveFinalLoot(
     .filter((e: EventResult) => e.lootPenalty)
     .reduce((acc: number, e: EventResult) => acc * (1 - (e.lootPenalty ?? 0)), 1)
 
+  const totalCostPenalty = completedEvents
+    .reduce((acc: number, e: EventResult) => acc + (e.costPenalty ?? 0), 0)
+
   const finalScore = rollResult.total + successBonus
 
   const dropPool = zoneConfig.drops
@@ -302,7 +306,7 @@ export async function resolveFinalLoot(
   else lootRarity = dropPool[0]
 
   const baseDoubloons = BASE_DOUBLOONS[exp.zone]
-  const doubloons = Math.max(10, Math.floor(baseDoubloons * (finalScore / 25) * lootPenaltyMultiplier))
+  const doubloons = Math.max(10, Math.floor(baseDoubloons * (finalScore / 25) * lootPenaltyMultiplier) - totalCostPenalty)
 
   // Draw a card of the determined rarity
   const { data: variantRows } = await admin

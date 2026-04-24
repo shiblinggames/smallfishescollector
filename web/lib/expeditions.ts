@@ -37,6 +37,7 @@ export interface EventChoice {
   successText: string
   failText: string
   isNoRoll?: boolean
+  cost?: number
 }
 
 export interface EventNode {
@@ -65,6 +66,7 @@ export interface EventResult {
   threshold?: number
   hullDamage?: number
   lootPenalty?: number
+  costPenalty?: number
   expeditionFailed?: boolean
   failReason?: string
 }

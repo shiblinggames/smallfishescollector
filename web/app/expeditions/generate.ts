@@ -54,6 +54,8 @@ Every sentence must earn its place. Each sentence should:
 
 Cut anything that only describes a mood without adding new information.
 
+NO-ROLL CHOICE RULE: Every isNoRoll choice must include a "cost" field — doubloons deducted from the player's final loot. This represents paying your way out of risk. Scale costs by zone: coral_run 15–50, bertuna_triangle 50–150, sunken_reach 150–400, davy_jones_locker 400–800. The cost should feel proportionate to the danger being avoided.
+
 CRISIS EVENT RULE: The final event in the sequence (marked as isCrisis: true) must always be LONG format. It is the climax of the expedition. Something real should be at stake. The choice must feel genuinely difficult with no obviously correct answer. The player should pause before clicking.
 
 WORLD FACTIONS — reference and vary these across events:
@@ -84,7 +86,8 @@ BRIEF EXAMPLE (combat):
     {
       "label": "💰 Pay the toll",
       "successText": "He pockets it without looking at you. Worse, somehow.",
-      "isNoRoll": true
+      "isNoRoll": true,
+      "cost": 30
     },
     {
       "label": "💨 Run before he finishes talking",
@@ -113,7 +116,8 @@ MEDIUM EXAMPLE (navigation):
     {
       "label": "🔄 Go around",
       "successText": "It costs you half a day. Maybe that's fine.",
-      "isNoRoll": true
+      "isNoRoll": true,
+      "cost": 20
     }
   ]
 }
@@ -137,7 +141,8 @@ LONG EXAMPLE (crisis):
     {
       "label": "🚪 Leave him to it",
       "successText": "Not your cargo. Not your problem. You sail on.",
-      "isNoRoll": true
+      "isNoRoll": true,
+      "cost": 0
     }
   ]
 }
@@ -164,7 +169,7 @@ Make the crisis event feel earned after everything that came before it.`
   if (!match) throw new Error(`No JSON array in Claude response: ${raw.slice(0, 200)}`)
   const parsed = JSON.parse(match[0]) as Array<{
     eventType: string; name: string; flavor: string;
-    choices: Array<{ label: string; successText: string; failText: string; isNoRoll?: boolean }>
+    choices: Array<{ label: string; successText: string; failText: string; isNoRoll?: boolean; cost?: number }>
   }>
 
   return parsed.map((event, i) => ({

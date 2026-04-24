@@ -363,7 +363,9 @@ function EventView({
                 {choice.label}
               </p>
               {choice.isNoRoll && (
-                <p className="font-karla mt-0.5" style={{ fontSize: '0.6rem', color: '#6a6764' }}>Always succeeds</p>
+                <p className="font-karla mt-0.5" style={{ fontSize: '0.6rem', color: '#6a6764' }}>
+                  {choice.cost ? `Always succeeds · −${choice.cost} ⟡ from loot` : 'Always succeeds'}
+                </p>
               )}
             </button>
           )
@@ -453,6 +455,11 @@ function ResultView({ event, result, shipTier, onContinue }: { event: EventNode;
           Loot reduced by 20%
         </p>
       )}
+      {result.costPenalty ? (
+        <p className="font-karla mb-4" style={{ fontSize: '0.7rem', color: '#f59e0b' }}>
+          −{result.costPenalty} ⟡ deducted from final loot
+        </p>
+      ) : null}
 
       <button
         onClick={onContinue}
