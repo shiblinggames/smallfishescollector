@@ -1,7 +1,14 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { RARITY_COLORS, type ZoneKey, type ZoneConfig, type Expedition } from '@/lib/expeditions'
+import { RARITY_COLORS, BASE_DOUBLOONS, type ZoneKey, type ZoneConfig, type Expedition } from '@/lib/expeditions'
+
+const ZONE_DIFFICULTY: Record<ZoneKey, { label: string; color: string }> = {
+  coral_run:          { label: 'Beginner',     color: '#4ade80' },
+  bertuna_triangle:   { label: 'Intermediate', color: '#f0c040' },
+  sunken_reach:       { label: 'Advanced',     color: '#f97316' },
+  davy_jones_locker:  { label: 'Extreme',      color: '#f87171' },
+}
 
 interface Props {
   zoneKey: ZoneKey
@@ -39,13 +46,12 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, hasSpe
     router.push(`/expeditions/prepare?zone=${zoneKey}`)
   }
 
-  const dropDisplay = config.drops.map(r => (
-    <span key={r} style={{ color: RARITY_COLORS[r] }}>
-      {r.charAt(0).toUpperCase() + r.slice(1)}
-    </span>
-  ))
+  const difficulty = ZONE_DIFFICULTY[zoneKey]
+  const topRarity = config.drops[config.drops.length - 1]
+  const topRarityColor = RARITY_COLORS[topRarity] ?? '#f0c040'
+  const baseDoubloons = BASE_DOUBLOONS[zoneKey]
 
-  let statusLabel = `${config.length} events · ${config.entryCost} ⟡`
+  let statusLabel = `Entry: ${config.entryCost} ⟡`
   let statusColor = '#6a6764'
   if (isActive) { statusLabel = `In progress — node ${expedition!.current_node + 1}/${config.length - 1}`; statusColor = '#f0c040' }
   if (isCompleted) { statusLabel = `Completed — ${(expedition?.loot as { doubloons?: number })?.doubloons ?? 0} ⟡ earned`; statusColor = '#4ade80' }
@@ -111,14 +117,35 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, hasSpe
         {config.description}
       </p>
 
-      {/* Drop rarities */}
-      {!isLocked && (
-        <div className="flex items-center gap-1 flex-wrap mb-2">
-          {dropDisplay.reduce<React.ReactNode[]>((acc, el, i) => {
-            if (i > 0) acc.push(<span key={`dot-${i}`} style={{ color: '#4a4845', fontSize: '0.5rem' }}>·</span>)
-            acc.push(el)
-            return acc
-          }, []).map((el, i) => <span key={i} className="font-karla font-600" style={{ fontSize: '0.62rem' }}>{el}</span>)}
+      {/* Difficulty + rewards */}
+      {!isAttempted && (
+        <div className="flex flex-col gap-1.5 mb-2">
+          <div className="flex items-center gap-2">
+            <span
+              className="font-karla font-700 uppercase tracking-[0.08em]"
+              style={{
+                fontSize: '0.5rem',
+                color: difficulty.color,
+                background: `${difficulty.color}15`,
+                border: `1px solid ${difficulty.color}35`,
+                borderRadius: 4,
+                padding: '0.15rem 0.4rem',
+              }}
+            >
+              {difficulty.label}
+            </span>
+            <span className="font-karla" style={{ fontSize: '0.6rem', color: '#6a6764' }}>
+              {config.length} events
+            </span>
+          </div>
+          {!isLocked && (
+            <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
+              <span style={{ color: topRarityColor }}>
+                {topRarity.charAt(0).toUpperCase() + topRarity.slice(1)}
+              </span>
+              {' '}cards · ~{baseDoubloons.toLocaleString()} ⟡ base reward
+            </p>
+          )}
         </div>
       )}
 

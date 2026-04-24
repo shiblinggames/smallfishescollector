@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { SHIPS } from '@/lib/ships'
 import { buyShip } from '@/app/shipyard/actions'
+import { EXPEDITION_SHIP_STATS, HULL_POINTS, STAT_ICONS } from '@/lib/expeditions'
 
 export default function ShipyardClient({ shipTier: initialTier, doubloons: initialDoubloons }: { shipTier: number; doubloons: number }) {
   const [shipTier, setShipTier] = useState(initialTier)
@@ -71,8 +72,50 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
                   </div>
                   <p className="font-karla font-300 text-[#6a6764] text-xs sm:text-sm">{ship.description}</p>
 
+                  {/* Expedition stats */}
+                  {!locked && (() => {
+                    const stats = EXPEDITION_SHIP_STATS[ship.tier]
+                    const hull = HULL_POINTS[ship.tier] ?? 3
+                    const floor = ship.tier + 1
+                    const statKeys = ['combat', 'navigation', 'durability', 'speed', 'luck'] as const
+                    return (
+                      <div className="mt-2.5">
+                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                          <span className="font-karla" style={{ fontSize: '0.55rem', color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                            {stats.crewSlots} crew slots
+                          </span>
+                          <span style={{ color: '#4a4845', fontSize: '0.5rem' }}>·</span>
+                          <span className="font-karla" style={{ fontSize: '0.55rem', color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                            {hull} hull
+                          </span>
+                        </div>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {statKeys.map(stat => (
+                            <div
+                              key={stat}
+                              style={{
+                                background: owned ? `${c}0d` : 'rgba(255,255,255,0.04)',
+                                border: `1px solid ${owned ? `${c}25` : 'rgba(255,255,255,0.08)'}`,
+                                borderRadius: 6,
+                                padding: '0.2rem 0.45rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                              }}
+                            >
+                              <span style={{ fontSize: '0.65rem', lineHeight: 1 }}>{STAT_ICONS[stat]}</span>
+                              <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: owned ? c : '#6a6764' }}>
+                                {floor}–{stats[stat]}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })()}
+
                   {isNext && (
-                    <p className="font-karla font-600 mt-1 text-xs sm:text-sm" style={{ color: canAfford ? c : '#6a6764' }}>
+                    <p className="font-karla font-600 mt-1.5 text-xs sm:text-sm" style={{ color: canAfford ? c : '#6a6764' }}>
                       {isPending ? 'Upgrading…' : canAfford ? '↑ Tap to upgrade' : `${(ship.cost - doubloons).toLocaleString()} ⟡ short`}
                     </p>
                   )}
