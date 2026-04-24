@@ -22,11 +22,7 @@ interface ZoneDef {
 const ZONES: ZoneDef[] = [
   { from:  0, to: 14, quality:  3, label: 'Weak',     color: '#f87171', bg: 'rgba(248,113,113,0.15)' },
   { from: 14, to: 18, quality: 20, label: 'Perfect!',  color: '#fde68a', bg: 'rgba(253,230,138,0.55)', isPerfect: true },
-  { from: 18, to: 35, quality:  9, label: 'Good',      color: '#f0c040', bg: 'rgba(240,192,64,0.13)'  },
-  { from: 35, to: 39, quality: 17, label: 'Perfect!',  color: '#86efac', bg: 'rgba(134,239,172,0.5)',  isPerfect: true },
-  { from: 39, to: 61, quality: 14, label: 'Great',     color: '#4ade80', bg: 'rgba(74,222,128,0.16)'  },
-  { from: 61, to: 65, quality: 17, label: 'Perfect!',  color: '#86efac', bg: 'rgba(134,239,172,0.5)',  isPerfect: true },
-  { from: 65, to: 82, quality:  9, label: 'Good',      color: '#f0c040', bg: 'rgba(240,192,64,0.13)'  },
+  { from: 18, to: 82, quality: 14, label: 'Great',     color: '#4ade80', bg: 'rgba(74,222,128,0.13)'  },
   { from: 82, to: 86, quality: 20, label: 'Perfect!',  color: '#fde68a', bg: 'rgba(253,230,138,0.55)', isPerfect: true },
   { from: 86, to:100, quality:  3, label: 'Weak',      color: '#f87171', bg: 'rgba(248,113,113,0.15)' },
 ]
@@ -52,10 +48,9 @@ function catchColor(quality: number, isPerfect: boolean): string {
 }
 
 const ZONE_LEGEND = [
-  { label: 'Weak',    color: '#f87171', desc: 'Poor catch'       },
-  { label: 'Good',    color: '#f0c040', desc: 'Decent haul'      },
-  { label: 'Great',   color: '#4ade80', desc: 'Strong pull'      },
-  { label: 'Perfect', color: '#fde68a', desc: 'Maximum reward'   },
+  { label: 'Weak',    color: '#f87171', desc: 'Poor catch'     },
+  { label: 'Great',   color: '#4ade80', desc: 'Good haul'      },
+  { label: 'Perfect ✦', color: '#fde68a', desc: 'Maximum reward' },
 ]
 
 export default function FishingGame({
@@ -401,10 +396,10 @@ export default function FishingGame({
 
             {/* Zone labels below bar */}
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 4px' }}>
-              {(['Weak', 'Good', 'Great', 'Good', 'Weak'] as const).map((l, i) => (
+              {(['Weak', 'Great', 'Weak'] as const).map((l, i) => (
                 <p key={i} className="font-karla" style={{
                   fontSize: '0.5rem',
-                  color: l === 'Weak' ? '#f8717160' : l === 'Good' ? '#f0c04070' : '#4ade8070',
+                  color: l === 'Weak' ? '#f8717160' : '#4ade8070',
                   letterSpacing: '0.05em',
                 }}>
                   {l}
