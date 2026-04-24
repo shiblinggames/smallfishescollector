@@ -68,7 +68,6 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
   const [isPending, startTransition] = useTransition()
   const [currentNode, setCurrentNode] = useState(expedition.current_node)
   const [phase, setPhase] = useState<Phase>({ type: 'event' })
-  const [rollingResult, setRollingResult] = useState<EventResult | null>(null)
   const [pendingRoll, setPendingRoll] = useState<number>(1)
   const [lootResult, setLootResult] = useState<LootResult | null>(null)
   const [showStats, setShowStats] = useState(false)
@@ -79,8 +78,6 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
 
   const hullMax = HULL_POINTS[expedition.ship_tier] ?? 3
   const shipStats = EXPEDITION_SHIP_STATS[expedition.ship_tier]
-
-  // Compute current hull damage from stored events + any in-session damage
   const storedHullDamage = expedition.hull_damage ?? 0
 
   function handleChoiceClick(choiceIndex: number) {
@@ -94,14 +91,13 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
         return
       }
 
-      // Show the real roll on the die, then wait for animation to finish
+      // Let the die settle, then linger on the final number before showing result
       if (result.roll !== undefined) setPendingRoll(result.roll)
-      await new Promise(r => setTimeout(r, 950))
-      setRollingResult(result)
+      await new Promise(r => setTimeout(r, 1600))
       setPhase({ type: 'result', result })
 
       if (result.expeditionFailed) {
-        await new Promise(r => setTimeout(r, 1500))
+        await new Promise(r => setTimeout(r, 1800))
         setPhase({ type: 'failed', reason: result.failReason ?? 'Your ship was destroyed.' })
       }
     })
@@ -112,10 +108,8 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
     const result = (phase as { type: 'result'; result: EventResult }).result
     const nextNode = result.nodeIndex + 1
     setCurrentNode(nextNode)
-    setRollingResult(null)
 
     if (nextNode >= eventSequence.length) {
-      // Move to final loot roll
       setPhase({ type: 'loot-rolling' })
       startTransition(async () => {
         const loot = await resolveFinalLoot(expedition.id)
@@ -140,6 +134,7 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
   }
 
   const progressPct = Math.min((currentNode / totalEvents) * 100, 100)
+  const activeResult = phase.type === 'result' ? (phase as { type: 'result'; result: EventResult }).result : null
 
   return (
     <main className="min-h-screen pb-24 sm:pb-0 pt-6">
@@ -162,7 +157,6 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
               >
                 ⚓ Crew
               </button>
-              {/* Hull indicator */}
               <div className="flex items-center gap-1">
                 {Array.from({ length: hullMax }).map((_, i) => (
                   <div
@@ -179,40 +173,29 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
               </p>
             </div>
           </div>
-          {/* Progress bar */}
           <div style={{ height: 2, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${progressPct}%`, background: '#f0c040', transition: 'width 0.4s ease', borderRadius: 2 }} />
           </div>
         </div>
 
-        {/* ── EVENT PHASE ── */}
-        {(phase.type === 'event' || phase.type === 'rolling') && currentEvent && (
-          <EventView
+        {/* ── EVENT / ROLLING / RESULT (inline) ── */}
+        {(phase.type === 'event' || phase.type === 'rolling' || phase.type === 'result') && currentEvent && (
+          <EventCard
             event={currentEvent}
             phase={phase}
-            rollingResult={rollingResult}
+            result={activeResult}
             pendingRoll={pendingRoll}
+            shipTier={expedition.ship_tier}
             onChoice={handleChoiceClick}
+            onContinue={handleContinue}
             isPending={isPending}
           />
         )}
 
-        {/* ── RESULT PHASE ── */}
-        {phase.type === 'result' && currentEvent && rollingResult && (
-          <ResultView
-            event={currentEvent}
-            result={rollingResult}
-            shipTier={expedition.ship_tier}
-            onContinue={handleContinue}
-          />
-        )}
+        {/* ── LOOT ROLLING ── */}
+        {phase.type === 'loot-rolling' && <LootRollingView />}
 
-        {/* ── LOOT ROLLING PHASE ── */}
-        {phase.type === 'loot-rolling' && (
-          <LootRollingView />
-        )}
-
-        {/* ── LOOT RESULT PHASE ── */}
+        {/* ── LOOT RESULT ── */}
         {phase.type === 'loot-result' && lootResult && (
           <LootResultView
             loot={lootResult}
@@ -221,7 +204,7 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
           />
         )}
 
-        {/* ── FAILED PHASE ── */}
+        {/* ── FAILED ── */}
         {phase.type === 'failed' && (
           <FailedView
             reason={(phase as { type: 'failed'; reason: string }).reason}
@@ -273,7 +256,7 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
           />
         )}
 
-        {/* Abandon link (shown during event phase) */}
+        {/* Abandon link */}
         {phase.type === 'event' && (
           <button
             onClick={() => setPhase({ type: 'abandon-confirm' })}
@@ -289,23 +272,22 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
   )
 }
 
-function EventView({
-  event,
-  phase,
-  rollingResult,
-  pendingRoll,
-  onChoice,
-  isPending,
+function EventCard({
+  event, phase, result, pendingRoll, shipTier, onChoice, onContinue, isPending,
 }: {
   event: EventNode
   phase: Phase
-  rollingResult: EventResult | null
+  result: EventResult | null
   pendingRoll: number
+  shipTier: number
   onChoice: (i: number) => void
+  onContinue: () => void
   isPending: boolean
 }) {
   const rolling = phase.type === 'rolling'
+  const showResult = phase.type === 'result'
   const rollingChoiceIndex = rolling ? (phase as { type: 'rolling'; choiceIndex: number }).choiceIndex : -1
+  const success = result?.outcome === 'success'
 
   return (
     <div>
@@ -326,8 +308,8 @@ function EventView({
         {event.flavor}
       </p>
 
-      {/* Stat being checked */}
-      {event.mechanics.stat && (
+      {/* Stat being checked — hide once result is in */}
+      {event.mechanics.stat && !showResult && (
         <div className="flex items-center gap-1.5 mb-5">
           <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
             Checking:
@@ -341,28 +323,61 @@ function EventView({
       {/* Choices */}
       <div className="flex flex-col gap-2.5">
         {event.choices.map((choice, i) => {
+          const isChosen = showResult && result?.choiceIndex === i
           const isThisRolling = rolling && rollingChoiceIndex === i
+
+          let bg = 'rgba(255,255,255,0.05)'
+          let border = 'rgba(255,255,255,0.1)'
+          let opacity = 1
+          let textColor = '#f0ede8'
+
+          if (showResult) {
+            if (isChosen) {
+              bg = success ? 'rgba(74,222,128,0.08)' : 'rgba(248,113,113,0.08)'
+              border = success ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.25)'
+              textColor = success ? '#4ade80' : '#f87171'
+            } else {
+              bg = 'rgba(255,255,255,0.02)'
+              border = 'rgba(255,255,255,0.05)'
+              opacity = 0.25
+              textColor = '#6a6764'
+            }
+          } else if (rolling) {
+            if (isThisRolling) {
+              bg = 'rgba(240,192,64,0.12)'
+              border = 'rgba(240,192,64,0.3)'
+              textColor = '#f0c040'
+            } else {
+              opacity = 0.4
+            }
+          }
+
           return (
             <button
               key={i}
-              onClick={() => !rolling && !isPending && onChoice(i)}
-              disabled={rolling || isPending}
+              onClick={() => !rolling && !isPending && !showResult && onChoice(i)}
+              disabled={rolling || isPending || showResult}
               style={{
                 width: '100%',
                 padding: '0.875rem 1rem',
-                background: isThisRolling ? 'rgba(240,192,64,0.12)' : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${isThisRolling ? 'rgba(240,192,64,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                background: bg,
+                border: `1px solid ${border}`,
                 borderRadius: 12,
-                cursor: rolling || isPending ? 'default' : 'pointer',
-                opacity: rolling && !isThisRolling ? 0.4 : 1,
+                cursor: rolling || isPending || showResult ? 'default' : 'pointer',
+                opacity,
                 textAlign: 'left',
-                transition: 'opacity 0.2s, border-color 0.2s',
+                transition: 'opacity 0.3s, border-color 0.3s, background 0.3s',
               }}
             >
-              <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: isThisRolling ? '#f0c040' : '#f0ede8' }}>
+              <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: textColor }}>
                 {choice.label}
               </p>
-              {choice.isNoRoll && (
+              {isChosen && showResult && (
+                <p className="font-karla mt-0.5" style={{ fontSize: '0.6rem', color: textColor, opacity: 0.8 }}>
+                  {success ? '✓ This worked' : '✗ This failed'}
+                </p>
+              )}
+              {choice.isNoRoll && !showResult && (
                 <p className="font-karla mt-0.5" style={{ fontSize: '0.6rem', color: '#6a6764' }}>
                   {choice.cost ? `Always succeeds · −${choice.cost} ⟡ from loot` : 'Always succeeds'}
                 </p>
@@ -372,111 +387,139 @@ function EventView({
         })}
       </div>
 
-      {/* Rolling state */}
-      {rolling && rollingResult === null && (
+      {/* Die — shown while rolling */}
+      {rolling && (
         <div className="flex flex-col items-center gap-3 mt-6">
           <RollingDie finalRoll={pendingRoll} rolling={true} />
           <p className="font-karla" style={{ fontSize: '0.68rem', color: '#6a6764' }}>Rolling...</p>
         </div>
       )}
+
+      {/* Inline result card */}
+      {showResult && result && (
+        <ResultCard result={result} shipTier={shipTier} />
+      )}
+
+      {/* Continue button */}
+      {showResult && (
+        <button
+          onClick={onContinue}
+          style={{
+            width: '100%',
+            marginTop: '1rem',
+            padding: '0.875rem',
+            background: success ? 'rgba(74,222,128,0.1)' : 'rgba(240,192,64,0.1)',
+            border: `1px solid ${success ? 'rgba(74,222,128,0.25)' : 'rgba(240,192,64,0.2)'}`,
+            borderRadius: 12,
+            cursor: 'pointer',
+            color: success ? '#4ade80' : '#f0c040',
+            fontSize: '0.72rem',
+          }}
+          className="font-karla font-700 uppercase tracking-[0.1em]"
+        >
+          Continue →
+        </button>
+      )}
     </div>
   )
 }
 
-function ResultView({ event, result, shipTier, onContinue }: { event: EventNode; result: EventResult; shipTier: number; onContinue: () => void }) {
-  const shipFloor = shipTier + 1
+function ResultCard({ result, shipTier }: { result: EventResult; shipTier: number }) {
   const success = result.outcome === 'success'
+  const shipFloor = shipTier + 1
+  const accent = success ? '#4ade80' : '#f87171'
+  const bg = success ? 'rgba(74,222,128,0.05)' : 'rgba(248,113,113,0.05)'
+  const border = success ? 'rgba(74,222,128,0.18)' : 'rgba(248,113,113,0.18)'
+  const hasRoll = !result.noRoll && result.roll !== undefined
+  const margin = hasRoll
+    ? success ? (result.total ?? 0) - (result.threshold ?? 0) : (result.threshold ?? 0) - (result.total ?? 0)
+    : null
 
   return (
-    <div>
-      {/* Event title */}
-      <p className="font-cinzel font-700 text-[#f0ede8] mb-4" style={{ fontSize: '1.15rem' }}>
-        {event.name}
-      </p>
+    <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 14, overflow: 'hidden', marginTop: '1.25rem' }}>
 
-      {/* Roll breakdown */}
-      {!result.noRoll && result.roll !== undefined && (
-        <div
-          className="flex flex-col gap-2 mb-4"
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 12,
-            padding: '0.875rem 1rem',
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <p className="font-karla" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
-              {result.stat && `${STAT_ICONS[result.stat]} ${STAT_LABELS[result.stat]}`}
+      {/* Header */}
+      <div style={{ padding: '0.75rem 1rem', borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {success ? (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          )}
+          <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: accent }}>
+            {success ? 'Success' : 'Failed'}
+          </p>
+          {result.stat && (
+            <p className="font-karla" style={{ fontSize: '0.65rem', color: '#6a6764' }}>
+              · {STAT_ICONS[result.stat]} {STAT_LABELS[result.stat]}
             </p>
-            <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: success ? '#4ade80' : '#f87171' }}>
-              {success ? '✓ Success' : '✗ Failed'}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0c040' }}>{result.roll}</p>
-              <p className="font-karla" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Ship ({shipFloor}–{result.base})</p>
+          )}
+        </div>
+        {margin !== null && (
+          <p className="font-karla" style={{ fontSize: '0.6rem', color: accent, opacity: 0.75 }}>
+            {success ? `beat by ${margin}` : `short by ${margin}`}
+          </p>
+        )}
+      </div>
+
+      {/* Roll numbers */}
+      {hasRoll && (
+        <div style={{ padding: '0.875rem 1rem', borderBottom: `1px solid ${border}` }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
+            <div style={{ textAlign: 'center' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0c040', lineHeight: 1 }}>{result.roll}</p>
+              <p className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#6a6764', marginTop: 3 }}>Ship</p>
+              <p className="font-karla" style={{ fontSize: '0.48rem', color: '#4a4845' }}>{shipFloor}–{result.base}</p>
             </div>
-            {(result.crewBonus ?? 0) > 0 && <>
-              <p style={{ color: '#6a6764', fontSize: '0.8rem' }}>+</p>
-              <div style={{ flex: 1, textAlign: 'center' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#4ade80' }}>{result.crewRoll}</p>
-                <p className="font-karla" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Crew (1–{result.crewBonus})</p>
-              </div>
-            </>}
-            <p style={{ color: '#6a6764', fontSize: '0.8rem' }}>=</p>
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>{result.total}</p>
-              <p className="font-karla" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Total</p>
+            {(result.crewBonus ?? 0) > 0 && (
+              <>
+                <p style={{ color: '#4a4845', fontSize: '1rem', paddingBottom: '1.1rem' }}>+</p>
+                <div style={{ textAlign: 'center' }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#60a5fa', lineHeight: 1 }}>{result.crewRoll}</p>
+                  <p className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#6a6764', marginTop: 3 }}>Crew</p>
+                  <p className="font-karla" style={{ fontSize: '0.48rem', color: '#4a4845' }}>1–{result.crewBonus}</p>
+                </div>
+              </>
+            )}
+            <p style={{ color: '#4a4845', fontSize: '1rem', paddingBottom: '1.1rem' }}>=</p>
+            <div style={{ textAlign: 'center', flex: 1 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: accent, lineHeight: 1 }}>{result.total}</p>
+              <p className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#6a6764', marginTop: 3 }}>Total</p>
             </div>
-            <p style={{ color: '#6a6764', fontSize: '0.8rem' }}>vs</p>
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#a0a09a' }}>{result.threshold}</p>
-              <p className="font-karla" style={{ fontSize: '0.55rem', color: '#6a6764' }}>DC</p>
+            <p style={{ color: '#4a4845', fontSize: '1rem', paddingBottom: '1.1rem' }}>vs</p>
+            <div style={{ textAlign: 'center' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#a0a09a', lineHeight: 1 }}>{result.threshold}</p>
+              <p className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#6a6764', marginTop: 3 }}>Needed</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Result text */}
-      <p className="font-karla mb-5" style={{ fontSize: '0.82rem', color: '#a0a09a', lineHeight: 1.6 }}>
-        {result.text}
-      </p>
-
-      {/* Consequence */}
-      {result.hullDamage && (
-        <p className="font-karla mb-4" style={{ fontSize: '0.7rem', color: '#f87171' }}>
-          ⚠ Hull damaged (−1)
+      {/* Outcome text + consequences */}
+      <div style={{ padding: '0.875rem 1rem' }}>
+        <p className="font-karla" style={{ fontSize: '0.82rem', color: '#c0bdb8', lineHeight: 1.65 }}>
+          {result.text}
         </p>
-      )}
-      {result.lootPenalty && (
-        <p className="font-karla mb-4" style={{ fontSize: '0.7rem', color: '#f59e0b' }}>
-          Loot reduced by 20%
-        </p>
-      )}
-      {result.costPenalty ? (
-        <p className="font-karla mb-4" style={{ fontSize: '0.7rem', color: '#f59e0b' }}>
-          −{result.costPenalty} ⟡ deducted from final loot
-        </p>
-      ) : null}
-
-      <button
-        onClick={onContinue}
-        style={{
-          width: '100%',
-          padding: '0.875rem',
-          background: 'rgba(240,192,64,0.12)',
-          border: '1px solid rgba(240,192,64,0.25)',
-          borderRadius: 12,
-          cursor: 'pointer',
-          color: '#f0c040',
-          fontSize: '0.72rem',
-        }}
-        className="font-karla font-700 uppercase tracking-[0.1em]"
-      >
-        Continue →
-      </button>
+        {result.hullDamage ? (
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#f87171', marginTop: 10 }}>
+            ⚠ Hull damaged (−1)
+          </p>
+        ) : null}
+        {result.lootPenalty ? (
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#f59e0b', marginTop: 8 }}>
+            ⚠ Loot penalty applied
+          </p>
+        ) : null}
+        {result.costPenalty ? (
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#f59e0b', marginTop: 8 }}>
+            ⟡ −{result.costPenalty} from final loot
+          </p>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -493,7 +536,6 @@ function LootRollingView() {
 
 function LootResultView({ loot, shipTier, onDone }: { loot: LootResult; shipTier: number; onDone: () => void }) {
   const shipFloor = shipTier + 1
-  const rarityColor = RARITY_COLORS[loot.lootRarity] ?? '#f0c040'
 
   return (
     <div>
@@ -501,7 +543,6 @@ function LootResultView({ loot, shipTier, onDone }: { loot: LootResult; shipTier
         Final Haul
       </p>
 
-      {/* Luck roll */}
       <div
         style={{
           background: 'rgba(255,255,255,0.04)',
@@ -522,7 +563,6 @@ function LootResultView({ loot, shipTier, onDone }: { loot: LootResult; shipTier
         </p>
       </div>
 
-      {/* Doubloons */}
       <div
         style={{
           background: 'rgba(240,192,64,0.06)',
@@ -599,7 +639,6 @@ function StatsSheet({ expedition, shipStats, onClose }: {
           </button>
         </div>
 
-        {/* How rolls work */}
         <div className="px-5 pt-3 pb-1">
           <p className="font-karla" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.5 }}>
             Each event tests one stat. Both your ship and crew roll randomly up to their rating — a better ship and stronger crew means higher possible scores, but nothing is guaranteed.
