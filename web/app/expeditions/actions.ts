@@ -80,8 +80,9 @@ Return ONLY a valid JSON array, no markdown, no extra text:
   })
 
   const raw = (response.content[0] as { type: string; text: string }).text.trim()
-  const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim()
-  const parsed = JSON.parse(text) as Array<{
+  const match = raw.match(/\[[\s\S]*\]/)
+  if (!match) throw new Error(`No JSON array in Claude response: ${raw.slice(0, 200)}`)
+  const parsed = JSON.parse(match[0]) as Array<{
     eventType: string; name: string; flavor: string;
     choices: Array<{ label: string; successText: string; failText: string; isNoRoll?: boolean }>
   }>
@@ -179,7 +180,8 @@ export async function startExpedition(
       await ensureDailyContent(zone, date)
     } catch (genErr) {
       console.error('[startExpedition] content generation failed:', genErr)
-      return { error: 'Failed to generate expedition content — please try again' }
+      const msg = genErr instanceof Error ? genErr.message : String(genErr)
+      return { error: `Generation failed: ${msg}` }
     }
 
     // Deduct entry cost
