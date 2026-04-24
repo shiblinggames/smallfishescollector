@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useTransition } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { resolveChoice, resolvePenaltyEvent, resolveFinalLoot, abandonExpedition } from '../actions'
 import {
@@ -238,20 +239,30 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
         </div>
 
         {/* ── EVENT / ROLLING / RESULT (inline) ── */}
-        {(phase.type === 'event' || phase.type === 'rolling' || phase.type === 'result') && displayEvent && (
-          <EventCard
-            event={displayEvent}
-            phase={phase}
-            result={activeResult}
-            pendingRoll={pendingRoll}
-            pendingCrewRoll={pendingCrewRoll}
-            crewBonusForStat={crewBonusForStat}
-            shipTier={expedition.ship_tier}
-            onChoice={handleChoiceClick}
-            onContinue={handleContinue}
-            isPending={isPending}
-          />
-        )}
+        <AnimatePresence mode="wait" initial={false}>
+          {(phase.type === 'event' || phase.type === 'rolling' || phase.type === 'result') && displayEvent && (
+            <motion.div
+              key={displayEvent.nodeIndex ?? currentNode}
+              initial={{ opacity: 0, y: 32 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+            >
+              <EventCard
+                event={displayEvent}
+                phase={phase}
+                result={activeResult}
+                pendingRoll={pendingRoll}
+                pendingCrewRoll={pendingCrewRoll}
+                crewBonusForStat={crewBonusForStat}
+                shipTier={expedition.ship_tier}
+                onChoice={handleChoiceClick}
+                onContinue={handleContinue}
+                isPending={isPending}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* ── LOOT ROLLING ── */}
         {phase.type === 'loot-rolling' && <LootRollingView pendingLootRoll={pendingLootRoll} />}

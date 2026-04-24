@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
+import { motion } from 'framer-motion'
 import FishCard from '@/components/FishCard'
 import type { Card } from '@/lib/types'
 import type { OwnedEntry, AllVariantEntry } from './page'
@@ -441,13 +442,24 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
         const cards = zoneAllCards(zone)
         return (
           <section key={zone.id} className="w-full" style={{ paddingTop: '1.5rem', paddingBottom: '1.5rem' }}>
-            <div className="flex flex-wrap justify-center gap-7 px-6">
+            <motion.div
+              className="flex flex-wrap justify-center gap-7 px-6"
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: '-40px' }}
+              variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
+            >
               {cards.map((card) => {
                 const entries = ownedState[card.id] ?? []
                 const isOwned = entries.length > 0
                 const best = isOwned ? displayEntry(card.id, entries) : null
                 return (
-                  <div key={card.id} className="flex flex-col items-center gap-2">
+                  <motion.div
+                    key={card.id}
+                    className="flex flex-col items-center gap-2"
+                    variants={{ hidden: { opacity: 0, y: 14, scale: 0.96 }, show: { opacity: 1, y: 0, scale: 1 } }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                  >
                     <div
                       className={`relative ${isOwned ? 'cursor-pointer' : ''}`}
                       onClick={() => isOwned && setModal({ card, entries })}
@@ -463,10 +475,10 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                     <p className="font-karla font-300 text-[0.62rem] text-[#a0a09a] tracking-wide">
                       {entries.length} <span className="text-[#555350]">/ {totalVariantsByCardId[card.id] ?? '?'}</span>
                     </p>
-                  </div>
+                  </motion.div>
                 )
               })}
-            </div>
+            </motion.div>
           </section>
         )
       })}

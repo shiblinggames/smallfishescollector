@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Cinzel, Karla } from 'next/font/google'
 import './globals.css'
+import PageTransition from '@/components/PageTransition'
 
 const cinzel = Cinzel({
   subsets: ['latin'],
@@ -24,7 +25,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`h-full ${cinzel.variable} ${karla.variable}`}>
       <body className="min-h-full bg-[#000000] text-[#f0ede8] font-karla">
-        {children}
+        <PageTransition>
+          {children}
+        </PageTransition>
         <footer className="pb-28 sm:pb-10 pt-6 text-center">
           <p className="font-karla font-300 text-[#3a3835]" style={{ fontSize: '0.65rem' }}>
             &copy; {new Date().getFullYear()} Shibling Games LLC
