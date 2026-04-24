@@ -1,7 +1,5 @@
 'use server'
 
-export const maxDuration = 60
-
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
