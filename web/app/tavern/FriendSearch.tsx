@@ -55,7 +55,7 @@ export default function FriendSearch() {
 
       {lastQuery && !loading && (
         <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.65rem' }}>
-          Last search: <span className="text-[#8a8880]">{lastQuery}</span>
+          Last search: <span className="text-[#a0a09a]">{lastQuery}</span>
         </p>
       )}
 
@@ -70,7 +70,7 @@ export default function FriendSearch() {
               key={r.username}
               href={`/u/${r.username}`}
               className="flex items-center justify-between px-3 py-2 rounded-lg transition-colors"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.13)' }}
             >
               <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.8rem' }}>{r.username}</p>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round">

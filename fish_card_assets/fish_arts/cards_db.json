@@ -1,0 +1,254 @@
+[
+  {
+    "id": 1,
+    "name": "Bass",
+    "slug": "Bass",
+    "filename": "Bass.png",
+    "tier": 1
+  },
+  {
+    "id": 2,
+    "name": "Eel",
+    "slug": "Eel",
+    "filename": "Eel.png",
+    "tier": 1
+  },
+  {
+    "id": 3,
+    "name": "Flounder",
+    "slug": "Flounder",
+    "filename": "Flounder.png",
+    "tier": 1
+  },
+  {
+    "id": 4,
+    "name": "Goldfish",
+    "slug": "Goldfish",
+    "filename": "Goldfish.png",
+    "tier": 1
+  },
+  {
+    "id": 5,
+    "name": "Krill",
+    "slug": "Krill",
+    "filename": "Krill.png",
+    "tier": 1
+  },
+  {
+    "id": 6,
+    "name": "Minnow",
+    "slug": "Minnow",
+    "filename": "Minnow.png",
+    "tier": 1
+  },
+  {
+    "id": 7,
+    "name": "Piranha",
+    "slug": "Piranha",
+    "filename": "Piranha.png",
+    "tier": 2
+  },
+  {
+    "id": 8,
+    "name": "Pufferfish",
+    "slug": "Pufferfish",
+    "filename": "Pufferfish.png",
+    "tier": 1
+  },
+  {
+    "id": 9,
+    "name": "Red Snapper",
+    "slug": "Red_Snapper",
+    "filename": "Red_Snapper.png",
+    "tier": 2
+  },
+  {
+    "id": 10,
+    "name": "Salmon",
+    "slug": "Salmon",
+    "filename": "Salmon.png",
+    "tier": 1
+  },
+  {
+    "id": 11,
+    "name": "Sardine",
+    "slug": "Sardine",
+    "filename": "Sardine.png",
+    "tier": 2
+  },
+  {
+    "id": 12,
+    "name": "Tuna",
+    "slug": "Tuna",
+    "filename": "Tuna.png",
+    "tier": 1
+  },
+  {
+    "id": 13,
+    "name": "Angelfish",
+    "slug": "Angelfish",
+    "filename": "Angelfish.png",
+    "tier": 2
+  },
+  {
+    "id": 14,
+    "name": "Anglerfish",
+    "slug": "Anglerfish",
+    "filename": "Anglerfish.png",
+    "tier": 2
+  },
+  {
+    "id": 15,
+    "name": "Beluga Whale",
+    "slug": "Beluga_Whale",
+    "filename": "Beluga_Whale.png",
+    "tier": 2
+  },
+  {
+    "id": 16,
+    "name": "Blobfish",
+    "slug": "Blobfish",
+    "filename": "Blobfish.png",
+    "tier": 2
+  },
+  {
+    "id": 17,
+    "name": "Blue Marlin",
+    "slug": "Blue_Marlin",
+    "filename": "Blue_Marlin.png",
+    "tier": 2
+  },
+  {
+    "id": 18,
+    "name": "Clownfish",
+    "slug": "Clownfish",
+    "filename": "Clownfish.png",
+    "tier": 2
+  },
+  {
+    "id": 19,
+    "name": "Goblin Shark",
+    "slug": "Goblin_Shark",
+    "filename": "Goblin_Shark.png",
+    "tier": 2
+  },
+  {
+    "id": 20,
+    "name": "Koi",
+    "slug": "Koi",
+    "filename": "Koi.png",
+    "tier": 2
+  },
+  {
+    "id": 21,
+    "name": "Lionfish",
+    "slug": "Lionfish",
+    "filename": "Lionfish.png",
+    "tier": 2
+  },
+  {
+    "id": 22,
+    "name": "Nurse Shark",
+    "slug": "Nurse_Shark",
+    "filename": "Nurse_Shark.png",
+    "tier": 2
+  },
+  {
+    "id": 23,
+    "name": "Oarfish",
+    "slug": "Oarfish",
+    "filename": "Oarfish.png",
+    "tier": 2
+  },
+  {
+    "id": 24,
+    "name": "Sailfish",
+    "slug": "Sailfish",
+    "filename": "Sailfish.png",
+    "tier": 2
+  },
+  {
+    "id": 25,
+    "name": "Swordfish",
+    "slug": "Swordfish",
+    "filename": "Swordfish.png",
+    "tier": 2
+  },
+  {
+    "id": 26,
+    "name": "Tiger Shark",
+    "slug": "Tiger_Shark",
+    "filename": "Tiger_Shark.png",
+    "tier": 2
+  },
+  {
+    "id": 27,
+    "name": "Blue Whale",
+    "slug": "Blue_Whale",
+    "filename": "Blue_Whale.png",
+    "tier": 3
+  },
+  {
+    "id": 28,
+    "name": "Catfish",
+    "slug": "Catfish",
+    "filename": "Catfish.png",
+    "tier": 3
+  },
+  {
+    "id": 29,
+    "name": "Doby Mick",
+    "slug": "Doby_Mick",
+    "filename": "Doby_Mick.png",
+    "tier": 3
+  },
+  {
+    "id": 30,
+    "name": "Giant Squid",
+    "slug": "Giant_Squid",
+    "filename": "Giant_Squid.png",
+    "tier": 3
+  },
+  {
+    "id": 31,
+    "name": "Great White Shark",
+    "slug": "Great_White_Shark",
+    "filename": "Great_White_Shark.png",
+    "tier": 3
+  },
+  {
+    "id": 32,
+    "name": "Hammerhead Shark",
+    "slug": "Hammerhead_Shark",
+    "filename": "Hammerhead_Shark.png",
+    "tier": 3
+  },
+  {
+    "id": 33,
+    "name": "Humpback Whale",
+    "slug": "Humpback_Whale",
+    "filename": "Humpback_Whale.png",
+    "tier": 3
+  },
+  {
+    "id": 34,
+    "name": "Manta Ray",
+    "slug": "Manta_Ray",
+    "filename": "Manta_Ray.png",
+    "tier": 3
+  },
+  {
+    "id": 35,
+    "name": "Orca",
+    "slug": "Orca",
+    "filename": "Orca.png",
+    "tier": 3
+  },
+  {
+    "id": 36,
+    "name": "Whale Shark",
+    "slug": "Whale_Shark",
+    "filename": "Whale_Shark.png",
+    "tier": 3
+  }
+]

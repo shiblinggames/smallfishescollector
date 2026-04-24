@@ -35,17 +35,17 @@ export default async function HomePage() {
           <Link href="/register" className="btn-ghost">Create Account</Link>
         </div>
 
-        <div className="border-t border-[rgba(255,255,255,0.06)] pt-8 space-y-2">
-          <p className="font-karla font-300 text-[#8a8880] text-xs uppercase tracking-[0.14em]">
+        <div className="border-t border-[rgba(255,255,255,0.11)] pt-8 space-y-2">
+          <p className="font-karla font-300 text-[#a0a09a] text-xs uppercase tracking-[0.14em]">
             Follow us for more chances to win!
           </p>
           <div className="flex justify-center gap-6">
             <a href="https://www.instagram.com/shiblinggames/" target="_blank" rel="noopener noreferrer"
-               className="font-karla font-600 text-[0.7rem] uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors">
+               className="font-karla font-600 text-[0.7rem] uppercase tracking-[0.12em] text-[#a0a09a] hover:text-[#f0ede8] transition-colors">
               Instagram
             </a>
             <a href="https://www.tiktok.com/@shiblinggames" target="_blank" rel="noopener noreferrer"
-               className="font-karla font-600 text-[0.7rem] uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors">
+               className="font-karla font-600 text-[0.7rem] uppercase tracking-[0.12em] text-[#a0a09a] hover:text-[#f0ede8] transition-colors">
               TikTok
             </a>
           </div>

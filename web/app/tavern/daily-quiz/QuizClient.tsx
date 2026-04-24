@@ -42,8 +42,8 @@ export default function QuizClient({ quiz, previousAnswer }: Props) {
   function optionStyle(index: number): React.CSSProperties {
     if (!revealed) {
       return {
-        background: selected === index ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.03)',
-        border: `1px solid ${selected === index ? 'rgba(240,192,64,0.35)' : 'rgba(255,255,255,0.08)'}`,
+        background: selected === index ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.06)',
+        border: `1px solid ${selected === index ? 'rgba(240,192,64,0.35)' : 'rgba(255,255,255,0.15)'}`,
         color: selected === index ? '#f0ede8' : '#a0a09a',
         cursor: loading ? 'default' : 'pointer',
         opacity: loading && selected !== index ? 0.5 : 1,
@@ -66,8 +66,8 @@ export default function QuizClient({ quiz, previousAnswer }: Props) {
       }
     }
     return {
-      background: 'rgba(255,255,255,0.02)',
-      border: '1px solid rgba(255,255,255,0.05)',
+      background: 'rgba(255,255,255,0.05)',
+      border: '1px solid rgba(255,255,255,0.09)',
       color: '#4a4845',
       cursor: 'default',
     }
@@ -101,7 +101,7 @@ export default function QuizClient({ quiz, previousAnswer }: Props) {
           >
             <span
               className="font-cinzel font-700 shrink-0"
-              style={{ fontSize: '0.7rem', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }}
+              style={{ fontSize: '0.7rem', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: 'rgba(255,255,255,0.11)' }}
             >
               {LETTERS[i]}
             </span>
@@ -127,8 +127,8 @@ export default function QuizClient({ quiz, previousAnswer }: Props) {
         <div
           className="rounded-xl px-5 py-4"
           style={{
-            background: result!.correct ? 'rgba(74,222,128,0.06)' : 'rgba(255,255,255,0.03)',
-            border: `1px solid ${result!.correct ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}`,
+            background: result!.correct ? 'rgba(74,222,128,0.06)' : 'rgba(255,255,255,0.06)',
+            border: `1px solid ${result!.correct ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.15)'}`,
           }}
         >
           <div className="flex items-center gap-2 mb-2">

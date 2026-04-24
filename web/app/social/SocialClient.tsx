@@ -106,7 +106,7 @@ export default function SocialClient({ initialCrew, username, usernameChanged, s
                 <div
                   key={r.username}
                   className="flex items-center justify-between px-4 py-3 rounded-xl"
-                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.13)' }}
                 >
                   <Link href={`/u/${r.username}`} className="font-cinzel font-700 text-[#f0ede8] hover:text-[#f0c040] transition-colors" style={{ fontSize: '0.85rem' }}>
                     {r.username}
@@ -144,7 +144,7 @@ export default function SocialClient({ initialCrew, username, usernameChanged, s
                 <div
                   key={member.username}
                   className="flex items-center justify-between px-4 py-3 rounded-xl"
-                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.13)' }}
                 >
                   <div className="flex items-center gap-3">
                     <Link

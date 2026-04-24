@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__supabase__list_projects",
+      "Bash(git -C \"c:/Users/Kong/Projects/shiblinggames/smallfishes\" checkout -- web/app/demo/DemoPackOpener.tsx web/app/packs/PackOpener.tsx)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
+    ]
+  }
+}

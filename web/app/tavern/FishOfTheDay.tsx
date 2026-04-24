@@ -89,8 +89,8 @@ export default function FishOfTheDay({
       {/* Streak */}
       {puzzle.streak > 0 && (
         <div style={{
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.07)',
+          background: 'rgba(255,255,255,0.06)',
+          border: '1px solid rgba(255,255,255,0.13)',
           borderRadius: '10px',
           padding: '0.625rem 0.875rem',
           display: 'flex',
@@ -127,8 +127,8 @@ export default function FishOfTheDay({
           <div
             key={i}
             style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.15)',
               borderRadius: '12px',
               padding: '0.875rem 1rem',
             }}
@@ -148,8 +148,8 @@ export default function FishOfTheDay({
           <div
             key={i}
             style={{
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px dashed rgba(255,255,255,0.07)',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px dashed rgba(255,255,255,0.13)',
               borderRadius: '12px',
               padding: '0.75rem 1rem',
               opacity: 0.45,
@@ -158,11 +158,11 @@ export default function FishOfTheDay({
               gap: '0.5rem',
             }}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8a8880" strokeWidth="2" strokeLinecap="round">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="2" strokeLinecap="round">
               <rect x="3" y="11" width="18" height="11" rx="2"/>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
             </svg>
-            <p className="font-karla font-600 uppercase tracking-[0.15em] text-[#8a8880]"
+            <p className="font-karla font-600 uppercase tracking-[0.15em] text-[#a0a09a]"
                style={{ fontSize: '0.58rem' }}>
               Clue {puzzle.cluesRevealed.length + i + 1}
             </p>
@@ -230,7 +230,7 @@ export default function FishOfTheDay({
                 zIndex: 20,
               }}>
                 {filteredFish.length === 0 ? (
-                  <p className="font-karla" style={{ padding: '0.75rem 1rem', color: '#8a8880', fontSize: '0.875rem' }}>
+                  <p className="font-karla" style={{ padding: '0.75rem 1rem', color: '#a0a09a', fontSize: '0.875rem' }}>
                     No fish found
                   </p>
                 ) : filteredFish.map(name => (
@@ -246,7 +246,7 @@ export default function FishOfTheDay({
                       fontSize: '0.875rem',
                       color: '#f0ede8',
                       background: 'transparent',
-                      borderBottom: '1px solid rgba(255,255,255,0.04)',
+                      borderBottom: '1px solid rgba(255,255,255,0.08)',
                       cursor: 'pointer',
                     }}
                   >
@@ -297,8 +297,8 @@ function AnswerCard({ answer, solved, doubloonsAwarded, streak, milestoneReward 
 }) {
   return (
     <div style={{
-      background: solved ? 'rgba(240,192,64,0.06)' : 'rgba(255,255,255,0.03)',
-      border: `1px solid ${solved ? 'rgba(240,192,64,0.22)' : 'rgba(255,255,255,0.08)'}`,
+      background: solved ? 'rgba(240,192,64,0.06)' : 'rgba(255,255,255,0.06)',
+      border: `1px solid ${solved ? 'rgba(240,192,64,0.22)' : 'rgba(255,255,255,0.15)'}`,
       borderRadius: '14px',
       overflow: 'hidden',
     }}>
@@ -308,7 +308,7 @@ function AnswerCard({ answer, solved, doubloonsAwarded, streak, milestoneReward 
           {solved ? answer.common_name : `It was the ${answer.common_name}`}
         </p>
         {answer.scientific_name && (
-          <p className="font-karla" style={{ fontStyle: 'italic', color: '#8a8880', fontSize: '0.72rem', marginBottom: '0.75rem' }}>
+          <p className="font-karla" style={{ fontStyle: 'italic', color: '#a0a09a', fontSize: '0.72rem', marginBottom: '0.75rem' }}>
             {answer.scientific_name}
           </p>
         )}
@@ -328,7 +328,7 @@ function AnswerCard({ answer, solved, doubloonsAwarded, streak, milestoneReward 
       </div>
 
       {/* Detail rows */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.11)' }}>
         {DETAIL_ROWS.map(({ key, label }) => {
           const val = answer[key]
           if (!val) return null
@@ -338,7 +338,7 @@ function AnswerCard({ answer, solved, doubloonsAwarded, streak, milestoneReward 
               className="flex gap-3"
               style={{
                 padding: '0.55rem 1.125rem',
-                borderBottom: '1px solid rgba(255,255,255,0.04)',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
               }}
             >
               <p className="font-karla font-600 uppercase tracking-[0.10em] shrink-0" style={{ fontSize: '0.58rem', color: '#6a6764', width: 80, paddingTop: 2 }}>

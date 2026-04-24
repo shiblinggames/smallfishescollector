@@ -11,7 +11,7 @@ import { updateUsername, updateShowcase } from '@/app/u/actions'
 import Link from 'next/link'
 
 const RANKS = [
-  { name: 'Crewmate',      min: 0,   color: '#8a8880', next: 25  },
+  { name: 'Crewmate',      min: 0,   color: '#a0a09a', next: 25  },
   { name: 'Officer',       min: 25,  color: '#4ade80', next: 75  },
   { name: 'Second Mate',   min: 75,  color: '#60a5fa', next: 150 },
   { name: 'Quartermaster', min: 150, color: '#a78bfa', next: 250 },
@@ -146,7 +146,7 @@ function LockedVariant({ variantName, dropWeight }: { variantName: string; dropW
       <div className="text-center">
         <p className="font-karla font-400 text-sm text-[#f0ede8]">Not Found</p>
         <p className="font-karla font-600 text-[0.72rem] uppercase tracking-[0.10em] mt-0.5" style={{ color: rarityColor }}>{rarity}</p>
-        <p className="font-karla font-600 text-[0.72rem] uppercase tracking-[0.10em] text-[#8a8880]">{variantName}</p>
+        <p className="font-karla font-600 text-[0.72rem] uppercase tracking-[0.10em] text-[#a0a09a]">{variantName}</p>
       </div>
     </div>
   )
@@ -318,8 +318,8 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           onClick={() => setStatsOpen(v => !v)}
           className="w-full text-left"
           style={{
-            background: rank.name === 'Crewmate' ? 'rgba(255,255,255,0.03)' : `rgba(${rank.name === 'Officer' ? '74,222,128' : rank.name === 'Second Mate' ? '96,165,250' : rank.name === 'Quartermaster' ? '167,139,250' : '240,192,64'},0.05)`,
-            border: `1px solid ${rank.name === 'Crewmate' ? 'rgba(255,255,255,0.07)' : rank.color + '40'}`,
+            background: rank.name === 'Crewmate' ? 'rgba(255,255,255,0.06)' : `rgba(${rank.name === 'Officer' ? '74,222,128' : rank.name === 'Second Mate' ? '96,165,250' : rank.name === 'Quartermaster' ? '167,139,250' : '240,192,64'},0.05)`,
+            border: `1px solid ${rank.name === 'Crewmate' ? 'rgba(255,255,255,0.13)' : rank.color + '40'}`,
             boxShadow: rank.name === 'Crewmate' ? 'none' : `0 0 20px ${rank.color}10`,
             borderRadius: statsOpen ? '12px 12px 0 0' : 12,
             padding: '1rem 1.125rem',
@@ -359,16 +359,16 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
         </button>
 
         {statsOpen && (
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${rank.name === 'Crewmate' ? 'rgba(255,255,255,0.07)' : rank.color + '40'}`, borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '0.875rem 1rem' }}>
-            <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden', marginBottom: '0.4rem' }}>
+          <div style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${rank.name === 'Crewmate' ? 'rgba(255,255,255,0.13)' : rank.color + '40'}`, borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '0.875rem 1rem' }}>
+            <div style={{ height: 3, background: 'rgba(255,255,255,0.11)', borderRadius: 2, overflow: 'hidden', marginBottom: '0.4rem' }}>
               <div style={{ height: '100%', width: `${progressPct}%`, background: rank.color, borderRadius: 2, opacity: 0.8 }} />
             </div>
             {nextRankName ? (
-              <p className="font-karla text-[#8a8880]" style={{ fontSize: '0.7rem', marginBottom: '0.75rem' }}>
+              <p className="font-karla text-[#a0a09a]" style={{ fontSize: '0.7rem', marginBottom: '0.75rem' }}>
                 {rank.next! - uniqueVariantsOwned} more to reach {nextRankName}
               </p>
             ) : (
-              <p className="font-karla text-[#8a8880]" style={{ fontSize: '0.7rem', marginBottom: '0.75rem' }}>Maximum rank achieved</p>
+              <p className="font-karla text-[#a0a09a]" style={{ fontSize: '0.7rem', marginBottom: '0.75rem' }}>Maximum rank achieved</p>
             )}
             <div className="flex items-center justify-between">
               <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.7rem' }}>
@@ -382,7 +382,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                   <button
                     onClick={openLiquidateModal}
                     disabled={isPending}
-                    className="font-karla font-600 uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors border border-[rgba(255,255,255,0.1)] rounded px-2 py-0.5"
+                    className="font-karla font-600 uppercase tracking-[0.12em] text-[#a0a09a] hover:text-[#f0ede8] transition-colors border border-[rgba(255,255,255,0.1)] rounded px-2 py-0.5"
                     style={{ fontSize: '0.6rem' }}
                   >
                     Sell Dupes · {totalDupes}
@@ -400,39 +400,39 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           onClick={() => { setProfileOpen(true); setShowUsernameForm(false); setUsernameError('') }}
           className="flex-1 flex items-center justify-center gap-2 transition-colors"
           style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.15)',
             borderRadius: '10px',
             padding: '0.75rem 1rem',
           }}
-          onPointerDown={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
-          onPointerUp={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-          onPointerLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+          onPointerDown={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)' }}
+          onPointerUp={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
+          onPointerLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a8880" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
           </svg>
-          <span className="font-karla font-600 uppercase tracking-[0.12em] text-[#8a8880]" style={{ fontSize: '0.62rem' }}>Edit Profile</span>
+          <span className="font-karla font-600 uppercase tracking-[0.12em] text-[#a0a09a]" style={{ fontSize: '0.62rem' }}>Edit Profile</span>
         </button>
         <a
           href="/achievements"
           className="flex-1 flex items-center justify-center gap-2 transition-colors"
           style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.15)',
             borderRadius: '10px',
             padding: '0.75rem 1rem',
             textDecoration: 'none',
           }}
-          onPointerDown={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
-          onPointerUp={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-          onPointerLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+          onPointerDown={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)' }}
+          onPointerUp={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
+          onPointerLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a8880" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 9H4V4h16v5h-2"/><path d="M6 4v5a6 6 0 0 0 12 0V4"/>
             <line x1="12" y1="15" x2="12" y2="19"/><line x1="8" y1="19" x2="16" y2="19"/>
           </svg>
-          <span className="font-karla font-600 uppercase tracking-[0.12em] text-[#8a8880]" style={{ fontSize: '0.62rem' }}>Achievements</span>
+          <span className="font-karla font-600 uppercase tracking-[0.12em] text-[#a0a09a]" style={{ fontSize: '0.62rem' }}>Achievements</span>
         </a>
       </div>
 
@@ -460,7 +460,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                         unowned={!isOwned}
                       />
                     </div>
-                    <p className="font-karla font-300 text-[0.62rem] text-[#8a8880] tracking-wide">
+                    <p className="font-karla font-300 text-[0.62rem] text-[#a0a09a] tracking-wide">
                       {entries.length} <span className="text-[#555350]">/ {totalVariantsByCardId[card.id] ?? '?'}</span>
                     </p>
                   </div>
@@ -485,13 +485,13 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           >
             <button
               onClick={() => setModal(null)}
-              className="absolute top-4 right-4 font-karla font-300 text-[#8a8880] hover:text-[#f0ede8] text-xs uppercase tracking-widest transition-colors"
+              className="absolute top-4 right-4 font-karla font-300 text-[#a0a09a] hover:text-[#f0ede8] text-xs uppercase tracking-widest transition-colors"
             >
               Close
             </button>
             <p className="sg-eyebrow text-center mb-1">Variants</p>
             <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-2">{modal.card.name}</p>
-            <p className="font-karla font-300 text-[#8a8880] text-center text-xs tracking-wide mb-8">
+            <p className="font-karla font-300 text-[#a0a09a] text-center text-xs tracking-wide mb-8">
               Tap an owned variant to display it in your collection
             </p>
             <div className="flex flex-wrap justify-center gap-6">
@@ -521,7 +521,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                       </div>
                       {dupeCount > 0 && (
                         <div className="flex flex-col items-center gap-1">
-                          <p className="font-karla font-300 text-[0.62rem] text-[#8a8880]">
+                          <p className="font-karla font-300 text-[0.62rem] text-[#a0a09a]">
                             {dupeCount} duplicate{dupeCount > 1 ? 's' : ''}
                           </p>
                           <button
@@ -555,29 +555,29 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           >
             <button
               onClick={() => setLiquidateOpen(false)}
-              className="absolute top-4 right-4 font-karla font-300 text-[#8a8880] hover:text-[#f0ede8] text-xs uppercase tracking-widest transition-colors"
+              className="absolute top-4 right-4 font-karla font-300 text-[#a0a09a] hover:text-[#f0ede8] text-xs uppercase tracking-widest transition-colors"
             >
               Close
             </button>
             <p className="sg-eyebrow text-center mb-1">Sell All Duplicates</p>
             <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-8">Liquidate</p>
             {!breakdown ? (
-              <p className="text-center font-karla font-300 text-[#8a8880] text-sm">Loading…</p>
+              <p className="text-center font-karla font-300 text-[#a0a09a] text-sm">Loading…</p>
             ) : breakdown.length === 0 ? (
-              <p className="text-center font-karla font-300 text-[#8a8880] text-sm">No duplicates to sell.</p>
+              <p className="text-center font-karla font-300 text-[#a0a09a] text-sm">No duplicates to sell.</p>
             ) : (
               <>
                 <div className="flex flex-col gap-2 mb-8">
                   {breakdown.map((item, i) => {
                     const rarity = rarityFromVariant(item.variantName, item.dropWeight)
                     return (
-                      <div key={i} className="flex items-center justify-between gap-4 py-2 border-b border-[rgba(255,255,255,0.05)]">
+                      <div key={i} className="flex items-center justify-between gap-4 py-2 border-b border-[rgba(255,255,255,0.09)]">
                         <div>
                           <p className="font-karla font-600 text-xs text-[#f0ede8]">{item.cardName} · {item.variantName}</p>
                           <p className="font-karla font-300 text-[0.62rem] mt-0.5" style={{ color: RARITY_COLOR[rarity] }}>{rarity}</p>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="font-karla font-300 text-[0.62rem] text-[#8a8880]">{item.extraCopies}× dupe</p>
+                          <p className="font-karla font-300 text-[0.62rem] text-[#a0a09a]">{item.extraCopies}× dupe</p>
                           <p className="font-karla font-600 text-xs text-[#f0c040]">+{item.doubloons} ⟡</p>
                         </div>
                       </div>
@@ -615,7 +615,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           >
             <button
               onClick={() => setProfileOpen(false)}
-              className="absolute top-4 right-4 font-karla font-300 text-[#8a8880] hover:text-[#f0ede8] text-xs uppercase tracking-widest transition-colors"
+              className="absolute top-4 right-4 font-karla font-300 text-[#a0a09a] hover:text-[#f0ede8] text-xs uppercase tracking-widest transition-colors"
               style={{ zIndex: 1 }}
             >
               Close
@@ -654,7 +654,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                 ) : (
                   <button
                     onClick={() => setShowUsernameForm(true)}
-                    className="font-karla font-300 text-[#6a6764] hover:text-[#8a8880] transition-colors text-xs tracking-wide"
+                    className="font-karla font-300 text-[#6a6764] hover:text-[#a0a09a] transition-colors text-xs tracking-wide"
                   >
                     Change username (once)
                   </button>
@@ -663,14 +663,14 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
             )}
 
             {/* Showcase picker */}
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '1.5rem', marginTop: usernameChanged ? '1.5rem' : 0 }}>
-              <p className="font-karla font-300 text-[#8a8880] text-center text-xs tracking-wide mb-2">
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.13)', paddingTop: '1.5rem', marginTop: usernameChanged ? '1.5rem' : 0 }}>
+              <p className="font-karla font-300 text-[#a0a09a] text-center text-xs tracking-wide mb-2">
                 Tap to select your top 5 showcase catches
               </p>
               <p className="font-karla font-300 text-center mb-8" style={{ fontSize: '0.7rem', color: selectedShowcase.length === 5 ? '#f0c040' : '#6a6764' }}>
                 {selectedShowcase.length} / 5 selected
                 {selectedShowcase.length > 0 && (
-                  <button onClick={() => setSelectedShowcase([])} className="ml-3 text-[#6a6764] hover:text-[#8a8880] transition-colors">
+                  <button onClick={() => setSelectedShowcase([])} className="ml-3 text-[#6a6764] hover:text-[#a0a09a] transition-colors">
                     Clear
                   </button>
                 )}
@@ -713,7 +713,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
 
             </div>
 
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '1rem 2rem' }}>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.13)', padding: '1rem 2rem' }}>
               <button
                 onClick={handleSaveShowcase}
                 disabled={profilePending}

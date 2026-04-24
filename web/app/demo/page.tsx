@@ -17,12 +17,12 @@ export default async function DemoPage() {
           Pack Opening.
         </h1>
         <div className="flex flex-wrap justify-center gap-6 font-karla font-300 text-sm">
-          <span className="text-[#8a8880]">Common</span>
-          <span className="text-[#8a8880]">·</span>
+          <span className="text-[#a0a09a]">Common</span>
+          <span className="text-[#a0a09a]">·</span>
           <span className="text-[#f0c040]">✦ Rare</span>
-          <span className="text-[#8a8880]">·</span>
+          <span className="text-[#a0a09a]">·</span>
           <span className="text-[#a78bfa]">✦✦ Epic</span>
-          <span className="text-[#8a8880]">·</span>
+          <span className="text-[#a0a09a]">·</span>
           <span className="bg-clip-text text-transparent bg-linear-to-r from-yellow-300 via-pink-400 to-purple-400">✦✦✦ Legendary</span>
         </div>
       </div>

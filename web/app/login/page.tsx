@@ -18,7 +18,7 @@ export default function LoginPage() {
           <p className="font-karla font-400 text-[#f0ede8] text-sm leading-relaxed">
             Every purchase of <span className="text-[#f0c040] font-600">Small Fishes</span> comes with digital booster packs — collect all <span className="text-[#f0c040] font-600">36 fish cards</span> across a huge variety of rarities and special editions.
           </p>
-          <p className="font-karla font-300 text-[#8a8880] text-xs leading-relaxed">
+          <p className="font-karla font-300 text-[#a0a09a] text-xs leading-relaxed">
             Chance to win special prizes and discounts.
           </p>
           <a

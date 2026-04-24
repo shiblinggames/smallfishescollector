@@ -35,7 +35,7 @@ const insetShadow: Partial<Record<BorderStyle, string>> = {
 }
 
 const variantLabelColor: Record<BorderStyle, string> = {
-  standard:      '#8a8880',
+  standard:      '#a0a09a',
   silver:        '#9ca3af',
   gold:          '#f0c040',
   pearl:         '#e8d5b0',

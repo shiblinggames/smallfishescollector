@@ -106,16 +106,16 @@ function CategorySection({ cat, label, achievements, unlockedSet }: Category & {
                   alignItems: 'center',
                   gap: '0.875rem',
                   padding: '0.875rem 1rem',
-                  background: done ? 'rgba(240,192,64,0.05)' : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${done ? 'rgba(240,192,64,0.18)' : 'rgba(255,255,255,0.05)'}`,
+                  background: done ? 'rgba(240,192,64,0.05)' : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${done ? 'rgba(240,192,64,0.18)' : 'rgba(255,255,255,0.09)'}`,
                   borderRadius: '12px',
                   opacity: done ? 1 : 0.45,
                 }}
               >
                 <div style={{
                   width: 36, height: 36, flexShrink: 0,
-                  background: done ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${done ? 'rgba(240,192,64,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                  background: done ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.08)',
+                  border: `1px solid ${done ? 'rgba(240,192,64,0.25)' : 'rgba(255,255,255,0.15)'}`,
                   borderRadius: '9px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: done ? '#f0c040' : '#6a6764',
@@ -123,7 +123,7 @@ function CategorySection({ cat, label, achievements, unlockedSet }: Category & {
                   {ICON_SVG[a.icon]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: done ? '#f0ede8' : '#8a8880' }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: done ? '#f0ede8' : '#a0a09a' }}>
                     {a.name}
                   </p>
                   <p className="font-karla font-300 text-[#6a6764] mt-0.5" style={{ fontSize: '0.72rem', lineHeight: 1.45 }}>

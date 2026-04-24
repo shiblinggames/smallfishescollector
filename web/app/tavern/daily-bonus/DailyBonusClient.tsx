@@ -127,8 +127,8 @@ function ClaimCard({
 
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.04)',
-      border: `1px solid ${claimed ? 'rgba(255,255,255,0.06)' : locked ? 'rgba(255,255,255,0.06)' : 'rgba(240,192,64,0.22)'}`,
+      background: 'rgba(255,255,255,0.08)',
+      border: `1px solid ${claimed ? 'rgba(255,255,255,0.11)' : locked ? 'rgba(255,255,255,0.11)' : 'rgba(240,192,64,0.22)'}`,
       borderRadius: '16px',
       padding: '1.25rem',
       opacity: dim ? 0.6 : 1,
@@ -137,8 +137,8 @@ function ClaimCard({
       <div className="flex items-start gap-4">
         <div style={{
           width: 48, height: 48,
-          background: dim ? 'rgba(255,255,255,0.03)' : 'rgba(240,192,64,0.08)',
-          border: `1px solid ${dim ? 'rgba(255,255,255,0.07)' : 'rgba(240,192,64,0.18)'}`,
+          background: dim ? 'rgba(255,255,255,0.06)' : 'rgba(240,192,64,0.08)',
+          border: `1px solid ${dim ? 'rgba(255,255,255,0.13)' : 'rgba(240,192,64,0.18)'}`,
           borderRadius: '12px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
@@ -164,7 +164,7 @@ function ClaimCard({
           <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>
             {claimed ? `${title} Claimed` : title}
           </p>
-          <p className="font-karla text-[#8a8880] mt-1" style={{ fontSize: '0.8rem', lineHeight: 1.5 }}>
+          <p className="font-karla text-[#a0a09a] mt-1" style={{ fontSize: '0.8rem', lineHeight: 1.5 }}>
             {claimed ? 'Come back tomorrow.' : description}
           </p>
         </div>
@@ -172,7 +172,7 @@ function ClaimCard({
 
       {!claimed && !locked && (
         <>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', margin: '1rem 0 0.75rem' }} />
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.11)', margin: '1rem 0 0.75rem' }} />
           <button
             onClick={onClaim}
             disabled={loading}

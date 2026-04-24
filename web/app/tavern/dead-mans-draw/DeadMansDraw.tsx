@@ -27,7 +27,7 @@ function CardChip({ card, bust }: { card: Card; bust?: boolean }) {
   return (
     <div style={{
       minWidth: 62, width: 62, height: 84,
-      background: bust ? 'rgba(248,113,113,0.08)' : 'rgba(255,255,255,0.05)',
+      background: bust ? 'rgba(248,113,113,0.08)' : 'rgba(255,255,255,0.09)',
       border: `1.5px solid ${bust ? '#f87171' : card.power && !card.powerCancelled ? color : 'rgba(255,255,255,0.1)'}`,
       borderRadius: 10, display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', gap: 3,
@@ -273,7 +273,7 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
     return (
       <div className="flex flex-col gap-6 w-full">
         <div className="text-center">
-          <p className="font-karla text-[#8a8880] text-xs mb-1">Balance</p>
+          <p className="font-karla text-[#a0a09a] text-xs mb-1">Balance</p>
           <p className="font-cinzel font-700 text-[#f0c040] text-xl">{doubloons.toLocaleString()} ⟡</p>
           {freeGame && (
             <p className="font-karla font-600 text-[#34d399] mt-1" style={{ fontSize: '0.75rem' }}>
@@ -288,8 +288,8 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
               key={key}
               onClick={() => setSelectedOpponent(key)}
               style={{
-                background: selectedOpponent === key ? 'rgba(240,192,64,0.08)' : 'rgba(255,255,255,0.03)',
-                border: `1.5px solid ${selectedOpponent === key ? '#f0c040' : 'rgba(255,255,255,0.08)'}`,
+                background: selectedOpponent === key ? 'rgba(240,192,64,0.08)' : 'rgba(255,255,255,0.06)',
+                border: `1.5px solid ${selectedOpponent === key ? '#f0c040' : 'rgba(255,255,255,0.15)'}`,
                 borderRadius: 14, padding: '1rem 1.25rem',
                 textAlign: 'left', cursor: 'pointer', width: '100%',
               }}
@@ -298,7 +298,7 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
                 <div>
                   <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#9a9488]" style={{ fontSize: '0.6rem' }}>{op.difficulty}</p>
                   <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem', marginTop: 2 }}>{op.name}</p>
-                  <p className="font-karla text-[#8a8880]" style={{ fontSize: '0.75rem', marginTop: 2 }}>{op.label} — {key === 'cautious' ? 'banks early' : key === 'balanced' ? 'plays the odds' : 'keeps drawing'}</p>
+                  <p className="font-karla text-[#a0a09a]" style={{ fontSize: '0.75rem', marginTop: 2 }}>{op.label} — {key === 'cautious' ? 'banks early' : key === 'balanced' ? 'plays the odds' : 'keeps drawing'}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.7rem' }}>Win</p>
@@ -323,7 +323,7 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
           <summary className="font-karla text-center text-[#6a6764] list-none" style={{ fontSize: '0.7rem' }}>
             First to {WIN_SCORE} points wins · How to play ↓
           </summary>
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '1rem', marginTop: '0.75rem' }}>
+          <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.13)', borderRadius: 12, padding: '1rem', marginTop: '0.75rem' }}>
             <div className="flex flex-col gap-2.5 mb-4">
               {[
                 { label: 'Draw', text: 'Flip cards one at a time from the deck into your draw pile.' },
@@ -333,11 +333,11 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
               ].map(({ label, text }) => (
                 <div key={label} className="flex gap-2.5">
                   <span className="font-karla font-700 text-[#f0c040] shrink-0" style={{ fontSize: '0.72rem', paddingTop: 1 }}>{label}</span>
-                  <span className="font-karla text-[#8a8880]" style={{ fontSize: '0.75rem', lineHeight: 1.55 }}>{text}</span>
+                  <span className="font-karla text-[#a0a09a]" style={{ fontSize: '0.75rem', lineHeight: 1.55 }}>{text}</span>
                 </div>
               ))}
             </div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.875rem' }}>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.11)', paddingTop: '0.875rem' }}>
               <p className="font-karla font-600 text-[#9a9488] mb-2" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Power Fish</p>
               <div className="flex flex-col gap-1.5">
                 {[
@@ -369,14 +369,14 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
     return (
       <div className="flex flex-col gap-5 w-full items-center text-center">
         <div style={{
-          background: won ? 'rgba(240,192,64,0.07)' : 'rgba(255,255,255,0.03)',
-          border: `1px solid ${won ? 'rgba(240,192,64,0.25)' : 'rgba(255,255,255,0.08)'}`,
+          background: won ? 'rgba(240,192,64,0.07)' : 'rgba(255,255,255,0.06)',
+          border: `1px solid ${won ? 'rgba(240,192,64,0.25)' : 'rgba(255,255,255,0.15)'}`,
           borderRadius: 14, padding: '1.5rem', width: '100%',
         }}>
           <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.3rem', marginBottom: '0.4rem' }}>
             {won ? 'Victory!' : 'Defeated.'}
           </p>
-          <p className="font-karla text-[#8a8880]" style={{ fontSize: '0.8rem' }}>
+          <p className="font-karla text-[#a0a09a]" style={{ fontSize: '0.8rem' }}>
             You: {playerScore}pt · {opp.name}: {aiScore}pt
           </p>
           {won ? (
@@ -384,7 +384,7 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
               +{opp.payout} ⟡ · Balance: {doubloons.toLocaleString()} ⟡
             </p>
           ) : (
-            <p className="font-karla text-[#8a8880]" style={{ fontSize: '0.8rem', marginTop: '0.75rem' }}>
+            <p className="font-karla text-[#a0a09a]" style={{ fontSize: '0.8rem', marginTop: '0.75rem' }}>
               −{ENTRY_FEE} ⟡ · Balance: {doubloons.toLocaleString()} ⟡
             </p>
           )}
@@ -404,14 +404,14 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
           { label: 'You', score: playerScore, shielded: gs.playerBankShielded },
           { label: opp.name, score: aiScore, shielded: gs.aiBankShielded },
         ].map(({ label, score, shielded }) => (
-          <div key={label} style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
+          <div key={label} style={{ flex: 1, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
             <p className="font-karla font-600 uppercase tracking-[0.10em] text-[#9a9488]" style={{ fontSize: '0.55rem' }}>
               {label}{shielded ? ' · SHIELDED' : ''}
             </p>
             <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.2rem', lineHeight: 1 }}>
               {score}<span className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.7rem' }}> / {WIN_SCORE}</span>
             </p>
-            <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 99, marginTop: 6, overflow: 'hidden' }}>
+            <div style={{ height: 3, background: 'rgba(255,255,255,0.11)', borderRadius: 99, marginTop: 6, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${Math.min(score / WIN_SCORE * 100, 100)}%`, background: '#f0c040', borderRadius: 99, transition: 'width 0.4s' }} />
             </div>
           </div>
@@ -430,7 +430,7 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
             Draw Pile
           </p>
           {gs.drawPile.length > 0 && (
-            <p className="font-karla text-[#8a8880]" style={{ fontSize: '0.7rem' }}>
+            <p className="font-karla text-[#a0a09a]" style={{ fontSize: '0.7rem' }}>
               {drawPileScore}pt potential
             </p>
           )}
@@ -439,8 +439,8 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
           style={{
             display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 6,
             minHeight: 92,
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px dashed rgba(255,255,255,0.06)',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px dashed rgba(255,255,255,0.11)',
             borderRadius: 12, padding: '0.5rem',
           }}
         >
@@ -461,7 +461,7 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
           </div>
           <div className="flex gap-2">
             <button onClick={orcaKeep} className="btn-ghost flex-1" style={{ fontSize: '0.8rem', padding: '0.5rem' }}>Keep Both</button>
-            <button onClick={orcaDiscard} style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#8a8880', fontFamily: 'var(--font-karla)', fontWeight: 600, fontSize: '0.8rem', padding: '0.5rem', cursor: 'pointer' }}>Discard Both</button>
+            <button onClick={orcaDiscard} style={{ flex: 1, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#a0a09a', fontFamily: 'var(--font-karla)', fontWeight: 600, fontSize: '0.8rem', padding: '0.5rem', cursor: 'pointer' }}>Discard Both</button>
           </div>
         </div>
       )}
@@ -476,7 +476,7 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
 
       {/* Deck + actions */}
       <div className="flex gap-3 items-center">
-        <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '0.5rem 0.875rem', textAlign: 'center' }}>
+        <div style={{ background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '0.5rem 0.875rem', textAlign: 'center' }}>
           <p className="font-karla font-600 uppercase tracking-[0.08em] text-[#6a6764]" style={{ fontSize: '0.5rem' }}>Deck</p>
           <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>{gs.deck.length}</p>
         </div>
@@ -492,8 +492,8 @@ export default function DeadMansDraw({ initialDoubloons, hasFreeGame: initialFre
           disabled={!canBank}
           style={{
             flex: 1, padding: '0.75rem', borderRadius: 10,
-            background: canBank ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
-            border: `1px solid ${canBank ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)'}`,
+            background: canBank ? 'rgba(255,255,255,0.11)' : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${canBank ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.11)'}`,
             color: canBank ? '#f0ede8' : '#3a3835',
             fontFamily: 'var(--font-karla)', fontWeight: 700,
             fontSize: '0.875rem', cursor: canBank ? 'pointer' : 'not-allowed',

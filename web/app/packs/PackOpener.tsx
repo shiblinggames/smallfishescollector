@@ -16,12 +16,12 @@ function ActiveHookBadge({ hookTier }: { hookTier: number }) {
   const hook = getHook(hookTier)
   return (
     <a href="/marketplace" className="flex items-center gap-1.5 transition-opacity hover:opacity-80" style={{ textDecoration: 'none' }}>
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8a8880" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2v10"/>
         <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
-        <circle cx="12" cy="3" r="2" fill="#8a8880" stroke="none"/>
+        <circle cx="12" cy="3" r="2" fill="#a0a09a" stroke="none"/>
       </svg>
-      <p className="font-karla text-[#8a8880]" style={{ fontSize: '0.62rem' }}>{hook.name}</p>
+      <p className="font-karla text-[#a0a09a]" style={{ fontSize: '0.62rem' }}>{hook.name}</p>
     </a>
   )
 }
@@ -332,7 +332,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3 mt-2">
-              <p className="font-karla font-300 text-[#8a8880] text-sm">No packs available.</p>
+              <p className="font-karla font-300 text-[#a0a09a] text-sm">No packs available.</p>
               <a href="/tavern" className="btn-ghost">Go to the Tavern</a>
               <a href="/redeem" className="text-[#f0c040] hover:text-[#ffd966] text-xs font-karla font-600 uppercase tracking-[0.12em] transition-colors">
                 Redeem a Code
@@ -369,8 +369,8 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
           href="/marketplace"
           className="flex items-center gap-4 px-4 py-3 rounded-xl transition-opacity hover:opacity-80"
           style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.07)',
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.13)',
             textDecoration: 'none',
             width: 'min(80vw, 480px)',
           }}
@@ -487,14 +487,14 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-1" style={{ height: 248 }}>
         <span className="font-cinzel font-700 text-[#f0ede8] leading-none" style={{ fontSize: '1.6rem' }}>{packs}</span>
-        <span className="font-karla font-600 uppercase text-[#8a8880] text-center leading-tight" style={{ fontSize: '0.6rem', letterSpacing: '0.10em' }}>packs<br/>left</span>
+        <span className="font-karla font-600 uppercase text-[#a0a09a] text-center leading-tight" style={{ fontSize: '0.6rem', letterSpacing: '0.10em' }}>packs<br/>left</span>
         <button
           onClick={toggleSwap}
           className="mt-3 touch-manipulation rounded-full flex items-center justify-center"
-          style={{ width: 32, height: 32, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#f0ede8', transition: 'background 0.07s ease, transform 0.07s ease' }}
+          style={{ width: 32, height: 32, background: 'rgba(255,255,255,0.13)', border: '1px solid rgba(255,255,255,0.12)', color: '#f0ede8', transition: 'background 0.07s ease, transform 0.07s ease' }}
           onPointerDown={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.transform = 'scale(0.90)' }}
-          onPointerUp={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.transform = '' }}
-          onPointerLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.transform = '' }}
+          onPointerUp={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.13)'; e.currentTarget.style.transform = '' }}
+          onPointerLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.13)'; e.currentTarget.style.transform = '' }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M7 16H17M17 16L14 13M17 16L14 19"/>

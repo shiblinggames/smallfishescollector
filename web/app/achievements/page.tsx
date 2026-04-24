@@ -55,7 +55,7 @@ export default async function AchievementsPage() {
               </p>
             </div>
             {/* Progress bar */}
-            <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ height: 4, background: 'rgba(255,255,255,0.11)', borderRadius: 2, overflow: 'hidden' }}>
               <div style={{
                 height: '100%',
                 width: `${Math.round((count / total) * 100)}%`,

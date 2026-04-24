@@ -149,7 +149,7 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
       </div>
 
       {/* Divider */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.11)' }} />
 
       {/* Tackle shop */}
       <div>
@@ -173,8 +173,8 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
                 key={hook.tier}
                 onClick={clickable ? handleBuyHook : undefined}
                 style={{
-                  background: owned ? `${c}0d` : isNext && canAfford ? `${c}08` : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${owned ? `${c}55` : isNext && canAfford ? `${c}40` : 'rgba(255,255,255,0.05)'}`,
+                  background: owned ? `${c}0d` : isNext && canAfford ? `${c}08` : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${owned ? `${c}55` : isNext && canAfford ? `${c}40` : 'rgba(255,255,255,0.09)'}`,
                   boxShadow: isActive ? `0 0 16px ${c}18` : isNext && canAfford ? `0 0 12px ${c}12` : 'none',
                   borderRadius: 12,
                   padding: '0.75rem 0.875rem',
@@ -220,7 +220,7 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
                       onMouseEnter={() => setTooltipTier(hook.tier)}
                       onMouseLeave={() => setTooltipTier(null)}
                       className="transition-colors"
-                      style={{ color: showTooltip ? '#8a8880' : '#4a4845', lineHeight: 1 }}
+                      style={{ color: showTooltip ? '#a0a09a' : '#4a4845', lineHeight: 1 }}
                       aria-label="Show zone breakdown"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -254,7 +254,7 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
 
         {hookError && <p className="font-karla font-300 text-red-400 text-xs text-center mb-2">{hookError}</p>}
         {!nextHook && (
-          <p className="font-karla font-300 text-[#8a8880] text-sm text-center">
+          <p className="font-karla font-300 text-[#a0a09a] text-sm text-center">
             You have the best hook in the sea.
           </p>
         )}
@@ -266,8 +266,8 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
 function HookIcon({ tier, color, owned, isActive }: { tier: number; color: string; owned: boolean; isActive: boolean }) {
   const stroke = owned ? color : '#4a4845'
   const fill = owned ? color : '#4a4845'
-  const bg = owned ? `${color}12` : 'rgba(255,255,255,0.03)'
-  const border = owned ? `${color}35` : 'rgba(255,255,255,0.06)'
+  const bg = owned ? `${color}12` : 'rgba(255,255,255,0.06)'
+  const border = owned ? `${color}35` : 'rgba(255,255,255,0.11)'
 
   const icons: Record<number, React.ReactNode> = {
     0: ( // Rusty — simple rough hook

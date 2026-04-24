@@ -106,7 +106,7 @@ function ToastItem({ achievementKey, onExit }: { achievementKey: string; onExit:
           Achievement Unlocked
         </p>
         <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.82rem' }}>{achievement.name}</p>
-        <p className="font-karla font-300 text-[#8a8880]" style={{ fontSize: '0.72rem' }}>{achievement.description}</p>
+        <p className="font-karla font-300 text-[#a0a09a]" style={{ fontSize: '0.72rem' }}>{achievement.description}</p>
       </div>
     </div>
   )

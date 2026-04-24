@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m ' *)",
+      "Bash(npx tsc *)",
+      "mcp__supabase__execute_sql",
+      "Bash(xargs grep *)",
+      "mcp__supabase__apply_migration",
+      "Read(//c/Users/Kong/.claude/projects/c--Users-Kong-Projects-shiblinggames-smallfishes/memory/**)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\Kong\\Projects\\shiblinggames\\smallfishes\\web\\app\\u",
+      "c:\\Users\\Kong\\.claude\\projects\\c--Users-Kong-Projects-shiblinggames-smallfishes\\memory"
+    ]
+  }
+}

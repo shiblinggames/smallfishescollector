@@ -73,7 +73,7 @@ export default function DemoPackOpener({ variants }: Props) {
 
   if (variants.length === 0) {
     return (
-      <p className="text-center font-karla font-300 text-[#8a8880] text-sm">
+      <p className="text-center font-karla font-300 text-[#a0a09a] text-sm">
         No cards in database yet.
       </p>
     )
@@ -89,7 +89,7 @@ export default function DemoPackOpener({ variants }: Props) {
               onClick={() => setPackIndex(i)}
               className="font-karla font-600 text-[0.65rem] uppercase tracking-[0.12em] px-3 py-1.5 transition-colors"
               style={{
-                color: packIndex === i ? '#f0c040' : '#8a8880',
+                color: packIndex === i ? '#f0c040' : '#a0a09a',
                 borderBottom: packIndex === i ? '1px solid #f0c040' : '1px solid transparent',
               }}
             >
@@ -104,7 +104,7 @@ export default function DemoPackOpener({ variants }: Props) {
           </p>
           <button onClick={openPack} className="btn-ghost">Open Pack</button>
         </div>
-        <p className="font-karla font-300 text-[#8a8880] text-xs tracking-wide">
+        <p className="font-karla font-300 text-[#a0a09a] text-xs tracking-wide">
           CSS effects only · No account needed
         </p>
       </div>
@@ -122,9 +122,9 @@ export default function DemoPackOpener({ variants }: Props) {
             onClick={() => { if (i === currentIndex && !flipped[i]) flipNext() }}
           >
             <div className="flip-card-inner w-full h-full">
-              <div className="flip-card-front w-full h-full bg-black border border-[rgba(255,255,255,0.08)] flex flex-col items-center justify-center gap-3">
+              <div className="flip-card-front w-full h-full bg-black border border-[rgba(255,255,255,0.15)] flex flex-col items-center justify-center gap-3">
                 <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                  <path d="M4 16C4 16 8 6 16 6C24 6 28 16 28 16C28 16 24 26 16 26C8 26 4 16 4 16Z" stroke="#8a8880" strokeWidth="1.6" fill="none"/>
+                  <path d="M4 16C4 16 8 6 16 6C24 6 28 16 28 16C28 16 24 26 16 26C8 26 4 16 4 16Z" stroke="#a0a09a" strokeWidth="1.6" fill="none"/>
                   <circle cx="16" cy="16" r="4" stroke="#f0c040" strokeWidth="1.6" fill="none"/>
                 </svg>
                 {i === currentIndex && <p className="sg-eyebrow text-[0.6rem]">Reveal</p>}
@@ -150,7 +150,7 @@ export default function DemoPackOpener({ variants }: Props) {
         </button>
       ) : phase === 'done' ? (
         <div className="flex flex-col items-center gap-4">
-          <p className="font-karla font-300 text-[#8a8880] text-sm">
+          <p className="font-karla font-300 text-[#a0a09a] text-sm">
             {cards.map((c) => c.variantName).join(' · ')}
           </p>
           <button onClick={reset} className="btn-ghost">Open Another</button>

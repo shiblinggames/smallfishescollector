@@ -46,8 +46,8 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
               onClick={clickable ? handleBuyShip : undefined}
               className="p-3 sm:p-5"
               style={{
-                background: owned ? `${c}0d` : isNext && canAfford ? `${c}08` : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${owned ? `${c}55` : isNext && canAfford ? `${c}40` : 'rgba(255,255,255,0.05)'}`,
+                background: owned ? `${c}0d` : isNext && canAfford ? `${c}08` : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${owned ? `${c}55` : isNext && canAfford ? `${c}40` : 'rgba(255,255,255,0.09)'}`,
                 boxShadow: isActive ? `0 0 16px ${c}18` : isNext && canAfford ? `0 0 12px ${c}12` : 'none',
                 borderRadius: 12,
                 opacity: locked ? 0.3 : isPending && isNext ? 0.6 : 1,
@@ -96,7 +96,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
 
       {error && <p className="font-karla font-300 text-red-400 text-xs text-center mb-2">{error}</p>}
       {!nextShip && (
-        <p className="font-karla font-300 text-[#8a8880] text-sm text-center">
+        <p className="font-karla font-300 text-[#a0a09a] text-sm text-center">
           Your fleet commands the sea.
         </p>
       )}
@@ -107,8 +107,8 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
 function ShipIcon({ tier, color, owned, isActive }: { tier: number; color: string; owned: boolean; isActive: boolean }) {
   const stroke = owned ? color : '#4a4845'
   const fill = owned ? color : '#4a4845'
-  const bg = owned ? `${color}12` : 'rgba(255,255,255,0.03)'
-  const border = owned ? `${color}35` : 'rgba(255,255,255,0.06)'
+  const bg = owned ? `${color}12` : 'rgba(255,255,255,0.06)'
+  const border = owned ? `${color}35` : 'rgba(255,255,255,0.11)'
 
   const icons: Record<number, React.ReactNode> = {
     0: (

@@ -74,9 +74,9 @@ export default function ProfileClient({ username, showcaseVariants, stats, isPre
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-karla font-600 uppercase tracking-[0.12em] transition-all disabled:opacity-40"
               style={{
                 fontSize: '0.6rem',
-                background: inCrew ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.05)',
+                background: inCrew ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.09)',
                 border: `1px solid ${inCrew ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.12)'}`,
-                color: inCrew ? '#4ade80' : '#8a8880',
+                color: inCrew ? '#4ade80' : '#a0a09a',
               }}
             >
               {crewPending ? '…' : inCrew ? '✓ In Your Crew' : '+ Add to Crew'}
@@ -86,7 +86,7 @@ export default function ProfileClient({ username, showcaseVariants, stats, isPre
       </div>
 
       {/* Stats */}
-      <div className="w-full" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: statsOpen ? '12px 12px 0 0' : 12 }}>
+      <div className="w-full" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.13)', borderRadius: statsOpen ? '12px 12px 0 0' : 12 }}>
         {/* Primary stats row */}
         <button
           className="w-full flex items-center justify-between px-5 py-4"
@@ -95,12 +95,12 @@ export default function ProfileClient({ username, showcaseVariants, stats, isPre
           <div className="flex gap-6">
             <div className="text-left">
               <p className="font-cinzel font-700 text-[#f0ede8] text-lg leading-none mb-0.5">{stats.packsOpened}</p>
-              <p className="font-karla font-300 text-[0.62rem] uppercase tracking-[0.12em] text-[#8a8880]">Packs Opened</p>
+              <p className="font-karla font-300 text-[0.62rem] uppercase tracking-[0.12em] text-[#a0a09a]">Packs Opened</p>
             </div>
-            <div className="w-px bg-[rgba(255,255,255,0.08)]" />
+            <div className="w-px bg-[rgba(255,255,255,0.15)]" />
             <div className="text-left">
               <p className="font-cinzel font-700 text-[#f0ede8] text-lg leading-none mb-0.5">{stats.completionPct}%</p>
-              <p className="font-karla font-300 text-[0.62rem] uppercase tracking-[0.12em] text-[#8a8880]">Completion</p>
+              <p className="font-karla font-300 text-[0.62rem] uppercase tracking-[0.12em] text-[#a0a09a]">Completion</p>
             </div>
           </div>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, transition: 'transform 0.2s ease', transform: statsOpen ? 'rotate(180deg)' : '' }}>
@@ -110,7 +110,7 @@ export default function ProfileClient({ username, showcaseVariants, stats, isPre
 
         {/* Extended stats dropdown */}
         {statsOpen && (
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '1rem 1.25rem 1.25rem', borderRadius: '0 0 12px 12px' }}>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.11)', padding: '1rem 1.25rem 1.25rem', borderRadius: '0 0 12px 12px' }}>
             <div className="flex flex-col gap-3">
               <StatRow label="Fish Discovered" value={String(stats.fishDiscovered)} />
               <StatRow label="Unique Variants" value={String(stats.uniqueVariants)} />
@@ -192,8 +192,8 @@ export default function ProfileClient({ username, showcaseVariants, stats, isPre
               <div
                 key={a.key}
                 style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.07)',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.13)',
                   borderRadius: '10px',
                   padding: '0.625rem 0.75rem',
                   display: 'flex',

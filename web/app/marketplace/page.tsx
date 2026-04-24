@@ -116,8 +116,8 @@ function ShopCard({
 }) {
   const cardStyle: React.CSSProperties = {
     display: 'block',
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.15)',
     borderRadius: '16px',
     padding: '1.25rem',
     textDecoration: 'none',
@@ -145,13 +145,13 @@ function ShopCard({
               <span className="font-karla font-700 uppercase tracking-[0.12em] text-[#f0c040] shrink-0" style={{ fontSize: '0.5rem' }}>{badge}</span>
             )}
           </div>
-          <p className="font-karla text-[#8a8880] mt-1" style={{ fontSize: '0.8rem', lineHeight: 1.5 }}>{description}</p>
+          <p className="font-karla text-[#a0a09a] mt-1" style={{ fontSize: '0.8rem', lineHeight: 1.5 }}>{description}</p>
         </div>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 6 }}>
           <path d="M9 18l6-6-6-6"/>
         </svg>
       </div>
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', margin: '1rem 0 0.75rem' }} />
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.11)', margin: '1rem 0 0.75rem' }} />
       <ul className="flex flex-col gap-1.5">
         {items.map((item, i) => (
           <li key={i} className="flex items-start gap-2">

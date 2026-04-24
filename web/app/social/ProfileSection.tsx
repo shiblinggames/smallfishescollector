@@ -70,10 +70,10 @@ export default function ProfileSection({ username: initialUsername, usernameChan
       <div>
         <p className="sg-eyebrow mb-3" style={{ color: '#9a9488' }}>My Profile</p>
 
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, overflow: 'hidden' }}>
+        <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.13)', borderRadius: 14, overflow: 'hidden' }}>
 
           {/* Username + badges */}
-          <div className="flex items-center justify-between px-4 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex items-center justify-between px-4 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.11)' }}>
             <div className="flex flex-col gap-1.5">
               <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>{username}</p>
               <div className="flex items-center gap-2">
@@ -103,7 +103,7 @@ export default function ProfileSection({ username: initialUsername, usernameChan
 
           {/* Username form */}
           {showUsernameForm && (
-            <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.11)' }}>
               <form onSubmit={handleSaveUsername} className="flex flex-col gap-2">
                 <input
                   type="text"
@@ -166,7 +166,7 @@ export default function ProfileSection({ username: initialUsername, usernameChan
           >
             <button
               onClick={() => setModalOpen(false)}
-              className="absolute top-4 right-4 font-karla font-300 text-[#8a8880] hover:text-[#f0ede8] text-xs uppercase tracking-widest transition-colors"
+              className="absolute top-4 right-4 font-karla font-300 text-[#a0a09a] hover:text-[#f0ede8] text-xs uppercase tracking-widest transition-colors"
             >
               Close
             </button>
@@ -176,13 +176,13 @@ export default function ProfileSection({ username: initialUsername, usernameChan
               <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-6">{username}</p>
 
               <div>
-                <p className="font-karla font-300 text-[#8a8880] text-center text-xs tracking-wide mb-2">
+                <p className="font-karla font-300 text-[#a0a09a] text-center text-xs tracking-wide mb-2">
                   Tap to select your top 5 showcase catches
                 </p>
                 <p className="font-karla font-300 text-center mb-8" style={{ fontSize: '0.7rem', color: selectedShowcase.length === 5 ? '#f0c040' : '#6a6764' }}>
                   {selectedShowcase.length} / 5 selected
                   {selectedShowcase.length > 0 && (
-                    <button onClick={() => setSelectedShowcase([])} className="ml-3 text-[#6a6764] hover:text-[#8a8880] transition-colors">
+                    <button onClick={() => setSelectedShowcase([])} className="ml-3 text-[#6a6764] hover:text-[#a0a09a] transition-colors">
                       Clear
                     </button>
                   )}
@@ -224,7 +224,7 @@ export default function ProfileSection({ username: initialUsername, usernameChan
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '1rem 2rem' }}>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.13)', padding: '1rem 2rem' }}>
               <button onClick={handleSaveShowcase} disabled={pending} className="btn-ghost w-full disabled:opacity-30">
                 {pending ? 'Saving…' : 'Save Showcase'}
               </button>

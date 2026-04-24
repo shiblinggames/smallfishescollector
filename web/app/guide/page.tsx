@@ -2,7 +2,7 @@ import Nav from '@/components/Nav'
 import Link from 'next/link'
 
 const RARITIES = [
-  { label: 'Common',    color: '#8a8880', chance: '~70%',   note: 'Standard variant' },
+  { label: 'Common',    color: '#a0a09a', chance: '~70%',   note: 'Standard variant' },
   { label: 'Uncommon',  color: '#4ade80', chance: '~25%',   note: 'Silver variant' },
   { label: 'Rare',      color: '#60a5fa', chance: '~12%',   note: 'Gold variant' },
   { label: 'Epic',      color: '#a78bfa', chance: '~4%',    note: 'Pearl or Holographic' },
@@ -22,7 +22,7 @@ export default function GuidePage() {
         >
           How It Works.
         </h1>
-        <p className="font-karla font-300 text-[#8a8880] text-center mb-10 max-w-sm" style={{ fontSize: '0.95rem', lineHeight: 1.6 }}>
+        <p className="font-karla font-300 text-[#a0a09a] text-center mb-10 max-w-sm" style={{ fontSize: '0.95rem', lineHeight: 1.6 }}>
           Small Fishes is a digital collectible card game built around real fish. Open packs, build your collection, and earn doubloons playing daily games in the Tavern.
         </p>
 
@@ -43,7 +43,7 @@ export default function GuidePage() {
           {/* Rarity */}
           <div className="sg-card px-8 py-7">
             <p className="font-cinzel font-700 text-[#f0ede8] text-base mb-2">Rarity</p>
-            <p className="font-karla font-300 text-[#8a8880] text-sm leading-relaxed mb-5">
+            <p className="font-karla font-300 text-[#a0a09a] text-sm leading-relaxed mb-5">
               Every fish comes in multiple variants — from Common all the way up to Mythic. The rarer the variant, the harder it is to pull. Pulling something extraordinary can also unlock <Highlight>real-world rewards</Highlight> like discount codes and merch.
             </p>
             <div className="flex flex-col gap-3">
@@ -51,7 +51,7 @@ export default function GuidePage() {
                 <div key={label} className="flex items-center gap-3">
                   <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
                   <span className="font-karla font-600 text-xs uppercase tracking-[0.10em] w-20 flex-shrink-0" style={{ color }}>{label}</span>
-                  <span className="font-karla font-300 text-[#8a8880] text-xs flex-1">{note}</span>
+                  <span className="font-karla font-300 text-[#a0a09a] text-xs flex-1">{note}</span>
                   <span className="font-karla font-300 text-[#6a6764] text-xs tabular-nums">{chance}</span>
                 </div>
               ))}
@@ -179,14 +179,14 @@ export default function GuidePage() {
               <a
                 href="https://www.instagram.com/shiblinggames/"
                 target="_blank" rel="noopener noreferrer"
-                className="font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors"
+                className="font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#a0a09a] hover:text-[#f0ede8] transition-colors"
               >
                 Instagram →
               </a>
               <a
                 href="https://www.tiktok.com/@shiblinggames"
                 target="_blank" rel="noopener noreferrer"
-                className="font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors"
+                className="font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#a0a09a] hover:text-[#f0ede8] transition-colors"
               >
                 TikTok →
               </a>
@@ -207,7 +207,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <div className="sg-card px-8 py-7">
       <p className="font-cinzel font-700 text-[#f0ede8] text-base mb-4">{title}</p>
-      <div className="flex flex-col gap-3 text-sm font-karla font-300 text-[#8a8880] leading-relaxed">
+      <div className="flex flex-col gap-3 text-sm font-karla font-300 text-[#a0a09a] leading-relaxed">
         {children}
       </div>
     </div>
@@ -230,7 +230,7 @@ function TavernGame({ name, desc }: { name: string; desc: string }) {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4">
-      <span className="font-karla font-400 text-[#8a8880] text-xs">{label}</span>
+      <span className="font-karla font-400 text-[#a0a09a] text-xs">{label}</span>
       <span className="font-karla font-400 text-[#f0ede8] text-xs text-right">{value}</span>
     </div>
   )

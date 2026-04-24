@@ -76,7 +76,7 @@ export default function ClaimContent() {
   if (status === 'loading') {
     return (
       <div className="sg-card p-8 text-center">
-        <p className="font-karla font-300 text-[#8a8880] text-sm">Validating link…</p>
+        <p className="font-karla font-300 text-[#a0a09a] text-sm">Validating link…</p>
       </div>
     )
   }
@@ -84,7 +84,7 @@ export default function ClaimContent() {
   if (status === 'sending_magic_link') {
     return (
       <div className="sg-card p-8 text-center">
-        <p className="font-karla font-300 text-[#8a8880] text-sm">Sending sign-in link…</p>
+        <p className="font-karla font-300 text-[#a0a09a] text-sm">Sending sign-in link…</p>
       </div>
     )
   }
@@ -97,7 +97,7 @@ export default function ClaimContent() {
           We sent a sign-in link to{' '}
           <span className="text-[#f0c040]">{emailParam}</span>.
         </p>
-        <p className="font-karla font-300 text-[#8a8880] text-sm">
+        <p className="font-karla font-300 text-[#a0a09a] text-sm">
           Click the sign-in link, then come back and click your claim link again to get your packs.
         </p>
       </div>
@@ -123,7 +123,7 @@ export default function ClaimContent() {
       <div className="sg-card p-8 space-y-6 text-center">
         <div className="border border-[rgba(240,192,64,0.38)] bg-[rgba(240,192,64,0.06)] px-4 py-5 space-y-1">
           <p className="font-cinzel font-700 text-[#f0c040] text-lg">✦ {packs} Pack{packs !== 1 ? 's' : ''} Added</p>
-          <p className="font-karla font-300 text-[#8a8880] text-xs tracking-wide">Ready to open in your account</p>
+          <p className="font-karla font-300 text-[#a0a09a] text-xs tracking-wide">Ready to open in your account</p>
         </div>
         <button onClick={() => router.push('/packs')} className="btn-ghost w-full">
           Open Packs

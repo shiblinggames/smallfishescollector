@@ -6,20 +6,20 @@ const PITY_CAP = 20
 
 function TideBar({ count }: { count: number }) {
   const pct = Math.min((count / PITY_CAP) * 100, 100)
-  const color = pct >= 80 ? '#f0c040' : pct >= 50 ? '#a78bfa' : '#8a8880'
+  const color = pct >= 80 ? '#f0c040' : pct >= 50 ? '#a78bfa' : '#a0a09a'
   const remaining = PITY_CAP - count
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between items-baseline">
-        <p className="font-karla font-300 text-[0.68rem] uppercase tracking-[0.12em] text-[#8a8880]">The Tide</p>
+        <p className="font-karla font-300 text-[0.68rem] uppercase tracking-[0.12em] text-[#a0a09a]">The Tide</p>
         <p className="font-karla font-600 text-[0.68rem]" style={{ color }}>
-          {count} <span className="font-300 text-[#8a8880]">/ {PITY_CAP}</span>
+          {count} <span className="font-300 text-[#a0a09a]">/ {PITY_CAP}</span>
         </p>
       </div>
-      <div className="h-px w-full bg-[rgba(255,255,255,0.08)] overflow-hidden">
+      <div className="h-px w-full bg-[rgba(255,255,255,0.15)] overflow-hidden">
         <div className="h-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
       </div>
-      <p className="font-karla font-300 text-[0.6rem] text-[#8a8880]">
+      <p className="font-karla font-300 text-[0.6rem] text-[#a0a09a]">
         {count >= PITY_CAP
           ? 'The tide is turning — Legendary guaranteed next pack'
           : `The tide turns in ${remaining} pack${remaining === 1 ? '' : 's'}`}
@@ -32,14 +32,14 @@ function StatItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="text-center">
       <p className="font-cinzel font-700 text-[#f0ede8] text-lg leading-none mb-1">{value}</p>
-      <p className="font-karla font-300 text-[0.62rem] uppercase tracking-[0.12em] text-[#8a8880]">{label}</p>
+      <p className="font-karla font-300 text-[0.62rem] uppercase tracking-[0.12em] text-[#a0a09a]">{label}</p>
     </div>
   )
 }
 
 function HistoryCardDot({ dropWeight, variantName }: { dropWeight: number; variantName: string }) {
   const rarity = rarityFromVariant(variantName, dropWeight)
-  const color = RARITY_COLOR[rarity] ?? '#8a8880'
+  const color = RARITY_COLOR[rarity] ?? '#a0a09a'
   return (
     <div
       className="w-2 h-2 rounded-full flex-shrink-0"
@@ -59,22 +59,22 @@ export default function PackStats({ stats, history, hookTier }: { stats: PackSta
       <div className="sg-card px-6 py-5 space-y-5">
         <div className="flex justify-around">
           <StatItem label="Packs Opened" value={stats.totalPacksOpened.toString()} />
-          <div className="w-px bg-[rgba(255,255,255,0.08)]" />
+          <div className="w-px bg-[rgba(255,255,255,0.15)]" />
           <StatItem label="Completion" value={`${stats.completionPct}%`} />
           {stats.rarestPull && (
             <>
-              <div className="w-px bg-[rgba(255,255,255,0.08)]" />
+              <div className="w-px bg-[rgba(255,255,255,0.15)]" />
               <div className="text-center">
                 <p
                   className="font-cinzel font-700 text-lg leading-none mb-1"
-                  style={{ color: RARITY_COLOR[rarityFromVariant(stats.rarestPull.variantName, stats.rarestPull.dropWeight)] ?? '#8a8880' }}
+                  style={{ color: RARITY_COLOR[rarityFromVariant(stats.rarestPull.variantName, stats.rarestPull.dropWeight)] ?? '#a0a09a' }}
                 >
                   {rarityFromVariant(stats.rarestPull.variantName, stats.rarestPull.dropWeight)}
                 </p>
-                <p className="font-karla font-300 text-[0.62rem] uppercase tracking-[0.12em] text-[#8a8880]">
+                <p className="font-karla font-300 text-[0.62rem] uppercase tracking-[0.12em] text-[#a0a09a]">
                   Rarest Pull
                 </p>
-                <p className="font-karla font-300 text-[0.58rem] text-[#8a8880] mt-0.5 whitespace-nowrap">
+                <p className="font-karla font-300 text-[0.58rem] text-[#a0a09a] mt-0.5 whitespace-nowrap">
                   {stats.rarestPull.name}
                 </p>
               </div>
@@ -82,9 +82,9 @@ export default function PackStats({ stats, history, hookTier }: { stats: PackSta
           )}
         </div>
         <TideBar count={stats.packsSinceLegendary} />
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.875rem' }}>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.11)', paddingTop: '0.875rem' }}>
           <div className="flex items-center justify-between">
-            <p className="font-karla font-300 text-[0.68rem] uppercase tracking-[0.12em] text-[#8a8880]">Active Hook</p>
+            <p className="font-karla font-300 text-[0.68rem] uppercase tracking-[0.12em] text-[#a0a09a]">Active Hook</p>
             <div className="flex items-center gap-2">
               <p className="font-karla font-600 text-[0.68rem]" style={{ color: hook.color }}>{hook.name}</p>
               <p className="font-karla font-300 text-[0.68rem] text-[#6a6764]">· {luckPct}% luck</p>
@@ -96,11 +96,11 @@ export default function PackStats({ stats, history, hookTier }: { stats: PackSta
       {/* Pull history */}
       {history.length > 0 && (
         <div className="sg-card px-6 py-5 space-y-4">
-          <p className="font-karla font-300 text-[0.68rem] uppercase tracking-[0.12em] text-[#8a8880]">Recent Packs</p>
+          <p className="font-karla font-300 text-[0.68rem] uppercase tracking-[0.12em] text-[#a0a09a]">Recent Packs</p>
           <div className="space-y-3">
             {history.map((entry) => (
               <div key={entry.id} className="flex items-center justify-between gap-4">
-                <p className="font-karla font-300 text-[0.62rem] text-[#8a8880] whitespace-nowrap">
+                <p className="font-karla font-300 text-[0.62rem] text-[#a0a09a] whitespace-nowrap">
                   {new Date(entry.openedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   {entry.wasGodPack && (
                     <span className="ml-1.5 font-600 text-[0.58rem] uppercase tracking-wider"
@@ -114,7 +114,7 @@ export default function PackStats({ stats, history, hookTier }: { stats: PackSta
                     <HistoryCardDot key={i} dropWeight={c.dropWeight} variantName={c.variantName} />
                   ))}
                 </div>
-                <p className="font-karla font-300 text-[0.62rem] text-[#8a8880] text-right" style={{ minWidth: '5.5rem' }}>
+                <p className="font-karla font-300 text-[0.62rem] text-[#a0a09a] text-right" style={{ minWidth: '5.5rem' }}>
                   {(() => { const best = entry.cards.reduce((a, b) => a.dropWeight <= b.dropWeight ? a : b); return rarityFromVariant(best.variantName, best.dropWeight) })()}
                 </p>
               </div>

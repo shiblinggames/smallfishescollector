@@ -22,7 +22,7 @@ export default async function DeadMansDrawPage() {
         <div className="px-6 pt-6 pb-2">
           <Link
             href="/tavern"
-            className="font-karla text-[#6a6764] text-xs uppercase tracking-[0.12em] hover:text-[#8a8880] transition-colors"
+            className="font-karla text-[#6a6764] text-xs uppercase tracking-[0.12em] hover:text-[#a0a09a] transition-colors"
           >
             ← Tavern
           </Link>
@@ -33,7 +33,7 @@ export default async function DeadMansDrawPage() {
           <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem' }}>
             Dead Man's Draw
           </h1>
-          <p className="font-karla font-300 text-[#8a8880] text-xs mt-1">
+          <p className="font-karla font-300 text-[#a0a09a] text-xs mt-1">
             Push your luck. Bank before you bust.
           </p>
         </div>

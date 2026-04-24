@@ -156,14 +156,14 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   return (
     <>
       {/* Desktop top bar */}
-      <nav className="hidden sm:flex bg-black border-b border-[rgba(255,255,255,0.08)] px-6 py-4 items-center justify-between">
+      <nav className="hidden sm:flex bg-black border-b border-[rgba(255,255,255,0.15)] px-6 py-4 items-center justify-between">
         <Link href="/" className="font-cinzel font-700 text-[#f0ede8] tracking-wide text-sm uppercase">
           Small Fishes
         </Link>
 
         <div className="hidden sm:flex flex-1 ml-8 gap-2 text-xs font-karla font-600 uppercase tracking-[0.12em]">
           {[...links, ...desktopOnlyLinks].map(({ href, label, badge }) => (
-            <Link key={href} href={href} className={`py-2 px-2 transition-colors duration-200 ${pathname === href || pathname.startsWith(href + '/') ? 'text-[#f0ede8]' : 'text-[#8a8880] hover:text-[#f0ede8]'}`}>
+            <Link key={href} href={href} className={`py-2 px-2 transition-colors duration-200 ${pathname === href || pathname.startsWith(href + '/') ? 'text-[#f0ede8]' : 'text-[#a0a09a] hover:text-[#f0ede8]'}`}>
               {label}
               {badge && <span className="ml-1.5 text-[#f0c040]">· {badge}</span>}
             </Link>
@@ -178,7 +178,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
           )}
           <button
             onClick={signOut}
-            className="py-2 px-2 text-[0.68rem] font-karla font-600 uppercase tracking-[0.20em] text-[#8a8880] hover:text-[#f0ede8] active:text-[#f0ede8] transition-colors duration-200"
+            className="py-2 px-2 text-[0.68rem] font-karla font-600 uppercase tracking-[0.20em] text-[#a0a09a] hover:text-[#f0ede8] active:text-[#f0ede8] transition-colors duration-200"
           >
             Sign Out
           </button>
@@ -186,7 +186,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
       </nav>
 
       {/* Mobile top strip */}
-      <div className="sm:hidden bg-black border-b border-[rgba(255,255,255,0.08)] px-4 py-2 flex justify-between items-center relative z-50" ref={menuRef}>
+      <div className="sm:hidden bg-black border-b border-[rgba(255,255,255,0.15)] px-4 py-2 flex justify-between items-center relative z-50" ref={menuRef}>
         <Link href="/" className="font-cinzel font-700 text-[#f0ede8] tracking-wide text-xs uppercase">
           Small Fishes
         </Link>
@@ -201,12 +201,12 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
           <button
             onClick={() => setMenuOpen(o => !o)}
             className="flex flex-col items-center justify-center gap-[4px] w-7 h-7 rounded-md transition-colors"
-            style={{ background: menuOpen ? 'rgba(255,255,255,0.08)' : 'transparent', border: 'none' }}
+            style={{ background: menuOpen ? 'rgba(255,255,255,0.15)' : 'transparent', border: 'none' }}
             aria-label="Menu"
           >
-            <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#8a8880', borderRadius: 1, transition: 'background 0.15s' }} />
-            <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#8a8880', borderRadius: 1, transition: 'background 0.15s' }} />
-            <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#8a8880', borderRadius: 1, transition: 'background 0.15s' }} />
+            <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#a0a09a', borderRadius: 1, transition: 'background 0.15s' }} />
+            <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#a0a09a', borderRadius: 1, transition: 'background 0.15s' }} />
+            <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#a0a09a', borderRadius: 1, transition: 'background 0.15s' }} />
           </button>
         </div>
 
@@ -216,7 +216,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
             className="absolute top-full left-0 right-0"
             style={{
               background: '#0a0a0a',
-              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              borderBottom: '1px solid rgba(255,255,255,0.15)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
             }}
           >
@@ -228,8 +228,8 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
                   href={href}
                   className="flex items-center gap-3 px-5 py-3.5"
                   style={{
-                    color: active ? '#f0ede8' : '#8a8880',
-                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    color: active ? '#f0ede8' : '#a0a09a',
+                    borderBottom: '1px solid rgba(255,255,255,0.09)',
                     textDecoration: 'none',
                   }}
                 >
@@ -255,14 +255,14 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
       </div>
 
       {/* Mobile bottom tab bar */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-black border-t border-[rgba(255,255,255,0.08)] flex">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-black border-t border-[rgba(255,255,255,0.15)] flex">
         {mobileLinks.map(({ href, label, badge, icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link
               key={href}
               href={href}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 relative select-none ${active ? 'text-[#f0ede8]' : 'text-[#8a8880]'}`}
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 relative select-none ${active ? 'text-[#f0ede8]' : 'text-[#a0a09a]'}`}
               style={{ transition: 'color 0.2s, transform 0.08s, opacity 0.08s' }}
               onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.82)'; e.currentTarget.style.opacity = '0.7' }}
               onPointerUp={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.opacity = '' }}

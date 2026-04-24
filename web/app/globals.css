@@ -6,12 +6,12 @@
 
   --color-sg-bg:          #000000;
   --color-sg-text:        #f0ede8;
-  --color-sg-muted:       #8a8880;
+  --color-sg-muted:       #a0a09a;
   --color-sg-gold:        #f0c040;
   --color-sg-gold-hover:  #ffd966;
   --color-sg-teal:        #00c8b4;
-  --color-sg-surface:     rgba(255,255,255,0.04);
-  --color-sg-border:      rgba(255,255,255,0.08);
+  --color-sg-surface:     rgba(255,255,255,0.08);
+  --color-sg-border:      rgba(255,255,255,0.15);
   --color-sg-gold-border: rgba(240,192,64,0.38);
 }
 
@@ -60,7 +60,7 @@ body {
   letter-spacing: 0.12em;
   color: #f0ede8;
   background: transparent;
-  border: 1px solid rgba(240,237,232,0.35);
+  border: 1px solid rgba(240,237,232,0.50);
   border-radius: 10px;
   padding: 0.75rem 2rem;
   text-decoration: none;
@@ -72,15 +72,15 @@ body {
 .btn-ghost:disabled { opacity: 0.45; pointer-events: none; }
 
 /* ── Surfaces & inputs ── */
-.sg-card  { background: rgba(255,255,255,0.04); border: 3px solid rgba(255,255,255,0.08); border-radius: 10px; }
+.sg-card  { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; }
 .scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
 .sg-input {
   font-family: var(--font-karla), sans-serif;
   font-weight: 300;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.20);
   color: #f0ede8;
   padding: 0.75rem 1rem;
   width: 100%;
@@ -88,7 +88,7 @@ body {
   transition: border-color 0.2s;
 }
 .sg-input:focus       { border-color: rgba(240,192,64,0.6); }
-.sg-input::placeholder { color: #8a8880; }
+.sg-input::placeholder { color: #a0a09a; }
 
 .sg-eyebrow {
   font-family: var(--font-karla), sans-serif;

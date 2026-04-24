@@ -94,7 +94,7 @@ function Die({ symbol, rolling, delay }: { symbol: Symbol; rolling: boolean; del
       className="flex items-center justify-center rounded-2xl transition-transform duration-150"
       style={{
         width: 80, height: 80,
-        background: rolling ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.08)',
+        background: rolling ? 'rgba(255,255,255,0.11)' : 'rgba(255,255,255,0.15)',
         border: `2px solid ${rolling ? 'rgba(255,255,255,0.12)' : SYMBOL_COLOR[display]}`,
         color: SYMBOL_COLOR[display],
         boxShadow: rolling ? 'none' : `0 0 16px ${SYMBOL_COLOR[display]}40`,
@@ -157,7 +157,7 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
       {/* Balance + daily cap */}
       <div className="text-center">
         <p className="font-cinzel font-700 text-[#f0c040] text-2xl">{doubloons.toLocaleString()} ⟡</p>
-        <p className="font-karla font-300 text-[#8a8880] text-xs tracking-wide mt-1">
+        <p className="font-karla font-300 text-[#a0a09a] text-xs tracking-wide mt-1">
           {dailyRemaining > 0 ? `${dailyRemaining} ⟡ wager limit remaining today` : 'Daily limit reached — come back tomorrow'}
         </p>
       </div>
@@ -172,9 +172,9 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
               onClick={() => setSelected(s)}
               className="flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all duration-150"
               style={{
-                background: selected === s ? `${SYMBOL_COLOR[s]}18` : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${selected === s ? SYMBOL_COLOR[s] : 'rgba(255,255,255,0.08)'}`,
-                color: selected === s ? SYMBOL_COLOR[s] : '#8a8880',
+                background: selected === s ? `${SYMBOL_COLOR[s]}18` : 'rgba(255,255,255,0.08)',
+                border: `1px solid ${selected === s ? SYMBOL_COLOR[s] : 'rgba(255,255,255,0.15)'}`,
+                color: selected === s ? SYMBOL_COLOR[s] : '#a0a09a',
                 boxShadow: selected === s ? `0 0 12px ${SYMBOL_COLOR[s]}30` : 'none',
               }}
             >
@@ -200,7 +200,7 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
               {lastResult.matches === 3 ? '🎰 ' : ''}{lastResult.matches}× match — +{lastResult.payout} ⟡
             </p>
           ) : (
-            <p className="font-karla font-400 text-[#8a8880] text-sm">No match — {lastResult.net} ⟡</p>
+            <p className="font-karla font-400 text-[#a0a09a] text-sm">No match — {lastResult.net} ⟡</p>
           )}
         </div>
       )}
@@ -219,9 +219,9 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
                 onClick={() => !disabled && setWager(amt)}
                 className="font-karla font-600 text-xs uppercase tracking-[0.10em] px-3 py-2 rounded-lg transition-all"
                 style={{
-                  background: wager === amt ? 'rgba(240,192,64,0.15)' : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${wager === amt ? '#f0c040' : 'rgba(255,255,255,0.08)'}`,
-                  color: disabled ? '#3a3835' : wager === amt ? '#f0c040' : '#8a8880',
+                  background: wager === amt ? 'rgba(240,192,64,0.15)' : 'rgba(255,255,255,0.08)',
+                  border: `1px solid ${wager === amt ? '#f0c040' : 'rgba(255,255,255,0.15)'}`,
+                  color: disabled ? '#3a3835' : wager === amt ? '#f0c040' : '#a0a09a',
                   cursor: disabled ? 'default' : 'pointer',
                 }}
               >
@@ -241,7 +241,7 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
         {rolling ? 'Rolling…' : `Roll · ${wager} ⟡`}
       </button>
 
-      <p className="font-karla font-300 text-[#8a8880] text-xs text-center tracking-wide">
+      <p className="font-karla font-300 text-[#a0a09a] text-xs text-center tracking-wide">
         Match 1 die → win 1× · 2 dice → 2× · 3 dice → 3×
       </p>
     </div>

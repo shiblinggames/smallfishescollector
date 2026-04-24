@@ -60,7 +60,7 @@ export default function LeaderboardClient({ packs, collection, streak, achieveme
   return (
     <div>
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.11)' }}>
         {TABS.map(t => (
           <button
             key={t.key}
@@ -95,8 +95,8 @@ export default function LeaderboardClient({ packs, collection, streak, achieveme
                 gap: '0.875rem',
                 padding: '0.75rem 1rem',
                 borderRadius: '10px',
-                background: isMe ? 'rgba(240,192,64,0.07)' : rank <= 3 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${isMe ? 'rgba(240,192,64,0.22)' : rank <= 3 ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)'}`,
+                background: isMe ? 'rgba(240,192,64,0.07)' : rank <= 3 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${isMe ? 'rgba(240,192,64,0.22)' : rank <= 3 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.08)'}`,
                 textDecoration: 'none',
               }}
             >
@@ -130,7 +130,7 @@ export default function LeaderboardClient({ packs, collection, streak, achieveme
 
       {/* Current user if outside top 50 */}
       {!inTop50 && myScore > 0 && (
-        <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem' }}>
+        <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.11)', paddingTop: '1rem' }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',

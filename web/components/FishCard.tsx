@@ -18,7 +18,7 @@ const BORDER = 5  // ring thickness px
 
 // Label color keyed by border_style
 const variantLabelColor: Record<BorderStyle, string> = {
-  standard:      '#8a8880',
+  standard:      '#a0a09a',
   silver:        '#9ca3af',
   gold:          '#f0c040',
   pearl:         '#e8d5b0',
@@ -220,7 +220,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
   const isHolographicLabel = artEffect === 'holographic'
   const labelColor = variantLabelColor[borderStyle]
   const rarity = dropWeight != null ? rarityFromVariant(variantName ?? '', dropWeight) : null
-  const rarityColor = rarity ? RARITY_COLOR[rarity] : '#8a8880'
+  const rarityColor = rarity ? RARITY_COLOR[rarity] : '#a0a09a'
   const isLegendary = rarity ? IS_LEGENDARY_RARITY(rarity) : false
   const isMythic    = rarity ? IS_MYTHIC_RARITY(rarity)    : false
   const isDivine    = rarity ? IS_DIVINE_RARITY(rarity)    : false
@@ -264,7 +264,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
               {variantName}
             </p>
             {dropWeight != null && (
-              <p className="font-karla font-300 text-[0.62rem] text-[#8a8880] mt-0.5">
+              <p className="font-karla font-300 text-[0.62rem] text-[#a0a09a] mt-0.5">
                 {dropWeight < 1 ? `${dropWeight.toFixed(2)}% chance` : dropWeight < 10 ? `${dropWeight.toFixed(1)}% chance` : `${Math.round(dropWeight)}% chance`}
               </p>
             )}

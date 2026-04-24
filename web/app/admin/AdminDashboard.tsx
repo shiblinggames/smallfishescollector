@@ -31,7 +31,7 @@ export default function AdminDashboard() {
       <form action={action} className="sg-card p-8 space-y-6">
         <div className="space-y-1.5">
           <label className="sg-eyebrow block">Bulk Input</label>
-          <p className="font-karla font-300 text-[#8a8880] text-xs mb-2">
+          <p className="font-karla font-300 text-[#a0a09a] text-xs mb-2">
             One customer per line: <span className="text-[#f0ede8]">email, packs</span>
           </p>
           <textarea
@@ -63,17 +63,17 @@ export default function AdminDashboard() {
           </div>
           <div className="space-y-2">
             {state.results.map((r) => (
-              <div key={r.token} className="flex items-center gap-3 border border-[rgba(255,255,255,0.06)] px-4 py-3">
+              <div key={r.token} className="flex items-center gap-3 border border-[rgba(255,255,255,0.11)] px-4 py-3">
                 <div className="flex-1 min-w-0">
                   <p className="font-karla font-400 text-[#f0ede8] text-sm truncate">{r.email}</p>
-                  <p className="font-karla font-300 text-[#8a8880] text-xs truncate">{claimUrl(r.token, r.email)}</p>
+                  <p className="font-karla font-300 text-[#a0a09a] text-xs truncate">{claimUrl(r.token, r.email)}</p>
                 </div>
                 <span className="font-karla font-600 text-[#f0c040] text-sm shrink-0">
                   {r.packs}p
                 </span>
                 <button
                   onClick={() => navigator.clipboard.writeText(claimUrl(r.token, r.email))}
-                  className="font-karla font-600 text-[0.65rem] uppercase tracking-[0.10em] text-[#8a8880] hover:text-[#f0ede8] transition-colors shrink-0"
+                  className="font-karla font-600 text-[0.65rem] uppercase tracking-[0.10em] text-[#a0a09a] hover:text-[#f0ede8] transition-colors shrink-0"
                 >
                   Copy
                 </button>

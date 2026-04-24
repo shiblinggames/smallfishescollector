@@ -25,7 +25,7 @@ export default async function HooksPage() {
           >
             Tackle Shop.
           </h1>
-          <p className="font-karla font-300 text-[#8a8880] text-sm mt-3">
+          <p className="font-karla font-300 text-[#a0a09a] text-sm mt-3">
             Better hooks reach deeper waters.
           </p>
         </div>

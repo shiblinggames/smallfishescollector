@@ -12,7 +12,7 @@ export default function ClaimPage() {
         </h1>
         <Suspense fallback={
           <div className="sg-card p-8 text-center">
-            <p className="font-karla font-300 text-[#8a8880] text-sm">Validating link…</p>
+            <p className="font-karla font-300 text-[#a0a09a] text-sm">Validating link…</p>
           </div>
         }>
           <ClaimContent />

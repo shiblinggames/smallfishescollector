@@ -24,7 +24,7 @@ export default function PrizeModal({ cardName, variantName, prizeCode, onClose }
               style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)' }}>
             ✦ Special Prize ✦
           </h2>
-          <p className="font-karla font-300 text-[#8a8880] text-sm leading-relaxed">
+          <p className="font-karla font-300 text-[#a0a09a] text-sm leading-relaxed">
             You pulled a <span className="text-[#f0ede8] font-500">{variantName} {cardName}</span> — one of the rarest cards in the game.
           </p>
         </div>
@@ -36,12 +36,12 @@ export default function PrizeModal({ cardName, variantName, prizeCode, onClose }
             {prizeCode}
           </p>
           <button onClick={copyCode}
-                  className="font-karla font-600 text-[0.65rem] uppercase tracking-[0.12em] text-[#8a8880] hover:text-[#f0ede8] transition-colors">
+                  className="font-karla font-600 text-[0.65rem] uppercase tracking-[0.12em] text-[#a0a09a] hover:text-[#f0ede8] transition-colors">
             Copy Code
           </button>
         </div>
 
-        <p className="font-karla font-300 text-[#8a8880] text-sm leading-relaxed">
+        <p className="font-karla font-300 text-[#a0a09a] text-sm leading-relaxed">
           Reach out to us at{' '}
           <a href="mailto:hello@shiblinggames.com"
              className="text-[#f0c040] hover:text-[#ffd966] transition-colors">

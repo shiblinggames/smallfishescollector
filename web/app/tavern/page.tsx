@@ -142,8 +142,8 @@ function GameCard({ href, eyebrow, name, description, rules, icon, streak, compl
   return (
     <Link href={href} style={{
       display: 'block',
-      background: 'rgba(255,255,255,0.04)',
-      border: `1px solid ${completed ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.08)'}`,
+      background: 'rgba(255,255,255,0.08)',
+      border: `1px solid ${completed ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.15)'}`,
       borderRadius: '16px',
       padding: '1.25rem',
       textDecoration: 'none',
@@ -152,8 +152,8 @@ function GameCard({ href, eyebrow, name, description, rules, icon, streak, compl
       <div className="flex items-start gap-4">
         <div style={{
           width: 48, height: 48,
-          background: completed ? 'rgba(255,255,255,0.03)' : 'rgba(240,192,64,0.08)',
-          border: `1px solid ${completed ? 'rgba(255,255,255,0.07)' : 'rgba(240,192,64,0.18)'}`,
+          background: completed ? 'rgba(255,255,255,0.06)' : 'rgba(240,192,64,0.08)',
+          border: `1px solid ${completed ? 'rgba(255,255,255,0.13)' : 'rgba(240,192,64,0.18)'}`,
           borderRadius: '12px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
@@ -171,7 +171,7 @@ function GameCard({ href, eyebrow, name, description, rules, icon, streak, compl
             )}
           </div>
           <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>{name}</p>
-          <p className="font-karla text-[#8a8880] mt-1" style={{ fontSize: '0.8rem', lineHeight: 1.5 }}>{description}</p>
+          <p className="font-karla text-[#a0a09a] mt-1" style={{ fontSize: '0.8rem', lineHeight: 1.5 }}>{description}</p>
           {!completed && streak != null && streak > 0 && (
             <p className="font-karla font-600 mt-1.5" style={{ fontSize: '0.72rem', color: '#f0c040' }}>
               {streak} day streak
@@ -184,7 +184,7 @@ function GameCard({ href, eyebrow, name, description, rules, icon, streak, compl
       </div>
       {!completed && (
         <>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', margin: '1rem 0 0.75rem' }} />
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.11)', margin: '1rem 0 0.75rem' }} />
           <ul className="flex flex-col gap-1.5">
             {rules.map((rule, i) => (
               <li key={i} className="flex items-start gap-2">
@@ -196,7 +196,7 @@ function GameCard({ href, eyebrow, name, description, rules, icon, streak, compl
         </>
       )}
       {completed && completedNote && (
-        <p className="font-karla mt-3" style={{ fontSize: '0.78rem', color: '#8a8880', lineHeight: 1.5 }}>
+        <p className="font-karla mt-3" style={{ fontSize: '0.78rem', color: '#a0a09a', lineHeight: 1.5 }}>
           {completedNote}
         </p>
       )}

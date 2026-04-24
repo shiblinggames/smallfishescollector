@@ -42,13 +42,13 @@ export default function HookShop({ hookTier: initialTier, doubloons: initialDoub
                 background: isActive
                   ? 'rgba(240,192,64,0.06)'
                   : owned
-                  ? 'rgba(255,255,255,0.03)'
-                  : 'rgba(255,255,255,0.02)',
+                  ? 'rgba(255,255,255,0.06)'
+                  : 'rgba(255,255,255,0.05)',
                 border: isActive
                   ? '1px solid rgba(240,192,64,0.35)'
                   : owned
-                  ? '1px solid rgba(255,255,255,0.08)'
-                  : '1px solid rgba(255,255,255,0.05)',
+                  ? '1px solid rgba(255,255,255,0.15)'
+                  : '1px solid rgba(255,255,255,0.09)',
                 borderRadius: 12,
                 padding: '0.875rem 1rem',
                 opacity: locked ? 0.4 : 1,
@@ -111,7 +111,7 @@ export default function HookShop({ hookTier: initialTier, doubloons: initialDoub
       )}
 
       {!nextHook && (
-        <p className="font-karla font-300 text-[#8a8880] text-sm text-center">
+        <p className="font-karla font-300 text-[#a0a09a] text-sm text-center">
           You have the best hook in the sea.
         </p>
       )}
@@ -120,12 +120,12 @@ export default function HookShop({ hookTier: initialTier, doubloons: initialDoub
 }
 
 function HookIcon({ tier, active, owned }: { tier: number; active: boolean; owned: boolean }) {
-  const color = active ? '#f0c040' : owned ? '#8a8880' : '#4a4845'
+  const color = active ? '#f0c040' : owned ? '#a0a09a' : '#4a4845'
   return (
     <div style={{
       width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-      background: active ? 'rgba(240,192,64,0.08)' : 'rgba(255,255,255,0.04)',
-      border: `1px solid ${active ? 'rgba(240,192,64,0.2)' : 'rgba(255,255,255,0.06)'}`,
+      background: active ? 'rgba(240,192,64,0.08)' : 'rgba(255,255,255,0.08)',
+      border: `1px solid ${active ? 'rgba(240,192,64,0.2)' : 'rgba(255,255,255,0.11)'}`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">

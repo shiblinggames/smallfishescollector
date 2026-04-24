@@ -40,7 +40,7 @@ export default function LoginForm() {
           We sent a sign-in link to{' '}
           <span className="text-[#f0c040]">{email}</span>.
         </p>
-        <p className="font-karla font-300 text-[#8a8880] text-sm">
+        <p className="font-karla font-300 text-[#a0a09a] text-sm">
           Click the link in the email to sign in. You can close this tab.
         </p>
       </div>
@@ -72,9 +72,9 @@ export default function LoginForm() {
       </button>
 
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-[rgba(255,255,255,0.08)]" />
-        <span className="font-karla font-300 text-[#8a8880] text-xs tracking-widest">OR</span>
-        <div className="flex-1 h-px bg-[rgba(255,255,255,0.08)]" />
+        <div className="flex-1 h-px bg-[rgba(255,255,255,0.15)]" />
+        <span className="font-karla font-300 text-[#a0a09a] text-xs tracking-widest">OR</span>
+        <div className="flex-1 h-px bg-[rgba(255,255,255,0.15)]" />
       </div>
 
       <GoogleButton next={next} />
