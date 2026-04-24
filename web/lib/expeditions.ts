@@ -266,11 +266,11 @@ export const STAT_ICONS: Record<Stat, string> = {
 }
 
 export const STAT_DESCRIPTIONS: Record<Stat, string> = {
-  combat:     'Used when fighting rival pirates or sea creatures',
-  navigation: 'Used to navigate fog, whirlpools, and tricky waters',
-  durability: 'Used to weather storms and take damage without sinking',
-  speed:      'Used to outrun threats and escape danger',
-  luck:       'Used on treasure finds — and determines your final loot',
+  combat:     'Fighting pirates and sea creatures. Fail and take a loot penalty.',
+  navigation: 'Fog, whirlpools, tricky passages. Succeed and skip the next event. Fail and face a detour.',
+  durability: 'Your hull HP. Failed hull events deal damage equal to how badly you missed. Reach zero and the voyage ends.',
+  speed:      'Your escape rating. Roll Speed when abandoning to recover your entry fee.',
+  luck:       'Rolled at voyage end. Determines loot quality and doubloons earned.',
 }
 
 export const RARITY_COLORS: Record<string, string> = {

@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { startExpedition } from '../actions'
 import {
-  STATS, STAT_LABELS, STAT_ICONS,
+  STATS, STAT_LABELS, STAT_ICONS, STAT_DESCRIPTIONS,
   type Stat, type ZoneKey, type ZoneConfig, type ExpeditionShipStats, type CrewCard, type CrewLoadout,
 } from '@/lib/expeditions'
 
@@ -150,7 +150,7 @@ export default function PreparePage({ zone, zoneConfig, shipStats, shipTier, dou
                   borderBottom: i < STATS.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none',
                 }}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3">
                   {/* Stat label */}
                   <div style={{ width: 80, flexShrink: 0 }}>
                     <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#f0ede8' }}>
@@ -161,6 +161,9 @@ export default function PreparePage({ zone, zoneConfig, shipStats, shipTier, dou
                       {bonus > 0 && (
                         <span style={{ fontSize: '0.62rem', color: '#4ade80', marginLeft: 3 }}>+{bonus}</span>
                       )}
+                    </p>
+                    <p className="font-karla" style={{ fontSize: '0.52rem', color: '#4a4845', lineHeight: 1.45, marginTop: 3 }}>
+                      {STAT_DESCRIPTIONS[stat]}
                     </p>
                   </div>
 
