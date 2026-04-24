@@ -342,9 +342,6 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
 
           {packs > 0 ? (
             <div className="flex flex-col items-center gap-1.5">
-              <p className="font-karla text-[#a0a09a] text-xs uppercase tracking-[0.12em]">
-                {packs} {packs === 1 ? 'pack' : 'packs'} available — click to open
-              </p>
               <ActiveHookBadge hookTier={hookTier} />
             </div>
           ) : (
@@ -595,7 +592,7 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
 
       {/* Desktop: in flow */}
       {phase !== 'done' && flipped.some((f) => !f) ? (
-        <button onClick={flipAll} className="hidden sm:block btn-ghost">Open All</button>
+        <div className="hidden sm:block"><button onClick={flipAll} className="btn-ghost">Open All</button></div>
       ) : phase === 'done' ? (
         <div className="hidden sm:flex flex-col items-center gap-4">
           <div className="flex gap-4 flex-wrap justify-center">
