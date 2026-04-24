@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { resolveChoice, resolveFinalLoot, abandonExpedition } from '../actions'
 import {
-  STATS, STAT_LABELS, STAT_ICONS, STAT_DESCRIPTIONS, RARITY_COLORS, EXPEDITION_SHIP_STATS, HULL_POINTS,
+  STATS, STAT_LABELS, STAT_ICONS, STAT_DESCRIPTIONS, RARITY_COLORS, EXPEDITION_SHIP_STATS,
   type Expedition, type DailyExpeditionRow, type EventNode, type EventResult, type LootResult, type ExpeditionShipStats,
 } from '@/lib/expeditions'
 
@@ -83,8 +83,9 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
     ? (expedition.crew_loadout[currentStat] ?? []).reduce((s, c) => s + c.power, 0)
     : 0
 
-  const hullMax = HULL_POINTS[expedition.ship_tier] ?? 3
   const shipStats = EXPEDITION_SHIP_STATS[expedition.ship_tier]
+  const crewHullBonus = (expedition.crew_loadout.durability ?? []).reduce((s, c) => s + c.power, 0)
+  const hullMax = (shipStats?.durability ?? 3) + crewHullBonus
   const storedHullDamage = expedition.hull_damage ?? 0
 
   function handleChoiceClick(choiceIndex: number) {
@@ -166,16 +167,19 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
               >
                 ⚓ Crew
               </button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: hullMax }).map((_, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      width: 6, height: 6, borderRadius: '50%',
-                      background: i < hullMax - storedHullDamage ? '#60a5fa' : 'rgba(255,255,255,0.1)',
-                    }}
-                  />
-                ))}
+              <div className="flex items-center gap-1.5">
+                <div style={{ width: 44, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${Math.max(0, ((hullMax - storedHullDamage) / hullMax) * 100)}%`,
+                    background: storedHullDamage / hullMax > 0.6 ? '#f87171' : storedHullDamage / hullMax > 0.3 ? '#f0c040' : '#60a5fa',
+                    borderRadius: 2,
+                    transition: 'width 0.4s ease, background 0.4s ease',
+                  }} />
+                </div>
+                <p className="font-karla" style={{ fontSize: '0.58rem', color: '#6a6764' }}>
+                  {Math.max(0, hullMax - storedHullDamage)}/{hullMax}
+                </p>
               </div>
               <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
                 {isFinalLootNode ? 'Final Haul' : `${currentNode + 1} / ${totalEvents}`}
@@ -595,7 +599,7 @@ function ResultCard({ result, shipTier }: { result: EventResult; shipTier: numbe
         </p>
         {result.hullDamage ? (
           <p className="font-karla" style={{ fontSize: '0.68rem', color: '#f87171', marginTop: 10 }}>
-            ⚠ Hull damaged (−1)
+            ⚠ Hull damaged (−{result.hullDamage})
           </p>
         ) : null}
         {result.lootPenalty ? (

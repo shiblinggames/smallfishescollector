@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
 import {
-  ZONES, EXPEDITION_SHIP_STATS, HULL_POINTS, STAT_LABELS, STAT_ICONS,
+  ZONES, EXPEDITION_SHIP_STATS, STAT_LABELS, STAT_ICONS,
   type Expedition, type DailyExpeditionRow, type EventResult, type EventNode,
 } from '@/lib/expeditions'
 
@@ -44,7 +44,8 @@ export default async function ExpeditionsResultsPage({
 
   const zoneConfig = ZONES[expedition.zone]
   const shipStats = EXPEDITION_SHIP_STATS[expedition.ship_tier]
-  const hullMax = HULL_POINTS[expedition.ship_tier] ?? 3
+  const crewHullBonus = (expedition.crew_loadout?.durability ?? []).reduce((s, c) => s + c.power, 0)
+  const hullMax = (EXPEDITION_SHIP_STATS[expedition.ship_tier]?.durability ?? 3) + crewHullBonus
   const failed = expedition.status === 'failed'
   const loot = expedition.loot
   const events: EventResult[] = expedition.events ?? []
