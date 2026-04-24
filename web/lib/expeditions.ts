@@ -73,6 +73,9 @@ export interface EventResult {
   failReason?: string
   skipNextNode?: boolean
   penaltyEventIndex?: number
+  lootBonus?: number
+  hullRepair?: number
+  doubloonBonus?: number
 }
 
 export interface LootResult {
