@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import {
-  ZONES, EXPEDITION_SHIP_STATS, HULL_POINTS, BASE_DOUBLOONS,
+  ZONES, EXPEDITION_SHIP_STATS, BASE_DOUBLOONS,
   rollStat, getCrewPower,
   type ZoneKey, type CrewLoadout, type EventNode, type EventResult, type LootResult,
   type Expedition, type DailyExpeditionRow,
@@ -184,6 +184,7 @@ export async function resolveChoice(
   if (!choice) return { error: 'Invalid choice' }
 
   const zoneConfig = ZONES[exp.zone]
+  const normalCount = zoneConfig.length - 1  // indices 0..normalCount-1 are regular events
 
   // No-roll path
   if (choice.isNoRoll) {
@@ -196,7 +197,7 @@ export async function resolveChoice(
       noRoll: true,
       ...(choice.cost ? { costPenalty: choice.cost } : {}),
     }
-    await saveProgress(admin, expeditionId, nodeIndex, result, exp.events)
+    await saveProgress(admin, expeditionId, result, exp.events, nodeIndex + 1)
     return result
   }
 
@@ -223,6 +224,12 @@ export async function resolveChoice(
     text: success ? choice.successText : choice.failText,
   }
 
+  const isNavEvent = mechanics.stat === 'navigation'
+
+  if (success && isNavEvent) {
+    result.skipNextNode = true
+  }
+
   if (!success) {
     const isHullEvent = ['storm', 'mild_storm', 'sea_monster', 'kraken_attack', 'kraken_warning',
       'ghost_armada', 'abyss_creature', 'void_storm'].includes(eventNode.eventType)
@@ -230,6 +237,13 @@ export async function resolveChoice(
       result.hullDamage = threshold - rollResult.total
     } else {
       result.lootPenalty = 0.2
+    }
+    // Navigation failure: queue a detour event if any remain
+    if (isNavEvent) {
+      const penaltyEventsUsed = (exp.events ?? []).filter(e => e.nodeIndex >= normalCount).length
+      if (penaltyEventsUsed < 2) {
+        result.penaltyEventIndex = normalCount + penaltyEventsUsed
+      }
     }
   }
 
@@ -250,7 +264,10 @@ export async function resolveChoice(
     return result
   }
 
-  await saveProgress(admin, expeditionId, nodeIndex, result, exp.events, newHullDamage)
+  const nextNode = result.skipNextNode
+    ? Math.min(nodeIndex + 2, normalCount)
+    : nodeIndex + 1
+  await saveProgress(admin, expeditionId, result, exp.events, nextNode, newHullDamage)
   return result
 }
 
@@ -258,18 +275,132 @@ async function saveProgress(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   admin: any,
   expeditionId: number,
-  nodeIndex: number,
   result: EventResult,
   existingEvents: EventResult[],
+  nextNode: number,
   newHullDamage?: number,
 ) {
   const updatedEvents = [...(existingEvents ?? []), result]
   const update: Record<string, unknown> = {
-    current_node: nodeIndex + 1,
+    current_node: nextNode,
     events: updatedEvents,
   }
   if (newHullDamage !== undefined) update.hull_damage = newHullDamage
   await admin.from('expeditions').update(update).eq('id', expeditionId)
+}
+
+export async function resolvePenaltyEvent(
+  expeditionId: number,
+  penaltyEventNodeIndex: number,
+  choiceIndex: number
+): Promise<EventResult | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const date = today()
+
+  const { data: expedition } = await admin
+    .from('expeditions')
+    .select('*')
+    .eq('id', expeditionId)
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .eq('expedition_date', date)
+    .single()
+
+  if (!expedition) return { error: 'Expedition not found' }
+
+  const { data: dailyData } = await admin
+    .from('daily_expeditions')
+    .select('event_sequence')
+    .eq('expedition_date', date)
+    .eq('zone', expedition.zone)
+    .single()
+
+  if (!dailyData) return { error: 'Daily content not found' }
+
+  const exp = expedition as Expedition
+  const eventSequence = (dailyData as { event_sequence: EventNode[] }).event_sequence
+  const eventNode = eventSequence[penaltyEventNodeIndex]
+  if (!eventNode || !eventNode.isPenalty) return { error: 'Invalid penalty event' }
+
+  const choice = eventNode.choices[choiceIndex]
+  if (!choice) return { error: 'Invalid choice' }
+
+  const zoneConfig = ZONES[exp.zone]
+
+  if (choice.isNoRoll) {
+    const result: EventResult = {
+      nodeIndex: penaltyEventNodeIndex,
+      eventType: eventNode.eventType,
+      choiceIndex,
+      outcome: 'success',
+      text: choice.successText,
+      noRoll: true,
+      ...(choice.cost ? { costPenalty: choice.cost } : {}),
+    }
+    const updatedEvents = [...(exp.events ?? []), result]
+    await admin.from('expeditions').update({ events: updatedEvents }).eq('id', expeditionId)
+    return result
+  }
+
+  const mechanics = eventNode.mechanics
+  const stat = mechanics.stat ?? 'luck'
+  const [min, max] = zoneConfig.difficulty[mechanics.difficultyTier]
+  const threshold = eventNode.mechanics.threshold ?? (Math.floor(Math.random() * (max - min + 1)) + min)
+  const crewForStat = exp.crew_loadout[stat] ?? []
+  const rollResult = rollStat(stat, crewForStat, exp.ship_tier)
+  const success = rollResult.total >= threshold
+
+  const result: EventResult = {
+    nodeIndex: penaltyEventNodeIndex,
+    eventType: eventNode.eventType,
+    choiceIndex,
+    stat,
+    roll: rollResult.roll,
+    base: rollResult.base,
+    crewBonus: rollResult.crewBonus,
+    crewRoll: rollResult.crewRoll,
+    total: rollResult.total,
+    threshold,
+    outcome: success ? 'success' : 'fail',
+    text: success ? choice.successText : choice.failText,
+  }
+
+  if (!success) {
+    const isHullEvent = ['storm', 'mild_storm', 'sea_monster', 'kraken_attack', 'kraken_warning',
+      'ghost_armada', 'abyss_creature', 'void_storm'].includes(eventNode.eventType)
+    if (isHullEvent) {
+      result.hullDamage = threshold - rollResult.total
+    } else {
+      result.lootPenalty = 0.2
+    }
+  }
+
+  const newHullDamage = (exp.hull_damage ?? 0) + (result.hullDamage ?? 0)
+  const crewDurabilityBonus = (exp.crew_loadout.durability ?? []).reduce((s: number, c: { power: number }) => s + c.power, 0)
+  const hullMax = (EXPEDITION_SHIP_STATS[exp.ship_tier]?.durability ?? 3) + crewDurabilityBonus
+
+  if (newHullDamage >= hullMax) {
+    result.expeditionFailed = true
+    result.failReason = 'Your ship could not take any more damage. You limp back to port.'
+    const newEvents = [...(exp.events ?? []), result]
+    await admin.from('expeditions').update({
+      status: 'failed',
+      events: newEvents,
+      hull_damage: newHullDamage,
+      completed_at: new Date().toISOString(),
+    }).eq('id', expeditionId)
+    return result
+  }
+
+  const updatedEvents = [...(exp.events ?? []), result]
+  const update: Record<string, unknown> = { events: updatedEvents }
+  if (result.hullDamage) update.hull_damage = newHullDamage
+  await admin.from('expeditions').update(update).eq('id', expeditionId)
+  return result
 }
 
 export async function resolveFinalLoot(

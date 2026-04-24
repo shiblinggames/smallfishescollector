@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { resolveChoice, resolveFinalLoot, abandonExpedition } from '../actions'
+import { resolveChoice, resolvePenaltyEvent, resolveFinalLoot, abandonExpedition } from '../actions'
 import {
   STATS, STAT_LABELS, STAT_ICONS, STAT_DESCRIPTIONS, RARITY_COLORS, EXPEDITION_SHIP_STATS,
   type Expedition, type DailyExpeditionRow, type EventNode, type EventResult, type LootResult, type ExpeditionShipStats,
@@ -74,12 +74,16 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
   const [lootResult, setLootResult] = useState<LootResult | null>(null)
   const [showStats, setShowStats] = useState(false)
   const [hullDamage, setHullDamage] = useState(expedition.hull_damage ?? 0)
+  const [activeEventOverride, setActiveEventOverride] = useState<EventNode | null>(null)
+  const [pendingPenaltyEvent, setPendingPenaltyEvent] = useState<EventNode | null>(null)
+  const [isInPenalty, setIsInPenalty] = useState(false)
 
   const eventSequence = dailyContent.event_sequence
-  const isFinalLootNode = currentNode >= eventSequence.length
-  const currentEvent: EventNode | null = isFinalLootNode ? null : eventSequence[currentNode]
+  const isFinalLootNode = currentNode >= totalEvents
+  const regularEvent: EventNode | null = isFinalLootNode ? null : eventSequence[currentNode]
+  const displayEvent = activeEventOverride ?? regularEvent
 
-  const currentStat = currentEvent?.mechanics.stat ?? null
+  const currentStat = displayEvent?.mechanics.stat ?? null
   const crewBonusForStat = currentStat
     ? (expedition.crew_loadout[currentStat] ?? []).reduce((s, c) => s + c.power, 0)
     : 0
@@ -93,17 +97,22 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
     setPhase({ type: 'rolling', choiceIndex })
 
     startTransition(async () => {
-      const result = await resolveChoice(expedition.id, currentNode, choiceIndex)
+      const result = isInPenalty
+        ? await resolvePenaltyEvent(expedition.id, activeEventOverride!.nodeIndex, choiceIndex)
+        : await resolveChoice(expedition.id, currentNode, choiceIndex)
+
       if ('error' in result) {
         setPhase({ type: 'event' })
         return
       }
 
-      // Let the die settle, then linger on the final number before showing result
       if (result.roll !== undefined) setPendingRoll(result.roll)
       if (result.crewRoll !== undefined) setPendingCrewRoll(result.crewRoll ?? 0)
       await new Promise(r => setTimeout(r, 1600))
       if (result.hullDamage) setHullDamage(prev => prev + result.hullDamage!)
+      if (!isInPenalty && result.penaltyEventIndex !== undefined) {
+        setPendingPenaltyEvent(eventSequence[result.penaltyEventIndex])
+      }
       setPhase({ type: 'result', result })
 
       if (result.expeditionFailed) {
@@ -113,25 +122,53 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
     })
   }
 
+  function startLoot() {
+    setPhase({ type: 'loot-rolling' })
+    startTransition(async () => {
+      const loot = await resolveFinalLoot(expedition.id)
+      if ('error' in loot) { setPhase({ type: 'event' }); return }
+      setPendingLootRoll(loot.roll)
+      await new Promise(r => setTimeout(r, 1600))
+      setLootResult(loot)
+      setPhase({ type: 'loot-result', loot })
+    })
+  }
+
   function handleContinue() {
     if (phase.type !== 'result') return
     const result = (phase as { type: 'result'; result: EventResult }).result
-    const nextNode = result.nodeIndex + 1
+
+    // Finishing a penalty (detour) event — return to normal flow
+    if (isInPenalty) {
+      setIsInPenalty(false)
+      setActiveEventOverride(null)
+      if (currentNode >= totalEvents) {
+        startLoot()
+      } else {
+        setPhase({ type: 'event' })
+      }
+      return
+    }
+
+    // About to show a penalty (detour) event before advancing
+    if (pendingPenaltyEvent) {
+      const penalty = pendingPenaltyEvent
+      setCurrentNode(result.nodeIndex + 1)
+      setPendingPenaltyEvent(null)
+      setIsInPenalty(true)
+      setActiveEventOverride(penalty)
+      setPhase({ type: 'event' })
+      return
+    }
+
+    // Normal advance — skip by 2 on successful navigation
+    const nextNode = result.skipNextNode
+      ? Math.min(result.nodeIndex + 2, totalEvents)
+      : result.nodeIndex + 1
     setCurrentNode(nextNode)
 
-    if (nextNode >= eventSequence.length) {
-      setPhase({ type: 'loot-rolling' })
-      startTransition(async () => {
-        const loot = await resolveFinalLoot(expedition.id)
-        if ('error' in loot) {
-          setPhase({ type: 'event' })
-          return
-        }
-        setPendingLootRoll(loot.roll)
-        await new Promise(r => setTimeout(r, 1600))
-        setLootResult(loot)
-        setPhase({ type: 'loot-result', loot })
-      })
+    if (nextNode >= totalEvents) {
+      startLoot()
     } else {
       setPhase({ type: 'event' })
     }
@@ -193,9 +230,9 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
         </div>
 
         {/* ── EVENT / ROLLING / RESULT (inline) ── */}
-        {(phase.type === 'event' || phase.type === 'rolling' || phase.type === 'result') && currentEvent && (
+        {(phase.type === 'event' || phase.type === 'rolling' || phase.type === 'result') && displayEvent && (
           <EventCard
-            event={currentEvent}
+            event={displayEvent}
             phase={phase}
             result={activeResult}
             pendingRoll={pendingRoll}
@@ -329,12 +366,16 @@ function EventCard({
 
   return (
     <div>
-      {/* Crisis badge */}
-      {event.isCrisis && (
+      {/* Crisis / detour badge */}
+      {event.isPenalty ? (
+        <p className="font-karla font-700 uppercase tracking-[0.1em] mb-2" style={{ fontSize: '0.52rem', color: '#f59e0b' }}>
+          ⚠ Detour
+        </p>
+      ) : event.isCrisis ? (
         <p className="font-karla font-700 uppercase tracking-[0.1em] mb-2" style={{ fontSize: '0.52rem', color: '#f87171' }}>
           ⚠ Crisis Event
         </p>
-      )}
+      ) : null}
 
       {/* Event title */}
       <p className="font-cinzel font-700 text-[#f0ede8] mb-4" style={{ fontSize: '1.2rem', lineHeight: 1.25 }}>
@@ -603,6 +644,16 @@ function ResultCard({ result, shipTier }: { result: EventResult; shipTier: numbe
             ⚠ Hull damaged (−{result.hullDamage})
           </p>
         ) : null}
+        {result.skipNextNode && (
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#4ade80', marginTop: 10 }}>
+            → Navigation success — next event skipped
+          </p>
+        )}
+        {result.penaltyEventIndex !== undefined && (
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#f59e0b', marginTop: 10 }}>
+            ⚠ Navigation failure — detour ahead
+          </p>
+        )}
         {result.lootPenalty ? (
           <p className="font-karla" style={{ fontSize: '0.68rem', color: '#f59e0b', marginTop: 8 }}>
             ⚠ Loot penalty applied
