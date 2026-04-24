@@ -198,8 +198,11 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
     <>
       {/* Desktop top bar */}
       <nav className="hidden sm:flex bg-black border-b border-[rgba(255,255,255,0.15)] px-6 py-4 items-center justify-between">
-        <Link href="/" className="font-cinzel font-700 text-[#f0ede8] tracking-wide text-sm uppercase">
+        <Link href="/" className="flex items-center gap-2 font-cinzel font-700 text-[#f0ede8] tracking-wide text-sm uppercase">
           Small Fishes
+          <span style={{ fontSize: '0.48rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.25)', color: '#f0c040', borderRadius: 4, padding: '0.15rem 0.4rem', letterSpacing: '0.12em', lineHeight: 1.4, fontFamily: 'inherit' }}>
+            BETA
+          </span>
         </Link>
 
         <div className="hidden sm:flex flex-1 ml-8 gap-2 text-xs font-karla font-600 uppercase tracking-[0.12em]">
@@ -229,8 +232,11 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
 
       {/* Mobile top strip */}
       <div className="sm:hidden bg-black border-b border-[rgba(255,255,255,0.15)] px-4 py-2 flex justify-between items-center relative z-50" ref={menuRef}>
-        <Link href="/" className="font-cinzel font-700 text-[#f0ede8] tracking-wide text-xs uppercase">
+        <Link href="/" className="flex items-center gap-1.5 font-cinzel font-700 text-[#f0ede8] tracking-wide text-xs uppercase">
           Small Fishes
+          <span style={{ fontSize: '0.44rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.25)', color: '#f0c040', borderRadius: 4, padding: '0.15rem 0.35rem', letterSpacing: '0.12em', lineHeight: 1.4, fontFamily: 'inherit' }}>
+            BETA
+          </span>
         </Link>
 
         <div className="flex items-center gap-3">
