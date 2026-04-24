@@ -69,6 +69,7 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
   const [currentNode, setCurrentNode] = useState(expedition.current_node)
   const [phase, setPhase] = useState<Phase>({ type: 'event' })
   const [rollingResult, setRollingResult] = useState<EventResult | null>(null)
+  const [pendingRoll, setPendingRoll] = useState<number>(1)
   const [lootResult, setLootResult] = useState<LootResult | null>(null)
   const [showStats, setShowStats] = useState(false)
 
@@ -93,7 +94,8 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
         return
       }
 
-      // Brief delay so the rolling animation plays out (900ms) before showing result
+      // Show the real roll on the die, then wait for animation to finish
+      if (result.roll !== undefined) setPendingRoll(result.roll)
       await new Promise(r => setTimeout(r, 950))
       setRollingResult(result)
       setPhase({ type: 'result', result })
@@ -189,6 +191,7 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
             event={currentEvent}
             phase={phase}
             rollingResult={rollingResult}
+            pendingRoll={pendingRoll}
             onChoice={handleChoiceClick}
             isPending={isPending}
           />
@@ -288,12 +291,14 @@ function EventView({
   event,
   phase,
   rollingResult,
+  pendingRoll,
   onChoice,
   isPending,
 }: {
   event: EventNode
   phase: Phase
   rollingResult: EventResult | null
+  pendingRoll: number
   onChoice: (i: number) => void
   isPending: boolean
 }) {
@@ -366,7 +371,7 @@ function EventView({
       {/* Rolling state */}
       {rolling && rollingResult === null && (
         <div className="flex flex-col items-center gap-3 mt-6">
-          <RollingDie finalRoll={1} rolling={true} />
+          <RollingDie finalRoll={pendingRoll} rolling={true} />
           <p className="font-karla" style={{ fontSize: '0.68rem', color: '#6a6764' }}>Rolling...</p>
         </div>
       )}
@@ -406,12 +411,7 @@ function ResultView({ event, result, onContinue }: { event: EventNode; result: E
           <div className="flex items-center gap-2">
             <div style={{ flex: 1, textAlign: 'center' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0c040' }}>{result.roll}</p>
-              <p className="font-karla" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Roll</p>
-            </div>
-            <p style={{ color: '#6a6764', fontSize: '0.8rem' }}>+</p>
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>{result.base}</p>
-              <p className="font-karla" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Base</p>
+              <p className="font-karla" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Ship (1d{result.base})</p>
             </div>
             {(result.crewBonus ?? 0) > 0 && <>
               <p style={{ color: '#6a6764', fontSize: '0.8rem' }}>+</p>
@@ -507,7 +507,7 @@ function LootResultView({ loot, onDone }: { loot: LootResult; onDone: () => void
           )}
         </div>
         <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.1rem' }}>
-          {loot.roll} + {loot.base}{(loot.crewBonus ?? 0) > 0 ? ` + ${loot.crewRoll} crew (1d${loot.crewBonus})` : ''} = {loot.total} → score {loot.finalScore}
+          ship {loot.roll} (1d{loot.base}){(loot.crewBonus ?? 0) > 0 ? ` + crew ${loot.crewRoll} (1d${loot.crewBonus})` : ''} = {loot.total} → score {loot.finalScore}
         </p>
       </div>
 
@@ -621,7 +621,7 @@ function StatsSheet({ expedition, shipStats, onClose }: {
         {/* How rolls work */}
         <div className="px-5 pt-3 pb-1">
           <p className="font-karla" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.5 }}>
-            Each event tests one stat. You roll a random number up to your score — higher crew means a bigger possible bonus, but nothing is guaranteed.
+            Each event tests one stat. Both your ship and crew roll randomly up to their rating — a better ship and stronger crew means higher possible scores, but nothing is guaranteed.
           </p>
         </div>
 
@@ -630,8 +630,8 @@ function StatsSheet({ expedition, shipStats, onClose }: {
             const base = shipStats[stat]
             const assigned = crew[stat] ?? []
             const crewTotal = assigned.reduce((s, c) => s + c.power, 0)
-            const minScore = base + 1 + (crewTotal > 0 ? 1 : 0)
-            const maxScore = base + 20 + crewTotal
+            const minScore = 1 + (crewTotal > 0 ? 1 : 0)
+            const maxScore = base + crewTotal
 
             return (
               <div key={stat} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.75rem' }}>
