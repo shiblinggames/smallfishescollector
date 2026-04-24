@@ -85,8 +85,20 @@ export default function QuizClient({ quiz, previousAnswer }: Props) {
   )
   const [loading, setLoading] = useState(false)
   const [showRewardToast, setShowRewardToast] = useState(false)
+  const [timeLeft, setTimeLeft] = useState(previousAnswer ? 0 : 20)
+  const [timedOut, setTimedOut] = useState(false)
 
-  const revealed = result !== null
+  const revealed = result !== null || timedOut
+
+  useEffect(() => {
+    if (previousAnswer || timedOut || result) return
+    if (timeLeft <= 0) {
+      setTimedOut(true)
+      return
+    }
+    const t = setTimeout(() => setTimeLeft(t => t - 1), 1000)
+    return () => clearTimeout(t)
+  }, [timeLeft, previousAnswer, timedOut, result])
 
   async function handleSelect(index: number) {
     if (revealed || loading) return
@@ -103,6 +115,12 @@ export default function QuizClient({ quiz, previousAnswer }: Props) {
   }
 
   function optionStyle(index: number): React.CSSProperties {
+    if (timedOut) {
+      if (index === quiz.correct_index) {
+        return { background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.3)', color: '#4ade80', cursor: 'default' }
+      }
+      return { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', color: '#4a4845', cursor: 'default' }
+    }
     if (!revealed) {
       return {
         background: selected === index ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.06)',
@@ -152,9 +170,29 @@ export default function QuizClient({ quiz, previousAnswer }: Props) {
       )}
 
       {/* Question */}
-      <h1 className="font-cinzel font-700 text-[#f0ede8] mb-8" style={{ fontSize: '1.15rem', lineHeight: 1.45 }}>
+      <h1 className="font-cinzel font-700 text-[#f0ede8] mb-5" style={{ fontSize: '1.15rem', lineHeight: 1.45 }}>
         {quiz.question}
       </h1>
+
+      {/* Timer bar */}
+      {!previousAnswer && (
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-1.5">
+            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: timeLeft <= 5 ? '#f87171' : '#6a6764' }}>
+              {timedOut ? 'Time\'s up' : `${timeLeft}s`}
+            </span>
+          </div>
+          <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              borderRadius: 2,
+              width: `${(timeLeft / 20) * 100}%`,
+              background: timeLeft <= 5 ? '#f87171' : timeLeft <= 10 ? '#f0c040' : '#4ade80',
+              transition: 'width 1s linear, background 0.3s ease',
+            }} />
+          </div>
+        </div>
+      )}
 
       {/* Options */}
       <div className="flex flex-col gap-3 mb-8">
@@ -175,12 +213,12 @@ export default function QuizClient({ quiz, previousAnswer }: Props) {
             <span className="font-karla font-500" style={{ fontSize: '0.88rem', lineHeight: 1.4 }}>
               {option}
             </span>
-            {revealed && i === result!.correctIndex && (
+            {revealed && (timedOut ? i === quiz.correct_index : i === result!.correctIndex) && (
               <svg className="ml-auto shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 6L9 17l-5-5"/>
               </svg>
             )}
-            {revealed && i === selected && !result!.correct && i !== result!.correctIndex && (
+            {revealed && !timedOut && i === selected && !result!.correct && i !== result!.correctIndex && (
               <svg className="ml-auto shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 6L6 18M6 6l12 12"/>
               </svg>
@@ -218,6 +256,23 @@ export default function QuizClient({ quiz, previousAnswer }: Props) {
                 </p>
               </>
             )}
+          </div>
+          <p className="font-karla text-[#a0a09a]" style={{ fontSize: '0.82rem', lineHeight: 1.6 }}>
+            {quiz.explanation}
+          </p>
+        </div>
+      )}
+
+      {/* Timed out */}
+      {timedOut && (
+        <div className="rounded-xl px-5 py-4" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+            </svg>
+            <p className="font-karla font-700 uppercase tracking-[0.12em] text-[#f87171]" style={{ fontSize: '0.6rem' }}>
+              Time&apos;s up · No reward
+            </p>
           </div>
           <p className="font-karla text-[#a0a09a]" style={{ fontSize: '0.82rem', lineHeight: 1.6 }}>
             {quiz.explanation}

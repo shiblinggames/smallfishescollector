@@ -10,6 +10,26 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const [tavernBadge, setTavernBadge] = useState(0)
+
+  useEffect(() => {
+    const supabase = createClient()
+    async function checkDailies() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const today = new Date().toISOString().split('T')[0]
+      const [{ data: profile }, { data: quiz }, { data: fotd }] = await Promise.all([
+        supabase.from('profiles').select('last_daily_claim, last_ship_claim').eq('id', user.id).single(),
+        supabase.from('quiz_answers').select('id').eq('user_id', user.id).eq('date', today).single(),
+        supabase.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
+      ])
+      const bonusDone = profile?.last_daily_claim === today && profile?.last_ship_claim === today
+      const quizDone = !!quiz
+      const fotdDone = !!fotd && (fotd.solved || (fotd.guesses?.length ?? 0) >= 4)
+      setTavernBadge([!bonusDone, !quizDone, !fotdDone].filter(Boolean).length)
+    }
+    checkDailies()
+  }, [pathname])
 
   // Close on outside tap
   useEffect(() => {
@@ -34,7 +54,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   }
 
   const mobileLinks = [
-    { href: '/tavern', label: 'Tavern', badge: null,
+    { href: '/tavern', label: 'Tavern', badge: tavernBadge > 0 ? tavernBadge : null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M5 3h14l-1 9H6L5 3z"/>
@@ -116,7 +136,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   ]
 
   const links = [
-    { href: '/tavern', label: 'Tavern', badge: null,
+    { href: '/tavern', label: 'Tavern', badge: tavernBadge > 0 ? tavernBadge : null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M5 3h14l-1 9H6L5 3z"/>
