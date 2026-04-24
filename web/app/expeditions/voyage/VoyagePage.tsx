@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { resolveChoice, resolveFinalLoot, abandonExpedition } from '../actions'
 import {
-  STATS, STAT_LABELS, STAT_ICONS, RARITY_COLORS, EXPEDITION_SHIP_STATS, HULL_POINTS,
+  STATS, STAT_LABELS, STAT_ICONS, STAT_DESCRIPTIONS, RARITY_COLORS, EXPEDITION_SHIP_STATS, HULL_POINTS,
   type Expedition, type DailyExpeditionRow, type EventNode, type EventResult, type LootResult, type ExpeditionShipStats,
 } from '@/lib/expeditions'
 
@@ -618,38 +618,52 @@ function StatsSheet({ expedition, shipStats, onClose }: {
           </button>
         </div>
 
+        {/* How rolls work */}
+        <div className="px-5 pt-3 pb-1">
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.5 }}>
+            Each event tests one stat. You roll a random number up to your score — higher crew means a bigger possible bonus, but nothing is guaranteed.
+          </p>
+        </div>
+
         <div className="overflow-y-auto flex-1 px-5 py-3 flex flex-col gap-3">
           {STATS.map(stat => {
             const base = shipStats[stat]
             const assigned = crew[stat] ?? []
             const crewTotal = assigned.reduce((s, c) => s + c.power, 0)
+            const minScore = base + 1 + (crewTotal > 0 ? 1 : 0)
+            const maxScore = base + 20 + crewTotal
 
             return (
               <div key={stat} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.75rem' }}>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-karla font-700" style={{ fontSize: '0.75rem', color: '#f0ede8' }}>
-                    {STAT_ICONS[stat]} {STAT_LABELS[stat]}
-                  </p>
-                  <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
-                    d20 + {base}{crewTotal > 0 ? ` + 1d${crewTotal}` : ''}
-                  </p>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div>
+                    <p className="font-karla font-700" style={{ fontSize: '0.75rem', color: '#f0ede8' }}>
+                      {STAT_ICONS[stat]} {STAT_LABELS[stat]}
+                    </p>
+                    <p className="font-karla" style={{ fontSize: '0.6rem', color: '#6a6764', marginTop: 1 }}>
+                      {STAT_DESCRIPTIONS[stat]}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0c040' }}>{minScore}–{maxScore}</p>
+                    <p className="font-karla" style={{ fontSize: '0.5rem', color: '#6a6764' }}>possible score</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div style={{ background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.15)', borderRadius: 6, padding: '0.2rem 0.5rem', flexShrink: 0 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0c040' }}>{base}</p>
-                    <p className="font-karla" style={{ fontSize: '0.45rem', color: '#6a6764', textAlign: 'center' }}>ship</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div style={{ background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.15)', borderRadius: 6, padding: '0.2rem 0.6rem', flexShrink: 0 }}>
+                    <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#f0c040' }}>Ship +{base}</p>
                   </div>
                   {assigned.map((card, i) => (
                     <div key={i} className="flex items-center gap-1.5" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '0.2rem 0.5rem', minWidth: 0 }}>
                       <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                       <div style={{ minWidth: 0 }}>
                         <p className="font-karla truncate" style={{ fontSize: '0.58rem', color: '#f0ede8' }}>{card.name}</p>
-                        <p className="font-karla" style={{ fontSize: '0.5rem', color: RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764' }}>+{card.power}</p>
+                        <p className="font-karla" style={{ fontSize: '0.5rem', color: RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764' }}>up to +{card.power}</p>
                       </div>
                     </div>
                   ))}
                   {assigned.length === 0 && (
-                    <p className="font-karla" style={{ fontSize: '0.62rem', color: '#4a4845' }}>No crew assigned</p>
+                    <p className="font-karla" style={{ fontSize: '0.62rem', color: '#4a4845' }}>No crew — ship bonus only</p>
                   )}
                 </div>
               </div>

@@ -261,6 +261,14 @@ export const STAT_ICONS: Record<Stat, string> = {
   luck:       '🍀',
 }
 
+export const STAT_DESCRIPTIONS: Record<Stat, string> = {
+  combat:     'Used when fighting rival pirates or sea creatures',
+  navigation: 'Used to navigate fog, whirlpools, and tricky waters',
+  durability: 'Used to weather storms and take damage without sinking',
+  speed:      'Used to outrun threats and escape danger',
+  luck:       'Used on treasure finds — and determines your final loot',
+}
+
 export const RARITY_COLORS: Record<string, string> = {
   common:    '#8a8880',
   uncommon:  '#4ade80',
