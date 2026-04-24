@@ -1,5 +1,7 @@
 'use server'
 
+export const maxDuration = 60
+
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
@@ -79,7 +81,8 @@ Return ONLY a valid JSON array, no markdown, no extra text:
     }],
   })
 
-  const text = (response.content[0] as { type: string; text: string }).text.trim()
+  const raw = (response.content[0] as { type: string; text: string }).text.trim()
+  const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim()
   const parsed = JSON.parse(text) as Array<{
     eventType: string; name: string; flavor: string;
     choices: Array<{ label: string; successText: string; failText: string; isNoRoll?: boolean }>
@@ -121,89 +124,99 @@ export async function startExpedition(
   zone: ZoneKey,
   crewLoadout: CrewLoadout
 ): Promise<{ expeditionId: number } | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
 
-  const admin = createAdminClient()
-  const date = today()
-  const zoneConfig = ZONES[zone]
+    const admin = createAdminClient()
+    const date = today()
+    const zoneConfig = ZONES[zone]
 
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, ship_tier')
-    .eq('id', user.id)
-    .single()
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('doubloons, ship_tier')
+      .eq('id', user.id)
+      .single()
 
-  if (!profile) return { error: 'Profile not found' }
+    if (!profile) return { error: 'Profile not found' }
 
-  // Zone tier gate
-  const shipTier = profile.ship_tier ?? 0
-  if (shipTier < zoneConfig.requiredShipTier) {
-    return { error: `Requires ${EXPEDITION_SHIP_STATS[zoneConfig.requiredShipTier].name} or better` }
-  }
-
-  // Special crew gate (Davy Jones)
-  if (zoneConfig.specialCrewRequired) {
-    const allCrew = (Object.values(crewLoadout) as CrewLoadout[keyof CrewLoadout][]).flat()
-    const crewSlugs = allCrew.map(c => c.slug)
-    const hasSpecial = zoneConfig.specialCrewRequired.some(s => crewSlugs.includes(s))
-    if (!hasSpecial) {
-      return { error: `Requires Catfish or Doby Mick in your crew` }
+    // Zone tier gate
+    const shipTier = profile.ship_tier ?? 0
+    if (shipTier < zoneConfig.requiredShipTier) {
+      return { error: `Requires ${EXPEDITION_SHIP_STATS[zoneConfig.requiredShipTier].name} or better` }
     }
+
+    // Special crew gate (Davy Jones)
+    if (zoneConfig.specialCrewRequired) {
+      const allCrew = (Object.values(crewLoadout) as CrewLoadout[keyof CrewLoadout][]).flat()
+      const crewSlugs = allCrew.map(c => c.slug)
+      const hasSpecial = zoneConfig.specialCrewRequired.some(s => crewSlugs.includes(s))
+      if (!hasSpecial) {
+        return { error: `Requires Catfish or Doby Mick in your crew` }
+      }
+    }
+
+    // Entry cost check
+    if ((profile.doubloons ?? 0) < zoneConfig.entryCost) {
+      return { error: `Not enough doubloons (need ${zoneConfig.entryCost} ⟡)` }
+    }
+
+    // One attempt per zone per day
+    const { data: existing } = await admin
+      .from('expeditions')
+      .select('id, status')
+      .eq('user_id', user.id)
+      .eq('zone', zone)
+      .eq('expedition_date', date)
+      .maybeSingle()
+
+    if (existing) {
+      if (existing.status === 'active') return { expeditionId: existing.id }
+      return { error: 'Already attempted this zone today' }
+    }
+
+    // Ensure daily content exists (generates if needed — first player of the day)
+    try {
+      await ensureDailyContent(zone, date)
+    } catch (genErr) {
+      console.error('[startExpedition] content generation failed:', genErr)
+      return { error: 'Failed to generate expedition content — please try again' }
+    }
+
+    // Deduct entry cost
+    const newDoubloons = profile.doubloons - zoneConfig.entryCost
+    await Promise.all([
+      admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+      admin.from('doubloon_transactions').insert({
+        user_id: user.id,
+        amount: -zoneConfig.entryCost,
+        reason: `Expedition entry: ${zoneConfig.name}`,
+      }),
+    ])
+
+    const { data: expedition, error } = await admin
+      .from('expeditions')
+      .insert({
+        user_id: user.id,
+        zone,
+        ship_tier: shipTier,
+        crew_loadout: crewLoadout,
+        expedition_date: date,
+        status: 'active',
+        current_node: 0,
+      })
+      .select('id')
+      .single()
+
+    if (error || !expedition) return { error: 'Failed to start expedition' }
+
+    revalidatePath('/expeditions')
+    return { expeditionId: expedition.id }
+  } catch (err) {
+    console.error('[startExpedition] unexpected error:', err)
+    return { error: 'Something went wrong — please try again' }
   }
-
-  // Entry cost check
-  if ((profile.doubloons ?? 0) < zoneConfig.entryCost) {
-    return { error: `Not enough doubloons (need ${zoneConfig.entryCost} ⟡)` }
-  }
-
-  // One attempt per zone per day
-  const { data: existing } = await admin
-    .from('expeditions')
-    .select('id, status')
-    .eq('user_id', user.id)
-    .eq('zone', zone)
-    .eq('expedition_date', date)
-    .maybeSingle()
-
-  if (existing) {
-    if (existing.status === 'active') return { expeditionId: existing.id }
-    return { error: 'Already attempted this zone today' }
-  }
-
-  // Ensure daily content exists (generates if needed — first player of the day)
-  await ensureDailyContent(zone, date)
-
-  // Deduct entry cost
-  const newDoubloons = profile.doubloons - zoneConfig.entryCost
-  await Promise.all([
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({
-      user_id: user.id,
-      amount: -zoneConfig.entryCost,
-      reason: `Expedition entry: ${zoneConfig.name}`,
-    }),
-  ])
-
-  const { data: expedition, error } = await admin
-    .from('expeditions')
-    .insert({
-      user_id: user.id,
-      zone,
-      ship_tier: shipTier,
-      crew_loadout: crewLoadout,
-      expedition_date: date,
-      status: 'active',
-      current_node: 0,
-    })
-    .select('id')
-    .single()
-
-  if (error || !expedition) return { error: 'Failed to start expedition' }
-
-  revalidatePath('/expeditions')
-  return { expeditionId: expedition.id }
 }
 
 export async function resolveChoice(
