@@ -29,9 +29,6 @@ export default async function PacksPage() {
         <PackOpener packsAvailable={packsAvailable} doubloons={doubloons} hookTier={profile?.hook_tier ?? 0} />
         {bounties && <WeeklyBounties initialData={bounties} />}
         {stats && <PackStatsToggle stats={stats} history={history} hookTier={profile?.hook_tier ?? 0} />}
-        <a href="/guide" className="mt-16 font-karla font-600 text-xs uppercase tracking-[0.12em] text-[#a0a09a] hover:text-[#f0ede8] transition-colors">
-          How It Works →
-        </a>
       </main>
     </>
   )
