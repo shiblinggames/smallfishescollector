@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { submitQuizAnswer, type SubmitResult } from './actions'
 import type { QuizData } from './generate'
+import { refreshTavernBadge } from '@/lib/tavernBadge'
 
 function RewardToast({ reward, onDone }: { reward: number; onDone: () => void }) {
   const [visible, setVisible] = useState(false)
@@ -111,7 +112,7 @@ export default function QuizClient({ quiz, previousAnswer }: Props) {
     }
     setResult(res)
     if (res.correct && res.reward > 0) setShowRewardToast(true)
-    window.dispatchEvent(new Event('daily-completed'))
+    refreshTavernBadge()
     setLoading(false)
   }
 

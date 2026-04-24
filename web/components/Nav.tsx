@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { onTavernBadge, refreshTavernBadge } from '@/lib/tavernBadge'
 
 export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: number; doubloons?: number }) {
   const router = useRouter()
@@ -12,19 +13,9 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   const menuRef = useRef<HTMLDivElement>(null)
   const [tavernBadge, setTavernBadge] = useState(0)
 
-  const refreshBadge = () => {
-    fetch('/api/daily-status', { cache: 'no-store' })
-      .then(r => r.json())
-      .then(({ badge }) => setTavernBadge(badge ?? 0))
-      .catch(() => {})
-  }
+  useEffect(() => { refreshTavernBadge() }, [pathname])
 
-  useEffect(() => { refreshBadge() }, [pathname])
-
-  useEffect(() => {
-    window.addEventListener('daily-completed', refreshBadge)
-    return () => window.removeEventListener('daily-completed', refreshBadge)
-  }, [])
+  useEffect(() => { return onTavernBadge(setTavernBadge) }, [])
 
   // Close on outside tap
   useEffect(() => {
