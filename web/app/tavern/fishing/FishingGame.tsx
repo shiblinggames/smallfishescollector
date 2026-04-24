@@ -7,27 +7,49 @@ import { HOOKS } from '@/lib/hooks'
 
 type Phase = 'ready' | 'active' | 'result'
 
-interface CastResult {
+interface ZoneDef {
+  from: number
+  to: number
   quality: number
-  earned: number
-  castsUsed: number
+  label: string
+  color: string
+  bg: string
+  isPerfect?: boolean
 }
 
-function qualityLabel(q: number) {
-  if (q >= 15) return 'Great catch!'
-  if (q >= 8) return 'Good catch'
+// Symmetric layout: Weak | P-Weak | Good | P-Good | Great | P-Good | Good | P-Weak | Weak
+// Perfect zones are the tiny high-risk/high-reward strips between colour zones
+// P-Weak (quality 20) is highest reward because missing it means landing in Weak
+// P-Good (quality 17) is middle reward; missing means Good
+const ZONES: ZoneDef[] = [
+  { from:  0, to: 14, quality:  3, label: 'Weak',    color: '#f87171', bg: 'rgba(248,113,113,0.12)' },
+  { from: 14, to: 18, quality: 20, label: 'Perfect!', color: '#fde68a', bg: 'rgba(253,230,138,0.45)', isPerfect: true },
+  { from: 18, to: 35, quality:  9, label: 'Good',     color: '#f0c040', bg: 'rgba(240,192,64,0.1)'  },
+  { from: 35, to: 39, quality: 17, label: 'Perfect!', color: '#86efac', bg: 'rgba(134,239,172,0.4)', isPerfect: true },
+  { from: 39, to: 61, quality: 14, label: 'Great',    color: '#4ade80', bg: 'rgba(74,222,128,0.13)' },
+  { from: 61, to: 65, quality: 17, label: 'Perfect!', color: '#86efac', bg: 'rgba(134,239,172,0.4)', isPerfect: true },
+  { from: 65, to: 82, quality:  9, label: 'Good',     color: '#f0c040', bg: 'rgba(240,192,64,0.1)'  },
+  { from: 82, to: 86, quality: 20, label: 'Perfect!', color: '#fde68a', bg: 'rgba(253,230,138,0.45)', isPerfect: true },
+  { from: 86, to: 100, quality: 3, label: 'Weak',     color: '#f87171', bg: 'rgba(248,113,113,0.12)' },
+]
+
+function getZone(pos: number): ZoneDef {
+  return ZONES.find(z => pos >= z.from && pos < z.to) ?? ZONES[0]
+}
+
+function catchLabel(quality: number, isPerfect: boolean): string {
+  if (isPerfect && quality === 20) return 'Perfect! ✦'
+  if (isPerfect) return 'Perfect!'
+  if (quality >= 14) return 'Great catch'
+  if (quality >= 9) return 'Good catch'
   return 'Tiny catch'
 }
 
-function qualityColor(q: number) {
-  if (q >= 15) return '#4ade80'
-  if (q >= 8) return '#f0c040'
-  return '#f87171'
-}
-
-function zoneColor(pos: number) {
-  if (pos >= 70) return '#4ade80'
-  if (pos >= 35) return '#f0c040'
+function catchColor(quality: number, isPerfect: boolean): string {
+  if (isPerfect && quality === 20) return '#fde68a'
+  if (isPerfect) return '#86efac'
+  if (quality >= 14) return '#4ade80'
+  if (quality >= 9) return '#f0c040'
   return '#f87171'
 }
 
@@ -40,240 +62,194 @@ export default function FishingGame({
 }) {
   const [phase, setPhase] = useState<Phase>('ready')
   const [position, setPosition] = useState(50)
-  const [result, setResult] = useState<CastResult | null>(null)
+  const [result, setResult] = useState<{ quality: number; earned: number; castsUsed: number; isPerfect: boolean } | null>(null)
   const [castsUsed, setCastsUsed] = useState(initialCastsUsed)
-  const [isPending, startTransition] = useTransition()
+  const [, startTransition] = useTransition()
 
-  const posRef = useRef(50)
-  const dirRef = useRef(1)
-  const speedRef = useRef(45)
-  const animRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const posRef   = useRef(50)
+  const dirRef   = useRef(1)
+  const speedRef = useRef(100)
+  const phaseRef = useRef<Phase>('ready')
+  const animRef  = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const hook = HOOKS[Math.min(hookTier, HOOKS.length - 1)]
   const castsLeft = MAX_CASTS - castsUsed
 
+  useEffect(() => { phaseRef.current = phase }, [phase])
+
   useEffect(() => {
-    if (phase === 'active') {
-      animRef.current = setInterval(() => {
-        posRef.current += dirRef.current * (speedRef.current / 20)
-        if (posRef.current >= 100) {
-          posRef.current = 100
-          dirRef.current = -1
-        } else if (posRef.current <= 0) {
-          posRef.current = 0
-          dirRef.current = 1
-        }
-        setPosition(posRef.current)
-      }, 50)
-    } else {
-      if (animRef.current) clearInterval(animRef.current)
+    if (phase !== 'active') {
+      if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
+      return
     }
-    return () => {
-      if (animRef.current) clearInterval(animRef.current)
-    }
+    animRef.current = setInterval(() => {
+      if (phaseRef.current !== 'active') return
+      posRef.current += dirRef.current * (speedRef.current / 20) // 50 ms ticks
+      if (posRef.current >= 100) {
+        posRef.current = 100
+        dirRef.current = -1
+        speedRef.current = 90 + Math.random() * 60
+      } else if (posRef.current <= 0) {
+        posRef.current = 0
+        dirRef.current = 1
+        speedRef.current = 90 + Math.random() * 60
+      }
+      setPosition(posRef.current)
+    }, 50)
+    return () => { if (animRef.current) { clearInterval(animRef.current); animRef.current = null } }
   }, [phase])
 
   function handleCast() {
     if (castsLeft <= 0 || phase !== 'ready') return
-    posRef.current = 20 + Math.random() * 60
-    dirRef.current = Math.random() > 0.5 ? 1 : -1
-    speedRef.current = 30 + Math.random() * 40
+    posRef.current  = 15 + Math.random() * 70
+    dirRef.current  = Math.random() > 0.5 ? 1 : -1
+    speedRef.current = 90 + Math.random() * 60
     setPosition(posRef.current)
     setResult(null)
     setPhase('active')
   }
 
   function handleReelIn() {
-    if (phase !== 'active' || isPending) return
+    if (phase !== 'active') return
 
-    // Capture position at the exact moment of click — this IS the quality
-    const frozenPos = posRef.current
-    const quality = Math.max(1, Math.min(20, Math.round((frozenPos / 100) * 20)))
+    // Freeze immediately at click position
+    phaseRef.current = 'result'
+    if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
 
-    // Stop animation and show result immediately — no perceived delay
-    if (animRef.current) clearInterval(animRef.current)
-    setPosition(frozenPos)
+    const zone = getZone(posRef.current)
+    const quality   = zone.quality
+    const isPerfect = zone.isPerfect ?? false
+
     setCastsUsed(prev => prev + 1)
-    setResult({ quality, earned: 0, castsUsed: castsUsed + 1 })
+    setResult({ quality, earned: 0, castsUsed: castsUsed + 1, isPerfect })
     setPhase('result')
 
-    // Award doubloons in the background
     startTransition(async () => {
       const res = await castLine(quality)
       if (!('error' in res)) {
-        setResult({ quality, earned: res.earned, castsUsed: res.castsUsed })
+        setResult({ quality, earned: res.earned, castsUsed: res.castsUsed, isPerfect })
         setCastsUsed(res.castsUsed)
       }
     })
   }
 
-  function handleNext() {
-    setPhase('ready')
-  }
-
-  const barColor = phase === 'result' && result
-    ? qualityColor(result.quality)
-    : zoneColor(position)
+  const currentZone = getZone(position)
 
   return (
     <div className="flex flex-col items-center gap-5 max-w-sm mx-auto px-6 py-4">
 
-      {/* Hook + casts */}
+      {/* Hook + cast counter */}
       <div className="w-full flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <span style={{ fontSize: '0.9rem' }}>🪝</span>
-          <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: hook.color }}>
-            {hook.name}
-          </p>
+          <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: hook.color }}>{hook.name}</p>
         </div>
         <p className="font-karla" style={{ fontSize: '0.68rem', color: castsLeft > 0 ? '#a0a09a' : '#4a4845' }}>
           {castsLeft > 0 ? `${castsLeft} / ${MAX_CASTS} casts left` : 'All done today'}
         </p>
       </div>
 
-      {/* Water surface + rod visual */}
+      {/* Rod / water visual */}
       <div className="w-full flex flex-col items-center gap-1">
         <div style={{
-          width: 2,
-          height: phase === 'ready' ? 32 : 56,
+          width: 2, height: phase === 'ready' ? 32 : 56,
           background: phase === 'ready' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.35)',
-          borderRadius: 1,
-          transition: 'height 0.3s ease, background 0.3s ease',
+          borderRadius: 1, transition: 'height 0.3s ease',
         }} />
-        <div style={{
-          width: '100%',
-          height: 2,
-          background: 'linear-gradient(90deg, rgba(96,165,250,0.1), rgba(96,165,250,0.25), rgba(96,165,250,0.1))',
-          borderRadius: 1,
-        }} />
+        <div style={{ width: '100%', height: 2, background: 'linear-gradient(90deg, rgba(96,165,250,0.1), rgba(96,165,250,0.25), rgba(96,165,250,0.1))', borderRadius: 1 }} />
       </div>
 
-      {/* Quality bar */}
+      {/* Quality bar — shown while active or after result */}
       {(phase === 'active' || phase === 'result') && (
         <div className="w-full">
-          <div style={{
-            position: 'relative',
-            height: 36,
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 10,
-            overflow: 'hidden',
-          }}>
-            {/* Zone backgrounds */}
-            <div style={{ position: 'absolute', left: 0, top: 0, width: '35%', height: '100%', background: 'rgba(248,113,113,0.1)' }} />
-            <div style={{ position: 'absolute', left: '35%', top: 0, width: '35%', height: '100%', background: 'rgba(240,192,64,0.08)' }} />
-            <div style={{ position: 'absolute', left: '70%', top: 0, width: '30%', height: '100%', background: 'rgba(74,222,128,0.1)' }} />
 
-            {/* Glowing cursor */}
+          {/* Live zone label */}
+          <p
+            className="font-karla font-700 text-center mb-2 uppercase tracking-[0.1em]"
+            style={{ fontSize: '0.58rem', color: phase === 'active' ? currentZone.color : (result ? catchColor(result.quality, result.isPerfect) : '#a0a09a'), minHeight: '1em' }}
+          >
+            {phase === 'active' ? currentZone.label : (result ? catchLabel(result.quality, result.isPerfect) : '')}
+          </p>
+
+          <div style={{ position: 'relative', height: 42, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, overflow: 'hidden' }}>
+
+            {/* Zone backgrounds */}
+            {ZONES.map((zone, i) => (
+              <div key={i} style={{
+                position: 'absolute',
+                left: `${zone.from}%`,
+                width: `${zone.to - zone.from}%`,
+                top: 0, bottom: 0,
+                background: zone.bg,
+                ...(zone.isPerfect ? { boxShadow: `inset 0 0 6px ${zone.color}50` } : {}),
+              }} />
+            ))}
+
+            {/* Moving cursor line */}
             <div style={{
               position: 'absolute',
-              top: 0,
-              bottom: 0,
+              top: 0, bottom: 0,
               left: `${position}%`,
               width: 3,
               transform: 'translateX(-50%)',
-              background: barColor,
-              boxShadow: `0 0 8px ${barColor}`,
+              background: phase === 'result' && result ? catchColor(result.quality, result.isPerfect) : currentZone.color,
+              boxShadow: `0 0 8px ${phase === 'result' && result ? catchColor(result.quality, result.isPerfect) : currentZone.color}`,
               borderRadius: 2,
-              transition: phase === 'result' ? 'left 0.5s ease-out, background 0.3s' : 'background 0.1s',
             }} />
 
-            {/* Fish emoji */}
+            {/* Fish indicator */}
             <div style={{
               position: 'absolute',
-              top: '50%',
-              left: `${position}%`,
+              top: '50%', left: `${position}%`,
               transform: `translate(-50%, -50%) scaleX(${dirRef.current})`,
-              fontSize: '1.1rem',
-              lineHeight: 1,
-              transition: phase === 'result' ? 'left 0.5s ease-out' : 'none',
-              userSelect: 'none',
-            }}>
-              🐟
-            </div>
+              fontSize: '1.1rem', lineHeight: 1, userSelect: 'none',
+            }}>🐟</div>
           </div>
 
           {/* Zone labels */}
-          <div className="flex justify-between mt-1 px-1">
-            <p className="font-karla" style={{ fontSize: '0.5rem', color: '#f87171' }}>Weak</p>
-            <p className="font-karla" style={{ fontSize: '0.5rem', color: '#f0c040' }}>Good</p>
-            <p className="font-karla" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Great</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, padding: '0 2px' }}>
+            {['Weak','Good','Great','Good','Weak'].map((l, i) => (
+              <p key={i} className="font-karla" style={{ fontSize: '0.48rem', color: l === 'Weak' ? '#f87171' : l === 'Good' ? '#f0c040' : '#4ade80' }}>{l}</p>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Result card */}
+      {/* Earned result */}
       {phase === 'result' && result && (
         <div style={{
           width: '100%',
-          background: `${qualityColor(result.quality)}10`,
-          border: `1px solid ${qualityColor(result.quality)}30`,
-          borderRadius: 12,
-          padding: '1rem',
-          textAlign: 'center',
+          background: `${catchColor(result.quality, result.isPerfect)}0d`,
+          border: `1px solid ${catchColor(result.quality, result.isPerfect)}30`,
+          borderRadius: 12, padding: '1rem', textAlign: 'center',
         }}>
-          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: qualityColor(result.quality), marginBottom: 4 }}>
-            {qualityLabel(result.quality)}
-          </p>
           <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0c040', lineHeight: 1 }}>
             {result.earned > 0 ? `+${result.earned} ⟡` : '…'}
           </p>
         </div>
       )}
 
-      {/* Buttons */}
+      {/* Cast button */}
       {phase === 'ready' && castsLeft > 0 && (
-        <button
-          onClick={handleCast}
-          className="w-full font-karla font-700 uppercase tracking-[0.12em]"
-          style={{
-            padding: '0.875rem',
-            background: 'rgba(96,165,250,0.1)',
-            border: '1px solid rgba(96,165,250,0.25)',
-            borderRadius: 12,
-            cursor: 'pointer',
-            fontSize: '0.72rem',
-            color: '#60a5fa',
-          }}
-        >
+        <button onClick={handleCast} className="w-full font-karla font-700 uppercase tracking-[0.12em]"
+          style={{ padding: '0.875rem', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.25)', borderRadius: 12, cursor: 'pointer', fontSize: '0.72rem', color: '#60a5fa' }}>
           Cast Line
         </button>
       )}
 
+      {/* Reel In — color tracks current zone */}
       {phase === 'active' && (
-        <button
-          onClick={handleReelIn}
-          className="w-full font-karla font-700 uppercase tracking-[0.12em]"
-          style={{
-            padding: '0.875rem',
-            background: `${zoneColor(position)}18`,
-            border: `1px solid ${zoneColor(position)}50`,
-            borderRadius: 12,
-            cursor: 'pointer',
-            fontSize: '0.72rem',
-            color: zoneColor(position),
-            transition: 'background 0.1s, border-color 0.1s, color 0.1s',
-          }}
-        >
+        <button onClick={handleReelIn} className="w-full font-karla font-700 uppercase tracking-[0.12em]"
+          style={{ padding: '0.875rem', background: `${currentZone.color}15`, border: `1px solid ${currentZone.color}45`, borderRadius: 12, cursor: 'pointer', fontSize: '0.72rem', color: currentZone.color, transition: 'background 0.05s, border-color 0.05s, color 0.05s' }}>
           Reel In!
         </button>
       )}
 
+      {/* Next cast / done */}
       {phase === 'result' && (
-        <button
-          onClick={handleNext}
-          className="w-full font-karla font-700 uppercase tracking-[0.12em]"
-          style={{
-            padding: '0.875rem',
-            background: castsLeft > 1 ? 'rgba(96,165,250,0.1)' : 'rgba(255,255,255,0.05)',
-            border: `1px solid ${castsLeft > 1 ? 'rgba(96,165,250,0.25)' : 'rgba(255,255,255,0.1)'}`,
-            borderRadius: 12,
-            cursor: 'pointer',
-            fontSize: '0.72rem',
-            color: castsLeft > 1 ? '#60a5fa' : '#4a4845',
-          }}
-        >
-          {castsLeft > 1 ? 'Cast Again' : 'No casts remaining'}
+        <button onClick={() => setPhase('ready')} className="w-full font-karla font-700 uppercase tracking-[0.12em]"
+          style={{ padding: '0.875rem', background: castsLeft > 0 ? 'rgba(96,165,250,0.1)' : 'rgba(255,255,255,0.05)', border: `1px solid ${castsLeft > 0 ? 'rgba(96,165,250,0.25)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 12, cursor: castsLeft > 0 ? 'pointer' : 'default', fontSize: '0.72rem', color: castsLeft > 0 ? '#60a5fa' : '#4a4845' }}>
+          {castsLeft > 0 ? 'Cast Again' : 'No casts remaining'}
         </button>
       )}
 
@@ -283,14 +259,11 @@ export default function FishingGame({
         </p>
       )}
 
-      {/* Hook upgrade hint */}
       {hookTier < HOOKS.length - 1 && (
         <p className="font-karla text-center" style={{ fontSize: '0.62rem', color: '#4a4845' }}>
           Upgrade your hook at the{' '}
-          <a href="/marketplace/tackle-shop" style={{ color: '#6a6764', textDecoration: 'underline' }}>
-            Tackle Shop
-          </a>{' '}
-          to earn more per cast
+          <a href="/marketplace/tackle-shop" style={{ color: '#6a6764', textDecoration: 'underline' }}>Tackle Shop</a>
+          {' '}to earn more per cast
         </p>
       )}
 
