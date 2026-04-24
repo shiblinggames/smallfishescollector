@@ -22,7 +22,7 @@ const USER_PROMPT = `Generate one fish/ocean trivia question. Return ONLY a vali
 
 Rules:
 - correct_index must be 0, 1, 2, or 3 corresponding to the correct option
-- options must have exactly 4 entries, all plausible but only one correct
+- options must have exactly 4 entries, all plausible but only one correct, and all 4 must be distinct (no duplicates or near-duplicates like "Sea horse" and "Seahorse")
 - topic must be one of: biology, behavior, habitat, fishing, record, history
 - The correct option should appear in different positions each day (not always 0)
 - Questions should vary: anatomy, world records, famous species, fishing techniques, ocean facts, conservation`
@@ -51,6 +51,9 @@ export async function getTodaysQuiz(): Promise<QuizData | null> {
     const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
     const quiz: QuizData = JSON.parse(text)
 
+    const normalized = quiz.options.map((o: string) => o.trim().toLowerCase().replace(/\s+/g, ' '))
+    const hasDuplicates = normalized.length !== new Set(normalized).size
+
     if (
       typeof quiz.question !== 'string' ||
       !Array.isArray(quiz.options) ||
@@ -58,7 +61,8 @@ export async function getTodaysQuiz(): Promise<QuizData | null> {
       typeof quiz.correct_index !== 'number' ||
       quiz.correct_index < 0 ||
       quiz.correct_index > 3 ||
-      typeof quiz.explanation !== 'string'
+      typeof quiz.explanation !== 'string' ||
+      hasDuplicates
     ) {
       throw new Error('Invalid quiz structure from Claude')
     }
