@@ -100,7 +100,7 @@ export default function FishingGame({
   }, [phase])
 
   function handleCast() {
-    if (castsLeft <= 0 || phase !== 'ready') return
+    if (castsLeft <= 0 || (phase !== 'ready' && phase !== 'result')) return
     posRef.current  = 15 + Math.random() * 70
     dirRef.current  = Math.random() > 0.5 ? 1 : -1
     speedRef.current = 90 + Math.random() * 60
@@ -247,7 +247,7 @@ export default function FishingGame({
 
       {/* Next cast / done */}
       {phase === 'result' && (
-        <button onClick={() => setPhase('ready')} className="w-full font-karla font-700 uppercase tracking-[0.12em]"
+        <button onClick={castsLeft > 0 ? handleCast : undefined} className="w-full font-karla font-700 uppercase tracking-[0.12em]"
           style={{ padding: '0.875rem', background: castsLeft > 0 ? 'rgba(96,165,250,0.1)' : 'rgba(255,255,255,0.05)', border: `1px solid ${castsLeft > 0 ? 'rgba(96,165,250,0.25)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 12, cursor: castsLeft > 0 ? 'pointer' : 'default', fontSize: '0.72rem', color: castsLeft > 0 ? '#60a5fa' : '#4a4845' }}>
           {castsLeft > 0 ? 'Cast Again' : 'No casts remaining'}
         </button>
