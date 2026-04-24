@@ -16,7 +16,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
     const supabase = createClient()
     const today = new Date().toISOString().split('T')[0]
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
+      if (!user) { console.log('[badge] no user'); return }
       Promise.all([
         supabase.from('profiles').select('last_daily_claim').eq('id', user.id).single(),
         supabase.from('quiz_answers').select('id').eq('user_id', user.id).eq('date', today).single(),
@@ -25,8 +25,10 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
         const bonusDone = profile?.last_daily_claim === today
         const quizDone = !!quiz
         const fotdDone = !!fotd && (fotd.solved || (fotd.guesses?.length ?? 0) >= 4)
-        setTavernBadge([!bonusDone, !quizDone, !fotdDone].filter(Boolean).length)
-      })
+        const badge = [!bonusDone, !quizDone, !fotdDone].filter(Boolean).length
+        console.log('[badge]', { today, bonusDone, quizDone, fotdDone, badge, profile, quiz, fotd })
+        setTavernBadge(badge)
+      }).catch(e => console.error('[badge] error', e))
     })
   }, [])
 
