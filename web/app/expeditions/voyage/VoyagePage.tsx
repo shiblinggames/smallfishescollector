@@ -284,6 +284,24 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
   )
 }
 
+function formatFlavorText(flavor: string): string[] {
+  const sentences = flavor.match(/[^.!?]+[.!?]+/g) ?? [flavor]
+  const paragraphs: string[] = []
+  let current: string[] = []
+  for (const sentence of sentences) {
+    const isDialogue = sentence.includes('"') || sentence.includes('“') || sentence.includes('”')
+    if (isDialogue) {
+      if (current.length) { paragraphs.push(current.join(' ')); current = [] }
+      paragraphs.push(sentence.trim())
+    } else {
+      current.push(sentence.trim())
+      if (current.length >= 2) { paragraphs.push(current.join(' ')); current = [] }
+    }
+  }
+  if (current.length) paragraphs.push(current.join(' '))
+  return paragraphs.filter(p => p.length > 0)
+}
+
 function EventCard({
   event, phase, result, pendingRoll, pendingCrewRoll, crewBonusForStat, shipTier, onChoice, onContinue, isPending,
 }: {
@@ -302,6 +320,7 @@ function EventCard({
   const showResult = phase.type === 'result'
   const rollingChoiceIndex = rolling ? (phase as { type: 'rolling'; choiceIndex: number }).choiceIndex : -1
   const success = result?.outcome === 'success'
+  const shipBase = event.mechanics.stat ? EXPEDITION_SHIP_STATS[shipTier][event.mechanics.stat] : 0
 
   return (
     <div>
@@ -313,30 +332,62 @@ function EventCard({
       )}
 
       {/* Event title */}
-      <p className="font-cinzel font-700 text-[#f0ede8] mb-2" style={{ fontSize: '1.15rem', lineHeight: 1.25 }}>
+      <p className="font-cinzel font-700 text-[#f0ede8] mb-4" style={{ fontSize: '1.2rem', lineHeight: 1.25 }}>
         {event.name}
       </p>
 
-      {/* Flavor text */}
-      <p className="font-karla text-[#a0a09a] mb-4" style={{ fontSize: '0.78rem', lineHeight: 1.6 }}>
-        {event.flavor}
-      </p>
+      {/* Flavor text — paragraphs with dialogue pulled out */}
+      <div className="flex flex-col gap-3 mb-5">
+        {formatFlavorText(event.flavor).map((para, i) => {
+          const isDialogue = para.includes('"') || para.includes('"') || para.includes('"')
+          return isDialogue ? (
+            <p
+              key={i}
+              className="font-karla"
+              style={{
+                fontSize: '0.78rem',
+                lineHeight: 1.6,
+                color: '#e0ddd8',
+                fontStyle: 'italic',
+                paddingLeft: '0.875rem',
+                borderLeft: '2px solid rgba(255,255,255,0.15)',
+              }}
+            >
+              {para}
+            </p>
+          ) : (
+            <p
+              key={i}
+              className="font-karla"
+              style={{ fontSize: '0.78rem', lineHeight: 1.65, color: '#a0a09a' }}
+            >
+              {para}
+            </p>
+          )
+        })}
+      </div>
+
+      {/* Divider */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', marginBottom: '1rem' }} />
 
       {/* Stat + threshold — hide once result is in */}
       {event.mechanics.stat && !showResult && (
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-1.5">
-            <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-              Checking:
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#6a6764', marginBottom: 3 }}>
+              Checking
             </p>
-            <p className="font-karla font-700" style={{ fontSize: '0.65rem', color: '#f0ede8' }}>
+            <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#f0ede8' }}>
               {STAT_ICONS[event.mechanics.stat]} {STAT_LABELS[event.mechanics.stat]}
+            </p>
+            <p className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845', marginTop: 2 }}>
+              Ship {shipBase}{crewBonusForStat > 0 ? ` + Crew up to ${crewBonusForStat}` : ''}
             </p>
           </div>
           {event.mechanics.threshold !== undefined && (
             <div style={{ textAlign: 'right' }}>
-              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Need to beat</p>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0c040' }}>
+              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: '#6a6764', marginBottom: 3 }}>Need to beat</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0c040' }}>
                 {event.mechanics.threshold}
               </p>
             </div>
