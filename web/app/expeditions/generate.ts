@@ -21,7 +21,13 @@ async function generateZoneContent(zone: ZoneKey): Promise<EventNode[]> {
   }
   const crisisType = zoneConfig.crisisTypes[Math.floor(Math.random() * zoneConfig.crisisTypes.length)]
   eventTypes.push(crisisType)
-  const eventCount = eventTypes.length
+  const normalCount = eventTypes.length
+
+  // 2 detour events — shown only if player fails a navigation check
+  const penaltyTypes: string[] = [0, 1].map(() =>
+    zoneConfig.eventTypes[Math.floor(Math.random() * zoneConfig.eventTypes.length)]
+  )
+  const eventCount = normalCount
 
   const prompt = `You write event text for a roguelike game set in a pirate fish world.
 Think FTL: Faster Than Light but on the open seas, with anthropomorphized fish as all characters. Every character in this world is a fish.
@@ -153,8 +159,11 @@ ${ZONE_PERSONALITY[zone]}
 Now generate ${eventCount} events for this zone in this exact order:
 ${eventTypes.map((t, i) => `${i + 1}. ${t}${i === eventTypes.length - 1 ? ' ← CRISIS EVENT (long format, climax, difficult choice)' : ''}`).join('\n')}
 
-Return ONLY a valid JSON array. No markdown. No explanation.
-No keys other than those shown in the examples.
+Then generate 2 DETOUR events (brief format only — these appear as unexpected penalty encounters if the player fails a navigation check mid-voyage):
+${penaltyTypes.map((t, i) => `D${i + 1}. ${t} ← DETOUR (brief, feels like an unlucky wrong turn)`).join('\n')}
+
+Return all ${eventCount + 2} events as a single JSON array — main events first, then the 2 detour events at the end.
+No markdown. No explanation. No keys other than those shown in the examples.
 Vary event lengths deliberately — not every event should be the same length.
 Make the crisis event feel earned after everything that came before it.`
 
@@ -188,10 +197,13 @@ Make the crisis event feel earned after everything that came before it.`
       const [min, max] = zoneConfig.difficulty[mechanics.difficultyTier]
       threshold = Math.floor(Math.random() * (max - min + 1)) + min
     }
+    // Last 2 events are detour/penalty events
+    const isPenalty = i >= normalCount
     return {
       ...event,
       nodeIndex: i,
-      isCrisis: i === parsed.length - 1,
+      isCrisis: i === normalCount - 1,
+      isPenalty,
       mechanics: { ...mechanics, threshold },
     }
   })

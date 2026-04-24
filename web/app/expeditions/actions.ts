@@ -492,22 +492,51 @@ export async function resolveFinalLoot(
 
 export async function abandonExpedition(
   expeditionId: number
-): Promise<{ success: boolean } | { error: string }> {
+): Promise<{ roll: number; threshold: number; escaped: boolean; refunded: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
-  const { error } = await admin
+
+  const { data: expeditionRow } = await admin
     .from('expeditions')
-    .update({ status: 'failed', completed_at: new Date().toISOString() })
+    .select('*')
     .eq('id', expeditionId)
     .eq('user_id', user.id)
     .eq('status', 'active')
+    .single()
 
-  if (error) return { error: 'Failed to abandon expedition' }
+  if (!expeditionRow) return { error: 'Expedition not found' }
+  const exp = expeditionRow as Expedition
+
+  const zoneConfig = ZONES[exp.zone]
+  const crewSpeed = exp.crew_loadout.speed ?? []
+  const rollResult = rollStat('speed', crewSpeed, exp.ship_tier)
+  const [min, max] = zoneConfig.difficulty.standard
+  const threshold = Math.floor(Math.random() * (max - min + 1)) + min
+  const escaped = rollResult.total >= threshold
+  const refunded = escaped ? zoneConfig.entryCost : 0
+
+  await admin.from('expeditions')
+    .update({ status: 'failed', completed_at: new Date().toISOString() })
+    .eq('id', expeditionId)
+
+  if (escaped) {
+    const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
+    const newDoubloons = (profile?.doubloons ?? 0) + refunded
+    await Promise.all([
+      admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+      admin.from('doubloon_transactions').insert({
+        user_id: user.id,
+        amount: refunded,
+        reason: `Abandoned (escaped): ${zoneConfig.name}`,
+      }),
+    ])
+  }
+
   revalidatePath('/expeditions')
-  return { success: true }
+  return { roll: rollResult.total, threshold, escaped, refunded }
 }
 
 export async function getActiveExpedition(): Promise<{

@@ -47,6 +47,7 @@ export interface EventNode {
   name: string
   flavor: string
   isCrisis: boolean
+  isPenalty?: boolean
   mechanics: EventMechanics
   choices: EventChoice[]
 }
@@ -70,6 +71,8 @@ export interface EventResult {
   costPenalty?: number
   expeditionFailed?: boolean
   failReason?: string
+  skipNextNode?: boolean
+  penaltyEventIndex?: number
 }
 
 export interface LootResult {

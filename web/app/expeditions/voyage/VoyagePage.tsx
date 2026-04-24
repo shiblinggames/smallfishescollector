@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { resolveChoice, resolvePenaltyEvent, resolveFinalLoot, abandonExpedition } from '../actions'
 import {
-  STATS, STAT_LABELS, STAT_ICONS, STAT_DESCRIPTIONS, RARITY_COLORS, EXPEDITION_SHIP_STATS,
+  STATS, STAT_LABELS, STAT_ICONS, STAT_DESCRIPTIONS, RARITY_COLORS, EXPEDITION_SHIP_STATS, ZONES,
   type Expedition, type DailyExpeditionRow, type EventNode, type EventResult, type LootResult, type ExpeditionShipStats,
 } from '@/lib/expeditions'
 
@@ -16,6 +16,8 @@ type Phase =
   | { type: 'loot-result'; loot: LootResult }
   | { type: 'failed'; reason: string }
   | { type: 'abandon-confirm' }
+  | { type: 'abandon-rolling' }
+  | { type: 'abandon-result'; roll: number; threshold: number; escaped: boolean; refunded: number }
 
 interface Props {
   expedition: Expedition
@@ -175,8 +177,13 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
   }
 
   function handleAbandon() {
+    setPhase({ type: 'abandon-rolling' })
     startTransition(async () => {
-      await abandonExpedition(expedition.id)
+      const result = await abandonExpedition(expedition.id)
+      if ('error' in result) { setPhase({ type: 'abandon-confirm' }); return }
+      await new Promise(r => setTimeout(r, 1600))
+      setPhase({ type: 'abandon-result', ...result })
+      await new Promise(r => setTimeout(r, 2800))
       router.push('/expeditions')
     })
   }
@@ -266,40 +273,92 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
           />
         )}
 
-        {/* ── ABANDON CONFIRM ── */}
-        {phase.type === 'abandon-confirm' && (
-          <div
-            onClick={() => setPhase({ type: 'event' })}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '1.5rem' }}
-          >
+        {/* ── ABANDON CONFIRM / ROLLING / RESULT ── */}
+        {(phase.type === 'abandon-confirm' || phase.type === 'abandon-rolling' || phase.type === 'abandon-result') && (() => {
+          const speedBase = shipStats?.speed ?? 0
+          const crewSpeedBonus = (expedition.crew_loadout.speed ?? []).reduce((s, c) => s + c.power, 0)
+          const isRolling = phase.type === 'abandon-rolling'
+          const abandonResult = phase.type === 'abandon-result' ? phase as { type: 'abandon-result'; roll: number; threshold: number; escaped: boolean; refunded: number } : null
+
+          return (
             <div
-              onClick={e => e.stopPropagation()}
-              style={{ background: '#1c1917', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 18, padding: '1.5rem', width: '100%', maxWidth: '22rem' }}
+              onClick={phase.type === 'abandon-confirm' ? () => setPhase({ type: 'event' }) : undefined}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '1.5rem' }}
             >
-              <p className="font-cinzel font-700 text-[#f0ede8] mb-2" style={{ fontSize: '1rem' }}>Abandon Expedition?</p>
-              <p className="font-karla text-[#a0a09a] mb-5" style={{ fontSize: '0.78rem' }}>
-                You will lose your entry fee and receive no rewards. This cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setPhase({ type: 'event' })}
-                  style={{ flex: 1, padding: '0.625rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, cursor: 'pointer', color: '#a0a09a', fontSize: '0.72rem' }}
-                  className="font-karla font-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAbandon}
-                  disabled={isPending}
-                  style={{ flex: 1, padding: '0.625rem', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 10, cursor: 'pointer', color: '#f87171' }}
-                  className="font-karla font-600"
-                >
-                  Abandon
-                </button>
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{ background: '#1c1917', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 18, padding: '1.5rem', width: '100%', maxWidth: '22rem' }}
+              >
+                {phase.type === 'abandon-confirm' && (
+                  <>
+                    <p className="font-cinzel font-700 text-[#f0ede8] mb-1" style={{ fontSize: '1rem' }}>Abandon Expedition?</p>
+                    <p className="font-karla mb-4" style={{ fontSize: '0.72rem', color: '#6a6764', lineHeight: 1.5 }}>
+                      Roll Speed to escape. Beat the threshold and recover your entry fee.
+                    </p>
+                    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.75rem', marginBottom: '1.25rem' }}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#6a6764', marginBottom: 3 }}>💨 Speed</p>
+                          <p className="font-karla" style={{ fontSize: '0.65rem', color: '#f0ede8' }}>
+                            Ship {expedition.ship_tier + 1}–{speedBase}{crewSpeedBonus > 0 ? ` + Crew up to ${crewSpeedBonus}` : ''}
+                          </p>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#6a6764', marginBottom: 3 }}>Entry fee</p>
+                          <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#f0c040' }}>{ZONES[expedition.zone].entryCost} ⟡</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setPhase({ type: 'event' })}
+                        style={{ flex: 1, padding: '0.625rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, cursor: 'pointer', color: '#a0a09a', fontSize: '0.72rem' }}
+                        className="font-karla font-600"
+                      >
+                        Stay
+                      </button>
+                      <button
+                        onClick={handleAbandon}
+                        disabled={isPending}
+                        style={{ flex: 1, padding: '0.625rem', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 10, cursor: 'pointer', color: '#f87171', fontSize: '0.72rem' }}
+                        className="font-karla font-600"
+                      >
+                        Roll to escape
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {isRolling && (
+                  <div className="flex flex-col items-center gap-3 py-2">
+                    <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>Rolling Speed...</p>
+                    <RollingDie finalRoll={1} rolling={true} color="#60a5fa" />
+                  </div>
+                )}
+
+                {abandonResult && (
+                  <div className="flex flex-col items-center gap-3">
+                    <RollingDie finalRoll={abandonResult.roll} rolling={false} color={abandonResult.escaped ? '#4ade80' : '#f87171'} />
+                    <div style={{ textAlign: 'center' }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: abandonResult.escaped ? '#4ade80' : '#f87171', marginBottom: 4 }}>
+                        {abandonResult.escaped ? 'Escaped' : 'Caught'}
+                      </p>
+                      <p className="font-karla" style={{ fontSize: '0.65rem', color: '#6a6764' }}>
+                        {abandonResult.roll} vs {abandonResult.threshold}
+                      </p>
+                    </div>
+                    <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a0a09a', lineHeight: 1.5, textAlign: 'center' }}>
+                      {abandonResult.escaped
+                        ? `You slipped away in time. Entry fee refunded — +${abandonResult.refunded} ⟡`
+                        : `You couldn't get clear in time. Entry fee lost.`}
+                    </p>
+                    <p className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845' }}>Returning to port...</p>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* Stats sheet */}
         {showStats && (
