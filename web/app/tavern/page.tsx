@@ -8,6 +8,7 @@ import { DAILY_CAP } from './constants'
 import { getShip } from '@/lib/ships'
 import { getWeeklyBounties } from '@/app/packs/bountyActions'
 import GameCard from './GameCard'
+import WelcomeModal from './WelcomeModal'
 
 export default async function TavernPage() {
   const supabase = await createClient()
@@ -18,7 +19,7 @@ export default async function TavernPage() {
   const today = new Date().toISOString().split('T')[0]
 
   const [{ data: profile }, { data: fotdAttempt }, dailyWagered, { data: quizAnswer }, bounties, { data: todayExpedition }] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_ship_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, fishing_date, fishing_casts').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_ship_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, fishing_date, fishing_casts, has_seen_welcome').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
     admin.from('quiz_answers').select('correct').eq('user_id', user.id).eq('date', today).single(),
@@ -61,6 +62,7 @@ export default async function TavernPage() {
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      {!profile?.has_seen_welcome && <WelcomeModal />}
       <main className="min-h-screen pb-24 sm:pb-0 pt-6">
         <div className="px-6 grid grid-cols-2 lg:grid-cols-3 gap-3 pb-12 max-w-4xl mx-auto">
           <GameCard
