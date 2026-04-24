@@ -12,17 +12,15 @@ function today() {
   return new Date().toISOString().split('T')[0]
 }
 
-function rollQuality(): number {
-  // Flat d20 — 1 to 20
-  return Math.floor(Math.random() * 20) + 1
-}
-
-export async function castLine(): Promise<
-  { quality: number; earned: number; castsUsed: number } | { error: string }
+export async function castLine(quality: number): Promise<
+  { earned: number; castsUsed: number } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
+
+  // Clamp quality to valid range
+  const q = Math.max(1, Math.min(20, Math.round(quality)))
 
   const admin = createAdminClient()
   const date = today()
@@ -42,10 +40,9 @@ export async function castLine(): Promise<
     return { error: 'No casts remaining today. Come back tomorrow.' }
   }
 
-  const quality = rollQuality()
   const hookTier = Math.min(profile.hook_tier ?? 0, HOOK_MULTIPLIERS.length - 1)
   const multiplier = HOOK_MULTIPLIERS[hookTier]
-  const earned = Math.max(1, Math.floor(quality * multiplier))
+  const earned = Math.max(1, Math.floor(q * multiplier))
 
   const newCastsUsed = castsUsed + 1
 
@@ -62,5 +59,5 @@ export async function castLine(): Promise<
     }),
   ])
 
-  return { quality, earned, castsUsed: newCastsUsed }
+  return { earned, castsUsed: newCastsUsed }
 }

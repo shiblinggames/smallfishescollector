@@ -5,7 +5,7 @@ import { castLine } from './actions'
 import { MAX_CASTS } from './constants'
 import { HOOKS } from '@/lib/hooks'
 
-type Phase = 'ready' | 'active' | 'reeling' | 'result'
+type Phase = 'ready' | 'active' | 'result'
 
 interface CastResult {
   quality: number
@@ -53,7 +53,7 @@ export default function FishingGame({
   const castsLeft = MAX_CASTS - castsUsed
 
   useEffect(() => {
-    if (phase === 'active' || phase === 'reeling') {
+    if (phase === 'active') {
       animRef.current = setInterval(() => {
         posRef.current += dirRef.current * (speedRef.current / 20)
         if (posRef.current >= 100) {
@@ -85,19 +85,25 @@ export default function FishingGame({
 
   function handleReelIn() {
     if (phase !== 'active' || isPending) return
-    setPhase('reeling')
+
+    // Capture position at the exact moment of click — this IS the quality
+    const frozenPos = posRef.current
+    const quality = Math.max(1, Math.min(20, Math.round((frozenPos / 100) * 20)))
+
+    // Stop animation and show result immediately — no perceived delay
+    if (animRef.current) clearInterval(animRef.current)
+    setPosition(frozenPos)
+    setCastsUsed(prev => prev + 1)
+    setResult({ quality, earned: 0, castsUsed: castsUsed + 1 })
+    setPhase('result')
+
+    // Award doubloons in the background
     startTransition(async () => {
-      const res = await castLine()
-      if ('error' in res) {
-        setPhase('ready')
-        return
+      const res = await castLine(quality)
+      if (!('error' in res)) {
+        setResult({ quality, earned: res.earned, castsUsed: res.castsUsed })
+        setCastsUsed(res.castsUsed)
       }
-      const targetPos = (res.quality / 20) * 100
-      posRef.current = targetPos
-      setPosition(targetPos)
-      setResult({ quality: res.quality, earned: res.earned, castsUsed: res.castsUsed })
-      setCastsUsed(res.castsUsed)
-      setPhase('result')
     })
   }
 
@@ -143,7 +149,7 @@ export default function FishingGame({
       </div>
 
       {/* Quality bar */}
-      {(phase === 'active' || phase === 'reeling' || phase === 'result') && (
+      {(phase === 'active' || phase === 'result') && (
         <div className="w-full">
           <div style={{
             position: 'relative',
@@ -210,7 +216,7 @@ export default function FishingGame({
             {qualityLabel(result.quality)}
           </p>
           <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0c040', lineHeight: 1 }}>
-            +{result.earned} ⟡
+            {result.earned > 0 ? `+${result.earned} ⟡` : '…'}
           </p>
         </div>
       )}
@@ -250,24 +256,6 @@ export default function FishingGame({
           }}
         >
           Reel In!
-        </button>
-      )}
-
-      {phase === 'reeling' && (
-        <button
-          disabled
-          className="w-full font-karla font-700 uppercase tracking-[0.12em]"
-          style={{
-            padding: '0.875rem',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 12,
-            fontSize: '0.72rem',
-            color: '#4a4845',
-            cursor: 'default',
-          }}
-        >
-          Reeling...
         </button>
       )}
 

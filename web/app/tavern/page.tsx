@@ -134,6 +134,20 @@ export default async function TavernPage() {
             />
           )}
           <GameCard
+            href="/tavern/fishing"
+            eyebrow="Game"
+            title="Drop a Line"
+            statusText={fishingDone ? 'Come back tomorrow' : `${fishingCastsLeft} casts remaining`}
+            info={[
+              '20 casts per day — cast anytime',
+              'Time your reel for better catches',
+              'Better hooks earn more per cast',
+              'Upgrade your hook at the Tackle Shop',
+            ]}
+            icon={<HookIcon />}
+            completed={fishingDone}
+          />
+          <GameCard
             href="/tavern/crown-and-anchor"
             eyebrow="Game"
             title="Crown & Anchor"
@@ -158,20 +172,6 @@ export default async function TavernPage() {
               'First game free daily · 20 ⟡ after',
             ]}
             icon={<SkullIcon />}
-          />
-          <GameCard
-            href="/tavern/fishing"
-            eyebrow="Grind"
-            title="Drop a Line"
-            statusText={fishingDone ? 'Come back tomorrow' : `${fishingCastsLeft} casts remaining`}
-            info={[
-              '20 casts per day — cast anytime',
-              'Time your reel for better catches',
-              'Better hooks earn more per cast',
-              'Upgrade your hook at the Tackle Shop',
-            ]}
-            icon={<HookIcon />}
-            completed={fishingDone}
           />
         </div>
 
