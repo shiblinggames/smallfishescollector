@@ -124,8 +124,8 @@ export default async function TavernPage() {
             statusText={fishingDone ? 'Come back tomorrow' : `${fishingCastsLeft} casts remaining`}
             info={[
               '20 casts per day — cast anytime',
-              'Time your reel for better catches',
-              'Better hooks earn more per cast',
+              'Stop the needle in the Catch zone to earn',
+              'Better hooks widen your catch zone',
               'Upgrade your hook at the Tackle Shop',
             ]}
             icon={<HookIcon />}

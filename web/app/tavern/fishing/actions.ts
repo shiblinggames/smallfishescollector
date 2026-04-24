@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { MAX_CASTS } from './constants'
 import { DEPTHS } from './depths'
-import { getHook } from '@/lib/hooks'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -23,27 +22,23 @@ export async function castLine(
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('hook_tier, doubloons, fishing_date, fishing_casts')
+    .select('doubloons, fishing_date, fishing_casts')
     .eq('id', user.id)
     .single()
 
   if (!profile) return { error: 'Profile not found' }
 
-  const isToday  = profile.fishing_date === date
+  const isToday   = profile.fishing_date === date
   const castsUsed = isToday ? (profile.fishing_casts ?? 0) : 0
 
   if (castsUsed >= MAX_CASTS) {
     return { error: 'No casts remaining today. Come back tomorrow.' }
   }
 
-  const depth = DEPTHS[Math.max(0, Math.min(3, Math.round(depthId)))]
-  const quality =
-    result === 'perfect' ? depth.perfectQuality :
-    result === 'catch'   ? depth.catchQuality   : 0
-
-  const hookTier   = profile.hook_tier ?? 0
-  const multiplier = getHook(hookTier).multiplier
-  const earned     = quality > 0 ? Math.max(1, Math.floor(quality * multiplier)) : 0
+  const depth  = DEPTHS[Math.max(0, Math.min(3, Math.round(depthId)))]
+  const earned =
+    result === 'perfect' ? depth.perfectEarns :
+    result === 'catch'   ? depth.catchEarns   : 0
 
   const castsToConsume = result === 'penalty' ? Math.min(2, MAX_CASTS - castsUsed) : 1
   const newCastsUsed   = castsUsed + castsToConsume

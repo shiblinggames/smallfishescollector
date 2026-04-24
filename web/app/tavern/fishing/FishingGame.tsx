@@ -166,15 +166,15 @@ export default function FishingGame({
   const hook      = HOOKS[Math.min(hookTier, HOOKS.length - 1)]
   const castsLeft = MAX_CASTS - castsUsed
 
-  const previewZones = buildZones(DEPTHS[selectedDepth])
-  const activeZones  = buildZones(DEPTHS[castDepthRef.current])
+  const previewZones = buildZones(DEPTHS[selectedDepth], hookTier)
+  const activeZones  = buildZones(DEPTHS[castDepthRef.current], hookTier)
 
   function earnRange(depthId: number) {
     const d = DEPTHS[depthId]
-    const lo = Math.max(1, Math.floor(d.catchQuality   * hook.multiplier))
-    const hi = Math.max(1, Math.floor(d.perfectQuality * hook.multiplier))
-    return `${lo}–${hi} ⟡`
+    return `${d.catchEarns}–${d.perfectEarns} ⟡`
   }
+
+  const hookZoneBonus = hookTier * 3  // degrees added to catch zone
 
   useEffect(() => { phaseRef.current = phase }, [phase])
 
@@ -329,7 +329,7 @@ export default function FishingGame({
           <div>
             <p className="font-karla font-700 leading-none" style={{ fontSize: '0.82rem', color: hook.color }}>{hook.name}</p>
             <p className="font-karla font-600 leading-none mt-1" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
-              {earnRange(selectedDepth)} per catch
+              {hookZoneBonus > 0 ? `+${hookZoneBonus}° catch zone` : 'Standard zones'}
             </p>
           </div>
         </div>
