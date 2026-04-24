@@ -51,6 +51,8 @@
 |---|---|---|
 | id | uuid PK → auth.users | |
 | username | text | |
+| username_changed | boolean | One-time rename only |
+| showcase_variant_ids | int[] | Up to 5 variant IDs shown on public profile |
 | packs_available | int | |
 | doubloons | int | |
 | hook_tier | int | 0–6 |
@@ -65,6 +67,10 @@
 | fotd_streak | int | Current FOTD streak |
 | fotd_longest_streak | int | |
 | last_fotd_date | date | |
+| fishing_date | date | Date of last fishing session |
+| fishing_casts | int | Casts used on fishing_date |
+| fishing_abyss_streak | int | Consecutive Abyss perfect casts (resets on any non-abyss-perfect) |
+| has_seen_welcome | boolean | Whether welcome modal has been shown and pack claimed |
 | last_viewed_achievements_at | timestamptz | For Nav badge |
 | created_at | timestamptz | |
 
@@ -148,6 +154,60 @@ No `id` column. Unique constraint: (user_id, date).
 | explanation | text | |
 | topic | text | biology, behavior, habitat, fishing, record, history |
 
+### dice_rolls
+| Column | Type | Notes |
+|---|---|---|
+| id | serial PK | |
+| user_id | uuid FK → profiles | |
+| symbol | text | Player's chosen symbol |
+| wager | int | Amount wagered |
+| result | text[] | 3 dice face values |
+| matches | int | 0–3 |
+| payout | int | Amount paid out |
+| created_at | timestamptz | |
+
+### expeditions
+| Column | Type | Notes |
+|---|---|---|
+| id | serial PK | |
+| user_id | uuid FK → profiles | |
+| zone | text | `coral_run`, `bertuna_triangle`, `sunken_reach`, `davy_jones_locker` |
+| status | text | `active`, `completed`, `failed` |
+| expedition_date | date | |
+| ship_tier | int | |
+| crew_loadout | jsonb | Assigned crew members per stat |
+| events | jsonb | Array of EventResult objects |
+| loot | jsonb | LootResult (doubloons, lootRarity, roll, etc.) |
+| completed_at | timestamptz | |
+
+### daily_expeditions
+| Column | Type | Notes |
+|---|---|---|
+| expedition_date | date | |
+| zone | text | |
+| event_sequence | jsonb | Pre-generated event node array for the day |
+
+Unique on (expedition_date, zone) — all users share the same event sequence per zone per day.
+
+### weekly_bounties
+| Column | Type | Notes |
+|---|---|---|
+| week_start | date UNIQUE PK | Monday of the bounty week |
+| shallows_card_id | int FK → cards | |
+| open_waters_card_id | int FK → cards | |
+| deep_card_id | int FK → cards | |
+| abyss_card_id | int FK → cards | |
+
+### weekly_bounty_progress
+| Column | Type | Notes |
+|---|---|---|
+| user_id | uuid FK → profiles | |
+| week_start | date | |
+| shallows_completed | boolean | |
+| open_waters_completed | boolean | |
+| deep_completed | boolean | |
+| abyss_completed | boolean | |
+
 ### claim_tokens
 | Column | Type | Notes |
 |---|---|---|
@@ -190,7 +250,7 @@ No `id` column. Unique constraint: (user_id, date).
 
 ## Hook / Shipyard System
 
-**Hooks** (`lib/hooks.ts`) — affect zone drop probabilities when opening packs.
+**Hooks** (`lib/hooks.ts`) — affect zone drop probabilities when opening packs, and widen the catch zone in Drop a Line (+3°/tier).
 
 | Tier | Name | Cost (⟡) |
 |---|---|---|
@@ -289,8 +349,8 @@ Implemented in `lib/drawPack.ts`.
 - Custom God Pack weights: Pearl 20, Holographic 20, Ghost 18, Shadow 16, Prismatic 12, each Mythic 3
 
 **Pack costs:**
-- 1 pack: 200 ⟡
-- 10 packs: 1,500 ⟡
+- 1 pack: 250 ⟡
+- 10 packs: 2,000 ⟡
 - Premium: 1 free pack/day
 
 ---
@@ -321,11 +381,51 @@ Implemented in `lib/drawPack.ts`.
 **Daily Pack** (`app/actions/dailyPack.ts`)
 - Premium members only: 1 free pack per day (last_pack_claim)
 
+**Drop a Line** (`app/tavern/fishing/`)
+- 20 casts per day, tracked in `profiles.fishing_date` + `profiles.fishing_casts`
+- Circular dial with spinning needle; player taps Reel In to stop it
+- Four depth zones to choose from:
+
+| Depth | Catch Zone | Perfect Zone | Snag | Catch ⟡ | Perfect ⟡ | Speed (°/s) |
+|---|---|---|---|---|---|---|
+| Shallows | 90° | 4° | Right only, 30° gap | 3 | 5 | 130–210 |
+| Open Waters | 68° | 4° | Right only, 15° gap | 4 | 6 | 210–320 |
+| Deep | 50° | 4° | Both sides, 5° gap | 5 | 8 | 320–450 |
+| Abyss | 28° | 4° | Both sides, flush | 8 | 12 | 450–590 |
+
+- Perfect zone is a fixed 4° across all depths (not affected by hook tier)
+- Hook tier widens catch zone: +3°/tier (e.g. tier 6 = +18°)
+- Snag zone = 2 casts consumed; Miss = 1 cast
+- Zones rotate to a random position each cast
+- Abyss: direction reversal chance 30%, Deep: 12%
+- `fishing_abyss_streak` tracks consecutive Abyss perfect casts
+
+**Expedition** (`app/expeditions/`)
+- One expedition per day; results persist in `expeditions` table
+- Player chooses a zone, assigns crew to stats, then navigates events one at a time
+- Each zone has a pre-generated event sequence shared across all users that day (`daily_expeditions`)
+
+| Zone | Name | Ship Required | Events | Entry Cost | Base Doubloons |
+|---|---|---|---|---|---|
+| coral_run | The Coral Run | Tier 0 | 4 | 25 ⟡ | ~80 ⟡ |
+| bertuna_triangle | The Bertuna Triangle | Tier 2 | 6 | 75 ⟡ | ~200 ⟡ |
+| sunken_reach | The Sunken Reach | Tier 4 | 8 | 200 ⟡ | ~500 ⟡ |
+| davy_jones_locker | Davy Jones' Locker | Tier 6 | 10 | 200 ⟡ | ~1,200 ⟡ |
+
+- Davy Jones' Locker requires Catfish + Doby Mick in crew
+- Stats: combat, navigation, durability, speed, luck
+- Loot rarity scales with final score (0–30+)
+
+**Weekly Bounties** (`app/packs/bountyActions.ts`)
+- 4 target fish (one per zone) reset each Monday
+- Rewards: Shallows 50 ⟡, Open Waters 150 ⟡, Deep 300 ⟡, Abyss 500 ⟡ + 1 pack
+- Progress tracked in `weekly_bounty_progress`
+
 ---
 
 ## Tavern Minigames
 
-### Crown & Anchor (`app/tavern/actions.ts` + `app/tavern/CrownAndAnchor.tsx`)
+### Crown & Anchor (`app/tavern/actions.ts`)
 - Symbols: anchor, crown, heart, diamond, spade, club
 - Pick one symbol, wager 10–200 ⟡ (MIN_BET: 10, MAX_BET: 200)
 - 3 dice roll — count how many match your symbol:
@@ -334,11 +434,7 @@ Implemented in `lib/drawPack.ts`.
   - 2 matches: get 2× wager (net +wager)
   - 3 matches: get 3× wager (net +wager × 2)
 - Daily cap: 500 ⟡ wagered per day (DAILY_CAP)
-- Achievements: crown_first, crown_triple
-
-### Fish of the Day (see Daily Features above)
-
-### Daily Quiz (see Daily Features above)
+- Achievements: crown_first, crown_triple, crown_all_in (3× on max bet)
 
 ### Dead Man's Draw (`app/tavern/dead-mans-draw/`)
 - Card game vs. AI — first to 30 points wins
@@ -347,6 +443,26 @@ Implemented in `lib/drawPack.ts`.
 - 8 power cards (4 copies each) + 28 vanilla cards = 60-card deck
 - Power cards: Kraken, Anglerfish, Piranha, Whale Shark, Hammerhead, Clownfish, Manta Ray, Orca
 - Game state is local (not persisted to DB)
+
+---
+
+## Achievements
+
+Defined in `lib/achievements.ts`. Checked and awarded via `lib/checkAchievements.ts`. 37 total across 9 categories.
+
+| Category | Count | Keys |
+|---|---|---|
+| Packs | 5 | first_pack, packs_10/50/100/500 |
+| Collection | 6 | first_epic/legendary/mythic, fish_10/25/all |
+| Fish of the Day | 5 | fotd_first/perfect, fotd_streak_3/7/30 |
+| Drop a Line | 4 | fishing_first_catch, fishing_perfect, fishing_abyss, fishing_abyss_streak |
+| Expedition | 5 | expedition_first, expedition_coral_run/bertuna/sunken/davy_jones |
+| Tavern | 3 | crown_first, crown_triple, crown_all_in |
+| Daily Bonus | 2 | bonus_first, bonus_7 |
+| Doubloons | 4 | doubloons_1k/5k/25k/100k |
+| Membership | 1 | member |
+
+Achievement triggers are fired from: `castLine` (fishing), expedition completion, `rollDice` (Crown & Anchor), `openPack`, `submitFishGuess`, `claimDailyBonus`.
 
 ---
 
@@ -395,8 +511,12 @@ Implemented in `lib/drawPack.ts`.
 | Fish of the Day | 25–100 ⟡ |
 | FOTD streak bonus | 25–150 ⟡ |
 | Daily Quiz (correct) | 50 ⟡ |
+| Drop a Line (catch) | 3–8 ⟡/cast |
+| Drop a Line (perfect) | 5–12 ⟡/cast |
 | Crown & Anchor (win) | up to wager × 3 |
 | Dead Man's Draw (win) | 35–50 ⟡ |
+| Expedition (complete) | 80–1,200 ⟡ base (scales with score) |
+| Weekly bounty | 50–500 ⟡ + optional pack |
 | Rank-up rewards | 200–5,000 ⟡ |
 
 **Rank-up thresholds** (unique variants collected):
@@ -409,12 +529,13 @@ Implemented in `lib/drawPack.ts`.
 
 | Action | Cost |
 |---|---|
-| 1 pack | 200 ⟡ |
-| 10 packs | 1,500 ⟡ |
+| 1 pack | 250 ⟡ |
+| 10 packs | 2,000 ⟡ |
 | Hook tier 1–6 | 150 – 18,000 ⟡ |
 | Ship tier 1–6 | 150 – 18,000 ⟡ |
 | Crown & Anchor | 10–200 ⟡/bet |
 | Dead Man's Draw entry | 20 ⟡ |
+| Expedition entry | 25–200 ⟡ |
 
 All transactions recorded in `doubloon_transactions` (positive = earned, negative = spent). Achievement milestones check sum of all positive amounts: 1k / 5k / 25k / 100k ⟡.
 
@@ -425,22 +546,28 @@ All transactions recorded in `doubloon_transactions` (positive = earned, negativ
 | Route | Description |
 |---|---|
 | `/` | Landing / home page |
-| `/login` | Auth login |
+| `/login` | Auth login (redirects to /tavern on success) |
 | `/register` | Auth registration |
 | `/auth/*` | Supabase auth callbacks |
-| `/packs` | Pack opener — open packs, view animation |
+| `/packs` | Pack opener — open packs, buy with doubloons, weekly bounties |
 | `/collection` | Card collection grid, sell duplicates |
 | `/marketplace` | Hub: hooks, shipyard, redeem |
+| `/marketplace/tackle-shop` | Buy hook upgrades |
 | `/marketplace/shipyard` | Buy ship upgrades |
 | `/marketplace/redeem` | Redeem codes / claim tokens |
-| `/tavern` | Tavern hub with daily task status |
+| `/tavern` | Tavern hub with daily task status cards |
 | `/tavern/crown-and-anchor` | Crown & Anchor dice game |
 | `/tavern/fish-of-the-day` | Daily fish puzzle |
 | `/tavern/daily-quiz` | Daily trivia quiz |
+| `/tavern/fishing` | Drop a Line — 20-cast daily fishing minigame |
 | `/tavern/dead-mans-draw` | Dead Man's Draw card game vs. AI |
+| `/expeditions` | Expedition hub — choose zone, view today's status |
+| `/expeditions/prepare` | Crew assignment before departure |
+| `/expeditions/voyage` | Active expedition event navigation |
+| `/expeditions/results` | Completed expedition results |
 | `/leaderboard` | Global leaderboards (Collection, Packs, Streak, Achievements) |
-| `/achievements` | User achievement progress |
-| `/social` | Crew/follow management |
+| `/achievements` | User achievement progress (9 categories, 37 total) |
+| `/social` | Crew/follow management + showcase editor |
 | `/u/[username]` | Public user profile |
 | `/guide` | How to play |
 | `/admin` | Admin dashboard |
