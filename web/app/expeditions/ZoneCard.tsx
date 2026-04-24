@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { RARITY_COLORS, BASE_DOUBLOONS, type ZoneKey, type ZoneConfig, type Expedition } from '@/lib/expeditions'
+import { BASE_DOUBLOONS, type ZoneKey, type ZoneConfig, type Expedition } from '@/lib/expeditions'
 
 const ZONE_DIFFICULTY: Record<ZoneKey, { label: string; color: string }> = {
   coral_run:          { label: 'Beginner',     color: '#4ade80' },
@@ -47,8 +47,6 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, hasSpe
   }
 
   const difficulty = ZONE_DIFFICULTY[zoneKey]
-  const topRarity = config.drops[config.drops.length - 1]
-  const topRarityColor = RARITY_COLORS[topRarity] ?? '#f0c040'
   const baseDoubloons = BASE_DOUBLOONS[zoneKey]
 
   let statusLabel = `Entry: ${config.entryCost} ⟡`
@@ -140,10 +138,7 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, hasSpe
           </div>
           {!isLocked && (
             <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
-              <span style={{ color: topRarityColor }}>
-                {topRarity.charAt(0).toUpperCase() + topRarity.slice(1)}
-              </span>
-              {' '}cards · ~{baseDoubloons.toLocaleString()} ⟡ base reward
+              ~{baseDoubloons.toLocaleString()} ⟡ base reward
             </p>
           )}
         </div>
