@@ -117,6 +117,20 @@ export default async function TavernPage() {
             icon={<ShipIcon />}
             completed={expeditionDone}
           />
+          <GameCard
+            href="/tavern/fishing"
+            eyebrow="Daily"
+            title="Drop a Line"
+            statusText={fishingDone ? 'Come back tomorrow' : `${fishingCastsLeft} casts remaining`}
+            info={[
+              '20 casts per day — cast anytime',
+              'Time your reel for better catches',
+              'Better hooks earn more per cast',
+              'Upgrade your hook at the Tackle Shop',
+            ]}
+            icon={<HookIcon />}
+            completed={fishingDone}
+          />
           {bounties && (
             <GameCard
               href="/packs"
@@ -133,20 +147,6 @@ export default async function TavernPage() {
               completed={bountyAllDone}
             />
           )}
-          <GameCard
-            href="/tavern/fishing"
-            eyebrow="Game"
-            title="Drop a Line"
-            statusText={fishingDone ? 'Come back tomorrow' : `${fishingCastsLeft} casts remaining`}
-            info={[
-              '20 casts per day — cast anytime',
-              'Time your reel for better catches',
-              'Better hooks earn more per cast',
-              'Upgrade your hook at the Tackle Shop',
-            ]}
-            icon={<HookIcon />}
-            completed={fishingDone}
-          />
           <GameCard
             href="/tavern/crown-and-anchor"
             eyebrow="Game"
