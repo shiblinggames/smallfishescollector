@@ -12,12 +12,19 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   const menuRef = useRef<HTMLDivElement>(null)
   const [tavernBadge, setTavernBadge] = useState(0)
 
-  useEffect(() => {
+  const refreshBadge = () => {
     fetch('/api/daily-status', { cache: 'no-store' })
       .then(r => r.json())
       .then(({ badge }) => setTavernBadge(badge ?? 0))
       .catch(() => {})
-  }, [pathname])
+  }
+
+  useEffect(() => { refreshBadge() }, [pathname])
+
+  useEffect(() => {
+    window.addEventListener('daily-completed', refreshBadge)
+    return () => window.removeEventListener('daily-completed', refreshBadge)
+  }, [])
 
   // Close on outside tap
   useEffect(() => {
