@@ -2,9 +2,8 @@
 
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { onTavernBadge, refreshTavernBadge } from '@/lib/tavernBadge'
 
 export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: number; doubloons?: number }) {
   const router = useRouter()
@@ -13,9 +12,30 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   const menuRef = useRef<HTMLDivElement>(null)
   const [tavernBadge, setTavernBadge] = useState(0)
 
-  useEffect(() => { refreshTavernBadge() }, [pathname])
+  const fetchBadge = useCallback(() => {
+    const supabase = createClient()
+    const today = new Date().toISOString().split('T')[0]
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      Promise.all([
+        supabase.from('profiles').select('last_daily_claim').eq('id', user.id).single(),
+        supabase.from('quiz_answers').select('id').eq('user_id', user.id).eq('date', today).single(),
+        supabase.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
+      ]).then(([{ data: profile }, { data: quiz }, { data: fotd }]) => {
+        const bonusDone = profile?.last_daily_claim === today
+        const quizDone = !!quiz
+        const fotdDone = !!fotd && (fotd.solved || (fotd.guesses?.length ?? 0) >= 4)
+        setTavernBadge([!bonusDone, !quizDone, !fotdDone].filter(Boolean).length)
+      })
+    })
+  }, [])
 
-  useEffect(() => { return onTavernBadge(setTavernBadge) }, [])
+  useEffect(() => { fetchBadge() }, [pathname, fetchBadge])
+
+  useEffect(() => {
+    window.addEventListener('tavern-daily-completed', fetchBadge)
+    return () => window.removeEventListener('tavern-daily-completed', fetchBadge)
+  }, [fetchBadge])
 
   // Close on outside tap
   useEffect(() => {
