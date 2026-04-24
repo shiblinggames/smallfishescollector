@@ -401,7 +401,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           className="flex-1 flex items-center justify-center gap-2 transition-colors"
           style={{
             background: 'rgba(255,255,255,0.08)',
-            border: '1px solid rgba(255,255,255,0.15)',
+            border: `1px solid ${rank.color}40`,
             borderRadius: '10px',
             padding: '0.75rem 1rem',
           }}
@@ -409,17 +409,17 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           onPointerUp={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
           onPointerLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={rank.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
           </svg>
-          <span className="font-karla font-600 uppercase tracking-[0.12em] text-[#a0a09a]" style={{ fontSize: '0.62rem' }}>Edit Profile</span>
+          <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: rank.color }}>Edit Profile</span>
         </button>
         <a
           href="/achievements"
           className="flex-1 flex items-center justify-center gap-2 transition-colors"
           style={{
             background: 'rgba(255,255,255,0.08)',
-            border: '1px solid rgba(255,255,255,0.15)',
+            border: `1px solid ${rank.color}40`,
             borderRadius: '10px',
             padding: '0.75rem 1rem',
             textDecoration: 'none',
@@ -428,11 +428,11 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           onPointerUp={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
           onPointerLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={rank.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 9H4V4h16v5h-2"/><path d="M6 4v5a6 6 0 0 0 12 0V4"/>
             <line x1="12" y1="15" x2="12" y2="19"/><line x1="8" y1="19" x2="16" y2="19"/>
           </svg>
-          <span className="font-karla font-600 uppercase tracking-[0.12em] text-[#a0a09a]" style={{ fontSize: '0.62rem' }}>Achievements</span>
+          <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: rank.color }}>Achievements</span>
         </a>
       </div>
 
