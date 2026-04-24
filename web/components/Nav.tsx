@@ -13,7 +13,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   const [tavernBadge, setTavernBadge] = useState(0)
 
   useEffect(() => {
-    fetch('/api/daily-status')
+    fetch('/api/daily-status', { cache: 'no-store' })
       .then(r => r.json())
       .then(({ badge }) => setTavernBadge(badge ?? 0))
       .catch(() => {})
