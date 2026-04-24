@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import Anthropic from '@anthropic-ai/sdk'
+import { anthropic } from '@/lib/anthropic'
 import {
   ZONES, EVENT_MECHANICS, EXPEDITION_SHIP_STATS, HULL_POINTS, BASE_DOUBLOONS,
   rollStat, getCrewPower,
@@ -41,9 +41,8 @@ async function generateZoneContent(zone: ZoneKey): Promise<EventNode[]> {
   const crisisType = zoneConfig.crisisTypes[Math.floor(Math.random() * zoneConfig.crisisTypes.length)]
   eventTypes.push(crisisType)
 
-  const client = new Anthropic()
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const response = await anthropic.messages.create({
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 2000,
     messages: [{
       role: 'user',
