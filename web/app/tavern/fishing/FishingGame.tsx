@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef, useTransition } from 'react'
-import { castLine, MAX_CASTS } from './actions'
+import { castLine } from './actions'
+import { MAX_CASTS } from './constants'
 import { HOOKS } from '@/lib/hooks'
 
 type Phase = 'ready' | 'active' | 'reeling' | 'result'

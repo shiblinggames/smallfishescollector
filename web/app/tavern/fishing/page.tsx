@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import FishingGame from './FishingGame'
-import { MAX_CASTS } from './actions'
+import { MAX_CASTS } from './constants'
 
 export default async function FishingPage() {
   const supabase = await createClient()

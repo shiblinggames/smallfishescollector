@@ -2,8 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-
-export const MAX_CASTS = 20
+import { MAX_CASTS } from './constants'
 
 // Max per day = 20 casts × quality 20 × multiplier
 // Tier 0 → ~40 ⟡/day max · Tier 6 → ~248 ⟡/day max
