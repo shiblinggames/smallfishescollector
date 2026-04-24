@@ -16,17 +16,16 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
     const supabase = createClient()
     const today = new Date().toISOString().split('T')[0]
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { console.log('[badge] no user'); return }
+      if (!user) return
       Promise.all([
         supabase.from('profiles').select('last_daily_claim').eq('id', user.id).single(),
-        supabase.from('quiz_answers').select('id').eq('date', today).maybeSingle(),
-        supabase.from('daily_fish_attempts').select('solved, guesses').eq('date', today).maybeSingle(),
+        supabase.from('quiz_answers').select('date').order('date', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('daily_fish_attempts').select('solved, guesses, date').order('date', { ascending: false }).limit(1).maybeSingle(),
       ]).then(([{ data: profile }, { data: quiz }, { data: fotd }]) => {
         const bonusDone = profile?.last_daily_claim === today
-        const quizDone = !!quiz
-        const fotdDone = !!fotd && (fotd.solved || (fotd.guesses?.length ?? 0) >= 4)
+        const quizDone = quiz?.date === today
+        const fotdDone = fotd?.date === today && (fotd.solved || (fotd.guesses?.length ?? 0) >= 4)
         const badge = [!bonusDone, !quizDone, !fotdDone].filter(Boolean).length
-        console.log('[badge]', { today, bonusDone, quizDone, fotdDone, badge, profile, quiz, fotd })
         setTavernBadge(badge)
       }).catch(e => console.error('[badge] error', e))
     })
