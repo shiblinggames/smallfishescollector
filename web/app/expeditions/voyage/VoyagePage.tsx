@@ -385,6 +385,13 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
   )
 }
 
+const STAT_CONSEQUENCES: Record<string, string> = {
+  combat:     'Fail → hull damage',
+  durability: 'Fail → hull damage',
+  navigation: 'Succeed → skip next · Fail → detour',
+  luck:       'Fail → loot penalty',
+}
+
 function formatFlavorText(flavor: string): string[] {
   const sentences = flavor.match(/[^.!?]+[.!?]+/g) ?? [flavor]
   const paragraphs: string[] = []
@@ -488,6 +495,11 @@ function EventCard({
             <p className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845', marginTop: 2 }}>
               Ship {shipBase}{crewBonusForStat > 0 ? ` + Crew up to ${crewBonusForStat}` : ''}
             </p>
+            {STAT_CONSEQUENCES[event.mechanics.stat] && (
+              <p className="font-karla" style={{ fontSize: '0.56rem', color: '#6a6764', marginTop: 3 }}>
+                {STAT_CONSEQUENCES[event.mechanics.stat]}
+              </p>
+            )}
           </div>
           {event.mechanics.threshold !== undefined && (
             <div style={{ textAlign: 'right' }}>
