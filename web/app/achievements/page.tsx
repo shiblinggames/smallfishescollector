@@ -27,6 +27,7 @@ export default async function AchievementsPage() {
   const [{ data: profile }, { data: unlockedRows }] = await Promise.all([
     admin.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
     admin.from('user_achievements').select('achievement_key').eq('user_id', user.id),
+    admin.from('profiles').update({ last_viewed_achievements_at: new Date().toISOString() }).eq('id', user.id),
   ])
 
   const unlocked = new Set((unlockedRows ?? []).map((r: any) => r.achievement_key as string))

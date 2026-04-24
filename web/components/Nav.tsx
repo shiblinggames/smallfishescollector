@@ -11,6 +11,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const [tavernBadge, setTavernBadge] = useState(0)
+  const [achievementsBadge, setAchievementsBadge] = useState(false)
 
   const fetchBadge = useCallback(() => {
     const supabase = createClient()
@@ -18,16 +19,19 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       Promise.all([
-        supabase.from('profiles').select('last_daily_claim').eq('id', user.id).single(),
+        supabase.from('profiles').select('last_daily_claim, last_viewed_achievements_at').eq('id', user.id).single(),
         supabase.from('quiz_answers').select('date').order('date', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('daily_fish_attempts').select('solved, guesses, date').order('date', { ascending: false }).limit(1).maybeSingle(),
-      ]).then(([{ data: profile }, { data: quiz }, { data: fotd }]) => {
+        supabase.from('user_achievements').select('unlocked_at').eq('user_id', user.id).order('unlocked_at', { ascending: false }).limit(1).maybeSingle(),
+      ]).then(([{ data: profile }, { data: quiz }, { data: fotd }, { data: latestAchievement }]) => {
         const bonusDone = profile?.last_daily_claim === today
         const quizDone = quiz?.date === today
         const fotdDone = fotd?.date === today && (fotd.solved || (fotd.guesses?.length ?? 0) >= 4)
-        const badge = [!bonusDone, !quizDone, !fotdDone].filter(Boolean).length
-        setTavernBadge(badge)
-      }).catch(e => console.error('[badge] error', e))
+        setTavernBadge([!bonusDone, !quizDone, !fotdDone].filter(Boolean).length)
+        const lastViewed = profile?.last_viewed_achievements_at
+        const latestUnlocked = latestAchievement?.unlocked_at
+        setAchievementsBadge(!!latestUnlocked && (!lastViewed || latestUnlocked > lastViewed))
+      }).catch(() => {})
     })
   }, [])
 
@@ -99,7 +103,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   ]
 
   const mobileMenuLinks = [
-    { href: '/social', label: 'Social',
+    { href: '/social', label: 'Social', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
@@ -107,7 +111,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
         </svg>
       )
     },
-    { href: '/guide', label: 'How to Play',
+    { href: '/guide', label: 'How to Play', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
@@ -115,7 +119,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
         </svg>
       )
     },
-    { href: '/achievements', label: 'Achievements',
+    { href: '/achievements', label: 'Achievements', badge: achievementsBadge,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
           <path d="M6 9H4V4h16v5h-2"/>
@@ -124,7 +128,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
         </svg>
       )
     },
-    { href: '/leaderboard', label: 'Leaderboard',
+    { href: '/leaderboard', label: 'Leaderboard', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
           <rect x="2" y="14" width="5" height="7" rx="1"/>
@@ -136,7 +140,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   ]
 
   const desktopOnlyLinks = [
-    { href: '/achievements', label: 'Achievements', badge: null },
+    { href: '/achievements', label: 'Achievements', badge: achievementsBadge ? true : null },
     { href: '/leaderboard',  label: 'Leaderboard',  badge: null },
     { href: '/social',       label: 'Social',        badge: null },
     { href: '/guide',        label: 'Guide',         badge: null },
@@ -192,7 +196,8 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
           {[...links, ...desktopOnlyLinks].map(({ href, label, badge }) => (
             <Link key={href} href={href} className={`py-2 px-2 transition-colors duration-200 ${pathname === href || pathname.startsWith(href + '/') ? 'text-[#f0ede8]' : 'text-[#a0a09a] hover:text-[#f0ede8]'}`}>
               {label}
-              {badge && <span className="ml-1.5 text-[#f0c040]">· {badge}</span>}
+              {typeof badge === 'number' && badge > 0 && <span className="ml-1.5 text-[#f0c040]">· {badge}</span>}
+              {badge === true && <span className="inline-block ml-1.5 w-1.5 h-1.5 rounded-full bg-[#f0c040] translate-y-[-1px]" />}
             </Link>
           ))}
         </div>
@@ -227,13 +232,16 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
           {/* Hamburger */}
           <button
             onClick={() => setMenuOpen(o => !o)}
-            className="flex flex-col items-center justify-center gap-[4px] w-7 h-7 rounded-md transition-colors"
+            className="relative flex flex-col items-center justify-center gap-[4px] w-7 h-7 rounded-md transition-colors"
             style={{ background: menuOpen ? 'rgba(255,255,255,0.15)' : 'transparent', border: 'none' }}
             aria-label="Menu"
           >
             <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#a0a09a', borderRadius: 1, transition: 'background 0.15s' }} />
             <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#a0a09a', borderRadius: 1, transition: 'background 0.15s' }} />
             <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#a0a09a', borderRadius: 1, transition: 'background 0.15s' }} />
+            {achievementsBadge && (
+              <span style={{ position: 'absolute', top: 2, right: 2, width: 6, height: 6, borderRadius: '50%', background: '#f0c040' }} />
+            )}
           </button>
         </div>
 
@@ -247,7 +255,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
               boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
             }}
           >
-            {mobileMenuLinks.map(({ href, label, icon }) => {
+            {mobileMenuLinks.map(({ href, label, icon, badge }) => {
               const active = pathname === href || pathname.startsWith(href + '/')
               return (
                 <Link
@@ -262,6 +270,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
                 >
                   <span style={{ color: active ? '#f0c040' : '#4a4845' }}>{icon}</span>
                   <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem' }}>{label}</span>
+                  {badge && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f0c040', flexShrink: 0 }} />}
                 </Link>
               )
             })}
