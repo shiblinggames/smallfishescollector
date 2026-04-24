@@ -33,10 +33,10 @@ const CATCH_BONUS_PER_TIER   = 3    // degrees
 const PERFECT_BONUS_PER_TIER = 0.5  // degrees (rounded)
 
 export const DEPTHS: DepthDef[] = [
-  { id: 0, name: 'Shallows',    color: '#60a5fa', catchDeg:  90, perfectDeg: 20, snagDeg: 40, snagGapRight: 30, snagGapLeft:  -1, catchEarns: 3, perfectEarns:  5, speedMin:  45, speedMax:  85, changeMin: 25, changeMax: 45, reverseChance: 0.00 },
-  { id: 1, name: 'Open Waters', color: '#34d399', catchDeg:  68, perfectDeg: 16, snagDeg: 45, snagGapRight: 15, snagGapLeft:  -1, catchEarns: 4, perfectEarns:  6, speedMin:  90, speedMax: 145, changeMin: 18, changeMax: 32, reverseChance: 0.00 },
-  { id: 2, name: 'Deep',        color: '#a78bfa', catchDeg:  50, perfectDeg: 12, snagDeg: 45, snagGapRight:  5, snagGapLeft:   5, catchEarns: 5, perfectEarns:  8, speedMin: 170, speedMax: 270, changeMin: 10, changeMax: 18, reverseChance: 0.10 },
-  { id: 3, name: 'Abyss',       color: '#f87171', catchDeg:  28, perfectDeg:  6, snagDeg: 50, snagGapRight:  0, snagGapLeft:   0, catchEarns: 8, perfectEarns: 12, speedMin: 300, speedMax: 420, changeMin:  6, changeMax: 12, reverseChance: 0.25 },
+  { id: 0, name: 'Shallows',    color: '#60a5fa', catchDeg:  90, perfectDeg: 20, snagDeg: 40, snagGapRight: 30, snagGapLeft:  -1, catchEarns: 3, perfectEarns:  5, speedMin: 130, speedMax: 210, changeMin: 22, changeMax: 38, reverseChance: 0.00 },
+  { id: 1, name: 'Open Waters', color: '#34d399', catchDeg:  68, perfectDeg: 16, snagDeg: 45, snagGapRight: 15, snagGapLeft:  -1, catchEarns: 4, perfectEarns:  6, speedMin: 210, speedMax: 320, changeMin: 16, changeMax: 28, reverseChance: 0.00 },
+  { id: 2, name: 'Deep',        color: '#a78bfa', catchDeg:  50, perfectDeg: 12, snagDeg: 45, snagGapRight:  5, snagGapLeft:   5, catchEarns: 5, perfectEarns:  8, speedMin: 320, speedMax: 450, changeMin: 10, changeMax: 18, reverseChance: 0.12 },
+  { id: 3, name: 'Abyss',       color: '#f87171', catchDeg:  28, perfectDeg:  6, snagDeg: 50, snagGapRight:  0, snagGapLeft:   0, catchEarns: 8, perfectEarns: 12, speedMin: 450, speedMax: 590, changeMin:  5, changeMax: 10, reverseChance: 0.30 },
 ]
 
 export function buildZones(d: DepthDef, hookTier = 0): ZoneDef[] {
