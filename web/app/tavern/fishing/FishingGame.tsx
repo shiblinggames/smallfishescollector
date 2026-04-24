@@ -8,32 +8,31 @@ import { HOOKS } from '@/lib/hooks'
 import Link from 'next/link'
 
 type Phase = 'ready' | 'active' | 'result'
+type ZoneType = 'miss' | 'catch' | 'perfect' | 'penalty'
 
 interface ZoneDef {
-  from: number      // start angle in degrees (0 = top / 12 o'clock, clockwise)
+  from: number
   to: number
-  quality: number
+  type: ZoneType
   label: string
   color: string
-  isPerfect?: boolean
 }
 
 // 0° = 12 o'clock, clockwise
-// Weak at top (danger) → Perfect strips → Good → Great (bottom, safe) → Good → Perfect → Weak
+// Catch zone spans 90°, with Perfect (15°) nested in its center
 const ZONES: ZoneDef[] = [
-  { from:   0, to:  47, quality:  3, label: 'Weak',    color: '#f87171' },
-  { from:  47, to:  61, quality: 20, label: 'Perfect!', color: '#fde68a', isPerfect: true },
-  { from:  61, to: 119, quality:  9, label: 'Good',     color: '#f0c040' },
-  { from: 119, to: 241, quality: 14, label: 'Great',    color: '#4ade80' },
-  { from: 241, to: 299, quality:  9, label: 'Good',     color: '#f0c040' },
-  { from: 299, to: 313, quality: 20, label: 'Perfect!', color: '#fde68a', isPerfect: true },
-  { from: 313, to: 360, quality:  3, label: 'Weak',     color: '#f87171' },
+  { from:   0, to:  45, type: 'miss',    label: 'Miss',     color: '#64748b' },
+  { from:  45, to:  90, type: 'catch',   label: 'Catch',    color: '#4ade80' },
+  { from:  90, to: 105, type: 'perfect', label: 'Perfect!', color: '#fde68a' },
+  { from: 105, to: 150, type: 'catch',   label: 'Catch',    color: '#4ade80' },
+  { from: 150, to: 235, type: 'miss',    label: 'Miss',     color: '#64748b' },
+  { from: 235, to: 290, type: 'penalty', label: 'Snag!',    color: '#f87171' },
+  { from: 290, to: 360, type: 'miss',    label: 'Miss',     color: '#64748b' },
 ]
 
-// SVG layout
 const CX = 110, CY = 110
 const OUTER_R = 96, INNER_R = 66
-const GAP = 1.0 // degrees of gap between arc segments
+const GAP = 1.0
 
 function polar(r: number, deg: number) {
   const rad = (deg - 90) * (Math.PI / 180)
@@ -61,25 +60,11 @@ function getZone(deg: number): ZoneDef {
   return ZONES.find(z => a >= z.from && a < z.to) ?? ZONES[0]
 }
 
-function catchLabel(quality: number, isPerfect: boolean): string {
-  if (isPerfect) return 'Perfect ✦'
-  if (quality >= 14) return 'Great catch'
-  if (quality >= 9) return 'Good catch'
-  return 'Tiny catch'
-}
-
-function catchColor(quality: number, isPerfect: boolean): string {
-  if (isPerfect) return '#fde68a'
-  if (quality >= 14) return '#4ade80'
-  if (quality >= 9) return '#f0c040'
-  return '#f87171'
-}
-
 const ZONE_LEGEND = [
-  { label: 'Weak',       color: '#f87171', desc: 'Poor catch'     },
-  { label: 'Good',       color: '#f0c040', desc: 'Decent haul'    },
-  { label: 'Great',      color: '#4ade80', desc: 'Strong pull'    },
-  { label: 'Perfect ✦',  color: '#fde68a', desc: 'Maximum reward' },
+  { label: 'Perfect ✦', color: '#fde68a', desc: 'Bonus doubloons' },
+  { label: 'Catch',     color: '#4ade80', desc: 'Earn doubloons'  },
+  { label: 'Snag!',     color: '#f87171', desc: '2 casts wasted'  },
+  { label: 'Miss',      color: '#64748b', desc: '1 cast wasted'   },
 ]
 
 export default function FishingGame({
@@ -89,23 +74,27 @@ export default function FishingGame({
   initialCastsUsed: number
   hookTier: number
 }) {
-  const [phase, setPhase]   = useState<Phase>('ready')
-  const [angle, setAngle]   = useState(270) // start pointing left (in Weak zone visually off-screen)
-  const [result, setResult] = useState<{ quality: number; earned: number; castsUsed: number; isPerfect: boolean } | null>(null)
+  const [phase, setPhase] = useState<Phase>('ready')
+  const [angle, setAngle] = useState(270)
+  const [result, setResult] = useState<{
+    type: ZoneType
+    earned: number
+    castsUsed: number
+  } | null>(null)
   const [castsUsed, setCastsUsed] = useState(initialCastsUsed)
   const [, startTransition] = useTransition()
 
-  const angleRef    = useRef(270)
-  const speedRef    = useRef(80)    // degrees per second
-  const phaseRef    = useRef<Phase>('ready')
-  const animRef     = useRef<ReturnType<typeof setInterval> | null>(null)
-  const tickRef     = useRef(0)
-  const nextChgRef  = useRef(40)
+  const angleRef   = useRef(270)
+  const speedRef   = useRef(80)
+  const phaseRef   = useRef<Phase>('ready')
+  const animRef    = useRef<ReturnType<typeof setInterval> | null>(null)
+  const tickRef    = useRef(0)
+  const nextChgRef = useRef(40)
 
   const hook      = HOOKS[Math.min(hookTier, HOOKS.length - 1)]
   const castsLeft = MAX_CASTS - castsUsed
-  const minEarn   = Math.max(1, Math.floor(3  * hook.multiplier))
-  const maxEarn   = Math.max(1, Math.floor(20 * hook.multiplier))
+  const catchEarn = Math.max(1, Math.floor(8  * hook.multiplier))
+  const perfEarn  = Math.max(1, Math.floor(20 * hook.multiplier))
 
   useEffect(() => { phaseRef.current = phase }, [phase])
 
@@ -142,37 +131,61 @@ export default function FishingGame({
     if (phase !== 'active') return
     phaseRef.current = 'result'
     if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
-    const zone      = getZone(angleRef.current)
-    const quality   = zone.quality
-    const isPerfect = zone.isPerfect ?? false
-    setCastsUsed(prev => prev + 1)
-    setResult({ quality, earned: 0, castsUsed: castsUsed + 1, isPerfect })
+    const zone = getZone(angleRef.current)
+    const castsToConsume = zone.type === 'penalty' ? Math.min(2, MAX_CASTS - castsUsed) : 1
+    const newLocalCasts = Math.min(castsUsed + castsToConsume, MAX_CASTS)
+    setCastsUsed(newLocalCasts)
+    setResult({ type: zone.type, earned: 0, castsUsed: newLocalCasts })
     setPhase('result')
     startTransition(async () => {
-      const res = await castLine(quality)
+      const res = await castLine(zone.type as 'perfect' | 'catch' | 'miss' | 'penalty')
       if (!('error' in res)) {
-        setResult({ quality, earned: res.earned, castsUsed: res.castsUsed, isPerfect })
+        setResult({ type: zone.type, earned: res.earned, castsUsed: res.castsUsed })
         setCastsUsed(res.castsUsed)
       }
     })
   }
 
-  const currentZone    = getZone(angle)
-  const needleColor    = phase === 'result' && result ? catchColor(result.quality, result.isPerfect) : currentZone.color
-  // tip of needle — stops just before the inner ring
-  const needleTipY     = CY - (INNER_R - 8)
+  const currentZone = getZone(angle)
+  const needleColor = phase === 'result' && result ? result.type === 'miss' ? '#64748b' : ZONES.find(z => z.type === result.type)?.color ?? '#888' : currentZone.color
 
-  // Arc fill opacity per phase
   function zoneOpacity(zone: ZoneDef): number {
-    if (phase === 'ready') return 0.28
-    if (phase === 'active') return currentZone === zone ? 0.72 : 0.22
-    // result: highlight the zone that was hit
+    if (phase === 'ready') return zone.type === 'perfect' ? 0.55 : zone.type === 'penalty' ? 0.38 : 0.22
+    if (phase === 'active') return currentZone === zone ? 0.82 : zone.type === 'perfect' ? 0.45 : zone.type === 'penalty' ? 0.32 : 0.18
     if (result) {
       const hitZone = getZone(angleRef.current)
-      return hitZone === zone ? 0.78 : 0.1
+      return hitZone === zone ? 0.85 : 0.1
     }
     return 0.22
   }
+
+  function resultTitle(): string {
+    if (!result) return ''
+    if (result.type === 'perfect') return '✦ Perfect catch!'
+    if (result.type === 'catch') return 'Fish on!'
+    if (result.type === 'penalty') return 'Snagged!'
+    return 'No catch'
+  }
+
+  function resultSubtitle(): string {
+    if (!result) return ''
+    if (result.type === 'perfect' || result.type === 'catch') {
+      return result.earned > 0 ? `+${result.earned} doubloons` : '…'
+    }
+    if (result.type === 'penalty') return '2 casts wasted'
+    return '1 cast wasted'
+  }
+
+  function resultColor(): string {
+    if (!result) return '#888'
+    if (result.type === 'perfect') return '#fde68a'
+    if (result.type === 'catch') return '#4ade80'
+    if (result.type === 'penalty') return '#f87171'
+    return '#475569'
+  }
+
+  const isPerfect = result?.type === 'perfect'
+  const isCatch   = result?.type === 'catch' || isPerfect
 
   return (
     <div className="flex flex-col gap-4 max-w-sm mx-auto px-4 py-2">
@@ -187,7 +200,9 @@ export default function FishingGame({
           </div>
           <div>
             <p className="font-karla font-700 leading-none" style={{ fontSize: '0.82rem', color: hook.color }}>{hook.name}</p>
-            <p className="font-karla font-600 leading-none mt-1" style={{ fontSize: '0.68rem', color: '#6a6764' }}>{minEarn}–{maxEarn} ⟡ per cast</p>
+            <p className="font-karla font-600 leading-none mt-1" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
+              {catchEarn}–{perfEarn} ⟡ per catch
+            </p>
           </div>
         </div>
         <div className="text-right">
@@ -215,13 +230,21 @@ export default function FishingGame({
                 <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block' }}>
                   <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.35)" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
                   {ZONES.map((zone, i) => (
-                    <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color} fillOpacity={0.28} />
+                    <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
+                      fillOpacity={zone.type === 'perfect' ? 0.55 : zone.type === 'penalty' ? 0.38 : 0.22} />
                   ))}
-                  {/* Perfect ✦ labels */}
-                  {ZONES.filter(z => z.isPerfect).map((zone, i) => {
-                    const mid = polar(OUTER_R + 14, (zone.from + zone.to) / 2)
-                    return <text key={i} x={mid.x} y={mid.y} textAnchor="middle" dominantBaseline="central" fill={zone.color} fontSize="9" opacity="0.7">✦</text>
-                  })}
+                  {/* ✦ marker at Perfect zone midpoint */}
+                  {(() => {
+                    const pz = ZONES.find(z => z.type === 'perfect')!
+                    const mid = polar(OUTER_R + 14, (pz.from + pz.to) / 2)
+                    return <text x={mid.x} y={mid.y} textAnchor="middle" dominantBaseline="central" fill={pz.color} fontSize="9" opacity="0.8">✦</text>
+                  })()}
+                  {/* ⚠ marker at Penalty zone midpoint */}
+                  {(() => {
+                    const pz = ZONES.find(z => z.type === 'penalty')!
+                    const mid = polar(OUTER_R + 14, (pz.from + pz.to) / 2)
+                    return <text x={mid.x} y={mid.y} textAnchor="middle" dominantBaseline="central" fill={pz.color} fontSize="8" opacity="0.7">✕</text>
+                  })()}
                   <circle cx={CX} cy={CY} r={INNER_R - 2} fill="rgba(0,0,0,0.5)" />
                   <circle cx={CX} cy={CY} r="7" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
                 </svg>
@@ -234,15 +257,8 @@ export default function FishingGame({
               style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
               <p className="font-karla font-700 uppercase tracking-[0.12em] mb-3" style={{ fontSize: '0.62rem', color: '#6a6764' }}>How to play</p>
               <p className="font-karla font-600 leading-relaxed mb-3" style={{ fontSize: '0.82rem', color: '#b0afa8' }}>
-                The needle sweeps around the dial. Tap <span style={{ color: '#f0ede8' }}>Reel In</span> when it lands in the zone you want.
+                The needle sweeps around the dial. Tap <span style={{ color: '#f0ede8' }}>Reel In</span> to stop it.
               </p>
-              <div className="rounded-lg px-3 py-3 mb-3 flex items-start gap-2.5"
-                style={{ background: 'rgba(253,230,138,0.07)', border: '1px solid rgba(253,230,138,0.22)' }}>
-                <span style={{ fontSize: '0.8rem', color: '#fde68a', lineHeight: 1, marginTop: 2, flexShrink: 0 }}>✦</span>
-                <p className="font-karla font-600 leading-relaxed" style={{ fontSize: '0.78rem', color: '#c9b87a' }}>
-                  <span style={{ color: '#fde68a' }}>Target the ✦ Perfect strips</span> — the thin arcs near the Weak zone. Highest risk, highest reward.
-                </p>
-              </div>
               <div className="flex flex-col gap-2">
                 {ZONE_LEGEND.map(z => (
                   <div key={z.label} className="flex items-center gap-2.5">
@@ -288,13 +304,13 @@ export default function FishingGame({
             <div style={{ minHeight: '1.6rem' }}>
               <AnimatePresence mode="wait">
                 <motion.p
-                  key={phase === 'active' ? currentZone.label : (result ? catchLabel(result.quality, result.isPerfect) : '')}
+                  key={phase === 'active' ? currentZone.type : result?.type ?? ''}
                   initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }}
+                  exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.1 }}
                   className="font-cinzel font-700 uppercase tracking-[0.18em]"
                   style={{ fontSize: '0.88rem', color: needleColor }}
                 >
-                  {phase === 'active' ? currentZone.label : (result ? catchLabel(result.quality, result.isPerfect) : '')}
+                  {phase === 'active' ? currentZone.label : resultTitle()}
                 </motion.p>
               </AnimatePresence>
             </div>
@@ -302,52 +318,45 @@ export default function FishingGame({
             {/* Circular dial */}
             <div style={{ position: 'relative', width: '100%', maxWidth: 240, margin: '0 auto' }}>
               <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block' }}>
-                {/* Outer background circle */}
                 <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.45)" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
 
-                {/* Zone arcs */}
                 {ZONES.map((zone, i) => (
-                  <path
-                    key={i}
-                    d={arcPath(zone.from, zone.to)}
-                    fill={zone.color}
-                    fillOpacity={zoneOpacity(zone)}
-                    style={{ transition: 'fill-opacity 0.08s' }}
-                  />
+                  <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
+                    fillOpacity={zoneOpacity(zone)} style={{ transition: 'fill-opacity 0.08s' }} />
                 ))}
 
-                {/* Perfect ✦ markers outside ring */}
-                {ZONES.filter(z => z.isPerfect).map((zone, i) => {
-                  const mid = polar(OUTER_R + 14, (zone.from + zone.to) / 2)
-                  return (
-                    <text key={i} x={mid.x.toFixed(2)} y={mid.y.toFixed(2)}
-                      textAnchor="middle" dominantBaseline="central"
-                      fill={zone.color} fontSize="10" opacity="0.9">✦</text>
-                  )
-                })}
+                {/* ✦ marker at Perfect zone */}
+                {(() => {
+                  const pz = ZONES.find(z => z.type === 'perfect')!
+                  const mid = polar(OUTER_R + 14, (pz.from + pz.to) / 2)
+                  return <text x={mid.x.toFixed(2)} y={mid.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill={pz.color} fontSize="10" opacity="0.95">✦</text>
+                })()}
 
-                {/* Inner dark circle (center area) */}
+                {/* ✕ marker at Penalty zone */}
+                {(() => {
+                  const pz = ZONES.find(z => z.type === 'penalty')!
+                  const mid = polar(OUTER_R + 14, (pz.from + pz.to) / 2)
+                  return <text x={mid.x.toFixed(2)} y={mid.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill={pz.color} fontSize="9" opacity="0.85">✕</text>
+                })()}
+
                 <circle cx={CX} cy={CY} r={INNER_R - 2} fill="rgba(0,0,0,0.55)" />
 
-                {/* Needle glow (wide, transparent) */}
+                {/* Needle */}
                 <g transform={`rotate(${angle}, ${CX}, ${CY})`}>
-                  <line x1={CX} y1={CY} x2={CX} y2={needleTipY}
+                  <line x1={CX} y1={CY} x2={CX} y2={CY - (INNER_R - 8)}
                     stroke={needleColor} strokeWidth="10" strokeOpacity="0.12" strokeLinecap="round" />
-                  <line x1={CX} y1={CY} x2={CX} y2={needleTipY}
+                  <line x1={CX} y1={CY} x2={CX} y2={CY - (INNER_R - 8)}
                     stroke={needleColor} strokeWidth="2.5" strokeLinecap="round" />
-                  <circle cx={CX} cy={needleTipY} r="5" fill={needleColor} />
+                  <circle cx={CX} cy={CY - (INNER_R - 8)} r="5" fill={needleColor} />
                 </g>
 
-                {/* Center pivot */}
                 <circle cx={CX} cy={CY} r="8" fill="rgba(10,10,10,0.9)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
               </svg>
 
-              {/* Fish in center (HTML overlay) */}
               <div style={{
                 position: 'absolute', top: '50%', left: '50%',
                 transform: 'translate(-50%, -50%)',
-                fontSize: '1.6rem', lineHeight: 1, pointerEvents: 'none',
-                userSelect: 'none',
+                fontSize: '1.6rem', lineHeight: 1, pointerEvents: 'none', userSelect: 'none',
               }}>🐟</div>
             </div>
 
@@ -355,12 +364,13 @@ export default function FishingGame({
             <AnimatePresence>
               {phase === 'result' && result && (
                 <div style={{ position: 'relative', width: '100%' }}>
-                  {result.isPerfect && result.earned > 0 && [...Array(8)].map((_, i) => {
-                    const angle2 = (i / 8) * Math.PI * 2
+                  {/* Spark burst for perfect */}
+                  {isPerfect && result.earned > 0 && [...Array(8)].map((_, i) => {
+                    const a2 = (i / 8) * Math.PI * 2
                     return (
                       <motion.div key={i}
                         initial={{ opacity: 1, x: 0, y: 0, scale: 1.2 }}
-                        animate={{ opacity: 0, x: Math.cos(angle2) * 55, y: Math.sin(angle2) * 55, scale: 0 }}
+                        animate={{ opacity: 0, x: Math.cos(a2) * 55, y: Math.sin(a2) * 55, scale: 0 }}
                         transition={{ duration: 0.65, ease: 'easeOut', delay: i * 0.03 }}
                         style={{
                           position: 'absolute', top: '50%', left: '50%',
@@ -371,38 +381,25 @@ export default function FishingGame({
                     )
                   })}
                   <motion.div
-                    initial={{ opacity: 0, scale: result.isPerfect ? 0.75 : 0.95, y: 8 }}
+                    initial={{ opacity: 0, scale: isCatch ? (isPerfect ? 0.75 : 0.92) : 0.96, y: 8 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    transition={result.isPerfect ? { type: 'spring', stiffness: 280, damping: 14 } : { duration: 0.2 }}
+                    transition={isPerfect ? { type: 'spring', stiffness: 280, damping: 14 } : { duration: 0.2 }}
                     className="w-full rounded-2xl text-center"
                     style={{
-                      background: `linear-gradient(135deg, ${catchColor(result.quality, result.isPerfect)}12, ${catchColor(result.quality, result.isPerfect)}06)`,
-                      border: `1px solid ${catchColor(result.quality, result.isPerfect)}${result.isPerfect ? '50' : '25'}`,
+                      background: `linear-gradient(135deg, ${resultColor()}12, ${resultColor()}06)`,
+                      border: `1px solid ${resultColor()}${isCatch ? '45' : '20'}`,
                       padding: '1.25rem 1rem',
-                      boxShadow: result.isPerfect ? `0 0 28px ${catchColor(result.quality, result.isPerfect)}20` : 'none',
+                      boxShadow: isPerfect ? `0 0 28px ${resultColor()}20` : 'none',
                     }}
                   >
-                    {result.isPerfect && (
-                      <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, delay: 0.08 }}
-                        className="font-karla font-700 uppercase tracking-[0.16em] mb-1"
-                        style={{ fontSize: '0.72rem', color: catchColor(result.quality, result.isPerfect) }}>
-                        ✦ Perfect catch
-                      </motion.p>
-                    )}
-                    <motion.p
-                      initial={{ scale: result.isPerfect ? 0.5 : 1, opacity: result.isPerfect ? 0 : 1 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ type: 'spring', stiffness: 380, damping: 14, delay: result.isPerfect ? 0.12 : 0 }}
-                      className="font-cinzel font-700"
-                      style={{ fontSize: '2.4rem', color: result.isPerfect ? catchColor(result.quality, result.isPerfect) : '#f0c040', lineHeight: 1 }}
-                    >
-                      {result.earned > 0 ? `+${result.earned}` : '…'}
-                    </motion.p>
-                    {result.earned > 0 && (
-                      <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#7a7974', marginTop: '0.35rem' }}>
-                        doubloons earned
-                      </p>
-                    )}
+                    <p className="font-cinzel font-700 tracking-[0.12em]"
+                      style={{ fontSize: isCatch ? '1.5rem' : '1.1rem', color: resultColor(), lineHeight: 1.2, marginBottom: '0.4rem' }}>
+                      {resultTitle()}
+                    </p>
+                    <p className="font-karla font-600"
+                      style={{ fontSize: isCatch ? '1rem' : '0.82rem', color: isCatch ? resultColor() : '#4a4845' }}>
+                      {resultSubtitle()}
+                    </p>
                   </motion.div>
                 </div>
               )}
@@ -455,7 +452,7 @@ export default function FishingGame({
         <p className="font-karla font-600 text-center" style={{ fontSize: '0.7rem', color: '#4a4845' }}>
           <Link href="/marketplace/tackle-shop" style={{ color: '#5a5956', textDecoration: 'underline' }}>
             Upgrade your hook
-          </Link>{' '}to earn more per cast
+          </Link>{' '}to earn more per catch
         </p>
       )}
     </div>
