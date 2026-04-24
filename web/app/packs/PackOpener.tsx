@@ -370,17 +370,16 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
         {/* Marketplace promo */}
         <a
           href="/marketplace"
-          className="flex items-center gap-4 px-4 py-3 rounded-xl transition-opacity hover:opacity-80"
+          className="w-full max-w-sm flex items-center gap-4 px-4 py-3 rounded-xl transition-opacity hover:opacity-80"
           style={{
             background: 'rgba(255,255,255,0.06)',
             border: '1px solid rgba(255,255,255,0.13)',
             textDecoration: 'none',
-            width: 'min(80vw, 480px)',
           }}
         >
           <div className="flex-1 min-w-0">
-            <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#f0ede8]" style={{ fontSize: '0.7rem' }}>Visit the Market</p>
-            <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.65rem', marginTop: 2 }}>Upgrade your hook &amp; ship for better pulls</p>
+            <p className="font-karla font-700 uppercase tracking-[0.12em] text-[#f0ede8]" style={{ fontSize: '0.78rem' }}>Visit the Market</p>
+            <p className="font-karla text-[#a0a09a]" style={{ fontSize: '0.75rem', marginTop: 2 }}>Upgrade your hook &amp; ship for better pulls</p>
           </div>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}>
             <path d="M9 18l6-6-6-6"/>

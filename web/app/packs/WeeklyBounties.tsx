@@ -71,7 +71,7 @@ function BountyRow({ fish, label, color, reward, completed }: {
             <path d="M20 6L9 17l-5-5"/>
           </svg>
         ) : (
-          <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#6a6764' }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#a0a09a' }}>
             {reward}
           </p>
         )}

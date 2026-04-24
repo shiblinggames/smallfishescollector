@@ -91,6 +91,23 @@ export default async function TavernPage() {
             completed={quizDone}
             completedNote="You've answered today. Come back tomorrow for a new question."
           />
+          {bounties && (
+            <GameCard
+              href="/packs"
+              eyebrow="Weekly Bounties"
+              name={bountyAllDone ? 'All Complete' : bountyCount > 0 ? `${bountyCount} / 4 Complete` : 'Hunt This Week\'s Fish'}
+              description="Pull specific fish from your packs to claim weekly doubloon rewards."
+              rules={[
+                `Shallows — ${bounties.shallows.name} · 50 ⟡`,
+                `Open Waters — ${bounties.openWaters.name} · 150 ⟡`,
+                `Deep — ${bounties.deep.name} · 300 ⟡`,
+                `Abyss — ${bounties.abyss.name} · 500 ⟡ + 1 pack`,
+              ]}
+              icon={<BountyIcon />}
+              completed={bountyAllDone}
+              completedNote="All bounties complete! Come back next Monday for new targets."
+            />
+          )}
           <GameCard
             href="/tavern/crown-and-anchor"
             eyebrow="Dice Game"
@@ -118,23 +135,6 @@ export default async function TavernPage() {
             ]}
             icon={<SkullIcon />}
           />
-          {bounties && (
-            <GameCard
-              href="/packs"
-              eyebrow="Weekly Bounties"
-              name={bountyAllDone ? 'All Complete' : bountyCount > 0 ? `${bountyCount} / 4 Complete` : 'Hunt This Week\'s Fish'}
-              description="Pull specific fish from your packs to claim weekly doubloon rewards."
-              rules={[
-                `Shallows — ${bounties.shallows.name} · 50 ⟡`,
-                `Open Waters — ${bounties.openWaters.name} · 150 ⟡`,
-                `Deep — ${bounties.deep.name} · 300 ⟡`,
-                `Abyss — ${bounties.abyss.name} · 500 ⟡ + 1 pack`,
-              ]}
-              icon={<BountyIcon />}
-              completed={bountyAllDone}
-              completedNote="All bounties complete! Come back next Monday for new targets."
-            />
-          )}
         </div>
 
         <div className="px-6 pb-16 text-center">
