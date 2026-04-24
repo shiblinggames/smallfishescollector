@@ -167,10 +167,19 @@ Make the crisis event feel earned after everything that came before it.`
   const raw = (response.content[0] as { type: string; text: string }).text.trim()
   const match = raw.match(/\[[\s\S]*\]/)
   if (!match) throw new Error(`No JSON array in Claude response: ${raw.slice(0, 200)}`)
-  const parsed = JSON.parse(match[0]) as Array<{
+  const rawParsed = JSON.parse(match[0]) as Array<{
     eventType: string; name: string; flavor: string;
     choices: Array<{ label: string; successText: string; failText: string; isNoRoll?: boolean; cost?: number }>
   }>
+
+  // Drop any events that came back malformed (missing name, eventType, or choices)
+  const parsed = rawParsed.filter(e =>
+    e && typeof e.name === 'string' && e.name.trim() &&
+    typeof e.eventType === 'string' &&
+    Array.isArray(e.choices) && e.choices.length > 0
+  )
+
+  if (parsed.length === 0) throw new Error('All generated events were malformed — no valid events in response')
 
   return parsed.map((event, i) => {
     const mechanics = EVENT_MECHANICS[event.eventType] ?? { stat: 'luck', difficultyTier: 'standard' as const }

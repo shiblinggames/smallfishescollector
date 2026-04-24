@@ -397,7 +397,7 @@ function EventCard({
 
       {/* Choices */}
       <div className="flex flex-col gap-2.5">
-        {event.choices.map((choice, i) => {
+        {(event.choices ?? []).map((choice, i) => {
           const isChosen = showResult && result?.choiceIndex === i
           const isThisRolling = rolling && rollingChoiceIndex === i
 
