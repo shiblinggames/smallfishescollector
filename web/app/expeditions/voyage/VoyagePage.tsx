@@ -73,6 +73,7 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
   const [pendingLootRoll, setPendingLootRoll] = useState<number>(1)
   const [lootResult, setLootResult] = useState<LootResult | null>(null)
   const [showStats, setShowStats] = useState(false)
+  const [hullDamage, setHullDamage] = useState(expedition.hull_damage ?? 0)
 
   const eventSequence = dailyContent.event_sequence
   const isFinalLootNode = currentNode >= eventSequence.length
@@ -86,7 +87,6 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
   const shipStats = EXPEDITION_SHIP_STATS[expedition.ship_tier]
   const crewHullBonus = (expedition.crew_loadout.durability ?? []).reduce((s, c) => s + c.power, 0)
   const hullMax = (shipStats?.durability ?? 3) + crewHullBonus
-  const storedHullDamage = expedition.hull_damage ?? 0
 
   function handleChoiceClick(choiceIndex: number) {
     if (isPending || phase.type !== 'event') return
@@ -103,6 +103,7 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
       if (result.roll !== undefined) setPendingRoll(result.roll)
       if (result.crewRoll !== undefined) setPendingCrewRoll(result.crewRoll ?? 0)
       await new Promise(r => setTimeout(r, 1600))
+      if (result.hullDamage) setHullDamage(prev => prev + result.hullDamage!)
       setPhase({ type: 'result', result })
 
       if (result.expeditionFailed) {
@@ -171,14 +172,14 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
                 <div style={{ width: 44, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
                   <div style={{
                     height: '100%',
-                    width: `${Math.max(0, ((hullMax - storedHullDamage) / hullMax) * 100)}%`,
-                    background: storedHullDamage / hullMax > 0.6 ? '#f87171' : storedHullDamage / hullMax > 0.3 ? '#f0c040' : '#60a5fa',
+                    width: `${Math.max(0, ((hullMax - hullDamage) / hullMax) * 100)}%`,
+                    background: hullDamage / hullMax > 0.6 ? '#f87171' : hullDamage / hullMax > 0.3 ? '#f0c040' : '#60a5fa',
                     borderRadius: 2,
                     transition: 'width 0.4s ease, background 0.4s ease',
                   }} />
                 </div>
                 <p className="font-karla" style={{ fontSize: '0.58rem', color: '#6a6764' }}>
-                  {Math.max(0, hullMax - storedHullDamage)}/{hullMax}
+                  {Math.max(0, hullMax - hullDamage)}/{hullMax}
                 </p>
               </div>
               <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
