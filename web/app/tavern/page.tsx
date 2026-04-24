@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { getDailyWagered } from './actions'
 import { DAILY_CAP } from './constants'
 import { getShip } from '@/lib/ships'
+import { getWeeklyBounties } from '@/app/packs/bountyActions'
 
 export default async function TavernPage() {
   const supabase = await createClient()
@@ -15,11 +16,12 @@ export default async function TavernPage() {
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const [{ data: profile }, { data: fotdAttempt }, dailyWagered, { data: quizAnswer }] = await Promise.all([
+  const [{ data: profile }, { data: fotdAttempt }, dailyWagered, { data: quizAnswer }, bounties] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_ship_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
     admin.from('quiz_answers').select('correct').eq('user_id', user.id).eq('date', today).single(),
+    getWeeklyBounties(),
   ])
 
   const isPremium =
@@ -37,6 +39,9 @@ export default async function TavernPage() {
   const fotdDone = !!fotdAttempt && (fotdAttempt.solved || (fotdAttempt.guesses?.length ?? 0) >= 4)
   const crownCapReached = dailyWagered >= DAILY_CAP
   const quizDone = !!quizAnswer
+  const bountyProgress = bounties?.progress
+  const bountyCount = bountyProgress ? Object.values(bountyProgress).filter(Boolean).length : 0
+  const bountyAllDone = bountyCount === 4
 
   return (
     <>
@@ -113,6 +118,23 @@ export default async function TavernPage() {
             ]}
             icon={<SkullIcon />}
           />
+          {bounties && (
+            <GameCard
+              href="/packs"
+              eyebrow="Weekly Bounties"
+              name={bountyAllDone ? 'All Complete' : bountyCount > 0 ? `${bountyCount} / 4 Complete` : 'Hunt This Week\'s Fish'}
+              description="Pull specific fish from your packs to claim weekly doubloon rewards."
+              rules={[
+                `Shallows — ${bounties.shallows.name} · 50 ⟡`,
+                `Open Waters — ${bounties.openWaters.name} · 150 ⟡`,
+                `Deep — ${bounties.deep.name} · 300 ⟡`,
+                `Abyss — ${bounties.abyss.name} · 500 ⟡ + 1 pack`,
+              ]}
+              icon={<BountyIcon />}
+              completed={bountyAllDone}
+              completedNote="All bounties complete! Come back next Monday for new targets."
+            />
+          )}
         </div>
 
         <div className="px-6 pb-16 text-center">
@@ -250,6 +272,16 @@ function QuizIcon() {
       <circle cx="12" cy="12" r="9"/>
       <path d="M9.5 9a2.5 2.5 0 0 1 5 .5c0 2-2.5 2.5-2.5 4.5"/>
       <circle cx="12" cy="17.5" r="0.8" fill="currentColor" stroke="none"/>
+    </svg>
+  )
+}
+
+function BountyIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4"/>
+      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+      <path d="M9 8l1.5 1.5L13 7"/>
     </svg>
   )
 }
