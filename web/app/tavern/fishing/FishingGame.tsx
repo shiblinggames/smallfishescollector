@@ -207,12 +207,17 @@ export default function FishingGame({
                 How to play
               </p>
               <p className="font-karla leading-relaxed mb-3" style={{ fontSize: '0.72rem', color: '#a0a09a' }}>
-                The fish drifts back and forth. Tap{' '}
-                <span style={{ color: '#f0ede8' }}>Reel In</span>{' '}
-                when it lands in a zone you want. The narrow strips between zones are{' '}
-                <span style={{ color: '#fde68a' }}>Perfect</span>{' '}
-                catches — highest risk, highest reward.
+                The fish drifts back and forth — tap <span style={{ color: '#f0ede8' }}>Reel In</span> when it lands where you want.
               </p>
+
+              {/* Perfect callout */}
+              <div className="rounded-lg px-3 py-2.5 mb-3 flex items-start gap-2.5"
+                style={{ background: 'rgba(253,230,138,0.06)', border: '1px solid rgba(253,230,138,0.2)' }}>
+                <span style={{ fontSize: '0.7rem', color: '#fde68a', lineHeight: 1, marginTop: 1 }}>✦</span>
+                <p className="font-karla leading-relaxed" style={{ fontSize: '0.7rem', color: '#c9b87a' }}>
+                  <span style={{ color: '#fde68a', fontWeight: 600 }}>Target the ✦ Perfect strips</span> — the thin lines between zones. They pay the most. The rest of the bar earns much less.
+                </p>
+              </div>
 
               {/* Zone legend */}
               <div className="grid grid-cols-2 gap-1.5">
@@ -298,6 +303,28 @@ export default function FishingGame({
                   {phase === 'active' ? currentZone.label : (result ? catchLabel(result.quality, result.isPerfect) : '')}
                 </motion.p>
               </AnimatePresence>
+            </div>
+
+            {/* ✦ Perfect zone markers above bar */}
+            <div style={{ position: 'relative', height: 18 }}>
+              {ZONES.filter(z => z.isPerfect).map((zone, i) => (
+                <motion.span
+                  key={i}
+                  animate={{ opacity: [0.45, 1, 0.45] }}
+                  transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.45, ease: 'easeInOut' }}
+                  style={{
+                    position: 'absolute',
+                    left: `${(zone.from + zone.to) / 2}%`,
+                    transform: 'translateX(-50%)',
+                    fontSize: '0.6rem',
+                    color: zone.color,
+                    lineHeight: 1,
+                    userSelect: 'none',
+                  }}
+                >
+                  ✦
+                </motion.span>
+              ))}
             </div>
 
             {/* The bar */}
@@ -388,26 +415,72 @@ export default function FishingGame({
             {/* Result card */}
             <AnimatePresence>
               {phase === 'result' && result && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 8 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                  className="w-full rounded-2xl text-center"
-                  style={{
-                    background: `linear-gradient(135deg, ${catchColor(result.quality, result.isPerfect)}0a, ${catchColor(result.quality, result.isPerfect)}05)`,
-                    border: `1px solid ${catchColor(result.quality, result.isPerfect)}25`,
-                    padding: '1.25rem 1rem',
-                  }}
-                >
-                  <p className="font-cinzel font-700" style={{ fontSize: '2.2rem', color: '#f0c040', lineHeight: 1, letterSpacing: '0.02em' }}>
-                    {result.earned > 0 ? `+${result.earned}` : '…'}
-                  </p>
-                  {result.earned > 0 && (
-                    <p className="font-karla" style={{ fontSize: '0.68rem', color: '#6a6764', marginTop: '0.3rem' }}>
-                      doubloons earned
-                    </p>
-                  )}
-                </motion.div>
+                <div style={{ position: 'relative' }}>
+                  {/* Sparkle burst on perfect */}
+                  {result.isPerfect && result.earned > 0 && [...Array(8)].map((_, i) => {
+                    const angle = (i / 8) * Math.PI * 2
+                    const dist = 55
+                    return (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 1, x: 0, y: 0, scale: 1.2 }}
+                        animate={{ opacity: 0, x: Math.cos(angle) * dist, y: Math.sin(angle) * dist, scale: 0 }}
+                        transition={{ duration: 0.65, ease: 'easeOut', delay: i * 0.03 }}
+                        style={{
+                          position: 'absolute',
+                          top: '50%', left: '50%',
+                          width: 6, height: 6,
+                          borderRadius: '50%',
+                          background: result.quality === 20 ? '#fde68a' : '#86efac',
+                          pointerEvents: 'none',
+                          zIndex: 10,
+                        }}
+                      />
+                    )
+                  })}
+
+                  <motion.div
+                    initial={{ opacity: 0, scale: result.isPerfect ? 0.75 : 0.95, y: 8 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={result.isPerfect
+                      ? { type: 'spring', stiffness: 280, damping: 14 }
+                      : { duration: 0.2, ease: [0.32, 0.72, 0, 1] }
+                    }
+                    className="w-full rounded-2xl text-center"
+                    style={{
+                      background: `linear-gradient(135deg, ${catchColor(result.quality, result.isPerfect)}12, ${catchColor(result.quality, result.isPerfect)}06)`,
+                      border: `1px solid ${catchColor(result.quality, result.isPerfect)}${result.isPerfect ? '50' : '25'}`,
+                      padding: '1.25rem 1rem',
+                      boxShadow: result.isPerfect ? `0 0 28px ${catchColor(result.quality, result.isPerfect)}20` : 'none',
+                    }}
+                  >
+                    {result.isPerfect && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2, delay: 0.08 }}
+                        className="font-karla font-600 uppercase tracking-[0.16em] mb-1"
+                        style={{ fontSize: '0.58rem', color: catchColor(result.quality, result.isPerfect) }}
+                      >
+                        ✦ Perfect catch
+                      </motion.p>
+                    )}
+                    <motion.p
+                      initial={{ scale: result.isPerfect ? 0.5 : 1, opacity: result.isPerfect ? 0 : 1 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 14, delay: result.isPerfect ? 0.12 : 0 }}
+                      className="font-cinzel font-700"
+                      style={{ fontSize: '2.2rem', color: result.isPerfect ? catchColor(result.quality, result.isPerfect) : '#f0c040', lineHeight: 1, letterSpacing: '0.02em' }}
+                    >
+                      {result.earned > 0 ? `+${result.earned}` : '…'}
+                    </motion.p>
+                    {result.earned > 0 && (
+                      <p className="font-karla" style={{ fontSize: '0.68rem', color: '#6a6764', marginTop: '0.3rem' }}>
+                        doubloons earned
+                      </p>
+                    )}
+                  </motion.div>
+                </div>
               )}
             </AnimatePresence>
 
