@@ -744,3 +744,8 @@ body {
 .shockwave-divine-2 { border-color: rgba(255,248,200,0.75);  animation: shockwave-divine 1.6s 0.22s ease-out both; }
 .shockwave-divine-3 { border-color: rgba(255,235,140,0.58);  animation: shockwave-divine 1.6s 0.44s ease-out both; }
 .shockwave-divine-4 { border-color: rgba(255,220,100,0.4);   animation: shockwave-divine 1.6s 0.66s ease-out both; }
+
+@keyframes pack-pulse {
+  0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+  50%       { opacity: 0.65; transform: translateX(-50%) scale(0.97); }
+}

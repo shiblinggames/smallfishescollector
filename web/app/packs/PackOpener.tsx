@@ -323,6 +323,20 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/booster.png" alt="Booster Pack" style={{ width: '100%', height: 'auto', display: 'block', opacity: loading ? 0.5 : 1, transition: 'opacity 0.2s ease' }} />
+              {packs > 0 && !loading && (
+                <div style={{
+                  position: 'absolute', bottom: '12%', left: '50%', transform: 'translateX(-50%)',
+                  background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  borderRadius: '2rem', padding: '0.4rem 1rem',
+                  pointerEvents: 'none',
+                  animation: 'pack-pulse 2s ease-in-out infinite',
+                }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem', color: '#f0ede8', whiteSpace: 'nowrap' }}>
+                    Tap to open
+                  </p>
+                </div>
+              )}
             </button>
           </div>
 
