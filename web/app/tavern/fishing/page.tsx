@@ -26,14 +26,14 @@ export default async function FishingPage() {
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0 pt-6">
-        <div className="px-6 max-w-sm mx-auto">
+        <div className="px-6 max-w-md mx-auto">
 
           <div className="mb-6">
             <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.4rem', marginBottom: '0.3rem' }}>
               Drop a Line
             </h1>
             <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.78rem' }}>
-              {MAX_CASTS} casts per day. Better hooks earn more per cast.
+              {MAX_CASTS} casts per day. Better hooks widen your catch zone.
             </p>
           </div>
 

@@ -67,7 +67,7 @@ function DialSVG({
   const penaltyZones = zones.filter(z => z.type === 'penalty')
 
   return (
-    <div style={{ position: 'relative', width: '100%', maxWidth: 240, margin: '0 auto' }}>
+    <div style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto' }}>
       <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block' }}>
         <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.45)" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
         {/* Zone ring rotated by random offset each cast */}
@@ -316,7 +316,7 @@ export default function FishingGame({
   }
 
   return (
-    <div className="flex flex-col gap-4 max-w-sm mx-auto px-4 py-2">
+    <div className="flex flex-col gap-4 max-w-md mx-auto px-4 py-2">
 
       {/* Hook + casts header */}
       <div className="w-full flex items-center justify-between rounded-xl px-4 py-3"
@@ -422,7 +422,7 @@ export default function FishingGame({
             </div>
 
             {/* Dial with result overlaid inside the inner circle */}
-            <div style={{ position: 'relative', width: '100%', maxWidth: 240 }}>
+            <div style={{ position: 'relative', width: '100%', maxWidth: 300 }}>
               <DialSVG zones={activeZones} angle={angle} rotation={zoneRotation} needleColor={activeNeedleColor()} zoneOpacityFn={zoneOpacity} />
 
               {/* Result overlay — sits over the inner circle, no layout impact */}
