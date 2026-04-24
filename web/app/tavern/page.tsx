@@ -7,6 +7,7 @@ import { getDailyWagered } from './actions'
 import { DAILY_CAP } from './constants'
 import { getShip } from '@/lib/ships'
 import { getWeeklyBounties } from '@/app/packs/bountyActions'
+import GameCard from './GameCard'
 
 export default async function TavernPage() {
   const supabase = await createClient()
@@ -47,57 +48,54 @@ export default async function TavernPage() {
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0 pt-6">
-        <div className="px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-12 max-w-4xl mx-auto">
+        <div className="px-6 grid grid-cols-2 lg:grid-cols-3 gap-3 pb-12 max-w-4xl mx-auto">
           <GameCard
             href="/tavern/daily-bonus"
-            eyebrow="Daily Bonus"
-            name={allClaimed ? 'Claimed' : `${baseAmount + ship.dailyBonus} ⟡ Available`}
-            description="Claim your daily doubloons, ship earnings, and member pack."
-            rules={[
+            eyebrow="Daily"
+            title="Bonus"
+            statusText={allClaimed ? 'Come back tomorrow' : `${baseAmount + ship.dailyBonus} ⟡ available`}
+            info={[
               `${baseAmount} ⟡ base daily bonus`,
               ...(ship.dailyBonus > 0 ? [`+${ship.dailyBonus} ⟡ from your ${ship.name}`] : []),
-              ...(isPremium ? ['1 free pack daily'] : ['Upgrade for a free daily pack']),
+              isPremium ? '1 free pack daily (Member)' : 'Upgrade to Member for a free daily pack',
             ]}
             icon={<CoinIcon />}
             completed={allClaimed}
-            completedNote="All daily rewards claimed. Come back tomorrow."
           />
           <GameCard
             href="/tavern/fish-of-the-day"
-            eyebrow="Daily Puzzle"
-            name="Fish of the Day"
-            description="Identify the mystery fish of the day using progressive clues."
-            rules={[
+            eyebrow="Daily"
+            title="Fish of the Day"
+            statusText={fotdDone ? 'Come back tomorrow' : 'Guess the mystery fish'}
+            info={[
               'Four clues, four guesses — one fish',
               'Each wrong guess reveals the next clue',
               '100 ⟡ for 1st guess · 75 · 50 · 25 ⟡',
               'New fish every day',
             ]}
             icon={<FishIcon />}
-            streak={profile?.fotd_streak ?? 0}
             completed={fotdDone}
-            completedNote="You've played today. Come back tomorrow for a new fish."
+            streak={profile?.fotd_streak ?? 0}
           />
           <GameCard
             href="/tavern/daily-quiz"
-            eyebrow="Daily Quiz"
-            name="Fish Trivia"
-            description="Answer one fish and ocean question per day."
-            rules={[
+            eyebrow="Daily"
+            title="Fish Trivia"
+            statusText={quizDone ? 'Come back tomorrow' : '50 ⟡ for a correct answer'}
+            info={[
               'One question generated fresh every day',
               '50 ⟡ for a correct answer',
             ]}
             icon={<QuizIcon />}
             completed={quizDone}
-            completedNote="You've answered today. Come back tomorrow for a new question."
           />
           {bounties && (
             <GameCard
               href="/packs"
-              eyebrow="Weekly Bounties"
-              name={bountyAllDone ? 'All Complete' : bountyCount > 0 ? `${bountyCount} / 4 Complete` : 'Hunt This Week\'s Fish'}
-              description="Pull specific fish from your packs to claim weekly doubloon rewards."
-              rules={[
+              eyebrow="Weekly"
+              title="Bounty"
+              statusText={bountyAllDone ? 'All complete' : bountyCount > 0 ? `${bountyCount} / 4 complete` : 'New targets this week'}
+              info={[
                 `Shallows — ${bounties.shallows.name} · 50 ⟡`,
                 `Open Waters — ${bounties.openWaters.name} · 150 ⟡`,
                 `Deep — ${bounties.deep.name} · 300 ⟡`,
@@ -105,29 +103,27 @@ export default async function TavernPage() {
               ]}
               icon={<BountyIcon />}
               completed={bountyAllDone}
-              completedNote="All bounties complete! Come back next Monday for new targets."
             />
           )}
           <GameCard
             href="/tavern/crown-and-anchor"
-            eyebrow="Dice Game"
-            name="Crown & Anchor"
-            description="Roll three dice and match your symbol to win doubloons."
-            rules={[
+            eyebrow="Game"
+            title="Crown & Anchor"
+            statusText={crownCapReached ? 'Daily limit reached' : 'Roll dice, match your symbol'}
+            info={[
               'Pick a symbol and place your wager',
               '1 match → 1× · 2 matches → 2× · 3 → 3×',
               '500 ⟡ daily wagering limit',
             ]}
             icon={<AnchorIcon />}
             completed={crownCapReached}
-            completedNote="You've hit the 500 ⟡ daily limit. Come back tomorrow."
           />
           <GameCard
             href="/tavern/dead-mans-draw"
-            eyebrow="Card Game"
-            name="Dead Man's Draw"
-            description="Push your luck. Draw cards and bank before you bust."
-            rules={[
+            eyebrow="Game"
+            title="Dead Man's Draw"
+            statusText="First game free daily"
+            info={[
               'Draw cards one at a time — duplicate species = bust',
               'Power fish trigger special effects',
               'First to 30 points wins',
@@ -150,85 +146,9 @@ export default async function TavernPage() {
   )
 }
 
-function GameCard({ href, eyebrow, name, description, rules, icon, streak, completed, completedNote }: {
-  href: string
-  eyebrow: string
-  name: string
-  description: string
-  rules: string[]
-  icon: React.ReactNode
-  streak?: number
-  completed?: boolean
-  completedNote?: string
-}) {
-  return (
-    <Link href={href} style={{
-      display: 'block',
-      background: 'rgba(255,255,255,0.08)',
-      border: `1px solid ${completed ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.15)'}`,
-      borderRadius: '16px',
-      padding: '1.25rem',
-      textDecoration: 'none',
-      opacity: completed ? 0.7 : 1,
-    }}>
-      <div className="flex items-start gap-4">
-        <div style={{
-          width: 48, height: 48,
-          background: completed ? 'rgba(255,255,255,0.06)' : 'rgba(240,192,64,0.08)',
-          border: `1px solid ${completed ? 'rgba(255,255,255,0.13)' : 'rgba(240,192,64,0.18)'}`,
-          borderRadius: '12px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-          color: completed ? '#4a4845' : '#f0c040',
-        }}>
-          {icon}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <p className="sg-eyebrow" style={{ color: '#9a9488' }}>{eyebrow}</p>
-            {completed && (
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 6L9 17l-5-5"/>
-              </svg>
-            )}
-          </div>
-          <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>{name}</p>
-          <p className="font-karla text-[#a0a09a] mt-1" style={{ fontSize: '0.8rem', lineHeight: 1.5 }}>{description}</p>
-          {!completed && streak != null && streak > 0 && (
-            <p className="font-karla font-600 mt-1.5" style={{ fontSize: '0.72rem', color: '#f0c040' }}>
-              {streak} day streak
-            </p>
-          )}
-        </div>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 6 }}>
-          <path d="M9 18l6-6-6-6"/>
-        </svg>
-      </div>
-      {!completed && (
-        <>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.11)', margin: '1rem 0 0.75rem' }} />
-          <ul className="flex flex-col gap-1.5">
-            {rules.map((rule, i) => (
-              <li key={i} className="flex items-start gap-2">
-                <span style={{ color: '#4a4845', fontSize: '0.65rem', lineHeight: '1.6rem' }}>—</span>
-                <span className="font-karla text-[#6a6764]" style={{ fontSize: '0.78rem', lineHeight: 1.55 }}>{rule}</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      {completed && completedNote && (
-        <p className="font-karla mt-3" style={{ fontSize: '0.78rem', color: '#a0a09a', lineHeight: 1.5 }}>
-          {completedNote}
-        </p>
-      )}
-    </Link>
-  )
-}
-
 function CoinIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
       <circle cx="12" cy="12" r="9"/>
       <path d="M12 7v1.5M12 15.5V17M9.5 9.5C9.5 8.4 10.6 8 12 8s2.5.6 2.5 1.8c0 2.4-5 2-5 4.4C9.5 15.4 10.6 16 12 16s2.5-.5 2.5-1.7"/>
     </svg>
@@ -237,7 +157,7 @@ function CoinIcon() {
 
 function FishIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 12c2-4 6-6 10-6s8 2 10 6c-2 4-6 6-10 6S4 16 2 12z"/>
       <circle cx="16" cy="10" r="1.2" fill="currentColor" stroke="none"/>
       <path d="M2 12c-2-2-2-4 0-4"/>
@@ -247,7 +167,7 @@ function FishIcon() {
 
 function AnchorIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
       <circle cx="12" cy="5" r="2"/>
       <path d="M12 7v10M8 17c0 0 1 2 4 2s4-2 4-2M7 11h10"/>
       <path d="M7 17c-2-1-3-3-3-5h3M17 17c2-1 3-3 3-5h-3"/>
@@ -257,7 +177,7 @@ function AnchorIcon() {
 
 function SkullIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 22h6M12 22v-4"/>
       <path d="M5 12a7 7 0 0 1 14 0c0 3-1.5 5-3.5 6H8.5C6.5 17 5 15 5 12z"/>
       <circle cx="9.5" cy="11.5" r="1" fill="currentColor" stroke="none"/>
@@ -268,7 +188,7 @@ function SkullIcon() {
 
 function QuizIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="9"/>
       <path d="M9.5 9a2.5 2.5 0 0 1 5 .5c0 2-2.5 2.5-2.5 4.5"/>
       <circle cx="12" cy="17.5" r="0.8" fill="currentColor" stroke="none"/>
@@ -278,7 +198,7 @@ function QuizIcon() {
 
 function BountyIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="8" r="4"/>
       <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
       <path d="M9 8l1.5 1.5L13 7"/>
