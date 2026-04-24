@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import {
   ZONES, EXPEDITION_SHIP_STATS, HULL_POINTS, BASE_DOUBLOONS,
   rollStat, getCrewPower,
-  type ZoneKey, type CrewLoadout, type EventResult, type LootResult,
+  type ZoneKey, type CrewLoadout, type EventNode, type EventResult, type LootResult,
   type Expedition, type DailyExpeditionRow,
 } from '@/lib/expeditions'
 import { ensureDailyExpeditionContent } from './generate'
