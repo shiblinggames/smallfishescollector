@@ -111,7 +111,7 @@ export default function PreparePage({ zone, zoneConfig, shipStats, shipTier, dou
 
   return (
     <main className="min-h-screen pb-24 sm:pb-0 pt-6">
-      <div className="px-6 max-w-lg mx-auto">
+      <div className="px-6 max-w-2xl mx-auto">
 
         {/* Header */}
         <div className="mb-5">

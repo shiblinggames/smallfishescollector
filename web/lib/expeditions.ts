@@ -58,6 +58,7 @@ export interface EventResult {
   noRoll?: boolean
   stat?: Stat | null
   roll?: number
+  crewRoll?: number
   base?: number
   crewBonus?: number
   total?: number
@@ -72,10 +73,10 @@ export interface LootResult {
   doubloons: number
   lootRarity: string
   roll: number
+  crewRoll: number
   total: number
   base: number
   crewBonus: number
-  effectiveStat: number
   finalScore: number
   successBonus: number
   cardVariantId?: number
@@ -230,7 +231,7 @@ export const EVENT_MECHANICS: Record<string, EventMechanics> = {
 export interface RollResult {
   base: number
   crewBonus: number
-  effectiveStat: number
+  crewRoll: number
   roll: number
   total: number
 }
@@ -239,9 +240,9 @@ export function rollStat(stat: Stat, crewAssigned: CrewCard[], shipTier: number)
   const stats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
   const base = stats[stat]
   const crewBonus = crewAssigned.reduce((sum, card) => sum + card.power, 0)
-  const effectiveStat = base + crewBonus
+  const crewRoll = crewBonus > 0 ? Math.floor(Math.random() * crewBonus) + 1 : 0
   const roll = Math.floor(Math.random() * 20) + 1
-  return { base, crewBonus, effectiveStat, roll, total: effectiveStat + roll }
+  return { base, crewBonus, crewRoll, roll, total: base + crewRoll + roll }
 }
 
 export const STAT_LABELS: Record<Stat, string> = {
