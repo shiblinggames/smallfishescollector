@@ -399,26 +399,28 @@ export default function FishingGame({
 
             {/* Reel In button */}
             {phase === 'active' && (
-              <motion.button
-                onPointerDown={e => { e.preventDefault(); handleReelIn() }}
-                className="w-full font-karla font-700 uppercase tracking-[0.14em]"
-                style={{
-                  padding: '1.1rem',
-                  background: 'rgba(240,237,232,0.08)',
-                  border: '1px solid rgba(240,237,232,0.18)',
-                  borderRadius: 14,
-                  cursor: 'pointer',
-                  fontSize: '0.78rem',
-                  color: '#f0ede8',
-                  touchAction: 'manipulation',
-                  boxShadow: '0 4px 0 rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08)',
-                  position: 'relative',
-                }}
-                whileTap={{ scale: 0.98, y: 3, boxShadow: '0 1px 0 rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08)' }}
-                transition={{ type: 'spring', stiffness: 600, damping: 25 }}
-              >
-                Reel In
-              </motion.button>
+              <div className="flex flex-col items-center gap-2 py-1">
+                <motion.button
+                  onPointerDown={e => { e.preventDefault(); handleReelIn() }}
+                  className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                  style={{
+                    width: 88,
+                    height: 88,
+                    borderRadius: '50%',
+                    background: 'rgba(240,237,232,0.07)',
+                    border: '1px solid rgba(240,237,232,0.16)',
+                    cursor: 'pointer',
+                    fontSize: '0.68rem',
+                    color: '#f0ede8',
+                    touchAction: 'manipulation',
+                    boxShadow: '0 6px 0 rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)',
+                  }}
+                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)' }}
+                  transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                >
+                  Reel In
+                </motion.button>
+              </div>
             )}
 
             {/* Cast again */}
