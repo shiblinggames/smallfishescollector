@@ -430,17 +430,6 @@ export default function FishingGame({
               </AnimatePresence>
             </div>
 
-            {/* Depth selector — only in result phase, compact */}
-            <AnimatePresence>
-              {phase === 'result' && (
-                <motion.div key="ds" style={{ width: '100%' }}
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}>
-                  <DepthSelector compact />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             {/* Button — always in this exact DOM position */}
             <AnimatePresence mode="wait">
               {phase === 'active' ? (
@@ -480,6 +469,17 @@ export default function FishingGame({
                   style={{ fontSize: '0.82rem', color: '#4a4845' }}>
                   No casts remaining
                 </motion.p>
+              )}
+            </AnimatePresence>
+
+            {/* Depth selector — below button so it never shifts button position */}
+            <AnimatePresence>
+              {phase === 'result' && (
+                <motion.div key="ds" style={{ width: '100%' }}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}>
+                  <DepthSelector compact />
+                </motion.div>
               )}
             </AnimatePresence>
           </motion.div>
