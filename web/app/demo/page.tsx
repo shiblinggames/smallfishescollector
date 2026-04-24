@@ -6,7 +6,7 @@ export default async function DemoPage() {
   const supabase = await createClient()
   const { data: variants } = await supabase
     .from('card_variants')
-    .select('id, card_id, variant_name, border_style, art_effect, drop_weight, cards(id, name, slug, filename, tier)')
+    .select('id, card_id, variant_name, border_style, art_effect, drop_weight, cards(id, name, slug, filename, tier, zone)')
 
   return (
     <main className="min-h-screen bg-black px-6 py-14">

@@ -5,7 +5,7 @@ import FishCard from '@/components/FishCard'
 import { drawPack } from '@/lib/drawPack'
 import type { CardVariant, DrawnCard, BorderStyle, ArtEffect } from '@/lib/types'
 
-const MYTHIC_BORDERS: BorderStyle[] = ['kraken', 'davy-jones', 'golden-age', 'storm', 'wanted']
+const MYTHIC_BORDERS: BorderStyle[] = ['kraken', 'davy-jones', 'golden-age', 'storm', 'wanted', 'god']
 const PACK_NAMES = ['Mythic Showcase', 'Random Pack']
 
 interface Props {
