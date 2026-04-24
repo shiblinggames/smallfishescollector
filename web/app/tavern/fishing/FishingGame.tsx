@@ -102,6 +102,41 @@ function DialSVG({
   )
 }
 
+function DoneForToday() {
+  return (
+    <div className="flex flex-col items-center gap-3 py-2 text-center">
+      <p className="font-karla font-700" style={{ fontSize: '0.88rem', color: '#c0bfba' }}>
+        All casts used today
+      </p>
+      <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#4a4845' }}>
+        Come back tomorrow for 20 more
+      </p>
+      <div className="flex gap-2 mt-1">
+        <Link href="/tavern"
+          className="font-karla font-700 uppercase tracking-[0.12em]"
+          style={{
+            fontSize: '0.68rem', color: '#93c5fd',
+            padding: '0.45rem 1rem', borderRadius: '2rem',
+            border: '1px solid rgba(96,165,250,0.35)',
+            background: 'rgba(96,165,250,0.08)',
+          }}>
+          Back to Tavern
+        </Link>
+        <Link href="/marketplace/tackle-shop"
+          className="font-karla font-700 uppercase tracking-[0.12em]"
+          style={{
+            fontSize: '0.68rem', color: '#f0c040',
+            padding: '0.45rem 1rem', borderRadius: '2rem',
+            border: '1px solid rgba(240,192,64,0.35)',
+            background: 'rgba(240,192,64,0.08)',
+          }}>
+          Upgrade Hook
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 export default function FishingGame({
   initialCastsUsed,
   hookTier,
@@ -361,9 +396,7 @@ export default function FishingGame({
                 >Cast Line</motion.button>
               </div>
             ) : (
-              <p className="font-karla font-600 text-center py-3" style={{ fontSize: '0.82rem', color: '#4a4845' }}>
-                All casts used today. Come back tomorrow.
-              </p>
+              <DoneForToday />
             )}
           </motion.div>
         )}
@@ -463,12 +496,9 @@ export default function FishingGame({
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                 >Cast Again</motion.button>
               ) : (
-                <motion.p key="done"
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  className="font-karla font-600 text-center py-3"
-                  style={{ fontSize: '0.82rem', color: '#4a4845' }}>
-                  No casts remaining
-                </motion.p>
+                <motion.div key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <DoneForToday />
+                </motion.div>
               )}
             </AnimatePresence>
 
