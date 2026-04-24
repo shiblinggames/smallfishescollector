@@ -12,24 +12,26 @@ export interface DepthDef {
   id: number
   name: string
   color: string
-  catchDeg: number    // total catch arc (includes Perfect inside)
-  perfectDeg: number  // Perfect bonus arc (nested in center of catch)
+  catchDeg: number
+  perfectDeg: number
   snagDeg: number
   catchQuality: number
   perfectQuality: number
-  speedMin: number    // deg/sec
+  speedMin: number      // deg/sec
   speedMax: number
+  changeMin: number     // ticks between speed changes (lower = more chaotic)
+  changeMax: number
+  reverseChance: number // 0–1 probability of direction flip per speed change
 }
 
-// Catch zone centered at 97.5°, Snag centered at 262.5°
 const CATCH_CENTER = 97.5
 const SNAG_CENTER  = 262.5
 
 export const DEPTHS: DepthDef[] = [
-  { id: 0, name: 'Shallows',    color: '#60a5fa', catchDeg: 120, perfectDeg: 24, snagDeg:  35, catchQuality:  4, perfectQuality:  8, speedMin:  40, speedMax:  65 },
-  { id: 1, name: 'Open Waters', color: '#34d399', catchDeg:  80, perfectDeg: 18, snagDeg:  50, catchQuality:  8, perfectQuality: 14, speedMin:  65, speedMax: 105 },
-  { id: 2, name: 'Deep',        color: '#a78bfa', catchDeg:  50, perfectDeg: 12, snagDeg:  65, catchQuality: 12, perfectQuality: 18, speedMin: 100, speedMax: 150 },
-  { id: 3, name: 'Abyss',       color: '#f87171', catchDeg:  28, perfectDeg:  6, snagDeg:  80, catchQuality: 16, perfectQuality: 20, speedMin: 150, speedMax: 210 },
+  { id: 0, name: 'Shallows',    color: '#60a5fa', catchDeg: 120, perfectDeg: 24, snagDeg:  35, catchQuality:  4, perfectQuality:  8, speedMin:  45, speedMax:  85, changeMin: 25, changeMax: 45, reverseChance: 0.00 },
+  { id: 1, name: 'Open Waters', color: '#34d399', catchDeg:  80, perfectDeg: 18, snagDeg:  50, catchQuality:  8, perfectQuality: 14, speedMin:  90, speedMax: 145, changeMin: 18, changeMax: 32, reverseChance: 0.00 },
+  { id: 2, name: 'Deep',        color: '#a78bfa', catchDeg:  50, perfectDeg: 12, snagDeg:  65, catchQuality: 12, perfectQuality: 18, speedMin: 170, speedMax: 270, changeMin: 10, changeMax: 18, reverseChance: 0.10 },
+  { id: 3, name: 'Abyss',       color: '#f87171', catchDeg:  28, perfectDeg:  6, snagDeg:  80, catchQuality: 16, perfectQuality: 20, speedMin: 300, speedMax: 420, changeMin:  6, changeMax: 12, reverseChance: 0.25 },
 ]
 
 export function buildZones(d: DepthDef): ZoneDef[] {

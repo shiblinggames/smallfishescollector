@@ -118,6 +118,7 @@ export default function FishingGame({
 
   const angleRef        = useRef(270)
   const speedRef        = useRef(80)
+  const dirRef          = useRef(1)   // 1 = clockwise, -1 = counter-clockwise
   const phaseRef        = useRef<Phase>('ready')
   const animRef         = useRef<ReturnType<typeof setInterval> | null>(null)
   const tickRef         = useRef(0)
@@ -149,12 +150,13 @@ export default function FishingGame({
     }
     animRef.current = setInterval(() => {
       if (phaseRef.current !== 'active') return
-      angleRef.current = (angleRef.current + speedRef.current / 20) % 360
+      angleRef.current = ((angleRef.current + dirRef.current * speedRef.current / 20) % 360 + 360) % 360
       tickRef.current++
       if (tickRef.current >= nextChgRef.current) {
         const d = DEPTHS[castDepthRef.current]
         speedRef.current = d.speedMin + Math.random() * (d.speedMax - d.speedMin)
-        nextChgRef.current = tickRef.current + 25 + Math.floor(Math.random() * 25)
+        if (Math.random() < d.reverseChance) dirRef.current *= -1
+        nextChgRef.current = tickRef.current + d.changeMin + Math.floor(Math.random() * (d.changeMax - d.changeMin))
       }
       setAngle(angleRef.current)
     }, 50)
@@ -170,8 +172,9 @@ export default function FishingGame({
     setZoneRotation(rot)
     angleRef.current   = Math.random() * 360
     speedRef.current   = d.speedMin + Math.random() * (d.speedMax - d.speedMin)
+    dirRef.current     = 1
     tickRef.current    = 0
-    nextChgRef.current = 30 + Math.floor(Math.random() * 20)
+    nextChgRef.current = d.changeMin + Math.floor(Math.random() * (d.changeMax - d.changeMin))
     setAngle(angleRef.current)
     setResult(null)
     setPhase('active')
@@ -365,109 +368,120 @@ export default function FishingGame({
           </motion.div>
         )}
 
-        {/* ── ACTIVE ── */}
-        {phase === 'active' && (
-          <motion.div key="active"
+        {/* ── ACTIVE + RESULT (shared layout so button never moves) ── */}
+        {(phase === 'active' || phase === 'result') && (
+          <motion.div key="game"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
             className="flex flex-col gap-4 items-center"
           >
+            {/* Zone label */}
             <div style={{ minHeight: '1.6rem' }}>
               <AnimatePresence mode="wait">
-                <motion.p key={currentZone.type}
+                <motion.p key={phase === 'active' ? currentZone.type : result?.type ?? 'idle'}
                   initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.1 }}
                   className="font-cinzel font-700 uppercase tracking-[0.18em]"
                   style={{ fontSize: '0.88rem', color: activeNeedleColor() }}>
-                  {currentZone.label}
+                  {phase === 'active' ? currentZone.label : resultTitle()}
                 </motion.p>
               </AnimatePresence>
             </div>
 
-            <DialSVG zones={activeZones} angle={angle} rotation={zoneRotation} needleColor={activeNeedleColor()} zoneOpacityFn={zoneOpacity} />
+            {/* Dial with result overlaid inside the inner circle */}
+            <div style={{ position: 'relative', width: '100%', maxWidth: 240 }}>
+              <DialSVG zones={activeZones} angle={angle} rotation={zoneRotation} needleColor={activeNeedleColor()} zoneOpacityFn={zoneOpacity} />
 
-            <motion.button
-              onPointerDown={e => { e.preventDefault(); handleReelIn() }}
-              className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-              style={{
-                width: 88, height: 88, borderRadius: '50%',
-                background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
-                border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
-                fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
-                boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
-              }}
-              whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)' }}
-              transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-            >Reel In</motion.button>
-          </motion.div>
-        )}
+              {/* Result overlay — sits over the inner circle, no layout impact */}
+              <AnimatePresence>
+                {phase === 'result' && result && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: isPerfect ? 0.6 : 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={isPerfect ? { type: 'spring', stiffness: 300, damping: 16 } : { duration: 0.18 }}
+                    style={{
+                      position: 'absolute', top: '50%', left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: '52%', textAlign: 'center', pointerEvents: 'none',
+                    }}
+                  >
+                    {/* Spark burst for perfect */}
+                    {isPerfect && result.earned > 0 && [...Array(8)].map((_, i) => {
+                      const a2 = (i / 8) * Math.PI * 2
+                      return (
+                        <motion.div key={i}
+                          initial={{ opacity: 1, x: 0, y: 0, scale: 1.2 }}
+                          animate={{ opacity: 0, x: Math.cos(a2) * 52, y: Math.sin(a2) * 52, scale: 0 }}
+                          transition={{ duration: 0.6, ease: 'easeOut', delay: i * 0.03 }}
+                          style={{ position: 'absolute', top: '50%', left: '50%', width: 6, height: 6, borderRadius: '50%', background: '#fde68a', pointerEvents: 'none' }}
+                        />
+                      )
+                    })}
+                    <p className="font-cinzel font-700"
+                      style={{ fontSize: isCatch ? '1.3rem' : '0.85rem', color: resultColor(), lineHeight: 1.1 }}>
+                      {isCatch ? (result.earned > 0 ? `+${result.earned}` : '…') : result.type === 'penalty' ? '−2' : '✕'}
+                    </p>
+                    <p className="font-karla font-600"
+                      style={{ fontSize: '0.58rem', color: isCatch ? resultColor() + 'bb' : '#4a4845', marginTop: 2 }}>
+                      {isCatch ? 'doubloons' : result.type === 'penalty' ? 'casts lost' : 'no catch'}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
-        {/* ── RESULT ── */}
-        {phase === 'result' && (
-          <motion.div key="result"
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
-            className="flex flex-col gap-4 items-center"
-          >
-            <DialSVG zones={activeZones} angle={angle} rotation={zoneRotation} needleColor={activeNeedleColor()} zoneOpacityFn={zoneOpacity} />
-
-            {/* Result card */}
-            {result && (
-              <div style={{ position: 'relative', width: '100%' }}>
-                {isPerfect && result.earned > 0 && [...Array(8)].map((_, i) => {
-                  const a2 = (i / 8) * Math.PI * 2
-                  return (
-                    <motion.div key={i}
-                      initial={{ opacity: 1, x: 0, y: 0, scale: 1.2 }}
-                      animate={{ opacity: 0, x: Math.cos(a2) * 55, y: Math.sin(a2) * 55, scale: 0 }}
-                      transition={{ duration: 0.65, ease: 'easeOut', delay: i * 0.03 }}
-                      style={{ position: 'absolute', top: '50%', left: '50%', width: 6, height: 6, borderRadius: '50%', background: '#fde68a', pointerEvents: 'none', zIndex: 10 }}
-                    />
-                  )
-                })}
-                <motion.div
-                  initial={{ opacity: 0, scale: isPerfect ? 0.75 : 0.94, y: 8 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={isPerfect ? { type: 'spring', stiffness: 280, damping: 14 } : { duration: 0.2 }}
-                  className="w-full rounded-2xl text-center"
-                  style={{
-                    background: `linear-gradient(135deg, ${resultColor()}12, ${resultColor()}06)`,
-                    border: `1px solid ${resultColor()}${isCatch ? '45' : '20'}`,
-                    padding: '1.1rem 1rem',
-                    boxShadow: isPerfect ? `0 0 28px ${resultColor()}20` : 'none',
-                  }}>
-                  <p className="font-cinzel font-700 tracking-[0.12em]"
-                    style={{ fontSize: isCatch ? '1.4rem' : '1rem', color: resultColor(), lineHeight: 1.2, marginBottom: '0.3rem' }}>
-                    {resultTitle()}
-                  </p>
-                  <p className="font-karla font-600"
-                    style={{ fontSize: isCatch ? '0.95rem' : '0.78rem', color: isCatch ? resultColor() : '#4a4845' }}>
-                    {isCatch ? (result.earned > 0 ? `+${result.earned} doubloons` : '…') : result.type === 'penalty' ? '2 casts wasted' : '1 cast wasted'}
-                  </p>
+            {/* Depth selector — only in result phase, compact */}
+            <AnimatePresence>
+              {phase === 'result' && (
+                <motion.div key="ds" style={{ width: '100%' }}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}>
+                  <DepthSelector compact />
                 </motion.div>
-              </div>
-            )}
+              )}
+            </AnimatePresence>
 
-            <DepthSelector compact />
-
-            {castsLeft > 0 ? (
-              <motion.button onClick={handleCast}
-                className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-                style={{
-                  width: 88, height: 88, borderRadius: '50%',
-                  background: 'radial-gradient(ellipse at 40% 35%, rgba(96,165,250,0.28), rgba(96,165,250,0.09))',
-                  border: '1px solid rgba(96,165,250,0.4)', cursor: 'pointer',
-                  fontSize: '0.72rem', color: '#93c5fd', touchAction: 'manipulation',
-                  boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(96,165,250,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
-                }}
-                whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5), 0 0 22px rgba(96,165,250,0.22), inset 0 1px 0 rgba(255,255,255,0.1)' }}
-                transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-              >Cast Again</motion.button>
-            ) : (
-              <p className="font-karla font-600 text-center py-3" style={{ fontSize: '0.82rem', color: '#4a4845' }}>
-                No casts remaining
-              </p>
-            )}
+            {/* Button — always in this exact DOM position */}
+            <AnimatePresence mode="wait">
+              {phase === 'active' ? (
+                <motion.button key="reel"
+                  onPointerDown={e => { e.preventDefault(); handleReelIn() }}
+                  className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                  style={{
+                    width: 88, height: 88, borderRadius: '50%',
+                    background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
+                    border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
+                    fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
+                    boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
+                  }}
+                  initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)' }}
+                  transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                >Reel In</motion.button>
+              ) : castsLeft > 0 ? (
+                <motion.button key="cast"
+                  onClick={handleCast}
+                  className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                  style={{
+                    width: 88, height: 88, borderRadius: '50%',
+                    background: 'radial-gradient(ellipse at 40% 35%, rgba(96,165,250,0.28), rgba(96,165,250,0.09))',
+                    border: '1px solid rgba(96,165,250,0.4)', cursor: 'pointer',
+                    fontSize: '0.72rem', color: '#93c5fd', touchAction: 'manipulation',
+                    boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(96,165,250,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
+                  }}
+                  initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5), 0 0 22px rgba(96,165,250,0.22), inset 0 1px 0 rgba(255,255,255,0.1)' }}
+                  transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                >Cast Again</motion.button>
+              ) : (
+                <motion.p key="done"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="font-karla font-600 text-center py-3"
+                  style={{ fontSize: '0.82rem', color: '#4a4845' }}>
+                  No casts remaining
+                </motion.p>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
