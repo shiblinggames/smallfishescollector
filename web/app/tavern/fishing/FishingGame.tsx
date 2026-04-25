@@ -165,6 +165,7 @@ export default function FishingGame({
   const castRotationRef = useRef(0)
 
   const [zoneRotation, setZoneRotation] = useState(0)
+  const [showHowTo, setShowHowTo] = useState(false)
 
   const hook      = HOOKS[Math.min(hookTier, HOOKS.length - 1)]
   const castsLeft = hook.maxCasts - castsUsed
@@ -370,25 +371,8 @@ export default function FishingGame({
               />
             </div>
 
-            {/* Zone legend */}
-            <div className="rounded-xl px-4 py-3"
-              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <p className="font-karla font-600 leading-relaxed mb-2.5" style={{ fontSize: '0.78rem', color: '#b0afa8' }}>
-                Stop the needle in the <span style={{ color: '#4ade80' }}>Catch</span> zone to earn. Hit the <span style={{ color: '#fde68a' }}>✦ Perfect</span> strip inside for a bonus. Avoid the <span style={{ color: '#f87171' }}>Snag</span>.
-              </p>
-              <div className="flex flex-col gap-1.5">
-                {ZONE_LEGEND.map(z => (
-                  <div key={z.label} className="flex items-center gap-2.5">
-                    <div style={{ width: 9, height: 9, borderRadius: 2, background: z.color, flexShrink: 0 }} />
-                    <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: z.color }}>{z.label}</span>
-                    <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#5a5956' }}>— {z.desc}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {castsLeft > 0 ? (
-              <div className="flex justify-center py-1">
+              <div className="flex justify-center">
                 <motion.button onClick={handleCast}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
@@ -405,6 +389,46 @@ export default function FishingGame({
             ) : (
               <DoneForToday />
             )}
+
+            {/* Collapsible how to play */}
+            <div>
+              <button
+                onClick={() => setShowHowTo(v => !v)}
+                className="font-karla font-600 flex items-center gap-1.5 mx-auto"
+                style={{ fontSize: '0.68rem', color: showHowTo ? '#8a8a84' : '#5a5956', background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem 0' }}
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                  style={{ transform: showHowTo ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+                How to play
+              </button>
+              <AnimatePresence>
+                {showHowTo && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.18 }}
+                    style={{ overflow: 'hidden' }}
+                  >
+                    <div className="rounded-xl px-4 py-3 mt-2"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <p className="font-karla font-600 leading-relaxed mb-2.5" style={{ fontSize: '0.78rem', color: '#b0afa8' }}>
+                        Stop the needle in the <span style={{ color: '#4ade80' }}>Catch</span> zone to earn. Hit the <span style={{ color: '#fde68a' }}>✦ Perfect</span> strip inside for a bonus. Avoid the <span style={{ color: '#f87171' }}>Snag</span>.
+                      </p>
+                      <div className="flex flex-col gap-1.5">
+                        {ZONE_LEGEND.map(z => (
+                          <div key={z.label} className="flex items-center gap-2.5">
+                            <div style={{ width: 9, height: 9, borderRadius: 2, background: z.color, flexShrink: 0 }} />
+                            <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: z.color }}>{z.label}</span>
+                            <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#5a5956' }}>— {z.desc}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </motion.div>
         )}
 
