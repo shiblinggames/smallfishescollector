@@ -11,19 +11,26 @@ import type { DrawnCard, BorderStyle, ArtEffect } from '@/lib/types'
 import type { OpenPackResponse } from './actions'
 import { getHook } from '@/lib/hooks'
 import AchievementToast from '@/components/AchievementToast'
+import dynamic from 'next/dynamic'
+
+const ShipViewer3D = dynamic(() => import('@/app/marketplace/shipyard/ShipViewer3D'), { ssr: false })
 
 function ActiveHookBadge({ hookTier }: { hookTier: number }) {
   const hook = getHook(hookTier)
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-2">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <div className="flex flex-col items-center gap-1.5">
+      {hook.modelUrl ? (
+        <div style={{ width: 90, height: 90 }}>
+          <ShipViewer3D modelUrl={hook.modelUrl} color={hook.color} height={90} />
+        </div>
+      ) : (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 2v10"/>
           <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
           <circle cx="12" cy="3" r="2" fill="#a0a09a" stroke="none"/>
         </svg>
-        <p className="font-karla font-600 text-[#f0ede8]" style={{ fontSize: '0.88rem' }}>{hook.name}</p>
-      </div>
+      )}
+      <p className="font-karla font-600 text-[#f0ede8]" style={{ fontSize: '0.88rem' }}>{hook.name}</p>
       <a
         href="/marketplace/tackle-shop"
         className="font-karla font-600 uppercase tracking-[0.1em] transition-opacity hover:opacity-80"
