@@ -5,13 +5,14 @@ export interface ShipDef {
   description: string
   dailyBonus: number
   color: string
+  modelUrl?: string
 }
 
 export const SHIPS: ShipDef[] = [
   {
     tier: 0, name: 'Rowboat', cost: 0,
     description: 'A humble start on the open sea.',
-    dailyBonus: 0, color: '#a07858',
+    dailyBonus: 0, color: '#a07858', modelUrl: '/models/rowboat.glb',
   },
   {
     tier: 1, name: 'Dinghy', cost: 150,

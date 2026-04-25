@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import dynamic from 'next/dynamic'
 import { SHIPS } from '@/lib/ships'
 import { buyShip } from '@/app/shipyard/actions'
 import { EXPEDITION_SHIP_STATS, HULL_POINTS, STAT_ICONS, STAT_LABELS, STAT_DESCRIPTIONS } from '@/lib/expeditions'
+
+const ShipViewer3D = dynamic(() => import('./ShipViewer3D'), { ssr: false })
 
 export default function ShipyardClient({ shipTier: initialTier, doubloons: initialDoubloons }: { shipTier: number; doubloons: number }) {
   const [shipTier, setShipTier] = useState(initialTier)
@@ -28,11 +31,23 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
   const nextShip = shipTier < SHIPS.length - 1 ? SHIPS[shipTier + 1] : null
   const canAfford = nextShip ? doubloons >= nextShip.cost : false
 
+  const activeShip = SHIPS[shipTier]
+
   return (
     <div className="px-6 max-w-sm sm:max-w-2xl mx-auto">
       <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-3 text-[0.65rem] sm:text-xs">
         Shipyard
       </p>
+
+      {activeShip.modelUrl && (
+        <div className="mb-5">
+          <ShipViewer3D modelUrl={activeShip.modelUrl} color={activeShip.color} />
+          <p className="font-cinzel font-700 text-center mt-2.5" style={{ fontSize: '0.85rem', color: activeShip.color }}>
+            {activeShip.name}
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-2.5 mb-6">
         {SHIPS.map((ship) => {
           const owned = ship.tier <= shipTier
