@@ -15,14 +15,23 @@ import AchievementToast from '@/components/AchievementToast'
 function ActiveHookBadge({ hookTier }: { hookTier: number }) {
   const hook = getHook(hookTier)
   return (
-    <a href="/marketplace" className="flex items-center gap-1.5 transition-opacity hover:opacity-80" style={{ textDecoration: 'none' }}>
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2v10"/>
-        <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
-        <circle cx="12" cy="3" r="2" fill="#a0a09a" stroke="none"/>
-      </svg>
-      <p className="font-karla text-[#a0a09a]" style={{ fontSize: '0.62rem' }}>{hook.name}</p>
-    </a>
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2v10"/>
+          <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
+          <circle cx="12" cy="3" r="2" fill="#a0a09a" stroke="none"/>
+        </svg>
+        <p className="font-karla font-600 text-[#f0ede8]" style={{ fontSize: '0.88rem' }}>{hook.name}</p>
+      </div>
+      <a
+        href="/marketplace/tackle-shop"
+        className="font-karla font-600 uppercase tracking-[0.1em] transition-opacity hover:opacity-80"
+        style={{ fontSize: '0.6rem', color: '#f0c040', textDecoration: 'none' }}
+      >
+        Upgrade →
+      </a>
+    </div>
   )
 }
 
@@ -341,7 +350,10 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
           </div>
 
           {packs > 0 ? (
-            <div className="flex flex-col items-center gap-1.5">
+            <div className="flex flex-col items-center gap-2">
+              <p className="font-karla font-600 text-[#a0a09a]" style={{ fontSize: '0.78rem' }}>
+                {packs} pack{packs !== 1 ? 's' : ''} available
+              </p>
               <ActiveHookBadge hookTier={hookTier} />
             </div>
           ) : (
@@ -378,24 +390,6 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
           </div>
         </div>
 
-        {/* Marketplace promo */}
-        <a
-          href="/marketplace"
-          className="w-full max-w-sm flex items-center gap-4 px-4 py-3 rounded-xl transition-opacity hover:opacity-80"
-          style={{
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.13)',
-            textDecoration: 'none',
-          }}
-        >
-          <div className="flex-1 min-w-0">
-            <p className="font-karla font-700 uppercase tracking-[0.12em] text-[#f0ede8]" style={{ fontSize: '0.78rem' }}>Visit the Market</p>
-            <p className="font-karla text-[#a0a09a]" style={{ fontSize: '0.75rem', marginTop: 2 }}>Upgrade your hook &amp; ship for better pulls</p>
-          </div>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}>
-            <path d="M9 18l6-6-6-6"/>
-          </svg>
-        </a>
       </div>
     )
   }
