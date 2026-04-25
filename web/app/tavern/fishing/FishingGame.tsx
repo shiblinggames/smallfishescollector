@@ -224,7 +224,7 @@ export default function FishingGame({
     if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
     const zone = getZone(activeZones, angleRef.current, castRotationRef.current)
     const castsToConsume = zone.type === 'penalty' ? Math.min(2, hook.maxCasts - castsUsed) : 1
-    const newLocalCasts  = Math.min(castsUsed + castsToConsume, MAX_CASTS)
+    const newLocalCasts  = Math.min(castsUsed + castsToConsume, hook.maxCasts)
     setCastsUsed(newLocalCasts)
     setResult({ type: zone.type, earned: 0, castsUsed: newLocalCasts })
     setPhase('result')
