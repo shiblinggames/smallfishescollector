@@ -7,19 +7,18 @@ import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import * as THREE from 'three'
 
 function WaterPlane({ color }: { color: THREE.Color }) {
-  const ref = useRef<THREE.Mesh>(null)
   return (
-    <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.9, 0]}>
-      <planeGeometry args={[12, 12, 1, 1]} />
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.9, 0]}>
+      <circleGeometry args={[6, 64]} />
       {/* @ts-ignore — MeshWobbleMaterial props */}
       <MeshWobbleMaterial
         color={color}
-        factor={0.18}
-        speed={0.6}
+        factor={0.08}
+        speed={0.5}
         transparent
-        opacity={0.18}
-        roughness={0.1}
-        metalness={0.4}
+        opacity={0.14}
+        roughness={1}
+        metalness={0}
       />
     </mesh>
   )
