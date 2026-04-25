@@ -37,7 +37,7 @@ export const SHIPS: ShipDef[] = [
   {
     tier: 5, name: 'Galleon', cost: 6000,
     description: 'A grand vessel. The sea respects your presence.',
-    dailyBonus: 80, color: '#a78bfa',
+    dailyBonus: 80, color: '#a78bfa', modelUrl: '/models/galleon.glb',
   },
   {
     tier: 6, name: 'Man-o-War', cost: 18000,
