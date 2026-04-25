@@ -70,13 +70,30 @@ export default async function TavernPage() {
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
       {!profile?.has_seen_welcome && <WelcomeModal />}
-      <main className="min-h-screen pb-24 sm:pb-0 pt-6">
+      <main className="min-h-screen pb-24 sm:pb-0">
         {/* Lantern light — warm amber glow from above */}
         <div aria-hidden style={{
           position: 'fixed', top: 0, left: 0, right: 0, height: '60%',
           background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(180,120,30,0.15) 0%, transparent 100%)',
           pointerEvents: 'none', zIndex: 0,
         }} />
+
+        {/* Bartender banner */}
+        <div style={{ position: 'relative', width: '100%', height: 200, zIndex: 1, overflow: 'hidden' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/bartender.jpeg"
+            alt=""
+            aria-hidden
+            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%', display: 'block' }}
+          />
+          {/* Fade to page background */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to bottom, transparent 30%, #0e0c0a 100%)',
+          }} />
+        </div>
+
         <div className="px-6 max-w-4xl mx-auto mb-6" style={{ position: 'relative', zIndex: 1 }}>
           <p className="font-karla" style={{ fontSize: '0.78rem', color: '#4a4845', fontStyle: 'italic', lineHeight: 1.6 }}>
             {flavorText}
