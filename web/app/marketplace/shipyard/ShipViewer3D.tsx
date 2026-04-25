@@ -2,10 +2,22 @@
 
 import { Suspense, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { useGLTF, OrbitControls } from '@react-three/drei'
+import { useGLTF, OrbitControls, Bounds, useBounds } from '@react-three/drei'
 import * as THREE from 'three'
 
-function ShipModel({ url, color }: { url: string; color: string }) {
+function FitOnLoad() {
+  const bounds = useBounds()
+  const fitted = useRef(false)
+  useFrame(() => {
+    if (!fitted.current) {
+      bounds.refresh().fit()
+      fitted.current = true
+    }
+  })
+  return null
+}
+
+function ShipModel({ url }: { url: string }) {
   const { scene } = useGLTF(url)
   const ref = useRef<THREE.Group>(null)
 
@@ -25,12 +37,15 @@ export default function ShipViewer3D({ modelUrl, color, height = 220 }: { modelU
 
   return (
     <div style={{ width: '100%', height, borderRadius: 14, overflow: 'hidden', background: 'rgba(255,255,255,0.03)' }}>
-      <Canvas camera={{ position: [0, 0.6, 2.8], fov: 45 }}>
+      <Canvas camera={{ position: [0, 1, 5], fov: 45 }}>
         <ambientLight intensity={0.5} />
-        <directionalLight position={[4, 6, 4]} intensity={1.2} castShadow />
-        <pointLight position={[0, 1, 0]} color={new THREE.Color(r, g, b)} intensity={0.8} distance={5} />
+        <directionalLight position={[4, 6, 4]} intensity={1.2} />
+        <pointLight position={[0, 1, 0]} color={new THREE.Color(r, g, b)} intensity={0.8} distance={10} />
         <Suspense fallback={null}>
-          <ShipModel url={modelUrl} color={hex} />
+          <Bounds fit clip margin={1.2}>
+            <ShipModel url={modelUrl} />
+            <FitOnLoad />
+          </Bounds>
         </Suspense>
         <OrbitControls
           autoRotate
