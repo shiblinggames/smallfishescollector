@@ -2,8 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { MAX_CASTS } from './constants'
 import { DEPTHS } from './depths'
+import { getHook } from '@/lib/hooks'
 import { checkAchievements } from '@/lib/checkAchievements'
 
 function today() {
@@ -23,16 +23,17 @@ export async function castLine(
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, fishing_date, fishing_casts, fishing_abyss_streak')
+    .select('doubloons, fishing_date, fishing_casts, fishing_abyss_streak, hook_tier')
     .eq('id', user.id)
     .single()
 
   if (!profile) return { error: 'Profile not found' }
 
+  const maxCasts  = getHook(profile.hook_tier ?? 0).maxCasts
   const isToday   = profile.fishing_date === date
   const castsUsed = isToday ? (profile.fishing_casts ?? 0) : 0
 
-  if (castsUsed >= MAX_CASTS) {
+  if (castsUsed >= maxCasts) {
     return { error: 'No casts remaining today. Come back tomorrow.' }
   }
 
@@ -41,7 +42,7 @@ export async function castLine(
     result === 'perfect' ? depth.perfectEarns :
     result === 'catch'   ? depth.catchEarns   : 0
 
-  const castsToConsume = result === 'penalty' ? Math.min(2, MAX_CASTS - castsUsed) : 1
+  const castsToConsume = result === 'penalty' ? Math.min(2, maxCasts - castsUsed) : 1
   const newCastsUsed   = castsUsed + castsToConsume
 
   const isAbyssPerfect = result === 'perfect' && depthId === 3

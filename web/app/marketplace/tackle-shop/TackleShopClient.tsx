@@ -112,6 +112,19 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
                   </div>
                   <p className="font-karla font-300 text-[#6a6764] text-xs sm:text-sm">{hook.description}</p>
 
+                  {owned && (
+                    <div className="flex gap-3 mt-1.5 flex-wrap">
+                      <span className="font-karla font-600 text-[0.65rem] sm:text-xs" style={{ color: `${c}99` }}>
+                        {hook.maxCasts} casts/day
+                      </span>
+                      {hook.tier > 0 && (
+                        <span className="font-karla font-600 text-[0.65rem] sm:text-xs" style={{ color: `${c}99` }}>
+                          +{hook.tier * 3}° catch zone
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   {isNext && (
                     <p className="font-karla font-600 mt-1 text-xs sm:text-sm" style={{ color: canAfford ? c : '#6a6764' }}>
                       {isPending ? 'Upgrading…' : canAfford ? '↑ Tap to upgrade' : `${(hook.cost - doubloons).toLocaleString()} ⟡ short`}
@@ -146,18 +159,40 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
               </div>
 
               {showTooltip && (
-                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 sm:gap-x-8 sm:gap-y-1.5" style={{ paddingLeft: 50 }}>
-                  {[
-                    { label: 'Shallows', value: hook.weights.shallows, color: '#60a5fa' },
-                    { label: 'Open Waters', value: hook.weights.openWaters, color: '#4ade80' },
-                    { label: 'Deep', value: hook.weights.deep, color: '#a78bfa' },
-                    { label: 'Abyss', value: hook.weights.abyss, color: '#f0c040' },
-                  ].map(({ label, value, color }) => (
-                    <div key={label} className="flex items-center justify-between gap-2">
-                      <p className="font-karla font-300 text-[#6a6764] text-[0.65rem] sm:text-xs">{label}</p>
-                      <p className="font-karla font-600 text-[0.65rem] sm:text-xs" style={{ color }}>{(value * 100).toFixed(1)}%</p>
+                <div className="mt-3 flex flex-col gap-2.5" style={{ paddingLeft: 50 }}>
+                  {/* Drop a Line */}
+                  <div>
+                    <p className="font-karla font-600 uppercase tracking-[0.1em] mb-1.5" style={{ fontSize: '0.55rem', color: '#5a5956' }}>Drop a Line</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-karla font-300 text-[#6a6764] text-[0.65rem] sm:text-xs">Casts/day</p>
+                        <p className="font-karla font-600 text-[0.65rem] sm:text-xs" style={{ color: c }}>{hook.maxCasts}</p>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-karla font-300 text-[#6a6764] text-[0.65rem] sm:text-xs">Catch zone</p>
+                        <p className="font-karla font-600 text-[0.65rem] sm:text-xs" style={{ color: c }}>
+                          {hook.tier === 0 ? 'Standard' : `+${hook.tier * 3}°`}
+                        </p>
+                      </div>
                     </div>
-                  ))}
+                  </div>
+                  {/* Pack Opening */}
+                  <div>
+                    <p className="font-karla font-600 uppercase tracking-[0.1em] mb-1.5" style={{ fontSize: '0.55rem', color: '#5a5956' }}>Pack Opening</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                      {[
+                        { label: 'Shallows', value: hook.weights.shallows, color: '#60a5fa' },
+                        { label: 'Open Waters', value: hook.weights.openWaters, color: '#4ade80' },
+                        { label: 'Deep', value: hook.weights.deep, color: '#a78bfa' },
+                        { label: 'Abyss', value: hook.weights.abyss, color: '#f0c040' },
+                      ].map(({ label, value, color }) => (
+                        <div key={label} className="flex items-center justify-between gap-2">
+                          <p className="font-karla font-300 text-[#6a6764] text-[0.65rem] sm:text-xs">{label}</p>
+                          <p className="font-karla font-600 text-[0.65rem] sm:text-xs" style={{ color }}>{(value * 100).toFixed(1)}%</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

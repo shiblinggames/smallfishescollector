@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import FishingGame from './FishingGame'
-import { MAX_CASTS } from './constants'
+import { getHook } from '@/lib/hooks'
 
 export default async function FishingPage() {
   const supabase = await createClient()
@@ -19,6 +19,8 @@ export default async function FishingPage() {
     .eq('id', user.id)
     .single()
 
+  const hookTier = profile?.hook_tier ?? 0
+  const hook = getHook(hookTier)
   const isToday = profile?.fishing_date === today
   const castsUsed = isToday ? (profile?.fishing_casts ?? 0) : 0
 
@@ -33,13 +35,13 @@ export default async function FishingPage() {
               Drop a Line
             </h1>
             <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.78rem' }}>
-              {MAX_CASTS} casts per day. Better hooks widen your catch zone.
+              {hook.maxCasts} casts per day. Better hooks widen your catch zone.
             </p>
           </div>
 
           <FishingGame
             initialCastsUsed={castsUsed}
-            hookTier={profile?.hook_tier ?? 0}
+            hookTier={hookTier}
           />
 
         </div>

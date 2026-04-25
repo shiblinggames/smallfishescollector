@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { castLine } from './actions'
-import { MAX_CASTS } from './constants'
 import { DEPTHS, buildZones, type ZoneDef, type ZoneType } from './depths'
 import { HOOKS } from '@/lib/hooks'
 import Link from 'next/link'
@@ -168,7 +167,7 @@ export default function FishingGame({
   const [zoneRotation, setZoneRotation] = useState(0)
 
   const hook      = HOOKS[Math.min(hookTier, HOOKS.length - 1)]
-  const castsLeft = MAX_CASTS - castsUsed
+  const castsLeft = hook.maxCasts - castsUsed
 
   const previewZones = buildZones(DEPTHS[selectedDepth], hookTier)
   const activeZones  = buildZones(DEPTHS[castDepthRef.current], hookTier)
@@ -224,7 +223,7 @@ export default function FishingGame({
     phaseRef.current = 'result'
     if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
     const zone = getZone(activeZones, angleRef.current, castRotationRef.current)
-    const castsToConsume = zone.type === 'penalty' ? Math.min(2, MAX_CASTS - castsUsed) : 1
+    const castsToConsume = zone.type === 'penalty' ? Math.min(2, hook.maxCasts - castsUsed) : 1
     const newLocalCasts  = Math.min(castsUsed + castsToConsume, MAX_CASTS)
     setCastsUsed(newLocalCasts)
     setResult({ type: zone.type, earned: 0, castsUsed: newLocalCasts })
@@ -343,7 +342,7 @@ export default function FishingGame({
         </div>
         <div className="text-right">
           <p className="font-karla font-700 leading-none" style={{ fontSize: '0.82rem', color: castsLeft > 0 ? '#c0bfba' : '#4a4845' }}>
-            {castsLeft > 0 ? `${castsLeft} / ${MAX_CASTS}` : 'Done'}
+            {castsLeft > 0 ? `${castsLeft} / ${hook.maxCasts}` : 'Done'}
           </p>
           <p className="font-karla font-600 leading-none mt-1" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
             {castsLeft > 0 ? 'casts left today' : 'come back tomorrow'}

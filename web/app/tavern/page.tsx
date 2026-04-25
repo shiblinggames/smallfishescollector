@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { getDailyWagered } from './actions'
 import { DAILY_CAP } from './constants'
 import { getShip } from '@/lib/ships'
+import { getHook } from '@/lib/hooks'
 import { getWeeklyBounties } from '@/app/packs/bountyActions'
 import GameCard from './GameCard'
 import WelcomeModal from './WelcomeModal'
@@ -19,7 +20,7 @@ export default async function TavernPage() {
   const today = new Date().toISOString().split('T')[0]
 
   const [{ data: profile }, { data: fotdAttempt }, dailyWagered, bounties, { data: todayExpedition }] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_ship_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, fishing_date, fishing_casts, has_seen_welcome').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_ship_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
     getWeeklyBounties(),
@@ -44,8 +45,9 @@ export default async function TavernPage() {
   const bountyCount = bountyProgress ? Object.values(bountyProgress).filter(Boolean).length : 0
   const bountyAllDone = bountyCount === 4
 
+  const fishingHook = getHook(profile?.hook_tier ?? 0)
   const fishingCastsUsed = profile?.fishing_date === today ? (profile?.fishing_casts ?? 0) : 0
-  const fishingCastsLeft = 20 - fishingCastsUsed
+  const fishingCastsLeft = fishingHook.maxCasts - fishingCastsUsed
   const fishingDone = fishingCastsLeft <= 0
 
   const expeditionStatus = todayExpedition?.status ?? null
