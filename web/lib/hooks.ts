@@ -9,6 +9,7 @@ export interface HookDef {
   color: string      // hex color for border/icon theming
   multiplier: number // doubloon multiplier for fishing game earnings
   weights: { shallows: number; openWaters: number; deep: number; abyss: number }
+  modelUrl?: string
 }
 
 export const HOOKS: HookDef[] = [

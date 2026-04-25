@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import dynamic from 'next/dynamic'
 import { HOOKS } from '@/lib/hooks'
 import { buyHook } from '@/app/hooks/actions'
+
+const ShipViewer3D = dynamic(() => import('@/app/marketplace/shipyard/ShipViewer3D'), { ssr: false })
 
 export default function TackleShopClient({ hookTier: initialTier, doubloons: initialDoubloons }: { hookTier: number; doubloons: number }) {
   const [hookTier, setHookTier] = useState(initialTier)
@@ -10,6 +13,7 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
   const [isPending, startTransition] = useTransition()
   const [hookError, setHookError] = useState<string | null>(null)
   const [tooltipTier, setTooltipTier] = useState<number | null>(null)
+  const [previewTier, setPreviewTier] = useState(initialTier)
 
   function handleBuyHook() {
     setHookError(null)
@@ -26,12 +30,41 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
 
   const nextHook = hookTier < HOOKS.length - 1 ? HOOKS[hookTier + 1] : null
   const canAfford = nextHook ? doubloons >= nextHook.cost : false
+  const previewHook = HOOKS[previewTier]
 
   return (
     <div className="px-6 max-w-sm sm:max-w-2xl mx-auto">
       <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-3 text-[0.65rem] sm:text-xs">
         Tackle Shop
       </p>
+
+      <div className="mb-5">
+        {previewHook.modelUrl ? (
+          <ShipViewer3D modelUrl={previewHook.modelUrl} color={previewHook.color} />
+        ) : (
+          <div style={{
+            width: '100%', height: 220, borderRadius: 14,
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <div style={{ width: 56, height: 56, opacity: 0.2 }}>
+              <HookIcon tier={previewTier} color={previewHook.color} owned={false} isActive={false} />
+            </div>
+          </div>
+        )}
+        <div className="flex items-center justify-center gap-2 mt-2.5">
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.85rem', color: previewHook.color }}>
+            {previewHook.name}
+          </p>
+          {previewTier !== hookTier && (
+            <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.48rem', color: '#6a6764' }}>
+              preview
+            </span>
+          )}
+        </div>
+      </div>
+
       <div className="flex flex-col gap-2.5 mb-6">
         {HOOKS.map((hook) => {
           const owned = hook.tier <= hookTier
@@ -42,20 +75,24 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
 
           const isNext = hook.tier === hookTier + 1
           const clickable = isNext && canAfford && !isPending
+          const isPreviewing = previewTier === hook.tier && hook.tier !== hookTier
           const luckPct = Math.round((hook.deepChance - HOOKS[0].deepChance) / (HOOKS[HOOKS.length - 1].deepChance - HOOKS[0].deepChance) * 100)
 
           return (
             <div
               key={hook.tier}
-              onClick={clickable ? handleBuyHook : undefined}
+              onClick={() => {
+                setPreviewTier(hook.tier)
+                if (clickable) handleBuyHook()
+              }}
               className="p-3 sm:p-5"
               style={{
                 background: owned ? `${c}0d` : isNext && canAfford ? `${c}08` : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${owned ? `${c}55` : isNext && canAfford ? `${c}40` : 'rgba(255,255,255,0.09)'}`,
-                boxShadow: isActive ? `0 0 16px ${c}18` : isNext && canAfford ? `0 0 12px ${c}12` : 'none',
+                border: `1px solid ${owned ? `${c}55` : isPreviewing ? `${c}30` : isNext && canAfford ? `${c}40` : 'rgba(255,255,255,0.09)'}`,
+                boxShadow: isActive ? `0 0 16px ${c}18` : isPreviewing ? `0 0 10px ${c}10` : isNext && canAfford ? `0 0 12px ${c}12` : 'none',
                 borderRadius: 12,
                 opacity: locked ? 0.3 : isPending && isNext ? 0.6 : 1,
-                cursor: clickable ? 'pointer' : 'default',
+                cursor: 'pointer',
                 transition: 'box-shadow 0.2s ease, opacity 0.15s ease',
               }}
             >
