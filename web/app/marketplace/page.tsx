@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
-import MarketRedeemBar from './MarketRedeemBar'
 import ShopCard from './ShopCard'
+import Link from 'next/link'
 
 export default async function MarketplacePage() {
   const supabase = await createClient()
@@ -20,15 +20,59 @@ export default async function MarketplacePage() {
     !!profile?.premium_expires_at &&
     new Date(profile.premium_expires_at) > new Date()
 
+  const shopkeepLines = [
+    "Take your time. Everything's priced fair. Mostly.",
+    "The Legendary hook? Only two sailors have bought one. Both still fishing.",
+    "Membership pays for itself in a week. Just saying.",
+    "Every hook I sell comes with a guarantee. Not in writing, but still.",
+    "The board game's been sitting in that corner since last season. Good game though.",
+    "Enchanted hooks don't come cheap. Neither does luck.",
+    "You want the Abyss? You'll need a better hook than that.",
+    "I've seen sailors upgrade three tiers in a month. Dedication.",
+    "That Gold hook? Beautiful piece of work. I almost kept it.",
+    "Doubloons don't spend themselves. Might as well invest.",
+    "The Shipyard's next door. Tell them I sent you. They won't care, but still.",
+    "Steel hook'll do the job. Gold hook'll do it better.",
+    "Come back when you've got more doubloons. Or come back now — browsing's free.",
+    "No refunds. Not because I'm stingy — just the nature of upgrades.",
+    "The Iron hook's a solid choice. Underrated, if you ask me.",
+    "Membership's my best seller. People like their daily packs.",
+  ]
+  const shopkeepLine = shopkeepLines[Math.floor(Math.random() * shopkeepLines.length)]
+
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
-      <main className="min-h-screen pb-24 sm:pb-0 pt-6">
-        <div className="px-6 max-w-4xl mx-auto mb-6">
-          <MarketRedeemBar />
+      <main className="min-h-screen pb-24 sm:pb-0">
+        {/* Ambient glow */}
+        <div aria-hidden style={{
+          position: 'fixed', top: 0, left: 0, right: 0, height: '60%',
+          background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(120,80,180,0.10) 0%, transparent 100%)',
+          pointerEvents: 'none', zIndex: 0,
+        }} />
+
+        {/* Shopkeep banner */}
+        <div style={{ position: 'relative', zIndex: 1, marginBottom: '-1rem', textAlign: 'center' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/shopkeep.jpeg"
+            alt=""
+            aria-hidden
+            style={{
+              width: '100%', maxWidth: 560, height: 'auto', display: 'inline-block',
+              maskImage: 'radial-gradient(ellipse 85% 80% at 50% 42%, black 25%, transparent 100%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 85% 80% at 50% 42%, black 25%, transparent 100%)',
+            }}
+          />
         </div>
 
-        <div className="px-6 pb-12 max-w-4xl mx-auto flex flex-col gap-6">
+        <div className="px-6 max-w-lg mx-auto mb-6 text-center" style={{ position: 'relative', zIndex: 1 }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.95rem', color: '#c8a96e', lineHeight: 1.6 }}>
+            &ldquo;{shopkeepLine}&rdquo;
+          </p>
+        </div>
+
+        <div className="px-6 pb-12 max-w-4xl mx-auto flex flex-col gap-6" style={{ position: 'relative', zIndex: 1 }}>
 
           {/* Upgrades */}
           <div>
@@ -95,6 +139,15 @@ export default async function MarketplacePage() {
             </div>
           </div>
 
+        </div>
+
+        <div className="px-6 pb-16 text-center" style={{ position: 'relative', zIndex: 1 }}>
+          <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.75rem' }}>
+            Have a pack code?{' '}
+            <Link href="/marketplace/redeem" className="text-[#a09d98] hover:text-[#c0bfba] transition-colors">
+              Redeem it here →
+            </Link>
+          </p>
         </div>
       </main>
     </>
