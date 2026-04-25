@@ -52,17 +52,18 @@ export default async function MarketplacePage() {
         }} />
 
         {/* Shopkeep banner */}
-        <div style={{ position: 'relative', zIndex: 1, marginBottom: '-1rem', textAlign: 'center' }}>
+        <div style={{
+          position: 'relative', zIndex: 1, marginBottom: '-1rem',
+          overflow: 'hidden', height: 320,
+          maskImage: 'linear-gradient(to bottom, black 45%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, black 45%, transparent 100%)',
+        }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/shopkeep.jpeg"
             alt=""
             aria-hidden
-            style={{
-              width: '100%', maxWidth: 560, height: 'auto', display: 'inline-block',
-              maskImage: 'radial-gradient(ellipse 85% 80% at 50% 42%, black 25%, transparent 100%)',
-              WebkitMaskImage: 'radial-gradient(ellipse 85% 80% at 50% 42%, black 25%, transparent 100%)',
-            }}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
           />
         </div>
 
