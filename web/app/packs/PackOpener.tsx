@@ -21,8 +21,8 @@ function ActiveHookBadge({ hookTier }: { hookTier: number }) {
   return (
     <div className="flex flex-col items-center gap-1.5">
       {hook.modelUrl ? (
-        <div style={{ width: 90, height: 90 }}>
-          <HookViewer3D modelUrl={hook.modelUrl} color={hook.color} tier={hookTier} height={90} />
+        <div style={{ width: 60, height: 60 }}>
+          <HookViewer3D modelUrl={hook.modelUrl} color={hook.color} tier={hookTier} height={60} />
         </div>
       ) : (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -358,22 +358,19 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
             </button>
           </div>
 
-          <div className="flex flex-col items-center gap-3">
-            {packs > 0 ? (
-              <p className="font-karla font-600 text-[#a0a09a]" style={{ fontSize: '0.78rem' }}>
-                {packs} pack{packs !== 1 ? 's' : ''} available
-              </p>
-            ) : (
-              <div className="flex flex-col items-center gap-2">
-                <p className="font-karla font-300 text-[#a0a09a] text-sm">No packs available.</p>
-                <a href="/tavern" className="btn-ghost">Go to the Tavern</a>
-                <a href="/redeem" className="text-[#f0c040] hover:text-[#ffd966] text-xs font-karla font-600 uppercase tracking-[0.12em] transition-colors">
-                  Redeem a Code
-                </a>
-              </div>
-            )}
-            <ActiveHookBadge hookTier={hookTier} />
-          </div>
+          {packs > 0 ? (
+            <p className="font-karla font-600 text-[#a0a09a]" style={{ fontSize: '0.78rem' }}>
+              {packs} pack{packs !== 1 ? 's' : ''} available
+            </p>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <p className="font-karla font-300 text-[#a0a09a] text-sm">No packs available.</p>
+              <a href="/tavern" className="btn-ghost">Go to the Tavern</a>
+              <a href="/redeem" className="text-[#f0c040] hover:text-[#ffd966] text-xs font-karla font-600 uppercase tracking-[0.12em] transition-colors">
+                Redeem a Code
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Doubloon balance + buy buttons */}
@@ -398,6 +395,8 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
             </button>
           </div>
         </div>
+
+        <ActiveHookBadge hookTier={hookTier} />
 
       </div>
     )
