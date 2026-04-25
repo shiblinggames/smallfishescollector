@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import { HOOKS } from '@/lib/hooks'
 import { buyHook } from '@/app/hooks/actions'
 
-const ShipViewer3D = dynamic(() => import('@/app/marketplace/shipyard/ShipViewer3D'), { ssr: false })
+const HookViewer3D = dynamic(() => import('./HookViewer3D'), { ssr: false })
 
 export default function TackleShopClient({ hookTier: initialTier, doubloons: initialDoubloons }: { hookTier: number; doubloons: number }) {
   const [hookTier, setHookTier] = useState(initialTier)
@@ -40,7 +40,7 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
 
       <div className="mb-5">
         {previewHook.modelUrl ? (
-          <ShipViewer3D modelUrl={previewHook.modelUrl} color={previewHook.color} />
+          <HookViewer3D modelUrl={previewHook.modelUrl} color={previewHook.color} tier={previewTier} />
         ) : (
           <div style={{
             width: '100%', height: 220, borderRadius: 14,

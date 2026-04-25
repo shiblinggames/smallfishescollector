@@ -13,7 +13,7 @@ import { getHook } from '@/lib/hooks'
 import AchievementToast from '@/components/AchievementToast'
 import dynamic from 'next/dynamic'
 
-const ShipViewer3D = dynamic(() => import('@/app/marketplace/shipyard/ShipViewer3D'), { ssr: false })
+const HookViewer3D = dynamic(() => import('@/app/marketplace/tackle-shop/HookViewer3D'), { ssr: false })
 
 function ActiveHookBadge({ hookTier }: { hookTier: number }) {
   const hook = getHook(hookTier)
@@ -21,7 +21,7 @@ function ActiveHookBadge({ hookTier }: { hookTier: number }) {
     <div className="flex flex-col items-center gap-1.5">
       {hook.modelUrl ? (
         <div style={{ width: 90, height: 90 }}>
-          <ShipViewer3D modelUrl={hook.modelUrl} color={hook.color} height={90} />
+          <HookViewer3D modelUrl={hook.modelUrl} color={hook.color} tier={hookTier} height={90} />
         </div>
       ) : (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
