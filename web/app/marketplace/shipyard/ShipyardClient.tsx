@@ -14,6 +14,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [statsModal, setStatsModal] = useState<number | null>(null)
+  const [previewTier, setPreviewTier] = useState(initialTier)
 
   function handleBuyShip() {
     setError(null)
@@ -32,6 +33,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
   const canAfford = nextShip ? doubloons >= nextShip.cost : false
 
   const activeShip = SHIPS[shipTier]
+  const previewShip = SHIPS[previewTier]
 
   return (
     <div className="px-6 max-w-sm sm:max-w-2xl mx-auto">
@@ -39,14 +41,32 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
         Shipyard
       </p>
 
-      {activeShip.modelUrl && (
-        <div className="mb-5">
-          <ShipViewer3D modelUrl={activeShip.modelUrl} color={activeShip.color} />
-          <p className="font-cinzel font-700 text-center mt-2.5" style={{ fontSize: '0.85rem', color: activeShip.color }}>
-            {activeShip.name}
+      <div className="mb-5">
+        {previewShip.modelUrl ? (
+          <ShipViewer3D modelUrl={previewShip.modelUrl} color={previewShip.color} />
+        ) : (
+          <div style={{
+            width: '100%', height: 220, borderRadius: 14,
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <div style={{ width: 64, height: 64, opacity: 0.25 }}>
+              <ShipIconPreview tier={previewTier} color={previewShip.color} />
+            </div>
+          </div>
+        )}
+        <div className="flex items-center justify-center gap-2 mt-2.5">
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.85rem', color: previewShip.color }}>
+            {previewShip.name}
           </p>
+          {previewTier !== shipTier && (
+            <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.48rem', color: '#6a6764' }}>
+              preview
+            </span>
+          )}
         </div>
-      )}
+      </div>
 
       <div className="flex flex-col gap-2.5 mb-6">
         {SHIPS.map((ship) => {
@@ -55,20 +75,24 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
           const locked = ship.tier > shipTier + 1
           const isNext = ship.tier === shipTier + 1
           const clickable = isNext && canAfford && !isPending
+          const isPreviewing = previewTier === ship.tier && ship.tier !== shipTier
           const c = ship.color
 
           return (
             <div
               key={ship.tier}
-              onClick={clickable ? handleBuyShip : undefined}
+              onClick={() => {
+                setPreviewTier(ship.tier)
+                if (clickable) handleBuyShip()
+              }}
               className="p-3 sm:p-5"
               style={{
                 background: owned ? `${c}0d` : isNext && canAfford ? `${c}08` : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${owned ? `${c}55` : isNext && canAfford ? `${c}40` : 'rgba(255,255,255,0.09)'}`,
-                boxShadow: isActive ? `0 0 16px ${c}18` : isNext && canAfford ? `0 0 12px ${c}12` : 'none',
+                border: `1px solid ${owned ? `${c}55` : isPreviewing ? `${c}30` : isNext && canAfford ? `${c}40` : 'rgba(255,255,255,0.09)'}`,
+                boxShadow: isActive ? `0 0 16px ${c}18` : isPreviewing ? `0 0 10px ${c}10` : isNext && canAfford ? `0 0 12px ${c}12` : 'none',
                 borderRadius: 12,
                 opacity: locked ? 0.3 : isPending && isNext ? 0.6 : 1,
-                cursor: clickable ? 'pointer' : 'default',
+                cursor: 'pointer',
                 transition: 'box-shadow 0.2s ease, opacity 0.15s ease',
               }}
             >
@@ -320,4 +344,8 @@ function ShipIcon({ tier, color, owned, isActive }: { tier: number; color: strin
       {icons[tier]}
     </div>
   )
+}
+
+function ShipIconPreview({ tier, color }: { tier: number; color: string }) {
+  return <ShipIcon tier={tier} color={color} owned={false} isActive={false} />
 }
