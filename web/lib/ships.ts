@@ -17,7 +17,7 @@ export const SHIPS: ShipDef[] = [
   {
     tier: 1, name: 'Dinghy', cost: 150,
     description: 'Small but reliable. More room for haul.',
-    dailyBonus: 10, color: '#9ca3af',
+    dailyBonus: 10, color: '#9ca3af', modelUrl: '/models/dinghy.glb',
   },
   {
     tier: 2, name: 'Sloop', cost: 400,
