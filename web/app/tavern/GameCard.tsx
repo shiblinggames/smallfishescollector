@@ -12,12 +12,14 @@ interface Props {
   icon: React.ReactNode
   completed?: boolean
   streak?: number
+  variant?: 'default' | 'featured'
 }
 
-export default function GameCard({ href, eyebrow, title, statusText, info, icon, completed, streak }: Props) {
+export default function GameCard({ href, eyebrow, title, statusText, info, icon, completed, streak, variant = 'default' }: Props) {
   const router = useRouter()
   const [showModal, setShowModal] = useState(false)
-  const dim = !!completed
+  const done = !!completed
+  const featured = variant === 'featured'
 
   return (
     <>
@@ -27,12 +29,12 @@ export default function GameCard({ href, eyebrow, title, statusText, info, icon,
         onClick={() => router.push(href)}
         onKeyDown={(e) => e.key === 'Enter' && router.push(href)}
         style={{
-          background: 'rgba(255,255,255,0.08)',
-          border: `1px solid ${dim ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.15)'}`,
+          background: featured ? 'rgba(240,192,64,0.05)' : 'rgba(255,255,255,0.08)',
+          border: `1px solid ${done ? 'rgba(240,192,64,0.18)' : featured ? 'rgba(240,192,64,0.35)' : 'rgba(255,255,255,0.15)'}`,
           borderRadius: '14px',
-          padding: '0.875rem',
+          padding: featured ? '1.1rem' : '0.875rem',
           cursor: 'pointer',
-          opacity: dim ? 0.7 : 1,
+          opacity: done ? 0.82 : 1,
           userSelect: 'none',
         }}
       >
@@ -40,12 +42,12 @@ export default function GameCard({ href, eyebrow, title, statusText, info, icon,
         <div className="flex items-center gap-2 mb-2.5">
           <div style={{
             width: 34, height: 34,
-            background: dim ? 'rgba(255,255,255,0.06)' : 'rgba(240,192,64,0.08)',
-            border: `1px solid ${dim ? 'rgba(255,255,255,0.13)' : 'rgba(240,192,64,0.18)'}`,
+            background: 'rgba(240,192,64,0.08)',
+            border: '1px solid rgba(240,192,64,0.18)',
             borderRadius: '9px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
-            color: dim ? '#4a4845' : '#f0c040',
+            color: '#f0c040',
           }}>
             {icon}
           </div>
@@ -76,7 +78,7 @@ export default function GameCard({ href, eyebrow, title, statusText, info, icon,
         <p className="font-karla text-[#a0a09a]" style={{ fontSize: '0.72rem', lineHeight: 1.4 }}>
           {statusText}
         </p>
-        {!completed && streak != null && streak > 0 && (
+        {!done && streak != null && streak > 0 && (
           <p className="font-karla font-600 mt-1" style={{ fontSize: '0.65rem', color: '#f0c040' }}>
             {streak}d streak
           </p>
