@@ -17,7 +17,7 @@ export const HOOKS: HookDef[] = [
     tier: 0, name: 'Rusty Hook', cost: 0,
     description: 'A worn hook from the bottom of the tackle box.',
     luckLabel: 'Standard', luckScore: 0, deepChance: 15, color: '#a07858', multiplier: 0.10,
-    weights: { shallows: 0.520, openWaters: 0.330, deep: 0.148, abyss: 0.002 },
+    weights: { shallows: 0.520, openWaters: 0.330, deep: 0.148, abyss: 0.002 }, modelUrl: '/models/hooks/rusty-hook.glb',
   },
   {
     tier: 1, name: 'Bent Hook', cost: 150,
