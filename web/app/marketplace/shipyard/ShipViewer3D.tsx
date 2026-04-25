@@ -11,12 +11,11 @@ function ShipModel({ url }: { url: string }) {
 
   const { scale, center } = useMemo(() => {
     const box = new THREE.Box3().setFromObject(scene)
-    const size = new THREE.Vector3()
-    box.getSize(size)
+    const sphere = new THREE.Sphere()
+    box.getBoundingSphere(sphere)
     const c = new THREE.Vector3()
     box.getCenter(c)
-    const maxDim = Math.max(size.x, size.y, size.z)
-    return { scale: maxDim > 0 ? 2 / maxDim : 1, center: c }
+    return { scale: sphere.radius > 0 ? 1.6 / sphere.radius : 1, center: c }
   }, [scene])
 
   useFrame((state) => {
