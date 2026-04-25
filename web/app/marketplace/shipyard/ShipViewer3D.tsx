@@ -2,27 +2,9 @@
 
 import { Suspense, useRef, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { useGLTF, OrbitControls, Environment, MeshWobbleMaterial } from '@react-three/drei'
+import { useGLTF, OrbitControls, Environment } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import * as THREE from 'three'
-
-function WaterPlane({ color }: { color: THREE.Color }) {
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.9, 0]}>
-      <circleGeometry args={[6, 64]} />
-      {/* @ts-ignore — MeshWobbleMaterial props */}
-      <MeshWobbleMaterial
-        color={color}
-        factor={0.08}
-        speed={0.5}
-        transparent
-        opacity={0.14}
-        roughness={1}
-        metalness={0}
-      />
-    </mesh>
-  )
-}
 
 function ShipModel({ url }: { url: string }) {
   const { scene } = useGLTF(url)
@@ -71,7 +53,6 @@ export default function ShipViewer3D({ modelUrl, color, height = 220 }: { modelU
         <Environment preset="sunset" />
         <Suspense fallback={null}>
           <ShipModel url={modelUrl} />
-          <WaterPlane color={threeColor} />
         </Suspense>
         <EffectComposer>
           <Bloom intensity={0.4} luminanceThreshold={0.3} luminanceSmoothing={0.9} mipmapBlur />
