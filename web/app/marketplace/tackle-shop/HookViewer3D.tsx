@@ -20,7 +20,7 @@ function HookModel({ url }: { url: string }) {
     box.getBoundingSphere(sphere)
     const c = new THREE.Vector3()
     box.getCenter(c)
-    return { scale: sphere.radius > 0 ? 1.6 / sphere.radius : 1, center: c }
+    return { scale: sphere.radius > 0 ? 0.9 / sphere.radius : 1, center: c }
   }, [scene])
 
   useFrame((state) => {
@@ -51,7 +51,7 @@ export default function HookViewer3D({ modelUrl, color, tier, height = 220 }: { 
     <div style={{ width: '100%', height }}>
       <Canvas
         camera={{ position: [0, 0.8, 3.5], fov: 40 }}
-        gl={{ alpha: true, antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
+        gl={{ alpha: true, antialias: true, toneMapping: THREE.NoToneMapping }}
         style={{ background: 'transparent' }}
       >
         <ambientLight intensity={0.4} />

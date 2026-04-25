@@ -44,7 +44,7 @@ export default function ShipViewer3D({ modelUrl, color, height = 220 }: { modelU
     <div style={{ width: '100%', height }}>
       <Canvas
         camera={{ position: [0, 0.8, 3.5], fov: 40 }}
-        gl={{ alpha: true, antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
+        gl={{ alpha: true, antialias: true, toneMapping: THREE.NoToneMapping }}
         style={{ background: 'transparent' }}
       >
         <ambientLight intensity={0.4} />
