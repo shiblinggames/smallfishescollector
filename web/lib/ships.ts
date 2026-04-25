@@ -22,7 +22,7 @@ export const SHIPS: ShipDef[] = [
   {
     tier: 2, name: 'Sloop', cost: 400,
     description: 'A single-masted workhorse of the seas.',
-    dailyBonus: 20, color: '#60a5fa',
+    dailyBonus: 20, color: '#60a5fa', modelUrl: '/models/sloop.glb',
   },
   {
     tier: 3, name: 'Schooner', cost: 1000,
