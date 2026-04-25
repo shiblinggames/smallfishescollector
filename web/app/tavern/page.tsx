@@ -109,25 +109,23 @@ export default async function TavernPage() {
         }} />
 
         {/* Bartender banner */}
-        <div style={{ position: 'relative', zIndex: 1, marginBottom: '-1rem', display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', zIndex: 1, marginBottom: '-1rem', textAlign: 'center' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/bartender.jpeg"
             alt=""
             aria-hidden
-            style={{ width: '100%', maxWidth: 560, height: 'auto', display: 'block' }}
+            style={{
+              width: '100%', maxWidth: 560, height: 'auto', display: 'inline-block',
+              maskImage: 'radial-gradient(ellipse 85% 80% at 50% 42%, black 25%, transparent 100%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 85% 80% at 50% 42%, black 25%, transparent 100%)',
+            }}
           />
-          {/* Fade all four edges */}
-          <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, #0e0c0a 0%, transparent 20%, transparent 55%, #0e0c0a 100%)' }} />
-          <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, #0e0c0a 0%, transparent 15%, transparent 85%, #0e0c0a 100%)' }} />
         </div>
 
         <div className="px-6 max-w-lg mx-auto mb-6 text-center" style={{ position: 'relative', zIndex: 1 }}>
           <p className="font-karla font-600" style={{ fontSize: '0.95rem', color: '#c8a96e', lineHeight: 1.6 }}>
             &ldquo;{bartenderLine}&rdquo;
-          </p>
-          <p className="font-karla font-300 mt-1" style={{ fontSize: '0.65rem', color: '#5a5450', letterSpacing: '0.08em' }}>
-            — PETE, BARKEEP
           </p>
         </div>
 
