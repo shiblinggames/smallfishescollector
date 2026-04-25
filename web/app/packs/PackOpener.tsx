@@ -9,7 +9,7 @@ import PrizeModal from '@/components/PrizeModal'
 import { openPack as openPackAction, buyPacksWithDoubloons } from './actions'
 import type { DrawnCard, BorderStyle, ArtEffect } from '@/lib/types'
 import type { OpenPackResponse } from './actions'
-import { getHook } from '@/lib/hooks'
+import { getHook, HOOKS } from '@/lib/hooks'
 import AchievementToast from '@/components/AchievementToast'
 import dynamic from 'next/dynamic'
 
@@ -17,6 +17,7 @@ const HookViewer3D = dynamic(() => import('@/app/marketplace/tackle-shop/HookVie
 
 function ActiveHookBadge({ hookTier }: { hookTier: number }) {
   const hook = getHook(hookTier)
+  const luckPct = Math.round((hook.deepChance - HOOKS[0].deepChance) / (HOOKS[HOOKS.length - 1].deepChance - HOOKS[0].deepChance) * 100)
   return (
     <div className="flex flex-col items-center gap-1.5">
       {hook.modelUrl ? (
@@ -31,6 +32,7 @@ function ActiveHookBadge({ hookTier }: { hookTier: number }) {
         </svg>
       )}
       <p className="font-karla font-600 text-[#f0ede8]" style={{ fontSize: '0.88rem' }}>{hook.name}</p>
+      <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: hook.color }}>{luckPct}% luck</p>
       <a
         href="/marketplace/tackle-shop"
         className="font-karla font-600 uppercase tracking-[0.1em] transition-opacity hover:opacity-80"
@@ -356,22 +358,22 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
             </button>
           </div>
 
-          {packs > 0 ? (
-            <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-3">
+            {packs > 0 ? (
               <p className="font-karla font-600 text-[#a0a09a]" style={{ fontSize: '0.78rem' }}>
                 {packs} pack{packs !== 1 ? 's' : ''} available
               </p>
-              <ActiveHookBadge hookTier={hookTier} />
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-3 mt-2">
-              <p className="font-karla font-300 text-[#a0a09a] text-sm">No packs available.</p>
-              <a href="/tavern" className="btn-ghost">Go to the Tavern</a>
-              <a href="/redeem" className="text-[#f0c040] hover:text-[#ffd966] text-xs font-karla font-600 uppercase tracking-[0.12em] transition-colors">
-                Redeem a Code
-              </a>
-            </div>
-          )}
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <p className="font-karla font-300 text-[#a0a09a] text-sm">No packs available.</p>
+                <a href="/tavern" className="btn-ghost">Go to the Tavern</a>
+                <a href="/redeem" className="text-[#f0c040] hover:text-[#ffd966] text-xs font-karla font-600 uppercase tracking-[0.12em] transition-colors">
+                  Redeem a Code
+                </a>
+              </div>
+            )}
+            <ActiveHookBadge hookTier={hookTier} />
+          </div>
         </div>
 
         {/* Doubloon balance + buy buttons */}
