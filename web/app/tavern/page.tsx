@@ -59,12 +59,30 @@ export default async function TavernPage() {
     expeditionStatus === 'active' ? 'Expedition in progress' :
     'Choose your zone · 1 per day'
 
+  const hour = new Date().getHours()
+  const flavorText =
+    hour < 6  ? "It's late. The candles are burning low and the last sailor just passed out in the corner." :
+    hour < 10 ? "The barkeep is still setting up. You're here early — the good seats are yours." :
+    hour < 14 ? "The midday crowd is trickling in. Someone's already bragging about last night's haul." :
+    hour < 18 ? "The afternoon lull. Cards slap the table in the back. A gull calls outside." :
+    hour < 21 ? "The tavern is alive tonight. Three sailors are arguing over who caught the biggest fish." :
+                "Last call's coming. The dice are hot and the stories are getting taller."
+
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
       {!profile?.has_seen_welcome && <WelcomeModal />}
       <main className="min-h-screen pb-24 sm:pb-0 pt-6">
-        <div className="px-6 grid grid-cols-2 lg:grid-cols-3 gap-3 pb-12 max-w-4xl mx-auto">
+        <div className="px-6 max-w-4xl mx-auto mb-6">
+          <p className="font-karla" style={{ fontSize: '0.78rem', color: '#4a4845', fontStyle: 'italic', lineHeight: 1.6 }}>
+            {flavorText}
+          </p>
+        </div>
+
+        <div className="px-6 max-w-4xl mx-auto mb-2">
+          <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>Today</p>
+        </div>
+        <div className="px-6 grid grid-cols-2 lg:grid-cols-3 gap-3 pb-6 max-w-4xl mx-auto">
           <GameCard
             href="/tavern/daily-bonus"
             eyebrow="Daily"
@@ -149,6 +167,12 @@ export default async function TavernPage() {
               completed={bountyAllDone}
             />
           )}
+        </div>
+
+        <div className="px-6 max-w-4xl mx-auto mb-2 mt-4">
+          <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>Games</p>
+        </div>
+        <div className="px-6 grid grid-cols-2 gap-3 pb-6 max-w-4xl mx-auto">
           <GameCard
             href="/tavern/crown-and-anchor"
             eyebrow="Game"
