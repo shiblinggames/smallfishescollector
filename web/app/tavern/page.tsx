@@ -18,11 +18,10 @@ export default async function TavernPage() {
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const [{ data: profile }, { data: fotdAttempt }, dailyWagered, { data: quizAnswer }, bounties, { data: todayExpedition }] = await Promise.all([
+  const [{ data: profile }, { data: fotdAttempt }, dailyWagered, bounties, { data: todayExpedition }] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_ship_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, fishing_date, fishing_casts, has_seen_welcome').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
-    admin.from('quiz_answers').select('correct').eq('user_id', user.id).eq('date', today).single(),
     getWeeklyBounties(),
     admin.from('expeditions').select('status, zone, loot').eq('user_id', user.id).eq('expedition_date', today).maybeSingle(),
   ])
@@ -41,7 +40,6 @@ export default async function TavernPage() {
 
   const fotdDone = !!fotdAttempt && (fotdAttempt.solved || (fotdAttempt.guesses?.length ?? 0) >= 4)
   const crownCapReached = dailyWagered >= DAILY_CAP
-  const quizDone = !!quizAnswer
   const bountyProgress = bounties?.progress
   const bountyCount = bountyProgress ? Object.values(bountyProgress).filter(Boolean).length : 0
   const bountyAllDone = bountyCount === 4
@@ -112,18 +110,6 @@ export default async function TavernPage() {
             streak={profile?.fotd_streak ?? 0}
           />
           <GameCard
-            href="/tavern/daily-quiz"
-            eyebrow="Daily"
-            title="Fish Trivia"
-            statusText={quizDone ? 'Come back tomorrow' : '50 ⟡ for a correct answer'}
-            info={[
-              'One question generated fresh every day',
-              '50 ⟡ for a correct answer',
-            ]}
-            icon={<QuizIcon />}
-            completed={quizDone}
-          />
-          <GameCard
             href="/expeditions"
             eyebrow="Daily"
             title="Expedition"
@@ -186,19 +172,6 @@ export default async function TavernPage() {
             icon={<AnchorIcon />}
             completed={crownCapReached}
           />
-          <GameCard
-            href="/tavern/dead-mans-draw"
-            eyebrow="Game"
-            title="Dead Man's Draw"
-            statusText="First game free daily"
-            info={[
-              'Draw cards one at a time — duplicate species = bust',
-              'Power fish trigger special effects',
-              'First to 30 points wins',
-              'First game free daily · 20 ⟡ after',
-            ]}
-            icon={<SkullIcon />}
-          />
         </div>
 
         <div className="px-6 pb-16 text-center">
@@ -239,27 +212,6 @@ function AnchorIcon() {
       <circle cx="12" cy="5" r="2"/>
       <path d="M12 7v10M8 17c0 0 1 2 4 2s4-2 4-2M7 11h10"/>
       <path d="M7 17c-2-1-3-3-3-5h3M17 17c2-1 3-3 3-5h-3"/>
-    </svg>
-  )
-}
-
-function SkullIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 22h6M12 22v-4"/>
-      <path d="M5 12a7 7 0 0 1 14 0c0 3-1.5 5-3.5 6H8.5C6.5 17 5 15 5 12z"/>
-      <circle cx="9.5" cy="11.5" r="1" fill="currentColor" stroke="none"/>
-      <circle cx="14.5" cy="11.5" r="1" fill="currentColor" stroke="none"/>
-    </svg>
-  )
-}
-
-function QuizIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="9"/>
-      <path d="M9.5 9a2.5 2.5 0 0 1 5 .5c0 2-2.5 2.5-2.5 4.5"/>
-      <circle cx="12" cy="17.5" r="0.8" fill="currentColor" stroke="none"/>
     </svg>
   )
 }
