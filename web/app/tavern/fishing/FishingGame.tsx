@@ -85,7 +85,7 @@ function DialSVG({
             return <text key={i} x={mid.x.toFixed(2)} y={mid.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill={pz.color} fontSize="9" opacity="0.85">✕</text>
           })}
         </g>
-        <circle cx={CX} cy={CY} r={INNER_R - 2} fill="rgba(0,0,0,0.55)" />
+        <circle cx={CX} cy={CY} r={INNER_R - 2} fill="rgba(8,18,28,0.82)" />
         <g transform={`rotate(${angle}, ${CX}, ${CY})`}>
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={needleColor} strokeWidth="10" strokeOpacity="0.12" strokeLinecap="round" />
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={needleColor} strokeWidth="2.5" strokeLinecap="round" />
@@ -94,8 +94,12 @@ function DialSVG({
         <circle cx={CX} cy={CY} r="8" fill="rgba(10,10,10,0.9)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
       </svg>
       {fish && (
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: '1.6rem', lineHeight: 1, pointerEvents: 'none', userSelect: 'none' }}>
-          🐟
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none', userSelect: 'none' }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 12c2-4 6-6 10-6s8 2 10 6c-2 4-6 6-10 6S4 16 2 12z"/>
+            <circle cx="16" cy="10" r="1" fill="rgba(255,255,255,0.25)" stroke="none"/>
+            <path d="M2 12c-2-2-2-4 0-4"/>
+          </svg>
         </div>
       )}
     </div>
@@ -115,10 +119,10 @@ function DoneForToday() {
         <Link href="/tavern"
           className="font-karla font-700 uppercase tracking-[0.12em]"
           style={{
-            fontSize: '0.68rem', color: '#93c5fd',
+            fontSize: '0.68rem', color: '#c0bfba',
             padding: '0.45rem 1rem', borderRadius: '2rem',
-            border: '1px solid rgba(96,165,250,0.35)',
-            background: 'rgba(96,165,250,0.08)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            background: 'rgba(255,255,255,0.06)',
           }}>
           Back to Tavern
         </Link>
@@ -324,7 +328,11 @@ export default function FishingGame({
         <div className="flex items-center gap-2.5">
           <div className="flex items-center justify-center w-8 h-8 rounded-lg"
             style={{ background: `${hook.color}18`, border: `1px solid ${hook.color}35` }}>
-            <span style={{ fontSize: '1rem' }}>🪝</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={hook.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3v9"/>
+              <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
+              <circle cx="12" cy="3" r="1.2" fill={hook.color} stroke="none"/>
+            </svg>
           </div>
           <div>
             <p className="font-karla font-700 leading-none" style={{ fontSize: '0.82rem', color: hook.color }}>{hook.name}</p>
@@ -386,12 +394,12 @@ export default function FishingGame({
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
                     width: 88, height: 88, borderRadius: '50%',
-                    background: 'radial-gradient(ellipse at 40% 35%, rgba(96,165,250,0.28), rgba(96,165,250,0.09))',
-                    border: '1px solid rgba(96,165,250,0.4)', cursor: 'pointer',
-                    fontSize: '0.72rem', color: '#93c5fd', touchAction: 'manipulation',
-                    boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(96,165,250,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
+                    background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.35), rgba(14,116,144,0.12))',
+                    border: '1px solid rgba(34,170,200,0.4)', cursor: 'pointer',
+                    fontSize: '0.72rem', color: '#67d4e8', touchAction: 'manipulation',
+                    boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
                   }}
-                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5), 0 0 22px rgba(96,165,250,0.22), inset 0 1px 0 rgba(255,255,255,0.1)' }}
+                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)' }}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                 >Cast Line</motion.button>
               </div>
@@ -486,13 +494,13 @@ export default function FishingGame({
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
                     width: 88, height: 88, borderRadius: '50%',
-                    background: 'radial-gradient(ellipse at 40% 35%, rgba(96,165,250,0.28), rgba(96,165,250,0.09))',
-                    border: '1px solid rgba(96,165,250,0.4)', cursor: 'pointer',
-                    fontSize: '0.72rem', color: '#93c5fd', touchAction: 'manipulation',
-                    boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(96,165,250,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
+                    background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.35), rgba(14,116,144,0.12))',
+                    border: '1px solid rgba(34,170,200,0.4)', cursor: 'pointer',
+                    fontSize: '0.72rem', color: '#67d4e8', touchAction: 'manipulation',
+                    boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
                   }}
                   initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5), 0 0 22px rgba(96,165,250,0.22), inset 0 1px 0 rgba(255,255,255,0.1)' }}
+                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)' }}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                 >Cast Again</motion.button>
               ) : (
