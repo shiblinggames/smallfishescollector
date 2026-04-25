@@ -57,14 +57,44 @@ export default async function TavernPage() {
     expeditionStatus === 'active' ? 'Expedition in progress' :
     'Choose your zone · 1 per day'
 
-  const hour = new Date().getHours()
-  const flavorText =
-    hour < 6  ? "It's late. The candles are burning low and the last sailor just passed out in the corner." :
-    hour < 10 ? "The barkeep is still setting up. You're here early — the good seats are yours." :
-    hour < 14 ? "The midday crowd is trickling in. Someone's already bragging about last night's haul." :
-    hour < 18 ? "The afternoon lull. Cards slap the table in the back. A gull calls outside." :
-    hour < 21 ? "The tavern is alive tonight. Three sailors are arguing over who caught the biggest fish." :
-                "Last call's coming. The dice are hot and the stories are getting taller."
+  const bartenderLines = [
+    // Fish of the Day
+    "Heard the fish today is a tricky one. Three sailors guessed wrong on the first clue.",
+    "Someone cracked the fish of the day on the very first guess this morning. Haven't seen that in weeks.",
+    "Don't even look at today's fish without your first clue. Trust me on that one.",
+    "The fish of the day's been stumping everyone. Clue by clue, they're getting closer.",
+    // Expeditions
+    "Two ships didn't make it back from the Bertuna Triangle last week. Beautiful zone. Deadly.",
+    "Coral Run's looking calm today. Good time to send a ship out if you've been holding off.",
+    "Word from the docks — something massive spotted near the Sunken Reach. Might want to wait on that one.",
+    "Nobody talks about Davy Jones' Locker and smiles. But the ones who make it back smile plenty.",
+    "The Sunken Reach is no joke. Pack your best crew before you go near that place.",
+    "Expedition season's picking up. Lost count of the ships heading out this week.",
+    // Fishing
+    "Slow morning on the water. Fish aren't biting much today.",
+    "Dropped a line myself before my shift. Came up empty. The deep ones are hiding.",
+    "Those enchanted hooks — never believed in 'em myself. Then I saw what came up on one.",
+    "Twenty casts a day. Some folks use 'em all at once, some spread 'em out. Doesn't seem to matter.",
+    "Best hook wins. Simple as that. The rusty one'll catch something, sure — just not the good stuff.",
+    // Bounties
+    "There's a bounty out on a deep water fish this week. Nobody's landed it yet.",
+    "The abyss bounty's still up for grabs. Five hundred doubloons and a pack for whoever lands it.",
+    "Bounty board's fresh this week. Someone always clears the shallows one first. Easy money.",
+    // Crown & Anchor
+    "Careful with the dice today. Saw a sailor lose four rounds straight on the anchor. Bad luck going around.",
+    "Crown and Anchor's been running hot this week. Or maybe it's just the dice. Who knows.",
+    "Five hundred doubloons is the limit at the tables. House rules. Don't bother arguing — I made the rules.",
+    // General tavern
+    "What'll it be? Oh — you're just browsing. Fair enough.",
+    "Stay for a round. The Tentacle-Tonic's fresh today.",
+    "Another one asking about the abyss. I'll say what I always say — go prepared, or don't go at all.",
+    "Fortified XX just came in from the southern ports. Good batch this time.",
+    "Quieter than usual today. Most of the regulars are out on the water.",
+    // Ships
+    "Saw a Galleon come into port this morning. Now that's a ship.",
+    "Bigger ship, better haul. That's how it works. Always has been.",
+  ]
+  const bartenderLine = bartenderLines[Math.floor(Math.random() * bartenderLines.length)]
 
   return (
     <>
@@ -92,9 +122,12 @@ export default async function TavernPage() {
           <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, #0e0c0a 0%, transparent 15%, transparent 85%, #0e0c0a 100%)' }} />
         </div>
 
-        <div className="px-6 max-w-4xl mx-auto mb-6" style={{ position: 'relative', zIndex: 1 }}>
-          <p className="font-karla" style={{ fontSize: '0.78rem', color: '#4a4845', fontStyle: 'italic', lineHeight: 1.6 }}>
-            {flavorText}
+        <div className="px-6 max-w-lg mx-auto mb-6 text-center" style={{ position: 'relative', zIndex: 1 }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.95rem', color: '#c8a96e', lineHeight: 1.6 }}>
+            &ldquo;{bartenderLine}&rdquo;
+          </p>
+          <p className="font-karla font-300 mt-1" style={{ fontSize: '0.65rem', color: '#5a5450', letterSpacing: '0.08em' }}>
+            — PETE, BARKEEP
           </p>
         </div>
 
