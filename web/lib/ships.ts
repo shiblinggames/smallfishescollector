@@ -42,7 +42,7 @@ export const SHIPS: ShipDef[] = [
   {
     tier: 6, name: 'Man-o-War', cost: 18000,
     description: 'The most feared ship on the water.',
-    dailyBonus: 125, color: '#ff6b35',
+    dailyBonus: 125, color: '#ff6b35', modelUrl: '/models/man-o-war.glb',
   },
 ]
 

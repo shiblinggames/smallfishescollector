@@ -3,11 +3,15 @@
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { resolveChoice, resolvePenaltyEvent, resolveFinalLoot, abandonExpedition } from '../actions'
 import {
   STATS, STAT_LABELS, STAT_ICONS, STAT_DESCRIPTIONS, RARITY_COLORS, EXPEDITION_SHIP_STATS, ZONES,
   type Expedition, type DailyExpeditionRow, type EventNode, type EventResult, type LootResult, type ExpeditionShipStats,
 } from '@/lib/expeditions'
+import { SHIPS } from '@/lib/ships'
+
+const ShipViewer3D = dynamic(() => import('@/app/marketplace/shipyard/ShipViewer3D'), { ssr: false })
 
 type Phase =
   | { type: 'event' }
@@ -196,6 +200,17 @@ export default function VoyagePage({ expedition, dailyContent, zoneName, zoneIco
   return (
     <main className="min-h-screen pb-24 sm:pb-0 pt-6">
       <div className="px-6 max-w-2xl mx-auto">
+
+        {/* Ship viewer */}
+        {SHIPS[expedition.ship_tier]?.modelUrl && (
+          <div className="mb-4">
+            <ShipViewer3D
+              modelUrl={SHIPS[expedition.ship_tier].modelUrl!}
+              color={SHIPS[expedition.ship_tier].color}
+              height={150}
+            />
+          </div>
+        )}
 
         {/* Zone header + progress */}
         <div className="mb-5">

@@ -17,14 +17,14 @@ function ShipModel({ url, color }: { url: string; color: string }) {
   return <primitive ref={ref} object={scene} />
 }
 
-export default function ShipViewer3D({ modelUrl, color }: { modelUrl: string; color: string }) {
+export default function ShipViewer3D({ modelUrl, color, height = 220 }: { modelUrl: string; color: string; height?: number }) {
   const hex = color ?? '#a07858'
   const r = parseInt(hex.slice(1, 3), 16) / 255
   const g = parseInt(hex.slice(3, 5), 16) / 255
   const b = parseInt(hex.slice(5, 7), 16) / 255
 
   return (
-    <div style={{ width: '100%', height: 220, borderRadius: 14, overflow: 'hidden', background: 'rgba(255,255,255,0.03)' }}>
+    <div style={{ width: '100%', height, borderRadius: 14, overflow: 'hidden', background: 'rgba(255,255,255,0.03)' }}>
       <Canvas camera={{ position: [0, 0.6, 2.8], fov: 45 }}>
         <ambientLight intensity={0.5} />
         <directionalLight position={[4, 6, 4]} intensity={1.2} castShadow />
