@@ -79,17 +79,17 @@ export default async function TavernPage() {
         }} />
 
         {/* Bartender banner */}
-        <div style={{ position: 'relative', zIndex: 1, marginBottom: '-1rem', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', zIndex: 1, marginBottom: '-1rem', display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/bartender.jpeg"
             alt=""
             aria-hidden
-            style={{ width: '100%', height: 'auto', display: 'block', maxHeight: 320, objectFit: 'cover', objectPosition: 'center 20%' }}
+            style={{ width: '100%', maxWidth: 560, height: 'auto', display: 'block' }}
           />
           {/* Fade all four edges */}
           <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, #0e0c0a 0%, transparent 20%, transparent 55%, #0e0c0a 100%)' }} />
-          <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, #0e0c0a 0%, transparent 20%, transparent 80%, #0e0c0a 100%)' }} />
+          <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, #0e0c0a 0%, transparent 15%, transparent 85%, #0e0c0a 100%)' }} />
         </div>
 
         <div className="px-6 max-w-4xl mx-auto mb-6" style={{ position: 'relative', zIndex: 1 }}>
