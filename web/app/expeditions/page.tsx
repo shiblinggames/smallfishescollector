@@ -107,7 +107,7 @@ export default async function ExpeditionsPage() {
           )}
 
           {/* Ship info */}
-          <ShipInfoPanel ship={EXPEDITION_SHIP_STATS[shipTier]} />
+          <ShipInfoPanel ship={EXPEDITION_SHIP_STATS[shipTier]} shipTier={shipTier} />
 
           {/* Zone grid */}
           <div className="grid grid-cols-2 gap-3 pb-12">

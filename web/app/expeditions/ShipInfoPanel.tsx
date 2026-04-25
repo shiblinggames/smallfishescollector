@@ -1,12 +1,17 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { STAT_ICONS, STAT_LABELS, STAT_DESCRIPTIONS, type ExpeditionShipStats } from '@/lib/expeditions'
+import { SHIPS } from '@/lib/ships'
+
+const ShipViewer3D = dynamic(() => import('@/app/marketplace/shipyard/ShipViewer3D'), { ssr: false })
 
 const STATS = ['combat', 'navigation', 'durability', 'speed', 'luck'] as const
 
-export default function ShipInfoPanel({ ship }: { ship: ExpeditionShipStats }) {
+export default function ShipInfoPanel({ ship, shipTier }: { ship: ExpeditionShipStats; shipTier: number }) {
+  const shipDef = SHIPS[shipTier]
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -19,6 +24,11 @@ export default function ShipInfoPanel({ ship }: { ship: ExpeditionShipStats }) {
         overflow: 'hidden',
       }}
     >
+      {/* 3D ship viewer */}
+      {shipDef?.modelUrl && (
+        <ShipViewer3D modelUrl={shipDef.modelUrl} color={shipDef.color} height={160} />
+      )}
+
       {/* Header row — always visible, click to expand */}
       <button
         onClick={() => setExpanded(e => !e)}
