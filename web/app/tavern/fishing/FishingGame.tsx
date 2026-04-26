@@ -362,11 +362,15 @@ function FishingScene({ phase }: { phase: 'casting' | 'hooked' }) {
             : { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }
           : { duration: 0.08 }
         }
-        style={{ lineHeight: 0 }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt="" style={{ width: 220, height: 220, objectFit: 'contain', display: 'block' }} />
-      </motion.div>
+        style={{
+          width: 220,
+          height: 220,
+          backgroundImage: `url('${src}')`,
+          backgroundSize: 'contain',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
+        }}
+      />
       <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#6a6764' }}>
         {phase === 'hooked' ? 'Something\'s on the line!' : 'Waiting for a bite…'}
       </p>
