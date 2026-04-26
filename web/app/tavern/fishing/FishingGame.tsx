@@ -925,16 +925,7 @@ export default function FishingGame({
         }} />
 
         {/* UI content — fills full height as flex column */}
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', minHeight: '100svh', padding: '1rem', paddingTop: '3.5rem', paddingBottom: '1.25rem' }}>
-
-          {/* Header */}
-          <div className="flex items-center justify-between mb-3">
-            <Link href="/tavern" className="font-karla font-600"
-              style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.3)' }}>← Tavern</Link>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0c040' }}>
-              {doubloons.toLocaleString()} ⟡
-            </p>
-          </div>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', minHeight: '100svh', padding: '1rem', paddingTop: '1rem', paddingBottom: '1.25rem' }}>
 
           <GearBar rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} lineTier={lineTier} />
 
