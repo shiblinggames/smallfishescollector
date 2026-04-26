@@ -578,6 +578,9 @@ export default function FishingGame({
   const [inventory, setInventory]   = useState<InventoryItem[]>(initialInventory)
   const [doubloons, setDoubloons]   = useState(initialDoubloons)
   const [noBiteFlash, setNoBiteFlash] = useState(false)
+  const [baitOpen, setBaitOpen]       = useState(false)
+  const [holdOpen, setHoldOpen]       = useState(false)
+  const [sellPending, setSellPending] = useState<number | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number } | null>(null)
   const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean } | null>(null)
   const [missResult, setMissResult] = useState<ZoneType | null>(null)
@@ -667,6 +670,7 @@ export default function FishingGame({
     const currentQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
     if (currentQty <= 0) return
 
+    setBaitOpen(false)
     deductBait(selectedBait)
     setPhase('casting')
 
@@ -755,7 +759,9 @@ export default function FishingGame({
   }
 
   async function handleSell(fishId: number, qty: number) {
+    setSellPending(fishId)
     const res = await sellFish(fishId, qty)
+    setSellPending(null)
     if ('error' in res) return
     setDoubloons(res.doubloons)
     setInventory(prev => prev
@@ -768,6 +774,8 @@ export default function FishingGame({
     setCatchResult(null)
     setMissResult(null)
     setHookedFish(null)
+    setBaitOpen(false)
+    setHoldOpen(false)
     setPhase('idle')
   }
 
@@ -788,7 +796,10 @@ export default function FishingGame({
   }
 
   const hasBait = totalBait() > 0
-  const selectedBaitQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
+  const selectedBaitQty  = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
+  const selectedBaitDef  = BAITS.find(b => b.type === selectedBait)
+  const holdTotalCount   = inventory.reduce((s, i) => s + i.quantity, 0)
+  const holdTotalValue   = inventory.reduce((s, i) => s + i.fish_species.sell_value * i.quantity, 0)
 
   const FRAME_SRC: Record<SceneFrame, string> = {
     windup:  '/windup.jpg',
@@ -799,11 +810,8 @@ export default function FishingGame({
   const isBobbing = sceneFrame === 'fishing' && (phase === 'casting' || phase === 'hooked')
 
   return (
-    <div className="flex flex-col gap-4 max-w-md mx-auto px-4 py-2">
-
-      {/* ── Scene card — fish illustration is the persistent background ── */}
-      <div className="relative rounded-2xl overflow-hidden"
-        style={{ minHeight: 480, background: '#08121c', border: `1px solid ${HABITAT_COLOR[selectedZone]}20` }}>
+    <div className="relative max-w-md mx-auto overflow-hidden"
+      style={{ minHeight: '100svh', background: '#08121c' }}>
 
         {/* Background layers — all 4 frames always in DOM, opacity-switched to avoid reload flicker */}
         <motion.div
@@ -832,11 +840,11 @@ export default function FishingGame({
           background: 'linear-gradient(to bottom, rgba(8,18,28,0.1) 0%, rgba(8,18,28,0.45) 40%, rgba(8,18,28,0.92) 72%, rgba(8,18,28,0.98) 100%)',
         }} />
 
-        {/* UI content */}
-        <div style={{ position: 'relative', zIndex: 1 }} className="flex flex-col gap-3 p-4">
+        {/* UI content — fills full height as flex column */}
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', minHeight: '100svh', padding: '1rem', paddingTop: '3.5rem', paddingBottom: '1.25rem' }}>
 
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.3rem' }}>Drop a Line</h1>
               <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.7rem' }}>Fish · Catch · Sell</p>
@@ -852,203 +860,347 @@ export default function FishingGame({
 
           <GearBar rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} lineTier={lineTier} />
 
-          <AnimatePresence mode="wait">
+          {/* Phase content — grows to fill available space */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', marginTop: '0.75rem' }}>
+            <AnimatePresence mode="wait">
 
-            {/* ── IDLE ── */}
-            {phase === 'idle' && (
-              <motion.div key="idle"
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}
-                className="flex flex-col gap-3">
+              {/* ── IDLE ── */}
+              {phase === 'idle' && (
+                <motion.div key="idle"
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}
+                  style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
 
-                <ZoneSelector selectedZone={selectedZone} onSelect={setSelectedZone} rodTier={rodTier} />
+                  <ZoneSelector selectedZone={selectedZone} onSelect={setSelectedZone} rodTier={rodTier} />
 
-                {/* Zone label — floats over the scene */}
-                <div style={{ paddingTop: 80 }}>
-                  <p className="font-cinzel font-700"
-                    style={{ fontSize: '0.88rem', color: HABITAT_COLOR[selectedZone] }}>
-                    {HABITAT_LABEL[selectedZone]}
+                  <div>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: HABITAT_COLOR[selectedZone] }}>
+                      {HABITAT_LABEL[selectedZone]}
+                    </p>
+                    <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.35)' }}>
+                      {HABITAT_TAGLINE[selectedZone]}
+                    </p>
+                  </div>
+
+                  <div style={{ flex: 1 }} />
+
+                  <AnimatePresence>
+                    {noBiteFlash && (
+                      <motion.p key="nobite"
+                        initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                        className="font-karla font-600 text-center"
+                        style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
+                        No bite. Try again.
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="flex justify-center py-2">
+                    {hasBait && selectedBaitQty > 0 ? (
+                      <motion.button onClick={handleCast}
+                        className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                        style={{
+                          width: 88, height: 88, borderRadius: '50%',
+                          background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.45), rgba(14,116,144,0.18))',
+                          border: '1px solid rgba(34,170,200,0.5)', cursor: 'pointer',
+                          fontSize: '0.72rem', color: '#67d4e8', touchAction: 'manipulation',
+                          boxShadow: '0 6px 0 rgba(0,0,0,0.6), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+                        }}
+                        whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' }}
+                        transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                      >Cast</motion.button>
+                    ) : (
+                      <div className="text-center">
+                        <p className="font-karla font-600 mb-2" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)' }}>
+                          No compatible bait
+                        </p>
+                        <Link href="/marketplace/tackle-shop"
+                          className="font-karla font-700 uppercase tracking-[0.12em]"
+                          style={{
+                            fontSize: '0.65rem', color: '#f0c040',
+                            padding: '0.45rem 1rem', borderRadius: '2rem',
+                            border: '1px solid rgba(240,192,64,0.35)',
+                            background: 'rgba(240,192,64,0.08)',
+                          }}>Buy Bait</Link>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ── CASTING / HOOKED ── */}
+              {(phase === 'casting' || phase === 'hooked') && (
+                <motion.div key="waiting"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
+                  style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: '2rem' }}>
+                  <p className="font-karla font-600"
+                    style={{ fontSize: '0.82rem', color: phase === 'hooked' ? '#fde68a' : 'rgba(255,255,255,0.35)' }}>
+                    {phase === 'hooked' ? "Something's on the line!" : (
+                      selectedZone === 'abyss'       ? 'Something stirs in the deep…' :
+                      selectedZone === 'deep'        ? 'Waiting in the dark…' :
+                      selectedZone === 'open_waters' ? 'Drifting on the open sea…' :
+                                                       'Waiting for a bite…'
+                    )}
                   </p>
-                  <p className="font-karla font-300"
-                    style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.35)' }}>
-                    {HABITAT_TAGLINE[selectedZone]}
-                  </p>
-                </div>
+                </motion.div>
+              )}
 
-                <BaitSelector
-                  baitInventory={baitInventory}
-                  selectedBait={selectedBait}
-                  onSelect={setSelectedBait}
-                  selectedZone={selectedZone}
-                />
+              {/* ── CATCHING / REELING ── */}
+              {(phase === 'catching' || phase === 'reeling') && hookedFish && (
+                <motion.div key="catching"
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
+                  style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', paddingBottom: '1rem' }}>
 
-                <AnimatePresence>
-                  {noBiteFlash && (
-                    <motion.p key="nobite"
-                      initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-                      className="font-karla font-600 text-center"
-                      style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
-                      No bite. Try again.
-                    </motion.p>
-                  )}
-                </AnimatePresence>
+                  <div style={{ minHeight: '1.6rem' }}>
+                    <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
+                      style={{ fontSize: '0.88rem', color: currentZone?.color ?? '#888' }}>
+                      {phase === 'reeling' ? 'Reeling in…' : (currentZone?.label ?? '')}
+                    </p>
+                  </div>
 
-                <div className="flex justify-center pt-1">
-                  {hasBait && selectedBaitQty > 0 ? (
-                    <motion.button onClick={handleCast}
+                  <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}
+                    needleColor={needleColor()} zoneOpacityFn={zoneOpacity} />
+
+                  {phase === 'catching' ? (
+                    <motion.button
+                      onPointerDown={e => { e.preventDefault(); handleReelIn() }}
                       className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                       style={{
                         width: 88, height: 88, borderRadius: '50%',
-                        background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.45), rgba(14,116,144,0.18))',
-                        border: '1px solid rgba(34,170,200,0.5)', cursor: 'pointer',
-                        fontSize: '0.72rem', color: '#67d4e8', touchAction: 'manipulation',
-                        boxShadow: '0 6px 0 rgba(0,0,0,0.6), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+                        background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
+                        border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
+                        fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
+                        boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
                       }}
-                      whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' }}
+                      whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
                       transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                    >Cast</motion.button>
+                    >Reel In</motion.button>
                   ) : (
-                    <div className="text-center">
-                      <p className="font-karla font-600 mb-2" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)' }}>
-                        No compatible bait
-                      </p>
-                      <Link href="/marketplace/tackle-shop"
-                        className="font-karla font-700 uppercase tracking-[0.12em]"
-                        style={{
-                          fontSize: '0.65rem', color: '#f0c040',
-                          padding: '0.45rem 1rem', borderRadius: '2rem',
-                          border: '1px solid rgba(240,192,64,0.35)',
-                          background: 'rgba(240,192,64,0.08)',
-                        }}>Buy Bait</Link>
+                    <div style={{ width: 88, height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#4a4845' }}>…</p>
                     </div>
                   )}
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
 
-            {/* ── CASTING / HOOKED ── */}
-            {(phase === 'casting' || phase === 'hooked') && (
-              <motion.div key="waiting"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
-                style={{ paddingTop: 180, paddingBottom: 24 }}
-                className="flex flex-col items-center gap-2">
-                <p className="font-karla font-600"
-                  style={{ fontSize: '0.82rem', color: phase === 'hooked' ? '#fde68a' : 'rgba(255,255,255,0.35)' }}>
-                  {phase === 'hooked' ? "Something's on the line!" : (
-                    selectedZone === 'abyss'       ? 'Something stirs in the deep…' :
-                    selectedZone === 'deep'        ? 'Waiting in the dark…' :
-                    selectedZone === 'open_waters' ? 'Drifting on the open sea…' :
-                                                     'Waiting for a bite…'
+              {/* ── RESULT ── */}
+              {phase === 'result' && (
+                <motion.div key="result"
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
+                  style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: '1rem', paddingBottom: '1rem' }}>
+
+                  {catchResult ? (
+                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} />
+                  ) : (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
+                      <p className="font-cinzel font-700 mb-1"
+                        style={{ fontSize: '1rem', color: missResult === 'penalty' ? '#f87171' : '#64748b' }}>
+                        {missResult === 'penalty' ? 'Snagged!' : 'No catch'}
+                      </p>
+                      <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#4a4845' }}>
+                        {missResult === 'penalty' ? 'Lost an extra bait on the snag.' : 'The fish slipped away.'}
+                      </p>
+                    </motion.div>
                   )}
-                </p>
-              </motion.div>
-            )}
 
-            {/* ── CATCHING / REELING ── */}
-            {(phase === 'catching' || phase === 'reeling') && hookedFish && (
-              <motion.div key="catching"
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
-                className="flex flex-col gap-4 items-center">
-
-                <div style={{ minHeight: '1.6rem' }}>
-                  <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
-                    style={{ fontSize: '0.88rem', color: currentZone?.color ?? '#888' }}>
-                    {phase === 'reeling' ? 'Reeling in…' : (currentZone?.label ?? '')}
-                  </p>
-                </div>
-
-                <DialSVG
-                  zones={catchingZones}
-                  angle={angle}
-                  rotation={zoneRotation}
-                  needleColor={needleColor()}
-                  zoneOpacityFn={zoneOpacity}
-                />
-
-                {phase === 'catching' ? (
-                  <motion.button
-                    onPointerDown={e => { e.preventDefault(); handleReelIn() }}
-                    className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-                    style={{
-                      width: 88, height: 88, borderRadius: '50%',
-                      background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
-                      border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
-                      fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
-                      boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
-                    }}
-                    whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
-                    transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                  >Reel In</motion.button>
-                ) : (
-                  <div style={{ width: 88, height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#4a4845' }}>…</p>
+                  <div className="flex justify-center">
+                    <motion.button onClick={handleCastAgain}
+                      className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                      style={{
+                        width: 88, height: 88, borderRadius: '50%',
+                        background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.35), rgba(14,116,144,0.12))',
+                        border: '1px solid rgba(34,170,200,0.4)', cursor: 'pointer',
+                        fontSize: '0.65rem', color: '#67d4e8', touchAction: 'manipulation',
+                        boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+                      }}
+                      whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
+                      transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                    >Cast Again</motion.button>
                   </div>
-                )}
-              </motion.div>
-            )}
+                </motion.div>
+              )}
 
-            {/* ── RESULT ── */}
-            {phase === 'result' && (
-              <motion.div key="result"
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
-                className="flex flex-col gap-4">
+            </AnimatePresence>
+          </div>
 
-                {catchResult ? (
-                  <ResultCard
-                    fish={catchResult.fish}
-                    baitSaved={catchResult.baitSaved}
-                    isNewSpecies={catchResult.isNewSpecies}
-                  />
-                ) : (
-                  <motion.div
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    className="text-center py-6">
-                    <p className="font-cinzel font-700 mb-1"
-                      style={{ fontSize: '1rem', color: missResult === 'penalty' ? '#f87171' : '#64748b' }}>
-                      {missResult === 'penalty' ? 'Snagged!' : 'No catch'}
-                    </p>
-                    <p className="font-karla font-300"
-                      style={{ fontSize: '0.72rem', color: '#4a4845' }}>
-                      {missResult === 'penalty' ? 'Lost an extra bait on the snag.' : 'The fish slipped away.'}
-                    </p>
-                  </motion.div>
-                )}
+          {/* ── Bottom buttons — Bait + Fish Hold ── */}
+          <div className="flex gap-3" style={{ paddingTop: '0.75rem' }}>
 
-                <div className="flex justify-center">
-                  <motion.button onClick={handleCastAgain}
-                    className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-                    style={{
-                      width: 88, height: 88, borderRadius: '50%',
-                      background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.35), rgba(14,116,144,0.12))',
-                      border: '1px solid rgba(34,170,200,0.4)', cursor: 'pointer',
-                      fontSize: '0.65rem', color: '#67d4e8', touchAction: 'manipulation',
-                      boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
-                    }}
-                    whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
-                    transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                  >Cast Again</motion.button>
-                </div>
-              </motion.div>
-            )}
+            {/* Bait button */}
+            <button
+              onClick={() => { setBaitOpen(o => !o); setHoldOpen(false) }}
+              style={{
+                flex: 1, height: 68, borderRadius: 14,
+                background: baitOpen ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.45)',
+                border: `1px solid ${baitOpen ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.09)'}`,
+                backdropFilter: 'blur(16px)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
+              }}
+            >
+              <p className="font-karla font-600 uppercase tracking-[0.12em]"
+                style={{ fontSize: '0.44rem', color: '#6a6764' }}>Bait</p>
+              <p className="font-karla font-700"
+                style={{ fontSize: '0.75rem', color: selectedBaitDef?.color ?? '#f0ede8' }}>
+                {selectedBaitDef?.name ?? '—'}
+              </p>
+              <p className="font-karla font-600"
+                style={{ fontSize: '0.5rem', color: selectedBaitQty > 0 ? '#6a6764' : '#f87171' }}>
+                ×{selectedBaitQty} remaining
+              </p>
+            </button>
 
-          </AnimatePresence>
+            {/* Fish Hold button */}
+            <button
+              onClick={() => { setHoldOpen(o => !o); setBaitOpen(false) }}
+              style={{
+                flex: 1, height: 68, borderRadius: 14,
+                background: holdOpen ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.45)',
+                border: `1px solid ${holdOpen ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.09)'}`,
+                backdropFilter: 'blur(16px)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
+              }}
+            >
+              <p className="font-karla font-600 uppercase tracking-[0.12em]"
+                style={{ fontSize: '0.44rem', color: '#6a6764' }}>Fish Hold</p>
+              <p className="font-karla font-700"
+                style={{ fontSize: '0.75rem', color: holdTotalCount > 0 ? '#f0ede8' : '#4a4845' }}>
+                {holdTotalCount > 0 ? `${holdTotalCount} fish` : 'Empty'}
+              </p>
+              {holdTotalCount > 0 && (
+                <p className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#f0c040' }}>
+                  {holdTotalValue.toLocaleString()} ⟡
+                </p>
+              )}
+            </button>
+          </div>
+
         </div>
-      </div>
 
-      {/* Fish inventory */}
-      <FishInventory inventory={inventory} onSell={handleSell} />
+      {/* ── Bait drawer ── */}
+      <AnimatePresence>
+        {baitOpen && (
+          <motion.div key="bait-drawer"
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+              background: 'rgba(6,12,20,0.98)',
+              borderTop: '1px solid rgba(255,255,255,0.09)',
+              borderRadius: '18px 18px 0 0',
+              padding: '1.25rem 1rem 2rem',
+            }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                style={{ fontSize: '0.6rem', color: '#6a6764' }}>Select Bait</p>
+              <button onClick={() => setBaitOpen(false)}
+                style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+            </div>
+            <BaitSelector
+              baitInventory={baitInventory}
+              selectedBait={selectedBait}
+              onSelect={(type) => { setSelectedBait(type); setBaitOpen(false) }}
+              selectedZone={selectedZone}
+            />
+            <p className="font-karla font-600 text-center mt-4" style={{ fontSize: '0.62rem', color: '#4a4845' }}>
+              <Link href="/marketplace/tackle-shop" style={{ color: '#5a5956', textDecoration: 'underline' }}>
+                Buy bait or upgrade gear
+              </Link>
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {hookTier < 6 && (
-        <p className="font-karla font-600 text-center mt-2" style={{ fontSize: '0.65rem', color: '#4a4845' }}>
-          <Link href="/marketplace/tackle-shop" style={{ color: '#5a5956', textDecoration: 'underline' }}>
-            Upgrade your gear
-          </Link>{' '}to reach deeper waters
-        </p>
-      )}
+      {/* ── Fish Hold drawer ── */}
+      <AnimatePresence>
+        {holdOpen && (
+          <motion.div key="hold-drawer"
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+              background: 'rgba(6,12,20,0.98)',
+              borderTop: '1px solid rgba(255,255,255,0.09)',
+              borderRadius: '18px 18px 0 0',
+              padding: '1.25rem 1rem 2rem',
+              maxHeight: '72vh', overflowY: 'auto',
+            }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                  style={{ fontSize: '0.6rem', color: '#6a6764' }}>Fish Hold</p>
+                {holdTotalCount > 0 && (
+                  <span className="font-karla font-600"
+                    style={{ fontSize: '0.52rem', color: '#f0c040', background: 'rgba(240,192,64,0.1)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                    {holdTotalValue.toLocaleString()} ⟡
+                  </span>
+                )}
+              </div>
+              <button onClick={() => setHoldOpen(false)}
+                style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+            </div>
+
+            {inventory.length === 0 ? (
+              <p className="font-karla font-300 text-center py-6" style={{ fontSize: '0.72rem', color: '#4a4845' }}>
+                No fish yet. Cast a line!
+              </p>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {inventory.map(item => {
+                  const fish   = item.fish_species
+                  const hColor = HABITAT_COLOR[fish.habitat] ?? '#888'
+                  const isPend = sellPending === item.fish_id
+                  return (
+                    <div key={item.fish_id}
+                      className="flex items-center gap-3 px-3 py-2 rounded-xl"
+                      style={{ background: `${hColor}0a`, border: `1px solid ${hColor}20` }}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.75rem', color: '#f0ede8' }}>{fish.name}</p>
+                          <span className="font-karla font-600 shrink-0"
+                            style={{ fontSize: '0.52rem', color: hColor, background: `${hColor}18`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                            ×{item.quantity}
+                          </span>
+                        </div>
+                        <p className="font-karla font-600 mt-0.5" style={{ fontSize: '0.58rem', color: '#f0c040' }}>
+                          {fish.sell_value.toLocaleString()} ⟡ each
+                          {item.quantity > 1 && <span style={{ color: '#6a6764' }}> · {(fish.sell_value * item.quantity).toLocaleString()} ⟡</span>}
+                        </p>
+                      </div>
+                      <div className="flex gap-1.5 shrink-0">
+                        {item.quantity > 1 && (
+                          <button onClick={() => handleSell(item.fish_id, item.quantity)} disabled={!!isPend}
+                            className="font-karla font-700 uppercase tracking-[0.1em]"
+                            style={{ fontSize: '0.5rem', padding: '0.28rem 0.55rem', borderRadius: '0.5rem',
+                              background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.22)',
+                              color: '#f0c040', opacity: isPend ? 0.5 : 1, cursor: isPend ? 'default' : 'pointer' }}>
+                            Sell all
+                          </button>
+                        )}
+                        <button onClick={() => handleSell(item.fish_id, 1)} disabled={!!isPend}
+                          className="font-karla font-700 uppercase tracking-[0.1em]"
+                          style={{ fontSize: '0.5rem', padding: '0.28rem 0.55rem', borderRadius: '0.5rem',
+                            background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.35)',
+                            color: '#f0c040', opacity: isPend ? 0.5 : 1, cursor: isPend ? 'default' : 'pointer' }}>
+                          {isPend ? '…' : 'Sell 1'}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   )
 }

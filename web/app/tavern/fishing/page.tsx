@@ -40,7 +40,7 @@ export default async function FishingPage() {
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
-      <main className="min-h-screen pb-24 sm:pb-0 pt-6">
+      <main>
         <FishingGame
           hookTier={profile?.hook_tier ?? 0}
           rodTier={profile?.rod_tier ?? 0}
