@@ -358,6 +358,13 @@ function BaitSelector({ baitInventory, selectedBait, onSelect, selectedZone }: {
 
 type SceneFrame = 'windup' | 'cast1' | 'cast2' | 'fishing'
 
+const FRAME_SRC: Record<SceneFrame, string> = {
+  windup:  '/windup.jpg',
+  cast1:   '/cast1.jpg',
+  cast2:   '/cast2.jpeg',
+  fishing: '/fishing.jpeg',
+}
+
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
 function ResultCard({ fish, baitSaved, isNewSpecies }: {
@@ -672,6 +679,15 @@ export default function FishingGame({
   useEffect(() => { selectedBaitRef.current = selectedBait }, [selectedBait])
   useEffect(() => { hookedFishRef.current = hookedFish }, [hookedFish])
 
+  // Force-decode all scene frames on mount so GPU has them ready before animation starts
+  useEffect(() => {
+    Object.values(FRAME_SRC).forEach(src => {
+      const img = new Image()
+      img.src = src
+      img.decode().catch(() => {})
+    })
+  }, [])
+
   // Scene background frame — animates during casting phase
   const [sceneFrame, setSceneFrame] = useState<SceneFrame>('fishing')
   useEffect(() => {
@@ -869,12 +885,6 @@ export default function FishingGame({
   const holdTotalCount   = inventory.reduce((s, i) => s + i.quantity, 0)
   const holdTotalValue   = inventory.reduce((s, i) => s + i.fish_species.sell_value * i.quantity, 0)
 
-  const FRAME_SRC: Record<SceneFrame, string> = {
-    windup:  '/windup.jpg',
-    cast1:   '/cast1.jpg',
-    cast2:   '/cast2.jpeg',
-    fishing: '/fishing.jpeg',
-  }
   const isBobbing = sceneFrame === 'fishing' && (phase === 'casting' || phase === 'hooked')
 
   return (
@@ -901,7 +911,8 @@ export default function FishingGame({
                 objectFit: 'cover',
                 objectPosition: 'top center',
                 opacity: sceneFrame === frame ? 1 : 0,
-                transition: 'opacity 0.12s linear',
+                transition: 'opacity 0.15s linear',
+                willChange: 'opacity',
               }}
             />
           ))}
