@@ -9,7 +9,7 @@ import { getHook } from '@/lib/hooks'
 import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
-import { BAITS, getBait } from '@/lib/bait'
+import { BAITS } from '@/lib/bait'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -384,6 +384,7 @@ function FishInventory({ inventory, onSell }: {
   inventory: InventoryItem[]
   onSell: (fishId: number, qty: number) => Promise<void>
 }) {
+  const [open, setOpen] = useState(false)
   const [pending, setPending] = useState<number | null>(null)
   const [sellError, setSellError] = useState<string | null>(null)
 
@@ -399,80 +400,104 @@ function FishInventory({ inventory, onSell }: {
   const totalValue = inventory.reduce(
     (sum, item) => sum + item.fish_species.sell_value * item.quantity, 0
   )
+  const totalCount = inventory.reduce((s, i) => s + i.quantity, 0)
 
   return (
-    <div className="mt-6">
-      <div className="flex items-center justify-between mb-3">
-        <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]"
-          style={{ fontSize: '0.58rem' }}>
-          Fish Hold
-        </p>
-        <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#f0c040' }}>
-          {totalValue.toLocaleString()} ⟡ total value
-        </p>
-      </div>
+    <div className="mt-4 rounded-xl overflow-hidden"
+      style={{ border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)' }}>
 
-      <div className="flex flex-col gap-2">
-        {inventory.map(item => {
-          const fish   = item.fish_species
-          const hColor = HABITAT_COLOR[fish.habitat] ?? '#888'
-          const isPending = pending === item.fish_id
+      {/* Header — always visible, tap to toggle */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-3 py-2.5"
+        style={{ cursor: 'pointer' }}
+      >
+        <div className="flex items-center gap-2">
+          <p className="font-karla font-600 uppercase tracking-[0.12em]"
+            style={{ fontSize: '0.58rem', color: '#6a6764' }}>Fish Hold</p>
+          <span className="font-karla font-600"
+            style={{ fontSize: '0.55rem', color: '#4a4845',
+              background: 'rgba(255,255,255,0.06)', padding: '0.1rem 0.45rem', borderRadius: '2rem' }}>
+            {totalCount} fish
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#f0c040' }}>
+            {totalValue.toLocaleString()} ⟡
+          </p>
+          <span style={{ fontSize: '0.6rem', color: '#4a4845', transition: 'transform 0.2s',
+            display: 'inline-block', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+        </div>
+      </button>
 
-          return (
-            <div key={item.fish_id}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-              style={{ background: `${hColor}0a`, border: `1px solid ${hColor}25` }}>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-cinzel font-700 truncate"
-                    style={{ fontSize: '0.78rem', color: '#f0ede8' }}>{fish.name}</p>
-                  <span className="font-karla font-600 shrink-0"
-                    style={{ fontSize: '0.55rem', color: hColor,
-                      background: `${hColor}18`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
-                    ×{item.quantity}
-                  </span>
-                </div>
-                <p className="font-karla font-600 mt-0.5"
-                  style={{ fontSize: '0.6rem', color: '#f0c040' }}>
-                  {fish.sell_value.toLocaleString()} ⟡ each
-                  {item.quantity > 1 && (
-                    <span style={{ color: '#6a6764' }}> · {(fish.sell_value * item.quantity).toLocaleString()} ⟡ total</span>
-                  )}
-                </p>
-              </div>
-              <div className="flex gap-1.5 shrink-0">
-                {item.quantity > 1 && (
-                  <button
-                    onClick={() => handleSell(item.fish_id, item.quantity)}
-                    disabled={isPending}
-                    className="font-karla font-700 uppercase tracking-[0.1em]"
-                    style={{
-                      fontSize: '0.52rem', padding: '0.3rem 0.6rem', borderRadius: '0.5rem',
-                      background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.22)',
-                      color: '#f0c040', opacity: isPending ? 0.5 : 1, cursor: isPending ? 'default' : 'pointer',
-                    }}>
-                    Sell all
-                  </button>
-                )}
-                <button
-                  onClick={() => handleSell(item.fish_id, 1)}
-                  disabled={isPending}
-                  className="font-karla font-700 uppercase tracking-[0.1em]"
-                  style={{
-                    fontSize: '0.52rem', padding: '0.3rem 0.6rem', borderRadius: '0.5rem',
-                    background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.35)',
-                    color: '#f0c040', opacity: isPending ? 0.5 : 1, cursor: isPending ? 'default' : 'pointer',
-                  }}>
-                  {isPending ? '…' : 'Sell 1'}
-                </button>
-              </div>
+      {/* Expandable list */}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="hold"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="flex flex-col gap-1.5 px-3 pb-3"
+              style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              {inventory.map(item => {
+                const fish     = item.fish_species
+                const hColor   = HABITAT_COLOR[fish.habitat] ?? '#888'
+                const isPending = pending === item.fish_id
+
+                return (
+                  <div key={item.fish_id}
+                    className="flex items-center gap-3 px-3 py-2 rounded-xl mt-1.5"
+                    style={{ background: `${hColor}0a`, border: `1px solid ${hColor}20` }}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-cinzel font-700 truncate"
+                          style={{ fontSize: '0.75rem', color: '#f0ede8' }}>{fish.name}</p>
+                        <span className="font-karla font-600 shrink-0"
+                          style={{ fontSize: '0.52rem', color: hColor,
+                            background: `${hColor}18`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                          ×{item.quantity}
+                        </span>
+                      </div>
+                      <p className="font-karla font-600 mt-0.5"
+                        style={{ fontSize: '0.58rem', color: '#f0c040' }}>
+                        {fish.sell_value.toLocaleString()} ⟡ each
+                        {item.quantity > 1 && (
+                          <span style={{ color: '#6a6764' }}> · {(fish.sell_value * item.quantity).toLocaleString()} ⟡</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      {item.quantity > 1 && (
+                        <button onClick={() => handleSell(item.fish_id, item.quantity)} disabled={isPending}
+                          className="font-karla font-700 uppercase tracking-[0.1em]"
+                          style={{ fontSize: '0.5rem', padding: '0.28rem 0.55rem', borderRadius: '0.5rem',
+                            background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.22)',
+                            color: '#f0c040', opacity: isPending ? 0.5 : 1, cursor: isPending ? 'default' : 'pointer' }}>
+                          Sell all
+                        </button>
+                      )}
+                      <button onClick={() => handleSell(item.fish_id, 1)} disabled={isPending}
+                        className="font-karla font-700 uppercase tracking-[0.1em]"
+                        style={{ fontSize: '0.5rem', padding: '0.28rem 0.55rem', borderRadius: '0.5rem',
+                          background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.35)',
+                          color: '#f0c040', opacity: isPending ? 0.5 : 1, cursor: isPending ? 'default' : 'pointer' }}>
+                        {isPending ? '…' : 'Sell 1'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+              {sellError && (
+                <p className="font-karla font-300 text-red-400 text-xs text-center mt-1">{sellError}</p>
+              )}
             </div>
-          )
-        })}
-      </div>
-      {sellError && (
-        <p className="font-karla font-300 text-red-400 text-xs text-center mt-2">{sellError}</p>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -570,14 +595,18 @@ export default function FishingGame({
   // Phase 1 — cast
   async function handleCast() {
     if (phase !== 'idle') return
-    const bait = getBait(selectedBait)
     const currentQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
     if (currentQty <= 0) return
 
     deductBait(selectedBait)
     setPhase('casting')
 
-    const res = await castLine(selectedBait)
+    // Run server call and minimum wait in parallel — 2.5–5s feels like real fishing
+    const waitMs = 2500 + Math.random() * 2500
+    const [res] = await Promise.all([
+      castLine(selectedBait),
+      new Promise(r => setTimeout(r, waitMs)),
+    ])
 
     if ('error' in res) {
       setPhase('idle')
