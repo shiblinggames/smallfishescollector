@@ -13,7 +13,7 @@ import { BAITS, getBait } from '@/lib/bait'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Phase = 'idle' | 'casting' | 'hooked' | 'catching' | 'result'
+type Phase = 'idle' | 'casting' | 'hooked' | 'catching' | 'reeling' | 'result'
 
 type BaitItem = { bait_type: string; quantity: number }
 type InventoryItem = {
@@ -605,22 +605,32 @@ export default function FishingGame({
     const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier)
     const zone  = getZone(zones, angleRef.current, zoneRotation)
 
-    phaseRef.current = 'result'
-    setPhase('result')
-
     if (zone.type === 'penalty') deductBait(selectedBaitRef.current)
 
     const isCatch = zone.type === 'catch' || zone.type === 'perfect'
+
     if (!isCatch) {
+      // Miss/penalty: show result immediately, fire server call in background
       setMissResult(zone.type)
       setCatchResult(null)
+      phaseRef.current = 'result'
+      setPhase('result')
+      startTransition(async () => {
+        await reelIn(hookedFishRef.current!.fishId, zone.type as 'miss' | 'penalty', selectedBaitRef.current)
+      })
+      return
     }
 
-    startTransition(async () => {
-      const res = await reelIn(hookedFishRef.current!.fishId, zone.type as 'perfect' | 'catch' | 'miss' | 'penalty', selectedBaitRef.current)
-      if ('error' in res) return
+    // Catch/perfect: freeze needle, wait for server before showing result
+    phaseRef.current = 'reeling'
+    setPhase('reeling')
 
-      if (res.caught) {
+    startTransition(async () => {
+      const res = await reelIn(hookedFishRef.current!.fishId, zone.type as 'perfect' | 'catch', selectedBaitRef.current)
+
+      if ('error' in res || !res.caught) {
+        setMissResult('miss')
+      } else {
         const { fish, earned, isNewSpecies } = res
         setCatchResult({ fish, earned, isNewSpecies })
         setInventory(prev => {
@@ -629,9 +639,10 @@ export default function FishingGame({
           return [...prev, { fish_id: fish.id, quantity: 1, fish_species: fish }]
         })
         if (earned > 0) setDoubloons(d => d + earned)
-      } else {
-        setMissResult(zone.type)
       }
+
+      phaseRef.current = 'result'
+      setPhase('result')
     })
   }
 
@@ -654,10 +665,10 @@ export default function FishingGame({
 
   // Zone display helpers
   const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier) : []
-  const currentZone   = phase === 'catching' ? getZone(catchingZones, angle, zoneRotation) : null
+  const currentZone   = (phase === 'catching' || phase === 'reeling') ? getZone(catchingZones, angle, zoneRotation) : null
 
   function needleColor(): string {
-    if (phase === 'catching' && currentZone) return currentZone.color
+    if ((phase === 'catching' || phase === 'reeling') && currentZone) return currentZone.color
     return 'rgba(255,255,255,0.3)'
   }
 
@@ -778,8 +789,8 @@ export default function FishingGame({
           </motion.div>
         )}
 
-        {/* ── CATCHING ── */}
-        {phase === 'catching' && hookedFish && (
+        {/* ── CATCHING / REELING ── */}
+        {(phase === 'catching' || phase === 'reeling') && hookedFish && (
           <motion.div key="catching"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
@@ -788,7 +799,7 @@ export default function FishingGame({
             <div style={{ minHeight: '1.6rem' }}>
               <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
                 style={{ fontSize: '0.88rem', color: currentZone?.color ?? '#888' }}>
-                {currentZone?.label ?? ''}
+                {phase === 'reeling' ? 'Reeling in…' : (currentZone?.label ?? '')}
               </p>
             </div>
 
@@ -800,19 +811,25 @@ export default function FishingGame({
               zoneOpacityFn={zoneOpacity}
             />
 
-            <motion.button
-              onPointerDown={e => { e.preventDefault(); handleReelIn() }}
-              className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-              style={{
-                width: 88, height: 88, borderRadius: '50%',
-                background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
-                border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
-                fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
-                boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
-              }}
-              whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
-              transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-            >Reel In</motion.button>
+            {phase === 'catching' ? (
+              <motion.button
+                onPointerDown={e => { e.preventDefault(); handleReelIn() }}
+                className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                style={{
+                  width: 88, height: 88, borderRadius: '50%',
+                  background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
+                  border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
+                  fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
+                  boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
+                }}
+                whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
+                transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+              >Reel In</motion.button>
+            ) : (
+              <div style={{ width: 88, height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#4a4845' }}>…</p>
+              </div>
+            )}
           </motion.div>
         )}
 
