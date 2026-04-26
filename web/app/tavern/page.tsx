@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { getDailyWagered } from './actions'
 import { DAILY_CAP } from './constants'
 import { getShip } from '@/lib/ships'
-import { getHook } from '@/lib/hooks'
 import { getWeeklyBounties } from '@/app/packs/bountyActions'
 import GameCard from './GameCard'
 import WelcomeModal from './WelcomeModal'
@@ -45,10 +44,6 @@ export default async function TavernPage() {
   const bountyCount = bountyProgress ? Object.values(bountyProgress).filter(Boolean).length : 0
   const bountyAllDone = bountyCount === 4
 
-  const fishingHook = getHook(profile?.hook_tier ?? 0)
-  const fishingCastsUsed = profile?.fishing_date === today ? (profile?.fishing_casts ?? 0) : 0
-  const fishingCastsLeft = fishingHook.maxCasts - fishingCastsUsed
-  const fishingDone = fishingCastsLeft <= 0
 
   const expeditionStatus = todayExpedition?.status ?? null
   const expeditionDone = expeditionStatus === 'completed' || expeditionStatus === 'failed'
@@ -180,17 +175,17 @@ export default async function TavernPage() {
           />
           <GameCard
             href="/tavern/fishing"
-            eyebrow="Daily"
+            eyebrow="Fishing"
             title="Drop a Line"
-            statusText={fishingDone ? 'Come back tomorrow' : `${fishingCastsLeft} casts remaining`}
+            statusText="Free worms daily · cast anytime"
             info={[
-              '20 casts per day — cast anytime',
-              'Stop the needle in the Catch zone to earn',
-              'Better hooks widen your catch zone',
-              'Upgrade your hook at the Tackle Shop',
+              'Use bait to cast — worms refill each day',
+              'Hook a fish, then stop the needle to reel it in',
+              'Perfect hits pay out doubloons instantly',
+              'Sell your catch · upgrade gear at the Tackle Shop',
             ]}
             icon={<HookIcon />}
-            completed={fishingDone}
+            completed={false}
           />
         </div>
 
