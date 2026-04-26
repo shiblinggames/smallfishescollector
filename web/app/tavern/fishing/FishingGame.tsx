@@ -324,7 +324,7 @@ function BaitSelector({ baitInventory, selectedBait, onSelect, selectedZone }: {
   )
 }
 
-type SceneFrame = 'windup' | 'cast' | 'fishing'
+type SceneFrame = 'windup' | 'cast1' | 'cast2' | 'fishing'
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
@@ -581,9 +581,10 @@ export default function FishingGame({
   useEffect(() => {
     if (phase !== 'casting') { setSceneFrame('fishing'); return }
     setSceneFrame('windup')
-    const t1 = setTimeout(() => setSceneFrame('cast'), 350)
-    const t2 = setTimeout(() => setSceneFrame('fishing'), 550)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
+    const t1 = setTimeout(() => setSceneFrame('cast1'), 350)
+    const t2 = setTimeout(() => setSceneFrame('cast2'), 500)
+    const t3 = setTimeout(() => setSceneFrame('fishing'), 650)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
   }, [phase])
 
   // When zone changes, auto-switch to a compatible bait if current one doesn't work here
@@ -767,7 +768,8 @@ export default function FishingGame({
   const selectedBaitQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
 
   const sceneSrc = sceneFrame === 'windup' ? '/windup.jpg'
-    : sceneFrame === 'cast' ? '/cast.jpeg'
+    : sceneFrame === 'cast1' ? '/cast1.jpg'
+    : sceneFrame === 'cast2' ? '/cast2.jpeg'
     : '/fishing.jpeg'
   const isBobbing = sceneFrame === 'fishing' && (phase === 'casting' || phase === 'hooked')
 
