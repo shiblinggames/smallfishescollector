@@ -881,7 +881,7 @@ export default function FishingGame({
     <div className="relative max-w-md mx-auto overflow-hidden"
       style={{ minHeight: '100svh', background: '#08121c' }}>
 
-        {/* Background layers — all 4 frames always in DOM, opacity-switched to avoid reload flicker */}
+        {/* Background layers — img tags force eager loading so no black-frame on switch */}
         <motion.div
           animate={isBobbing ? { y: phase === 'hooked' ? [0, 8, 0] : [0, -6, 0] } : { y: 0 }}
           transition={isBobbing
@@ -891,14 +891,19 @@ export default function FishingGame({
           style={{ position: 'absolute', inset: '-14px' }}
         >
           {(Object.keys(FRAME_SRC) as SceneFrame[]).map(frame => (
-            <div key={frame} style={{
-              position: 'absolute', inset: 0,
-              backgroundImage: `url('${FRAME_SRC[frame]}')`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'top center',
-              opacity: sceneFrame === frame ? 1 : 0,
-              transition: 'opacity 0.05s linear',
-            }} />
+            <img
+              key={frame}
+              src={FRAME_SRC[frame]}
+              alt=""
+              style={{
+                position: 'absolute', inset: 0,
+                width: '100%', height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'top center',
+                opacity: sceneFrame === frame ? 1 : 0,
+                transition: 'opacity 0.12s linear',
+              }}
+            />
           ))}
         </motion.div>
 
