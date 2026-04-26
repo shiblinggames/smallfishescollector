@@ -22,6 +22,29 @@ type InventoryItem = {
   fish_species: FishSpecies
 }
 
+// ─── Wait time mechanics ──────────────────────────────────────────────────────
+
+const ZONE_WAIT_RANGE: Record<string, [number, number]> = {
+  shallows:    [2000,  4000],
+  open_waters: [4000,  8000],
+  deep:        [8000,  14000],
+  abyss:       [13000, 22000],
+}
+
+const BAIT_WAIT_MULT: Record<string, number> = {
+  worm:   1.00,
+  minnow: 0.85,
+  squid:  0.75,
+  chum:   0.60,
+}
+
+function castWaitMs(zone: string, baitType: string, rodTier: number): number {
+  const [min, max] = ZONE_WAIT_RANGE[zone] ?? [2000, 5000]
+  const baitMult = BAIT_WAIT_MULT[baitType] ?? 1.0
+  const rodMult  = Math.max(0.70, 1.0 - rodTier * 0.075)
+  return (min + Math.random() * (max - min)) * baitMult * rodMult
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CX = 110, CY = 110
@@ -646,8 +669,7 @@ export default function FishingGame({
     deductBait(selectedBait)
     setPhase('casting')
 
-    // Run server call and minimum wait in parallel — 2.5–5s feels like real fishing
-    const waitMs = 2500 + Math.random() * 2500
+    const waitMs = castWaitMs(selectedZone, selectedBait, rodTier)
     const [res] = await Promise.all([
       castLine(selectedBait, selectedZone),
       new Promise(r => setTimeout(r, waitMs)),
@@ -906,7 +928,12 @@ export default function FishingGame({
                 className="flex flex-col items-center gap-2">
                 <p className="font-karla font-600"
                   style={{ fontSize: '0.82rem', color: phase === 'hooked' ? '#fde68a' : 'rgba(255,255,255,0.35)' }}>
-                  {phase === 'hooked' ? "Something's on the line!" : 'Waiting for a bite…'}
+                  {phase === 'hooked' ? "Something's on the line!" : (
+                    selectedZone === 'abyss'       ? 'Something stirs in the deep…' :
+                    selectedZone === 'deep'        ? 'Waiting in the dark…' :
+                    selectedZone === 'open_waters' ? 'Drifting on the open sea…' :
+                                                     'Waiting for a bite…'
+                  )}
                 </p>
               </motion.div>
             )}
