@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useTransition } from 'react'
+import React, { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, sellFish, type FishSpecies } from './actions'
@@ -116,6 +116,8 @@ function DialSVG({
 
 // ─── GearBar ─────────────────────────────────────────────────────────────────
 
+const HABITAT_DOT_ORDER = ['shallows', 'open_waters', 'deep', 'abyss'] as const
+
 function GearBar({ rodTier, reelTier, hookTier, lineTier }: {
   rodTier: number; reelTier: number; hookTier: number; lineTier: number
 }) {
@@ -124,24 +126,61 @@ function GearBar({ rodTier, reelTier, hookTier, lineTier }: {
   const hook = getHook(hookTier)
   const line = getLine(lineTier)
 
-  const items = [
-    { label: 'Rod',  name: rod.name,  color: rod.color },
-    { label: 'Reel', name: reel.name, color: reel.color },
-    { label: 'Hook', name: hook.name, color: hook.color },
-    { label: 'Line', name: line.name, color: line.color },
-  ]
+  const dragPct       = Math.round((1 - reel.needleSpeedMultiplier) * 100)
+  const snagReduction = Math.round((1 - line.penaltyMultiplier) * 100)
+  // CATCH_BONUS_PER_TIER = 3 (from depths.ts) — each hook tier widens catch zone by 3°
+  const catchZoneBonus = hook.tier * 3
+
+  function Card({ label, name, color, children }: {
+    label: string; name: string; color: string; children?: React.ReactNode
+  }) {
+    return (
+      <div className="flex flex-col items-center gap-0.5 px-1 py-2 rounded-lg"
+        style={{ background: `${color}0d`, border: `1px solid ${color}30` }}>
+        <p className="font-karla font-600 uppercase tracking-[0.1em]"
+          style={{ fontSize: '0.45rem', color: '#6a6764' }}>{label}</p>
+        <p className="font-karla font-700 text-center leading-tight"
+          style={{ fontSize: '0.56rem', color }}>{name}</p>
+        {children}
+      </div>
+    )
+  }
+
+  function Stat({ children }: { children: React.ReactNode }) {
+    return (
+      <p className="font-karla font-600 text-center leading-tight"
+        style={{ fontSize: '0.46rem', color: '#5a5956', marginTop: 1 }}>
+        {children}
+      </p>
+    )
+  }
 
   return (
     <div className="grid grid-cols-4 gap-1.5">
-      {items.map(({ label, name, color }) => (
-        <div key={label} className="flex flex-col items-center gap-0.5 px-1 py-2 rounded-lg"
-          style={{ background: `${color}0d`, border: `1px solid ${color}30` }}>
-          <p className="font-karla font-600 uppercase tracking-[0.1em]"
-            style={{ fontSize: '0.48rem', color: '#6a6764' }}>{label}</p>
-          <p className="font-karla font-700 text-center leading-tight"
-            style={{ fontSize: '0.58rem', color }}>{name}</p>
+      <Card label="Rod" name={rod.name} color={rod.color}>
+        <div className="flex gap-[3px] flex-wrap justify-center" style={{ marginTop: 3 }}>
+          {HABITAT_DOT_ORDER.map(h => (
+            <span key={h} style={{
+              width: 5, height: 5, borderRadius: 1, display: 'inline-block',
+              background: rod.habitats.includes(h) ? HABITAT_COLOR[h] : 'rgba(255,255,255,0.08)',
+            }} />
+          ))}
         </div>
-      ))}
+        {rod.rollBonus > 0 && <Stat>+{rod.rollBonus} roll</Stat>}
+      </Card>
+
+      <Card label="Reel" name={reel.name} color={reel.color}>
+        <Stat>{dragPct > 0 ? `−${dragPct}% needle` : 'No drag'}</Stat>
+      </Card>
+
+      <Card label="Hook" name={hook.name} color={hook.color}>
+        <Stat>{hook.rollBonus > 0 ? `+${hook.rollBonus} roll` : 'No bonus'}</Stat>
+        {catchZoneBonus > 0 && <Stat>+{catchZoneBonus}° catch</Stat>}
+      </Card>
+
+      <Card label="Line" name={line.name} color={line.color}>
+        <Stat>{snagReduction > 0 ? `−${snagReduction}% snag` : 'Std. snag'}</Stat>
+      </Card>
     </div>
   )
 }
@@ -157,43 +196,78 @@ function BaitSelector({ baitInventory, selectedBait, onSelect, rodTier }: {
   const rod = getRod(rodTier)
   const inventoryMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
 
+  // Owned baits — always include the currently selected one so the select value is valid
+  const ownedBaits = BAITS.filter(b => (inventoryMap[b.type] ?? 0) > 0 || b.type === selectedBait)
+  const selectedDef = BAITS.find(b => b.type === selectedBait)
+  const selectedQty = inventoryMap[selectedBait] ?? 0
+  const compatibleHabitats = selectedDef
+    ? selectedDef.habitats.filter(h => rod.habitats.includes(h))
+    : []
+
+  if (ownedBaits.length === 0) return null
+
   return (
     <div>
-      <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-2"
-        style={{ fontSize: '0.58rem' }}>Select Bait</p>
-      <div className="grid grid-cols-3 gap-1.5">
-        {BAITS.map(bait => {
-          const qty = inventoryMap[bait.type] ?? 0
-          const compatible = bait.habitats.some(h => rod.habitats.includes(h))
-          const available  = qty > 0 && compatible
-          const selected   = selectedBait === bait.type
+      <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-1.5"
+        style={{ fontSize: '0.58rem' }}>Bait</p>
 
-          return (
-            <button
-              key={bait.type}
-              onClick={() => available && onSelect(bait.type)}
-              style={{
-                padding: '0.5rem 0.25rem',
-                borderRadius: 10,
-                border: `1px solid ${selected ? bait.color + '66' : available ? bait.color + '28' : 'rgba(255,255,255,0.06)'}`,
-                background: selected ? bait.color + '18' : available ? bait.color + '08' : 'rgba(255,255,255,0.02)',
-                opacity: available ? 1 : 0.35,
-                cursor: available ? 'pointer' : 'default',
-                transition: 'all 0.15s',
-              }}
-            >
-              <p className="font-karla font-700 leading-none mb-1"
-                style={{ fontSize: '0.62rem', color: selected ? bait.color : available ? bait.color + 'bb' : '#4a4845' }}>
-                {bait.name}
-              </p>
-              <p className="font-karla font-600"
-                style={{ fontSize: '0.55rem', color: available ? '#6a6764' : '#3a3835' }}>
-                {qty > 0 ? `${qty} left` : compatible ? 'None' : 'Wrong depth'}
-              </p>
-            </button>
-          )
-        })}
+      <div style={{ position: 'relative' }}>
+        <select
+          value={selectedBait}
+          onChange={e => onSelect(e.target.value)}
+          style={{
+            width: '100%',
+            appearance: 'none',
+            WebkitAppearance: 'none',
+            background: selectedDef ? `${selectedDef.color}12` : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${selectedDef ? selectedDef.color + '44' : 'rgba(255,255,255,0.1)'}`,
+            borderRadius: 10,
+            color: '#f0ede8',
+            padding: '0.6rem 2.2rem 0.6rem 0.85rem',
+            fontSize: '0.82rem',
+            fontFamily: 'inherit',
+            cursor: 'pointer',
+            outline: 'none',
+          }}
+        >
+          {ownedBaits.map(bait => {
+            const qty = inventoryMap[bait.type] ?? 0
+            return (
+              <option key={bait.type} value={bait.type}
+                style={{ background: '#1a1512', color: '#f0ede8' }}>
+                {bait.name}{qty > 0 ? ` ×${qty}` : ' (none)'}
+              </option>
+            )
+          })}
+        </select>
+        <span style={{
+          position: 'absolute', right: '0.85rem', top: '50%',
+          transform: 'translateY(-50%)', color: '#6a6764',
+          pointerEvents: 'none', fontSize: '0.72rem',
+        }}>▾</span>
       </div>
+
+      {selectedDef && (
+        <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+          <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#4a4845' }}>
+            {selectedQty} remaining ·
+          </span>
+          <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#4a4845' }}>
+            Reaches:
+          </span>
+          {compatibleHabitats.length > 0
+            ? compatibleHabitats.map((h, i) => (
+                <span key={h} className="font-karla font-600"
+                  style={{ fontSize: '0.58rem', color: HABITAT_COLOR[h] }}>
+                  {HABITAT_LABEL[h]}{i < compatibleHabitats.length - 1 ? ',' : ''}
+                </span>
+              ))
+            : <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#f87171' }}>
+                incompatible with {rod.name}
+              </span>
+          }
+        </div>
+      )}
     </div>
   )
 }
