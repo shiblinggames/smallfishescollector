@@ -25,9 +25,22 @@ export type FishSpecies = {
 }
 
 // Phase 1 — roll fishing power vs fish catch_score
+// Higher weight = more common. Rarity 1→32, 2→16, 3→8, 4→4, 5→1
+const RARITY_WEIGHT: Record<number, number> = { 1: 32, 2: 16, 3: 8, 4: 4, 5: 1 }
+
+function weightedPick<T extends { bite_rarity: number }>(items: T[]): T {
+  const total = items.reduce((s, f) => s + (RARITY_WEIGHT[f.bite_rarity] ?? 1), 0)
+  let rand = Math.random() * total
+  for (const item of items) {
+    rand -= RARITY_WEIGHT[item.bite_rarity] ?? 1
+    if (rand <= 0) return item
+  }
+  return items[items.length - 1]
+}
+
 export async function castLine(baitType: string, habitat: string): Promise<
   | { hit: false }
-  | { hit: true; fishId: number; catchDifficulty: number }
+  | { hit: true; fishId: number; catchDifficulty: number; biteRarity: number }
   | { error: string }
 > {
   const supabase = await createClient()
@@ -75,19 +88,19 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // Draw a random fish from the selected habitat
   const { data: candidates } = await admin
     .from('fish_species')
-    .select('id, catch_difficulty, catch_score')
+    .select('id, catch_difficulty, catch_score, bite_rarity')
     .eq('habitat', habitat)
 
   if (!candidates || candidates.length === 0) return { hit: false }
 
-  const fish = candidates[Math.floor(Math.random() * candidates.length)]
+  const fish = weightedPick(candidates)
 
   // Roll: 1–50 base + rod bonus + hook bonus vs fish catch_score
   const roll = Math.floor(Math.random() * 50) + 1 + rod.rollBonus + hook.rollBonus
 
   if (roll < fish.catch_score) return { hit: false }
 
-  return { hit: true, fishId: fish.id, catchDifficulty: fish.catch_difficulty }
+  return { hit: true, fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity }
 }
 
 const PERFECT_BAIT_SAVE_CHANCE = 0.5
