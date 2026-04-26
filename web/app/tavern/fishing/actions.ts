@@ -25,7 +25,7 @@ export type FishSpecies = {
 }
 
 // Phase 1 — roll fishing power vs fish catch_score
-export async function castLine(baitType: string): Promise<
+export async function castLine(baitType: string, habitat: string): Promise<
   | { hit: false }
   | { hit: true; fishId: number; catchDifficulty: number }
   | { error: string }
@@ -48,6 +48,14 @@ export async function castLine(baitType: string): Promise<
   const hook = getHook(profile.hook_tier ?? 0)
   const bait = getBait(baitType)
 
+  // Validate zone access
+  if (!rod.habitats.includes(habitat as ReturnType<typeof getRod>['habitats'][0])) {
+    return { error: 'Your rod cannot reach that depth' }
+  }
+  if (!bait.habitats.includes(habitat as ReturnType<typeof getRod>['habitats'][0])) {
+    return { error: 'That bait is not suited for this zone' }
+  }
+
   // Consume 1 bait
   const { data: baitRow } = await admin
     .from('bait_inventory')
@@ -64,15 +72,11 @@ export async function castLine(baitType: string): Promise<
     .eq('user_id', user.id)
     .eq('bait_type', baitType)
 
-  // Eligible habitats = intersection of rod + bait
-  const eligibleHabitats = rod.habitats.filter(h => bait.habitats.includes(h))
-  if (eligibleHabitats.length === 0) return { hit: false }
-
-  // Draw a random fish from the eligible pool
+  // Draw a random fish from the selected habitat
   const { data: candidates } = await admin
     .from('fish_species')
     .select('id, catch_difficulty, catch_score')
-    .in('habitat', eligibleHabitats)
+    .eq('habitat', habitat)
 
   if (!candidates || candidates.length === 0) return { hit: false }
 

@@ -40,6 +40,22 @@ const HABITAT_LABEL: Record<string, string> = {
   deep:        'Deep',
   abyss:       'Abyss',
 }
+const HABITAT_TAGLINE: Record<string, string> = {
+  shallows:    'Clear water, gentle currents',
+  open_waters: 'Wide open sea',
+  deep:        'Cold and dark below',
+  abyss:       'The unknown depths',
+}
+// Background art — place images in public/fishing/
+const ZONE_BG: Record<string, string> = {
+  shallows:    '/fishing/shallows.jpg',
+  open_waters: '/fishing/open-waters.jpg',
+  deep:        '/fishing/deep.jpg',
+  abyss:       '/fishing/abyss.jpg',
+}
+
+const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
+type ZoneKey = typeof ZONES[number]
 
 // ─── Geometry helpers ─────────────────────────────────────────────────────────
 
@@ -185,31 +201,81 @@ function GearBar({ rodTier, reelTier, hookTier, lineTier }: {
   )
 }
 
-// ─── BaitSelector ─────────────────────────────────────────────────────────────
+// ─── ZoneSelector ────────────────────────────────────────────────────────────
 
-function BaitSelector({ baitInventory, selectedBait, onSelect, rodTier }: {
-  baitInventory: BaitItem[]
-  selectedBait: string
-  onSelect: (type: string) => void
+function ZoneSelector({ selectedZone, onSelect, rodTier }: {
+  selectedZone: string
+  onSelect: (zone: ZoneKey) => void
   rodTier: number
 }) {
   const rod = getRod(rodTier)
+  return (
+    <div className="grid grid-cols-4 gap-1.5">
+      {ZONES.map(z => {
+        const accessible = rod.habitats.includes(z)
+        const selected   = selectedZone === z
+        const color      = HABITAT_COLOR[z]
+        return (
+          <button key={z}
+            onClick={() => accessible && onSelect(z)}
+            style={{
+              padding: '0.5rem 0.25rem',
+              borderRadius: 10,
+              border: `1px solid ${selected ? color + '70' : accessible ? color + '28' : 'rgba(255,255,255,0.06)'}`,
+              background: selected ? color + '1c' : accessible ? color + '08' : 'rgba(255,255,255,0.02)',
+              opacity: accessible ? 1 : 0.38,
+              cursor: accessible ? 'pointer' : 'default',
+              transition: 'all 0.15s',
+              boxShadow: selected ? `0 0 12px ${color}22` : 'none',
+            }}
+          >
+            <p className="font-karla font-700 text-center leading-tight"
+              style={{ fontSize: '0.6rem', color: selected ? color : accessible ? color + 'aa' : '#4a4845' }}>
+              {HABITAT_LABEL[z]}
+            </p>
+            {!accessible && (
+              <p className="font-karla font-600 text-center" style={{ fontSize: '0.44rem', color: '#3a3835', marginTop: 2 }}>
+                Locked
+              </p>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── BaitSelector ─────────────────────────────────────────────────────────────
+
+function BaitSelector({ baitInventory, selectedBait, onSelect, selectedZone }: {
+  baitInventory: BaitItem[]
+  selectedBait: string
+  onSelect: (type: string) => void
+  selectedZone: string
+}) {
   const inventoryMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
 
-  // Owned baits — always include the currently selected one so the select value is valid
-  const ownedBaits = BAITS.filter(b => (inventoryMap[b.type] ?? 0) > 0 || b.type === selectedBait)
+  // Owned baits compatible with current zone — always include selected so value stays valid
+  const ownedBaits = BAITS.filter(b => {
+    const qty = inventoryMap[b.type] ?? 0
+    const compatible = b.habitats.includes(selectedZone as ZoneKey)
+    return (qty > 0 && compatible) || b.type === selectedBait
+  })
+
   const selectedDef = BAITS.find(b => b.type === selectedBait)
   const selectedQty = inventoryMap[selectedBait] ?? 0
-  const compatibleHabitats = selectedDef
-    ? selectedDef.habitats.filter(h => rod.habitats.includes(h))
-    : []
+  const isCompatible = selectedDef?.habitats.includes(selectedZone as ZoneKey) ?? false
 
-  if (ownedBaits.length === 0) return null
+  if (ownedBaits.length === 0) return (
+    <p className="font-karla font-600 text-center" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
+      No compatible bait for this zone
+    </p>
+  )
 
   return (
     <div>
-      <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-1.5"
-        style={{ fontSize: '0.58rem' }}>Bait</p>
+      <p className="font-karla font-600 uppercase tracking-[0.12em] mb-1.5"
+        style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)' }}>Bait</p>
 
       <div style={{ position: 'relative' }}>
         <select
@@ -219,8 +285,8 @@ function BaitSelector({ baitInventory, selectedBait, onSelect, rodTier }: {
             width: '100%',
             appearance: 'none',
             WebkitAppearance: 'none',
-            background: selectedDef ? `${selectedDef.color}12` : 'rgba(255,255,255,0.04)',
-            border: `1px solid ${selectedDef ? selectedDef.color + '44' : 'rgba(255,255,255,0.1)'}`,
+            background: selectedDef ? `${selectedDef.color}14` : 'rgba(0,0,0,0.3)',
+            border: `1px solid ${isCompatible && selectedDef ? selectedDef.color + '50' : 'rgba(255,255,255,0.12)'}`,
             borderRadius: 10,
             color: '#f0ede8',
             padding: '0.6rem 2.2rem 0.6rem 0.85rem',
@@ -228,6 +294,7 @@ function BaitSelector({ baitInventory, selectedBait, onSelect, rodTier }: {
             fontFamily: 'inherit',
             cursor: 'pointer',
             outline: 'none',
+            backdropFilter: 'blur(8px)',
           }}
         >
           {ownedBaits.map(bait => {
@@ -242,31 +309,16 @@ function BaitSelector({ baitInventory, selectedBait, onSelect, rodTier }: {
         </select>
         <span style={{
           position: 'absolute', right: '0.85rem', top: '50%',
-          transform: 'translateY(-50%)', color: '#6a6764',
+          transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.35)',
           pointerEvents: 'none', fontSize: '0.72rem',
         }}>▾</span>
       </div>
 
       {selectedDef && (
-        <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-          <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#4a4845' }}>
-            {selectedQty} remaining ·
-          </span>
-          <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#4a4845' }}>
-            Reaches:
-          </span>
-          {compatibleHabitats.length > 0
-            ? compatibleHabitats.map((h, i) => (
-                <span key={h} className="font-karla font-600"
-                  style={{ fontSize: '0.58rem', color: HABITAT_COLOR[h] }}>
-                  {HABITAT_LABEL[h]}{i < compatibleHabitats.length - 1 ? ',' : ''}
-                </span>
-              ))
-            : <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#f87171' }}>
-                incompatible with {rod.name}
-              </span>
-          }
-        </div>
+        <p className="font-karla font-600 mt-1.5" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.3)' }}>
+          {selectedQty} remaining
+          {!isCompatible && <span style={{ color: '#f87171' }}> · incompatible with this zone</span>}
+        </p>
       )}
     </div>
   )
@@ -524,6 +576,7 @@ export default function FishingGame({
 
   // Game state
   const [phase, setPhase]           = useState<Phase>('idle')
+  const [selectedZone, setSelectedZone] = useState<ZoneKey>(() => rod.habitats[0] as ZoneKey)
   const [selectedBait, setSelectedBait] = useState<string>(() => {
     const first = initialBait.find(b => b.quantity > 0)
     return first?.bait_type ?? 'worm'
@@ -553,6 +606,18 @@ export default function FishingGame({
   useEffect(() => { phaseRef.current = phase }, [phase])
   useEffect(() => { selectedBaitRef.current = selectedBait }, [selectedBait])
   useEffect(() => { hookedFishRef.current = hookedFish }, [hookedFish])
+
+  // When zone changes, auto-switch to a compatible bait if current one doesn't work here
+  useEffect(() => {
+    const def = BAITS.find(b => b.type === selectedBait)
+    if (!def?.habitats.includes(selectedZone)) {
+      const first = baitInventory.find(b => {
+        const d = BAITS.find(x => x.type === b.bait_type)
+        return b.quantity > 0 && d?.habitats.includes(selectedZone)
+      })
+      if (first) setSelectedBait(first.bait_type)
+    }
+  }, [selectedZone]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Needle animation during catching phase
   useEffect(() => {
@@ -604,7 +669,7 @@ export default function FishingGame({
     // Run server call and minimum wait in parallel — 2.5–5s feels like real fishing
     const waitMs = 2500 + Math.random() * 2500
     const [res] = await Promise.all([
-      castLine(selectedBait),
+      castLine(selectedBait, selectedZone),
       new Promise(r => setTimeout(r, waitMs)),
     ])
 
@@ -751,63 +816,102 @@ export default function FishingGame({
           <motion.div key="idle"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}
-            className="flex flex-col gap-4">
+            className="flex flex-col gap-3">
 
-            <BaitSelector
-              baitInventory={baitInventory}
-              selectedBait={selectedBait}
-              onSelect={setSelectedBait}
-              rodTier={rodTier}
-            />
+            <ZoneSelector selectedZone={selectedZone} onSelect={setSelectedZone} rodTier={rodTier} />
 
-            <AnimatePresence>
-              {noBiteFlash && (
-                <motion.p key="nobite"
-                  initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-                  className="font-karla font-600 text-center"
-                  style={{ fontSize: '0.75rem', color: '#6a6764' }}>
-                  No bite. Try again.
-                </motion.p>
-              )}
-            </AnimatePresence>
+            {/* Zone panel with background art */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selectedZone}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                style={{
+                  position: 'relative',
+                  borderRadius: 16,
+                  overflow: 'hidden',
+                  minHeight: 220,
+                  backgroundImage: `url('${ZONE_BG[selectedZone]}')`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  border: `1px solid ${HABITAT_COLOR[selectedZone]}30`,
+                  background: `${HABITAT_COLOR[selectedZone]}08`,
+                }}
+              >
+                {/* Dark gradient overlay */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: 'linear-gradient(to bottom, rgba(8,18,28,0.25) 0%, rgba(8,18,28,0.82) 70%)',
+                  pointerEvents: 'none',
+                }} />
 
-            <div className="flex justify-center">
-              {hasBait && selectedBaitQty > 0 ? (
-                <motion.button onClick={handleCast}
-                  className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-                  style={{
-                    width: 88, height: 88, borderRadius: '50%',
-                    background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.35), rgba(14,116,144,0.12))',
-                    border: '1px solid rgba(34,170,200,0.4)', cursor: 'pointer',
-                    fontSize: '0.72rem', color: '#67d4e8', touchAction: 'manipulation',
-                    boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
-                  }}
-                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
-                  transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                >Cast</motion.button>
-              ) : (
-                <div className="text-center">
-                  <p className="font-karla font-600 mb-2" style={{ fontSize: '0.75rem', color: '#6a6764' }}>
-                    No bait — head to the Tackle Shop
+                {/* Zone name + tagline top-left */}
+                <div style={{ position: 'absolute', top: '1rem', left: '1rem' }}>
+                  <p className="font-cinzel font-700"
+                    style={{ fontSize: '0.88rem', color: HABITAT_COLOR[selectedZone] }}>
+                    {HABITAT_LABEL[selectedZone]}
                   </p>
-                  <Link href="/marketplace/tackle-shop"
-                    className="font-karla font-700 uppercase tracking-[0.12em]"
-                    style={{
-                      fontSize: '0.65rem', color: '#f0c040',
-                      padding: '0.45rem 1rem', borderRadius: '2rem',
-                      border: '1px solid rgba(240,192,64,0.35)',
-                      background: 'rgba(240,192,64,0.08)',
-                    }}>Buy Bait</Link>
+                  <p className="font-karla font-300"
+                    style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.35)' }}>
+                    {HABITAT_TAGLINE[selectedZone]}
+                  </p>
                 </div>
-              )}
-            </div>
 
-            {rod.habitats.length < 4 && (
-              <p className="font-karla font-600 text-center" style={{ fontSize: '0.65rem', color: '#4a4845' }}>
-                {rod.name} reaches: {rod.habitats.map(h => HABITAT_LABEL[h]).join(', ')}
-              </p>
-            )}
+                {/* Controls — bait + cast */}
+                <div style={{ position: 'relative', zIndex: 1, padding: '1rem', paddingTop: '4.5rem' }}
+                  className="flex flex-col gap-3">
+                  <BaitSelector
+                    baitInventory={baitInventory}
+                    selectedBait={selectedBait}
+                    onSelect={setSelectedBait}
+                    selectedZone={selectedZone}
+                  />
+
+                  <AnimatePresence>
+                    {noBiteFlash && (
+                      <motion.p key="nobite"
+                        initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                        className="font-karla font-600 text-center"
+                        style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
+                        No bite. Try again.
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="flex justify-center pt-1">
+                    {hasBait && selectedBaitQty > 0 ? (
+                      <motion.button onClick={handleCast}
+                        className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                        style={{
+                          width: 88, height: 88, borderRadius: '50%',
+                          background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.45), rgba(14,116,144,0.18))',
+                          border: '1px solid rgba(34,170,200,0.5)', cursor: 'pointer',
+                          fontSize: '0.72rem', color: '#67d4e8', touchAction: 'manipulation',
+                          boxShadow: '0 6px 0 rgba(0,0,0,0.6), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+                        }}
+                        whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' }}
+                        transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                      >Cast</motion.button>
+                    ) : (
+                      <div className="text-center">
+                        <p className="font-karla font-600 mb-2" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)' }}>
+                          No compatible bait
+                        </p>
+                        <Link href="/marketplace/tackle-shop"
+                          className="font-karla font-700 uppercase tracking-[0.12em]"
+                          style={{
+                            fontSize: '0.65rem', color: '#f0c040',
+                            padding: '0.45rem 1rem', borderRadius: '2rem',
+                            border: '1px solid rgba(240,192,64,0.35)',
+                            background: 'rgba(240,192,64,0.08)',
+                          }}>Buy Bait</Link>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </motion.div>
         )}
 
