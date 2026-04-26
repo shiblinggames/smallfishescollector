@@ -81,6 +81,14 @@ const ZONE_BG: Record<string, string> = {
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 type ZoneKey = typeof ZONES[number]
 
+const RARITY: Record<number, { label: string; color: string; hookedText: string }> = {
+  1: { label: 'Common',    color: '#94a3b8', hookedText: "Something's on the line…" },
+  2: { label: 'Uncommon',  color: '#4ade80', hookedText: "You've got a bite!" },
+  3: { label: 'Rare',      color: '#60a5fa', hookedText: "Something strong is pulling!" },
+  4: { label: 'Epic',      color: '#c084fc', hookedText: "A big one! Hold tight!" },
+  5: { label: 'Legendary', color: '#f59e0b', hookedText: "SOMETHING MASSIVE IS ON THE LINE!" },
+}
+
 // ─── Geometry helpers ─────────────────────────────────────────────────────────
 
 function polar(r: number, deg: number) {
@@ -359,67 +367,128 @@ function ResultCard({ fish, baitSaved, isNewSpecies }: {
 }) {
   const habitatColor = HABITAT_COLOR[fish.habitat] ?? '#888'
   const habitatLabel = HABITAT_LABEL[fish.habitat] ?? fish.habitat
+  const rarity = fish.bite_rarity ?? 1
+  const r = RARITY[rarity] ?? RARITY[1]
+  const isLegendary = rarity === 5
+  const isEpicPlus  = rarity >= 4
+
+  const glowShadow: Record<number, string> = {
+    1: 'none',
+    2: `0 0 10px ${r.color}40, 0 0 28px ${r.color}18`,
+    3: `0 0 18px ${r.color}55, 0 0 44px ${r.color}25`,
+    4: `0 0 26px ${r.color}65, 0 0 60px ${r.color}32`,
+    5: `0 0 32px ${r.color}80, 0 0 80px ${r.color}40, 0 0 130px ${r.color}20`,
+  }
+  const borderOpMap: Record<number, string> = { 1: '30', 2: '55', 3: '70', 4: '85', 5: 'b0' }
+  const cardBg: Record<number, string> = {
+    1: 'rgba(255,255,255,0.03)',
+    2: 'rgba(255,255,255,0.03)',
+    3: `${r.color}06`,
+    4: `${r.color}09`,
+    5: `${r.color}0c`,
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-      className="rounded-2xl overflow-hidden"
-      style={{ border: `1px solid ${habitatColor}40`, background: 'rgba(255,255,255,0.03)' }}
-    >
-      {/* Header band */}
-      <div className="px-4 py-3 flex items-center justify-between"
-        style={{ background: `${habitatColor}12`, borderBottom: `1px solid ${habitatColor}25` }}>
-        <span className="font-karla font-700 uppercase tracking-[0.14em]"
-          style={{ fontSize: '0.55rem', color: habitatColor }}>{habitatLabel}</span>
-        <div className="flex items-center gap-2">
-          {isNewSpecies && (
-            <motion.span
-              initial={{ scale: 0 }} animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.2 }}
-              className="font-karla font-700 uppercase tracking-[0.12em]"
-              style={{ fontSize: '0.5rem', color: '#fde68a',
-                background: 'rgba(253,230,138,0.15)', border: '1px solid rgba(253,230,138,0.4)',
-                padding: '0.15rem 0.5rem', borderRadius: '2rem' }}
-            >
-              New Species ✦
-            </motion.span>
-          )}
-          {baitSaved && (
-            <motion.span
-              initial={{ scale: 0 }} animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.15 }}
-              className="font-karla font-700 uppercase tracking-[0.12em]"
-              style={{ fontSize: '0.5rem', color: '#4ade80',
-                background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.35)',
-                padding: '0.15rem 0.5rem', borderRadius: '2rem' }}
-            >
-              Bait returned ✦
-            </motion.span>
-          )}
-        </div>
-      </div>
+    <div style={{ position: 'relative' }}>
+      {/* Glow halo — sits outside overflow:hidden so it isn't clipped */}
+      {rarity >= 2 && (
+        <motion.div
+          animate={isEpicPlus ? { opacity: [0.5, 1, 0.5] } : { opacity: 1 }}
+          transition={isEpicPlus
+            ? { duration: isLegendary ? 1.2 : 1.8, repeat: Infinity, ease: 'easeInOut' }
+            : {}}
+          style={{
+            position: 'absolute', inset: -1, borderRadius: '1rem',
+            boxShadow: glowShadow[rarity],
+            pointerEvents: 'none', zIndex: 0,
+          }}
+        />
+      )}
 
-      {/* Body */}
-      <div className="px-4 py-4">
-        <p className="font-cinzel font-700 mb-0.5" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>
-          {fish.name}
-        </p>
-        <p className="font-karla font-300 italic mb-3" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
-          {fish.scientific_name}
-        </p>
-        <p className="font-karla font-400 leading-relaxed" style={{ fontSize: '0.76rem', color: '#b0afa8' }}>
-          {fish.fun_fact}
-        </p>
-        <div className="flex items-center gap-1.5 mt-3">
-          <span style={{ width: 7, height: 7, borderRadius: 2, background: habitatColor, display: 'inline-block', flexShrink: 0 }} />
-          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
-            Sells for <span style={{ color: '#f0c040' }}>{fish.sell_value.toLocaleString()} ⟡</span>
-          </p>
+      {/* Card */}
+      <motion.div
+        initial={{ opacity: 0, y: isLegendary ? 32 : isEpicPlus ? 24 : 16, scale: isLegendary ? 0.92 : 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: isLegendary ? 200 : 280, damping: isLegendary ? 15 : 22 }}
+        className="rounded-2xl overflow-hidden"
+        style={{
+          border: `1px solid ${r.color}${borderOpMap[rarity] ?? '30'}`,
+          background: cardBg[rarity],
+          position: 'relative', zIndex: 1,
+        }}
+      >
+        {/* Legendary shimmer sweep */}
+        {isLegendary && (
+          <motion.div
+            initial={{ x: '-100%' }}
+            animate={{ x: '220%' }}
+            transition={{ duration: 1.5, delay: 0.6, ease: 'easeOut', repeat: Infinity, repeatDelay: 3.5 }}
+            style={{
+              position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
+              background: 'linear-gradient(105deg, transparent 25%, rgba(255,210,80,0.30) 50%, transparent 75%)',
+            }}
+          />
+        )}
+
+        {/* Header band */}
+        <div className="px-4 py-3 flex items-center justify-between"
+          style={{ position: 'relative', zIndex: 2, background: `${r.color}15`, borderBottom: `1px solid ${r.color}28` }}>
+          <div className="flex items-center gap-2">
+            <span className="font-karla font-700 uppercase tracking-[0.14em]"
+              style={{ fontSize: '0.55rem', color: habitatColor }}>{habitatLabel}</span>
+            <span className="font-karla font-700 uppercase tracking-[0.12em]"
+              style={{
+                fontSize: '0.5rem', color: r.color,
+                background: `${r.color}1c`, border: `1px solid ${r.color}45`,
+                padding: '0.12rem 0.45rem', borderRadius: '2rem',
+              }}>
+              {r.label}{rarity >= 4 ? ' ✦' : ''}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {isNewSpecies && (
+              <motion.span
+                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.2 }}
+                className="font-karla font-700 uppercase tracking-[0.12em]"
+                style={{ fontSize: '0.5rem', color: '#fde68a',
+                  background: 'rgba(253,230,138,0.15)', border: '1px solid rgba(253,230,138,0.4)',
+                  padding: '0.15rem 0.5rem', borderRadius: '2rem' }}
+              >New Species ✦</motion.span>
+            )}
+            {baitSaved && (
+              <motion.span
+                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.15 }}
+                className="font-karla font-700 uppercase tracking-[0.12em]"
+                style={{ fontSize: '0.5rem', color: '#4ade80',
+                  background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.35)',
+                  padding: '0.15rem 0.5rem', borderRadius: '2rem' }}
+              >Bait returned ✦</motion.span>
+            )}
+          </div>
         </div>
-      </div>
-    </motion.div>
+
+        {/* Body */}
+        <div className="px-4 py-4" style={{ position: 'relative', zIndex: 2 }}>
+          <p className="font-cinzel font-700 mb-0.5" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>
+            {fish.name}
+          </p>
+          <p className="font-karla font-300 italic mb-3" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
+            {fish.scientific_name}
+          </p>
+          <p className="font-karla font-400 leading-relaxed" style={{ fontSize: '0.76rem', color: '#b0afa8' }}>
+            {fish.fun_fact}
+          </p>
+          <div className="flex items-center gap-1.5 mt-3">
+            <span style={{ width: 7, height: 7, borderRadius: 2, background: r.color, display: 'inline-block', flexShrink: 0 }} />
+            <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
+              Sells for <span style={{ color: '#f0c040' }}>{fish.sell_value.toLocaleString()} ⟡</span>
+            </p>
+          </div>
+        </div>
+      </motion.div>
+    </div>
   )
 }
 
@@ -581,7 +650,7 @@ export default function FishingGame({
   const [baitOpen, setBaitOpen]       = useState(false)
   const [holdOpen, setHoldOpen]       = useState(false)
   const [sellPending, setSellPending] = useState<number | null>(null)
-  const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number } | null>(null)
+  const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
   const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean } | null>(null)
   const [missResult, setMissResult] = useState<ZoneType | null>(null)
   const [, startTransition]         = useTransition()
@@ -692,8 +761,7 @@ export default function FishingGame({
       return
     }
 
-    // Fish hooked — brief pause on hooked screen then go to catch phase
-    setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty })
+    setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity })
     setPhase('hooked')
     setTimeout(() => {
       const rot = Math.floor(Math.random() * 360)
@@ -935,15 +1003,40 @@ export default function FishingGame({
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: '2rem' }}>
-                  <p className="font-karla font-600"
-                    style={{ fontSize: '0.82rem', color: phase === 'hooked' ? '#fde68a' : 'rgba(255,255,255,0.35)' }}>
-                    {phase === 'hooked' ? "Something's on the line!" : (
-                      selectedZone === 'abyss'       ? 'Something stirs in the deep…' :
-                      selectedZone === 'deep'        ? 'Waiting in the dark…' :
-                      selectedZone === 'open_waters' ? 'Drifting on the open sea…' :
-                                                       'Waiting for a bite…'
-                    )}
-                  </p>
+                  {phase === 'hooked' && hookedFish ? (() => {
+                    const r = RARITY[hookedFish.biteRarity] ?? RARITY[1]
+                    const isLegendary = hookedFish.biteRarity === 5
+                    const isEpicPlus  = hookedFish.biteRarity >= 4
+                    return (
+                      <motion.p
+                        className="font-karla font-700 text-center px-4"
+                        animate={isLegendary
+                          ? { scale: [1, 1.06, 1], opacity: [1, 0.75, 1] }
+                          : isEpicPlus ? { opacity: [1, 0.8, 1] } : {}
+                        }
+                        transition={isLegendary || isEpicPlus
+                          ? { duration: 0.8, repeat: Infinity, ease: 'easeInOut' }
+                          : {}
+                        }
+                        style={{
+                          fontSize: isLegendary ? '1rem' : isEpicPlus ? '0.9rem' : '0.82rem',
+                          color: r.color,
+                          textShadow: isEpicPlus ? `0 0 20px ${r.color}80` : 'none',
+                          letterSpacing: isLegendary ? '0.04em' : 'normal',
+                        }}
+                      >
+                        {r.hookedText}
+                      </motion.p>
+                    )
+                  })() : (
+                    <p className="font-karla font-600"
+                      style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.35)' }}>
+                      {selectedZone === 'abyss'       ? 'Something stirs in the deep…' :
+                       selectedZone === 'deep'        ? 'Waiting in the dark…' :
+                       selectedZone === 'open_waters' ? 'Drifting on the open sea…' :
+                                                        'Waiting for a bite…'}
+                    </p>
+                  )}
                 </motion.div>
               )}
 
