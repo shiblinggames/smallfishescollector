@@ -766,9 +766,9 @@ export default function FishingGame({
   const hasBait = totalBait() > 0
   const selectedBaitQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
 
-  const sceneSrc = sceneFrame === 'windup' ? '/windup.png'
-    : sceneFrame === 'cast' ? '/cast.png'
-    : '/fishing.png'
+  const sceneSrc = sceneFrame === 'windup' ? '/windup.jpg'
+    : sceneFrame === 'cast' ? '/cast.jpeg'
+    : '/fishing.jpeg'
   const isBobbing = sceneFrame === 'fishing' && (phase === 'casting' || phase === 'hooked')
 
   return (
@@ -790,7 +790,7 @@ export default function FishingGame({
             inset: '-14px',
             backgroundImage: `url('${sceneSrc}')`,
             backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            backgroundPosition: 'top center',
           }}
         />
 
