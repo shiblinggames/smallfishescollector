@@ -3,15 +3,51 @@
 import { useState, useTransition } from 'react'
 import dynamic from 'next/dynamic'
 import { HOOKS } from '@/lib/hooks'
+import { BAITS } from '@/lib/bait'
 import { buyHook } from '@/app/hooks/actions'
+import { buyBait } from './actions'
 
 const HookViewer3D = dynamic(() => import('./HookViewer3D'), { ssr: false })
 
-export default function TackleShopClient({ hookTier: initialTier, doubloons: initialDoubloons }: { hookTier: number; doubloons: number }) {
+const HABITAT_COLOR: Record<string, string> = {
+  shallows:    '#60a5fa',
+  open_waters: '#34d399',
+  deep:        '#a78bfa',
+  abyss:       '#f87171',
+}
+const HABITAT_LABEL: Record<string, string> = {
+  shallows:    'Shallows',
+  open_waters: 'Open Waters',
+  deep:        'Deep',
+  abyss:       'Abyss',
+}
+
+// Bundle qty per bait tier — roughly 100–600⟡ spend per click
+const BUNDLE: Record<string, number> = {
+  worm:   10,
+  minnow:  5,
+  squid:   3,
+  chum:    3,
+}
+
+type BaitInventoryItem = { bait_type: string; quantity: number }
+
+export default function TackleShopClient({
+  hookTier: initialTier,
+  doubloons: initialDoubloons,
+  baitInventory: initialBait,
+}: {
+  hookTier: number
+  doubloons: number
+  baitInventory: BaitInventoryItem[]
+}) {
   const [hookTier, setHookTier] = useState(initialTier)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
+  const [baitInventory, setBaitInventory] = useState<BaitInventoryItem[]>(initialBait)
   const [isPending, startTransition] = useTransition()
   const [hookError, setHookError] = useState<string | null>(null)
+  const [baitError, setBaitError] = useState<string | null>(null)
+  const [buyingBait, setBuyingBait] = useState<string | null>(null)
   const [tooltipTier, setTooltipTier] = useState<number | null>(null)
   const [previewTier, setPreviewTier] = useState(initialTier)
 
@@ -28,6 +64,29 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
     })
   }
 
+  function handleBuyBait(baitType: string) {
+    const qty = BUNDLE[baitType] ?? 5
+    setBaitError(null)
+    setBuyingBait(baitType)
+    startTransition(async () => {
+      const result = await buyBait(baitType, qty)
+      setBuyingBait(null)
+      if ('error' in result) {
+        setBaitError(result.error)
+      } else {
+        setDoubloons(result.doubloons)
+        setBaitInventory(prev => {
+          const existing = prev.find(b => b.bait_type === baitType)
+          if (existing) return prev.map(b => b.bait_type === baitType ? { ...b, quantity: result.newQty } : b)
+          return [...prev, { bait_type: baitType, quantity: result.newQty }]
+        })
+      }
+    })
+  }
+
+  const shopBaits = BAITS.filter(b => b.shopCost > 0)
+  const baitMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
+
   const nextHook = hookTier < HOOKS.length - 1 ? HOOKS[hookTier + 1] : null
   const canAfford = nextHook ? doubloons >= nextHook.cost : false
   const previewHook = HOOKS[previewTier]
@@ -36,6 +95,98 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
     <div className="px-6 max-w-sm sm:max-w-2xl mx-auto">
       <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-3 text-[0.65rem] sm:text-xs">
         Tackle Shop
+      </p>
+
+      {/* ── Bait ── */}
+      <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-2 text-[0.6rem]">
+        Bait
+      </p>
+      <div className="flex flex-col gap-2 mb-7">
+        {shopBaits.map(bait => {
+          const qty = baitMap[bait.type] ?? 0
+          const bundleQty = BUNDLE[bait.type] ?? 5
+          const bundleCost = bait.shopCost * bundleQty
+          const canAffordBait = doubloons >= bundleCost
+          const isBuying = buyingBait === bait.type && isPending
+
+          return (
+            <div key={bait.type}
+              className="flex items-center gap-3 px-3 py-3 rounded-xl"
+              style={{
+                background: `${bait.color}0a`,
+                border: `1px solid ${bait.color}28`,
+              }}
+            >
+              {/* Color swatch */}
+              <div style={{
+                width: 36, height: 36, borderRadius: 9, flexShrink: 0,
+                background: `${bait.color}18`, border: `1px solid ${bait.color}40`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <div style={{ width: 10, height: 10, borderRadius: 3, background: bait.color }} />
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>
+                  {bait.name}
+                </p>
+                <p className="font-karla font-300" style={{ fontSize: '0.66rem', color: '#6a6764', marginBottom: 3 }}>
+                  {bait.description}
+                </p>
+                <div className="flex gap-1 flex-wrap">
+                  {bait.habitats.map(h => (
+                    <span key={h} className="font-karla font-600"
+                      style={{
+                        fontSize: '0.5rem', color: HABITAT_COLOR[h],
+                        background: `${HABITAT_COLOR[h]}14`,
+                        border: `1px solid ${HABITAT_COLOR[h]}30`,
+                        padding: '0.1rem 0.4rem', borderRadius: '2rem',
+                      }}>
+                      {HABITAT_LABEL[h]}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right: stock + buy */}
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: qty > 0 ? bait.color : '#4a4845' }}>
+                  ×{qty} owned
+                </p>
+                <button
+                  onClick={() => handleBuyBait(bait.type)}
+                  disabled={!canAffordBait || isPending}
+                  className="font-karla font-700"
+                  style={{
+                    fontSize: '0.6rem',
+                    padding: '0.3rem 0.65rem',
+                    borderRadius: 8,
+                    background: canAffordBait ? `${bait.color}16` : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${canAffordBait ? bait.color + '44' : 'rgba(255,255,255,0.08)'}`,
+                    color: canAffordBait ? bait.color : '#4a4845',
+                    cursor: canAffordBait && !isPending ? 'pointer' : 'default',
+                    opacity: isBuying ? 0.5 : 1,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {isBuying ? '…' : `+${bundleQty} · ${bundleCost.toLocaleString()} ⟡`}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+        {baitError && (
+          <p className="font-karla font-300 text-red-400 text-xs text-center">{baitError}</p>
+        )}
+        <p className="font-karla font-300 text-center" style={{ fontSize: '0.6rem', color: '#3a3835' }}>
+          Luminous Lure &amp; Golden Lure drop from expeditions and bounties
+        </p>
+      </div>
+
+      {/* ── Hooks ── */}
+      <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-3 text-[0.6rem]">
+        Hooks
       </p>
 
       <div className="mb-5">
@@ -114,9 +265,11 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
 
                   {owned && (
                     <div className="flex gap-3 mt-1.5 flex-wrap">
-                      <span className="font-karla font-600 text-[0.65rem] sm:text-xs" style={{ color: `${c}99` }}>
-                        {hook.maxCasts} casts/day
-                      </span>
+                      {hook.rollBonus > 0 && (
+                        <span className="font-karla font-600 text-[0.65rem] sm:text-xs" style={{ color: `${c}99` }}>
+                          +{hook.rollBonus} roll
+                        </span>
+                      )}
                       {hook.tier > 0 && (
                         <span className="font-karla font-600 text-[0.65rem] sm:text-xs" style={{ color: `${c}99` }}>
                           +{hook.tier * 3}° catch zone
@@ -165,8 +318,10 @@ export default function TackleShopClient({ hookTier: initialTier, doubloons: ini
                     <p className="font-karla font-600 uppercase tracking-[0.1em] mb-1.5" style={{ fontSize: '0.55rem', color: '#5a5956' }}>Drop a Line</p>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-karla font-300 text-[#6a6764] text-[0.65rem] sm:text-xs">Casts/day</p>
-                        <p className="font-karla font-600 text-[0.65rem] sm:text-xs" style={{ color: c }}>{hook.maxCasts}</p>
+                        <p className="font-karla font-300 text-[#6a6764] text-[0.65rem] sm:text-xs">Hook roll</p>
+                        <p className="font-karla font-600 text-[0.65rem] sm:text-xs" style={{ color: c }}>
+                          {hook.rollBonus > 0 ? `+${hook.rollBonus}` : 'Base'}
+                        </p>
                       </div>
                       <div className="flex items-center justify-between gap-2">
                         <p className="font-karla font-300 text-[#6a6764] text-[0.65rem] sm:text-xs">Catch zone</p>

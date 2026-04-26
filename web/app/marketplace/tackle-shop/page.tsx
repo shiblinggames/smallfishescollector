@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import TackleShopClient from './TackleShopClient'
@@ -8,11 +9,12 @@ export default async function TackleShopPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('hook_tier, doubloons, packs_available')
-    .eq('id', user.id)
-    .single()
+  const admin = createAdminClient()
+
+  const [{ data: profile }, { data: baitInventory }] = await Promise.all([
+    supabase.from('profiles').select('hook_tier, doubloons, packs_available').eq('id', user.id).single(),
+    admin.from('bait_inventory').select('bait_type, quantity').eq('user_id', user.id),
+  ])
 
   return (
     <>
@@ -21,6 +23,7 @@ export default async function TackleShopPage() {
         <TackleShopClient
           hookTier={profile?.hook_tier ?? 0}
           doubloons={profile?.doubloons ?? 0}
+          baitInventory={baitInventory ?? []}
         />
       </main>
     </>
