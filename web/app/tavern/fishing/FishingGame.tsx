@@ -789,10 +789,12 @@ export default function FishingGame({
   const hasBait = totalBait() > 0
   const selectedBaitQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
 
-  const sceneSrc = sceneFrame === 'windup' ? '/windup.jpg'
-    : sceneFrame === 'cast1' ? '/cast1.jpg'
-    : sceneFrame === 'cast2' ? '/cast2.jpeg'
-    : '/fishing.jpeg'
+  const FRAME_SRC: Record<SceneFrame, string> = {
+    windup:  '/windup.jpg',
+    cast1:   '/cast1.jpg',
+    cast2:   '/cast2.jpeg',
+    fishing: '/fishing.jpeg',
+  }
   const isBobbing = sceneFrame === 'fishing' && (phase === 'casting' || phase === 'hooked')
 
   return (
@@ -802,21 +804,26 @@ export default function FishingGame({
       <div className="relative rounded-2xl overflow-hidden"
         style={{ minHeight: 480, background: '#08121c', border: `1px solid ${HABITAT_COLOR[selectedZone]}20` }}>
 
-        {/* Background image layer — bobs gently during casting/hooked */}
+        {/* Background layers — all 4 frames always in DOM, opacity-switched to avoid reload flicker */}
         <motion.div
           animate={isBobbing ? { y: phase === 'hooked' ? [0, 8, 0] : [0, -6, 0] } : { y: 0 }}
           transition={isBobbing
             ? { duration: phase === 'hooked' ? 0.5 : 2.5, repeat: Infinity, ease: 'easeInOut' }
             : { duration: 0.12 }
           }
-          style={{
-            position: 'absolute',
-            inset: '-14px',
-            backgroundImage: `url('${sceneSrc}')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'top center',
-          }}
-        />
+          style={{ position: 'absolute', inset: '-14px' }}
+        >
+          {(Object.keys(FRAME_SRC) as SceneFrame[]).map(frame => (
+            <div key={frame} style={{
+              position: 'absolute', inset: 0,
+              backgroundImage: `url('${FRAME_SRC[frame]}')`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'top center',
+              opacity: sceneFrame === frame ? 1 : 0,
+              transition: 'opacity 0.05s linear',
+            }} />
+          ))}
+        </motion.div>
 
         {/* Gradient — light at top so the scene shows, dark at bottom for readability */}
         <div style={{
