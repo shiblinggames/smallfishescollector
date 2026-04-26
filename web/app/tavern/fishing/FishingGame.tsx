@@ -25,10 +25,10 @@ type InventoryItem = {
 // ─── Wait time mechanics ──────────────────────────────────────────────────────
 
 const ZONE_WAIT_RANGE: Record<string, [number, number]> = {
-  shallows:    [2000,  4000],
-  open_waters: [4000,  8000],
-  deep:        [8000,  14000],
-  abyss:       [13000, 22000],
+  shallows:    [8000,  16000],
+  open_waters: [15000, 28000],
+  deep:        [25000, 45000],
+  abyss:       [40000, 70000],
 }
 
 const BAIT_WAIT_MULT: Record<string, number> = {
@@ -39,10 +39,11 @@ const BAIT_WAIT_MULT: Record<string, number> = {
 }
 
 function castWaitMs(zone: string, baitType: string, rodTier: number): number {
-  const [min, max] = ZONE_WAIT_RANGE[zone] ?? [2000, 5000]
+  const [min, max] = ZONE_WAIT_RANGE[zone] ?? [8000, 16000]
   const baitMult = BAIT_WAIT_MULT[baitType] ?? 1.0
   const rodMult  = Math.max(0.70, 1.0 - rodTier * 0.075)
-  return (min + Math.random() * (max - min)) * baitMult * rodMult
+  // Floor of 5s so even best gear still feels like real fishing
+  return Math.max(5000, (min + Math.random() * (max - min)) * baitMult * rodMult)
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
