@@ -7,11 +7,10 @@ export interface RodDef {
   description: string
   color: string
   castsPerDay: number
-  // Habitats this rod can reach
   habitats: Habitat[]
-  // Multiplier on base hook chance (e.g. 1.2 = 20% better hook chance)
-  hookChanceBonus: number
-  // Seconds between bite checks (lower = faster bites)
+  // Flat bonus added to the 1–50 base roll in Phase 1
+  rollBonus: number
+  // Animation timing for bite phase (ms)
   biteIntervalMs: number
 }
 
@@ -24,7 +23,7 @@ export const RODS: RodDef[] = [
     color: '#a07858',
     castsPerDay: 15,
     habitats: ['shallows'],
-    hookChanceBonus: 1.0,
+    rollBonus: 0,
     biteIntervalMs: 4000,
   },
   {
@@ -35,7 +34,7 @@ export const RODS: RodDef[] = [
     color: '#9ca3af',
     castsPerDay: 20,
     habitats: ['shallows', 'open_waters'],
-    hookChanceBonus: 1.1,
+    rollBonus: 5,
     biteIntervalMs: 3500,
   },
   {
@@ -46,7 +45,7 @@ export const RODS: RodDef[] = [
     color: '#60a5fa',
     castsPerDay: 25,
     habitats: ['shallows', 'open_waters', 'deep'],
-    hookChanceBonus: 1.2,
+    rollBonus: 10,
     biteIntervalMs: 3000,
   },
   {
@@ -57,7 +56,7 @@ export const RODS: RodDef[] = [
     color: '#4ade80',
     castsPerDay: 30,
     habitats: ['shallows', 'open_waters', 'deep', 'abyss'],
-    hookChanceBonus: 1.35,
+    rollBonus: 15,
     biteIntervalMs: 2500,
   },
   {
@@ -68,7 +67,7 @@ export const RODS: RodDef[] = [
     color: '#ff6b35',
     castsPerDay: 40,
     habitats: ['shallows', 'open_waters', 'deep', 'abyss'],
-    hookChanceBonus: 1.6,
+    rollBonus: 25,
     biteIntervalMs: 1800,
   },
 ]
