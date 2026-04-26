@@ -888,8 +888,8 @@ export default function FishingGame({
   const isBobbing = sceneFrame === 'fishing' && (phase === 'casting' || phase === 'hooked')
 
   return (
-    <div className="relative max-w-md mx-auto overflow-hidden"
-      style={{ height: '100svh', background: '#08121c' }}>
+    <div style={{ position: 'fixed', inset: 0, background: '#08121c', zIndex: 40, display: 'flex', justifyContent: 'center' }}>
+      <div className="relative w-full max-w-md overflow-hidden" style={{ height: '100%' }}>
 
         {/* Background layers — img tags force eager loading so no black-frame on switch */}
         <motion.div
@@ -925,7 +925,7 @@ export default function FishingGame({
         }} />
 
         {/* UI content — fills full height as flex column */}
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100svh', padding: '1rem', paddingTop: '1rem', paddingBottom: '1.25rem' }}>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem', paddingTop: '1rem', paddingBottom: '1.25rem' }}>
 
           <GearBar rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} lineTier={lineTier} />
 
@@ -1310,6 +1310,7 @@ export default function FishingGame({
         )}
       </AnimatePresence>
 
+      </div>
     </div>
   )
 }
