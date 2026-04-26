@@ -24,18 +24,44 @@ export type FishSpecies = {
   sell_value: number
 }
 
-// Phase 1 — roll fishing power vs fish catch_score
-// Higher weight = more common. Rarity 1→32, 2→16, 3→8, 4→4, 5→1
-const RARITY_WEIGHT: Record<number, number> = { 1: 32, 2: 16, 3: 8, 4: 4, 5: 1 }
+// Two-stage fish selection:
+//   Stage 1 — roll rarity tier using zone-specific fixed rates (commons always dominant)
+//   Stage 2 — pick uniformly among fish of that tier in this zone
+// Adding more fish of a rarity increases variety, not that rarity's probability.
+// Tiers absent from a zone are excluded and the remaining rates normalise automatically.
+const ZONE_RARITY_RATES: Record<string, Record<number, number>> = {
+  shallows:    { 1: 55, 2: 25, 3: 12, 4: 7, 5: 1 },
+  open_waters: { 1: 52, 2: 26, 3: 14, 4: 6, 5: 2 },
+  deep:        { 1: 50, 2: 28, 3: 15, 4: 6, 5: 1 },
+  abyss:       { 1: 44, 2: 26, 3: 18, 4: 7, 5: 5 },
+}
 
-function weightedPick<T extends { bite_rarity: number }>(items: T[]): T {
-  const total = items.reduce((s, f) => s + (RARITY_WEIGHT[f.bite_rarity] ?? 1), 0)
-  let rand = Math.random() * total
+function tierWeightedPick<T extends { bite_rarity: number }>(items: T[], habitat: string): T {
+  const rates = ZONE_RARITY_RATES[habitat] ?? ZONE_RARITY_RATES.shallows
+
+  // Group fish by rarity tier
+  const groups = new Map<number, T[]>()
   for (const item of items) {
-    rand -= RARITY_WEIGHT[item.bite_rarity] ?? 1
-    if (rand <= 0) return item
+    const g = groups.get(item.bite_rarity) ?? []
+    g.push(item)
+    groups.set(item.bite_rarity, g)
   }
-  return items[items.length - 1]
+
+  // Stage 1: pick tier (only from tiers that have fish in this zone)
+  const tiers = [...groups.keys()]
+  const totalWeight = tiers.reduce((s, r) => s + (rates[r] ?? 0), 0)
+  if (totalWeight === 0) return items[Math.floor(Math.random() * items.length)]
+
+  let rand = Math.random() * totalWeight
+  let selectedTier = tiers[0]
+  for (const r of tiers) {
+    rand -= rates[r] ?? 0
+    if (rand <= 0) { selectedTier = r; break }
+  }
+
+  // Stage 2: pick uniformly within selected tier
+  const pool = groups.get(selectedTier)!
+  return pool[Math.floor(Math.random() * pool.length)]
 }
 
 export async function castLine(baitType: string, habitat: string): Promise<
@@ -93,7 +119,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   if (!candidates || candidates.length === 0) return { hit: false }
 
-  const fish = weightedPick(candidates)
+  const fish = tierWeightedPick(candidates, habitat)
 
   // Roll: 1–50 base + rod bonus + hook bonus vs fish catch_score
   const roll = Math.floor(Math.random() * 50) + 1 + rod.rollBonus + hook.rollBonus
