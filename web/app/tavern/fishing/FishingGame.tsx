@@ -184,11 +184,11 @@ function GearBar({ rodTier, reelTier, hookTier, lineTier }: {
   }) {
     return (
       <div className="flex flex-col items-center gap-0.5 px-1 py-2 rounded-lg"
-        style={{ background: `${color}0d`, border: `1px solid ${color}30` }}>
+        style={{ background: `${color}22`, border: `1px solid ${color}60` }}>
         <p className="font-karla font-600 uppercase tracking-[0.1em]"
-          style={{ fontSize: '0.45rem', color: '#6a6764' }}>{label}</p>
+          style={{ fontSize: '0.45rem', color: 'rgba(255,255,255,0.45)' }}>{label}</p>
         <p className="font-karla font-700 text-center leading-tight"
-          style={{ fontSize: '0.56rem', color }}>{name}</p>
+          style={{ fontSize: '0.58rem', color }}>{name}</p>
         {children}
       </div>
     )
@@ -197,7 +197,7 @@ function GearBar({ rodTier, reelTier, hookTier, lineTier }: {
   function Stat({ children }: { children: React.ReactNode }) {
     return (
       <p className="font-karla font-600 text-center leading-tight"
-        style={{ fontSize: '0.46rem', color: '#5a5956', marginTop: 1 }}>
+        style={{ fontSize: '0.46rem', color: 'rgba(255,255,255,0.38)', marginTop: 1 }}>
         {children}
       </p>
     )
@@ -913,17 +913,11 @@ export default function FishingGame({
 
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.3rem' }}>Drop a Line</h1>
-              <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.7rem' }}>Fish · Catch · Sell</p>
-            </div>
-            <div className="text-right">
-              <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0c040' }}>
-                {doubloons.toLocaleString()} ⟡
-              </p>
-              <Link href="/tavern" className="font-karla font-600"
-                style={{ fontSize: '0.62rem', color: '#4a4845' }}>← Tavern</Link>
-            </div>
+            <Link href="/tavern" className="font-karla font-600"
+              style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.3)' }}>← Tavern</Link>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0c040' }}>
+              {doubloons.toLocaleString()} ⟡
+            </p>
           </div>
 
           <GearBar rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} lineTier={lineTier} />
@@ -1236,8 +1230,25 @@ export default function FishingGame({
                   </span>
                 )}
               </div>
-              <button onClick={() => setHoldOpen(false)}
-                style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+              <div className="flex items-center gap-2">
+                {holdTotalCount > 0 && (
+                  <button
+                    onClick={async () => {
+                      for (const item of inventory) {
+                        await handleSell(item.fish_id, item.quantity)
+                      }
+                    }}
+                    disabled={!!sellPending}
+                    className="font-karla font-700 uppercase tracking-[0.1em]"
+                    style={{ fontSize: '0.52rem', padding: '0.3rem 0.7rem', borderRadius: '0.5rem',
+                      background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.4)',
+                      color: '#f0c040', opacity: sellPending ? 0.5 : 1, cursor: sellPending ? 'default' : 'pointer' }}>
+                    Sell All
+                  </button>
+                )}
+                <button onClick={() => setHoldOpen(false)}
+                  style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+              </div>
             </div>
 
             {inventory.length === 0 ? (
