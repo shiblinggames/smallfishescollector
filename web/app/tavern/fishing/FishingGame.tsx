@@ -889,7 +889,7 @@ export default function FishingGame({
 
   return (
     <div className="relative max-w-md mx-auto overflow-hidden"
-      style={{ minHeight: '100svh', background: '#08121c' }}>
+      style={{ height: '100svh', background: '#08121c' }}>
 
         {/* Background layers — img tags force eager loading so no black-frame on switch */}
         <motion.div
@@ -925,7 +925,7 @@ export default function FishingGame({
         }} />
 
         {/* UI content — fills full height as flex column */}
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', minHeight: '100svh', padding: '1rem', paddingTop: '1rem', paddingBottom: '1.25rem' }}>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100svh', padding: '1rem', paddingTop: '1rem', paddingBottom: '1.25rem' }}>
 
           <GearBar rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} lineTier={lineTier} />
 
