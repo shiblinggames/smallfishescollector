@@ -48,7 +48,7 @@ export default async function FishingPage() {
           lineTier={profile?.line_tier ?? 0}
           initialDoubloons={profile?.doubloons ?? 0}
           initialBait={baitInventory ?? []}
-          initialInventory={(fishInventory ?? []) as {
+          initialInventory={(fishInventory ?? []) as unknown as {
             fish_id: number
             quantity: number
             fish_species: {

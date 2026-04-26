@@ -191,15 +191,12 @@ export async function reelIn(
   const profileUpdate: Record<string, unknown> = { fishing_abyss_streak: newAbyssStreak }
   if (earned > 0) profileUpdate.doubloons = (profile.doubloons ?? 0) + earned
 
-  const updateOps: Promise<unknown>[] = [
+  await Promise.all([
     admin.from('profiles').update(profileUpdate).eq('id', user.id),
-  ]
-  if (earned > 0) {
-    updateOps.push(admin.from('doubloon_transactions').insert({
+    ...(earned > 0 ? [admin.from('doubloon_transactions').insert({
       user_id: user.id, amount: earned, reason: 'Perfect catch bonus',
-    }))
-  }
-  await Promise.all(updateOps)
+    })] : []),
+  ])
 
   const newAchievements = await checkAchievements(user.id, {
     type: 'fishing',
