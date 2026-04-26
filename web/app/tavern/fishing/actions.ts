@@ -86,13 +86,15 @@ export async function castLine(baitType: string): Promise<
   return { hit: true, fishId: fish.id, catchDifficulty: fish.catch_difficulty }
 }
 
+const PERFECT_BAIT_SAVE_CHANCE = 0.5
+
 // Phase 2 — process reel-in result
 export async function reelIn(
   fishId: number,
   result: 'perfect' | 'catch' | 'miss' | 'penalty',
   baitType: string,
 ): Promise<
-  | { caught: true; fish: FishSpecies; earned: number; isNewSpecies: boolean; newAchievements: string[] }
+  | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; newAchievements: string[] }
   | { caught: false; newAchievements: string[] }
   | { error: string }
 > {
@@ -135,8 +137,8 @@ export async function reelIn(
 
   if (!fish || !profile) return { error: 'Data not found' }
 
-  // Perfect gives 20% of sell value as instant doubloons
-  const earned = result === 'perfect' ? Math.round(fish.sell_value * 0.2) : 0
+  // Perfect: 50% chance to return the bait used for this cast
+  const baitSaved = result === 'perfect' && Math.random() < PERFECT_BAIT_SAVE_CHANCE
 
   // Check if new species for bestiary
   const { data: existing } = await admin
@@ -185,18 +187,26 @@ export async function reelIn(
     await admin.from('profiles').update({ line_tier: newLineTier }).eq('id', user.id)
   }
 
-  // Award perfect bonus + track abyss streak
+  // Track abyss streak for achievements
   const isAbyssPerfect = result === 'perfect' && fish.habitat === 'abyss'
   const newAbyssStreak = isAbyssPerfect ? (profile.fishing_abyss_streak ?? 0) + 1 : 0
-  const profileUpdate: Record<string, unknown> = { fishing_abyss_streak: newAbyssStreak }
-  if (earned > 0) profileUpdate.doubloons = (profile.doubloons ?? 0) + earned
 
-  await Promise.all([
-    admin.from('profiles').update(profileUpdate).eq('id', user.id),
-    ...(earned > 0 ? [admin.from('doubloon_transactions').insert({
-      user_id: user.id, amount: earned, reason: 'Perfect catch bonus',
-    })] : []),
-  ])
+  await admin.from('profiles').update({ fishing_abyss_streak: newAbyssStreak }).eq('id', user.id)
+
+  if (baitSaved) {
+    const { data: baitRow } = await admin
+      .from('bait_inventory')
+      .select('quantity')
+      .eq('user_id', user.id)
+      .eq('bait_type', baitType)
+      .single()
+    if (baitRow) {
+      await admin.from('bait_inventory')
+        .update({ quantity: baitRow.quantity + 1 })
+        .eq('user_id', user.id)
+        .eq('bait_type', baitType)
+    }
+  }
 
   const newAchievements = await checkAchievements(user.id, {
     type: 'fishing',
@@ -205,7 +215,7 @@ export async function reelIn(
     abyssStreak: newAbyssStreak,
   })
 
-  return { caught: true, fish: fish as FishSpecies, earned, isNewSpecies, newAchievements }
+  return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, newAchievements }
 }
 
 // Sell fish from inventory

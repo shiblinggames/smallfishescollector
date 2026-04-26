@@ -307,9 +307,9 @@ function CastAnimation({ phase }: { phase: 'casting' | 'hooked' }) {
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
-function ResultCard({ fish, earned, isNewSpecies }: {
+function ResultCard({ fish, baitSaved, isNewSpecies }: {
   fish: FishSpecies
-  earned: number
+  baitSaved: boolean
   isNewSpecies: boolean
 }) {
   const habitatColor = HABITAT_COLOR[fish.habitat] ?? '#888'
@@ -341,10 +341,17 @@ function ResultCard({ fish, earned, isNewSpecies }: {
               New Species ✦
             </motion.span>
           )}
-          {earned > 0 && (
-            <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#fde68a' }}>
-              +{earned} ⟡
-            </span>
+          {baitSaved && (
+            <motion.span
+              initial={{ scale: 0 }} animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.15 }}
+              className="font-karla font-700 uppercase tracking-[0.12em]"
+              style={{ fontSize: '0.5rem', color: '#4ade80',
+                background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.35)',
+                padding: '0.15rem 0.5rem', borderRadius: '2rem' }}
+            >
+              Bait returned ✦
+            </motion.span>
           )}
         </div>
       </div>
@@ -501,7 +508,7 @@ export default function FishingGame({
   const [doubloons, setDoubloons]   = useState(initialDoubloons)
   const [noBiteFlash, setNoBiteFlash] = useState(false)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number } | null>(null)
-  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; earned: number; isNewSpecies: boolean } | null>(null)
+  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean } | null>(null)
   const [missResult, setMissResult] = useState<ZoneType | null>(null)
   const [, startTransition]         = useTransition()
 
@@ -631,14 +638,18 @@ export default function FishingGame({
       if ('error' in res || !res.caught) {
         setMissResult('miss')
       } else {
-        const { fish, earned, isNewSpecies } = res
-        setCatchResult({ fish, earned, isNewSpecies })
+        const { fish, baitSaved, isNewSpecies } = res
+        setCatchResult({ fish, baitSaved, isNewSpecies })
         setInventory(prev => {
           const existing = prev.find(i => i.fish_id === fish.id)
           if (existing) return prev.map(i => i.fish_id === fish.id ? { ...i, quantity: i.quantity + 1 } : i)
           return [...prev, { fish_id: fish.id, quantity: 1, fish_species: fish }]
         })
-        if (earned > 0) setDoubloons(d => d + earned)
+        if (baitSaved) {
+          setBaitInventory(prev => prev.map(b =>
+            b.bait_type === selectedBaitRef.current ? { ...b, quantity: b.quantity + 1 } : b
+          ))
+        }
       }
 
       phaseRef.current = 'result'
@@ -843,7 +854,7 @@ export default function FishingGame({
             {catchResult ? (
               <ResultCard
                 fish={catchResult.fish}
-                earned={catchResult.earned}
+                baitSaved={catchResult.baitSaved}
                 isNewSpecies={catchResult.isNewSpecies}
               />
             ) : (
