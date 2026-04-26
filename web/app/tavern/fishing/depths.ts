@@ -16,9 +16,9 @@ export interface DepthDef {
   perfectDeg: number
   snagDeg: number
   snagGapRight: number
-  snagGapLeft: number    // -1 = no left snag
-  catchEarns: number     // fixed doubloons for a catch hit
-  perfectEarns: number   // fixed doubloons for a perfect hit
+  snagGapLeft: number
+  catchEarns: number
+  perfectEarns: number
   speedMin: number
   speedMax: number
   changeMin: number
@@ -27,10 +27,7 @@ export interface DepthDef {
 }
 
 const CATCH_CENTER = 97.5
-
-// Each hook tier widens the catch zone slightly (perfect zone is fixed)
-const CATCH_BONUS_PER_TIER   = 3    // degrees
-const PERFECT_BONUS_PER_TIER = 0    // perfect zone never scales
+const CATCH_BONUS_PER_TIER = 3
 
 export const DEPTHS: DepthDef[] = [
   { id: 0, name: 'Shallows',    color: '#60a5fa', catchDeg:  90, perfectDeg: 4, snagDeg: 40, snagGapRight: 30, snagGapLeft:  -1, catchEarns: 3, perfectEarns:  5, speedMin: 130, speedMax: 210, changeMin: 22, changeMax: 38, reverseChance: 0.00 },
@@ -39,22 +36,26 @@ export const DEPTHS: DepthDef[] = [
   { id: 3, name: 'Abyss',       color: '#f87171', catchDeg:  28, perfectDeg: 4, snagDeg: 50, snagGapRight:  0, snagGapLeft:   0, catchEarns: 8, perfectEarns: 12, speedMin: 450, speedMax: 590, changeMin:  5, changeMax: 10, reverseChance: 0.30 },
 ]
 
-export function buildZones(d: DepthDef, hookTier = 0): ZoneDef[] {
-  const tier      = Math.max(0, Math.min(6, hookTier))
-  const catchDeg  = d.catchDeg   + tier * CATCH_BONUS_PER_TIER
-  const perfDeg   = d.perfectDeg + Math.round(tier * PERFECT_BONUS_PER_TIER)
+function buildZonesFromParams(params: {
+  catchDeg: number
+  perfectDeg: number
+  snagDeg: number
+  snagGapRight: number
+  snagGapLeft: number
+}): ZoneDef[] {
+  const { catchDeg, perfectDeg, snagDeg, snagGapRight, snagGapLeft } = params
 
   const catchStart = CATCH_CENTER - catchDeg / 2
   const catchEnd   = CATCH_CENTER + catchDeg / 2
-  const perfStart  = CATCH_CENTER - perfDeg / 2
-  const perfEnd    = CATCH_CENTER + perfDeg / 2
+  const perfStart  = CATCH_CENTER - perfectDeg / 2
+  const perfEnd    = CATCH_CENTER + perfectDeg / 2
 
   const zones: ZoneDef[] = []
 
-  if (d.snagGapLeft >= 0) {
-    const leftSnagEnd   = catchStart - d.snagGapLeft
-    const leftSnagStart = Math.max(0, leftSnagEnd - d.snagDeg)
-    if (leftSnagStart > 0) zones.push({ from: 0, to: leftSnagStart, type: 'miss',    label: 'Miss',  color: '#64748b' })
+  if (snagGapLeft >= 0) {
+    const leftSnagEnd   = catchStart - snagGapLeft
+    const leftSnagStart = Math.max(0, leftSnagEnd - snagDeg)
+    if (leftSnagStart > 0) zones.push({ from: 0, to: leftSnagStart, type: 'miss', label: 'Miss', color: '#64748b' })
     zones.push({ from: leftSnagStart, to: leftSnagEnd, type: 'penalty', label: 'Snag!', color: '#f87171' })
     zones.push({ from: leftSnagEnd,   to: catchStart,  type: 'miss',    label: 'Miss',  color: '#64748b' })
   } else {
@@ -65,11 +66,52 @@ export function buildZones(d: DepthDef, hookTier = 0): ZoneDef[] {
   zones.push({ from: perfStart,  to: perfEnd,   type: 'perfect', label: 'Perfect!', color: '#fde68a' })
   zones.push({ from: perfEnd,    to: catchEnd,  type: 'catch',   label: 'Catch',    color: '#4ade80' })
 
-  const rightSnagStart = catchEnd + d.snagGapRight
-  const rightSnagEnd   = rightSnagStart + d.snagDeg
+  const rightSnagStart = catchEnd + snagGapRight
+  const rightSnagEnd   = rightSnagStart + snagDeg
   zones.push({ from: catchEnd,       to: rightSnagStart, type: 'miss',    label: 'Miss',  color: '#64748b' })
   zones.push({ from: rightSnagStart, to: rightSnagEnd,   type: 'penalty', label: 'Snag!', color: '#f87171' })
   if (rightSnagEnd < 360) zones.push({ from: rightSnagEnd, to: 360, type: 'miss', label: 'Miss', color: '#64748b' })
 
   return zones
 }
+
+export function buildZones(d: DepthDef, hookTier = 0): ZoneDef[] {
+  return buildZonesFromParams({
+    catchDeg:     d.catchDeg + Math.max(0, Math.min(6, hookTier)) * CATCH_BONUS_PER_TIER,
+    perfectDeg:   d.perfectDeg,
+    snagDeg:      d.snagDeg,
+    snagGapRight: d.snagGapRight,
+    snagGapLeft:  d.snagGapLeft,
+  })
+}
+
+// Zones for the new fish-based catch game
+export function buildFishZones(
+  catchDifficulty: number, // 1–5
+  hookTier = 0,
+  linePenaltyMultiplier = 1.0,
+): ZoneDef[] {
+  const d = Math.max(1, Math.min(5, catchDifficulty)) - 1
+  const baseCatch = [110, 88, 66, 46, 28][d]
+  const baseSnag  = [ 18, 26, 36, 48, 58][d]
+  const gapRight  = [ 28, 14,  5,  0,  0][d]
+  const gapLeft   = [  0,  0,  5,  0,  0][d]
+  const hasLeft   = d >= 2
+
+  return buildZonesFromParams({
+    catchDeg:     baseCatch + Math.max(0, Math.min(6, hookTier)) * CATCH_BONUS_PER_TIER,
+    perfectDeg:   4,
+    snagDeg:      Math.round(baseSnag * linePenaltyMultiplier),
+    snagGapRight: gapRight,
+    snagGapLeft:  hasLeft ? gapLeft : -1,
+  })
+}
+
+// Base needle speed by catch_difficulty (multiply by reel.needleSpeedMultiplier)
+export const FISH_DIFFICULTY_SPEED = [
+  { speedMin: 120, speedMax: 185, changeMin: 24, changeMax: 42, reverseChance: 0.00 }, // 1
+  { speedMin: 190, speedMax: 285, changeMin: 18, changeMax: 30, reverseChance: 0.00 }, // 2
+  { speedMin: 275, speedMax: 400, changeMin: 12, changeMax: 20, reverseChance: 0.08 }, // 3
+  { speedMin: 375, speedMax: 520, changeMin:  8, changeMax: 14, reverseChance: 0.18 }, // 4
+  { speedMin: 490, speedMax: 650, changeMin:  5, changeMax:  9, reverseChance: 0.30 }, // 5
+]

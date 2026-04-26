@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import FishingGame from './FishingGame'
-import { getHook } from '@/lib/hooks'
+import { claimDailyBait } from './actions'
 
 export default async function FishingPage() {
   const supabase = await createClient()
@@ -11,40 +11,54 @@ export default async function FishingPage() {
   if (!user) redirect('/login')
 
   const admin = createAdminClient()
-  const today = new Date().toISOString().split('T')[0]
 
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('packs_available, doubloons, hook_tier, fishing_date, fishing_casts')
-    .eq('id', user.id)
-    .single()
+  // Give daily free worms if not yet claimed today
+  await claimDailyBait(user.id)
 
-  const hookTier = profile?.hook_tier ?? 0
-  const hook = getHook(hookTier)
-  const isToday = profile?.fishing_date === today
-  const castsUsed = isToday ? (profile?.fishing_casts ?? 0) : 0
+  const [
+    { data: profile },
+    { data: baitInventory },
+    { data: fishInventory },
+    { count: uniqueSpeciesCaught },
+  ] = await Promise.all([
+    admin.from('profiles')
+      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier')
+      .eq('id', user.id)
+      .single(),
+    admin.from('bait_inventory')
+      .select('bait_type, quantity')
+      .eq('user_id', user.id),
+    admin.from('fish_inventory')
+      .select('fish_id, quantity, fish_species(*)')
+      .eq('user_id', user.id)
+      .gt('quantity', 0),
+    admin.from('fish_collection')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id),
+  ])
 
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0 pt-6">
-        <div className="px-6 max-w-md mx-auto">
-
-          <div className="mb-6">
-            <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.4rem', marginBottom: '0.3rem' }}>
-              Drop a Line
-            </h1>
-            <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.78rem' }}>
-              {hook.maxCasts} casts per day. Better hooks widen your catch zone.
-            </p>
-          </div>
-
-          <FishingGame
-            initialCastsUsed={castsUsed}
-            hookTier={hookTier}
-          />
-
-        </div>
+        <FishingGame
+          hookTier={profile?.hook_tier ?? 0}
+          rodTier={profile?.rod_tier ?? 0}
+          reelTier={profile?.reel_tier ?? 0}
+          lineTier={profile?.line_tier ?? 0}
+          initialDoubloons={profile?.doubloons ?? 0}
+          initialBait={baitInventory ?? []}
+          initialInventory={(fishInventory ?? []) as {
+            fish_id: number
+            quantity: number
+            fish_species: {
+              id: number; name: string; scientific_name: string
+              description: string | null; fun_fact: string; habitat: string
+              bite_rarity: number; catch_difficulty: number; catch_score: number; sell_value: number
+            }
+          }[]}
+          uniqueSpeciesCaught={uniqueSpeciesCaught ?? 0}
+        />
       </main>
     </>
   )

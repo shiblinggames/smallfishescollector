@@ -2,79 +2,281 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { DEPTHS } from './depths'
+import { getRod } from '@/lib/rods'
 import { getHook } from '@/lib/hooks'
+import { getBait } from '@/lib/bait'
 import { checkAchievements } from '@/lib/checkAchievements'
 
 function today() {
   return new Date().toISOString().split('T')[0]
 }
 
-export async function castLine(
-  result: 'perfect' | 'catch' | 'miss' | 'penalty',
-  depthId: number,
-): Promise<{ earned: number; castsUsed: number; newAchievements: string[] } | { error: string }> {
+export type FishSpecies = {
+  id: number
+  name: string
+  scientific_name: string
+  description: string | null
+  fun_fact: string
+  habitat: string
+  bite_rarity: number
+  catch_difficulty: number
+  catch_score: number
+  sell_value: number
+}
+
+// Phase 1 — roll fishing power vs fish catch_score
+export async function castLine(baitType: string): Promise<
+  | { hit: false }
+  | { hit: true; fishId: number; catchDifficulty: number }
+  | { error: string }
+> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
-  const date  = today()
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, fishing_date, fishing_casts, fishing_abyss_streak, hook_tier')
+    .select('rod_tier, hook_tier')
     .eq('id', user.id)
     .single()
 
   if (!profile) return { error: 'Profile not found' }
 
-  const maxCasts  = getHook(profile.hook_tier ?? 0).maxCasts
-  const isToday   = profile.fishing_date === date
-  const castsUsed = isToday ? (profile.fishing_casts ?? 0) : 0
+  const rod  = getRod(profile.rod_tier ?? 0)
+  const hook = getHook(profile.hook_tier ?? 0)
+  const bait = getBait(baitType)
 
-  if (castsUsed >= maxCasts) {
-    return { error: 'No casts remaining today. Come back tomorrow.' }
+  // Consume 1 bait
+  const { data: baitRow } = await admin
+    .from('bait_inventory')
+    .select('quantity')
+    .eq('user_id', user.id)
+    .eq('bait_type', baitType)
+    .single()
+
+  if (!baitRow || baitRow.quantity <= 0) return { error: 'No bait remaining.' }
+
+  await admin
+    .from('bait_inventory')
+    .update({ quantity: baitRow.quantity - 1 })
+    .eq('user_id', user.id)
+    .eq('bait_type', baitType)
+
+  // Eligible habitats = intersection of rod + bait
+  const eligibleHabitats = rod.habitats.filter(h => bait.habitats.includes(h))
+  if (eligibleHabitats.length === 0) return { hit: false }
+
+  // Draw a random fish from the eligible pool
+  const { data: candidates } = await admin
+    .from('fish_species')
+    .select('id, catch_difficulty, catch_score')
+    .in('habitat', eligibleHabitats)
+
+  if (!candidates || candidates.length === 0) return { hit: false }
+
+  const fish = candidates[Math.floor(Math.random() * candidates.length)]
+
+  // Roll: 1–50 base + rod bonus + hook bonus vs fish catch_score
+  const roll = Math.floor(Math.random() * 50) + 1 + rod.rollBonus + hook.rollBonus
+
+  if (roll < fish.catch_score) return { hit: false }
+
+  return { hit: true, fishId: fish.id, catchDifficulty: fish.catch_difficulty }
+}
+
+// Phase 2 — process reel-in result
+export async function reelIn(
+  fishId: number,
+  result: 'perfect' | 'catch' | 'miss' | 'penalty',
+  baitType: string,
+): Promise<
+  | { caught: true; fish: FishSpecies; earned: number; isNewSpecies: boolean; newAchievements: string[] }
+  | { caught: false; newAchievements: string[] }
+  | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const isCatch = result === 'perfect' || result === 'catch'
+
+  // Snag: consume one extra bait
+  if (result === 'penalty') {
+    const { data: baitRow } = await admin
+      .from('bait_inventory')
+      .select('quantity')
+      .eq('user_id', user.id)
+      .eq('bait_type', baitType)
+      .single()
+
+    if (baitRow && baitRow.quantity > 0) {
+      await admin
+        .from('bait_inventory')
+        .update({ quantity: baitRow.quantity - 1 })
+        .eq('user_id', user.id)
+        .eq('bait_type', baitType)
+    }
   }
 
-  const depth  = DEPTHS[Math.max(0, Math.min(3, Math.round(depthId)))]
-  const earned =
-    result === 'perfect' ? depth.perfectEarns :
-    result === 'catch'   ? depth.catchEarns   : 0
+  if (!isCatch) {
+    const newAchievements = await checkAchievements(user.id, {
+      type: 'fishing', result, depthId: 0, abyssStreak: 0,
+    })
+    return { caught: false, newAchievements }
+  }
 
-  const castsToConsume = result === 'penalty' ? Math.min(2, maxCasts - castsUsed) : 1
-  const newCastsUsed   = castsUsed + castsToConsume
+  const [{ data: fish }, { data: profile }] = await Promise.all([
+    admin.from('fish_species').select('*').eq('id', fishId).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak').eq('id', user.id).single(),
+  ])
 
-  const isAbyssPerfect = result === 'perfect' && depthId === 3
+  if (!fish || !profile) return { error: 'Data not found' }
+
+  // Perfect gives 20% of sell value as instant doubloons
+  const earned = result === 'perfect' ? Math.round(fish.sell_value * 0.2) : 0
+
+  // Check if new species for bestiary
+  const { data: existing } = await admin
+    .from('fish_collection')
+    .select('catch_count')
+    .eq('user_id', user.id)
+    .eq('fish_id', fishId)
+    .single()
+
+  const isNewSpecies = !existing
+
+  // Upsert bestiary log
+  if (isNewSpecies) {
+    await admin.from('fish_collection').insert({ user_id: user.id, fish_id: fishId, catch_count: 1 })
+  } else {
+    await admin.from('fish_collection').update({
+      catch_count: existing.catch_count + 1,
+      last_caught_at: new Date().toISOString(),
+    }).eq('user_id', user.id).eq('fish_id', fishId)
+  }
+
+  // Upsert sellable inventory
+  const { data: invRow } = await admin
+    .from('fish_inventory')
+    .select('quantity')
+    .eq('user_id', user.id)
+    .eq('fish_id', fishId)
+    .single()
+
+  if (invRow) {
+    await admin.from('fish_inventory')
+      .update({ quantity: invRow.quantity + 1 })
+      .eq('user_id', user.id).eq('fish_id', fishId)
+  } else {
+    await admin.from('fish_inventory').insert({ user_id: user.id, fish_id: fishId, quantity: 1 })
+  }
+
+  // Auto-upgrade line tier on new species unlock
+  if (isNewSpecies) {
+    const { count } = await admin
+      .from('fish_collection')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+    const unique = count ?? 0
+    const newLineTier = unique >= 45 ? 3 : unique >= 25 ? 2 : unique >= 10 ? 1 : 0
+    await admin.from('profiles').update({ line_tier: newLineTier }).eq('id', user.id)
+  }
+
+  // Award perfect bonus + track abyss streak
+  const isAbyssPerfect = result === 'perfect' && fish.habitat === 'abyss'
   const newAbyssStreak = isAbyssPerfect ? (profile.fishing_abyss_streak ?? 0) + 1 : 0
-
-  const profileUpdate: Record<string, unknown> = {
-    fishing_date:         date,
-    fishing_casts:        newCastsUsed,
-    fishing_abyss_streak: newAbyssStreak,
-  }
+  const profileUpdate: Record<string, unknown> = { fishing_abyss_streak: newAbyssStreak }
   if (earned > 0) profileUpdate.doubloons = (profile.doubloons ?? 0) + earned
 
-  const updateProfile = admin.from('profiles').update(profileUpdate).eq('id', user.id)
+  const updateOps: Promise<unknown>[] = [
+    admin.from('profiles').update(profileUpdate).eq('id', user.id),
+  ]
   if (earned > 0) {
-    await Promise.all([
-      updateProfile,
-      admin.from('doubloon_transactions').insert({
-        user_id: user.id,
-        amount:  earned,
-        reason:  'Fishing',
-      }),
-    ])
-  } else {
-    await updateProfile
+    updateOps.push(admin.from('doubloon_transactions').insert({
+      user_id: user.id, amount: earned, reason: 'Perfect catch bonus',
+    }))
   }
+  await Promise.all(updateOps)
 
   const newAchievements = await checkAchievements(user.id, {
-    type:        'fishing',
+    type: 'fishing',
     result,
-    depthId,
+    depthId: ['shallows', 'open_waters', 'deep', 'abyss'].indexOf(fish.habitat),
     abyssStreak: newAbyssStreak,
   })
 
-  return { earned, castsUsed: newCastsUsed, newAchievements }
+  return { caught: true, fish: fish as FishSpecies, earned, isNewSpecies, newAchievements }
+}
+
+// Sell fish from inventory
+export async function sellFish(
+  fishId: number,
+  quantity: number,
+): Promise<{ earned: number; doubloons: number } | { error: string }> {
+  if (quantity <= 0) return { error: 'Invalid quantity' }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+
+  const [{ data: invRow }, { data: fish }, { data: profile }] = await Promise.all([
+    admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', fishId).single(),
+    admin.from('fish_species').select('sell_value').eq('id', fishId).single(),
+    admin.from('profiles').select('doubloons').eq('id', user.id).single(),
+  ])
+
+  if (!invRow || !fish || !profile) return { error: 'Data not found' }
+  if (invRow.quantity < quantity) return { error: 'Not enough fish' }
+
+  const earned = fish.sell_value * quantity
+  const newDoubloons = (profile.doubloons ?? 0) + earned
+
+  await Promise.all([
+    admin.from('fish_inventory')
+      .update({ quantity: invRow.quantity - quantity })
+      .eq('user_id', user.id).eq('fish_id', fishId),
+    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+    admin.from('doubloon_transactions').insert({
+      user_id: user.id, amount: earned, reason: 'Sold fish',
+    }),
+  ])
+
+  return { earned, doubloons: newDoubloons }
+}
+
+// Give daily free worm bait top-up (called server-side on page load)
+export async function claimDailyBait(userId: string): Promise<void> {
+  const admin = createAdminClient()
+  const todayStr = today()
+
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('bait_last_topup')
+    .eq('id', userId)
+    .single()
+
+  if (profile?.bait_last_topup === todayStr) return
+
+  const DAILY_WORMS = 10
+
+  const { data: existing } = await admin
+    .from('bait_inventory')
+    .select('quantity')
+    .eq('user_id', userId)
+    .eq('bait_type', 'worm')
+    .single()
+
+  await Promise.all([
+    existing
+      ? admin.from('bait_inventory')
+          .update({ quantity: existing.quantity + DAILY_WORMS })
+          .eq('user_id', userId).eq('bait_type', 'worm')
+      : admin.from('bait_inventory').insert({ user_id: userId, bait_type: 'worm', quantity: DAILY_WORMS }),
+    admin.from('profiles').update({ bait_last_topup: todayStr }).eq('id', userId),
+  ])
 }

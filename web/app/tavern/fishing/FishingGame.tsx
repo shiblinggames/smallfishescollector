@@ -2,16 +2,46 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { castLine } from './actions'
-import { DEPTHS, buildZones, type ZoneDef, type ZoneType } from './depths'
-import { HOOKS } from '@/lib/hooks'
 import Link from 'next/link'
+import { castLine, reelIn, sellFish, type FishSpecies } from './actions'
+import { buildFishZones, FISH_DIFFICULTY_SPEED, type ZoneDef, type ZoneType } from './depths'
+import { getHook } from '@/lib/hooks'
+import { getRod } from '@/lib/rods'
+import { getReel } from '@/lib/reels'
+import { getLine } from '@/lib/lines'
+import { BAITS, getBait } from '@/lib/bait'
 
-type Phase = 'ready' | 'active' | 'result'
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type Phase = 'idle' | 'casting' | 'hooked' | 'catching' | 'result'
+
+type BaitItem = { bait_type: string; quantity: number }
+type InventoryItem = {
+  fish_id: number
+  quantity: number
+  fish_species: FishSpecies
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const CX = 110, CY = 110
 const OUTER_R = 96, INNER_R = 66
 const GAP = 1.0
+
+const HABITAT_COLOR: Record<string, string> = {
+  shallows:    '#60a5fa',
+  open_waters: '#34d399',
+  deep:        '#a78bfa',
+  abyss:       '#f87171',
+}
+const HABITAT_LABEL: Record<string, string> = {
+  shallows:    'Shallows',
+  open_waters: 'Open Waters',
+  deep:        'Deep',
+  abyss:       'Abyss',
+}
+
+// ─── Geometry helpers ─────────────────────────────────────────────────────────
 
 function polar(r: number, deg: number) {
   const rad = (deg - 90) * (Math.PI / 180)
@@ -39,37 +69,25 @@ function getZone(zones: ZoneDef[], deg: number, rotation = 0): ZoneDef {
   return zones.find(z => a >= z.from && a < z.to) ?? zones[0]
 }
 
-const ZONE_LEGEND = [
-  { label: 'Perfect ✦', color: '#fde68a', desc: 'Bonus doubloons' },
-  { label: 'Catch',     color: '#4ade80', desc: 'Earn doubloons'  },
-  { label: 'Snag!',     color: '#f87171', desc: '2 casts wasted'  },
-  { label: 'Miss',      color: '#64748b', desc: '1 cast wasted'   },
-]
+// ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 function DialSVG({
-  zones,
-  angle,
-  rotation = 0,
-  needleColor,
-  zoneOpacityFn,
-  fish = true,
+  zones, angle, rotation = 0, needleColor, zoneOpacityFn,
 }: {
   zones: ZoneDef[]
   angle: number
   rotation?: number
   needleColor: string
   zoneOpacityFn: (z: ZoneDef) => number
-  fish?: boolean
 }) {
-  const needleTipY = CY - (INNER_R - 8)
-  const perfectZone  = zones.find(z => z.type === 'perfect')
+  const needleTipY  = CY - (INNER_R - 8)
+  const perfectZone = zones.find(z => z.type === 'perfect')
   const penaltyZones = zones.filter(z => z.type === 'penalty')
 
   return (
     <div style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto' }}>
       <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block' }}>
         <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.45)" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
-        {/* Zone ring rotated by random offset each cast */}
         <g transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
             <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
@@ -92,287 +110,545 @@ function DialSVG({
         </g>
         <circle cx={CX} cy={CY} r="8" fill="rgba(10,10,10,0.9)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
       </svg>
-      {fish && (
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none', userSelect: 'none' }}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2 12c2-4 6-6 10-6s8 2 10 6c-2 4-6 6-10 6S4 16 2 12z"/>
-            <circle cx="16" cy="10" r="1" fill="rgba(255,255,255,0.25)" stroke="none"/>
-            <path d="M2 12c-2-2-2-4 0-4"/>
-          </svg>
+    </div>
+  )
+}
+
+// ─── GearBar ─────────────────────────────────────────────────────────────────
+
+function GearBar({ rodTier, reelTier, hookTier, lineTier }: {
+  rodTier: number; reelTier: number; hookTier: number; lineTier: number
+}) {
+  const rod  = getRod(rodTier)
+  const reel = getReel(reelTier)
+  const hook = getHook(hookTier)
+  const line = getLine(lineTier)
+
+  const items = [
+    { label: 'Rod',  name: rod.name,  color: rod.color },
+    { label: 'Reel', name: reel.name, color: reel.color },
+    { label: 'Hook', name: hook.name, color: hook.color },
+    { label: 'Line', name: line.name, color: line.color },
+  ]
+
+  return (
+    <div className="grid grid-cols-4 gap-1.5">
+      {items.map(({ label, name, color }) => (
+        <div key={label} className="flex flex-col items-center gap-0.5 px-1 py-2 rounded-lg"
+          style={{ background: `${color}0d`, border: `1px solid ${color}30` }}>
+          <p className="font-karla font-600 uppercase tracking-[0.1em]"
+            style={{ fontSize: '0.48rem', color: '#6a6764' }}>{label}</p>
+          <p className="font-karla font-700 text-center leading-tight"
+            style={{ fontSize: '0.58rem', color }}>{name}</p>
         </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── BaitSelector ─────────────────────────────────────────────────────────────
+
+function BaitSelector({ baitInventory, selectedBait, onSelect, rodTier }: {
+  baitInventory: BaitItem[]
+  selectedBait: string
+  onSelect: (type: string) => void
+  rodTier: number
+}) {
+  const rod = getRod(rodTier)
+  const inventoryMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
+
+  return (
+    <div>
+      <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-2"
+        style={{ fontSize: '0.58rem' }}>Select Bait</p>
+      <div className="grid grid-cols-3 gap-1.5">
+        {BAITS.map(bait => {
+          const qty = inventoryMap[bait.type] ?? 0
+          const compatible = bait.habitats.some(h => rod.habitats.includes(h))
+          const available  = qty > 0 && compatible
+          const selected   = selectedBait === bait.type
+
+          return (
+            <button
+              key={bait.type}
+              onClick={() => available && onSelect(bait.type)}
+              style={{
+                padding: '0.5rem 0.25rem',
+                borderRadius: 10,
+                border: `1px solid ${selected ? bait.color + '66' : available ? bait.color + '28' : 'rgba(255,255,255,0.06)'}`,
+                background: selected ? bait.color + '18' : available ? bait.color + '08' : 'rgba(255,255,255,0.02)',
+                opacity: available ? 1 : 0.35,
+                cursor: available ? 'pointer' : 'default',
+                transition: 'all 0.15s',
+              }}
+            >
+              <p className="font-karla font-700 leading-none mb-1"
+                style={{ fontSize: '0.62rem', color: selected ? bait.color : available ? bait.color + 'bb' : '#4a4845' }}>
+                {bait.name}
+              </p>
+              <p className="font-karla font-600"
+                style={{ fontSize: '0.55rem', color: available ? '#6a6764' : '#3a3835' }}>
+                {qty > 0 ? `${qty} left` : compatible ? 'None' : 'Wrong depth'}
+              </p>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── CastAnimation ────────────────────────────────────────────────────────────
+
+function CastAnimation({ phase }: { phase: 'casting' | 'hooked' }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-6 gap-4">
+      <svg width="120" height="120" viewBox="0 0 120 120">
+        {/* Water surface */}
+        <path d="M10 80 Q30 75 50 80 Q70 85 90 80 Q110 75 115 80" fill="none" stroke="rgba(96,165,250,0.3)" strokeWidth="2" />
+        {/* Fishing line */}
+        <line x1="60" y1="10" x2="60" y2={phase === 'hooked' ? 82 : 75}
+          stroke="rgba(255,255,255,0.4)" strokeWidth="1.2" />
+        {/* Bobber */}
+        <motion.g
+          animate={phase === 'hooked'
+            ? { y: 8, opacity: [1, 0.6, 1] }
+            : { y: [0, -3, 0] }
+          }
+          transition={phase === 'hooked'
+            ? { duration: 0.3, repeat: 2 }
+            : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }
+          }
+        >
+          <circle cx="60" cy="76" r="5" fill="#f87171" />
+          <circle cx="60" cy="81" r="5" fill="#f0ede8" />
+        </motion.g>
+      </svg>
+      <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#6a6764' }}>
+        {phase === 'hooked' ? 'Something\'s on the line!' : 'Waiting for a bite…'}
+      </p>
+    </div>
+  )
+}
+
+// ─── ResultCard ───────────────────────────────────────────────────────────────
+
+function ResultCard({ fish, earned, isNewSpecies }: {
+  fish: FishSpecies
+  earned: number
+  isNewSpecies: boolean
+}) {
+  const habitatColor = HABITAT_COLOR[fish.habitat] ?? '#888'
+  const habitatLabel = HABITAT_LABEL[fish.habitat] ?? fish.habitat
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+      className="rounded-2xl overflow-hidden"
+      style={{ border: `1px solid ${habitatColor}40`, background: 'rgba(255,255,255,0.03)' }}
+    >
+      {/* Header band */}
+      <div className="px-4 py-3 flex items-center justify-between"
+        style={{ background: `${habitatColor}12`, borderBottom: `1px solid ${habitatColor}25` }}>
+        <span className="font-karla font-700 uppercase tracking-[0.14em]"
+          style={{ fontSize: '0.55rem', color: habitatColor }}>{habitatLabel}</span>
+        <div className="flex items-center gap-2">
+          {isNewSpecies && (
+            <motion.span
+              initial={{ scale: 0 }} animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.2 }}
+              className="font-karla font-700 uppercase tracking-[0.12em]"
+              style={{ fontSize: '0.5rem', color: '#fde68a',
+                background: 'rgba(253,230,138,0.15)', border: '1px solid rgba(253,230,138,0.4)',
+                padding: '0.15rem 0.5rem', borderRadius: '2rem' }}
+            >
+              New Species ✦
+            </motion.span>
+          )}
+          {earned > 0 && (
+            <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#fde68a' }}>
+              +{earned} ⟡
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="px-4 py-4">
+        <p className="font-cinzel font-700 mb-0.5" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>
+          {fish.name}
+        </p>
+        <p className="font-karla font-300 italic mb-3" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
+          {fish.scientific_name}
+        </p>
+        <p className="font-karla font-400 leading-relaxed" style={{ fontSize: '0.76rem', color: '#b0afa8' }}>
+          {fish.fun_fact}
+        </p>
+        <div className="flex items-center gap-1.5 mt-3">
+          <span style={{ width: 7, height: 7, borderRadius: 2, background: habitatColor, display: 'inline-block', flexShrink: 0 }} />
+          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
+            Sells for <span style={{ color: '#f0c040' }}>{fish.sell_value.toLocaleString()} ⟡</span>
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+// ─── FishInventory ────────────────────────────────────────────────────────────
+
+function FishInventory({ inventory, onSell }: {
+  inventory: InventoryItem[]
+  onSell: (fishId: number, qty: number) => Promise<void>
+}) {
+  const [pending, setPending] = useState<number | null>(null)
+  const [sellError, setSellError] = useState<string | null>(null)
+
+  if (inventory.length === 0) return null
+
+  async function handleSell(fishId: number, qty: number) {
+    setPending(fishId)
+    setSellError(null)
+    await onSell(fishId, qty)
+    setPending(null)
+  }
+
+  const totalValue = inventory.reduce(
+    (sum, item) => sum + item.fish_species.sell_value * item.quantity, 0
+  )
+
+  return (
+    <div className="mt-6">
+      <div className="flex items-center justify-between mb-3">
+        <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]"
+          style={{ fontSize: '0.58rem' }}>
+          Fish Hold
+        </p>
+        <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#f0c040' }}>
+          {totalValue.toLocaleString()} ⟡ total value
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        {inventory.map(item => {
+          const fish   = item.fish_species
+          const hColor = HABITAT_COLOR[fish.habitat] ?? '#888'
+          const isPending = pending === item.fish_id
+
+          return (
+            <div key={item.fish_id}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+              style={{ background: `${hColor}0a`, border: `1px solid ${hColor}25` }}>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-cinzel font-700 truncate"
+                    style={{ fontSize: '0.78rem', color: '#f0ede8' }}>{fish.name}</p>
+                  <span className="font-karla font-600 shrink-0"
+                    style={{ fontSize: '0.55rem', color: hColor,
+                      background: `${hColor}18`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                    ×{item.quantity}
+                  </span>
+                </div>
+                <p className="font-karla font-600 mt-0.5"
+                  style={{ fontSize: '0.6rem', color: '#f0c040' }}>
+                  {fish.sell_value.toLocaleString()} ⟡ each
+                  {item.quantity > 1 && (
+                    <span style={{ color: '#6a6764' }}> · {(fish.sell_value * item.quantity).toLocaleString()} ⟡ total</span>
+                  )}
+                </p>
+              </div>
+              <div className="flex gap-1.5 shrink-0">
+                {item.quantity > 1 && (
+                  <button
+                    onClick={() => handleSell(item.fish_id, item.quantity)}
+                    disabled={isPending}
+                    className="font-karla font-700 uppercase tracking-[0.1em]"
+                    style={{
+                      fontSize: '0.52rem', padding: '0.3rem 0.6rem', borderRadius: '0.5rem',
+                      background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.22)',
+                      color: '#f0c040', opacity: isPending ? 0.5 : 1, cursor: isPending ? 'default' : 'pointer',
+                    }}>
+                    Sell all
+                  </button>
+                )}
+                <button
+                  onClick={() => handleSell(item.fish_id, 1)}
+                  disabled={isPending}
+                  className="font-karla font-700 uppercase tracking-[0.1em]"
+                  style={{
+                    fontSize: '0.52rem', padding: '0.3rem 0.6rem', borderRadius: '0.5rem',
+                    background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.35)',
+                    color: '#f0c040', opacity: isPending ? 0.5 : 1, cursor: isPending ? 'default' : 'pointer',
+                  }}>
+                  {isPending ? '…' : 'Sell 1'}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {sellError && (
+        <p className="font-karla font-300 text-red-400 text-xs text-center mt-2">{sellError}</p>
       )}
     </div>
   )
 }
 
-function DoneForToday() {
-  return (
-    <div className="flex flex-col items-center gap-3 py-2 text-center">
-      <p className="font-karla font-700" style={{ fontSize: '0.88rem', color: '#c0bfba' }}>
-        All casts used today
-      </p>
-      <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#4a4845' }}>
-        Come back tomorrow for 20 more
-      </p>
-      <div className="flex gap-2 mt-1">
-        <Link href="/tavern"
-          className="font-karla font-700 uppercase tracking-[0.12em]"
-          style={{
-            fontSize: '0.68rem', color: '#c0bfba',
-            padding: '0.45rem 1rem', borderRadius: '2rem',
-            border: '1px solid rgba(255,255,255,0.15)',
-            background: 'rgba(255,255,255,0.06)',
-          }}>
-          Back to Tavern
-        </Link>
-        <Link href="/marketplace/tackle-shop"
-          className="font-karla font-700 uppercase tracking-[0.12em]"
-          style={{
-            fontSize: '0.68rem', color: '#f0c040',
-            padding: '0.45rem 1rem', borderRadius: '2rem',
-            border: '1px solid rgba(240,192,64,0.35)',
-            background: 'rgba(240,192,64,0.08)',
-          }}>
-          Upgrade Hook
-        </Link>
-      </div>
-    </div>
-  )
-}
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function FishingGame({
-  initialCastsUsed,
-  hookTier,
+  hookTier, rodTier, reelTier, lineTier,
+  initialDoubloons, initialBait, initialInventory,
 }: {
-  initialCastsUsed: number
   hookTier: number
+  rodTier: number
+  reelTier: number
+  lineTier: number
+  initialDoubloons: number
+  initialBait: BaitItem[]
+  initialInventory: InventoryItem[]
+  uniqueSpeciesCaught: number
 }) {
-  const [phase, setPhase]           = useState<Phase>('ready')
-  const [selectedDepth, setSelectedDepth] = useState(0)
-  const [angle, setAngle]           = useState(270)
-  const [result, setResult]         = useState<{ type: ZoneType; earned: number; castsUsed: number } | null>(null)
-  const [castsUsed, setCastsUsed]   = useState(initialCastsUsed)
+  const rod  = getRod(rodTier)
+  const reel = getReel(reelTier)
+  const hook = getHook(hookTier)
+  const line = getLine(lineTier)
+
+  // Game state
+  const [phase, setPhase]           = useState<Phase>('idle')
+  const [selectedBait, setSelectedBait] = useState<string>(() => {
+    const first = initialBait.find(b => b.quantity > 0)
+    return first?.bait_type ?? 'worm'
+  })
+  const [baitInventory, setBaitInventory] = useState<BaitItem[]>(initialBait)
+  const [inventory, setInventory]   = useState<InventoryItem[]>(initialInventory)
+  const [doubloons, setDoubloons]   = useState(initialDoubloons)
+  const [noBiteFlash, setNoBiteFlash] = useState(false)
+  const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number } | null>(null)
+  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; earned: number; isNewSpecies: boolean } | null>(null)
+  const [missResult, setMissResult] = useState<ZoneType | null>(null)
   const [, startTransition]         = useTransition()
 
+  // Needle state
+  const [angle, setAngle]           = useState(270)
+  const [zoneRotation, setZoneRotation] = useState(0)
   const angleRef        = useRef(270)
-  const speedRef        = useRef(80)
-  const dirRef          = useRef(1)   // 1 = clockwise, -1 = counter-clockwise
-  const phaseRef        = useRef<Phase>('ready')
+  const speedRef        = useRef(0)
+  const dirRef          = useRef(1)
+  const phaseRef        = useRef<Phase>('idle')
   const animRef         = useRef<ReturnType<typeof setInterval> | null>(null)
   const tickRef         = useRef(0)
   const nextChgRef      = useRef(40)
-  const castDepthRef    = useRef(0)
-  const castRotationRef = useRef(0)
-
-  const [zoneRotation, setZoneRotation] = useState(0)
-  const [showHowTo, setShowHowTo] = useState(false)
-
-  const hook      = HOOKS[Math.min(hookTier, HOOKS.length - 1)]
-  const castsLeft = hook.maxCasts - castsUsed
-
-  const previewZones = buildZones(DEPTHS[selectedDepth], hookTier)
-  const activeZones  = buildZones(DEPTHS[castDepthRef.current], hookTier)
-
-  function earnRange(depthId: number) {
-    const d = DEPTHS[depthId]
-    return `${d.catchEarns}–${d.perfectEarns} ⟡`
-  }
-
-  const hookZoneBonus = hookTier * 3  // degrees added to catch zone
+  const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number } | null>(null)
+  const selectedBaitRef = useRef(selectedBait)
 
   useEffect(() => { phaseRef.current = phase }, [phase])
+  useEffect(() => { selectedBaitRef.current = selectedBait }, [selectedBait])
+  useEffect(() => { hookedFishRef.current = hookedFish }, [hookedFish])
 
+  // Needle animation during catching phase
   useEffect(() => {
-    if (phase !== 'active') {
+    if (phase !== 'catching' || !hookedFish) {
       if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
       return
     }
+    const diffSpeed = FISH_DIFFICULTY_SPEED[Math.max(0, Math.min(4, hookedFish.catchDifficulty - 1))]
+    const baseMin = diffSpeed.speedMin * reel.needleSpeedMultiplier
+    const baseMax = diffSpeed.speedMax * reel.needleSpeedMultiplier
+
+    speedRef.current = baseMin + Math.random() * (baseMax - baseMin)
+    tickRef.current = 0
+    nextChgRef.current = diffSpeed.changeMin + Math.floor(Math.random() * (diffSpeed.changeMax - diffSpeed.changeMin))
+
     animRef.current = setInterval(() => {
-      if (phaseRef.current !== 'active') return
+      if (phaseRef.current !== 'catching') return
       angleRef.current = ((angleRef.current + dirRef.current * speedRef.current / 20) % 360 + 360) % 360
       tickRef.current++
       if (tickRef.current >= nextChgRef.current) {
-        const d = DEPTHS[castDepthRef.current]
-        speedRef.current = d.speedMin + Math.random() * (d.speedMax - d.speedMin)
-        if (Math.random() < d.reverseChance) dirRef.current *= -1
-        nextChgRef.current = tickRef.current + d.changeMin + Math.floor(Math.random() * (d.changeMax - d.changeMin))
+        speedRef.current = baseMin + Math.random() * (baseMax - baseMin)
+        if (Math.random() < diffSpeed.reverseChance) dirRef.current *= -1
+        nextChgRef.current = tickRef.current + diffSpeed.changeMin + Math.floor(Math.random() * (diffSpeed.changeMax - diffSpeed.changeMin))
       }
       setAngle(angleRef.current)
     }, 50)
     return () => { if (animRef.current) { clearInterval(animRef.current); animRef.current = null } }
-  }, [phase])
+  }, [phase, hookedFish, reel.needleSpeedMultiplier])
 
-  function handleCast() {
-    if (castsLeft <= 0 || (phase !== 'ready' && phase !== 'result')) return
-    castDepthRef.current = selectedDepth
-    const d   = DEPTHS[selectedDepth]
-    const rot = Math.floor(Math.random() * 360)
-    castRotationRef.current = rot
-    setZoneRotation(rot)
-    angleRef.current   = Math.random() * 360
-    speedRef.current   = d.speedMin + Math.random() * (d.speedMax - d.speedMin)
-    dirRef.current     = 1
-    tickRef.current    = 0
-    nextChgRef.current = d.changeMin + Math.floor(Math.random() * (d.changeMax - d.changeMin))
-    setAngle(angleRef.current)
-    setResult(null)
-    setPhase('active')
+  function deductBait(type: string, qty = 1) {
+    setBaitInventory(prev => prev.map(b =>
+      b.bait_type === type ? { ...b, quantity: Math.max(0, b.quantity - qty) } : b
+    ))
   }
 
+  function totalBait() {
+    return baitInventory.reduce((s, b) => s + b.quantity, 0)
+  }
+
+  // Phase 1 — cast
+  async function handleCast() {
+    if (phase !== 'idle') return
+    const bait = getBait(selectedBait)
+    const currentQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
+    if (currentQty <= 0) return
+
+    deductBait(selectedBait)
+    setPhase('casting')
+
+    const res = await castLine(selectedBait)
+
+    if ('error' in res) {
+      setPhase('idle')
+      return
+    }
+
+    if (!res.hit) {
+      setNoBiteFlash(true)
+      setPhase('idle')
+      setTimeout(() => setNoBiteFlash(false), 2200)
+      return
+    }
+
+    // Fish hooked — brief pause on hooked screen then go to catch phase
+    setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty })
+    setPhase('hooked')
+    setTimeout(() => {
+      const rot = Math.floor(Math.random() * 360)
+      setZoneRotation(rot)
+      angleRef.current = Math.random() * 360
+      dirRef.current = 1
+      setAngle(angleRef.current)
+      setPhase('catching')
+    }, 1600)
+  }
+
+  // Phase 2 — reel in
   function handleReelIn() {
-    if (phase !== 'active') return
-    phaseRef.current = 'result'
+    if (phase !== 'catching' || !hookedFishRef.current) return
     if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
-    const zone = getZone(activeZones, angleRef.current, castRotationRef.current)
-    const castsToConsume = zone.type === 'penalty' ? Math.min(2, hook.maxCasts - castsUsed) : 1
-    const newLocalCasts  = Math.min(castsUsed + castsToConsume, hook.maxCasts)
-    setCastsUsed(newLocalCasts)
-    setResult({ type: zone.type, earned: 0, castsUsed: newLocalCasts })
+
+    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier)
+    const zone  = getZone(zones, angleRef.current, zoneRotation)
+
+    phaseRef.current = 'result'
     setPhase('result')
+
+    if (zone.type === 'penalty') deductBait(selectedBaitRef.current)
+
+    const isCatch = zone.type === 'catch' || zone.type === 'perfect'
+    if (!isCatch) {
+      setMissResult(zone.type)
+      setCatchResult(null)
+    }
+
     startTransition(async () => {
-      const res = await castLine(zone.type as 'perfect' | 'catch' | 'miss' | 'penalty', castDepthRef.current)
-      if (!('error' in res)) {
-        setResult({ type: zone.type, earned: res.earned, castsUsed: res.castsUsed })
-        setCastsUsed(res.castsUsed)
+      const res = await reelIn(hookedFishRef.current!.fishId, zone.type as 'perfect' | 'catch' | 'miss' | 'penalty', selectedBaitRef.current)
+      if ('error' in res) return
+
+      if (res.caught) {
+        const { fish, earned, isNewSpecies } = res
+        setCatchResult({ fish, earned, isNewSpecies })
+        setInventory(prev => {
+          const existing = prev.find(i => i.fish_id === fish.id)
+          if (existing) return prev.map(i => i.fish_id === fish.id ? { ...i, quantity: i.quantity + 1 } : i)
+          return [...prev, { fish_id: fish.id, quantity: 1, fish_species: fish }]
+        })
+        if (earned > 0) setDoubloons(d => d + earned)
+      } else {
+        setMissResult(zone.type)
       }
     })
   }
 
-  const currentZone  = getZone(activeZones, angle, castRotationRef.current)
-  const resultZone   = result ? DEPTHS.find(() => true) : null // only for type narrowing
-  void resultZone
+  async function handleSell(fishId: number, qty: number) {
+    const res = await sellFish(fishId, qty)
+    if ('error' in res) return
+    setDoubloons(res.doubloons)
+    setInventory(prev => prev
+      .map(i => i.fish_id === fishId ? { ...i, quantity: i.quantity - qty } : i)
+      .filter(i => i.quantity > 0)
+    )
+  }
 
-  function activeNeedleColor(): string {
-    if (phase === 'result' && result) {
-      if (result.type === 'miss') return '#64748b'
-      return activeZones.find(z => z.type === result.type)?.color ?? '#888'
-    }
-    return currentZone.color
+  function handleCastAgain() {
+    setCatchResult(null)
+    setMissResult(null)
+    setHookedFish(null)
+    setPhase('idle')
+  }
+
+  // Zone display helpers
+  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier) : []
+  const currentZone   = phase === 'catching' ? getZone(catchingZones, angle, zoneRotation) : null
+
+  function needleColor(): string {
+    if (phase === 'catching' && currentZone) return currentZone.color
+    return 'rgba(255,255,255,0.3)'
   }
 
   function zoneOpacity(zone: ZoneDef): number {
-    if (phase === 'active') return currentZone === zone ? 0.82 : zone.type === 'perfect' ? 0.45 : zone.type === 'penalty' ? 0.32 : 0.18
-    if (phase === 'result' && result) {
-      const hitZone = getZone(activeZones, angleRef.current, castRotationRef.current)
-      return hitZone === zone ? 0.85 : 0.1
+    if (phase === 'catching' && currentZone) {
+      return currentZone === zone ? 0.82 : zone.type === 'perfect' ? 0.45 : zone.type === 'penalty' ? 0.32 : 0.18
     }
     return 0.22
   }
 
-  function previewOpacity(zone: ZoneDef): number {
-    return zone.type === 'perfect' ? 0.55 : zone.type === 'penalty' ? 0.38 : 0.22
-  }
-
-  function resultTitle(): string {
-    if (!result) return ''
-    if (result.type === 'perfect') return '✦ Perfect catch!'
-    if (result.type === 'catch')   return 'Fish on!'
-    if (result.type === 'penalty') return 'Snagged!'
-    return 'No catch'
-  }
-
-  function resultColor(): string {
-    if (!result) return '#888'
-    if (result.type === 'perfect') return '#fde68a'
-    if (result.type === 'catch')   return '#4ade80'
-    if (result.type === 'penalty') return '#f87171'
-    return '#475569'
-  }
-
-  const isCatch   = result?.type === 'catch' || result?.type === 'perfect'
-  const isPerfect = result?.type === 'perfect'
-
-  function DepthSelector({ compact = false }: { compact?: boolean }) {
-    return (
-      <div className="flex gap-1.5 w-full">
-        {DEPTHS.map(d => (
-          <button key={d.id}
-            onClick={() => phase !== 'active' && setSelectedDepth(d.id)}
-            style={{
-              flex: 1, minWidth: 0,
-              padding: compact ? '0.35rem 0.2rem' : '0.5rem 0.25rem',
-              borderRadius: '0.55rem',
-              border: `1px solid ${selectedDepth === d.id ? d.color + '55' : 'rgba(255,255,255,0.06)'}`,
-              background: selectedDepth === d.id ? d.color + '12' : 'rgba(255,255,255,0.02)',
-              cursor: phase === 'active' ? 'default' : 'pointer',
-              textAlign: 'center',
-              transition: 'border-color 0.15s, background 0.15s',
-            }}>
-            <p className="font-karla font-700 truncate"
-              style={{ fontSize: '0.62rem', color: selectedDepth === d.id ? d.color : '#7a7974' }}>
-              {d.name}
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 2, margin: '0.18rem 0' }}>
-              {[0,1,2,3].map(i => (
-                <div key={i} style={{ width: 4, height: 4, borderRadius: '50%',
-                  background: i <= d.id ? (selectedDepth === d.id ? d.color : d.color + '80') : 'rgba(255,255,255,0.1)' }} />
-              ))}
-            </div>
-            {!compact && (
-              <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: selectedDepth === d.id ? d.color + 'bb' : '#4a4845' }}>
-                {earnRange(d.id)}
-              </p>
-            )}
-          </button>
-        ))}
-      </div>
-    )
-  }
+  const hasBait = totalBait() > 0
+  const selectedBaitQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
 
   return (
     <div className="flex flex-col gap-4 max-w-md mx-auto px-4 py-2">
 
-      {/* Hook + casts header */}
-      <div className="w-full flex items-center justify-between rounded-xl px-4 py-3"
-        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg"
-            style={{ background: `${hook.color}18`, border: `1px solid ${hook.color}35` }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={hook.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 3v9"/>
-              <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
-              <circle cx="12" cy="3" r="1.2" fill={hook.color} stroke="none"/>
-            </svg>
-          </div>
-          <div>
-            <p className="font-karla font-700 leading-none" style={{ fontSize: '0.82rem', color: hook.color }}>{hook.name}</p>
-            <p className="font-karla font-600 leading-none mt-1" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
-              {hookZoneBonus > 0 ? `+${hookZoneBonus}° catch zone` : 'Standard zones'}
-            </p>
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.3rem' }}>Drop a Line</h1>
+          <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.7rem' }}>
+            Fish · Catch · Sell
+          </p>
         </div>
         <div className="text-right">
-          <p className="font-karla font-700 leading-none" style={{ fontSize: '0.82rem', color: castsLeft > 0 ? '#c0bfba' : '#4a4845' }}>
-            {castsLeft > 0 ? `${castsLeft} / ${hook.maxCasts}` : 'Done'}
+          <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0c040' }}>
+            {doubloons.toLocaleString()} ⟡
           </p>
-          <p className="font-karla font-600 leading-none mt-1" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
-            {castsLeft > 0 ? 'casts left today' : 'come back tomorrow'}
-          </p>
+          <Link href="/tavern" className="font-karla font-600"
+            style={{ fontSize: '0.62rem', color: '#4a4845' }}>← Tavern</Link>
         </div>
       </div>
 
+      <GearBar rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} lineTier={lineTier} />
+
       <AnimatePresence mode="wait">
 
-        {/* ── READY ── */}
-        {phase === 'ready' && (
-          <motion.div key="ready"
+        {/* ── IDLE ── */}
+        {phase === 'idle' && (
+          <motion.div key="idle"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}
-            className="flex flex-col gap-3"
-          >
-            <DepthSelector />
+            className="flex flex-col gap-4">
 
-            <div className="flex justify-center py-1">
-              <DialSVG
-                zones={previewZones}
-                angle={270}
-                needleColor="rgba(255,255,255,0.15)"
-                zoneOpacityFn={previewOpacity}
-              />
-            </div>
+            <BaitSelector
+              baitInventory={baitInventory}
+              selectedBait={selectedBait}
+              onSelect={setSelectedBait}
+              rodTier={rodTier}
+            />
 
-            {castsLeft > 0 ? (
-              <div className="flex justify-center">
+            <AnimatePresence>
+              {noBiteFlash && (
+                <motion.p key="nobite"
+                  initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                  className="font-karla font-600 text-center"
+                  style={{ fontSize: '0.75rem', color: '#6a6764' }}>
+                  No bite. Try again.
+                </motion.p>
+              )}
+            </AnimatePresence>
+
+            <div className="flex justify-center">
+              {hasBait && selectedBaitQty > 0 ? (
                 <motion.button onClick={handleCast}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
@@ -382,176 +658,145 @@ export default function FishingGame({
                     fontSize: '0.72rem', color: '#67d4e8', touchAction: 'manipulation',
                     boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
                   }}
-                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)' }}
+                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                >Cast Line</motion.button>
-              </div>
-            ) : (
-              <DoneForToday />
-            )}
-
-            {/* Collapsible how to play */}
-            <div>
-              <button
-                onClick={() => setShowHowTo(v => !v)}
-                className="font-karla font-600 flex items-center gap-1.5 mx-auto"
-                style={{ fontSize: '0.68rem', color: showHowTo ? '#8a8a84' : '#5a5956', background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem 0' }}
-              >
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                  style={{ transform: showHowTo ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-                  <path d="M6 9l6 6 6-6"/>
-                </svg>
-                How to play
-              </button>
-              <AnimatePresence>
-                {showHowTo && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.18 }}
-                    style={{ overflow: 'hidden' }}
-                  >
-                    <div className="rounded-xl px-4 py-3 mt-2"
-                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                      <p className="font-karla font-600 leading-relaxed mb-2.5" style={{ fontSize: '0.78rem', color: '#b0afa8' }}>
-                        Stop the needle in the <span style={{ color: '#4ade80' }}>Catch</span> zone to earn. Hit the <span style={{ color: '#fde68a' }}>✦ Perfect</span> strip inside for a bonus. Avoid the <span style={{ color: '#f87171' }}>Snag</span>.
-                      </p>
-                      <div className="flex flex-col gap-1.5">
-                        {ZONE_LEGEND.map(z => (
-                          <div key={z.label} className="flex items-center gap-2.5">
-                            <div style={{ width: 9, height: 9, borderRadius: 2, background: z.color, flexShrink: 0 }} />
-                            <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: z.color }}>{z.label}</span>
-                            <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#5a5956' }}>— {z.desc}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                >Cast</motion.button>
+              ) : (
+                <div className="text-center">
+                  <p className="font-karla font-600 mb-2" style={{ fontSize: '0.75rem', color: '#6a6764' }}>
+                    No bait — head to the Tackle Shop
+                  </p>
+                  <Link href="/marketplace/tackle-shop"
+                    className="font-karla font-700 uppercase tracking-[0.12em]"
+                    style={{
+                      fontSize: '0.65rem', color: '#f0c040',
+                      padding: '0.45rem 1rem', borderRadius: '2rem',
+                      border: '1px solid rgba(240,192,64,0.35)',
+                      background: 'rgba(240,192,64,0.08)',
+                    }}>Buy Bait</Link>
+                </div>
+              )}
             </div>
+
+            {rod.habitats.length < 4 && (
+              <p className="font-karla font-600 text-center" style={{ fontSize: '0.65rem', color: '#4a4845' }}>
+                {rod.name} reaches: {rod.habitats.map(h => HABITAT_LABEL[h]).join(', ')}
+              </p>
+            )}
           </motion.div>
         )}
 
-        {/* ── ACTIVE + RESULT (shared layout so button never moves) ── */}
-        {(phase === 'active' || phase === 'result') && (
-          <motion.div key="game"
+        {/* ── CASTING ── */}
+        {phase === 'casting' && (
+          <motion.div key="casting"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+            <CastAnimation phase="casting" />
+          </motion.div>
+        )}
+
+        {/* ── HOOKED ── */}
+        {phase === 'hooked' && (
+          <motion.div key="hooked"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+            <CastAnimation phase="hooked" />
+          </motion.div>
+        )}
+
+        {/* ── CATCHING ── */}
+        {phase === 'catching' && hookedFish && (
+          <motion.div key="catching"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
-            className="flex flex-col gap-4 items-center"
-          >
-            {/* Zone label */}
+            className="flex flex-col gap-4 items-center">
+
             <div style={{ minHeight: '1.6rem' }}>
-              <AnimatePresence mode="wait">
-                <motion.p key={phase === 'active' ? currentZone.type : result?.type ?? 'idle'}
-                  initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.1 }}
-                  className="font-cinzel font-700 uppercase tracking-[0.18em]"
-                  style={{ fontSize: '0.88rem', color: activeNeedleColor() }}>
-                  {phase === 'active' ? currentZone.label : resultTitle()}
-                </motion.p>
-              </AnimatePresence>
+              <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
+                style={{ fontSize: '0.88rem', color: currentZone?.color ?? '#888' }}>
+                {currentZone?.label ?? ''}
+              </p>
             </div>
 
-            {/* Dial with result overlaid inside the inner circle */}
-            <div style={{ position: 'relative', width: '100%', maxWidth: 300 }}>
-              <DialSVG zones={activeZones} angle={angle} rotation={zoneRotation} needleColor={activeNeedleColor()} zoneOpacityFn={zoneOpacity} />
+            <DialSVG
+              zones={catchingZones}
+              angle={angle}
+              rotation={zoneRotation}
+              needleColor={needleColor()}
+              zoneOpacityFn={zoneOpacity}
+            />
 
-              {/* Result overlay — sits over the inner circle, no layout impact */}
-              <AnimatePresence>
-                {phase === 'result' && result && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: isPerfect ? 0.6 : 0.85 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={isPerfect ? { type: 'spring', stiffness: 300, damping: 16 } : { duration: 0.18 }}
-                    style={{
-                      position: 'absolute', top: '50%', left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      width: '52%', textAlign: 'center', pointerEvents: 'none',
-                    }}
-                  >
-                    {/* Spark burst for perfect */}
-                    {isPerfect && result.earned > 0 && [...Array(8)].map((_, i) => {
-                      const a2 = (i / 8) * Math.PI * 2
-                      return (
-                        <motion.div key={i}
-                          initial={{ opacity: 1, x: 0, y: 0, scale: 1.2 }}
-                          animate={{ opacity: 0, x: Math.cos(a2) * 52, y: Math.sin(a2) * 52, scale: 0 }}
-                          transition={{ duration: 0.6, ease: 'easeOut', delay: i * 0.03 }}
-                          style={{ position: 'absolute', top: '50%', left: '50%', width: 6, height: 6, borderRadius: '50%', background: '#fde68a', pointerEvents: 'none' }}
-                        />
-                      )
-                    })}
-                    <p className="font-cinzel font-700"
-                      style={{ fontSize: isCatch ? '1.3rem' : '0.85rem', color: resultColor(), lineHeight: 1.1 }}>
-                      {isCatch ? (result.earned > 0 ? `+${result.earned}` : '…') : result.type === 'penalty' ? '−2' : '✕'}
-                    </p>
-                    <p className="font-karla font-600"
-                      style={{ fontSize: '0.58rem', color: isCatch ? resultColor() + 'bb' : '#4a4845', marginTop: 2 }}>
-                      {isCatch ? 'doubloons' : result.type === 'penalty' ? 'casts lost' : 'no catch'}
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Button — always in this exact DOM position */}
-            <AnimatePresence mode="wait">
-              {phase === 'active' ? (
-                <motion.button key="reel"
-                  onPointerDown={e => { e.preventDefault(); handleReelIn() }}
-                  className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-                  style={{
-                    width: 88, height: 88, borderRadius: '50%',
-                    background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
-                    border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
-                    fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
-                    boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
-                  }}
-                  initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)' }}
-                  transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                >Reel In</motion.button>
-              ) : castsLeft > 0 ? (
-                <motion.button key="cast"
-                  onClick={handleCast}
-                  className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-                  style={{
-                    width: 88, height: 88, borderRadius: '50%',
-                    background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.35), rgba(14,116,144,0.12))',
-                    border: '1px solid rgba(34,170,200,0.4)', cursor: 'pointer',
-                    fontSize: '0.72rem', color: '#67d4e8', touchAction: 'manipulation',
-                    boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
-                  }}
-                  initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)' }}
-                  transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                >Cast Again</motion.button>
-              ) : (
-                <motion.div key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <DoneForToday />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Depth selector — below button so it never shifts button position */}
-            <AnimatePresence>
-              {phase === 'result' && (
-                <motion.div key="ds" style={{ width: '100%' }}
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}>
-                  <DepthSelector compact />
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <motion.button
+              onPointerDown={e => { e.preventDefault(); handleReelIn() }}
+              className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+              style={{
+                width: 88, height: 88, borderRadius: '50%',
+                background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
+                border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
+                fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
+                boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
+              }}
+              whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
+              transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+            >Reel In</motion.button>
           </motion.div>
         )}
+
+        {/* ── RESULT ── */}
+        {phase === 'result' && (
+          <motion.div key="result"
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
+            className="flex flex-col gap-4">
+
+            {catchResult ? (
+              <ResultCard
+                fish={catchResult.fish}
+                earned={catchResult.earned}
+                isNewSpecies={catchResult.isNewSpecies}
+              />
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="text-center py-6">
+                <p className="font-cinzel font-700 mb-1"
+                  style={{ fontSize: '1rem', color: missResult === 'penalty' ? '#f87171' : '#64748b' }}>
+                  {missResult === 'penalty' ? 'Snagged!' : 'No catch'}
+                </p>
+                <p className="font-karla font-300"
+                  style={{ fontSize: '0.72rem', color: '#4a4845' }}>
+                  {missResult === 'penalty' ? 'Lost an extra bait on the snag.' : 'The fish slipped away.'}
+                </p>
+              </motion.div>
+            )}
+
+            <div className="flex justify-center">
+              <motion.button onClick={handleCastAgain}
+                className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                style={{
+                  width: 88, height: 88, borderRadius: '50%',
+                  background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.35), rgba(14,116,144,0.12))',
+                  border: '1px solid rgba(34,170,200,0.4)', cursor: 'pointer',
+                  fontSize: '0.65rem', color: '#67d4e8', touchAction: 'manipulation',
+                  boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+                }}
+                whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
+                transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+              >Cast Again</motion.button>
+            </div>
+          </motion.div>
+        )}
+
       </AnimatePresence>
 
-      {hookTier < HOOKS.length - 1 && (
-        <p className="font-karla font-600 text-center" style={{ fontSize: '0.7rem', color: '#4a4845' }}>
+      {/* Fish inventory */}
+      <FishInventory inventory={inventory} onSell={handleSell} />
+
+      {hookTier < 6 && (
+        <p className="font-karla font-600 text-center mt-2" style={{ fontSize: '0.65rem', color: '#4a4845' }}>
           <Link href="/marketplace/tackle-shop" style={{ color: '#5a5956', textDecoration: 'underline' }}>
-            Upgrade your hook
-          </Link>{' '}to earn more per catch
+            Upgrade your gear
+          </Link>{' '}to reach deeper waters
         </p>
       )}
     </div>
