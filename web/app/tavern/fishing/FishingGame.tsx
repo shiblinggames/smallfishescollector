@@ -674,17 +674,16 @@ export default function FishingGame({
   const nextChgRef      = useRef(40)
   const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number } | null>(null)
   const selectedBaitRef = useRef(selectedBait)
+  const frameRefs       = useRef<Partial<Record<SceneFrame, HTMLImageElement>>>({})
 
   useEffect(() => { phaseRef.current = phase }, [phase])
   useEffect(() => { selectedBaitRef.current = selectedBait }, [selectedBait])
   useEffect(() => { hookedFishRef.current = hookedFish }, [hookedFish])
 
-  // Force-decode all scene frames on mount so GPU has them ready before animation starts
+  // Force-decode actual in-DOM img elements on mount so GPU has them compositor-ready
   useEffect(() => {
-    Object.values(FRAME_SRC).forEach(src => {
-      const img = new Image()
-      img.src = src
-      img.decode().catch(() => {})
+    Object.values(frameRefs.current).forEach(img => {
+      if (img) img.decode().catch(() => {})
     })
   }, [])
 
@@ -903,6 +902,7 @@ export default function FishingGame({
           {(Object.keys(FRAME_SRC) as SceneFrame[]).map(frame => (
             <img
               key={frame}
+              ref={el => { if (el) frameRefs.current[frame] = el }}
               src={FRAME_SRC[frame]}
               alt=""
               style={{
@@ -910,9 +910,7 @@ export default function FishingGame({
                 width: '100%', height: '100%',
                 objectFit: 'cover',
                 objectPosition: 'top center',
-                opacity: sceneFrame === frame ? 1 : 0,
-                transition: 'opacity 0.15s linear',
-                willChange: 'opacity',
+                zIndex: sceneFrame === frame ? 1 : 0,
               }}
             />
           ))}
