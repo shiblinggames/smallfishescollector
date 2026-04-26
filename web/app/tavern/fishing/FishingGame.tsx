@@ -184,9 +184,9 @@ function GearBar({ rodTier, reelTier, hookTier, lineTier }: {
   }) {
     return (
       <div className="flex flex-col items-center gap-0.5 px-1 py-2 rounded-lg"
-        style={{ background: `${color}22`, border: `1px solid ${color}60` }}>
+        style={{ background: 'rgba(4,10,18,0.82)', border: `1px solid ${color}70`, backdropFilter: 'blur(8px)' }}>
         <p className="font-karla font-600 uppercase tracking-[0.1em]"
-          style={{ fontSize: '0.45rem', color: 'rgba(255,255,255,0.45)' }}>{label}</p>
+          style={{ fontSize: '0.45rem', color: 'rgba(255,255,255,0.55)' }}>{label}</p>
         <p className="font-karla font-700 text-center leading-tight"
           style={{ fontSize: '0.58rem', color }}>{name}</p>
         {children}
@@ -197,7 +197,7 @@ function GearBar({ rodTier, reelTier, hookTier, lineTier }: {
   function Stat({ children }: { children: React.ReactNode }) {
     return (
       <p className="font-karla font-600 text-center leading-tight"
-        style={{ fontSize: '0.46rem', color: 'rgba(255,255,255,0.38)', marginTop: 1 }}>
+        style={{ fontSize: '0.46rem', color: 'rgba(255,255,255,0.55)', marginTop: 1 }}>
         {children}
       </p>
     )
@@ -949,21 +949,19 @@ export default function FishingGame({
                     </p>
                   </div>
 
-                  <div style={{ flex: 1 }} />
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+                    <AnimatePresence>
+                      {noBiteFlash && (
+                        <motion.p key="nobite"
+                          initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                          className="font-karla font-600 text-center"
+                          style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
+                          No bite. Try again.
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
 
-                  <AnimatePresence>
-                    {noBiteFlash && (
-                      <motion.p key="nobite"
-                        initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-                        className="font-karla font-600 text-center"
-                        style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
-                        No bite. Try again.
-                      </motion.p>
-                    )}
-                  </AnimatePresence>
-
-                  <div className="flex justify-center py-2">
                     {hasBait && selectedBaitQty > 0 ? (
                       <motion.button onClick={handleCast}
                         className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
