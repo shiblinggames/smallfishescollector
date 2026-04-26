@@ -324,32 +324,49 @@ function BaitSelector({ baitInventory, selectedBait, onSelect, selectedZone }: {
   )
 }
 
-// ─── CastAnimation ────────────────────────────────────────────────────────────
+// ─── FishingScene ─────────────────────────────────────────────────────────────
 
-function CastAnimation({ phase }: { phase: 'casting' | 'hooked' }) {
+type SceneFrame = 'windup' | 'cast' | 'fishing'
+
+function FishingScene({ phase }: { phase: 'casting' | 'hooked' }) {
+  const [frame, setFrame] = useState<SceneFrame>('windup')
+
+  useEffect(() => {
+    if (phase === 'casting') {
+      setFrame('windup')
+      const t1 = setTimeout(() => setFrame('cast'), 350)
+      const t2 = setTimeout(() => setFrame('fishing'), 550)
+      return () => { clearTimeout(t1); clearTimeout(t2) }
+    }
+    if (phase === 'hooked') {
+      setFrame('fishing')
+    }
+  }, [phase])
+
+  const src = frame === 'windup' ? '/windup.png'
+    : frame === 'cast' ? '/cast.png'
+    : '/fishing.png'
+
+  const isBobbing = frame === 'fishing'
+
   return (
-    <div className="flex flex-col items-center justify-center py-6 gap-4">
-      <svg width="120" height="120" viewBox="0 0 120 120">
-        {/* Water surface */}
-        <path d="M10 80 Q30 75 50 80 Q70 85 90 80 Q110 75 115 80" fill="none" stroke="rgba(96,165,250,0.3)" strokeWidth="2" />
-        {/* Fishing line */}
-        <line x1="60" y1="10" x2="60" y2={phase === 'hooked' ? 82 : 75}
-          stroke="rgba(255,255,255,0.4)" strokeWidth="1.2" />
-        {/* Bobber */}
-        <motion.g
-          animate={phase === 'hooked'
-            ? { y: 8, opacity: [1, 0.6, 1] }
-            : { y: [0, -3, 0] }
-          }
-          transition={phase === 'hooked'
-            ? { duration: 0.3, repeat: 2 }
-            : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }
-          }
-        >
-          <circle cx="60" cy="76" r="5" fill="#f87171" />
-          <circle cx="60" cy="81" r="5" fill="#f0ede8" />
-        </motion.g>
-      </svg>
+    <div className="flex flex-col items-center gap-4 py-4">
+      <motion.div
+        animate={isBobbing
+          ? { y: phase === 'hooked' ? [0, 10, 0, 10, 0] : [0, -6, 0] }
+          : { y: 0 }
+        }
+        transition={isBobbing
+          ? phase === 'hooked'
+            ? { duration: 0.5, repeat: Infinity, ease: 'easeInOut' }
+            : { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }
+          : { duration: 0.08 }
+        }
+        style={{ lineHeight: 0 }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={src} alt="" style={{ width: 220, height: 220, objectFit: 'contain', display: 'block' }} />
+      </motion.div>
       <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#6a6764' }}>
         {phase === 'hooked' ? 'Something\'s on the line!' : 'Waiting for a bite…'}
       </p>
@@ -920,7 +937,7 @@ export default function FishingGame({
           <motion.div key="casting"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-            <CastAnimation phase="casting" />
+            <FishingScene phase="casting" />
           </motion.div>
         )}
 
@@ -929,7 +946,7 @@ export default function FishingGame({
           <motion.div key="hooked"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-            <CastAnimation phase="hooked" />
+            <FishingScene phase="hooked" />
           </motion.div>
         )}
 
