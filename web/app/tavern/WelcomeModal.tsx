@@ -7,7 +7,7 @@ import { claimWelcomePack } from './welcomeActions'
 
 const ACTIVITIES = [
   { color: '#60a5fa', label: 'Fish of the Day',  desc: 'Guess the mystery fish for up to 100 ⟡' },
-  { color: '#4ade80', label: 'Drop a Line',       desc: 'Cast your line up to 20 times daily' },
+  { color: '#4ade80', label: 'Fishing',       desc: 'Cast your line up to 20 times daily' },
   { color: '#f0c040', label: 'Daily Bonus',       desc: 'Claim free doubloons every day' },
   { color: '#a78bfa', label: 'Fish Trivia',       desc: 'One question, 50 ⟡ for a correct answer' },
   { color: '#f87171', label: 'Bounties',          desc: 'Weekly catch targets — earn packs' },

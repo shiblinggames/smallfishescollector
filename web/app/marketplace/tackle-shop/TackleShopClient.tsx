@@ -315,7 +315,7 @@ export default function TackleShopClient({
                 <div className="mt-3 flex flex-col gap-2.5" style={{ paddingLeft: 50 }}>
                   {/* Drop a Line */}
                   <div>
-                    <p className="font-karla font-600 uppercase tracking-[0.1em] mb-1.5" style={{ fontSize: '0.55rem', color: '#5a5956' }}>Drop a Line</p>
+                    <p className="font-karla font-600 uppercase tracking-[0.1em] mb-1.5" style={{ fontSize: '0.55rem', color: '#5a5956' }}>Fishing</p>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                       <div className="flex items-center justify-between gap-2">
                         <p className="font-karla font-300 text-[#6a6764] text-[0.65rem] sm:text-xs">Hook roll</p>

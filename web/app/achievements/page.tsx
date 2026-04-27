@@ -9,7 +9,7 @@ const CATEGORY_LABELS: Record<AchievementCategory, string> = {
   packs:      'Packs',
   collection: 'Collection',
   fotd:       'Fish of the Day',
-  fishing:    'Drop a Line',
+  fishing:    'Fishing',
   expedition: 'Expedition',
   tavern:     'Tavern',
   bonus:      'Daily Bonus',

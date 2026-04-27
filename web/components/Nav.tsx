@@ -76,7 +76,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
         </svg>
       )
     },
-    { href: '/tavern/fishing', label: 'Fish', badge: null,
+    { href: '/tavern/fishing', label: 'Fishing', badge: null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 4l4 4"/>
@@ -178,7 +178,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
         </svg>
       )
     },
-    { href: '/tavern/fishing', label: 'Drop a Line', badge: null,
+    { href: '/tavern/fishing', label: 'Fishing', badge: null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 4l4 4"/>
