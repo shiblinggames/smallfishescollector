@@ -57,7 +57,7 @@ const HOW_IT_WORKS = [
   },
   {
     title: 'Zone Conditions',
-    body: 'Deeper zones have stronger currents. The needle will change speed more often and randomly reverse direction. The same fish is harder to reel in from the Abyss than the Shallows.',
+    body: 'Deeper zones have stronger currents. The needle changes speed more often, randomly reverses direction, and the catch window is smaller. The same fish is significantly harder to reel in from the Abyss than the Shallows.',
   },
   {
     title: 'Snag Zones',

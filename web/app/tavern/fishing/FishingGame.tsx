@@ -805,7 +805,8 @@ export default function FishingGame({
     if (phase !== 'catching' || !hookedFishRef.current) return
     if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
 
-    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier)
+    const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
+    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier)
     const zone  = getZone(zones, angleRef.current, zoneRotation)
 
     if (zone.type === 'penalty') deductBait(selectedBaitRef.current)
@@ -880,7 +881,7 @@ export default function FishingGame({
   }
 
   // Zone display helpers
-  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier) : []
+  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier) : []
   const currentZone   = (phase === 'catching' || phase === 'reeling') ? getZone(catchingZones, angle, zoneRotation) : null
 
   function needleColor(): string {

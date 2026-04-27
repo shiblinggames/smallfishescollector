@@ -90,6 +90,7 @@ export function buildFishZones(
   catchDifficulty: number, // 1–5
   hookTier = 0,
   linePenaltyMultiplier = 1.0,
+  zoneCatchMultiplier = 1.0,
 ): ZoneDef[] {
   const d = Math.max(1, Math.min(5, catchDifficulty)) - 1
   const baseCatch = [110, 88, 66, 46, 28][d]
@@ -98,8 +99,12 @@ export function buildFishZones(
   const gapLeft   = [  0,  0,  5,  0,  0][d]
   const hasLeft   = d >= 2
 
+  const catchDeg = Math.max(10, Math.round(
+    (baseCatch + Math.max(0, Math.min(6, hookTier)) * CATCH_BONUS_PER_TIER) * zoneCatchMultiplier
+  ))
+
   return buildZonesFromParams({
-    catchDeg:     baseCatch + Math.max(0, Math.min(6, hookTier)) * CATCH_BONUS_PER_TIER,
+    catchDeg,
     perfectDeg:   5,
     snagDeg:      Math.round(baseSnag * linePenaltyMultiplier),
     snagGapRight: gapRight,
@@ -116,10 +121,10 @@ export const FISH_DIFFICULTY_SPEED = [
   { speedMin: 490, speedMax: 650 }, // 5
 ]
 
-// Erraticism by zone (environment trait — currents, pressure, visibility)
-export const ZONE_DIFFICULTY: Record<string, { reverseChance: number; changeMin: number; changeMax: number }> = {
-  shallows:    { reverseChance: 0.00, changeMin: 28, changeMax: 48 },
-  open_waters: { reverseChance: 0.04, changeMin: 20, changeMax: 35 },
-  deep:        { reverseChance: 0.14, changeMin: 12, changeMax: 22 },
-  abyss:       { reverseChance: 0.28, changeMin:  6, changeMax: 12 },
+// Erraticism + catch window by zone (environment trait — currents, pressure, visibility)
+export const ZONE_DIFFICULTY: Record<string, { reverseChance: number; changeMin: number; changeMax: number; catchMultiplier: number }> = {
+  shallows:    { reverseChance: 0.00, changeMin: 28, changeMax: 48, catchMultiplier: 1.00 },
+  open_waters: { reverseChance: 0.04, changeMin: 20, changeMax: 35, catchMultiplier: 0.90 },
+  deep:        { reverseChance: 0.14, changeMin: 12, changeMax: 22, catchMultiplier: 0.78 },
+  abyss:       { reverseChance: 0.28, changeMin:  6, changeMax: 12, catchMultiplier: 0.65 },
 }
