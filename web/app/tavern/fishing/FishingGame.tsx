@@ -981,51 +981,69 @@ export default function FishingGame({
                     </p>
                   </div>
 
-                  {phase === 'casting' && (
-                    <p className="font-karla font-600" style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.75)' }}>
-                      {selectedZone === 'abyss'       ? 'Something stirs in the deep…' :
-                       selectedZone === 'deep'        ? 'Waiting in the dark…' :
-                       selectedZone === 'open_waters' ? 'Drifting on the open sea…' :
-                                                        'Waiting for a bite…'}
-                    </p>
-                  )}
+                  {/* Status text — centred in the space where the dial lives */}
+                  {(phase === 'casting' || phase === 'hooked') && (
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
 
-                  {phase === 'hooked' && hookedFish && (() => {
-                    const r = RARITY[hookedFish.biteRarity] ?? RARITY[1]
-                    const isLegendary = hookedFish.biteRarity === 5
-                    const isEpicPlus  = hookedFish.biteRarity >= 4
-                    return (
-                      <motion.div
-                        className="px-4 py-3 rounded-xl self-start"
-                        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.2 }}
-                        style={{
-                          background: `${r.color}18`,
-                          border: `1px solid ${r.color}45`,
-                        }}
-                      >
-                        <motion.p
-                          className="font-karla font-700"
-                          animate={isLegendary
-                            ? { scale: [1, 1.05, 1], opacity: [1, 0.8, 1] }
-                            : isEpicPlus ? { opacity: [1, 0.85, 1] } : {}
-                          }
-                          transition={isLegendary || isEpicPlus
-                            ? { duration: 0.8, repeat: Infinity, ease: 'easeInOut' }
-                            : {}
-                          }
-                          style={{
-                            fontSize: isLegendary ? '1.05rem' : isEpicPlus ? '0.95rem' : '0.88rem',
-                            color: r.color,
-                            textShadow: isEpicPlus ? `0 0 24px ${r.color}90` : `0 0 12px ${r.color}50`,
-                            letterSpacing: isLegendary ? '0.04em' : 'normal',
-                          }}
-                        >
-                          {r.hookedText}
-                        </motion.p>
-                      </motion.div>
-                    )
-                  })()}
+                      {phase === 'casting' && (
+                        <div style={{
+                          background: 'rgba(4,10,18,0.88)',
+                          border: '1px solid rgba(255,255,255,0.14)',
+                          borderRadius: 16,
+                          padding: '1.1rem 1.75rem',
+                          textAlign: 'center',
+                        }}>
+                          <p className="font-karla font-600" style={{ fontSize: '1rem', color: '#e8e4de' }}>
+                            {selectedZone === 'abyss'       ? 'Something stirs in the deep…' :
+                             selectedZone === 'deep'        ? 'Waiting in the dark…' :
+                             selectedZone === 'open_waters' ? 'Drifting on the open sea…' :
+                                                              'Waiting for a bite…'}
+                          </p>
+                        </div>
+                      )}
+
+                      {phase === 'hooked' && hookedFish && (() => {
+                        const r = RARITY[hookedFish.biteRarity] ?? RARITY[1]
+                        const isLegendary = hookedFish.biteRarity === 5
+                        const isEpicPlus  = hookedFish.biteRarity >= 4
+                        return (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
+                            transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+                            style={{
+                              background: 'rgba(4,10,18,0.92)',
+                              border: `1px solid ${r.color}60`,
+                              borderRadius: 16,
+                              padding: '1.1rem 1.75rem',
+                              textAlign: 'center',
+                              boxShadow: `0 0 32px ${r.color}28`,
+                            }}
+                          >
+                            <motion.p
+                              className="font-karla font-700"
+                              animate={isLegendary
+                                ? { scale: [1, 1.04, 1], opacity: [1, 0.82, 1] }
+                                : isEpicPlus ? { opacity: [1, 0.85, 1] } : {}
+                              }
+                              transition={isLegendary || isEpicPlus
+                                ? { duration: 0.8, repeat: Infinity, ease: 'easeInOut' }
+                                : {}
+                              }
+                              style={{
+                                fontSize: isLegendary ? '1.1rem' : isEpicPlus ? '1rem' : '0.95rem',
+                                color: r.color,
+                                textShadow: `0 0 20px ${r.color}80`,
+                                letterSpacing: isLegendary ? '0.04em' : 'normal',
+                              }}
+                            >
+                              {r.hookedText}
+                            </motion.p>
+                          </motion.div>
+                        )
+                      })()}
+
+                    </div>
+                  )}
 
                 </motion.div>
               )}
