@@ -23,8 +23,9 @@ export default async function LeaderboardPage() {
 
   const admin = createAdminClient()
 
-  const [profile, packsData, collectionData, streakData, achievementsData] = await Promise.all([
+  const [profile, fishingData, packsData, collectionData, streakData, achievementsData] = await Promise.all([
     admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
+    fetchBoard(admin, 'leaderboard_fishing', user.id),
     fetchBoard(admin, 'leaderboard_packs', user.id),
     fetchBoard(admin, 'leaderboard_collection', user.id),
     fetchBoard(admin, 'leaderboard_streak', user.id),
@@ -33,17 +34,19 @@ export default async function LeaderboardPage() {
 
   return (
     <>
-      <Nav packsAvailable={profile.data?.packs_available ?? 0} doubloons={profile.data?.doubloons ?? 0} />
+      <Nav packsAvailable={profile.data?.packs_available ?? 0} doubloons={profile.data?.doubloons ?? 0} gems={profile.data?.gems ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0 pt-8">
         <div className="px-6 max-w-xl mx-auto">
           <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Global</p>
           <h1 className="font-cinzel font-700 text-[#f0ede8] mb-6" style={{ fontSize: '1.4rem' }}>Leaderboard</h1>
           <LeaderboardClient
+            fishing={fishingData.top}
             packs={packsData.top}
             collection={collectionData.top}
             streak={streakData.top}
             achievements={achievementsData.top}
             myScores={{
+              fishing: fishingData.myScore,
               packs: packsData.myScore,
               collection: collectionData.myScore,
               streak: streakData.myScore,

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { getLevelFromXP } from '@/lib/fishingLevel'
 
 export interface LeaderboardEntry {
   user_id: string
@@ -10,6 +11,7 @@ export interface LeaderboardEntry {
 }
 
 interface MyScores {
+  fishing: number
   packs: number
   collection: number
   streak: number
@@ -17,6 +19,7 @@ interface MyScores {
 }
 
 interface Props {
+  fishing: LeaderboardEntry[]
   packs: LeaderboardEntry[]
   collection: LeaderboardEntry[]
   streak: LeaderboardEntry[]
@@ -26,6 +29,7 @@ interface Props {
 }
 
 const TABS = [
+  { key: 'fishing',      label: 'Fishing',      unit: (n: number) => `Lv ${getLevelFromXP(n)} · ${n.toLocaleString()} XP` },
   { key: 'collection',   label: 'Collection',   unit: (n: number) => `${n.toLocaleString()} cards` },
   { key: 'achievements', label: 'Achievements', unit: (n: number) => `${n} / 25` },
   { key: 'packs',        label: 'Packs',        unit: (n: number) => `${n.toLocaleString()} packs` },
@@ -40,11 +44,12 @@ const RANK_COLORS: Record<number, { color: string; label: string }> = {
   3: { color: '#cd7f32', label: '3rd' },
 }
 
-export default function LeaderboardClient({ packs, collection, streak, achievements, myScores, currentUserId }: Props) {
-  const [activeTab, setActiveTab] = useState<TabKey>('collection')
+export default function LeaderboardClient({ fishing, packs, collection, streak, achievements, myScores, currentUserId }: Props) {
+  const [activeTab, setActiveTab] = useState<TabKey>('fishing')
 
-  const dataMap: Record<TabKey, LeaderboardEntry[]> = { packs, collection, streak, achievements }
+  const dataMap: Record<TabKey, LeaderboardEntry[]> = { fishing, packs, collection, streak, achievements }
   const myScoreMap: Record<TabKey, number> = {
+    fishing: myScores.fishing,
     packs: myScores.packs,
     collection: myScores.collection,
     streak: myScores.streak,
