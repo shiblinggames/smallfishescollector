@@ -919,7 +919,7 @@ export default function FishingGame({
 
   function zoneOpacity(zone: ZoneDef): number {
     if (phase === 'catching' && currentZone) {
-      return currentZone === zone ? 0.95 : zone.type === 'perfect' ? 0.62 : zone.type === 'penalty' ? 0.48 : 0.30
+      return currentZone === zone ? 0.95 : zone.type === 'perfect' ? 0.88 : zone.type === 'penalty' ? 0.48 : 0.30
     }
     return 0.35
   }
@@ -1006,10 +1006,10 @@ export default function FishingGame({
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
 
                   <div>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: HABITAT_COLOR[selectedZone] }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: HABITAT_COLOR[selectedZone], textShadow: `0 0 20px ${HABITAT_COLOR[selectedZone]}60` }}>
                       {HABITAT_LABEL[selectedZone]}
                     </p>
-                    <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.35)' }}>
+                    <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.72)' }}>
                       {HABITAT_TAGLINE[selectedZone]}
                     </p>
                   </div>
@@ -1360,31 +1360,77 @@ export default function FishingGame({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.2 }}
             onAnimationComplete={() => {
-              if (perfectFlash) setTimeout(() => setPerfectFlash(false), 900)
+              if (perfectFlash) setTimeout(() => setPerfectFlash(false), 1200)
             }}
             style={{
               position: 'absolute', inset: 0, zIndex: 30,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               pointerEvents: 'none',
-              background: 'radial-gradient(ellipse 80% 50% at 50% 50%, rgba(245,158,11,0.22) 0%, transparent 70%)',
+              background: 'radial-gradient(ellipse 90% 60% at 50% 50%, rgba(245,158,11,0.32) 0%, transparent 70%)',
             }}
           >
+            {/* Expanding ring burst */}
             <motion.div
-              initial={{ scale: 0.55, y: 16, opacity: 0 }}
+              initial={{ scale: 0.2, opacity: 0.9 }}
+              animate={{ scale: 3.2, opacity: 0 }}
+              transition={{ duration: 0.7, ease: 'easeOut' }}
+              style={{
+                position: 'absolute',
+                width: 140, height: 140, borderRadius: '50%',
+                border: '2px solid rgba(245,158,11,0.7)',
+                left: '50%', top: '50%',
+                transform: 'translate(-50%, -50%)',
+              }}
+            />
+            {/* Second ring, slightly delayed */}
+            <motion.div
+              initial={{ scale: 0.2, opacity: 0.6 }}
+              animate={{ scale: 2.4, opacity: 0 }}
+              transition={{ duration: 0.65, ease: 'easeOut', delay: 0.1 }}
+              style={{
+                position: 'absolute',
+                width: 140, height: 140, borderRadius: '50%',
+                border: '1px solid rgba(253,230,138,0.5)',
+                left: '50%', top: '50%',
+                transform: 'translate(-50%, -50%)',
+              }}
+            />
+
+            {/* Floating sparks */}
+            {([
+              { x: -55, delay: 0.08 }, { x: 55, delay: 0.12 },
+              { x: -28, delay: 0.18 }, { x: 32, delay: 0.05 },
+            ] as { x: number; delay: number }[]).map((s, i) => (
+              <motion.span key={i}
+                initial={{ opacity: 0, y: 0, x: s.x, scale: 0 }}
+                animate={{ opacity: [0, 1, 0], y: -70 - i * 12, x: s.x * 1.3, scale: [0, 1.2, 0.6] }}
+                transition={{ duration: 1.0, delay: s.delay, ease: 'easeOut' }}
+                style={{ position: 'absolute', color: '#fde68a', fontSize: '0.85rem', pointerEvents: 'none' }}
+              >✦</motion.span>
+            ))}
+
+            {/* Main text */}
+            <motion.div
+              initial={{ scale: 0.45, y: 12, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 420, damping: 16, delay: 0.05 }}
-              style={{ textAlign: 'center' }}
+              transition={{ type: 'spring', stiffness: 500, damping: 18, delay: 0.04 }}
+              style={{ textAlign: 'center', position: 'relative' }}
             >
               <p className="font-cinzel font-700 uppercase tracking-[0.28em]"
-                style={{ fontSize: '1.75rem', color: '#f59e0b', textShadow: '0 0 40px rgba(245,158,11,0.9), 0 0 80px rgba(245,158,11,0.4)' }}>
+                style={{
+                  fontSize: '2.1rem', color: '#f59e0b',
+                  textShadow: '0 0 30px rgba(245,158,11,1), 0 0 70px rgba(245,158,11,0.6), 0 0 120px rgba(245,158,11,0.25)',
+                }}>
                 Perfect!
               </p>
               <motion.p
-                className="font-karla font-600 uppercase tracking-[0.18em]"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-                style={{ fontSize: '0.65rem', color: 'rgba(245,158,11,0.7)', marginTop: '0.35rem' }}>
+                className="font-karla font-600 uppercase tracking-[0.2em]"
+                initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.22, duration: 0.2 }}
+                style={{ fontSize: '0.68rem', color: 'rgba(253,230,138,0.85)', marginTop: '0.3rem',
+                  letterSpacing: '0.22em' }}>
                 ✦ &nbsp; Flawless cast &nbsp; ✦
               </motion.p>
             </motion.div>
