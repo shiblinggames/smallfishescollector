@@ -106,12 +106,32 @@ export default function TackleShopClient({
     })
   }
 
-  const CATEGORIES: { key: Exclude<Section, null>; label: string; color: string; sub: string }[] = [
-    { key: 'bait', label: 'Bait',  color: '#34d399', sub: `${totalBait} in stock` },
-    { key: 'hook', label: 'Hooks', color: HOOKS[hookTier]?.color ?? '#f0c040',  sub: HOOKS[hookTier]?.name ?? '' },
-    { key: 'rod',  label: 'Rods',  color: RODS[rodTier]?.color   ?? '#a07858',  sub: RODS[rodTier]?.name  ?? '' },
-    { key: 'reel', label: 'Reels', color: REELS[reelTier]?.color ?? '#60a5fa',  sub: REELS[reelTier]?.name ?? '' },
-    { key: 'line', label: 'Line',  color: LINES[lineTier]?.color ?? '#4ade80',  sub: LINES[lineTier]?.name ?? '' },
+  const CATEGORIES: { key: Exclude<Section, null>; label: string; desc: string; color: string; active: string }[] = [
+    {
+      key: 'bait', label: 'Bait', color: '#34d399',
+      desc: 'Consumables used per cast. Better bait attracts fish faster and increases your chances of rare catches.',
+      active: `${totalBait} in stock`,
+    },
+    {
+      key: 'hook', label: 'Hooks', color: HOOKS[hookTier]?.color ?? '#f0c040',
+      desc: 'Widens the catch zone on the reel dial and improves your luck when opening packs.',
+      active: HOOKS[hookTier]?.name ?? '',
+    },
+    {
+      key: 'rod', label: 'Rods', color: RODS[rodTier]?.color ?? '#a07858',
+      desc: 'Unlocks deeper fishing zones. Higher tiers also improve your base roll and shorten bite wait times.',
+      active: RODS[rodTier]?.name ?? '',
+    },
+    {
+      key: 'reel', label: 'Reels', color: REELS[reelTier]?.color ?? '#60a5fa',
+      desc: 'Slows the needle on the catch dial, giving you more time to land a perfect hit.',
+      active: REELS[reelTier]?.name ?? '',
+    },
+    {
+      key: 'line', label: 'Line', color: LINES[lineTier]?.color ?? '#4ade80',
+      desc: 'Shrinks snag zones on the catch dial. Earned by catching unique species — no purchase needed.',
+      active: LINES[lineTier]?.name ?? '',
+    },
   ]
 
   // ── Landing ────────────────────────────────────────────────────────────
@@ -122,19 +142,24 @@ export default function TackleShopClient({
           Tackle Shop
         </p>
         <div className="flex flex-col gap-2.5">
-          {CATEGORIES.map(({ key, label, color, sub }) => (
+          {CATEGORIES.map(({ key, label, desc, color, active }) => (
             <button
               key={key}
               onClick={() => { setSection(key); setError(null) }}
-              className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-opacity active:opacity-70"
+              className="flex items-start gap-3 px-4 py-3.5 rounded-xl text-left transition-opacity active:opacity-70"
               style={{ background: `${color}0a`, border: `1px solid ${color}28` }}
             >
-              <div style={{ width: 4, alignSelf: 'stretch', background: color, borderRadius: 2, flexShrink: 0 }} />
+              <div style={{ width: 4, alignSelf: 'stretch', background: color, borderRadius: 2, flexShrink: 0, marginTop: 2 }} />
               <div className="flex-1 min-w-0">
-                <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>{label}</p>
-                <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{sub}</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>{label}</p>
+                  <span className="font-karla font-600" style={{ fontSize: '0.58rem', color, background: `${color}18`, border: `1px solid ${color}30`, padding: '0.1rem 0.45rem', borderRadius: '2rem' }}>
+                    {active}
+                  </span>
+                </div>
+                <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.45 }}>{desc}</p>
               </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 3 }}>
                 <path d="M9 18l6-6-6-6"/>
               </svg>
             </button>
