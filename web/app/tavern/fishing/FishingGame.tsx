@@ -1583,8 +1583,8 @@ export default function FishingGame({
               transition={{ type: 'spring', stiffness: 420, damping: 18, delay: 0.06 }}
               style={{ textAlign: 'center', position: 'relative' }}
             >
-              <p className="font-karla font-700 uppercase tracking-[0.3em]"
-                style={{ fontSize: '0.75rem', color: '#60a5fa', marginBottom: '0.4rem', letterSpacing: '0.3em' }}>
+              <p className="font-cinzel font-700 uppercase tracking-[0.25em]"
+                style={{ fontSize: '1.1rem', color: '#fff', marginBottom: '0.4rem', textShadow: '0 0 18px rgba(255,255,255,0.95), 0 0 48px rgba(96,165,250,0.6)' }}>
                 Level Up!
               </p>
               <p className="font-cinzel font-700"
