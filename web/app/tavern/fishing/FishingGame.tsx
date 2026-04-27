@@ -968,8 +968,8 @@ export default function FishingGame({
               {/* ── IDLE / CASTING / HOOKED — single persistent element, updates in place ── */}
               {(phase === 'idle' || phase === 'casting' || phase === 'hooked') && (
                 <motion.div key="pre-catch"
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
 
                   <div>
@@ -981,25 +981,28 @@ export default function FishingGame({
                     </p>
                   </div>
 
-                  {/* Status text — centred in the space where the dial lives */}
-                  {(phase === 'casting' || phase === 'hooked') && (
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {/* Status pill — centred in the dial space, each state animates independently */}
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <AnimatePresence mode="wait">
 
                       {phase === 'casting' && (
-                        <div style={{
-                          background: 'rgba(4,10,18,0.88)',
-                          border: '1px solid rgba(255,255,255,0.14)',
-                          borderRadius: 16,
-                          padding: '1.1rem 1.75rem',
-                          textAlign: 'center',
-                        }}>
+                        <motion.div key="waiting-pill"
+                          initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.15 }}
+                          style={{
+                            background: 'rgba(4,10,18,0.88)',
+                            border: '1px solid rgba(255,255,255,0.14)',
+                            borderRadius: 16,
+                            padding: '1.1rem 1.75rem',
+                            textAlign: 'center',
+                          }}>
                           <p className="font-karla font-600" style={{ fontSize: '1rem', color: '#e8e4de' }}>
                             {selectedZone === 'abyss'       ? 'Something stirs in the deep…' :
                              selectedZone === 'deep'        ? 'Waiting in the dark…' :
                              selectedZone === 'open_waters' ? 'Drifting on the open sea…' :
                                                               'Waiting for a bite…'}
                           </p>
-                        </div>
+                        </motion.div>
                       )}
 
                       {phase === 'hooked' && hookedFish && (() => {
@@ -1007,8 +1010,9 @@ export default function FishingGame({
                         const isLegendary = hookedFish.biteRarity === 5
                         const isEpicPlus  = hookedFish.biteRarity >= 4
                         return (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
+                          <motion.div key="hooked-pill"
+                            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
                             transition={{ type: 'spring', stiffness: 380, damping: 22 }}
                             style={{
                               background: 'rgba(4,10,18,0.92)',
@@ -1042,8 +1046,8 @@ export default function FishingGame({
                         )
                       })()}
 
-                    </div>
-                  )}
+                    </AnimatePresence>
+                  </div>
 
                 </motion.div>
               )}
