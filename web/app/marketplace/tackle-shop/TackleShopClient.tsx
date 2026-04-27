@@ -60,12 +60,16 @@ export default function TackleShopClient({
   const totalBait = Object.values(baitMap).reduce((a, b) => a + b, 0)
   const shopBaits = BAITS.filter(b => b.shopCost > 0)
 
+  function broadcastDoubloons(amount: number) {
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: amount }))
+  }
+
   function handleBuyHook() {
     setError(null)
     startTransition(async () => {
       const result = await buyHook()
       if ('error' in result) { setError(result.error) }
-      else { setHookTier(result.hookTier); setDoubloons(result.doubloons) }
+      else { setHookTier(result.hookTier); setDoubloons(result.doubloons); broadcastDoubloons(result.doubloons) }
     })
   }
 
@@ -74,7 +78,7 @@ export default function TackleShopClient({
     startTransition(async () => {
       const result = await buyRod()
       if ('error' in result) { setError(result.error) }
-      else { setRodTier(result.rodTier); setDoubloons(result.doubloons) }
+      else { setRodTier(result.rodTier); setDoubloons(result.doubloons); broadcastDoubloons(result.doubloons) }
     })
   }
 
@@ -83,7 +87,7 @@ export default function TackleShopClient({
     startTransition(async () => {
       const result = await buyReel()
       if ('error' in result) { setError(result.error) }
-      else { setReelTier(result.reelTier); setDoubloons(result.doubloons) }
+      else { setReelTier(result.reelTier); setDoubloons(result.doubloons); broadcastDoubloons(result.doubloons) }
     })
   }
 
@@ -97,6 +101,7 @@ export default function TackleShopClient({
       if ('error' in result) { setError(result.error) }
       else {
         setDoubloons(result.doubloons)
+        broadcastDoubloons(result.doubloons)
         setBaitInventory(prev => {
           const existing = prev.find(b => b.bait_type === baitType)
           if (existing) return prev.map(b => b.bait_type === baitType ? { ...b, quantity: result.newQty } : b)

@@ -13,6 +13,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   const menuRef = useRef<HTMLDivElement>(null)
   const [tavernBadge, setTavernBadge] = useState(0)
   const [achievementsBadge, setAchievementsBadge] = useState(false)
+  const [displayDoubloons, setDisplayDoubloons] = useState(doubloons)
 
   const fetchBadge = useCallback(() => {
     const supabase = createClient()
@@ -42,6 +43,14 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
     window.addEventListener('tavern-daily-completed', fetchBadge)
     return () => window.removeEventListener('tavern-daily-completed', fetchBadge)
   }, [fetchBadge])
+
+  useEffect(() => {
+    function handleDoubloonsChanged(e: Event) {
+      setDisplayDoubloons((e as CustomEvent<number>).detail)
+    }
+    window.addEventListener('doubloons-changed', handleDoubloonsChanged)
+    return () => window.removeEventListener('doubloons-changed', handleDoubloonsChanged)
+  }, [])
 
   // Close on outside tap
   useEffect(() => {
@@ -237,9 +246,9 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
         </div>
 
         <div className="flex items-center gap-4">
-          {doubloons !== undefined && (
+          {displayDoubloons !== undefined && (
             <span className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.875rem' }}>
-              {doubloons.toLocaleString()} ⟡
+              {displayDoubloons.toLocaleString()} ⟡
             </span>
           )}
           <button
@@ -261,9 +270,9 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
         </Link>
 
         <div className="flex items-center gap-3">
-          {doubloons !== undefined && (
+          {displayDoubloons !== undefined && (
             <span className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.875rem' }}>
-              {doubloons.toLocaleString()} ⟡
+              {displayDoubloons.toLocaleString()} ⟡
             </span>
           )}
           {/* Hamburger */}

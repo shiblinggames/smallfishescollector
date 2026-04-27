@@ -891,6 +891,7 @@ export default function FishingGame({
     setSellPending(null)
     if ('error' in res) return
     setDoubloons(res.doubloons)
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
     setInventory(prev => prev
       .map(i => i.fish_id === fishId ? { ...i, quantity: i.quantity - qty } : i)
       .filter(i => i.quantity > 0)
