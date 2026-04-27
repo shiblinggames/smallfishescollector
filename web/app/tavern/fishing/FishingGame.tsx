@@ -220,10 +220,8 @@ function GearDrawerContent({ rodTier, reelTier, hookTier, lineTier }: {
       label: 'Hook', name: hook.name, color: hook.color,
       upgradeable: hookTier < HOOKS.length - 1,
       stats: [
-        hook.rollBonus > 0 ? `+${hook.rollBonus} bonus on catch roll` : null,
-        catchZoneBonus > 0 ? `+${catchZoneBonus}° wider catch zone` : null,
-        (!hook.rollBonus && !catchZoneBonus) ? 'No bonuses' : null,
-      ].filter(Boolean) as string[],
+        catchZoneBonus > 0 ? `+${catchZoneBonus}° wider catch zone` : 'No catch zone bonus',
+      ],
       extra: null,
     },
     {

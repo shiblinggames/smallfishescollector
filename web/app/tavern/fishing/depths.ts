@@ -77,7 +77,7 @@ function buildZonesFromParams(params: {
 
 export function buildZones(d: DepthDef, hookTier = 0): ZoneDef[] {
   return buildZonesFromParams({
-    catchDeg:     d.catchDeg + Math.max(0, Math.min(6, hookTier)) * CATCH_BONUS_PER_TIER,
+    catchDeg:     d.catchDeg + Math.max(0, Math.min(8, hookTier)) * CATCH_BONUS_PER_TIER,
     perfectDeg:   d.perfectDeg,
     snagDeg:      d.snagDeg,
     snagGapRight: d.snagGapRight,
@@ -101,7 +101,7 @@ export function buildFishZones(
   const hasLeft   = d >= 2
 
   const catchDeg = Math.max(10, Math.round(
-    (baseCatch + Math.max(0, Math.min(6, hookTier)) * CATCH_BONUS_PER_TIER + levelBonus) * zoneCatchMultiplier
+    (baseCatch + Math.max(0, Math.min(8, hookTier)) * CATCH_BONUS_PER_TIER + levelBonus) * zoneCatchMultiplier
   ))
 
   return buildZonesFromParams({

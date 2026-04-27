@@ -358,19 +358,11 @@ export default function TackleShopClient({
                       </div>
                       <p className="font-karla font-300 text-[#6a6764] text-xs sm:text-sm">{hook.description}</p>
 
-                      {owned && (
-                        <div className="flex gap-3 mt-1.5 flex-wrap">
-                          {hook.rollBonus > 0 && (
-                            <span className="font-karla font-600 text-[0.65rem] sm:text-xs" style={{ color: `${c}99` }}>
-                              +{hook.rollBonus} roll
-                            </span>
-                          )}
-                          {hook.tier > 0 && (
-                            <span className="font-karla font-600 text-[0.65rem] sm:text-xs" style={{ color: `${c}99` }}>
-                              +{hook.tier * 3}° catch zone
-                            </span>
-                          )}
-                        </div>
+                      {owned && hook.tier > 0 && (
+                        <span className="font-karla font-600 inline-block mt-1.5"
+                          style={{ fontSize: '0.5rem', color: `${c}bb`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                          +{hook.tier * 3}° catch zone
+                        </span>
                       )}
 
                       {isNext && (
