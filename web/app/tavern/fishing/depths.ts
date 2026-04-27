@@ -26,7 +26,7 @@ export interface DepthDef {
   reverseChance: number
 }
 
-const CATCH_CENTER = 97.5
+export const CATCH_CENTER = 97.5
 const CATCH_BONUS_PER_TIER = 3
 
 export const DEPTHS: DepthDef[] = [

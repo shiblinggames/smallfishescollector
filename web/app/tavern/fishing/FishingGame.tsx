@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, sellFish, type FishSpecies } from './actions'
-import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, type ZoneDef, type ZoneType } from './depths'
+import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { getHook } from '@/lib/hooks'
 import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
@@ -737,6 +737,7 @@ export default function FishingGame({
     const zoneDiff  = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
     const baseMin = diffSpeed.speedMin * reel.needleSpeedMultiplier
     const baseMax = diffSpeed.speedMax * reel.needleSpeedMultiplier
+    const capturedZoneRotation = zoneRotation
 
     speedRef.current = baseMin + Math.random() * (baseMax - baseMin)
     tickRef.current = 0
@@ -748,7 +749,13 @@ export default function FishingGame({
       tickRef.current++
       if (tickRef.current >= nextChgRef.current) {
         speedRef.current = baseMin + Math.random() * (baseMax - baseMin)
-        if (Math.random() < zoneDiff.reverseChance) dirRef.current *= -1
+        if (Math.random() < zoneDiff.reverseChance) {
+          // Only reverse near the catch zone — not while drifting through dead space
+          const catchCenter = (CATCH_CENTER + capturedZoneRotation) % 360
+          const needle = angleRef.current
+          const dist = Math.min(Math.abs(catchCenter - needle), 360 - Math.abs(catchCenter - needle))
+          if (dist <= 55) dirRef.current *= -1
+        }
         nextChgRef.current = tickRef.current + zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))
       }
       setAngle(angleRef.current)
