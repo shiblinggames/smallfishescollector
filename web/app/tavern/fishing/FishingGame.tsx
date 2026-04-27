@@ -356,11 +356,12 @@ const FRAME_SRC: Record<SceneFrame, string> = {
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
   isPerfect: boolean
+  xpGained: number
 }) {
   const habitatColor = HABITAT_COLOR[fish.habitat] ?? '#888'
   const habitatLabel = HABITAT_LABEL[fish.habitat] ?? fish.habitat
@@ -387,12 +388,20 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect }: {
         <motion.div
           initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-          className="flex items-center justify-center gap-2 mb-2 py-1.5 px-3 rounded-xl"
+          className="flex items-center justify-center gap-2 mb-2 py-2 px-3 rounded-xl"
           style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.35)' }}
         >
           <span style={{ fontSize: '0.7rem', color: '#f59e0b' }}>✦</span>
-          <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
-            style={{ fontSize: '0.72rem', color: '#f59e0b' }}>Perfect Cast</p>
+          <div style={{ textAlign: 'center' }}>
+            <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
+              style={{ fontSize: '0.72rem', color: '#f59e0b' }}>Perfect Cast</p>
+            {xpGained > 0 && (
+              <p className="font-karla font-600"
+                style={{ fontSize: '0.6rem', color: 'rgba(74,222,128,0.85)', marginTop: 2 }}>
+                +{xpGained} XP
+              </p>
+            )}
+          </div>
           <span style={{ fontSize: '0.7rem', color: '#f59e0b' }}>✦</span>
         </motion.div>
       )}
@@ -646,23 +655,25 @@ function XPBarDisplay({ xp }: { xp: number }) {
   const { level, progress, xpInLevel, xpForLevel } = getXPProgress(xp)
   const isMax = level >= MAX_LEVEL
   const fillPct = isMax ? 100 : progress * 100
+  const toGo = xpForLevel - xpInLevel
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl"
+      style={{ background: 'rgba(4,10,18,0.72)', border: '1px solid rgba(255,255,255,0.09)' }}>
       <p className="font-karla font-700 shrink-0"
-        style={{ fontSize: '0.58rem', color: '#60a5fa', minWidth: '2.5rem' }}>
+        style={{ fontSize: '0.72rem', color: '#60a5fa' }}>
         Lvl {level}
       </p>
-      <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+      <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
         <motion.div
-          style={{ height: '100%', borderRadius: 2, background: isMax ? '#f0c040' : '#60a5fa', width: `${fillPct}%` }}
+          style={{ height: '100%', borderRadius: 3, background: isMax ? '#f0c040' : '#60a5fa' }}
           animate={{ width: `${fillPct}%` }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         />
       </div>
       <p className="font-karla font-600 shrink-0"
-        style={{ fontSize: '0.5rem', color: '#3a3835', minWidth: '3.2rem', textAlign: 'right' }}>
-        {isMax ? 'Max level' : `${xpInLevel} / ${xpForLevel}`}
+        style={{ fontSize: '0.62rem', color: isMax ? '#f0c040' : 'rgba(255,255,255,0.4)', minWidth: '5rem', textAlign: 'right' }}>
+        {isMax ? 'Max level' : `${toGo} xp to go`}
       </p>
     </div>
   )
@@ -713,12 +724,13 @@ export default function FishingGame({
   const [gearOpen, setGearOpen]       = useState(false)
   const [sellPending, setSellPending] = useState<number | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
-  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean } | null>(null)
+  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number } | null>(null)
   const [bountyNotif, setBountyNotif] = useState<FishingBountyCompletion | null>(null)
   const [perfectFlash, setPerfectFlash] = useState(false)
   const [missResult, setMissResult] = useState<ZoneType | null>(null)
   const [fishingXP, setFishingXP]   = useState(initialFishingXP)
   const [xpPopup, setXpPopup]       = useState<{ value: number; id: number } | null>(null)
+  const [levelUpNotif, setLevelUpNotif] = useState<number | null>(null)
   const [, startTransition]         = useTransition()
 
   const fishingLevel = getLevelFromXP(fishingXP)
@@ -886,10 +898,13 @@ export default function FishingGame({
         setMissResult('miss')
       } else {
         const { fish, baitSaved, isNewSpecies, bountyCompletion, xpGained, newXP } = res
-        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect })
+        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained })
         if (bountyCompletion) setBountyNotif(bountyCompletion)
+        const oldLevel = getLevelFromXP(fishingXP)
+        const newLevel = getLevelFromXP(newXP)
         setFishingXP(newXP)
         setXpPopup({ value: xpGained, id: Date.now() })
+        if (newLevel > oldLevel) setLevelUpNotif(newLevel)
         setInventory(prev => {
           const existing = prev.find(i => i.fish_id === fish.id)
           if (existing) return prev.map(i => i.fish_id === fish.id ? { ...i, quantity: i.quantity + 1 } : i)
@@ -926,6 +941,7 @@ export default function FishingGame({
     setHookedFish(null)
     setPerfectFlash(false)
     setBountyNotif(null)
+    setLevelUpNotif(null)
     setBaitOpen(false)
     setHoldOpen(false)
     setGearOpen(false)
@@ -1042,15 +1058,15 @@ export default function FishingGame({
                 <motion.p
                   key={xpPopup.id}
                   initial={{ opacity: 0, y: 0 }}
-                  animate={{ opacity: [0, 1, 1, 0], y: -14 }}
-                  transition={{ duration: 1.8, times: [0, 0.12, 0.65, 1], ease: 'easeOut' }}
+                  animate={{ opacity: [0, 1, 1, 0], y: -18 }}
+                  transition={{ duration: 2.0, times: [0, 0.1, 0.6, 1], ease: 'easeOut' }}
                   onAnimationComplete={() => setXpPopup(null)}
                   className="font-karla font-700"
                   style={{
-                    position: 'absolute', right: 0, top: -2,
-                    fontSize: '0.62rem', color: '#4ade80',
+                    position: 'absolute', right: 8, top: 0,
+                    fontSize: '0.8rem', color: '#4ade80',
                     pointerEvents: 'none',
-                    textShadow: '0 0 8px rgba(74,222,128,0.6)',
+                    textShadow: '0 0 10px rgba(74,222,128,0.7)',
                   }}
                 >
                   +{xpPopup.value} XP
@@ -1211,7 +1227,7 @@ export default function FishingGame({
                   )}
 
                   {catchResult ? (
-                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} />
+                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} xpGained={catchResult.xpGained} />
                   ) : (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
                       <p className="font-cinzel font-700 mb-1"
@@ -1508,6 +1524,79 @@ export default function FishingGame({
                 style={{ fontSize: '0.68rem', color: 'rgba(253,230,138,0.85)', marginTop: '0.3rem',
                   letterSpacing: '0.22em' }}>
                 ✦ &nbsp; Flawless cast &nbsp; ✦
+              </motion.p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Level-up overlay ── */}
+      <AnimatePresence>
+        {levelUpNotif && (
+          <motion.div
+            key="levelup"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.3 } }}
+            transition={{ duration: 0.25 }}
+            onClick={() => setLevelUpNotif(null)}
+            style={{
+              position: 'absolute', inset: 0, zIndex: 32,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'radial-gradient(ellipse 80% 65% at 50% 50%, rgba(96,165,250,0.22) 0%, rgba(0,0,0,0.88) 100%)',
+              cursor: 'pointer',
+            }}
+          >
+            {/* Ring bursts */}
+            {[0, 0.12, 0.24].map((delay, i) => (
+              <motion.div key={i}
+                initial={{ scale: 0.1, opacity: 0.85 - i * 0.2 }}
+                animate={{ scale: 4.5 - i * 0.6, opacity: 0 }}
+                transition={{ duration: 1.1, ease: 'easeOut', delay }}
+                style={{
+                  position: 'absolute',
+                  width: 110, height: 110, borderRadius: '50%',
+                  border: `${2 - i}px solid ${i % 2 === 0 ? 'rgba(96,165,250,0.75)' : 'rgba(240,192,64,0.6)'}`,
+                  left: '50%', top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  pointerEvents: 'none',
+                }}
+              />
+            ))}
+
+            {/* Sparkles */}
+            {([{ x: -60, delay: 0.08 }, { x: 60, delay: 0.14 }, { x: -30, delay: 0.22 }, { x: 35, delay: 0.06 }, { x: 0, delay: 0.18 }] as { x: number; delay: number }[]).map((s, i) => (
+              <motion.span key={i}
+                initial={{ opacity: 0, y: 0, x: s.x, scale: 0 }}
+                animate={{ opacity: [0, 1, 0], y: -80 - i * 14, x: s.x * 1.4, scale: [0, 1.4, 0.4] }}
+                transition={{ duration: 1.2, delay: s.delay, ease: 'easeOut' }}
+                style={{ position: 'absolute', color: i % 2 === 0 ? '#60a5fa' : '#f0c040', fontSize: '0.9rem', pointerEvents: 'none' }}
+              >✦</motion.span>
+            ))}
+
+            {/* Text */}
+            <motion.div
+              initial={{ scale: 0.4, y: 24, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 18, delay: 0.06 }}
+              style={{ textAlign: 'center', position: 'relative' }}
+            >
+              <p className="font-karla font-700 uppercase tracking-[0.3em]"
+                style={{ fontSize: '0.75rem', color: '#60a5fa', marginBottom: '0.4rem', letterSpacing: '0.3em' }}>
+                Level Up!
+              </p>
+              <p className="font-cinzel font-700"
+                style={{
+                  fontSize: '5rem', lineHeight: 1, color: '#f0c040',
+                  textShadow: '0 0 40px rgba(240,192,64,1), 0 0 90px rgba(240,192,64,0.5)',
+                }}>
+                {levelUpNotif}
+              </p>
+              <motion.p
+                className="font-karla font-400"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+                style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.28)', marginTop: '0.75rem' }}>
+                tap to continue
               </motion.p>
             </motion.div>
           </motion.div>

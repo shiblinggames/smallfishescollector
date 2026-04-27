@@ -1,11 +1,12 @@
-const XP_SCALE = 15
+const BASE_GAP  = 60
+const GAP_GROWTH = 1.08
 
 function computeXPTable(): number[] {
   const table: number[] = [0] // table[0] = 0: need 0 XP to be at level 1
-  let sum = 0
-  for (let i = 1; i <= 99; i++) {
-    sum += Math.floor(i + 300 * Math.pow(2, i / 7))
-    table.push(Math.floor(sum / (4 * XP_SCALE)))
+  let total = 0
+  for (let lv = 1; lv <= 99; lv++) {
+    total += Math.floor(BASE_GAP * Math.pow(GAP_GROWTH, lv - 1))
+    table.push(total)
   }
   return table
 }
