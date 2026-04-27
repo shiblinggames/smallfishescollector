@@ -367,10 +367,11 @@ const FRAME_SRC: Record<SceneFrame, string> = {
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
-function ResultCard({ fish, baitSaved, isNewSpecies }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
+  isPerfect: boolean
 }) {
   const habitatColor = HABITAT_COLOR[fish.habitat] ?? '#888'
   const habitatLabel = HABITAT_LABEL[fish.habitat] ?? fish.habitat
@@ -397,6 +398,22 @@ function ResultCard({ fish, baitSaved, isNewSpecies }: {
 
   return (
     <div style={{ position: 'relative' }}>
+
+      {/* Perfect catch banner */}
+      {isPerfect && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+          className="flex items-center justify-center gap-2 mb-2 py-1.5 px-3 rounded-xl"
+          style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.35)' }}
+        >
+          <span style={{ fontSize: '0.7rem', color: '#f59e0b' }}>✦</span>
+          <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
+            style={{ fontSize: '0.72rem', color: '#f59e0b' }}>Perfect Cast</p>
+          <span style={{ fontSize: '0.7rem', color: '#f59e0b' }}>✦</span>
+        </motion.div>
+      )}
+
       {/* Glow halo — sits outside overflow:hidden so it isn't clipped */}
       {rarity >= 2 && (
         <motion.div
@@ -463,16 +480,6 @@ function ResultCard({ fish, baitSaved, isNewSpecies }: {
                   padding: '0.15rem 0.5rem', borderRadius: '2rem' }}
               >New Species ✦</motion.span>
             )}
-            {baitSaved && (
-              <motion.span
-                initial={{ scale: 0 }} animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.15 }}
-                className="font-karla font-700 uppercase tracking-[0.12em]"
-                style={{ fontSize: '0.5rem', color: '#4ade80',
-                  background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.35)',
-                  padding: '0.15rem 0.5rem', borderRadius: '2rem' }}
-              >Bait returned ✦</motion.span>
-            )}
           </div>
         </div>
 
@@ -493,6 +500,33 @@ function ResultCard({ fish, baitSaved, isNewSpecies }: {
               Sells for <span style={{ color: '#f0c040' }}>{fish.sell_value.toLocaleString()} ⟡</span>
             </p>
           </div>
+
+          {/* Bait callout — only shown on perfect casts */}
+          {isPerfect && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35, duration: 0.2 }}
+              className="flex items-center gap-2 mt-3 px-3 py-2 rounded-xl"
+              style={{
+                background: baitSaved ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${baitSaved ? 'rgba(74,222,128,0.35)' : 'rgba(255,255,255,0.1)'}`,
+              }}
+            >
+              <span style={{
+                width: 7, height: 7, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
+                background: baitSaved ? '#4ade80' : '#4a4845',
+              }} />
+              <p className="font-karla font-700 uppercase tracking-[0.12em]"
+                style={{ fontSize: '0.6rem', color: baitSaved ? '#4ade80' : '#6a6764' }}>
+                {baitSaved ? 'Bait returned' : 'Bait used'}
+              </p>
+              {!baitSaved && (
+                <p className="font-karla font-400 ml-auto" style={{ fontSize: '0.55rem', color: '#4a4845' }}>
+                  no luck this time
+                </p>
+              )}
+            </motion.div>
+          )}
         </div>
       </motion.div>
     </div>
@@ -667,7 +701,8 @@ export default function FishingGame({
   const [holdOpen, setHoldOpen]       = useState(false)
   const [sellPending, setSellPending] = useState<number | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
-  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean } | null>(null)
+  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean } | null>(null)
+  const [perfectFlash, setPerfectFlash] = useState(false)
   const [missResult, setMissResult] = useState<ZoneType | null>(null)
   const [, startTransition]         = useTransition()
 
@@ -813,6 +848,8 @@ export default function FishingGame({
     }
 
     // Catch/perfect: freeze needle, wait for server before showing result
+    const wasPerfect = zone.type === 'perfect'
+    if (wasPerfect) setPerfectFlash(true)
     phaseRef.current = 'reeling'
     setPhase('reeling')
 
@@ -823,7 +860,7 @@ export default function FishingGame({
         setMissResult('miss')
       } else {
         const { fish, baitSaved, isNewSpecies } = res
-        setCatchResult({ fish, baitSaved, isNewSpecies })
+        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect })
         setInventory(prev => {
           const existing = prev.find(i => i.fish_id === fish.id)
           if (existing) return prev.map(i => i.fish_id === fish.id ? { ...i, quantity: i.quantity + 1 } : i)
@@ -857,6 +894,7 @@ export default function FishingGame({
     setCatchResult(null)
     setMissResult(null)
     setHookedFish(null)
+    setPerfectFlash(false)
     setBaitOpen(false)
     setHoldOpen(false)
     setPhase('idle')
@@ -1022,7 +1060,7 @@ export default function FishingGame({
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: '1rem', paddingBottom: '1rem' }}>
 
                   {catchResult ? (
-                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} />
+                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} />
                   ) : (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
                       <p className="font-cinzel font-700 mb-1"
@@ -1214,6 +1252,46 @@ export default function FishingGame({
                 Buy bait or upgrade gear
               </Link>
             </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Perfect catch flash overlay ── */}
+      <AnimatePresence>
+        {perfectFlash && (
+          <motion.div
+            key="perfect-flash"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            onAnimationComplete={() => {
+              if (perfectFlash) setTimeout(() => setPerfectFlash(false), 900)
+            }}
+            style={{
+              position: 'absolute', inset: 0, zIndex: 30,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              pointerEvents: 'none',
+              background: 'radial-gradient(ellipse 80% 50% at 50% 50%, rgba(245,158,11,0.22) 0%, transparent 70%)',
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.55, y: 16, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 16, delay: 0.05 }}
+              style={{ textAlign: 'center' }}
+            >
+              <p className="font-cinzel font-700 uppercase tracking-[0.28em]"
+                style={{ fontSize: '1.75rem', color: '#f59e0b', textShadow: '0 0 40px rgba(245,158,11,0.9), 0 0 80px rgba(245,158,11,0.4)' }}>
+                Perfect!
+              </p>
+              <motion.p
+                className="font-karla font-600 uppercase tracking-[0.18em]"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+                style={{ fontSize: '0.65rem', color: 'rgba(245,158,11,0.7)', marginTop: '0.35rem' }}>
+                ✦ &nbsp; Flawless cast &nbsp; ✦
+              </motion.p>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
