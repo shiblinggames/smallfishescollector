@@ -135,7 +135,7 @@ function DialSVG({
   return (
     <div style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto' }}>
       <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block' }}>
-        <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.45)" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+        <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
         <g transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
             <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
@@ -150,7 +150,7 @@ function DialSVG({
             return <text key={i} x={mid.x.toFixed(2)} y={mid.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill={pz.color} fontSize="9" opacity="0.85">✕</text>
           })}
         </g>
-        <circle cx={CX} cy={CY} r={INNER_R - 2} fill="rgba(8,18,28,0.82)" />
+        <circle cx={CX} cy={CY} r={INNER_R - 2} fill="rgba(6,14,22,0.97)" />
         <g transform={`rotate(${angle}, ${CX}, ${CY})`}>
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={needleColor} strokeWidth="10" strokeOpacity="0.12" strokeLinecap="round" />
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={needleColor} strokeWidth="2.5" strokeLinecap="round" />
@@ -905,9 +905,9 @@ export default function FishingGame({
 
   function zoneOpacity(zone: ZoneDef): number {
     if (phase === 'catching' && currentZone) {
-      return currentZone === zone ? 0.82 : zone.type === 'perfect' ? 0.45 : zone.type === 'penalty' ? 0.32 : 0.18
+      return currentZone === zone ? 0.95 : zone.type === 'perfect' ? 0.62 : zone.type === 'penalty' ? 0.48 : 0.30
     }
-    return 0.22
+    return 0.35
   }
 
   const hasBait = totalBait() > 0
@@ -965,9 +965,9 @@ export default function FishingGame({
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', marginTop: '0.75rem' }}>
             <AnimatePresence mode="wait">
 
-              {/* ── IDLE ── */}
-              {phase === 'idle' && (
-                <motion.div key="idle"
+              {/* ── IDLE / CASTING / HOOKED — single persistent element, updates in place ── */}
+              {(phase === 'idle' || phase === 'casting' || phase === 'hooked') && (
+                <motion.div key="pre-catch"
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -981,49 +981,52 @@ export default function FishingGame({
                     </p>
                   </div>
 
-                </motion.div>
-              )}
-
-              {/* ── CASTING / HOOKED ── */}
-              {(phase === 'casting' || phase === 'hooked') && (
-                <motion.div key="waiting"
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
-                  style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: '2rem' }}>
-                  {phase === 'hooked' && hookedFish ? (() => {
-                    const r = RARITY[hookedFish.biteRarity] ?? RARITY[1]
-                    const isLegendary = hookedFish.biteRarity === 5
-                    const isEpicPlus  = hookedFish.biteRarity >= 4
-                    return (
-                      <motion.p
-                        className="font-karla font-700 text-center px-4"
-                        animate={isLegendary
-                          ? { scale: [1, 1.06, 1], opacity: [1, 0.75, 1] }
-                          : isEpicPlus ? { opacity: [1, 0.8, 1] } : {}
-                        }
-                        transition={isLegendary || isEpicPlus
-                          ? { duration: 0.8, repeat: Infinity, ease: 'easeInOut' }
-                          : {}
-                        }
-                        style={{
-                          fontSize: isLegendary ? '1rem' : isEpicPlus ? '0.9rem' : '0.82rem',
-                          color: r.color,
-                          textShadow: isEpicPlus ? `0 0 20px ${r.color}80` : 'none',
-                          letterSpacing: isLegendary ? '0.04em' : 'normal',
-                        }}
-                      >
-                        {r.hookedText}
-                      </motion.p>
-                    )
-                  })() : (
-                    <p className="font-karla font-600"
-                      style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.35)' }}>
+                  {phase === 'casting' && (
+                    <p className="font-karla font-600" style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.75)' }}>
                       {selectedZone === 'abyss'       ? 'Something stirs in the deep…' :
                        selectedZone === 'deep'        ? 'Waiting in the dark…' :
                        selectedZone === 'open_waters' ? 'Drifting on the open sea…' :
                                                         'Waiting for a bite…'}
                     </p>
                   )}
+
+                  {phase === 'hooked' && hookedFish && (() => {
+                    const r = RARITY[hookedFish.biteRarity] ?? RARITY[1]
+                    const isLegendary = hookedFish.biteRarity === 5
+                    const isEpicPlus  = hookedFish.biteRarity >= 4
+                    return (
+                      <motion.div
+                        className="px-4 py-3 rounded-xl self-start"
+                        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        style={{
+                          background: `${r.color}18`,
+                          border: `1px solid ${r.color}45`,
+                        }}
+                      >
+                        <motion.p
+                          className="font-karla font-700"
+                          animate={isLegendary
+                            ? { scale: [1, 1.05, 1], opacity: [1, 0.8, 1] }
+                            : isEpicPlus ? { opacity: [1, 0.85, 1] } : {}
+                          }
+                          transition={isLegendary || isEpicPlus
+                            ? { duration: 0.8, repeat: Infinity, ease: 'easeInOut' }
+                            : {}
+                          }
+                          style={{
+                            fontSize: isLegendary ? '1.05rem' : isEpicPlus ? '0.95rem' : '0.88rem',
+                            color: r.color,
+                            textShadow: isEpicPlus ? `0 0 24px ${r.color}90` : `0 0 12px ${r.color}50`,
+                            letterSpacing: isLegendary ? '0.04em' : 'normal',
+                          }}
+                        >
+                          {r.hookedText}
+                        </motion.p>
+                      </motion.div>
+                    )
+                  })()}
+
                 </motion.div>
               )}
 
