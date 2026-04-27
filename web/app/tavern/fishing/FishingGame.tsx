@@ -911,17 +911,33 @@ export default function FishingGame({
 
   const isBobbing = sceneFrame === 'fishing' && (phase === 'casting' || phase === 'hooked')
 
+  const hookedRarity = hookedFish?.biteRarity ?? 1
+  const bgBobAnimate = !isBobbing
+    ? { x: 0, y: 0 }
+    : phase !== 'hooked'
+      ? { x: 0, y: [0, -6, 0] }
+      : hookedRarity >= 5 ? { x: [0, -8, 8, -6, 6, -3, 0], y: [0, 15, -4, 13, -1, 0] }
+      : hookedRarity >= 4 ? { x: [0, -4, 4, -2, 0],         y: [0, 11, -1, 9, 0] }
+      : hookedRarity >= 3 ? { x: 0,                          y: [0, 8, 0] }
+      : hookedRarity >= 2 ? { x: 0,                          y: [0, 5, 0] }
+      :                     { x: 0,                          y: [0, 3, 0] }
+  const bgBobTransition = !isBobbing
+    ? { duration: 0.12 }
+    : phase !== 'hooked'
+      ? { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }
+      : {
+          duration: hookedRarity >= 5 ? 0.32 : hookedRarity >= 4 ? 0.40 : hookedRarity >= 3 ? 0.50 : hookedRarity >= 2 ? 0.60 : 0.72,
+          repeat: Infinity, ease: 'easeInOut',
+        }
+
   return (
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0" style={{ background: '#08121c', zIndex: 40, display: 'flex', justifyContent: 'center' }}>
       <div className="relative w-full max-w-md overflow-hidden" style={{ height: '100%' }}>
 
         {/* Background layers — img tags force eager loading so no black-frame on switch */}
         <motion.div
-          animate={isBobbing ? { y: phase === 'hooked' ? [0, 8, 0] : [0, -6, 0] } : { y: 0 }}
-          transition={isBobbing
-            ? { duration: phase === 'hooked' ? 0.5 : 2.5, repeat: Infinity, ease: 'easeInOut' }
-            : { duration: 0.12 }
-          }
+          animate={bgBobAnimate}
+          transition={bgBobTransition}
           style={{ position: 'absolute', inset: '-14px' }}
         >
           {(Object.keys(FRAME_SRC) as SceneFrame[]).map(frame => (
