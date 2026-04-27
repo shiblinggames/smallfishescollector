@@ -1006,10 +1006,10 @@ export default function FishingGame({
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
 
                   <div>
-                    <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: HABITAT_COLOR[selectedZone], textShadow: `0 0 20px ${HABITAT_COLOR[selectedZone]}60` }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: HABITAT_COLOR[selectedZone], textShadow: `0 1px 4px rgba(0,0,0,1), 0 2px 14px rgba(0,0,0,0.95), 0 0 20px ${HABITAT_COLOR[selectedZone]}80` }}>
                       {HABITAT_LABEL[selectedZone]}
                     </p>
-                    <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.72)' }}>
+                    <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 4px rgba(0,0,0,1), 0 2px 12px rgba(0,0,0,0.95)' }}>
                       {HABITAT_TAGLINE[selectedZone]}
                     </p>
                   </div>
