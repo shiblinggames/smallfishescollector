@@ -650,6 +650,12 @@ export default function FishingGame({
   const [phase, setPhase]           = useState<Phase>('idle')
   const selectedZone = initialZone
   const [selectedBait, setSelectedBait] = useState<string>(() => {
+    // Prefer a bait that's compatible with the selected zone
+    const compatible = initialBait.find(b => {
+      const def = BAITS.find(x => x.type === b.bait_type)
+      return b.quantity > 0 && def?.habitats.includes(initialZone)
+    })
+    if (compatible) return compatible.bait_type
     const first = initialBait.find(b => b.quantity > 0)
     return first?.bait_type ?? 'worm'
   })
@@ -756,6 +762,9 @@ export default function FishingGame({
     ])
 
     if ('error' in res) {
+      setBaitInventory(prev => prev.map(b =>
+        b.bait_type === selectedBait ? { ...b, quantity: b.quantity + 1 } : b
+      ))
       setPhase('idle')
       return
     }
@@ -1046,7 +1055,7 @@ export default function FishingGame({
               )}
             </AnimatePresence>
             <AnimatePresence mode="wait">
-              {phase === 'idle' && hasBait && selectedBaitQty > 0 && (
+              {phase === 'idle' && hasBait && selectedBaitQty > 0 && selectedBaitDef?.habitats.includes(selectedZone) && (
                 <motion.button key="cast" onClick={handleCast}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
@@ -1062,7 +1071,7 @@ export default function FishingGame({
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                 >Cast</motion.button>
               )}
-              {phase === 'idle' && (!hasBait || selectedBaitQty <= 0) && (
+              {phase === 'idle' && (!hasBait || selectedBaitQty <= 0 || !selectedBaitDef?.habitats.includes(selectedZone)) && (
                 <motion.div key="nobait"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="text-center">
