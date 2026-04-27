@@ -459,6 +459,18 @@ export default function TackleShopClient({
                           +{Math.round(rod.rarityBonus * 100)}% rare fish bias
                         </span>
                       )}
+                      {rod.doubleCatchChance > 0 && (
+                        <span className="font-karla font-600"
+                          style={{ fontSize: '0.5rem', color: `${c}bb`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                          {Math.round(rod.doubleCatchChance * 100)}% double catch
+                        </span>
+                      )}
+                      {rod.retryOnMissChance > 0 && (
+                        <span className="font-karla font-600"
+                          style={{ fontSize: '0.5rem', color: `${c}bb`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                          {Math.round(rod.retryOnMissChance * 100)}% miss retry
+                        </span>
+                      )}
                     </div>
                   </div>
 

@@ -152,6 +152,7 @@ export async function reelIn(
   fishId: number,
   result: 'perfect' | 'catch' | 'miss' | 'penalty',
   baitType: string,
+  doubleCatch = false,
 ): Promise<
   | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; newAchievements: string[]; bountyCompletion?: FishingBountyCompletion; xpGained: number; newXP: number }
   | { caught: false; newAchievements: string[] }
@@ -219,7 +220,8 @@ export async function reelIn(
     }).eq('user_id', user.id).eq('fish_id', fishId)
   }
 
-  // Upsert sellable inventory
+  // Upsert sellable inventory (doubleCatch = Twin-Strike rod ability)
+  const catchQty = doubleCatch ? 2 : 1
   const { data: invRow } = await admin
     .from('fish_inventory')
     .select('quantity')
@@ -229,10 +231,10 @@ export async function reelIn(
 
   if (invRow) {
     await admin.from('fish_inventory')
-      .update({ quantity: invRow.quantity + 1 })
+      .update({ quantity: invRow.quantity + catchQty })
       .eq('user_id', user.id).eq('fish_id', fishId)
   } else {
-    await admin.from('fish_inventory').insert({ user_id: user.id, fish_id: fishId, quantity: 1 })
+    await admin.from('fish_inventory').insert({ user_id: user.id, fish_id: fishId, quantity: catchQty })
   }
 
   // Auto-upgrade line tier on new species unlock

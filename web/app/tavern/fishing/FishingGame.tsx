@@ -297,6 +297,8 @@ function UnifiedGearDrawer({
                               }
                               {r.catchZoneBonus > 0 && <StatPill label={`+${r.catchZoneBonus}° catch zone`} color={r.color} />}
                               {r.rarityBonus > 0 && <StatPill label={`+${Math.round(r.rarityBonus * 100)}% rare bias`} color={r.color} />}
+                              {r.doubleCatchChance > 0 && <StatPill label={`${Math.round(r.doubleCatchChance * 100)}% double catch`} color={r.color} />}
+                              {r.retryOnMissChance > 0 && <StatPill label={`${Math.round(r.retryOnMissChance * 100)}% miss retry`} color={r.color} />}
                             </div>
                           </div>
                           {isEquipped
@@ -473,12 +475,13 @@ const FRAME_SRC: Record<SceneFrame, string> = {
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
   isPerfect: boolean
   xpGained: number
+  doubleCatch?: boolean
 }) {
   const habitatColor = HABITAT_COLOR[fish.habitat] ?? '#888'
   const habitatLabel = HABITAT_LABEL[fish.habitat] ?? fish.habitat
@@ -529,6 +532,23 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained }: {
             </div>
           </div>
           <span style={{ fontSize: '0.7rem', color: '#fbbf24' }}>✦</span>
+        </motion.div>
+      )}
+
+      {/* Double catch banner */}
+      {doubleCatch && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+          className="flex items-center justify-center gap-2 mb-2 py-2 px-3 rounded-xl"
+          style={{ background: 'rgba(4,8,0,0.88)', border: '1px solid rgba(251,191,36,0.45)' }}
+        >
+          <span style={{ fontSize: '0.65rem', color: '#fbbf24' }}>✦</span>
+          <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
+            style={{ fontSize: '0.68rem', color: '#fbbf24', textShadow: '0 0 10px rgba(251,191,36,0.6)' }}>
+            Twin-Strike — ×2 Catch
+          </p>
+          <span style={{ fontSize: '0.65rem', color: '#fbbf24' }}>✦</span>
         </motion.div>
       )}
 
@@ -823,9 +843,10 @@ export default function FishingGame({
   const [gearOpen, setGearOpen]     = useState(false)
   const [sellPending, setSellPending] = useState<number | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
-  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number } | null>(null)
+  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean } | null>(null)
   const [bountyNotif, setBountyNotif] = useState<FishingBountyCompletion | null>(null)
   const [perfectFlash, setPerfectFlash] = useState(false)
+  const [retryFlash, setRetryFlash] = useState(false)
   const [missResult, setMissResult] = useState<ZoneType | null>(null)
   const [fishingXP, setFishingXP]   = useState(initialFishingXP)
   const [xpPopup, setXpPopup]       = useState<{ value: number; id: number } | null>(null)
@@ -838,6 +859,7 @@ export default function FishingGame({
   // Needle state
   const [angle, setAngle]           = useState(270)
   const [zoneRotation, setZoneRotation] = useState(0)
+  const [retryKey, setRetryKey]     = useState(0)
   const angleRef        = useRef(270)
   const speedRef        = useRef(0)
   const dirRef          = useRef(1)
@@ -908,7 +930,8 @@ export default function FishingGame({
       setAngle(angleRef.current)
     }, 50)
     return () => { if (animRef.current) { clearInterval(animRef.current); animRef.current = null } }
-  }, [phase, hookedFish, reel.needleSpeedMultiplier])
+  // retryKey increments on Second Wind retry to restart animation with fresh randomization
+  }, [phase, hookedFish, reel.needleSpeedMultiplier, retryKey])
 
   function deductBait(type: string, qty = 1) {
     setBaitInventory(prev => prev.map(b =>
@@ -973,6 +996,25 @@ export default function FishingGame({
     const isCatch = zone.type === 'catch' || zone.type === 'perfect'
 
     if (!isCatch) {
+      // Second Wind rod: 25% chance to retry the dial on miss or snag
+      if (rod.retryOnMissChance > 0 && Math.random() < rod.retryOnMissChance) {
+        // Restore the bait lost to snag before retrying
+        if (zone.type === 'penalty') {
+          setBaitInventory(prev => prev.map(b =>
+            b.bait_type === selectedBaitRef.current ? { ...b, quantity: b.quantity + 1 } : b
+          ))
+        }
+        setRetryFlash(true)
+        setTimeout(() => setRetryFlash(false), 1200)
+        const rot = Math.floor(Math.random() * 360)
+        setZoneRotation(rot)
+        angleRef.current = Math.random() * 360
+        dirRef.current = 1
+        setAngle(angleRef.current)
+        setRetryKey(k => k + 1)
+        return
+      }
+
       // Miss/penalty: show result immediately, fire server call in background
       setMissResult(zone.type)
       setCatchResult(null)
@@ -990,14 +1032,17 @@ export default function FishingGame({
     phaseRef.current = 'reeling'
     setPhase('reeling')
 
+    // Twin-Strike rod: 25% chance to catch 2 fish
+    const doubleCatch = rod.doubleCatchChance > 0 && Math.random() < rod.doubleCatchChance
+
     startTransition(async () => {
-      const res = await reelIn(hookedFishRef.current!.fishId, zone.type as 'perfect' | 'catch', selectedBaitRef.current)
+      const res = await reelIn(hookedFishRef.current!.fishId, zone.type as 'perfect' | 'catch', selectedBaitRef.current, doubleCatch)
 
       if ('error' in res || !res.caught) {
         setMissResult('miss')
       } else {
         const { fish, baitSaved, isNewSpecies, bountyCompletion, xpGained, newXP } = res
-        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained })
+        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch })
         if (bountyCompletion) setBountyNotif(bountyCompletion)
         const oldLevel = getLevelFromXP(fishingXP)
         const newLevel = getLevelFromXP(newXP)
@@ -1006,8 +1051,9 @@ export default function FishingGame({
         if (newLevel > oldLevel) setLevelUpNotif(newLevel)
         setInventory(prev => {
           const existing = prev.find(i => i.fish_id === fish.id)
-          if (existing) return prev.map(i => i.fish_id === fish.id ? { ...i, quantity: i.quantity + 1 } : i)
-          return [...prev, { fish_id: fish.id, quantity: 1, fish_species: fish }]
+          const addQty = doubleCatch ? 2 : 1
+          if (existing) return prev.map(i => i.fish_id === fish.id ? { ...i, quantity: i.quantity + addQty } : i)
+          return [...prev, { fish_id: fish.id, quantity: addQty, fish_species: fish }]
         })
         if (baitSaved) {
           setBaitInventory(prev => prev.map(b =>
@@ -1272,10 +1318,10 @@ export default function FishingGame({
                         <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
                           style={{
                             fontSize: '0.88rem',
-                            color: currentZone?.color ?? '#e8e4de',
-                            textShadow: currentZone ? `0 0 16px ${currentZone.color}70` : 'none',
+                            color: retryFlash ? '#fb923c' : (currentZone?.color ?? '#e8e4de'),
+                            textShadow: retryFlash ? '0 0 16px rgba(251,146,60,0.7)' : currentZone ? `0 0 16px ${currentZone.color}70` : 'none',
                           }}>
-                          {phase === 'reeling' ? 'Reeling in…' : (currentZone?.label ?? '')}
+                          {retryFlash ? 'Second Wind!' : phase === 'reeling' ? 'Reeling in…' : (currentZone?.label ?? '')}
                         </p>
                       </div>
                     )}
@@ -1322,7 +1368,7 @@ export default function FishingGame({
                   )}
 
                   {catchResult ? (
-                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} xpGained={catchResult.xpGained} />
+                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} xpGained={catchResult.xpGained} doubleCatch={catchResult.doubleCatch} />
                   ) : (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
                       <p className="font-cinzel font-700 mb-1"

@@ -7,63 +7,75 @@ export interface RodDef {
   rarityBonus: number      // shifts rarity distribution toward rares (0 = no effect, only Legendary)
   biteIntervalMs: number   // time between bite opportunities (lower = faster)
   catchZoneBonus: number   // degrees added to catch zone (higher = easier to land)
+  doubleCatchChance: number  // chance to catch 2 fish on a successful catch (0 = no effect)
+  retryOnMissChance: number  // chance to retry the dial on a miss or snag (0 = no effect)
 }
 
 export const RODS: RodDef[] = [
   {
     tier: 0, name: 'Bamboo Rod', cost: 0,
     description: 'A simple bamboo pole. Gets the job done.',
-    color: '#a07858', rarityBonus: 0, biteIntervalMs: 3800, catchZoneBonus: 0,
+    color: '#a07858', rarityBonus: 0, biteIntervalMs: 3800, catchZoneBonus: 0, doubleCatchChance: 0, retryOnMissChance: 0,
   },
   {
     tier: 1, name: 'Driftwood Staff', cost: 1500,
     description: 'Heavy and slow, but the wide tip gives you a much more forgiving catch window.',
-    color: '#b8956a', rarityBonus: 0, biteIntervalMs: 4500, catchZoneBonus: 8,
+    color: '#b8956a', rarityBonus: 0, biteIntervalMs: 4500, catchZoneBonus: 8, doubleCatchChance: 0, retryOnMissChance: 0,
   },
   {
     tier: 2, name: 'Fiberglass Rod', cost: 2500,
     description: 'Lighter than bamboo. Fish bite noticeably faster.',
-    color: '#9ca3af', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
+    color: '#9ca3af', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0, doubleCatchChance: 0, retryOnMissChance: 0,
   },
   {
     tier: 3, name: 'Reef Rod', cost: 5000,
     description: 'Balanced offshore rod. Decent speed with a slightly wider catch zone.',
-    color: '#34d399', rarityBonus: 0, biteIntervalMs: 3200, catchZoneBonus: 5,
+    color: '#34d399', rarityBonus: 0, biteIntervalMs: 3200, catchZoneBonus: 5, doubleCatchChance: 0, retryOnMissChance: 0,
   },
   {
     tier: 4, name: 'Telescoping Rod', cost: 8000,
     description: 'Precision-balanced for speed. Fish bite quickly, no frills.',
-    color: '#60a5fa', rarityBonus: 0, biteIntervalMs: 2400, catchZoneBonus: 0,
+    color: '#60a5fa', rarityBonus: 0, biteIntervalMs: 2400, catchZoneBonus: 0, doubleCatchChance: 0, retryOnMissChance: 0,
   },
   {
     tier: 5, name: 'Moonwood Staff', cost: 12000,
     description: 'Carved from moonlit driftwood. Slow bites, but the catch window is enormous.',
-    color: '#a78bfa', rarityBonus: 0, biteIntervalMs: 4000, catchZoneBonus: 12,
+    color: '#a78bfa', rarityBonus: 0, biteIntervalMs: 4000, catchZoneBonus: 12, doubleCatchChance: 0, retryOnMissChance: 0,
   },
   {
     tier: 6, name: 'Graphite Rod', cost: 20000,
     description: 'Lightweight and stiff. Bites come fast.',
-    color: '#64748b', rarityBonus: 0, biteIntervalMs: 2200, catchZoneBonus: 0,
+    color: '#64748b', rarityBonus: 0, biteIntervalMs: 2200, catchZoneBonus: 0, doubleCatchChance: 0, retryOnMissChance: 0,
   },
   {
     tier: 7, name: "Navigator's Rod", cost: 35000,
     description: 'A well-balanced deep-sea rod. Good speed and a wider-than-average catch window.',
-    color: '#38bdf8', rarityBonus: 0, biteIntervalMs: 2800, catchZoneBonus: 7,
+    color: '#38bdf8', rarityBonus: 0, biteIntervalMs: 2800, catchZoneBonus: 7, doubleCatchChance: 0, retryOnMissChance: 0,
   },
   {
     tier: 8, name: 'Carbon Rod', cost: 60000,
     description: 'Precision-engineered carbon blank. Very fast bites.',
-    color: '#4ade80', rarityBonus: 0, biteIntervalMs: 1800, catchZoneBonus: 0,
+    color: '#4ade80', rarityBonus: 0, biteIntervalMs: 1800, catchZoneBonus: 0, doubleCatchChance: 0, retryOnMissChance: 0,
   },
   {
     tier: 9, name: 'Deep Diver', cost: 90000,
     description: 'Built for the abyss. Slower cadence, but the widest catch window money can buy.',
-    color: '#22d3ee', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 14,
+    color: '#22d3ee', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 14, doubleCatchChance: 0, retryOnMissChance: 0,
   },
   {
     tier: 10, name: 'Legendary Rod', cost: 200000,
     description: 'Forged from the mast of a sunken galleon. The rarest fish cannot resist.',
-    color: '#ff6b35', rarityBonus: 0.50, biteIntervalMs: 1400, catchZoneBonus: 0,
+    color: '#ff6b35', rarityBonus: 0.50, biteIntervalMs: 1400, catchZoneBonus: 0, doubleCatchChance: 0, retryOnMissChance: 0,
+  },
+  {
+    tier: 11, name: 'Twin-Strike', cost: 45000,
+    description: 'Two hooks on one line. When luck strikes, they both bite.',
+    color: '#fbbf24', rarityBonus: 0, biteIntervalMs: 3200, catchZoneBonus: 0, doubleCatchChance: 0.25, retryOnMissChance: 0,
+  },
+  {
+    tier: 12, name: 'Second Wind', cost: 28000,
+    description: "Stubborn rod. When you miss, sometimes it refuses to let go.",
+    color: '#fb923c', rarityBonus: 0, biteIntervalMs: 3200, catchZoneBonus: 0, doubleCatchChance: 0, retryOnMissChance: 0.25,
   },
 ]
 
