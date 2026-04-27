@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, sellFish, type FishSpecies } from './actions'
+import { castLine, reelIn, sellFish, type FishSpecies, type FishingBountyCompletion } from './actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { getHook } from '@/lib/hooks'
 import { getRod } from '@/lib/rods'
@@ -684,6 +684,7 @@ export default function FishingGame({
   const [sellPending, setSellPending] = useState<number | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
   const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean } | null>(null)
+  const [bountyNotif, setBountyNotif] = useState<FishingBountyCompletion | null>(null)
   const [perfectFlash, setPerfectFlash] = useState(false)
   const [missResult, setMissResult] = useState<ZoneType | null>(null)
   const [, startTransition]         = useTransition()
@@ -844,8 +845,9 @@ export default function FishingGame({
       if ('error' in res || !res.caught) {
         setMissResult('miss')
       } else {
-        const { fish, baitSaved, isNewSpecies } = res
+        const { fish, baitSaved, isNewSpecies, bountyCompletion } = res
         setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect })
+        if (bountyCompletion) setBountyNotif(bountyCompletion)
         setInventory(prev => {
           const existing = prev.find(i => i.fish_id === fish.id)
           if (existing) return prev.map(i => i.fish_id === fish.id ? { ...i, quantity: i.quantity + 1 } : i)
@@ -881,6 +883,7 @@ export default function FishingGame({
     setMissResult(null)
     setHookedFish(null)
     setPerfectFlash(false)
+    setBountyNotif(null)
     setBaitOpen(false)
     setHoldOpen(false)
     setGearOpen(false)
@@ -1111,6 +1114,34 @@ export default function FishingGame({
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: '1rem', paddingBottom: '1rem' }}>
+
+                  {bountyNotif && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 22, delay: 0.3 }}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl mb-3"
+                      style={{
+                        background: `${HABITAT_COLOR[bountyNotif.tier] ?? '#888'}14`,
+                        border: `1px solid ${HABITAT_COLOR[bountyNotif.tier] ?? '#888'}45`,
+                      }}
+                    >
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: `${HABITAT_COLOR[bountyNotif.tier] ?? '#888'}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span style={{ fontSize: '1rem' }}>🎯</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.48rem', color: HABITAT_COLOR[bountyNotif.tier] ?? '#888', marginBottom: 1 }}>
+                          Weekly Bounty
+                        </p>
+                        <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>
+                          {bountyNotif.fishName} caught!
+                        </p>
+                        <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#a0a09a' }}>
+                          +{bountyNotif.reward} ⟡{bountyNotif.packAwarded ? ' + 1 Pack' : ''} · visit Bounties to claim
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
 
                   {catchResult ? (
                     <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} />

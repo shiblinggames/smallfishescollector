@@ -138,9 +138,6 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     setIsGodPack(result.isGodPack ?? false)
     setRankUp(result.rankUp ?? null)
     pendingAchievements.current = result.newAchievements ?? []
-    for (const completion of result.bountyCompletions ?? []) {
-      window.dispatchEvent(new CustomEvent('bounty-completed', { detail: { tier: completion.tier } }))
-    }
     setCards(result.drawn)
     setFlipped(new Array(5).fill(false))
     setGlowClasses(new Array(5).fill(''))

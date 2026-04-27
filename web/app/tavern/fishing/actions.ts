@@ -6,9 +6,17 @@ import { getRod } from '@/lib/rods'
 import { getHook } from '@/lib/hooks'
 import { getBait } from '@/lib/bait'
 import { checkAchievements } from '@/lib/checkAchievements'
+import { getWeekStart } from '@/lib/weekStart'
 
 function today() {
   return new Date().toISOString().split('T')[0]
+}
+
+export interface FishingBountyCompletion {
+  tier: string
+  fishName: string
+  reward: number
+  packAwarded: boolean
 }
 
 export type FishSpecies = {
@@ -151,7 +159,7 @@ export async function reelIn(
   result: 'perfect' | 'catch' | 'miss' | 'penalty',
   baitType: string,
 ): Promise<
-  | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; newAchievements: string[] }
+  | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; newAchievements: string[]; bountyCompletion?: FishingBountyCompletion }
   | { caught: false; newAchievements: string[] }
   | { error: string }
 > {
@@ -265,14 +273,56 @@ export async function reelIn(
     }
   }
 
-  const newAchievements = await checkAchievements(user.id, {
-    type: 'fishing',
-    result,
-    depthId: ['shallows', 'open_waters', 'deep', 'abyss'].indexOf(fish.habitat),
-    abyssStreak: newAbyssStreak,
-  })
+  // Check weekly bounty and achievements in parallel
+  const weekStart = getWeekStart()
+  type BountyProgressRow = {
+    shallows_completed: boolean | null
+    open_waters_completed: boolean | null
+    deep_completed: boolean | null
+    abyss_completed: boolean | null
+  }
+  const [newAchievements, bountyRowRes, bountyProgressRes] = await Promise.all([
+    checkAchievements(user.id, {
+      type: 'fishing',
+      result,
+      depthId: ['shallows', 'open_waters', 'deep', 'abyss'].indexOf(fish.habitat),
+      abyssStreak: newAbyssStreak,
+    }),
+    admin.from('weekly_bounties')
+      .select('shallows_fish_id, open_waters_fish_id, deep_fish_id, abyss_fish_id')
+      .eq('week_start', weekStart)
+      .maybeSingle(),
+    admin.from('weekly_bounty_progress')
+      .select('shallows_completed, open_waters_completed, deep_completed, abyss_completed')
+      .eq('user_id', user.id)
+      .eq('week_start', weekStart)
+      .maybeSingle(),
+  ])
 
-  return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, newAchievements }
+  let bountyCompletion: FishingBountyCompletion | undefined
+  const bountyRow = bountyRowRes.data as { shallows_fish_id: number; open_waters_fish_id: number; deep_fish_id: number; abyss_fish_id: number } | null
+  const bountyProgress = bountyProgressRes.data as BountyProgressRow | null
+
+  if (bountyRow) {
+    const BOUNTY_CHECKS = [
+      { tier: 'shallows',    fishId: bountyRow.shallows_fish_id,    completedKey: 'shallows_completed'    as const, reward: 50,  packAwarded: false },
+      { tier: 'open_waters', fishId: bountyRow.open_waters_fish_id, completedKey: 'open_waters_completed' as const, reward: 150, packAwarded: false },
+      { tier: 'deep',        fishId: bountyRow.deep_fish_id,         completedKey: 'deep_completed'         as const, reward: 300, packAwarded: false },
+      { tier: 'abyss',       fishId: bountyRow.abyss_fish_id,        completedKey: 'abyss_completed'        as const, reward: 500, packAwarded: true  },
+    ]
+    for (const check of BOUNTY_CHECKS) {
+      if (!bountyProgress?.[check.completedKey] && fish.id === check.fishId) {
+        bountyCompletion = { tier: check.tier, fishName: fish.name, reward: check.reward, packAwarded: check.packAwarded }
+        await admin.from('weekly_bounty_progress').upsert(
+          { user_id: user.id, week_start: weekStart, [check.completedKey]: true },
+          { onConflict: 'user_id,week_start' }
+        )
+        break
+      }
+    }
+  }
+
+  return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, newAchievements, bountyCompletion }
 }
 
 // Sell fish from inventory

@@ -33,20 +33,12 @@ function BountyRow({ fish, label, color, reward, completed }: {
         transition: 'opacity 0.3s ease',
       }}
     >
-      {/* Fish art */}
+      {/* Zone dot */}
       <div style={{
-        width: 36, height: 36, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+        width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
         background: 'rgba(255,255,255,0.06)',
         border: `1px solid ${completed ? 'rgba(255,255,255,0.1)' : color}40`,
-      }}>
-        {fish.filename && (
-          <img
-            src={fishImageUrl(fish.filename)}
-            alt={fish.name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        )}
-      </div>
+      }} />
 
       {/* Labels */}
       <div className="flex-1 min-w-0">

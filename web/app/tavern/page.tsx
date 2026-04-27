@@ -42,6 +42,8 @@ export default async function TavernPage() {
   const crownCapReached = dailyWagered >= DAILY_CAP
   const bountyProgress = bounties?.progress
   const bountyCount = bountyProgress ? Object.values(bountyProgress).filter(Boolean).length : 0
+  const bountyClaimed = bounties?.claimed
+  const bountyClaimedCount = bountyClaimed ? Object.values(bountyClaimed).filter(Boolean).length : 0
   const bountyAllDone = bountyCount === 4
 
 
@@ -179,10 +181,15 @@ export default async function TavernPage() {
           <div className="px-6 max-w-4xl mx-auto mb-6" style={{ position: 'relative', zIndex: 1 }}>
             <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-2" style={{ fontSize: '0.6rem' }}>Weekly</p>
             <GameCard
-              href="/packs"
+              href="/tavern/bounties"
               eyebrow="Weekly"
               title="Bounty"
-              statusText={bountyAllDone ? 'All complete' : bountyCount > 0 ? `${bountyCount} / 4 complete` : 'New targets this week'}
+              statusText={
+                bountyClaimedCount === 4 ? 'All claimed ✓' :
+                bountyAllDone ? 'All caught — claim rewards' :
+                bountyCount > 0 ? `${bountyCount} / 4 caught` :
+                'New targets this week'
+              }
               info={[
                 `Shallows — ${bounties.shallows.name} · 50 ⟡`,
                 `Open Waters — ${bounties.openWaters.name} · 150 ⟡`,
@@ -190,7 +197,7 @@ export default async function TavernPage() {
                 `Abyss — ${bounties.abyss.name} · 500 ⟡ + 1 pack`,
               ]}
               icon={<BountyIcon />}
-              completed={bountyAllDone}
+              completed={bountyClaimedCount === 4}
               variant="featured"
             />
           </div>

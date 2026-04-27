@@ -7,7 +7,6 @@ import { rarityFromVariant } from '@/lib/variants'
 import { revalidatePath } from 'next/cache'
 import type { CardVariant, DrawnCard } from '@/lib/types'
 import { checkAchievements } from '@/lib/checkAchievements'
-import { getWeekStart } from '@/lib/weekStart'
 
 const PACK_GEM_COSTS: Record<number, number> = { 1: 100, 10: 900 }
 
@@ -53,13 +52,6 @@ function getRankIndex(uniqueVariants: number): number {
   return 0
 }
 
-export interface BountyCompletion {
-  tier: string
-  fishName: string
-  reward: number
-  packAwarded: boolean
-}
-
 export interface OpenPackResponse {
   drawn?: DrawnCard[]
   newVariantIds?: number[]
@@ -68,7 +60,6 @@ export interface OpenPackResponse {
   packsSinceLegendary?: number
   rankUp?: { rank: string; bonus: number }
   newAchievements?: string[]
-  bountyCompletions?: BountyCompletion[]
   error?: string
 }
 
@@ -129,61 +120,14 @@ export async function openPack(): Promise<OpenPackResponse> {
   const newRankIndex = getRankIndex(newUniqueCount)
   const rankUp = newRankIndex > oldRankIndex ? RANK_THRESHOLDS[newRankIndex] : null
 
-  // Check weekly bounties
-  const weekStart = getWeekStart()
-  const [{ data: bountyRow }, { data: existingProgress }] = await Promise.all([
-    admin.from('weekly_bounties')
-      .select('shallows_card_id, open_waters_card_id, deep_card_id, abyss_card_id')
-      .eq('week_start', weekStart)
-      .maybeSingle(),
-    admin.from('weekly_bounty_progress')
-      .select('shallows_completed, open_waters_completed, deep_completed, abyss_completed')
-      .eq('user_id', user.id)
-      .eq('week_start', weekStart)
-      .maybeSingle(),
-  ])
-
-  const bountyCompletions: BountyCompletion[] = []
-  const bountyProgressUpdate: Record<string, unknown> = {}
-  let bountyDoubloons = 0
-  let bountyPackGain = 0
-
-  if (bountyRow) {
-    const drawnCardIds = new Set(drawn.map((d) => d.cardId))
-    const completedMap = {
-      shallows:    existingProgress?.shallows_completed    ?? false,
-      open_waters: existingProgress?.open_waters_completed ?? false,
-      deep:        existingProgress?.deep_completed        ?? false,
-      abyss:       existingProgress?.abyss_completed       ?? false,
-    }
-    const BOUNTY_CHECKS = [
-      { tier: 'shallows',    field: 'shallows'    as const, cardId: bountyRow.shallows_card_id,    reward: 50,  packAwarded: false },
-      { tier: 'open_waters', field: 'open_waters' as const, cardId: bountyRow.open_waters_card_id, reward: 150, packAwarded: false },
-      { tier: 'deep',        field: 'deep'        as const, cardId: bountyRow.deep_card_id,         reward: 300, packAwarded: false },
-      { tier: 'abyss',       field: 'abyss'       as const, cardId: bountyRow.abyss_card_id,        reward: 500, packAwarded: true  },
-    ]
-
-    for (const check of BOUNTY_CHECKS) {
-      if (!completedMap[check.field] && drawnCardIds.has(check.cardId)) {
-        const matchingCard = drawn.find((d) => d.cardId === check.cardId)
-        bountyCompletions.push({ tier: check.tier, fishName: matchingCard?.name ?? '', reward: check.reward, packAwarded: check.packAwarded })
-        bountyProgressUpdate[`${check.field}_completed`] = true
-        bountyProgressUpdate[`${check.field}_claimed_at`] = new Date().toISOString()
-        bountyDoubloons += check.reward
-        if (check.packAwarded) bountyPackGain++
-      }
-    }
-  }
-
-  // Update tide counter + rank + doubloons
+  // Update packs_since_legendary counter + rank + doubloons
   const hitLegendary = drawn.some((d) => ['Legendary', 'Mythic', 'Divine'].includes(rarityFromVariant(d.variantName, d.dropWeight)))
-  const totalDoubloonGain = (rankUp?.bonus ?? 0) + bountyDoubloons
+  const rankUpBonus = rankUp?.bonus ?? 0
   const profileUpdates: Record<string, unknown> = {
     packs_since_legendary: hitLegendary ? 0 : (profile.packs_since_legendary ?? 0) + 1,
   }
   if (rankUp) profileUpdates.highest_rank_claimed = newRankIndex
-  if (totalDoubloonGain > 0) profileUpdates.doubloons = (profile.doubloons ?? 0) + totalDoubloonGain
-  if (bountyPackGain > 0) profileUpdates.packs_available = decremented.packs_available + bountyPackGain
+  if (rankUpBonus > 0) profileUpdates.doubloons = (profile.doubloons ?? 0) + rankUpBonus
 
   const writes: any[] = [
     admin.from('profiles').update(profileUpdates).eq('id', user.id),
@@ -196,22 +140,6 @@ export async function openPack(): Promise<OpenPackResponse> {
       reason: `Rank up: ${rankUp.name}`,
     }))
   }
-  if (Object.keys(bountyProgressUpdate).length > 0) {
-    const TIER_LABELS: Record<string, string> = { shallows: 'Shallows', open_waters: 'Open Waters', deep: 'Deep', abyss: 'Abyss' }
-    writes.push(
-      admin.from('weekly_bounty_progress').upsert(
-        { user_id: user.id, week_start: weekStart, ...bountyProgressUpdate },
-        { onConflict: 'user_id,week_start' }
-      )
-    )
-    for (const c of bountyCompletions) {
-      writes.push(admin.from('doubloon_transactions').insert({
-        user_id: user.id,
-        amount: c.reward,
-        reason: `Weekly bounty (${TIER_LABELS[c.tier]}): ${c.fishName}`,
-      }))
-    }
-  }
   await Promise.all(writes)
 
   const newAchievements = await checkAchievements(user.id, { type: 'pack', drawn })
@@ -219,11 +147,10 @@ export async function openPack(): Promise<OpenPackResponse> {
   return {
     drawn,
     newVariantIds: newCards.map((d) => d.variantId),
-    packsRemaining: decremented.packs_available + bountyPackGain,
+    packsRemaining: decremented.packs_available,
     isGodPack,
     packsSinceLegendary: hitLegendary ? 0 : (profile.packs_since_legendary ?? 0) + 1,
     rankUp: rankUp ? { rank: rankUp.name, bonus: rankUp.bonus } : undefined,
     newAchievements,
-    bountyCompletions: bountyCompletions.length > 0 ? bountyCompletions : undefined,
   }
 }
