@@ -138,10 +138,10 @@ function DialSVG({
             const gS = polar(gRad, perfectZone.from + GAP), gE = polar(gRad, perfectZone.to - GAP)
             const glowArcD = `M ${gS.x.toFixed(2)} ${gS.y.toFixed(2)} A ${gRad} ${gRad} 0 0 1 ${gE.x.toFixed(2)} ${gE.y.toFixed(2)}`
 
-            // Bracket tick marks at edges
-            const tickOuter = OUTER_R + 9, tickInner = OUTER_R + 2
-            const tL0 = polar(tickInner, perfectZone.from), tL1 = polar(tickOuter, perfectZone.from)
-            const tR0 = polar(tickInner, perfectZone.to),   tR1 = polar(tickOuter, perfectZone.to)
+            // Bracket tick marks at edges, pointing inward toward the needle
+            const tickOuter = INNER_R - 2, tickInner = INNER_R - 10
+            const tL0 = polar(tickOuter, perfectZone.from), tL1 = polar(tickInner, perfectZone.from)
+            const tR0 = polar(tickOuter, perfectZone.to),   tR1 = polar(tickInner, perfectZone.to)
 
             // Star label
             const star = polar(OUTER_R + 16, midDeg)
