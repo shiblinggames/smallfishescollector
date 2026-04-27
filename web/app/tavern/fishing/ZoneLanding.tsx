@@ -76,7 +76,7 @@ export default function ZoneLanding({
   onSelect: (zone: ZoneKey) => void
 }) {
   const rod = getRod(rodTier)
-  const [guideOpen, setGuideOpen] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
 
   return (
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0"
@@ -98,18 +98,35 @@ export default function ZoneLanding({
           overflowY: 'auto',
         }}>
           {/* Header */}
-          <div className="mb-5">
-            <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
-              style={{ fontSize: '1.1rem', color: '#f0ede8' }}>
-              Fishing
-            </p>
-            <p className="font-karla font-400" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)' }}>
-              Choose your zone
-            </p>
+          <div className="flex items-start justify-between mb-5">
+            <div>
+              <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
+                style={{ fontSize: '1.1rem', color: '#f0ede8' }}>
+                Fishing
+              </p>
+              <p className="font-karla font-400" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)' }}>
+                Choose your zone
+              </p>
+            </div>
+            <button
+              onClick={() => setModalOpen(true)}
+              aria-label="How fishing works"
+              style={{
+                width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.18)',
+                color: 'rgba(255,255,255,0.6)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', touchAction: 'manipulation',
+                fontSize: '0.75rem', fontFamily: 'serif', fontStyle: 'italic', fontWeight: 700,
+              }}
+            >
+              i
+            </button>
           </div>
 
           {/* Zone cards */}
-          <div className="flex flex-col gap-3 mb-4">
+          <div className="flex flex-col gap-3">
             {ZONES.map((zone, i) => {
               const accessible = rod.habitats.includes(zone)
               const color = HABITAT_COLOR[zone]
@@ -204,55 +221,69 @@ export default function ZoneLanding({
               )
             })}
           </div>
-          {/* How it works */}
-          <div style={{
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 14,
-            overflow: 'hidden',
-          }}>
-            <button
-              onClick={() => setGuideOpen(o => !o)}
-              className="w-full flex items-center justify-between font-karla font-600"
-              style={{
-                padding: '0.85rem 1rem',
-                background: 'rgba(255,255,255,0.04)',
-                color: 'rgba(255,255,255,0.6)',
-                fontSize: '0.72rem',
-                cursor: 'pointer',
-                touchAction: 'manipulation',
-              }}
-            >
-              <span>How fishing works</span>
-              <span style={{ transition: 'transform 0.2s', transform: guideOpen ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block' }}>▾</span>
-            </button>
+        </div>
 
-            <AnimatePresence initial={false}>
-              {guideOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.22, ease: 'easeInOut' }}
-                  style={{ overflow: 'hidden' }}
-                >
-                  <div className="flex flex-col gap-3" style={{ padding: '0.75rem 1rem 1rem' }}>
+        {/* Info modal */}
+        <AnimatePresence>
+          {modalOpen && (
+            <>
+              <motion.div
+                key="backdrop"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                onClick={() => setModalOpen(false)}
+                style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50 }}
+              />
+              <motion.div
+                key="modal"
+                initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.97 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                style={{
+                  position: 'absolute', top: '10%', left: '1rem', right: '1rem',
+                  background: '#0d1e2e',
+                  border: '1px solid rgba(255,255,255,0.14)',
+                  borderRadius: 18,
+                  zIndex: 51,
+                  maxHeight: '78%',
+                  display: 'flex', flexDirection: 'column',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Modal header */}
+                <div className="flex items-center justify-between" style={{ padding: '1rem 1.1rem 0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <p className="font-cinzel font-700 uppercase tracking-[0.15em]" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>
+                    How Fishing Works
+                  </p>
+                  <button
+                    onClick={() => setModalOpen(false)}
+                    style={{ color: 'rgba(255,255,255,0.4)', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none', padding: '0.1rem 0.3rem' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Modal body */}
+                <div style={{ overflowY: 'auto', padding: '0.9rem 1.1rem 1.1rem' }}>
+                  <div className="flex flex-col gap-4">
                     {HOW_IT_WORKS.map(({ title, body }) => (
                       <div key={title}>
-                        <p className="font-karla font-700 mb-0.5" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.8)' }}>
+                        <p className="font-karla font-700 mb-1" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.88)' }}>
                           {title}
                         </p>
-                        <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
+                        <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.55 }}>
                           {body}
                         </p>
                       </div>
                     ))}
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
-        </div>
       </div>
     </div>
   )
