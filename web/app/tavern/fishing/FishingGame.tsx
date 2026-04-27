@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, sellFish, type FishSpecies } from './actions'
-import { buildFishZones, FISH_DIFFICULTY_SPEED, type ZoneDef, type ZoneType } from './depths'
+import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, type ZoneDef, type ZoneType } from './depths'
 import { getHook } from '@/lib/hooks'
 import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
@@ -734,12 +734,13 @@ export default function FishingGame({
       return
     }
     const diffSpeed = FISH_DIFFICULTY_SPEED[Math.max(0, Math.min(4, hookedFish.catchDifficulty - 1))]
+    const zoneDiff  = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
     const baseMin = diffSpeed.speedMin * reel.needleSpeedMultiplier
     const baseMax = diffSpeed.speedMax * reel.needleSpeedMultiplier
 
     speedRef.current = baseMin + Math.random() * (baseMax - baseMin)
     tickRef.current = 0
-    nextChgRef.current = diffSpeed.changeMin + Math.floor(Math.random() * (diffSpeed.changeMax - diffSpeed.changeMin))
+    nextChgRef.current = zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))
 
     animRef.current = setInterval(() => {
       if (phaseRef.current !== 'catching') return
@@ -747,8 +748,8 @@ export default function FishingGame({
       tickRef.current++
       if (tickRef.current >= nextChgRef.current) {
         speedRef.current = baseMin + Math.random() * (baseMax - baseMin)
-        if (Math.random() < diffSpeed.reverseChance) dirRef.current *= -1
-        nextChgRef.current = tickRef.current + diffSpeed.changeMin + Math.floor(Math.random() * (diffSpeed.changeMax - diffSpeed.changeMin))
+        if (Math.random() < zoneDiff.reverseChance) dirRef.current *= -1
+        nextChgRef.current = tickRef.current + zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))
       }
       setAngle(angleRef.current)
     }, 50)

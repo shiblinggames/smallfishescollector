@@ -107,11 +107,19 @@ export function buildFishZones(
   })
 }
 
-// Base needle speed by catch_difficulty (multiply by reel.needleSpeedMultiplier)
+// Needle speed by catch_difficulty (fish trait — multiply by reel.needleSpeedMultiplier)
 export const FISH_DIFFICULTY_SPEED = [
-  { speedMin: 120, speedMax: 185, changeMin: 24, changeMax: 42, reverseChance: 0.00 }, // 1
-  { speedMin: 190, speedMax: 285, changeMin: 18, changeMax: 30, reverseChance: 0.00 }, // 2
-  { speedMin: 275, speedMax: 400, changeMin: 12, changeMax: 20, reverseChance: 0.08 }, // 3
-  { speedMin: 375, speedMax: 520, changeMin:  8, changeMax: 14, reverseChance: 0.18 }, // 4
-  { speedMin: 490, speedMax: 650, changeMin:  5, changeMax:  9, reverseChance: 0.30 }, // 5
+  { speedMin: 120, speedMax: 185 }, // 1
+  { speedMin: 190, speedMax: 285 }, // 2
+  { speedMin: 275, speedMax: 400 }, // 3
+  { speedMin: 375, speedMax: 520 }, // 4
+  { speedMin: 490, speedMax: 650 }, // 5
 ]
+
+// Erraticism by zone (environment trait — currents, pressure, visibility)
+export const ZONE_DIFFICULTY: Record<string, { reverseChance: number; changeMin: number; changeMax: number }> = {
+  shallows:    { reverseChance: 0.00, changeMin: 28, changeMax: 48 },
+  open_waters: { reverseChance: 0.04, changeMin: 20, changeMax: 35 },
+  deep:        { reverseChance: 0.14, changeMin: 12, changeMax: 22 },
+  abyss:       { reverseChance: 0.28, changeMin:  6, changeMax: 12 },
+}
