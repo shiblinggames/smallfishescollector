@@ -1,5 +1,5 @@
 const BASE_GAP  = 60
-const GAP_GROWTH = 1.08
+const GAP_GROWTH = 1.086
 
 function computeXPTable(): number[] {
   const table: number[] = [0] // table[0] = 0: need 0 XP to be at level 1
