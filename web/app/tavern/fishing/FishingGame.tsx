@@ -735,7 +735,7 @@ export default function FishingGame({
     const t1 = setTimeout(() => setSceneFrame('cast1'), 350)
     const t2 = setTimeout(() => setSceneFrame('cast2'), 500)
     const t3 = setTimeout(() => setSceneFrame('fishing'), 650)
-    const t4 = setTimeout(() => setCastAnimDone(true), 650)
+    const t4 = setTimeout(() => setCastAnimDone(true), 900)
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4) }
   }, [phase])
 
@@ -958,7 +958,12 @@ export default function FishingGame({
           <button
             onClick={onBack}
             className="font-karla font-600 uppercase tracking-[0.1em] mb-2 self-start"
-            style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.35)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, touchAction: 'manipulation' }}
+            style={{
+              fontSize: '0.6rem', color: 'rgba(255,255,255,0.75)',
+              background: 'rgba(4,10,18,0.72)', border: '1px solid rgba(255,255,255,0.18)',
+              borderRadius: 8, padding: '0.3rem 0.65rem',
+              cursor: 'pointer', touchAction: 'manipulation',
+            }}
           >
             ← Zones
           </button>
@@ -1063,10 +1068,24 @@ export default function FishingGame({
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', paddingBottom: '1rem' }}>
 
                   <div style={{ minHeight: '1.6rem' }}>
-                    <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
-                      style={{ fontSize: '0.88rem', color: currentZone?.color ?? '#888' }}>
-                      {phase === 'reeling' ? 'Reeling in…' : (currentZone?.label ?? '')}
-                    </p>
+                    {(phase === 'reeling' || currentZone) && (
+                      <div style={{
+                        display: 'inline-block',
+                        background: 'rgba(4,10,18,0.85)',
+                        border: `1px solid ${currentZone?.color ?? 'rgba(255,255,255,0.15)'}55`,
+                        borderRadius: 10,
+                        padding: '0.3rem 0.85rem',
+                      }}>
+                        <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
+                          style={{
+                            fontSize: '0.88rem',
+                            color: currentZone?.color ?? '#e8e4de',
+                            textShadow: currentZone ? `0 0 16px ${currentZone.color}70` : 'none',
+                          }}>
+                          {phase === 'reeling' ? 'Reeling in…' : (currentZone?.label ?? '')}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}

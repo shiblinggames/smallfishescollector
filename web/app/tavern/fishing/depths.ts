@@ -100,7 +100,7 @@ export function buildFishZones(
 
   return buildZonesFromParams({
     catchDeg:     baseCatch + Math.max(0, Math.min(6, hookTier)) * CATCH_BONUS_PER_TIER,
-    perfectDeg:   4,
+    perfectDeg:   5,
     snagDeg:      Math.round(baseSnag * linePenaltyMultiplier),
     snagGapRight: gapRight,
     snagGapLeft:  hasLeft ? gapLeft : -1,
