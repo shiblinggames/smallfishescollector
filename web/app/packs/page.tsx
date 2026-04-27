@@ -13,7 +13,7 @@ export default async function PacksPage() {
   if (!user) redirect('/login')
 
   const [{ data: profile }, stats, history, bounties] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     getPackStats(),
     getPackHistory(),
     getWeeklyBounties(),
@@ -21,12 +21,13 @@ export default async function PacksPage() {
 
   const packsAvailable = profile?.packs_available ?? 0
   const doubloons = profile?.doubloons ?? 0
+  const gems = profile?.gems ?? 0
 
   return (
     <>
-      <Nav packsAvailable={packsAvailable} doubloons={doubloons} />
+      <Nav packsAvailable={packsAvailable} doubloons={doubloons} gems={gems} />
       <main className="min-h-screen px-6 py-4 sm:py-0 flex flex-col items-center sm:justify-center">
-        <PackOpener packsAvailable={packsAvailable} doubloons={doubloons} />
+        <PackOpener packsAvailable={packsAvailable} gems={gems} />
         {bounties && <WeeklyBounties initialData={bounties} />}
         {stats && <PackStatsToggle stats={stats} history={history} />}
       </main>

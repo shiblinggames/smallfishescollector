@@ -26,7 +26,7 @@ export default async function ExpeditionsPreparePage({
   const today = new Date().toISOString().split('T')[0]
 
   const [{ data: profile }, { data: existingRun }] = await Promise.all([
-    admin.from('profiles').select('packs_available, doubloons, ship_tier').eq('id', user.id).single(),
+    admin.from('profiles').select('packs_available, doubloons, ship_tier, gems').eq('id', user.id).single(),
     admin.from('expeditions')
       .select('id, status')
       .eq('user_id', user.id)
@@ -86,7 +86,7 @@ export default async function ExpeditionsPreparePage({
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <PreparePage
         zone={zone}
         zoneConfig={zoneConfig}

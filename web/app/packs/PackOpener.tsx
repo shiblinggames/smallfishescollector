@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { rarityFromVariant } from '@/lib/variants'
 import FishCard from '@/components/FishCard'
 import PrizeModal from '@/components/PrizeModal'
-import { openPack as openPackAction, buyPacksWithDoubloons } from './actions'
+import { openPack as openPackAction, buyPacksWithGems } from './actions'
 import type { DrawnCard, BorderStyle, ArtEffect } from '@/lib/types'
 import type { OpenPackResponse } from './actions'
 import AchievementToast from '@/components/AchievementToast'
@@ -40,14 +40,13 @@ function cardBackBorderStyle(borderStyle: BorderStyle, artEffect: ArtEffect): Re
 
 interface Props {
   packsAvailable: number
-  doubloons: number
+  gems: number
 }
 
-export default function PackOpener({ packsAvailable: initialPacks, doubloons: initialDoubloons }: Props) {
+export default function PackOpener({ packsAvailable: initialPacks, gems: initialGems }: Props) {
   const router = useRouter()
   const packButtonRef = useRef<HTMLButtonElement>(null)
   const [packs, setPacks] = useState(initialPacks)
-  const [doubloons, setDoubloons] = useState(initialDoubloons)
   const [phase, setPhase] = useState<'idle' | 'reveal' | 'done'>('idle')
   const [cards, setCards] = useState<DrawnCard[]>([])
   const [flipped, setFlipped] = useState<boolean[]>([])
@@ -55,7 +54,8 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
   const [flash, setFlash] = useState<{ type: string; key: number } | null>(null)
   const [prize, setPrize] = useState<{ cardName: string; variantName: string; prizeCode: string } | null>(null)
   const [loading, setLoading] = useState(false)
-  const [buyingWithDoubloons, setBuyingWithDoubloons] = useState(false)
+  const [gems, setGems] = useState(initialGems)
+  const [buyingWithGems, setBuyingWithGems] = useState(false)
   const [newVariantIds, setNewVariantIds] = useState<Set<number>>(new Set())
   const [isGodPack, setIsGodPack] = useState(false)
   const [rankUp, setRankUp] = useState<{ rank: string; bonus: number } | null>(null)
@@ -257,15 +257,16 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
     router.refresh()
   }
 
-  async function handleBuyWithDoubloons(count: 1 | 10) {
-    if (buyingWithDoubloons) return
-    setBuyingWithDoubloons(true)
-    const result = await buyPacksWithDoubloons(count)
+  async function handleBuyWithGems(count: 1 | 10) {
+    if (buyingWithGems) return
+    setBuyingWithGems(true)
+    const result = await buyPacksWithGems(count)
     if (!('error' in result)) {
       setPacks(result.packsAvailable)
-      setDoubloons(result.doubloons)
+      setGems(result.gems)
+      window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.gems }))
     }
-    setBuyingWithDoubloons(false)
+    setBuyingWithGems(false)
   }
 
   if (phase === 'idle') {
@@ -339,25 +340,25 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
           )}
         </div>
 
-        {/* Doubloon balance + buy buttons */}
+        {/* Gem balance + buy buttons */}
         <div className="flex flex-col items-center gap-2">
-          <p className="font-karla font-600 text-[#f0c040] text-sm tracking-wide">{doubloons.toLocaleString()} ⟡</p>
+          <p className="font-cinzel font-700 text-sm tracking-wide" style={{ color: '#a78bfa' }}>{gems.toLocaleString()} ◆</p>
           <div className="flex gap-2">
             <button
-              onClick={() => doubloons >= 250 && handleBuyWithDoubloons(1)}
-              disabled={buyingWithDoubloons}
+              onClick={() => gems >= 100 && handleBuyWithGems(1)}
+              disabled={buyingWithGems}
               className="btn-ghost text-xs transition-opacity"
-              style={{ opacity: doubloons >= 250 ? 1 : 0.35, cursor: doubloons >= 250 ? 'pointer' : 'default' }}
+              style={{ opacity: gems >= 100 ? 1 : 0.35, cursor: gems >= 100 ? 'pointer' : 'default' }}
             >
-              {buyingWithDoubloons ? '…' : 'Buy 1 · 250 ⟡'}
+              {buyingWithGems ? '…' : 'Buy 1 · 100 ◆'}
             </button>
             <button
-              onClick={() => doubloons >= 2000 && handleBuyWithDoubloons(10)}
-              disabled={buyingWithDoubloons}
+              onClick={() => gems >= 900 && handleBuyWithGems(10)}
+              disabled={buyingWithGems}
               className="btn-ghost text-xs transition-opacity"
-              style={{ opacity: doubloons >= 2000 ? 1 : 0.35, cursor: doubloons >= 2000 ? 'pointer' : 'default' }}
+              style={{ opacity: gems >= 900 ? 1 : 0.35, cursor: gems >= 900 ? 'pointer' : 'default' }}
             >
-              Buy 10 · 2,000 ⟡
+              Buy 10 · 900 ◆
             </button>
           </div>
         </div>

@@ -80,7 +80,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
   // Nav data + crew status
   const [{ data: navProfile }, crewRow] = await Promise.all([
-    user ? admin.from('profiles').select('packs_available, doubloons').eq('id', user.id).single() : Promise.resolve({ data: null }),
+    user ? admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single() : Promise.resolve({ data: null }),
     user && user.id !== profile.id
       ? admin.from('crew').select('follower_id').eq('follower_id', user.id).eq('following_id', profile.id).single()
       : Promise.resolve({ data: null }),
@@ -91,7 +91,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
   return (
     <>
-      <Nav packsAvailable={navProfile?.packs_available ?? undefined} doubloons={navProfile?.doubloons ?? undefined} />
+      <Nav packsAvailable={navProfile?.packs_available ?? undefined} doubloons={navProfile?.doubloons ?? undefined} gems={navProfile?.gems ?? undefined} />
       <main className="min-h-screen pb-24 sm:pb-0 pt-10">
         <ProfileClient
           username={profile.username}

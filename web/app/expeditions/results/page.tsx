@@ -25,7 +25,7 @@ export default async function ExpeditionsResultsPage({
   const admin = createAdminClient()
 
   const [{ data: profile }, { data: expeditionRow }] = await Promise.all([
-    admin.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
+    admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     admin.from('expeditions').select('*').eq('id', expeditionId).eq('user_id', user.id).single(),
   ])
 
@@ -55,7 +55,7 @@ export default async function ExpeditionsResultsPage({
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0 pt-6">
         <div className="px-6 max-w-2xl mx-auto pb-12">
 

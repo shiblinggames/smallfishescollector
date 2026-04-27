@@ -22,7 +22,7 @@ export default async function FishingPage() {
     { count: uniqueSpeciesCaught },
   ] = await Promise.all([
     admin.from('profiles')
-      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier')
+      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems')
       .eq('id', user.id)
       .single(),
     admin.from('bait_inventory')
@@ -39,7 +39,7 @@ export default async function FishingPage() {
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main>
         <FishingPageClient
           hookTier={profile?.hook_tier ?? 0}

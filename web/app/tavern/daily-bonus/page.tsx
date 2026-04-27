@@ -15,7 +15,7 @@ export default async function DailyBonusPage() {
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('packs_available, doubloons, is_premium, premium_expires_at, ship_tier, last_daily_claim, last_ship_claim, last_pack_claim')
+    .select('packs_available, doubloons, is_premium, premium_expires_at, ship_tier, last_daily_claim, last_ship_claim, last_pack_claim, gems')
     .eq('id', user.id)
     .single()
 
@@ -28,7 +28,7 @@ export default async function DailyBonusPage() {
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0 pt-8">
         <div className="px-6 max-w-lg mx-auto">
           <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Tavern</p>

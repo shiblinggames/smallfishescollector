@@ -9,10 +9,10 @@ import type { CardVariant, DrawnCard } from '@/lib/types'
 import { checkAchievements } from '@/lib/checkAchievements'
 import { getWeekStart } from '@/lib/weekStart'
 
-const PACK_COSTS: Record<number, number> = { 1: 250, 10: 2000 }
+const PACK_GEM_COSTS: Record<number, number> = { 1: 100, 10: 900 }
 
-export async function buyPacksWithDoubloons(count: 1 | 10): Promise<{ packsAvailable: number; doubloons: number } | { error: string }> {
-  const cost = PACK_COSTS[count]
+export async function buyPacksWithGems(count: 1 | 10): Promise<{ packsAvailable: number; gems: number } | { error: string }> {
+  const cost = PACK_GEM_COSTS[count]
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -20,22 +20,22 @@ export async function buyPacksWithDoubloons(count: 1 | 10): Promise<{ packsAvail
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, packs_available')
+    .select('gems, packs_available')
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.doubloons < cost) return { error: 'Not enough doubloons' }
+  if (!profile || (profile.gems ?? 0) < cost) return { error: 'Not enough gems' }
 
-  const newDoubloons = profile.doubloons - cost
+  const newGems = (profile.gems ?? 0) - cost
   const newPacks = profile.packs_available + count
 
   await Promise.all([
-    admin.from('profiles').update({ doubloons: newDoubloons, packs_available: newPacks }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -cost, reason: `Bought ${count} pack${count > 1 ? 's' : ''} with doubloons` }),
+    admin.from('profiles').update({ gems: newGems, packs_available: newPacks }).eq('id', user.id),
+    admin.from('gem_transactions').insert({ user_id: user.id, amount: -cost, reason: `Bought ${count} pack${count > 1 ? 's' : ''} with gems` }),
   ])
 
   revalidatePath('/packs')
-  return { packsAvailable: newPacks, doubloons: newDoubloons }
+  return { packsAvailable: newPacks, gems: newGems }
 }
 
 const RANK_THRESHOLDS = [

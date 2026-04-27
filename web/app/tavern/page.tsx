@@ -19,7 +19,7 @@ export default async function TavernPage() {
   const today = new Date().toISOString().split('T')[0]
 
   const [{ data: profile }, { data: fotdAttempt }, dailyWagered, bounties, { data: todayExpedition }] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_ship_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_ship_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome, gems').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
     getWeeklyBounties(),
@@ -95,7 +95,7 @@ export default async function TavernPage() {
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       {!profile?.has_seen_welcome && <WelcomeModal />}
       <main className="min-h-screen pb-24 sm:pb-0">
         {/* Lantern light — warm amber glow from above */}

@@ -15,7 +15,7 @@ export default async function SocialPage() {
   const admin = createAdminClient()
 
   const [{ data: profile }, crew, { data: ownedRows }] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, gems').eq('id', user.id).single(),
     getCrew(),
     admin.from('user_collection')
       .select('card_variant_id, card_variants(id, variant_name, border_style, art_effect, drop_weight, cards(name, filename))')
@@ -46,7 +46,7 @@ export default async function SocialPage() {
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main className="min-h-screen pt-8 pb-24 sm:pb-0">
         <div className="px-6 max-w-4xl mx-auto mb-6">
           <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Social</p>

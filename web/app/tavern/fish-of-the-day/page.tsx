@@ -11,14 +11,14 @@ export default async function FishOfTheDayPage() {
   if (!user) redirect('/login')
 
   const [{ data: profile }, puzzleResult, allFishNames] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     getDailyFishPuzzle(),
     getAllFishNames(),
   ])
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0">
         <div className="px-6 pt-6 pb-2">
           <Link

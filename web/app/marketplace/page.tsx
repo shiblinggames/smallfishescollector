@@ -11,7 +11,7 @@ export default async function MarketplacePage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('packs_available, doubloons, is_premium, premium_expires_at')
+    .select('packs_available, doubloons, is_premium, premium_expires_at, gems')
     .eq('id', user.id)
     .single()
 
@@ -41,7 +41,7 @@ export default async function MarketplacePage() {
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0">
         {/* Ambient glow */}
         <div aria-hidden style={{

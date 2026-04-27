@@ -17,7 +17,7 @@ export default async function ExpeditionsPage() {
 
   const [{ data: profile }, { data: expeditionRows }] = await Promise.all([
     admin.from('profiles')
-      .select('packs_available, doubloons, ship_tier')
+      .select('packs_available, doubloons, ship_tier, gems')
       .eq('id', user.id)
       .single(),
     admin.from('expeditions')

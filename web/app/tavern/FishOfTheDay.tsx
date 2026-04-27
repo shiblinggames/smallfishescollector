@@ -13,7 +13,7 @@ function nextMilestone(streak: number): { day: number; reward: number } {
 }
 import type { FishPuzzleState, FishAnswer } from './fishActions'
 
-const DOUBLOON_REWARDS = [100, 75, 50, 25]
+const GEM_REWARDS = [100, 75, 50, 25]
 
 export default function FishOfTheDay({
   initialPuzzle,
@@ -67,7 +67,7 @@ export default function FishOfTheDay({
         guesses: [...prev.guesses, guessing],
         solved: result.correct,
         isOver: result.isOver,
-        doubloons_awarded: result.doubloons ?? prev.doubloons_awarded,
+        gems_awarded: result.gems ?? prev.gems_awarded,
         streak: result.streak ?? prev.streak,
         cluesRevealed: result.nextClue
           ? [...prev.cluesRevealed, result.nextClue]
@@ -78,7 +78,7 @@ export default function FishOfTheDay({
   }
 
   const guessIndex = puzzle.guesses.length
-  const reward = DOUBLOON_REWARDS[guessIndex] ?? 0
+  const reward = GEM_REWARDS[guessIndex] ?? 0
   const next = nextMilestone(puzzle.streak)
   const daysToNext = next.day - puzzle.streak
 
@@ -112,7 +112,7 @@ export default function FishOfTheDay({
               Next reward
             </p>
             <p className="font-karla text-[#f0c040]" style={{ fontSize: '0.72rem' }}>
-              Day {next.day} · +{next.reward} ⟡
+              Day {next.day} · +{next.reward} ◆
             </p>
             <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.62rem' }}>
               {daysToNext === 1 ? 'tomorrow!' : `${daysToNext} days away`}
@@ -194,7 +194,7 @@ export default function FishOfTheDay({
         <AnswerCard
           answer={puzzle.answer}
           solved={puzzle.solved}
-          doubloonsAwarded={puzzle.doubloons_awarded}
+          gemsAwarded={puzzle.gems_awarded}
           streak={puzzle.streak}
           milestoneReward={milestoneReward}
         />
@@ -268,7 +268,7 @@ export default function FishOfTheDay({
             disabled={!selected || isPending}
             className="btn-ghost w-full disabled:opacity-30"
           >
-            {isPending ? 'Checking…' : `Guess · ${reward} ⟡ if correct`}
+            {isPending ? 'Checking…' : `Guess · ${reward} ◆ if correct`}
           </button>
 
           <p className="font-karla text-center" style={{ color: '#6a6764', fontSize: '0.68rem' }}>
@@ -288,10 +288,10 @@ const DETAIL_ROWS: { key: keyof FishAnswer; label: string }[] = [
   { key: 'conservation_status', label: 'Conservation' },
 ]
 
-function AnswerCard({ answer, solved, doubloonsAwarded, streak, milestoneReward }: {
+function AnswerCard({ answer, solved, gemsAwarded, streak, milestoneReward }: {
   answer: FishAnswer
   solved: boolean
-  doubloonsAwarded: number
+  gemsAwarded: number
   streak: number
   milestoneReward?: number
 }) {
@@ -315,14 +315,14 @@ function AnswerCard({ answer, solved, doubloonsAwarded, streak, milestoneReward 
         <p className="font-karla" style={{ color: '#c8c4bc', fontSize: '0.82rem', lineHeight: 1.6 }}>
           {answer.fun_fact}
         </p>
-        {solved && doubloonsAwarded > 0 && (
-          <p className="font-karla font-600" style={{ color: '#f0c040', fontSize: '0.8rem', marginTop: '0.625rem' }}>
-            +{doubloonsAwarded} ⟡
+        {solved && gemsAwarded > 0 && (
+          <p className="font-karla font-600" style={{ color: '#a78bfa', fontSize: '0.8rem', marginTop: '0.625rem' }}>
+            +{gemsAwarded} ◆
           </p>
         )}
         {milestoneReward && (
           <p className="font-karla font-600" style={{ color: '#34d399', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-            +{milestoneReward} ⟡ — {streak}-day streak milestone!
+            +{milestoneReward} ◆ — {streak}-day streak milestone!
           </p>
         )}
       </div>

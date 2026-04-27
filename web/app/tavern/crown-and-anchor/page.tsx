@@ -11,13 +11,13 @@ export default async function CrownAndAnchorPage() {
   if (!user) redirect('/login')
 
   const [{ data: profile }, dailyWagered] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     getDailyWagered(),
   ])
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0">
         <div className="px-6 pt-6 pb-2">
           <Link

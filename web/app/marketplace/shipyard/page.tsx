@@ -10,18 +10,17 @@ export default async function ShipyardPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('ship_tier, doubloons, packs_available')
+    .select('ship_tier, doubloons, packs_available, gems')
     .eq('id', user.id)
     .single()
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0 pt-6">
         <ShipyardClient
           shipTier={profile?.ship_tier ?? 0}
-          doubloons={profile?.doubloons ?? 0}
-        />
+          doubloons={profile?.doubloons ?? 0} />
       </main>
     </>
   )

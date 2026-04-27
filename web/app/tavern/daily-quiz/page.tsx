@@ -15,13 +15,13 @@ export default async function DailyQuizPage() {
 
   const [quiz, { data: profile }, { data: previousAnswer }] = await Promise.all([
     getTodaysQuiz(),
-    supabase.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     admin.from('quiz_answers').select('correct, chosen_index, reward').eq('user_id', user.id).eq('date', today).single(),
   ])
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main className="min-h-screen">
         <div className="px-6 max-w-xl mx-auto pt-8 pb-2">
           <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Daily Quiz</p>

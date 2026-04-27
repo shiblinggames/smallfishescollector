@@ -34,7 +34,7 @@ export default async function CollectionPage() {
       .from('user_collection')
       .select('id, card_variant_id, card_variants(id, variant_name, border_style, art_effect, drop_weight, card_id)')
       .eq('user_id', user.id),
-    supabase.from('profiles').select('packs_available, doubloons, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, gems').eq('id', user.id).single(),
     supabase.from('card_variants').select('*', { count: 'exact', head: true }),
     supabase.from('card_variants').select('id, variant_name, border_style, art_effect, drop_weight, card_id'),
   ])
@@ -82,7 +82,7 @@ export default async function CollectionPage() {
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main className="min-h-screen pt-6">
         <CollectionGrid
           allCards={(allCards ?? []) as Card[]}

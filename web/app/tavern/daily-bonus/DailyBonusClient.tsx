@@ -41,6 +41,7 @@ export default function DailyBonusClient({
     const result = await claimDailyBonus()
     if (result.claimed) {
       setDailyClaimed(true)
+      if (result.gems !== undefined) window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.gems }))
       if (result.newAchievements?.length) setAchievementKeys(result.newAchievements)
     }
     setLoadingDaily(false)
@@ -67,11 +68,11 @@ export default function DailyBonusClient({
       <AchievementToast keys={achievementKeys} onDone={() => setAchievementKeys([])} />
       <div className="flex flex-col gap-3">
 
-        {/* Base daily doubloons */}
+        {/* Base daily gems */}
         <ClaimCard
           eyebrow="Daily Bonus"
-          title={`+${baseAmount} ⟡`}
-          description={isPremium ? 'Your daily doubloon bonus as a Member.' : 'Your daily doubloon bonus.'}
+          title={`+${baseAmount} ◆`}
+          description={isPremium ? 'Your daily gem bonus as a Member.' : 'Your daily gem bonus.'}
           claimed={dailyClaimed}
           loading={loadingDaily}
           onClaim={handleClaimDaily}

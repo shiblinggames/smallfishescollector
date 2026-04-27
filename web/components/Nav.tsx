@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { motion } from 'framer-motion'
 
-export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: number; doubloons?: number }) {
+export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailable?: number; doubloons?: number; gems?: number }) {
   const router = useRouter()
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -14,6 +14,7 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
   const [tavernBadge, setTavernBadge] = useState(0)
   const [achievementsBadge, setAchievementsBadge] = useState(false)
   const [displayDoubloons, setDisplayDoubloons] = useState(doubloons)
+  const [displayGems, setDisplayGems] = useState(gems)
 
   const fetchBadge = useCallback(() => {
     const supabase = createClient()
@@ -50,6 +51,14 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
     }
     window.addEventListener('doubloons-changed', handleDoubloonsChanged)
     return () => window.removeEventListener('doubloons-changed', handleDoubloonsChanged)
+  }, [])
+
+  useEffect(() => {
+    function handleGemsChanged(e: Event) {
+      setDisplayGems((e as CustomEvent<number>).detail)
+    }
+    window.addEventListener('gems-changed', handleGemsChanged)
+    return () => window.removeEventListener('gems-changed', handleGemsChanged)
   }, [])
 
   // Close on outside tap
@@ -246,6 +255,11 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
         </div>
 
         <div className="flex items-center gap-4">
+          {displayGems !== undefined && (
+            <span className="font-cinzel font-700" style={{ fontSize: '0.875rem', color: '#a78bfa' }}>
+              {displayGems.toLocaleString()} ◆
+            </span>
+          )}
           {displayDoubloons !== undefined && (
             <span className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.875rem' }}>
               {displayDoubloons.toLocaleString()} ⟡
@@ -270,8 +284,13 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
         </Link>
 
         <div className="flex items-center gap-3">
+          {displayGems !== undefined && (
+            <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#a78bfa' }}>
+              {displayGems.toLocaleString()} ◆
+            </span>
+          )}
           {displayDoubloons !== undefined && (
-            <span className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.875rem' }}>
+            <span className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.8rem' }}>
               {displayDoubloons.toLocaleString()} ⟡
             </span>
           )}

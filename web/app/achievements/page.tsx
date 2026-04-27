@@ -27,7 +27,7 @@ export default async function AchievementsPage() {
   const admin = createAdminClient()
 
   const [{ data: profile }, { data: unlockedRows }] = await Promise.all([
-    admin.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
+    admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     admin.from('user_achievements').select('achievement_key').eq('user_id', user.id),
     admin.from('profiles').update({ last_viewed_achievements_at: new Date().toISOString() }).eq('id', user.id),
   ])
@@ -44,7 +44,7 @@ export default async function AchievementsPage() {
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0 pt-8">
         <div className="px-6 max-w-2xl mx-auto">
 

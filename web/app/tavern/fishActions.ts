@@ -6,7 +6,7 @@ import { checkAchievements } from '@/lib/checkAchievements'
 import { getTodaysFishPuzzle } from './fish-of-the-day/generate'
 import { FISH_SPECIES } from '@/lib/fish-species'
 
-const DOUBLOON_REWARDS = [100, 75, 50, 25]
+const GEM_REWARDS = [100, 75, 50, 25]
 
 export interface FishAnswer {
   common_name: string
@@ -25,7 +25,7 @@ export interface FishPuzzleState {
   guesses: string[]
   solved: boolean
   isOver: boolean
-  doubloons_awarded: number
+  gems_awarded: number
   streak: number
   longestStreak: number
   answer?: FishAnswer
@@ -67,7 +67,7 @@ export async function getDailyFishPuzzle(): Promise<FishPuzzleState | { error: s
     guesses,
     solved,
     isOver,
-    doubloons_awarded: attempt?.doubloons_awarded ?? 0,
+    gems_awarded: attempt?.gems_awarded ?? 0,
     streak: profile?.fotd_streak ?? 0,
     longestStreak: profile?.fotd_longest_streak ?? 0,
     answer: isOver ? {
@@ -85,7 +85,7 @@ export async function getDailyFishPuzzle(): Promise<FishPuzzleState | { error: s
 
 export async function submitFishGuess(guessName: string): Promise<{
   correct: boolean
-  doubloons?: number
+  gems?: number
   nextClue?: string
   isOver: boolean
   streak?: number
@@ -118,9 +118,9 @@ export async function submitFishGuess(guessName: string): Promise<{
   const correct = guessName.toLowerCase() === fish.common_name.toLowerCase()
   const newGuesses = [...guesses, guessName]
   const isOver = correct || newGuesses.length >= 4
-  const guessDoubloons = correct ? (DOUBLOON_REWARDS[guessIndex] ?? 0) : 0
+  const guessGems = correct ? (GEM_REWARDS[guessIndex] ?? 0) : 0
 
-  const payload = { guesses: newGuesses, solved: correct, doubloons_awarded: guessDoubloons }
+  const payload = { guesses: newGuesses, solved: correct, gems_awarded: guessGems }
   if (existing) {
     await admin.from('daily_fish_attempts').update(payload).eq('id', existing.id)
   } else {
@@ -144,7 +144,7 @@ export async function submitFishGuess(guessName: string): Promise<{
   if (isOver) {
     const { data: profile } = await admin
       .from('profiles')
-      .select('doubloons, fotd_streak, fotd_longest_streak, last_fotd_date')
+      .select('gems, fotd_streak, fotd_longest_streak, last_fotd_date')
       .eq('id', user.id)
       .single()
 
@@ -155,25 +155,25 @@ export async function submitFishGuess(guessName: string): Promise<{
         : 1
       const newLongest = Math.max(newStreak, profile.fotd_longest_streak ?? 0)
       const bonus = milestoneBonus(newStreak)
-      const newDoubloons = profile.doubloons + guessDoubloons + bonus
+      const newGems = (profile.gems ?? 0) + guessGems + bonus
 
       const writes: any[] = [
         admin.from('profiles').update({
-          doubloons: newDoubloons,
+          gems: newGems,
           fotd_streak: newStreak,
           fotd_longest_streak: newLongest,
           last_fotd_date: today,
         }).eq('id', user.id),
       ]
-      if (correct && guessDoubloons > 0) {
-        writes.push(admin.from('doubloon_transactions').insert({
+      if (correct && guessGems > 0) {
+        writes.push(admin.from('gem_transactions').insert({
           user_id: user.id,
-          amount: guessDoubloons,
+          amount: guessGems,
           reason: `Fish of the Day: ${fish.common_name} in ${guessIndex + 1} guess${guessIndex + 1 !== 1 ? 'es' : ''}`,
         }))
       }
       if (bonus > 0) {
-        writes.push(admin.from('doubloon_transactions').insert({
+        writes.push(admin.from('gem_transactions').insert({
           user_id: user.id,
           amount: bonus,
           reason: `Fish of the Day: ${newStreak}-day streak`,
@@ -189,7 +189,7 @@ export async function submitFishGuess(guessName: string): Promise<{
 
       return {
         correct,
-        doubloons: correct ? guessDoubloons : undefined,
+        gems: correct ? guessGems : undefined,
         nextClue,
         isOver,
         streak: newStreak,
@@ -202,7 +202,7 @@ export async function submitFishGuess(guessName: string): Promise<{
 
   return {
     correct,
-    doubloons: correct ? guessDoubloons : undefined,
+    gems: correct ? guessGems : undefined,
     nextClue,
     isOver,
     answer: isOver ? answer : undefined,

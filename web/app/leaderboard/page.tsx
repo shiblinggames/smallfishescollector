@@ -24,7 +24,7 @@ export default async function LeaderboardPage() {
   const admin = createAdminClient()
 
   const [profile, packsData, collectionData, streakData, achievementsData] = await Promise.all([
-    admin.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
+    admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     fetchBoard(admin, 'leaderboard_packs', user.id),
     fetchBoard(admin, 'leaderboard_collection', user.id),
     fetchBoard(admin, 'leaderboard_streak', user.id),

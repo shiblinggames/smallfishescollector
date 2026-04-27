@@ -10,13 +10,13 @@ export default async function HooksPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('hook_tier, doubloons, packs_available')
+    .select('hook_tier, doubloons, packs_available, gems')
     .eq('id', user.id)
     .single()
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0">
         <div className="px-6 pt-8 pb-5 text-center">
           <h1
@@ -31,8 +31,7 @@ export default async function HooksPage() {
         </div>
         <HookShop
           hookTier={profile?.hook_tier ?? 0}
-          doubloons={profile?.doubloons ?? 0}
-        />
+          doubloons={profile?.doubloons ?? 0} />
       </main>
     </>
   )

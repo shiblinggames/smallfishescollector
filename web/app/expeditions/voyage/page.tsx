@@ -23,7 +23,7 @@ export default async function ExpeditionsVoyagePage({
   const admin = createAdminClient()
 
   const [{ data: profile }, { data: expeditionRow }] = await Promise.all([
-    admin.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
+    admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     admin.from('expeditions').select('*').eq('id', expeditionId).eq('user_id', user.id).single(),
   ])
 
@@ -51,7 +51,7 @@ export default async function ExpeditionsVoyagePage({
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <VoyagePage
         expedition={expedition}
         dailyContent={dailyRow as DailyExpeditionRow}
