@@ -387,14 +387,8 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect }: {
     4: `0 0 26px ${r.color}65, 0 0 60px ${r.color}32`,
     5: `0 0 32px ${r.color}80, 0 0 80px ${r.color}40, 0 0 130px ${r.color}20`,
   }
-  const borderOpMap: Record<number, string> = { 1: '30', 2: '55', 3: '70', 4: '85', 5: 'b0' }
-  const cardBg: Record<number, string> = {
-    1: 'rgba(255,255,255,0.03)',
-    2: 'rgba(255,255,255,0.03)',
-    3: `${r.color}06`,
-    4: `${r.color}09`,
-    5: `${r.color}0c`,
-  }
+  const borderOpMap: Record<number, string> = { 1: '55', 2: '70', 3: '88', 4: 'aa', 5: 'cc' }
+  const cardBg = 'rgba(6,16,26,0.96)'
 
   return (
     <div style={{ position: 'relative' }}>
@@ -436,8 +430,8 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect }: {
         transition={{ type: 'spring', stiffness: isLegendary ? 200 : 280, damping: isLegendary ? 15 : 22 }}
         className="rounded-2xl overflow-hidden"
         style={{
-          border: `1px solid ${r.color}${borderOpMap[rarity] ?? '30'}`,
-          background: cardBg[rarity],
+          border: `1px solid ${r.color}${borderOpMap[rarity] ?? '55'}`,
+          background: cardBg,
           position: 'relative', zIndex: 1,
         }}
       >
@@ -456,7 +450,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect }: {
 
         {/* Header band */}
         <div className="px-4 py-3 flex items-center justify-between"
-          style={{ position: 'relative', zIndex: 2, background: `${r.color}15`, borderBottom: `1px solid ${r.color}28` }}>
+          style={{ position: 'relative', zIndex: 2, background: `${r.color}28`, borderBottom: `1px solid ${r.color}45` }}>
           <div className="flex items-center gap-2">
             <span className="font-karla font-700 uppercase tracking-[0.14em]"
               style={{ fontSize: '0.55rem', color: habitatColor }}>{habitatLabel}</span>
