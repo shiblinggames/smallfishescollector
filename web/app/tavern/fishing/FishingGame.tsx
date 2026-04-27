@@ -389,20 +389,20 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained }: {
           initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           transition={{ type: 'spring', stiffness: 400, damping: 22 }}
           className="flex items-center justify-center gap-2 mb-2 py-2 px-3 rounded-xl"
-          style={{ background: 'rgba(245,158,11,0.22)', border: '1px solid rgba(245,158,11,0.55)' }}
+          style={{ background: 'rgba(8,4,0,0.88)', border: '1px solid rgba(245,158,11,0.65)' }}
         >
-          <span style={{ fontSize: '0.7rem', color: '#f59e0b' }}>✦</span>
+          <span style={{ fontSize: '0.7rem', color: '#fbbf24' }}>✦</span>
           <div style={{ textAlign: 'center' }}>
             <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
-              style={{ fontSize: '0.72rem', color: '#f5c842' }}>Perfect Cast</p>
+              style={{ fontSize: '0.72rem', color: '#fbbf24', textShadow: '0 0 10px rgba(251,191,36,0.7)' }}>Perfect Catch</p>
             {xpGained > 0 && (
-              <p className="font-karla font-600"
-                style={{ fontSize: '0.6rem', color: '#4ade80', marginTop: 2 }}>
+              <p className="font-karla font-700"
+                style={{ fontSize: '0.62rem', color: '#86efac', marginTop: 2 }}>
                 +{xpGained - Math.round(xpGained / 1.2)} bonus XP
               </p>
             )}
           </div>
-          <span style={{ fontSize: '0.7rem', color: '#f59e0b' }}>✦</span>
+          <span style={{ fontSize: '0.7rem', color: '#fbbf24' }}>✦</span>
         </motion.div>
       )}
 
@@ -666,9 +666,11 @@ function XPBarDisplay({ xp }: { xp: number }) {
       </p>
       <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
         <motion.div
+          key={level}
           style={{ height: '100%', borderRadius: 3, background: isMax ? '#f0c040' : '#60a5fa' }}
+          initial={{ width: '0%' }}
           animate={{ width: `${fillPct}%` }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
         />
       </div>
       <p className="font-karla font-600 shrink-0"
@@ -1523,7 +1525,7 @@ export default function FishingGame({
                 transition={{ delay: 0.22, duration: 0.2 }}
                 style={{ fontSize: '0.68rem', color: 'rgba(253,230,138,0.85)', marginTop: '0.3rem',
                   letterSpacing: '0.22em' }}>
-                ✦ &nbsp; Flawless cast &nbsp; ✦
+                ✦ &nbsp; Flawless reel &nbsp; ✦
               </motion.p>
             </motion.div>
           </motion.div>
