@@ -774,11 +774,10 @@ export default function FishingGame({
     return baitInventory.reduce((s, b) => s + b.quantity, 0)
   }
 
-  // Phase 1 — cast
-  async function handleCast() {
-    if (phase !== 'idle') return
+  // Core cast logic — no phase guard, called from both Cast and Cast Again
+  async function doCast() {
     const currentQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
-    if (currentQty <= 0) return
+    if (currentQty <= 0) { setPhase('idle'); return }
 
     setBaitOpen(false)
     deductBait(selectedBait)
@@ -806,6 +805,12 @@ export default function FishingGame({
       setAngle(angleRef.current)
       setPhase('catching')
     }, 1600)
+  }
+
+  // Phase 1 — cast (from idle)
+  async function handleCast() {
+    if (phase !== 'idle') return
+    await doCast()
   }
 
   // Phase 2 — reel in
@@ -878,7 +883,7 @@ export default function FishingGame({
     )
   }
 
-  function handleCastAgain() {
+  async function handleCastAgain() {
     setCatchResult(null)
     setMissResult(null)
     setHookedFish(null)
@@ -887,7 +892,7 @@ export default function FishingGame({
     setBaitOpen(false)
     setHoldOpen(false)
     setGearOpen(false)
-    setPhase('idle')
+    await doCast()
   }
 
   // Zone display helpers
