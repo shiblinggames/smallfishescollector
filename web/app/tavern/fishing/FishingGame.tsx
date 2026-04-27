@@ -735,7 +735,7 @@ export default function FishingGame({
     const t1 = setTimeout(() => setSceneFrame('cast1'), 350)
     const t2 = setTimeout(() => setSceneFrame('cast2'), 500)
     const t3 = setTimeout(() => setSceneFrame('fishing'), 650)
-    const t4 = setTimeout(() => setCastAnimDone(true), 900)
+    const t4 = setTimeout(() => setCastAnimDone(true), 1500)
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4) }
   }, [phase])
 
@@ -998,8 +998,8 @@ export default function FishingGame({
                           initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.15 }}
                           style={{
-                            background: 'rgba(4,10,18,0.88)',
-                            border: '1px solid rgba(255,255,255,0.14)',
+                            background: 'rgba(4,10,18,0.52)',
+                            border: '1px solid rgba(255,255,255,0.08)',
                             borderRadius: 16,
                             padding: '1.1rem 1.75rem',
                             textAlign: 'center',
