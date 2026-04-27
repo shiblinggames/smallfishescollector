@@ -63,41 +63,72 @@ export async function buyBait(
   return { doubloons: newDoubloons, newQty }
 }
 
-export async function buyRod(): Promise<{ rodTier: number; doubloons: number } | { error: string }> {
+export async function purchaseRod(
+  rodTier: number,
+): Promise<{ doubloons: number; ownedRods: number[] } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
+  const rod = RODS[rodTier]
+  if (!rod) return { error: 'Invalid rod' }
+  if (rod.cost === 0) return { error: 'This rod is free — just equip it' }
+
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('rod_tier, doubloons')
-    .eq('id', user.id)
-    .single()
+
+  const [{ data: profile }, { data: alreadyOwned }] = await Promise.all([
+    admin.from('profiles').select('doubloons').eq('id', user.id).single(),
+    admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id).eq('rod_tier', rodTier).maybeSingle(),
+  ])
 
   if (!profile) return { error: 'Profile not found' }
+  if (alreadyOwned) return { error: 'Already owned' }
+  if (profile.doubloons < rod.cost) return { error: `Need ${rod.cost.toLocaleString()} ⟡` }
 
-  const currentTier = profile.rod_tier ?? 0
-  const nextTier = currentTier + 1
-
-  if (nextTier >= RODS.length) return { error: 'Already at max tier' }
-
-  const cost = RODS[nextTier].cost
-  if (profile.doubloons < cost) return { error: 'Not enough doubloons' }
-
-  const newDoubloons = profile.doubloons - cost
+  const newDoubloons = profile.doubloons - rod.cost
 
   await Promise.all([
-    admin.from('profiles').update({ rod_tier: nextTier, doubloons: newDoubloons }).eq('id', user.id),
+    admin.from('rod_inventory').insert({ user_id: user.id, rod_tier: rodTier }),
+    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
-      amount: -cost,
-      reason: `Bought ${RODS[nextTier].name}`,
+      amount: -rod.cost,
+      reason: `Bought ${rod.name}`,
     }),
   ])
 
+  const { data: rows } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id)
+  const ownedRods = (rows ?? []).map(r => r.rod_tier)
+
   revalidatePath('/marketplace/tackle-shop')
-  return { rodTier: nextTier, doubloons: newDoubloons }
+  return { doubloons: newDoubloons, ownedRods }
+}
+
+export async function equipRod(
+  rodTier: number,
+): Promise<{ rodTier: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const rod = RODS[rodTier]
+  if (!rod) return { error: 'Invalid rod' }
+
+  const admin = createAdminClient()
+
+  const { data: owned } = await admin
+    .from('rod_inventory')
+    .select('rod_tier')
+    .eq('user_id', user.id)
+    .eq('rod_tier', rodTier)
+    .maybeSingle()
+
+  if (!owned) return { error: 'Rod not owned' }
+
+  await admin.from('profiles').update({ rod_tier: rodTier }).eq('id', user.id)
+
+  revalidatePath('/marketplace/tackle-shop')
+  return { rodTier }
 }
 
 export async function buyReel(): Promise<{ reelTier: number; doubloons: number } | { error: string }> {

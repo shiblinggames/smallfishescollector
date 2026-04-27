@@ -8,7 +8,7 @@ import { REELS } from '@/lib/reels'
 import { LINES } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
 import { buyHook } from '@/app/hooks/actions'
-import { buyBait, buyRod, buyReel } from './actions'
+import { buyBait, purchaseRod, equipRod, buyReel } from './actions'
 
 const HookViewer3D = dynamic(() => import('./HookViewer3D'), { ssr: false })
 
@@ -18,14 +18,16 @@ type Section = 'bait' | 'hook' | 'rod' | 'reel' | 'line' | null
 
 export default function TackleShopClient({
   hookTier: initialHookTier,
-  rodTier: initialRodTier,
+  equippedRod: initialEquippedRod,
+  ownedRods: initialOwnedRods,
   reelTier: initialReelTier,
   lineTier,
   doubloons: initialDoubloons,
   baitInventory: initialBait,
 }: {
   hookTier: number
-  rodTier: number
+  equippedRod: number
+  ownedRods: number[]
   reelTier: number
   lineTier: number
   doubloons: number
@@ -33,13 +35,16 @@ export default function TackleShopClient({
 }) {
   const [section, setSection] = useState<Section>(null)
   const [hookTier, setHookTier] = useState(initialHookTier)
-  const [rodTier, setRodTier] = useState(initialRodTier)
+  const [equippedRod, setEquippedRod] = useState(initialEquippedRod)
+  const [ownedRods, setOwnedRods] = useState<number[]>(initialOwnedRods)
   const [reelTier, setReelTier] = useState(initialReelTier)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
   const [baitInventory, setBaitInventory] = useState<BaitInventoryItem[]>(initialBait)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [buyingBait, setBuyingBait] = useState<string | null>(null)
+  const [buyingRod, setBuyingRod] = useState<number | null>(null)
+  const [equippingRod, setEquippingRod] = useState<number | null>(null)
   const [previewTier, setPreviewTier] = useState(initialHookTier)
 
   const baitMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
@@ -59,12 +64,30 @@ export default function TackleShopClient({
     })
   }
 
-  function handleBuyRod() {
+  function handlePurchaseRod(rodTier: number) {
     setError(null)
+    setBuyingRod(rodTier)
     startTransition(async () => {
-      const result = await buyRod()
+      const result = await purchaseRod(rodTier)
+      setBuyingRod(null)
       if ('error' in result) { setError(result.error) }
-      else { setRodTier(result.rodTier); setDoubloons(result.doubloons); broadcastDoubloons(result.doubloons) }
+      else {
+        setOwnedRods(result.ownedRods)
+        setDoubloons(result.doubloons)
+        broadcastDoubloons(result.doubloons)
+        setEquippedRod(rodTier)
+      }
+    })
+  }
+
+  function handleEquipRod(rodTier: number) {
+    setError(null)
+    setEquippingRod(rodTier)
+    startTransition(async () => {
+      const result = await equipRod(rodTier)
+      setEquippingRod(null)
+      if ('error' in result) { setError(result.error) }
+      else { setEquippedRod(result.rodTier) }
     })
   }
 
@@ -109,9 +132,9 @@ export default function TackleShopClient({
       active: HOOKS[hookTier]?.name ?? '',
     },
     {
-      key: 'rod', label: 'Rods', color: RODS[rodTier]?.color ?? '#a07858',
-      desc: 'Unlocks deeper fishing zones. Higher tiers also improve your base roll and shorten bite wait times.',
-      active: RODS[rodTier]?.name ?? '',
+      key: 'rod', label: 'Rods', color: RODS[equippedRod]?.color ?? '#a07858',
+      desc: 'Each rod trades bite speed against catch zone width. Mix and match — buy any, equip any.',
+      active: RODS[equippedRod]?.name ?? '',
     },
     {
       key: 'reel', label: 'Reels', color: REELS[reelTier]?.color ?? '#60a5fa',
@@ -379,26 +402,24 @@ export default function TackleShopClient({
       {section === 'rod' && (
         <div className="flex flex-col gap-2.5 mb-4">
           {RODS.map(rod => {
-            const owned = rod.tier <= rodTier
-            const isActive = rod.tier === rodTier
-            const locked = rod.tier > rodTier + 1
-            const isNext = rod.tier === rodTier + 1
-            const canAffordRod = isNext && doubloons >= rod.cost
+            const owned = rod.cost === 0 || ownedRods.includes(rod.tier)
+            const isActive = rod.tier === equippedRod
+            const canAfford = doubloons >= rod.cost
+            const isBuying = buyingRod === rod.tier && isPending
+            const isEquipping = equippingRod === rod.tier && isPending
             const c = rod.color
+            const speedPct = Math.round((3800 - rod.biteIntervalMs) / 3800 * 100)
 
             return (
               <div
                 key={rod.tier}
-                onClick={() => { if (isNext && canAffordRod && !isPending) handleBuyRod() }}
-                className="p-3 sm:p-5"
+                className="p-3 sm:p-4"
                 style={{
-                  background: owned ? `${c}0d` : isNext && canAffordRod ? `${c}08` : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${owned ? `${c}55` : isNext && canAffordRod ? `${c}40` : 'rgba(255,255,255,0.09)'}`,
-                  boxShadow: isActive ? `0 0 16px ${c}18` : isNext && canAffordRod ? `0 0 12px ${c}12` : 'none',
+                  background: isActive ? `${c}0f` : owned ? `${c}08` : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${isActive ? `${c}55` : owned ? `${c}28` : 'rgba(255,255,255,0.09)'}`,
+                  boxShadow: isActive ? `0 0 16px ${c}18` : 'none',
                   borderRadius: 12,
-                  opacity: locked ? 0.3 : isPending && isNext ? 0.6 : 1,
-                  cursor: isNext && canAffordRod ? 'pointer' : 'default',
-                  transition: 'box-shadow 0.2s ease, opacity 0.15s ease',
+                  transition: 'box-shadow 0.2s ease',
                 }}
               >
                 <div className="flex items-start gap-3">
@@ -409,46 +430,94 @@ export default function TackleShopClient({
                         {rod.name}
                       </p>
                       {isActive && (
-                        <span className="font-karla font-600 uppercase tracking-[0.12em] text-[0.52rem]" style={{ color: c }}>Active</span>
+                        <span className="font-karla font-600 uppercase tracking-[0.12em] text-[0.52rem]" style={{ color: c }}>Equipped</span>
                       )}
                       {owned && !isActive && (
                         <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80] text-[0.52rem]">Owned</span>
                       )}
                     </div>
-                    <p className="font-karla font-300 text-[#6a6764] text-xs">{rod.description}</p>
+                    <p className="font-karla font-300 text-[#6a6764] text-xs mb-1.5">{rod.description}</p>
 
-                    {owned && rod.rarityBonus > 0 && (
-                      <span className="font-karla font-600 inline-block mt-1.5"
-                        style={{
-                          fontSize: '0.5rem', color: `${c}bb`,
-                          background: `${c}14`, border: `1px solid ${c}30`,
-                          padding: '0.1rem 0.4rem', borderRadius: '2rem',
-                        }}>
-                        +{Math.round(rod.rarityBonus * 100)}% rare fish bias
-                      </span>
-                    )}
-
-                    {isNext && (
-                      <p className="font-karla font-600 mt-1.5 text-xs" style={{ color: canAffordRod ? c : '#6a6764' }}>
-                        {isPending ? 'Upgrading…' : canAffordRod ? '↑ Tap to upgrade' : `${(rod.cost - doubloons).toLocaleString()} ⟡ short`}
-                      </p>
-                    )}
+                    <div className="flex gap-1 flex-wrap">
+                      {speedPct > 0 ? (
+                        <span className="font-karla font-600"
+                          style={{ fontSize: '0.5rem', color: `${c}bb`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                          {speedPct}% faster bites
+                        </span>
+                      ) : speedPct < 0 ? (
+                        <span className="font-karla font-600"
+                          style={{ fontSize: '0.5rem', color: 'rgba(248,113,113,0.85)', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                          {Math.abs(speedPct)}% slower bites
+                        </span>
+                      ) : (
+                        <span className="font-karla font-600"
+                          style={{ fontSize: '0.5rem', color: '#6a6764', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                          Base bite speed
+                        </span>
+                      )}
+                      {rod.catchZoneBonus > 0 && (
+                        <span className="font-karla font-600"
+                          style={{ fontSize: '0.5rem', color: `${c}bb`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                          +{rod.catchZoneBonus}° catch zone
+                        </span>
+                      )}
+                      {rod.rarityBonus > 0 && (
+                        <span className="font-karla font-600"
+                          style={{ fontSize: '0.5rem', color: `${c}bb`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                          +{Math.round(rod.rarityBonus * 100)}% rare fish bias
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {!owned && (
-                    <p className="font-cinzel font-700 text-[#f0c040] text-sm shrink-0">
-                      {rod.cost.toLocaleString()} ⟡
-                    </p>
-                  )}
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    {!owned && (
+                      <p className="font-cinzel font-700 text-[#f0c040] text-sm">
+                        {rod.cost.toLocaleString()} ⟡
+                      </p>
+                    )}
+                    {!owned && (
+                      <button
+                        onClick={() => handlePurchaseRod(rod.tier)}
+                        disabled={!canAfford || isPending}
+                        className="font-karla font-700"
+                        style={{
+                          fontSize: '0.6rem', padding: '0.3rem 0.65rem', borderRadius: 8,
+                          background: canAfford ? `${c}16` : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${canAfford ? c + '44' : 'rgba(255,255,255,0.08)'}`,
+                          color: canAfford ? c : '#4a4845',
+                          cursor: canAfford && !isPending ? 'pointer' : 'default',
+                          opacity: isBuying ? 0.5 : 1,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {isBuying ? '…' : canAfford ? 'Buy & Equip' : `${(rod.cost - doubloons).toLocaleString()} ⟡ short`}
+                      </button>
+                    )}
+                    {owned && !isActive && (
+                      <button
+                        onClick={() => handleEquipRod(rod.tier)}
+                        disabled={isPending}
+                        className="font-karla font-700"
+                        style={{
+                          fontSize: '0.6rem', padding: '0.3rem 0.65rem', borderRadius: 8,
+                          background: `${c}16`, border: `1px solid ${c}44`,
+                          color: c, cursor: isPending ? 'default' : 'pointer',
+                          opacity: isEquipping ? 0.5 : 1,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {isEquipping ? '…' : 'Equip'}
+                      </button>
+                    )}
+                    {isActive && (
+                      <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: `${c}88` }}>✓ In use</span>
+                    )}
+                  </div>
                 </div>
               </div>
             )
           })}
-          {rodTier >= RODS.length - 1 && (
-            <p className="font-karla font-300 text-[#a0a09a] text-sm text-center">
-              You have the best rod money can buy.
-            </p>
-          )}
         </div>
       )}
 

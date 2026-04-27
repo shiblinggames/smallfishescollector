@@ -202,10 +202,12 @@ function GearDrawerContent({ rodTier, reelTier, hookTier, lineTier }: {
   const items = [
     {
       label: 'Rod', name: rod.name, color: rod.color,
-      upgradeable: rodTier < RODS.length - 1,
+      upgradeable: true,
       stats: [
-        rod.rarityBonus > 0 ? `+${Math.round(rod.rarityBonus * 100)}% rare fish bias` : 'No rarity bonus',
-      ],
+        rod.catchZoneBonus > 0 ? `+${rod.catchZoneBonus}° catch zone` : null,
+        rod.rarityBonus > 0 ? `+${Math.round(rod.rarityBonus * 100)}% rare fish bias` : null,
+        (!rod.catchZoneBonus && !rod.rarityBonus) ? 'Speed-focused' : null,
+      ].filter(Boolean) as string[],
       extra: null,
     },
     {
@@ -843,7 +845,7 @@ export default function FishingGame({
 
     const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
     const baitBonus = getBait(selectedBaitRef.current).catchZoneBonus
-    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus + baitBonus)
+    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus + baitBonus + rod.catchZoneBonus)
     const zone  = getZone(zones, angleRef.current, zoneRotation)
 
     if (zone.type === 'penalty') deductBait(selectedBaitRef.current)
@@ -926,7 +928,7 @@ export default function FishingGame({
   }
 
   // Zone display helpers
-  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus) : []
+  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus) : []
   const currentZone   = (phase === 'catching' || phase === 'reeling') ? getZone(catchingZones, angle, zoneRotation) : null
 
   function needleColor(): string {
