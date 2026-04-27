@@ -728,12 +728,6 @@ export default function FishingGame({
   const [phase, setPhase]           = useState<Phase>('idle')
   const selectedZone = initialZone
   const [selectedBait, setSelectedBait] = useState<string>(() => {
-    // Prefer a bait that's compatible with the selected zone
-    const compatible = initialBait.find(b => {
-      const def = BAITS.find(x => x.type === b.bait_type)
-      return b.quantity > 0 && def?.habitats.includes(initialZone)
-    })
-    if (compatible) return compatible.bait_type
     const first = initialBait.find(b => b.quantity > 0)
     return first?.bait_type ?? 'worm'
   })
