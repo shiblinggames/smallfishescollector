@@ -923,7 +923,7 @@ export default function FishingGame({
         }} />
 
         {/* UI content — fills full height as flex column */}
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem', paddingTop: '1rem', paddingBottom: '1.25rem' }}>
+        <div className="pt-[44px] sm:pt-4 pb-[60px] sm:pb-5 px-4" style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
 
           <GearBar rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} lineTier={lineTier} />
 
