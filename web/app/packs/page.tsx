@@ -13,7 +13,7 @@ export default async function PacksPage() {
   if (!user) redirect('/login')
 
   const [{ data: profile }, stats, history, bounties] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, hook_tier').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons').eq('id', user.id).single(),
     getPackStats(),
     getPackHistory(),
     getWeeklyBounties(),
@@ -26,9 +26,9 @@ export default async function PacksPage() {
     <>
       <Nav packsAvailable={packsAvailable} doubloons={doubloons} />
       <main className="min-h-screen px-6 py-4 sm:py-0 flex flex-col items-center sm:justify-center">
-        <PackOpener packsAvailable={packsAvailable} doubloons={doubloons} hookTier={profile?.hook_tier ?? 0} />
+        <PackOpener packsAvailable={packsAvailable} doubloons={doubloons} />
         {bounties && <WeeklyBounties initialData={bounties} />}
-        {stats && <PackStatsToggle stats={stats} history={history} hookTier={profile?.hook_tier ?? 0} />}
+        {stats && <PackStatsToggle stats={stats} history={history} />}
       </main>
     </>
   )

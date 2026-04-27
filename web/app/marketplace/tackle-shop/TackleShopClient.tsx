@@ -53,7 +53,6 @@ export default function TackleShopClient({
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [buyingBait, setBuyingBait] = useState<string | null>(null)
-  const [tooltipTier, setTooltipTier] = useState<number | null>(null)
   const [previewTier, setPreviewTier] = useState(initialHookTier)
 
   const baitMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
@@ -119,7 +118,7 @@ export default function TackleShopClient({
     },
     {
       key: 'hook', label: 'Hooks', color: HOOKS[hookTier]?.color ?? '#f0c040',
-      desc: 'Widens the catch zone on the reel dial and improves your luck when opening packs.',
+      desc: 'Widens the catch zone on the reel dial. Higher tiers also add a bonus to your catch roll.',
       active: HOOKS[hookTier]?.name ?? '',
     },
     {
@@ -306,13 +305,11 @@ export default function TackleShopClient({
               const owned = hook.tier <= hookTier
               const isActive = hook.tier === hookTier
               const locked = hook.tier > hookTier + 1
-              const showTooltip = tooltipTier === hook.tier
               const c = hook.color
               const isNext = hook.tier === hookTier + 1
               const canAffordHook = isNext && doubloons >= hook.cost
               const clickable = isNext && canAffordHook && !isPending
               const isPreviewing = previewTier === hook.tier && hook.tier !== hookTier
-              const luckPct = Math.round((hook.deepChance - HOOKS[0].deepChance) / (HOOKS[HOOKS.length - 1].deepChance - HOOKS[0].deepChance) * 100)
 
               return (
                 <div
@@ -367,68 +364,12 @@ export default function TackleShopClient({
                       )}
                     </div>
 
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      {!owned && (
-                        <p className="font-cinzel font-700 text-[#f0c040] text-sm sm:text-base">
-                          {hook.cost.toLocaleString()} ⟡
-                        </p>
-                      )}
-                      <p className="font-karla font-600 text-xs sm:text-sm" style={{ color: owned ? c : '#4a4845' }}>
-                        {luckPct}% luck
+                    {!owned && (
+                      <p className="font-cinzel font-700 text-[#f0c040] shrink-0 text-sm sm:text-base">
+                        {hook.cost.toLocaleString()} ⟡
                       </p>
-                      <button
-                        onClick={e => { e.stopPropagation(); setTooltipTier(showTooltip ? null : hook.tier) }}
-                        onMouseEnter={() => setTooltipTier(hook.tier)}
-                        onMouseLeave={() => setTooltipTier(null)}
-                        className="transition-colors"
-                        style={{ color: showTooltip ? '#a0a09a' : '#4a4845', lineHeight: 1 }}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                          <circle cx="12" cy="12" r="10"/>
-                          <line x1="12" y1="8" x2="12" y2="8.5"/>
-                          <line x1="12" y1="12" x2="12" y2="16"/>
-                        </svg>
-                      </button>
-                    </div>
+                    )}
                   </div>
-
-                  {showTooltip && (
-                    <div className="mt-3 flex flex-col gap-2.5" style={{ paddingLeft: 50 }}>
-                      <div>
-                        <p className="font-karla font-600 uppercase tracking-[0.1em] mb-1.5" style={{ fontSize: '0.55rem', color: '#5a5956' }}>Fishing</p>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="font-karla font-300 text-[#6a6764] text-[0.65rem]">Hook roll</p>
-                            <p className="font-karla font-600 text-[0.65rem]" style={{ color: c }}>
-                              {hook.rollBonus > 0 ? `+${hook.rollBonus}` : 'Base'}
-                            </p>
-                          </div>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="font-karla font-300 text-[#6a6764] text-[0.65rem]">Catch zone</p>
-                            <p className="font-karla font-600 text-[0.65rem]" style={{ color: c }}>
-                              {hook.tier === 0 ? 'Standard' : `+${hook.tier * 3}°`}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="font-karla font-600 uppercase tracking-[0.1em] mb-1.5" style={{ fontSize: '0.55rem', color: '#5a5956' }}>Pack Opening</p>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                          {[
-                            { label: 'Shallows',    value: hook.weights.shallows,   color: '#60a5fa' },
-                            { label: 'Open Waters', value: hook.weights.openWaters, color: '#4ade80' },
-                            { label: 'Deep',        value: hook.weights.deep,       color: '#a78bfa' },
-                            { label: 'Abyss',       value: hook.weights.abyss,      color: '#f0c040' },
-                          ].map(({ label, value, color }) => (
-                            <div key={label} className="flex items-center justify-between gap-2">
-                              <p className="font-karla font-300 text-[#6a6764] text-[0.65rem]">{label}</p>
-                              <p className="font-karla font-600 text-[0.65rem]" style={{ color }}>{(value * 100).toFixed(1)}%</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )
             })}

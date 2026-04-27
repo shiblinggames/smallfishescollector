@@ -26,7 +26,6 @@ export default async function MarketplacePage() {
     "Membership pays for itself in a week. Just saying.",
     "Every hook I sell comes with a guarantee. Not in writing, but still.",
     "The board game's been sitting in that corner since last season. Good game though.",
-    "Enchanted hooks don't come cheap. Neither does luck.",
     "You want the Abyss? You'll need a better hook than that.",
     "I've seen sailors upgrade three tiers in a month. Dedication.",
     "That Gold hook? Beautiful piece of work. I almost kept it.",

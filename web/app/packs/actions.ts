@@ -82,7 +82,7 @@ export async function openPack(): Promise<OpenPackResponse> {
   // Read current pack count
   const { data: profile } = await admin
     .from('profiles')
-    .select('packs_available, packs_since_legendary, doubloons, highest_rank_claimed, hook_tier')
+    .select('packs_available, packs_since_legendary, doubloons, highest_rank_claimed')
     .eq('id', user.id)
     .single()
 
@@ -107,7 +107,7 @@ export async function openPack(): Promise<OpenPackResponse> {
   const variants = (variantRows ?? []) as unknown as CardVariant[]
   const isGodPack = Math.random() < 0.001
   const forceLegendary = (profile.packs_since_legendary ?? 0) >= 20
-  const drawn = isGodPack ? drawGodPack(variants) : drawPack(variants, forceLegendary, profile.hook_tier ?? 0)
+  const drawn = isGodPack ? drawGodPack(variants) : drawPack(variants, forceLegendary)
 
   // Check what the user already owns (for new badge)
   const { data: existing } = await admin

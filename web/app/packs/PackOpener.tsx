@@ -9,40 +9,7 @@ import PrizeModal from '@/components/PrizeModal'
 import { openPack as openPackAction, buyPacksWithDoubloons } from './actions'
 import type { DrawnCard, BorderStyle, ArtEffect } from '@/lib/types'
 import type { OpenPackResponse } from './actions'
-import { getHook, HOOKS } from '@/lib/hooks'
 import AchievementToast from '@/components/AchievementToast'
-import dynamic from 'next/dynamic'
-
-const HookViewer3D = dynamic(() => import('@/app/marketplace/tackle-shop/HookViewer3D'), { ssr: false })
-
-function ActiveHookBadge({ hookTier }: { hookTier: number }) {
-  const hook = getHook(hookTier)
-  const luckPct = Math.round((hook.deepChance - HOOKS[0].deepChance) / (HOOKS[HOOKS.length - 1].deepChance - HOOKS[0].deepChance) * 100)
-  return (
-    <div className="flex flex-col items-center gap-1.5">
-      {hook.modelUrl ? (
-        <div style={{ width: 60, height: 60 }}>
-          <HookViewer3D modelUrl={hook.modelUrl} color={hook.color} tier={hookTier} height={60} />
-        </div>
-      ) : (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2v10"/>
-          <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
-          <circle cx="12" cy="3" r="2" fill="#a0a09a" stroke="none"/>
-        </svg>
-      )}
-      <p className="font-karla font-600 text-[#f0ede8]" style={{ fontSize: '0.88rem' }}>{hook.name}</p>
-      <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: hook.color }}>{luckPct}% luck</p>
-      <a
-        href="/marketplace/tackle-shop"
-        className="font-karla font-600 uppercase tracking-[0.1em] transition-opacity hover:opacity-80"
-        style={{ fontSize: '0.6rem', color: '#f0c040', textDecoration: 'none' }}
-      >
-        Upgrade →
-      </a>
-    </div>
-  )
-}
 
 function cardBackBorderStyle(borderStyle: BorderStyle, artEffect: ArtEffect): React.CSSProperties {
   if (artEffect === 'ghost')  return { borderColor: 'rgba(200,210,220,0.45)' }
@@ -74,10 +41,9 @@ function cardBackBorderStyle(borderStyle: BorderStyle, artEffect: ArtEffect): Re
 interface Props {
   packsAvailable: number
   doubloons: number
-  hookTier: number
 }
 
-export default function PackOpener({ packsAvailable: initialPacks, doubloons: initialDoubloons, hookTier }: Props) {
+export default function PackOpener({ packsAvailable: initialPacks, doubloons: initialDoubloons }: Props) {
   const router = useRouter()
   const packButtonRef = useRef<HTMLButtonElement>(null)
   const [packs, setPacks] = useState(initialPacks)
@@ -396,7 +362,6 @@ export default function PackOpener({ packsAvailable: initialPacks, doubloons: in
           </div>
         </div>
 
-        <ActiveHookBadge hookTier={hookTier} />
 
       </div>
     )

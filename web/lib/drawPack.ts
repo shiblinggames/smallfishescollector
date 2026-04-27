@@ -1,7 +1,5 @@
-import type { CardVariant, DrawnCard, BorderStyle, ArtEffect, Zone } from './types'
+import type { CardVariant, DrawnCard, BorderStyle, ArtEffect } from './types'
 import { RARITY_TIERS, VARIANT_RARITY } from './variants'
-import { getHook } from './hooks'
-import type { HookDef } from './hooks'
 
 // God pack eligible = Epic and above. Derives automatically from RARITY_TIERS.
 const GOD_PACK_RARITY_NAMES = new Set(['Epic', 'Legendary', 'Mythic'])
@@ -34,18 +32,6 @@ function weightedPick(variants: CardVariant[]): CardVariant {
   return variants[variants.length - 1]
 }
 
-function pickZone(w: HookDef['weights']): Zone {
-  const r = Math.random()
-  if (r < w.abyss) return 'abyss'
-  if (r < w.abyss + w.deep) return 'deep'
-  if (r < w.abyss + w.deep + w.openWaters) return 'open_waters'
-  return 'shallows'
-}
-
-function zonePool(variants: CardVariant[], zone: Zone): CardVariant[] {
-  return variants.filter(v => v.cards!.zone === zone)
-}
-
 export function drawGodPack(variants: CardVariant[]): DrawnCard[] {
   const godPool = variants
     .filter(v => GOD_PACK_ELIGIBLE.has(v.variant_name))
@@ -59,14 +45,11 @@ export function drawGodPack(variants: CardVariant[]): DrawnCard[] {
   return drawn
 }
 
-export function drawPack(variants: CardVariant[], forceLegendary = false, hookTier = 0): DrawnCard[] {
-  const hook = getHook(hookTier)
+export function drawPack(variants: CardVariant[], forceLegendary = false): DrawnCard[] {
   const drawn: DrawnCard[] = []
 
   for (let i = 0; i < 5; i++) {
-    const zone = pickZone(hook.weights)
-    const pool = zonePool(variants, zone)
-    drawn.push(toDrawn(weightedPick(pool.length > 0 ? pool : variants)))
+    drawn.push(toDrawn(weightedPick(variants)))
   }
 
   // Guarantee at least 1 card with drop_weight ≤ 12 (Gold or rarer)

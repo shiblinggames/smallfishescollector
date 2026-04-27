@@ -4,7 +4,7 @@ import { useState } from 'react'
 import PackStats from './PackStats'
 import type { PackStats as PackStatsType, PackHistoryEntry } from './stats'
 
-export default function PackStatsToggle({ stats, history, hookTier }: { stats: PackStatsType; history: PackHistoryEntry[]; hookTier: number }) {
+export default function PackStatsToggle({ stats, history }: { stats: PackStatsType; history: PackHistoryEntry[] }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -15,7 +15,7 @@ export default function PackStatsToggle({ stats, history, hookTier }: { stats: P
       >
         {open ? 'Hide Stats' : 'Stats & History'}
       </button>
-      {open && <PackStats stats={stats} history={history} hookTier={hookTier} />}
+      {open && <PackStats stats={stats} history={history} />}
     </div>
   )
 }

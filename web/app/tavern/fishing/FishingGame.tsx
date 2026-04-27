@@ -924,10 +924,10 @@ export default function FishingGame({
   const bgBobTransition = !isBobbing
     ? { duration: 0.12 }
     : phase !== 'hooked'
-      ? { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }
+      ? { duration: 2.5, repeat: Infinity, ease: 'easeInOut' as const }
       : {
           duration: hookedRarity >= 5 ? 0.32 : hookedRarity >= 4 ? 0.40 : hookedRarity >= 3 ? 0.50 : hookedRarity >= 2 ? 0.60 : 0.72,
-          repeat: Infinity, ease: 'easeInOut',
+          repeat: Infinity, ease: 'easeInOut' as const,
         }
 
   return (

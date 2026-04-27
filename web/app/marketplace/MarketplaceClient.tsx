@@ -12,8 +12,6 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
   const [doubloons, setDoubloons] = useState(initialDoubloons)
   const [isPending, startTransition] = useTransition()
   const [hookError, setHookError] = useState<string | null>(null)
-  const [tooltipTier, setTooltipTier] = useState<number | null>(null)
-
   // Redeem state
   const [code, setCode] = useState('')
   const [redeemStatus, setRedeemStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
@@ -161,12 +159,10 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
             const owned = hook.tier <= hookTier
             const isActive = hook.tier === hookTier
             const locked = hook.tier > hookTier + 1
-            const showTooltip = tooltipTier === hook.tier
             const c = hook.color
 
             const isNext = hook.tier === hookTier + 1
             const clickable = isNext && canAfford && !isPending
-            const luckPct = Math.round((hook.deepChance - HOOKS[0].deepChance) / (HOOKS[HOOKS.length - 1].deepChance - HOOKS[0].deepChance) * 100)
 
             return (
               <div
@@ -206,47 +202,12 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
                     )}
                   </div>
 
-                  <div className="flex flex-col items-end gap-1.5 shrink-0">
-                    {!owned && (
-                      <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.8rem' }}>
-                        {hook.cost.toLocaleString()} ⟡
-                      </p>
-                    )}
-                    <p className="font-karla font-600" style={{ fontSize: '0.65rem', color: owned ? c : '#4a4845' }}>
-                      {luckPct}% luck
+                  {!owned && (
+                    <p className="font-cinzel font-700 text-[#f0c040] shrink-0" style={{ fontSize: '0.8rem' }}>
+                      {hook.cost.toLocaleString()} ⟡
                     </p>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setTooltipTier(showTooltip ? null : hook.tier) }}
-                      onMouseEnter={() => setTooltipTier(hook.tier)}
-                      onMouseLeave={() => setTooltipTier(null)}
-                      className="transition-colors"
-                      style={{ color: showTooltip ? '#a0a09a' : '#4a4845', lineHeight: 1 }}
-                      aria-label="Show zone breakdown"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="12" y1="8" x2="12" y2="8.5"/>
-                        <line x1="12" y1="12" x2="12" y2="16"/>
-                      </svg>
-                    </button>
-                  </div>
+                  )}
                 </div>
-
-                {showTooltip && (
-                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1" style={{ paddingLeft: 50 }}>
-                    {[
-                      { label: 'Shallows', value: hook.weights.shallows, color: '#60a5fa' },
-                      { label: 'Open Waters', value: hook.weights.openWaters, color: '#4ade80' },
-                      { label: 'Deep', value: hook.weights.deep, color: '#a78bfa' },
-                      { label: 'Abyss', value: hook.weights.abyss, color: '#f0c040' },
-                    ].map(({ label, value, color }) => (
-                      <div key={label} className="flex items-center justify-between gap-2">
-                        <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.65rem' }}>{label}</p>
-                        <p className="font-karla font-600" style={{ fontSize: '0.65rem', color }}>{(value * 100).toFixed(1)}%</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             )
           })}
