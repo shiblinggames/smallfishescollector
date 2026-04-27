@@ -279,6 +279,7 @@ function UnifiedGearDrawer({
                     {ownedRodDefs.map(r => {
                       const isEquipped = r.tier === equippedRodTier
                       const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
+                      const hasSpecial = r.doubleCatchChance > 0 || r.retryOnMissChance > 0 || r.snagImmune || r.perfectZoneBonus > 0 || r.rarityBonus > 0
                       return (
                         <div key={r.tier} style={{
                           display: 'flex', alignItems: 'center', gap: 10,
@@ -289,16 +290,14 @@ function UnifiedGearDrawer({
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f0ede8' }}>{r.name}</p>
                             <div style={{ display: 'flex', gap: 3, marginTop: 3, flexWrap: 'wrap' }}>
-                              {speedPct > 0
-                                ? <StatPill label={`${speedPct}% faster bites`} color={r.color} />
-                                : speedPct < 0
-                                  ? <StatPill label={`${Math.abs(speedPct)}% slower bites`} color="#f87171" />
-                                  : <StatPill label="Base bite speed" muted />
-                              }
-                              {r.catchZoneBonus > 0 && <StatPill label={`+${r.catchZoneBonus}° catch zone`} color={r.color} />}
-                              {r.rarityBonus > 0 && <StatPill label={`+${Math.round(r.rarityBonus * 100)}% rare bias`} color={r.color} />}
-                              {r.doubleCatchChance > 0 && <StatPill label={`${Math.round(r.doubleCatchChance * 100)}% double catch`} color={r.color} />}
+                              {r.doubleCatchChance > 0 && <StatPill label={r.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(r.doubleCatchChance * 100)}% double catch`} color={r.color} />}
                               {r.retryOnMissChance > 0 && <StatPill label={`${Math.round(r.retryOnMissChance * 100)}% miss retry`} color={r.color} />}
+                              {r.snagImmune && <StatPill label="Snag immune" color={r.color} />}
+                              {r.perfectZoneBonus > 0 && <StatPill label={`Perfect zone +${r.perfectZoneBonus}°`} color={r.color} />}
+                              {r.rarityBonus > 0 && <StatPill label={`+${Math.round(r.rarityBonus * 100)}% rare bias`} color={r.color} />}
+                              {!hasSpecial && speedPct > 0 && <StatPill label={`${speedPct}% faster bites`} color={r.color} />}
+                              {!hasSpecial && speedPct <= 0 && r.catchZoneBonus > 0 && <StatPill label={`+${r.catchZoneBonus}° catch zone`} color={r.color} />}
+                              {!hasSpecial && speedPct <= 0 && r.catchZoneBonus === 0 && <StatPill label="Base rod" muted />}
                             </div>
                           </div>
                           {isEquipped
@@ -546,7 +545,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           <span style={{ fontSize: '0.65rem', color: '#fbbf24' }}>✦</span>
           <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
             style={{ fontSize: '0.68rem', color: '#fbbf24', textShadow: '0 0 10px rgba(251,191,36,0.6)' }}>
-            Twin-Strike — ×2 Catch
+            Double Catch — ×2
           </p>
           <span style={{ fontSize: '0.65rem', color: '#fbbf24' }}>✦</span>
         </motion.div>
@@ -988,18 +987,21 @@ export default function FishingGame({
 
     const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
     const baitBonus = getBait(selectedBaitRef.current).catchZoneBonus
-    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus + baitBonus + rod.catchZoneBonus)
+    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus + baitBonus + rod.catchZoneBonus, rod.perfectZoneBonus)
     const zone  = getZone(zones, angleRef.current, zoneRotation)
 
-    if (zone.type === 'penalty') deductBait(selectedBaitRef.current)
+    // Snag immune: treat penalty as miss — no extra bait lost
+    const effectiveZoneType = (zone.type === 'penalty' && rod.snagImmune) ? 'miss' : zone.type
 
-    const isCatch = zone.type === 'catch' || zone.type === 'perfect'
+    if (effectiveZoneType === 'penalty') deductBait(selectedBaitRef.current)
+
+    const isCatch = effectiveZoneType === 'catch' || effectiveZoneType === 'perfect'
 
     if (!isCatch) {
       // Second Wind rod: 25% chance to retry the dial on miss or snag
       if (rod.retryOnMissChance > 0 && Math.random() < rod.retryOnMissChance) {
         // Restore the bait lost to snag before retrying
-        if (zone.type === 'penalty') {
+        if (effectiveZoneType === 'penalty') {
           setBaitInventory(prev => prev.map(b =>
             b.bait_type === selectedBaitRef.current ? { ...b, quantity: b.quantity + 1 } : b
           ))
@@ -1016,12 +1018,12 @@ export default function FishingGame({
       }
 
       // Miss/penalty: show result immediately, fire server call in background
-      setMissResult(zone.type)
+      setMissResult(effectiveZoneType)
       setCatchResult(null)
       phaseRef.current = 'result'
       setPhase('result')
       startTransition(async () => {
-        await reelIn(hookedFishRef.current!.fishId, zone.type as 'miss' | 'penalty', selectedBaitRef.current)
+        await reelIn(hookedFishRef.current!.fishId, effectiveZoneType as 'miss' | 'penalty', selectedBaitRef.current)
       })
       return
     }
@@ -1101,7 +1103,7 @@ export default function FishingGame({
   }
 
   // Zone display helpers
-  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus) : []
+  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus, rod.perfectZoneBonus) : []
   const currentZone   = (phase === 'catching' || phase === 'reeling') ? getZone(catchingZones, angle, zoneRotation) : null
 
   function needleColor(): string {
