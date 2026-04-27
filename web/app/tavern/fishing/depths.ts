@@ -91,6 +91,7 @@ export function buildFishZones(
   hookTier = 0,
   linePenaltyMultiplier = 1.0,
   zoneCatchMultiplier = 1.0,
+  levelBonus = 0,
 ): ZoneDef[] {
   const d = Math.max(1, Math.min(5, catchDifficulty)) - 1
   const baseCatch = [77, 62, 46, 32, 20][d]
@@ -100,7 +101,7 @@ export function buildFishZones(
   const hasLeft   = d >= 2
 
   const catchDeg = Math.max(10, Math.round(
-    (baseCatch + Math.max(0, Math.min(6, hookTier)) * CATCH_BONUS_PER_TIER) * zoneCatchMultiplier
+    (baseCatch + Math.max(0, Math.min(6, hookTier)) * CATCH_BONUS_PER_TIER + levelBonus) * zoneCatchMultiplier
   ))
 
   return buildZonesFromParams({

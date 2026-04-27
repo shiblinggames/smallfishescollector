@@ -14,13 +14,14 @@ type InventoryItem = {
 
 export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
-  initialDoubloons, initialBait, initialInventory, uniqueSpeciesCaught,
+  initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
 }: {
   hookTier: number
   rodTier: number
   reelTier: number
   lineTier: number
   initialDoubloons: number
+  initialFishingXP: number
   initialBait: BaitItem[]
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
@@ -38,6 +39,7 @@ export default function FishingPageClient({
       reelTier={reelTier}
       lineTier={lineTier}
       initialDoubloons={initialDoubloons}
+      initialFishingXP={initialFishingXP}
       initialBait={initialBait}
       initialInventory={initialInventory}
       uniqueSpeciesCaught={uniqueSpeciesCaught}

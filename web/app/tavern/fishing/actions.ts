@@ -7,6 +7,7 @@ import { getHook } from '@/lib/hooks'
 import { getBait } from '@/lib/bait'
 import { checkAchievements } from '@/lib/checkAchievements'
 import { getWeekStart } from '@/lib/weekStart'
+import { catchXP } from '@/lib/fishingLevel'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -159,7 +160,7 @@ export async function reelIn(
   result: 'perfect' | 'catch' | 'miss' | 'penalty',
   baitType: string,
 ): Promise<
-  | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; newAchievements: string[]; bountyCompletion?: FishingBountyCompletion }
+  | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; newAchievements: string[]; bountyCompletion?: FishingBountyCompletion; xpGained: number; newXP: number }
   | { caught: false; newAchievements: string[] }
   | { error: string }
 > {
@@ -197,7 +198,7 @@ export async function reelIn(
 
   const [{ data: fish }, { data: profile }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp').eq('id', user.id).single(),
   ])
 
   if (!fish || !profile) return { error: 'Data not found' }
@@ -255,8 +256,10 @@ export async function reelIn(
   // Track abyss streak for achievements
   const isAbyssPerfect = result === 'perfect' && fish.habitat === 'abyss'
   const newAbyssStreak = isAbyssPerfect ? (profile.fishing_abyss_streak ?? 0) + 1 : 0
+  const xpGained = catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect')
+  const newXP = (profile.fishing_xp ?? 0) + xpGained
 
-  await admin.from('profiles').update({ fishing_abyss_streak: newAbyssStreak }).eq('id', user.id)
+  await admin.from('profiles').update({ fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP }).eq('id', user.id)
 
   if (baitSaved) {
     const { data: baitRow } = await admin
@@ -322,7 +325,7 @@ export async function reelIn(
     }
   }
 
-  return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, newAchievements, bountyCompletion }
+  return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, newAchievements, bountyCompletion, xpGained, newXP }
 }
 
 // Sell fish from inventory

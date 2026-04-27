@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, sellFish, type FishSpecies, type FishingBountyCompletion } from './actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
+import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
 import { getHook } from '@/lib/hooks'
 import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
@@ -639,11 +640,39 @@ function FishInventory({ inventory, onSell }: {
   )
 }
 
+// ─── XPBar ───────────────────────────────────────────────────────────────────
+
+function XPBarDisplay({ xp }: { xp: number }) {
+  const { level, progress, xpInLevel, xpForLevel } = getXPProgress(xp)
+  const isMax = level >= MAX_LEVEL
+  const fillPct = isMax ? 100 : progress * 100
+
+  return (
+    <div className="flex items-center gap-2">
+      <p className="font-karla font-700 shrink-0"
+        style={{ fontSize: '0.58rem', color: '#60a5fa', minWidth: '2.5rem' }}>
+        Lvl {level}
+      </p>
+      <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+        <motion.div
+          style={{ height: '100%', borderRadius: 2, background: isMax ? '#f0c040' : '#60a5fa', width: `${fillPct}%` }}
+          animate={{ width: `${fillPct}%` }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+        />
+      </div>
+      <p className="font-karla font-600 shrink-0"
+        style={{ fontSize: '0.5rem', color: '#3a3835', minWidth: '3.2rem', textAlign: 'right' }}>
+        {isMax ? 'Max level' : `${xpInLevel} / ${xpForLevel}`}
+      </p>
+    </div>
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function FishingGame({
   hookTier, rodTier, reelTier, lineTier,
-  initialDoubloons, initialBait, initialInventory,
+  initialDoubloons, initialFishingXP, initialBait, initialInventory,
   selectedZone: initialZone, onBack,
 }: {
   hookTier: number
@@ -651,6 +680,7 @@ export default function FishingGame({
   reelTier: number
   lineTier: number
   initialDoubloons: number
+  initialFishingXP: number
   initialBait: BaitItem[]
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
@@ -687,7 +717,12 @@ export default function FishingGame({
   const [bountyNotif, setBountyNotif] = useState<FishingBountyCompletion | null>(null)
   const [perfectFlash, setPerfectFlash] = useState(false)
   const [missResult, setMissResult] = useState<ZoneType | null>(null)
+  const [fishingXP, setFishingXP]   = useState(initialFishingXP)
+  const [xpPopup, setXpPopup]       = useState<{ value: number; id: number } | null>(null)
   const [, startTransition]         = useTransition()
+
+  const fishingLevel = getLevelFromXP(fishingXP)
+  const levelBonus   = levelCatchBonus(fishingLevel)
 
   // Needle state
   const [angle, setAngle]           = useState(270)
@@ -819,7 +854,7 @@ export default function FishingGame({
     if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
 
     const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
-    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier)
+    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus)
     const zone  = getZone(zones, angleRef.current, zoneRotation)
 
     if (zone.type === 'penalty') deductBait(selectedBaitRef.current)
@@ -850,9 +885,11 @@ export default function FishingGame({
       if ('error' in res || !res.caught) {
         setMissResult('miss')
       } else {
-        const { fish, baitSaved, isNewSpecies, bountyCompletion } = res
+        const { fish, baitSaved, isNewSpecies, bountyCompletion, xpGained, newXP } = res
         setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect })
         if (bountyCompletion) setBountyNotif(bountyCompletion)
+        setFishingXP(newXP)
+        setXpPopup({ value: xpGained, id: Date.now() })
         setInventory(prev => {
           const existing = prev.find(i => i.fish_id === fish.id)
           if (existing) return prev.map(i => i.fish_id === fish.id ? { ...i, quantity: i.quantity + 1 } : i)
@@ -896,7 +933,7 @@ export default function FishingGame({
   }
 
   // Zone display helpers
-  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier) : []
+  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus) : []
   const currentZone   = (phase === 'catching' || phase === 'reeling') ? getZone(catchingZones, angle, zoneRotation) : null
 
   function needleColor(): string {
@@ -970,7 +1007,7 @@ export default function FishingGame({
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem', paddingBottom: '1.25rem' }}>
 
           {/* Header row — back button left, gear button right */}
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <button
               onClick={onBack}
               className="font-karla font-600 uppercase tracking-[0.1em]"
@@ -995,6 +1032,31 @@ export default function FishingGame({
             >
               Gear ▾
             </button>
+          </div>
+
+          {/* XP bar */}
+          <div style={{ position: 'relative', marginBottom: '0.6rem' }}>
+            <XPBarDisplay xp={fishingXP} />
+            <AnimatePresence>
+              {xpPopup && (
+                <motion.p
+                  key={xpPopup.id}
+                  initial={{ opacity: 0, y: 0 }}
+                  animate={{ opacity: [0, 1, 1, 0], y: -14 }}
+                  transition={{ duration: 1.8, times: [0, 0.12, 0.65, 1], ease: 'easeOut' }}
+                  onAnimationComplete={() => setXpPopup(null)}
+                  className="font-karla font-700"
+                  style={{
+                    position: 'absolute', right: 0, top: -2,
+                    fontSize: '0.62rem', color: '#4ade80',
+                    pointerEvents: 'none',
+                    textShadow: '0 0 8px rgba(74,222,128,0.6)',
+                  }}
+                >
+                  +{xpPopup.value} XP
+                </motion.p>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Phase content — grows to fill available space */}
