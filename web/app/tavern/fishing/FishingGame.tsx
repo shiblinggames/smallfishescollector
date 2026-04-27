@@ -6,9 +6,9 @@ import Link from 'next/link'
 import { castLine, reelIn, sellFish, type FishSpecies, type FishingBountyCompletion } from './actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
-import { getHook } from '@/lib/hooks'
-import { getRod } from '@/lib/rods'
-import { getReel } from '@/lib/reels'
+import { getHook, HOOKS } from '@/lib/hooks'
+import { getRod, RODS } from '@/lib/rods'
+import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS, getBait } from '@/lib/bait'
 
@@ -202,6 +202,7 @@ function GearDrawerContent({ rodTier, reelTier, hookTier, lineTier }: {
   const items = [
     {
       label: 'Rod', name: rod.name, color: rod.color,
+      upgradeable: rodTier < RODS.length - 1,
       stats: [
         rod.rollBonus > 0 ? `+${rod.rollBonus} bonus on catch roll` : null,
       ].filter(Boolean) as string[],
@@ -218,11 +219,13 @@ function GearDrawerContent({ rodTier, reelTier, hookTier, lineTier }: {
     },
     {
       label: 'Reel', name: reel.name, color: reel.color,
+      upgradeable: reelTier < REELS.length - 1,
       stats: [dragPct > 0 ? `−${dragPct}% needle speed` : 'No drag reduction'],
       extra: null,
     },
     {
       label: 'Hook', name: hook.name, color: hook.color,
+      upgradeable: hookTier < HOOKS.length - 1,
       stats: [
         hook.rollBonus > 0 ? `+${hook.rollBonus} bonus on catch roll` : null,
         catchZoneBonus > 0 ? `+${catchZoneBonus}° wider catch zone` : null,
@@ -232,6 +235,7 @@ function GearDrawerContent({ rodTier, reelTier, hookTier, lineTier }: {
     },
     {
       label: 'Line', name: line.name, color: line.color,
+      upgradeable: false,
       stats: [snagReduction > 0 ? `−${snagReduction}% snag damage` : 'Standard snag damage'],
       extra: null,
     },
@@ -257,6 +261,16 @@ function GearDrawerContent({ rodTier, reelTier, hookTier, lineTier }: {
             ))}
             {item.extra}
           </div>
+          {item.upgradeable && (
+            <Link href="/marketplace/tackle-shop" className="shrink-0 font-karla font-700"
+              style={{
+                fontSize: '0.58rem', padding: '0.25rem 0.55rem', borderRadius: 7,
+                background: `${item.color}16`, border: `1px solid ${item.color}40`,
+                color: item.color, textDecoration: 'none', whiteSpace: 'nowrap',
+              }}>
+              Upgrade ↗
+            </Link>
+          )}
         </div>
       ))}
     </div>
