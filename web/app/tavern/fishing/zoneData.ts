@@ -5,17 +5,10 @@ export const ZONE_RARITY_RATES: Record<string, Record<number, number>> = {
   abyss:       { 1: 46, 2: 26, 3: 18, 4: 8, 5: 2 },
 }
 
-// Minimum rod tier required to access each zone
-export const ZONE_MIN_ROD: Record<string, number> = {
-  shallows:    0,
-  open_waters: 1,
-  deep:        2,
-  abyss:       3,
-}
-
-// Rod name the player needs to unlock each locked zone
-export const ZONE_UNLOCK_ROD: Record<string, string> = {
-  open_waters: 'Fiberglass Rod',
-  deep:        'Graphite Rod',
-  abyss:       'Carbon Rod',
+// Minimum fishing level required to access each zone
+export const ZONE_MIN_LEVEL: Record<string, number> = {
+  shallows:    1,
+  open_waters: 15,
+  deep:        30,
+  abyss:       50,
 }

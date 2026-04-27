@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getRod } from '@/lib/rods'
-import { ZONE_RARITY_RATES, ZONE_UNLOCK_ROD } from './zoneData'
+import { ZONE_RARITY_RATES, ZONE_MIN_LEVEL } from './zoneData'
 
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 export type ZoneKey = typeof ZONES[number]
@@ -65,17 +64,16 @@ const HOW_IT_WORKS = [
   },
   {
     title: 'Gear Summary',
-    body: 'Rod → unlocks zones + faster bites. Reel → slows the needle. Hook → widens the catch zone. Line → shrinks snag zones. Bait → faster bites + zone access.',
+    body: 'Rod → faster bites. Reel → slows the needle. Hook → widens the catch zone. Line → shrinks snag zones. Bait → faster bites + wider catch zone.',
   },
 ]
 
 export default function ZoneLanding({
-  rodTier, onSelect,
+  fishingLevel, onSelect,
 }: {
-  rodTier: number
+  fishingLevel: number
   onSelect: (zone: ZoneKey) => void
 }) {
-  const rod = getRod(rodTier)
   const [modalOpen, setModalOpen] = useState(false)
 
   return (
@@ -128,7 +126,8 @@ export default function ZoneLanding({
           {/* Zone cards */}
           <div className="flex flex-col gap-3">
             {ZONES.map((zone, i) => {
-              const accessible = rod.habitats.includes(zone)
+              const minLevel = ZONE_MIN_LEVEL[zone] ?? 1
+              const accessible = fishingLevel >= minLevel
               const color = HABITAT_COLOR[zone]
               const rates = ZONE_RARITY_RATES[zone]
               const total = Object.values(rates).reduce((s, v) => s + v, 0)
@@ -214,7 +213,7 @@ export default function ZoneLanding({
                   ) : (
                     <p className="font-karla font-600 text-center"
                       style={{ fontSize: '0.65rem', color: '#6a6764' }}>
-                      Requires {ZONE_UNLOCK_ROD[zone] ?? 'a better rod'} — upgrade at the Tackle Shop
+                      Reach Fishing Level {minLevel} to unlock
                     </p>
                   )}
                 </motion.div>

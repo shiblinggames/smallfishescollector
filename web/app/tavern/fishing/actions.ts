@@ -2,12 +2,10 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getRod } from '@/lib/rods'
-import { getHook } from '@/lib/hooks'
 import { getBait } from '@/lib/bait'
 import { checkAchievements } from '@/lib/checkAchievements'
 import { getWeekStart } from '@/lib/weekStart'
-import { catchXP } from '@/lib/fishingLevel'
+import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -33,7 +31,7 @@ export type FishSpecies = {
   sell_value: number
 }
 
-import { ZONE_RARITY_RATES } from './zoneData'
+import { ZONE_RARITY_RATES, ZONE_MIN_LEVEL } from './zoneData'
 
 // Wait time: zone sets the range, catch_score positions within it (higher score = longer wait)
 const ZONE_WAIT_BASE: Record<string, [number, number]> = {
@@ -97,19 +95,19 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, hook_tier')
+    .select('rod_tier, hook_tier, fishing_xp')
     .eq('id', user.id)
     .single()
 
   if (!profile) return { error: 'Profile not found' }
 
-  const rod  = getRod(profile.rod_tier ?? 0)
-  const hook = getHook(profile.hook_tier ?? 0)
   const bait = getBait(baitType)
 
-  // Validate zone access
-  if (!rod.habitats.includes(habitat as ReturnType<typeof getRod>['habitats'][0])) {
-    return { error: 'Your rod cannot reach that depth' }
+  // Validate zone access by fishing level
+  const fishingLevel = getLevelFromXP(profile.fishing_xp ?? 0)
+  const minLevel = ZONE_MIN_LEVEL[habitat] ?? 1
+  if (fishingLevel < minLevel) {
+    return { error: `Reach Fishing Level ${minLevel} to fish here` }
   }
 
   // Consume 1 bait

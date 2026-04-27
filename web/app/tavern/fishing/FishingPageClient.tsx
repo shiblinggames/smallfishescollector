@@ -4,6 +4,7 @@ import { useState } from 'react'
 import ZoneLanding, { type ZoneKey } from './ZoneLanding'
 import FishingGame from './FishingGame'
 import type { FishSpecies } from './actions'
+import { getLevelFromXP } from '@/lib/fishingLevel'
 
 type BaitItem = { bait_type: string; quantity: number }
 type InventoryItem = {
@@ -29,7 +30,7 @@ export default function FishingPageClient({
   const [selectedZone, setSelectedZone] = useState<ZoneKey | null>(null)
 
   if (!selectedZone) {
-    return <ZoneLanding rodTier={rodTier} onSelect={setSelectedZone} />
+    return <ZoneLanding fishingLevel={getLevelFromXP(initialFishingXP)} onSelect={setSelectedZone} />
   }
 
   return (
