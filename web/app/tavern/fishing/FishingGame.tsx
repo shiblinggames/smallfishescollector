@@ -942,13 +942,13 @@ export default function FishingGame({
               onClick={onBack}
               className="font-karla font-600 uppercase tracking-[0.1em]"
               style={{
-                fontSize: '0.6rem', color: 'rgba(255,255,255,0.75)',
-                background: 'rgba(4,10,18,0.72)', border: '1px solid rgba(255,255,255,0.18)',
+                fontSize: '0.6rem', color: HABITAT_COLOR[selectedZone],
+                background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
                 borderRadius: 8, padding: '0.3rem 0.65rem',
                 cursor: 'pointer', touchAction: 'manipulation',
               }}
             >
-              ← Zones
+              ← {HABITAT_LABEL[selectedZone]}
             </button>
             <button
               onClick={() => setGearOpen(o => !o)}
@@ -975,14 +975,6 @@ export default function FishingGame({
                   exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
 
-                  <div>
-                    <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: HABITAT_COLOR[selectedZone], textShadow: `0 1px 4px rgba(0,0,0,1), 0 2px 14px rgba(0,0,0,0.95), 0 0 20px ${HABITAT_COLOR[selectedZone]}80` }}>
-                      {HABITAT_LABEL[selectedZone]}
-                    </p>
-                    <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 4px rgba(0,0,0,1), 0 2px 12px rgba(0,0,0,0.95)' }}>
-                      {HABITAT_TAGLINE[selectedZone]}
-                    </p>
-                  </div>
 
                   {/* Status pill — centred in the dial space, each state animates independently */}
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
