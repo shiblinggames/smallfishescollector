@@ -42,18 +42,11 @@ const ZONE_WAIT_BASE: Record<string, [number, number]> = {
   deep:        [8000,  35000],
   abyss:       [12000, 60000],
 }
-const BAIT_WAIT_MULT: Record<string, number> = {
-  worm:   1.00,
-  minnow: 0.85,
-  squid:  0.75,
-  chum:   0.60,
-}
-
 function fishWaitMs(catchScore: number, habitat: string, baitType: string, rodTier: number): number {
   const [zMin, zMax] = ZONE_WAIT_BASE[habitat] ?? [5000, 20000]
   const frac = Math.max(0, Math.min(1, (catchScore - 8) / 90))
   const base = zMin + frac * (zMax - zMin)
-  const baitMult = BAIT_WAIT_MULT[baitType] ?? 1.0
+  const baitMult = getBait(baitType).waitMult
   const rodMult = Math.max(0.70, 1.0 - rodTier * 0.075)
   return Math.max(3000, Math.min(60000, base * baitMult * rodMult))
 }
@@ -117,9 +110,6 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // Validate zone access
   if (!rod.habitats.includes(habitat as ReturnType<typeof getRod>['habitats'][0])) {
     return { error: 'Your rod cannot reach that depth' }
-  }
-  if (!bait.habitats.includes(habitat as ReturnType<typeof getRod>['habitats'][0])) {
-    return { error: 'That bait is not suited for this zone' }
   }
 
   // Consume 1 bait

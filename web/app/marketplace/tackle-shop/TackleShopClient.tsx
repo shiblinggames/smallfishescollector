@@ -24,7 +24,6 @@ const HABITAT_LABEL: Record<string, string> = {
   deep:        'Deep',
   abyss:       'Abyss',
 }
-const BUNDLE: Record<string, number> = { worm: 10, minnow: 5, squid: 3, chum: 3 }
 
 type BaitInventoryItem = { bait_type: string; quantity: number }
 type Section = 'bait' | 'hook' | 'rod' | 'reel' | 'line' | null
@@ -91,7 +90,7 @@ export default function TackleShopClient({
   }
 
   function handleBuyBait(baitType: string) {
-    const qty = BUNDLE[baitType] ?? 5
+    const qty = BAITS.find(b => b.type === baitType)?.bundleSize ?? 1
     setError(null)
     setBuyingBait(baitType)
     startTransition(async () => {
@@ -198,8 +197,7 @@ export default function TackleShopClient({
         <div className="flex flex-col gap-2 mb-4">
           {shopBaits.map(bait => {
             const qty = baitMap[bait.type] ?? 0
-            const bundleQty = BUNDLE[bait.type] ?? 5
-            const bundleCost = bait.shopCost * bundleQty
+            const bundleCost = bait.shopCost * bait.bundleSize
             const canAffordBait = doubloons >= bundleCost
             const isBuying = buyingBait === bait.type && isPending
 
@@ -224,17 +222,24 @@ export default function TackleShopClient({
                     {bait.description}
                   </p>
                   <div className="flex gap-1 flex-wrap">
-                    {bait.habitats.map(h => (
-                      <span key={h} className="font-karla font-600"
-                        style={{
-                          fontSize: '0.5rem', color: HABITAT_COLOR[h],
-                          background: `${HABITAT_COLOR[h]}14`,
-                          border: `1px solid ${HABITAT_COLOR[h]}30`,
-                          padding: '0.1rem 0.4rem', borderRadius: '2rem',
-                        }}>
-                        {HABITAT_LABEL[h]}
+                    {bait.catchZoneBonus > 0 && (
+                      <span className="font-karla font-600"
+                        style={{ fontSize: '0.5rem', color: bait.color, background: `${bait.color}14`, border: `1px solid ${bait.color}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                        +{bait.catchZoneBonus}° catch zone
                       </span>
-                    ))}
+                    )}
+                    {bait.waitMult < 1.0 && (
+                      <span className="font-karla font-600"
+                        style={{ fontSize: '0.5rem', color: bait.color, background: `${bait.color}14`, border: `1px solid ${bait.color}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                        {Math.round((1 - bait.waitMult) * 100)}% faster bite
+                      </span>
+                    )}
+                    {bait.waitMult > 1.0 && (
+                      <span className="font-karla font-600"
+                        style={{ fontSize: '0.5rem', color: '#f87171', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                        {Math.round((bait.waitMult - 1) * 100)}% slower bite
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -258,14 +263,14 @@ export default function TackleShopClient({
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {isBuying ? '…' : `+${bundleQty} · ${bundleCost.toLocaleString()} ⟡`}
+                    {isBuying ? '…' : `+${bait.bundleSize} · ${bundleCost.toLocaleString()} ⟡`}
                   </button>
                 </div>
               </div>
             )
           })}
           <p className="font-karla font-300 text-center" style={{ fontSize: '0.6rem', color: '#3a3835', marginTop: 4 }}>
-            Luminous Lure &amp; Golden Lure drop from expeditions and bounties
+            Luminous Lure &amp; Golden Lure are earned — not for sale
           </p>
         </div>
       )}

@@ -10,7 +10,7 @@ import { getHook } from '@/lib/hooks'
 import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
-import { BAITS } from '@/lib/bait'
+import { BAITS, getBait } from '@/lib/bait'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -309,28 +309,21 @@ function ZoneSelector({ selectedZone, onSelect, rodTier }: {
 
 // ─── BaitSelector ─────────────────────────────────────────────────────────────
 
-function BaitSelector({ baitInventory, selectedBait, onSelect, selectedZone }: {
+function BaitSelector({ baitInventory, selectedBait, onSelect }: {
   baitInventory: BaitItem[]
   selectedBait: string
   onSelect: (type: string) => void
-  selectedZone: string
 }) {
   const inventoryMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
 
-  // Owned baits compatible with current zone — always include selected so value stays valid
-  const ownedBaits = BAITS.filter(b => {
-    const qty = inventoryMap[b.type] ?? 0
-    const compatible = b.habitats.includes(selectedZone as ZoneKey)
-    return (qty > 0 && compatible) || b.type === selectedBait
-  })
+  const ownedBaits = BAITS.filter(b => (inventoryMap[b.type] ?? 0) > 0 || b.type === selectedBait)
 
   const selectedDef = BAITS.find(b => b.type === selectedBait)
   const selectedQty = inventoryMap[selectedBait] ?? 0
-  const isCompatible = selectedDef?.habitats.includes(selectedZone as ZoneKey) ?? false
 
   if (ownedBaits.length === 0) return (
     <p className="font-karla font-600 text-center" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
-      No compatible bait for this zone
+      No bait in inventory
     </p>
   )
 
@@ -348,7 +341,7 @@ function BaitSelector({ baitInventory, selectedBait, onSelect, selectedZone }: {
             appearance: 'none',
             WebkitAppearance: 'none',
             background: selectedDef ? `${selectedDef.color}14` : 'rgba(0,0,0,0.3)',
-            border: `1px solid ${isCompatible && selectedDef ? selectedDef.color + '50' : 'rgba(255,255,255,0.12)'}`,
+            border: `1px solid ${selectedDef ? selectedDef.color + '50' : 'rgba(255,255,255,0.12)'}`,
             borderRadius: 10,
             color: '#f0ede8',
             padding: '0.6rem 2.2rem 0.6rem 0.85rem',
@@ -379,7 +372,9 @@ function BaitSelector({ baitInventory, selectedBait, onSelect, selectedZone }: {
       {selectedDef && (
         <p className="font-karla font-600 mt-1.5" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.3)' }}>
           {selectedQty} remaining
-          {!isCompatible && <span style={{ color: '#f87171' }}> · incompatible with this zone</span>}
+          {selectedDef.catchZoneBonus > 0 && <span style={{ color: selectedDef.color }}> · +{selectedDef.catchZoneBonus}° catch zone</span>}
+          {selectedDef.waitMult < 1.0 && <span style={{ color: selectedDef.color }}> · {Math.round((1 - selectedDef.waitMult) * 100)}% faster bite</span>}
+          {selectedDef.waitMult > 1.0 && <span style={{ color: '#f87171' }}> · {Math.round((selectedDef.waitMult - 1) * 100)}% slower bite</span>}
         </p>
       )}
     </div>
@@ -892,7 +887,8 @@ export default function FishingGame({
     if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
 
     const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
-    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus)
+    const baitBonus = getBait(selectedBaitRef.current).catchZoneBonus
+    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus + baitBonus)
     const zone  = getZone(zones, angleRef.current, zoneRotation)
 
     if (zone.type === 'penalty') deductBait(selectedBaitRef.current)
@@ -975,7 +971,7 @@ export default function FishingGame({
   }
 
   // Zone display helpers
-  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus) : []
+  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus) : []
   const currentZone   = (phase === 'catching' || phase === 'reeling') ? getZone(catchingZones, angle, zoneRotation) : null
 
   function needleColor(): string {
@@ -1429,7 +1425,6 @@ export default function FishingGame({
               baitInventory={baitInventory}
               selectedBait={selectedBait}
               onSelect={(type) => { setSelectedBait(type); setBaitOpen(false) }}
-              selectedZone={selectedZone}
             />
             <p className="font-karla font-600 text-center mt-4" style={{ fontSize: '0.62rem', color: '#4a4845' }}>
               <Link href="/marketplace/tackle-shop" style={{ color: '#5a5956', textDecoration: 'underline' }}>

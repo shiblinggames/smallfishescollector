@@ -1,80 +1,92 @@
-import type { Habitat } from './rods'
-
 export interface BaitDef {
   type: string
   name: string
   description: string
   color: string
-  // Which habitats this bait attracts fish from
-  habitats: Habitat[]
-  // Multiplier on hook chance roll
-  hookChanceBonus: number
-  // How to acquire: 'shop' | 'expedition' | 'bounty' | 'daily' | 'rare'
+  waitMult: number        // multiplier on bite wait time (< 1.0 = faster)
+  catchZoneBonus: number  // extra degrees added to the catch zone
   acquisition: string[]
-  // Doubloon cost if sold in shop (0 = not for sale)
-  shopCost: number
+  shopCost: number        // 0 = not for sale
+  bundleSize: number      // units per shop purchase
 }
 
 export const BAITS: BaitDef[] = [
   {
     type: 'worm',
     name: 'Worm',
-    description: 'Attracts common shallows fish. Reliable and cheap.',
+    description: 'Reliable and cheap. You get 10 free every day.',
     color: '#a07858',
-    habitats: ['shallows'],
-    hookChanceBonus: 1.0,
+    waitMult: 1.0,
+    catchZoneBonus: 0,
     acquisition: ['shop', 'daily'],
     shopCost: 10,
+    bundleSize: 10,
   },
   {
     type: 'minnow',
     name: 'Minnow',
-    description: 'Pulls in open water species. A solid mid-range bait.',
+    description: 'Fish bite 20% faster. A solid upgrade over worms.',
     color: '#60a5fa',
-    habitats: ['open_waters'],
-    hookChanceBonus: 1.1,
+    waitMult: 0.80,
+    catchZoneBonus: 0,
     acquisition: ['shop'],
     shopCost: 40,
+    bundleSize: 5,
   },
   {
-    type: 'squid',
-    name: 'Squid',
-    description: 'Draws deep-water predators up from below.',
-    color: '#4ade80',
-    habitats: ['deep'],
-    hookChanceBonus: 1.1,
+    type: 'night_crawler',
+    name: 'Night Crawler',
+    description: 'Fish take longer to bite, but your catch zone is significantly wider.',
+    color: '#a78bfa',
+    waitMult: 1.15,
+    catchZoneBonus: 8,
     acquisition: ['shop'],
-    shopCost: 120,
+    shopCost: 100,
+    bundleSize: 3,
   },
   {
     type: 'chum',
     name: 'Chum',
-    description: 'Attracts fish from any depth. No guarantees on what bites.',
+    description: 'Fish bite 40% faster. The fastest bait money can buy.',
     color: '#f0c040',
-    habitats: ['shallows', 'open_waters', 'deep', 'abyss'],
-    hookChanceBonus: 1.15,
+    waitMult: 0.60,
+    catchZoneBonus: 0,
     acquisition: ['shop'],
     shopCost: 200,
+    bundleSize: 3,
+  },
+  {
+    type: 'anglers_formula',
+    name: "Angler's Formula",
+    description: 'Massively widens your catch zone. Worth every doubloon for the hardest fish.',
+    color: '#fb923c',
+    waitMult: 0.90,
+    catchZoneBonus: 14,
+    acquisition: ['shop'],
+    shopCost: 500,
+    bundleSize: 1,
   },
   {
     type: 'luminous',
     name: 'Luminous Lure',
-    description: 'Glows in the dark. Lures creatures from the abyss.',
-    color: '#a78bfa',
-    habitats: ['abyss'],
-    hookChanceBonus: 1.25,
+    description: 'Glows in the dark. Fast bite and a wide catch zone. Earned from expeditions and bounties.',
+    color: '#4ade80',
+    waitMult: 0.75,
+    catchZoneBonus: 10,
     acquisition: ['expedition', 'bounty'],
     shopCost: 0,
+    bundleSize: 1,
   },
   {
     type: 'golden',
     name: 'Golden Lure',
-    description: 'Irresistible to rare species across all depths.',
-    color: '#ff6b35',
-    habitats: ['shallows', 'open_waters', 'deep', 'abyss'],
-    hookChanceBonus: 1.5,
+    description: 'Irresistible to all fish. The finest lure in existence.',
+    color: '#fde68a',
+    waitMult: 0.60,
+    catchZoneBonus: 16,
     acquisition: ['rare'],
     shopCost: 0,
+    bundleSize: 1,
   },
 ]
 
