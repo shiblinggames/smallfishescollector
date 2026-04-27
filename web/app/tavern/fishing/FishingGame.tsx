@@ -1023,8 +1023,8 @@ export default function FishingGame({
                             exit={{ opacity: 0, scale: 0.95 }}
                             transition={{ type: 'spring', stiffness: 380, damping: 22 }}
                             style={{
-                              background: 'rgba(4,10,18,0.92)',
-                              border: `1px solid ${r.color}60`,
+                              background: 'rgba(4,10,18,0.52)',
+                              border: `1px solid ${r.color}40`,
                               borderRadius: 16,
                               padding: '1.1rem 1.75rem',
                               textAlign: 'center',
@@ -1071,8 +1071,8 @@ export default function FishingGame({
                     {(phase === 'reeling' || currentZone) && (
                       <div style={{
                         display: 'inline-block',
-                        background: 'rgba(4,10,18,0.85)',
-                        border: `1px solid ${currentZone?.color ?? 'rgba(255,255,255,0.15)'}55`,
+                        background: 'rgba(4,10,18,0.52)',
+                        border: `1px solid ${currentZone?.color ?? 'rgba(255,255,255,0.08)'}35`,
                         borderRadius: 10,
                         padding: '0.3rem 0.85rem',
                       }}>
