@@ -76,6 +76,16 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
         </svg>
       )
     },
+    { href: '/tavern/fishing', label: 'Fish', badge: null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 4l4 4"/>
+          <path d="M8 8c2-2 5-3 8-1s4 5 2 8-5 3-8 1"/>
+          <path d="M8 8L4 20"/>
+          <circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/>
+        </svg>
+      )
+    },
     { href: '/packs', label: 'Packs', badge: packsAvailable && packsAvailable > 0 ? packsAvailable : null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -165,6 +175,16 @@ export default function Nav({ packsAvailable, doubloons }: { packsAvailable?: nu
           <path d="M18 6h2a1 1 0 011 1v3a1 1 0 01-1 1h-2"/>
           <path d="M6 21h12M8 17v4M16 17v4"/>
           <path d="M6 12c0 3 2 5 6 5s6-2 6-5"/>
+        </svg>
+      )
+    },
+    { href: '/tavern/fishing', label: 'Drop a Line', badge: null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 4l4 4"/>
+          <path d="M8 8c2-2 5-3 8-1s4 5 2 8-5 3-8 1"/>
+          <path d="M8 8L4 20"/>
+          <circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/>
         </svg>
       )
     },

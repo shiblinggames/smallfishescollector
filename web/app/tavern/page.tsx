@@ -173,20 +173,6 @@ export default async function TavernPage() {
             icon={<ShipIcon />}
             completed={expeditionDone}
           />
-          <GameCard
-            href="/tavern/fishing"
-            eyebrow="Fishing"
-            title="Drop a Line"
-            statusText="Free worms daily · cast anytime"
-            info={[
-              'Use bait to cast — worms refill each day',
-              'Hook a fish, then stop the needle to reel it in',
-              'Perfect hits pay out doubloons instantly',
-              'Sell your catch · upgrade gear at the Tackle Shop',
-            ]}
-            icon={<HookIcon />}
-            completed={false}
-          />
         </div>
 
         {bounties && (

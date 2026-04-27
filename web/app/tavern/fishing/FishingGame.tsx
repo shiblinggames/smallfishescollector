@@ -628,6 +628,7 @@ function FishInventory({ inventory, onSell }: {
 export default function FishingGame({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialBait, initialInventory,
+  selectedZone: initialZone, onBack,
 }: {
   hookTier: number
   rodTier: number
@@ -637,6 +638,8 @@ export default function FishingGame({
   initialBait: BaitItem[]
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
+  selectedZone: ZoneKey
+  onBack: () => void
 }) {
   const rod  = getRod(rodTier)
   const reel = getReel(reelTier)
@@ -645,7 +648,7 @@ export default function FishingGame({
 
   // Game state
   const [phase, setPhase]           = useState<Phase>('idle')
-  const [selectedZone, setSelectedZone] = useState<ZoneKey>(() => rod.habitats[0] as ZoneKey)
+  const selectedZone = initialZone
   const [selectedBait, setSelectedBait] = useState<string>(() => {
     const first = initialBait.find(b => b.quantity > 0)
     return first?.bait_type ?? 'worm'
@@ -697,18 +700,6 @@ export default function FishingGame({
     const t3 = setTimeout(() => setSceneFrame('fishing'), 650)
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
   }, [phase])
-
-  // When zone changes, auto-switch to a compatible bait if current one doesn't work here
-  useEffect(() => {
-    const def = BAITS.find(b => b.type === selectedBait)
-    if (!def?.habitats.includes(selectedZone)) {
-      const first = baitInventory.find(b => {
-        const d = BAITS.find(x => x.type === b.bait_type)
-        return b.quantity > 0 && d?.habitats.includes(selectedZone)
-      })
-      if (first) setSelectedBait(first.bait_type)
-    }
-  }, [selectedZone]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Needle animation during catching phase
   useEffect(() => {
@@ -920,6 +911,13 @@ export default function FishingGame({
         {/* UI content — fills full height as flex column */}
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem', paddingBottom: '1.25rem' }}>
 
+          <button
+            onClick={onBack}
+            className="font-karla font-600 uppercase tracking-[0.1em] mb-2 self-start"
+            style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.35)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, touchAction: 'manipulation' }}
+          >
+            ← Zones
+          </button>
           <GearBar rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} lineTier={lineTier} />
 
           {/* Phase content — grows to fill available space */}
@@ -932,8 +930,6 @@ export default function FishingGame({
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-
-                  <ZoneSelector selectedZone={selectedZone} onSelect={setSelectedZone} rodTier={rodTier} />
 
                   <div>
                     <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: HABITAT_COLOR[selectedZone] }}>

@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
-import FishingGame from './FishingGame'
+import FishingPageClient from './FishingPageClient'
 import { claimDailyBait } from './actions'
 
 export default async function FishingPage() {
@@ -41,7 +41,7 @@ export default async function FishingPage() {
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} />
       <main>
-        <FishingGame
+        <FishingPageClient
           hookTier={profile?.hook_tier ?? 0}
           rodTier={profile?.rod_tier ?? 0}
           reelTier={profile?.reel_tier ?? 0}
@@ -59,6 +59,7 @@ export default async function FishingPage() {
           }[]}
           uniqueSpeciesCaught={uniqueSpeciesCaught ?? 0}
         />
+
       </main>
     </>
   )

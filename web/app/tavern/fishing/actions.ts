@@ -24,17 +24,13 @@ export type FishSpecies = {
   sell_value: number
 }
 
+import { ZONE_RARITY_RATES } from './zoneData'
+
 // Two-stage fish selection:
 //   Stage 1 — roll rarity tier using zone-specific fixed rates (commons always dominant)
 //   Stage 2 — pick uniformly among fish of that tier in this zone
 // Adding more fish of a rarity increases variety, not that rarity's probability.
 // Tiers absent from a zone are excluded and the remaining rates normalise automatically.
-const ZONE_RARITY_RATES: Record<string, Record<number, number>> = {
-  shallows:    { 1: 55, 2: 25, 3: 12, 4: 7, 5: 1 },
-  open_waters: { 1: 53, 2: 26, 3: 14, 4: 6, 5: 1 },
-  deep:        { 1: 50, 2: 28, 3: 15, 4: 6, 5: 1 },
-  abyss:       { 1: 46, 2: 26, 3: 18, 4: 8, 5: 2 },
-}
 
 function tierWeightedPick<T extends { bite_rarity: number }>(items: T[], habitat: string): T {
   const rates = ZONE_RARITY_RATES[habitat] ?? ZONE_RARITY_RATES.shallows
