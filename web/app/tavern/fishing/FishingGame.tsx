@@ -727,13 +727,16 @@ export default function FishingGame({
 
   // Scene background frame — animates during casting phase
   const [sceneFrame, setSceneFrame] = useState<SceneFrame>('fishing')
+  const [castAnimDone, setCastAnimDone] = useState(false)
   useEffect(() => {
-    if (phase !== 'casting') { setSceneFrame('fishing'); return }
+    if (phase !== 'casting') { setSceneFrame('fishing'); setCastAnimDone(false); return }
+    setCastAnimDone(false)
     setSceneFrame('windup')
     const t1 = setTimeout(() => setSceneFrame('cast1'), 350)
     const t2 = setTimeout(() => setSceneFrame('cast2'), 500)
     const t3 = setTimeout(() => setSceneFrame('fishing'), 650)
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+    const t4 = setTimeout(() => setCastAnimDone(true), 650)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4) }
   }, [phase])
 
   // Needle animation during catching phase
@@ -985,7 +988,7 @@ export default function FishingGame({
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <AnimatePresence mode="wait">
 
-                      {phase === 'casting' && (
+                      {phase === 'casting' && castAnimDone && (
                         <motion.div key="waiting-pill"
                           initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.15 }}
