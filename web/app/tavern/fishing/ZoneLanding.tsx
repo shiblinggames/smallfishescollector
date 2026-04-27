@@ -1,6 +1,7 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { getRod } from '@/lib/rods'
 import { ZONE_RARITY_RATES, ZONE_UNLOCK_ROD } from './zoneData'
 
@@ -41,6 +42,33 @@ const RARITY_LABELS: Record<number, string> = {
   5: 'Legendary',
 }
 
+const HOW_IT_WORKS = [
+  {
+    title: 'Cast & Wait',
+    body: 'Each cast uses one bait. A fish is selected the moment you cast — rarer fish take longer to bite. Better rod and bait reduce the wait.',
+  },
+  {
+    title: 'Reel In',
+    body: 'When the rod dips, a spinning dial appears. Hit the green catch zone to land the fish, or the gold perfect zone to land it and get a chance to save your bait.',
+  },
+  {
+    title: 'Fish Speed',
+    body: "The needle speed depends on the fish's difficulty — harder fish spin faster. Upgrade your reel to slow it down.",
+  },
+  {
+    title: 'Zone Conditions',
+    body: 'Deeper zones have stronger currents. The needle will change speed more often and randomly reverse direction. The same fish is harder to reel in from the Abyss than the Shallows.',
+  },
+  {
+    title: 'Snag Zones',
+    body: 'Red zones on the dial snag your line — you lose the fish and your bait. Upgrade your line to shrink them.',
+  },
+  {
+    title: 'Gear Summary',
+    body: 'Rod → unlocks zones + faster bites. Reel → slows the needle. Hook → widens the catch zone. Line → shrinks snag zones. Bait → faster bites + zone access.',
+  },
+]
+
 export default function ZoneLanding({
   rodTier, onSelect,
 }: {
@@ -48,6 +76,7 @@ export default function ZoneLanding({
   onSelect: (zone: ZoneKey) => void
 }) {
   const rod = getRod(rodTier)
+  const [guideOpen, setGuideOpen] = useState(false)
 
   return (
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0"
@@ -80,7 +109,7 @@ export default function ZoneLanding({
           </div>
 
           {/* Zone cards */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 mb-4">
             {ZONES.map((zone, i) => {
               const accessible = rod.habitats.includes(zone)
               const color = HABITAT_COLOR[zone]
@@ -175,6 +204,54 @@ export default function ZoneLanding({
               )
             })}
           </div>
+          {/* How it works */}
+          <div style={{
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 14,
+            overflow: 'hidden',
+          }}>
+            <button
+              onClick={() => setGuideOpen(o => !o)}
+              className="w-full flex items-center justify-between font-karla font-600"
+              style={{
+                padding: '0.85rem 1rem',
+                background: 'rgba(255,255,255,0.04)',
+                color: 'rgba(255,255,255,0.6)',
+                fontSize: '0.72rem',
+                cursor: 'pointer',
+                touchAction: 'manipulation',
+              }}
+            >
+              <span>How fishing works</span>
+              <span style={{ transition: 'transform 0.2s', transform: guideOpen ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block' }}>▾</span>
+            </button>
+
+            <AnimatePresence initial={false}>
+              {guideOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: 'easeInOut' }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div className="flex flex-col gap-3" style={{ padding: '0.75rem 1rem 1rem' }}>
+                    {HOW_IT_WORKS.map(({ title, body }) => (
+                      <div key={title}>
+                        <p className="font-karla font-700 mb-0.5" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.8)' }}>
+                          {title}
+                        </p>
+                        <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
+                          {body}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
         </div>
       </div>
     </div>
