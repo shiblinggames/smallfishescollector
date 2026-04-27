@@ -50,7 +50,7 @@ export function getXPProgress(xp: number): {
 // XP awarded per successful catch
 const BASE_CATCH_XP = [15, 30, 55, 90, 140] // difficulty 1–5
 const ZONE_XP_MULT: Record<string, number> = {
-  shallows:    1.00,
+  shallows:    0.40,
   open_waters: 1.10,
   deep:        1.25,
   abyss:       1.50,
