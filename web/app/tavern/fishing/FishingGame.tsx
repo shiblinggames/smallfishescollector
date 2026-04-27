@@ -389,16 +389,16 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained }: {
           initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           transition={{ type: 'spring', stiffness: 400, damping: 22 }}
           className="flex items-center justify-center gap-2 mb-2 py-2 px-3 rounded-xl"
-          style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.35)' }}
+          style={{ background: 'rgba(245,158,11,0.22)', border: '1px solid rgba(245,158,11,0.55)' }}
         >
           <span style={{ fontSize: '0.7rem', color: '#f59e0b' }}>✦</span>
           <div style={{ textAlign: 'center' }}>
             <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
-              style={{ fontSize: '0.72rem', color: '#f59e0b' }}>Perfect Cast</p>
+              style={{ fontSize: '0.72rem', color: '#f5c842' }}>Perfect Cast</p>
             {xpGained > 0 && (
               <p className="font-karla font-600"
-                style={{ fontSize: '0.6rem', color: 'rgba(74,222,128,0.85)', marginTop: 2 }}>
-                +{xpGained} XP
+                style={{ fontSize: '0.6rem', color: '#4ade80', marginTop: 2 }}>
+                +{xpGained - Math.round(xpGained / 1.2)} bonus XP
               </p>
             )}
           </div>
