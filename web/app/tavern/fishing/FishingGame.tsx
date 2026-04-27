@@ -887,7 +887,7 @@ export default function FishingGame({
   const isBobbing = sceneFrame === 'fishing' && (phase === 'casting' || phase === 'hooked')
 
   return (
-    <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:inset-0" style={{ background: '#08121c', zIndex: 40, display: 'flex', justifyContent: 'center' }}>
+    <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0" style={{ background: '#08121c', zIndex: 40, display: 'flex', justifyContent: 'center' }}>
       <div className="relative w-full max-w-md overflow-hidden" style={{ height: '100%' }}>
 
         {/* Background layers — img tags force eager loading so no black-frame on switch */}
