@@ -887,7 +887,7 @@ export default function FishingGame({
   const isBobbing = sceneFrame === 'fishing' && (phase === 'casting' || phase === 'hooked')
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#08121c', zIndex: 40, display: 'flex', justifyContent: 'center' }}>
+    <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:inset-0" style={{ background: '#08121c', zIndex: 40, display: 'flex', justifyContent: 'center' }}>
       <div className="relative w-full max-w-md overflow-hidden" style={{ height: '100%' }}>
 
         {/* Background layers — img tags force eager loading so no black-frame on switch */}
@@ -919,11 +919,11 @@ export default function FishingGame({
         {/* Gradient — light at top so the scene shows, dark at bottom for readability */}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: 'linear-gradient(to bottom, rgba(8,18,28,0.1) 0%, rgba(8,18,28,0.45) 40%, rgba(8,18,28,0.92) 72%, rgba(8,18,28,0.98) 100%)',
+          background: 'linear-gradient(to bottom, rgba(8,18,28,0.05) 0%, rgba(8,18,28,0.18) 42%, rgba(8,18,28,0.72) 68%, rgba(8,18,28,0.97) 100%)',
         }} />
 
         {/* UI content — fills full height as flex column */}
-        <div className="pt-[44px] sm:pt-4 pb-[60px] sm:pb-5 px-4" style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem', paddingBottom: '1.25rem' }}>
 
           <GearBar rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} lineTier={lineTier} />
 
