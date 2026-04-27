@@ -204,18 +204,9 @@ function GearDrawerContent({ rodTier, reelTier, hookTier, lineTier }: {
       label: 'Rod', name: rod.name, color: rod.color,
       upgradeable: rodTier < RODS.length - 1,
       stats: [
-        rod.rollBonus > 0 ? `+${rod.rollBonus} bonus on catch roll` : null,
-      ].filter(Boolean) as string[],
-      extra: (
-        <div className="flex gap-1.5 flex-wrap mt-1">
-          {HABITAT_DOT_ORDER.map(h => (
-            <span key={h} className="font-karla font-600"
-              style={{ fontSize: '0.65rem', color: rod.habitats.includes(h) ? HABITAT_COLOR[h] : 'rgba(255,255,255,0.2)' }}>
-              {h === 'open_waters' ? 'Open Waters' : h.charAt(0).toUpperCase() + h.slice(1)}
-            </span>
-          ))}
-        </div>
-      ),
+        rod.rarityBonus > 0 ? `+${Math.round(rod.rarityBonus * 100)}% rare fish bias` : 'No rarity bonus',
+      ],
+      extra: null,
     },
     {
       label: 'Reel', name: reel.name, color: reel.color,

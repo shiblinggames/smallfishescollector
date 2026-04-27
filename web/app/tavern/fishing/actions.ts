@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
+import { getRod } from '@/lib/rods'
 import { checkAchievements } from '@/lib/checkAchievements'
 import { getWeekStart } from '@/lib/weekStart'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
@@ -40,13 +41,12 @@ const ZONE_WAIT_BASE: Record<string, [number, number]> = {
   deep:        [8000,  35000],
   abyss:       [12000, 60000],
 }
-function fishWaitMs(catchScore: number, habitat: string, baitType: string, rodTier: number): number {
+function fishWaitMs(catchScore: number, habitat: string, baitType: string): number {
   const [zMin, zMax] = ZONE_WAIT_BASE[habitat] ?? [5000, 20000]
   const frac = Math.max(0, Math.min(1, (catchScore - 8) / 90))
   const base = zMin + frac * (zMax - zMin)
   const baitMult = getBait(baitType).waitMult
-  const rodMult = Math.max(0.70, 1.0 - rodTier * 0.075)
-  return Math.max(3000, Math.min(60000, base * baitMult * rodMult))
+  return Math.max(3000, Math.min(60000, base * baitMult))
 }
 
 // Two-stage fish selection:
@@ -55,8 +55,8 @@ function fishWaitMs(catchScore: number, habitat: string, baitType: string, rodTi
 // Adding more fish of a rarity increases variety, not that rarity's probability.
 // Tiers absent from a zone are excluded and the remaining rates normalise automatically.
 
-function tierWeightedPick<T extends { bite_rarity: number }>(items: T[], habitat: string): T {
-  const rates = ZONE_RARITY_RATES[habitat] ?? ZONE_RARITY_RATES.shallows
+function tierWeightedPick<T extends { bite_rarity: number }>(items: T[], habitat: string, rarityBonus: number): T {
+  const baseRates = ZONE_RARITY_RATES[habitat] ?? ZONE_RARITY_RATES.shallows
 
   // Group fish by rarity tier
   const groups = new Map<number, T[]>()
@@ -66,19 +66,23 @@ function tierWeightedPick<T extends { bite_rarity: number }>(items: T[], habitat
     groups.set(item.bite_rarity, g)
   }
 
-  // Stage 1: pick tier (only from tiers that have fish in this zone)
+  // Apply rod rarity bias: higher tiers get boosted proportionally
   const tiers = [...groups.keys()]
-  const totalWeight = tiers.reduce((s, r) => s + (rates[r] ?? 0), 0)
+  const adjustedRates: Record<number, number> = {}
+  for (const r of tiers) {
+    adjustedRates[r] = (baseRates[r] ?? 0) * (1 + rarityBonus * (r - 1))
+  }
+
+  const totalWeight = tiers.reduce((s, r) => s + adjustedRates[r], 0)
   if (totalWeight === 0) return items[Math.floor(Math.random() * items.length)]
 
   let rand = Math.random() * totalWeight
   let selectedTier = tiers[0]
   for (const r of tiers) {
-    rand -= rates[r] ?? 0
+    rand -= adjustedRates[r]
     if (rand <= 0) { selectedTier = r; break }
   }
 
-  // Stage 2: pick uniformly within selected tier
   const pool = groups.get(selectedTier)!
   return pool[Math.floor(Math.random() * pool.length)]
 }
@@ -134,8 +138,9 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   if (!candidates || candidates.length === 0) return { error: 'No fish found in this zone' }
 
-  const fish = tierWeightedPick(candidates, habitat)
-  const waitMs = fishWaitMs(fish.catch_score, habitat, baitType, profile.rod_tier ?? 0)
+  const rod = getRod(profile.rod_tier ?? 0)
+  const fish = tierWeightedPick(candidates, habitat, rod.rarityBonus)
+  const waitMs = fishWaitMs(fish.catch_score, habitat, baitType)
 
   return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs }
 }

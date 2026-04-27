@@ -12,18 +12,6 @@ import { buyBait, buyRod, buyReel } from './actions'
 
 const HookViewer3D = dynamic(() => import('./HookViewer3D'), { ssr: false })
 
-const HABITAT_COLOR: Record<string, string> = {
-  shallows:    '#60a5fa',
-  open_waters: '#34d399',
-  deep:        '#a78bfa',
-  abyss:       '#f87171',
-}
-const HABITAT_LABEL: Record<string, string> = {
-  shallows:    'Shallows',
-  open_waters: 'Open Waters',
-  deep:        'Deep',
-  abyss:       'Abyss',
-}
 
 type BaitInventoryItem = { bait_type: string; quantity: number }
 type Section = 'bait' | 'hook' | 'rod' | 'reel' | 'line' | null
@@ -429,30 +417,15 @@ export default function TackleShopClient({
                     </div>
                     <p className="font-karla font-300 text-[#6a6764] text-xs">{rod.description}</p>
 
-                    {owned && (
-                      <div className="flex gap-1 flex-wrap mt-1.5">
-                        {rod.habitats.map(h => (
-                          <span key={h} className="font-karla font-600"
-                            style={{
-                              fontSize: '0.5rem', color: HABITAT_COLOR[h],
-                              background: `${HABITAT_COLOR[h]}14`,
-                              border: `1px solid ${HABITAT_COLOR[h]}30`,
-                              padding: '0.1rem 0.4rem', borderRadius: '2rem',
-                            }}>
-                            {HABITAT_LABEL[h]}
-                          </span>
-                        ))}
-                        {rod.rollBonus > 0 && (
-                          <span className="font-karla font-600"
-                            style={{
-                              fontSize: '0.5rem', color: `${c}bb`,
-                              background: `${c}14`, border: `1px solid ${c}30`,
-                              padding: '0.1rem 0.4rem', borderRadius: '2rem',
-                            }}>
-                            +{rod.rollBonus} roll
-                          </span>
-                        )}
-                      </div>
+                    {owned && rod.rarityBonus > 0 && (
+                      <span className="font-karla font-600 inline-block mt-1.5"
+                        style={{
+                          fontSize: '0.5rem', color: `${c}bb`,
+                          background: `${c}14`, border: `1px solid ${c}30`,
+                          padding: '0.1rem 0.4rem', borderRadius: '2rem',
+                        }}>
+                        +{Math.round(rod.rarityBonus * 100)}% rare fish bias
+                      </span>
                     )}
 
                     {isNext && (
