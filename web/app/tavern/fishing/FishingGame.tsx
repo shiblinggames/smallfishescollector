@@ -24,27 +24,6 @@ type InventoryItem = {
 
 // ─── Wait time mechanics ──────────────────────────────────────────────────────
 
-const ZONE_WAIT_RANGE: Record<string, [number, number]> = {
-  shallows:    [8000,  16000],
-  open_waters: [15000, 28000],
-  deep:        [25000, 45000],
-  abyss:       [40000, 70000],
-}
-
-const BAIT_WAIT_MULT: Record<string, number> = {
-  worm:   1.00,
-  minnow: 0.85,
-  squid:  0.75,
-  chum:   0.60,
-}
-
-function castWaitMs(zone: string, baitType: string, rodTier: number): number {
-  const [min, max] = ZONE_WAIT_RANGE[zone] ?? [8000, 16000]
-  const baitMult = BAIT_WAIT_MULT[baitType] ?? 1.0
-  const rodMult  = Math.max(0.70, 1.0 - rodTier * 0.075)
-  // Floor of 5s so even best gear still feels like real fishing
-  return Math.max(5000, (min + Math.random() * (max - min)) * baitMult * rodMult)
-}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -699,7 +678,6 @@ export default function FishingGame({
   const [baitInventory, setBaitInventory] = useState<BaitItem[]>(initialBait)
   const [inventory, setInventory]   = useState<InventoryItem[]>(initialInventory)
   const [doubloons, setDoubloons]   = useState(initialDoubloons)
-  const [noBiteFlash, setNoBiteFlash] = useState(false)
   const [baitOpen, setBaitOpen]       = useState(false)
   const [holdOpen, setHoldOpen]       = useState(false)
   const [gearOpen, setGearOpen]       = useState(false)
@@ -797,11 +775,7 @@ export default function FishingGame({
     deductBait(selectedBait)
     setPhase('casting')
 
-    const waitMs = castWaitMs(selectedZone, selectedBait, rodTier)
-    const [res] = await Promise.all([
-      castLine(selectedBait, selectedZone),
-      new Promise(r => setTimeout(r, waitMs)),
-    ])
+    const res = await castLine(selectedBait, selectedZone)
 
     if ('error' in res) {
       setBaitInventory(prev => prev.map(b =>
@@ -811,12 +785,7 @@ export default function FishingGame({
       return
     }
 
-    if (!res.hit) {
-      setNoBiteFlash(true)
-      setPhase('idle')
-      setTimeout(() => setNoBiteFlash(false), 2200)
-      return
-    }
+    await new Promise(r => setTimeout(r, res.waitMs))
 
     setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity })
     setPhase('hooked')
@@ -1149,15 +1118,6 @@ export default function FishingGame({
           {/* ── Action button — same position every phase ── */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', paddingTop: '0.5rem', paddingBottom: '0.75rem' }}>
             <AnimatePresence>
-              {noBiteFlash && (
-                <motion.p key="nobite"
-                  initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-                  className="font-karla font-600 text-center"
-                  style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
-                  No bite. Try again.
-                </motion.p>
-              )}
             </AnimatePresence>
             <AnimatePresence mode="wait">
               {phase === 'idle' && hasBait && selectedBaitQty > 0 && selectedBaitDef?.habitats.includes(selectedZone) && (

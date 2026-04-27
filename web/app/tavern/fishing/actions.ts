@@ -26,6 +26,29 @@ export type FishSpecies = {
 
 import { ZONE_RARITY_RATES } from './zoneData'
 
+// Wait time: zone sets the range, catch_score positions within it (higher score = longer wait)
+const ZONE_WAIT_BASE: Record<string, [number, number]> = {
+  shallows:    [3000,  12000],
+  open_waters: [5000,  20000],
+  deep:        [8000,  35000],
+  abyss:       [12000, 60000],
+}
+const BAIT_WAIT_MULT: Record<string, number> = {
+  worm:   1.00,
+  minnow: 0.85,
+  squid:  0.75,
+  chum:   0.60,
+}
+
+function fishWaitMs(catchScore: number, habitat: string, baitType: string, rodTier: number): number {
+  const [zMin, zMax] = ZONE_WAIT_BASE[habitat] ?? [5000, 20000]
+  const frac = Math.max(0, Math.min(1, (catchScore - 8) / 90))
+  const base = zMin + frac * (zMax - zMin)
+  const baitMult = BAIT_WAIT_MULT[baitType] ?? 1.0
+  const rodMult = Math.max(0.70, 1.0 - rodTier * 0.075)
+  return Math.max(3000, Math.min(60000, base * baitMult * rodMult))
+}
+
 // Two-stage fish selection:
 //   Stage 1 — roll rarity tier using zone-specific fixed rates (commons always dominant)
 //   Stage 2 — pick uniformly among fish of that tier in this zone
@@ -61,8 +84,7 @@ function tierWeightedPick<T extends { bite_rarity: number }>(items: T[], habitat
 }
 
 export async function castLine(baitType: string, habitat: string): Promise<
-  | { hit: false }
-  | { hit: true; fishId: number; catchDifficulty: number; biteRarity: number }
+  | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number }
   | { error: string }
 > {
   const supabase = await createClient()
@@ -113,16 +135,12 @@ export async function castLine(baitType: string, habitat: string): Promise<
     .select('id, catch_difficulty, catch_score, bite_rarity')
     .eq('habitat', habitat)
 
-  if (!candidates || candidates.length === 0) return { hit: false }
+  if (!candidates || candidates.length === 0) return { error: 'No fish found in this zone' }
 
   const fish = tierWeightedPick(candidates, habitat)
+  const waitMs = fishWaitMs(fish.catch_score, habitat, baitType, profile.rod_tier ?? 0)
 
-  // Roll: 1–50 base + rod bonus + hook bonus vs fish catch_score
-  const roll = Math.floor(Math.random() * 50) + 1 + rod.rollBonus + hook.rollBonus
-
-  if (roll < fish.catch_score) return { hit: false }
-
-  return { hit: true, fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity }
+  return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs }
 }
 
 const PERFECT_BAIT_SAVE_CHANCE = 0.5
