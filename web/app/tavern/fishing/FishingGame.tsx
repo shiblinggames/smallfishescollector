@@ -122,8 +122,49 @@ function DialSVG({
               fillOpacity={zoneOpacityFn(zone)} style={{ transition: 'fill-opacity 0.08s' }} />
           ))}
           {perfectZone && (() => {
-            const mid = polar(OUTER_R + 14, (perfectZone.from + perfectZone.to) / 2)
-            return <text x={mid.x.toFixed(2)} y={mid.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill={perfectZone.color} fontSize="10" opacity="0.95">✦</text>
+            const midDeg = (perfectZone.from + perfectZone.to) / 2
+            const haloSpan = 14
+            const haloFrom = midDeg - haloSpan / 2
+            const haloTo   = midDeg + haloSpan / 2
+
+            // Halo arc: wide soft gold glow behind the zone
+            const hRad = OUTER_R + 1
+            const hLa = 0
+            const hS = polar(hRad, haloFrom), hE = polar(hRad, haloTo)
+            const haloArcD = `M ${hS.x.toFixed(2)} ${hS.y.toFixed(2)} A ${hRad} ${hRad} 0 ${hLa} 1 ${hE.x.toFixed(2)} ${hE.y.toFixed(2)}`
+
+            // Outer glow stroke arc along top edge of zone
+            const gRad = OUTER_R + 3
+            const gS = polar(gRad, perfectZone.from + GAP), gE = polar(gRad, perfectZone.to - GAP)
+            const glowArcD = `M ${gS.x.toFixed(2)} ${gS.y.toFixed(2)} A ${gRad} ${gRad} 0 0 1 ${gE.x.toFixed(2)} ${gE.y.toFixed(2)}`
+
+            // Bracket tick marks at edges
+            const tickOuter = OUTER_R + 9, tickInner = OUTER_R + 2
+            const tL0 = polar(tickInner, perfectZone.from), tL1 = polar(tickOuter, perfectZone.from)
+            const tR0 = polar(tickInner, perfectZone.to),   tR1 = polar(tickOuter, perfectZone.to)
+
+            // Star label
+            const star = polar(OUTER_R + 16, midDeg)
+
+            return (
+              <>
+                {/* Wide soft halo */}
+                <path d={haloArcD} fill="none" stroke="#fde68a" strokeWidth="12" strokeOpacity="0.12" strokeLinecap="round" />
+                {/* Bright outer glow arc */}
+                <path d={glowArcD} fill="none" stroke="#fde68a" strokeWidth="2.5" strokeOpacity="0.9" strokeLinecap="round" />
+                {/* Bracket ticks */}
+                <line x1={tL0.x.toFixed(2)} y1={tL0.y.toFixed(2)} x2={tL1.x.toFixed(2)} y2={tL1.y.toFixed(2)} stroke="#fde68a" strokeWidth="1.5" strokeOpacity="0.9" />
+                <line x1={tR0.x.toFixed(2)} y1={tR0.y.toFixed(2)} x2={tR1.x.toFixed(2)} y2={tR1.y.toFixed(2)} stroke="#fde68a" strokeWidth="1.5" strokeOpacity="0.9" />
+                {/* Pulsing star */}
+                <motion.text
+                  x={star.x.toFixed(2)} y={star.y.toFixed(2)}
+                  textAnchor="middle" dominantBaseline="central"
+                  fill="#fde68a" fontSize="12"
+                  animate={{ opacity: [0.6, 1, 0.6] }}
+                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                >✦</motion.text>
+              </>
+            )
           })()}
           {penaltyZones.map((pz, i) => {
             const mid = polar(OUTER_R + 14, (pz.from + pz.to) / 2)
