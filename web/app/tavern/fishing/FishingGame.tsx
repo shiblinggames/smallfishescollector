@@ -1281,7 +1281,7 @@ export default function FishingGame({
             <AnimatePresence>
             </AnimatePresence>
             <AnimatePresence mode="wait">
-              {phase === 'idle' && hasBait && selectedBaitQty > 0 && selectedBaitDef?.habitats.includes(selectedZone) && (
+              {phase === 'idle' && hasBait && selectedBaitQty > 0 && (
                 <motion.button key="cast" onClick={handleCast}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
@@ -1297,12 +1297,12 @@ export default function FishingGame({
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                 >Cast</motion.button>
               )}
-              {phase === 'idle' && (!hasBait || selectedBaitQty <= 0 || !selectedBaitDef?.habitats.includes(selectedZone)) && (
+              {phase === 'idle' && (!hasBait || selectedBaitQty <= 0) && (
                 <motion.div key="nobait"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="text-center">
                   <p className="font-karla font-600 mb-2" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)' }}>
-                    No compatible bait
+                    No bait
                   </p>
                   <Link href="/marketplace/tackle-shop"
                     className="font-karla font-700 uppercase tracking-[0.12em]"
