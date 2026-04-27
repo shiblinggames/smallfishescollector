@@ -19,8 +19,8 @@ export const MAX_LEVEL = 100
 
 export function getLevelFromXP(xp: number): number {
   if (xp >= XP_TABLE[MAX_LEVEL - 1]) return MAX_LEVEL
-  for (let lv = MAX_LEVEL - 2; lv >= 0; lv--) {
-    if (xp >= XP_TABLE[lv]) return lv + 2
+  for (let lv = MAX_LEVEL - 1; lv >= 1; lv--) {
+    if (xp >= XP_TABLE[lv]) return lv + 1
   }
   return 1
 }
