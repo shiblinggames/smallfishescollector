@@ -59,7 +59,7 @@ export default function ZoneLanding({
           position: 'absolute', inset: 0, width: '100%', height: '100%',
           objectFit: 'cover', objectPosition: 'top center',
         }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(8,18,28,0.78)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(8,18,28,0.82)' }} />
 
         {/* Content */}
         <div style={{
@@ -74,7 +74,7 @@ export default function ZoneLanding({
               style={{ fontSize: '1.1rem', color: '#f0ede8' }}>
               Fishing
             </p>
-            <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)' }}>
+            <p className="font-karla font-400" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)' }}>
               Choose your zone
             </p>
           </div>
@@ -93,31 +93,31 @@ export default function ZoneLanding({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, delay: i * 0.06 }}
                   style={{
-                    border: `1px solid ${accessible ? color + '70' : 'rgba(255,255,255,0.12)'}`,
-                    background: accessible ? `${color}18` : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${accessible ? color + '80' : 'rgba(255,255,255,0.15)'}`,
+                    background: accessible ? `${color}22` : 'rgba(255,255,255,0.06)',
                     borderRadius: 14,
-                    padding: '1rem',
-                    opacity: accessible ? 1 : 0.6,
+                    padding: '1rem 1rem 0.9rem',
+                    opacity: accessible ? 1 : 0.65,
                   }}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <p className="font-cinzel font-700"
-                        style={{ fontSize: '0.95rem', color: accessible ? color : '#8a8784' }}>
+                        style={{ fontSize: '1.05rem', color: accessible ? color : '#8a8784' }}>
                         {HABITAT_LABEL[zone]}
                       </p>
                       <p className="font-karla font-400 mt-0.5"
-                        style={{ fontSize: '0.65rem', color: accessible ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.3)' }}>
+                        style={{ fontSize: '0.75rem', color: accessible ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)' }}>
                         {HABITAT_TAGLINE[zone]}
                       </p>
                     </div>
                     {!accessible && (
                       <span className="font-karla font-700 uppercase tracking-[0.1em] shrink-0"
                         style={{
-                          fontSize: '0.48rem', color: '#8a8784',
+                          fontSize: '0.58rem', color: '#8a8784',
                           background: 'rgba(255,255,255,0.08)',
-                          border: '1px solid rgba(255,255,255,0.15)',
-                          padding: '0.25rem 0.6rem', borderRadius: '2rem',
+                          border: '1px solid rgba(255,255,255,0.18)',
+                          padding: '0.28rem 0.65rem', borderRadius: '2rem',
                         }}>
                         Locked
                       </span>
@@ -126,7 +126,7 @@ export default function ZoneLanding({
 
                   {/* Rarity bar */}
                   <div className="mb-3">
-                    <div className="flex mb-2" style={{ height: 5, borderRadius: 3, overflow: 'hidden', gap: 1 }}>
+                    <div className="flex mb-2" style={{ height: 6, borderRadius: 3, overflow: 'hidden', gap: 1 }}>
                       {[1, 2, 3, 4, 5].map(tier => (
                         <div key={tier} style={{
                           flex: rates[tier] / total,
@@ -139,7 +139,7 @@ export default function ZoneLanding({
                       {[1, 2, 3, 4, 5].map(tier => (
                         <span key={tier} className="font-karla font-600"
                           style={{
-                            fontSize: '0.5rem',
+                            fontSize: '0.62rem',
                             color: accessible ? RARITY_COLORS[tier] : '#5a5956',
                           }}>
                           {RARITY_LABELS[tier]} {rates[tier]}%
@@ -153,12 +153,12 @@ export default function ZoneLanding({
                       onClick={() => onSelect(zone)}
                       className="w-full font-karla font-700 uppercase tracking-[0.12em]"
                       style={{
-                        padding: '0.65rem',
+                        padding: '0.7rem',
                         borderRadius: 10,
-                        background: `${color}2a`,
-                        border: `1px solid ${color}70`,
+                        background: `${color}30`,
+                        border: `1px solid ${color}80`,
                         color,
-                        fontSize: '0.65rem',
+                        fontSize: '0.75rem',
                         cursor: 'pointer',
                         touchAction: 'manipulation',
                       }}
@@ -167,7 +167,7 @@ export default function ZoneLanding({
                     </button>
                   ) : (
                     <p className="font-karla font-600 text-center"
-                      style={{ fontSize: '0.54rem', color: '#6a6764' }}>
+                      style={{ fontSize: '0.65rem', color: '#6a6764' }}>
                       Requires {ZONE_UNLOCK_ROD[zone] ?? 'a better rod'} — upgrade at the Tackle Shop
                     </p>
                   )}

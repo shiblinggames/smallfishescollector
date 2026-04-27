@@ -162,11 +162,11 @@ function DialSVG({
   )
 }
 
-// ─── GearBar ─────────────────────────────────────────────────────────────────
+// ─── GearDrawerContent ───────────────────────────────────────────────────────
 
 const HABITAT_DOT_ORDER = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 
-function GearBar({ rodTier, reelTier, hookTier, lineTier }: {
+function GearDrawerContent({ rodTier, reelTier, hookTier, lineTier }: {
   rodTier: number; reelTier: number; hookTier: number; lineTier: number
 }) {
   const rod  = getRod(rodTier)
@@ -174,61 +174,70 @@ function GearBar({ rodTier, reelTier, hookTier, lineTier }: {
   const hook = getHook(hookTier)
   const line = getLine(lineTier)
 
-  const dragPct       = Math.round((1 - reel.needleSpeedMultiplier) * 100)
-  const snagReduction = Math.round((1 - line.penaltyMultiplier) * 100)
-  // CATCH_BONUS_PER_TIER = 3 (from depths.ts) — each hook tier widens catch zone by 3°
+  const dragPct        = Math.round((1 - reel.needleSpeedMultiplier) * 100)
+  const snagReduction  = Math.round((1 - line.penaltyMultiplier) * 100)
   const catchZoneBonus = hook.tier * 3
 
-  function Card({ label, name, color, children }: {
-    label: string; name: string; color: string; children?: React.ReactNode
-  }) {
-    return (
-      <div className="flex flex-col items-center gap-0.5 px-1 py-2 rounded-lg"
-        style={{ background: 'rgba(4,10,18,0.82)', border: `1px solid ${color}70`, backdropFilter: 'blur(8px)' }}>
-        <p className="font-karla font-600 uppercase tracking-[0.1em]"
-          style={{ fontSize: '0.45rem', color: 'rgba(255,255,255,0.55)' }}>{label}</p>
-        <p className="font-karla font-700 text-center leading-tight"
-          style={{ fontSize: '0.58rem', color }}>{name}</p>
-        {children}
-      </div>
-    )
-  }
-
-  function Stat({ children }: { children: React.ReactNode }) {
-    return (
-      <p className="font-karla font-600 text-center leading-tight"
-        style={{ fontSize: '0.46rem', color: 'rgba(255,255,255,0.55)', marginTop: 1 }}>
-        {children}
-      </p>
-    )
-  }
-
-  return (
-    <div className="grid grid-cols-4 gap-1.5">
-      <Card label="Rod" name={rod.name} color={rod.color}>
-        <div className="flex gap-[3px] flex-wrap justify-center" style={{ marginTop: 3 }}>
+  const items = [
+    {
+      label: 'Rod', name: rod.name, color: rod.color,
+      stats: [
+        rod.rollBonus > 0 ? `+${rod.rollBonus} bonus on catch roll` : null,
+      ].filter(Boolean) as string[],
+      extra: (
+        <div className="flex gap-1.5 flex-wrap mt-1">
           {HABITAT_DOT_ORDER.map(h => (
-            <span key={h} style={{
-              width: 5, height: 5, borderRadius: 1, display: 'inline-block',
-              background: rod.habitats.includes(h) ? HABITAT_COLOR[h] : 'rgba(255,255,255,0.08)',
-            }} />
+            <span key={h} className="font-karla font-600"
+              style={{ fontSize: '0.65rem', color: rod.habitats.includes(h) ? HABITAT_COLOR[h] : 'rgba(255,255,255,0.2)' }}>
+              {h === 'open_waters' ? 'Open Waters' : h.charAt(0).toUpperCase() + h.slice(1)}
+            </span>
           ))}
         </div>
-        {rod.rollBonus > 0 && <Stat>+{rod.rollBonus} roll</Stat>}
-      </Card>
+      ),
+    },
+    {
+      label: 'Reel', name: reel.name, color: reel.color,
+      stats: [dragPct > 0 ? `−${dragPct}% needle speed` : 'No drag reduction'],
+      extra: null,
+    },
+    {
+      label: 'Hook', name: hook.name, color: hook.color,
+      stats: [
+        hook.rollBonus > 0 ? `+${hook.rollBonus} bonus on catch roll` : null,
+        catchZoneBonus > 0 ? `+${catchZoneBonus}° wider catch zone` : null,
+        (!hook.rollBonus && !catchZoneBonus) ? 'No bonuses' : null,
+      ].filter(Boolean) as string[],
+      extra: null,
+    },
+    {
+      label: 'Line', name: line.name, color: line.color,
+      stats: [snagReduction > 0 ? `−${snagReduction}% snag damage` : 'Standard snag damage'],
+      extra: null,
+    },
+  ]
 
-      <Card label="Reel" name={reel.name} color={reel.color}>
-        <Stat>{dragPct > 0 ? `−${dragPct}% needle` : 'No drag'}</Stat>
-      </Card>
-
-      <Card label="Hook" name={hook.name} color={hook.color}>
-        <Stat>{hook.rollBonus > 0 ? `+${hook.rollBonus} roll` : 'No bonus'}</Stat>
-        {catchZoneBonus > 0 && <Stat>+{catchZoneBonus}° catch</Stat>}
-      </Card>
-
-      <Card label="Line" name={line.name} color={line.color}>
-        <Stat>{snagReduction > 0 ? `−${snagReduction}% snag` : 'Std. snag'}</Stat>
-      </Card>
+  return (
+    <div className="flex flex-col gap-2.5">
+      {items.map(item => (
+        <div key={item.label}
+          className="flex items-start gap-3 px-3 py-2.5 rounded-xl"
+          style={{ background: `${item.color}0e`, border: `1px solid ${item.color}35` }}>
+          <div style={{ width: 3, alignSelf: 'stretch', borderRadius: 2, background: item.color, flexShrink: 0 }} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-2 mb-0.5">
+              <p className="font-karla font-600 uppercase tracking-[0.1em]"
+                style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.4)' }}>{item.label}</p>
+              <p className="font-karla font-700"
+                style={{ fontSize: '0.82rem', color: item.color }}>{item.name}</p>
+            </div>
+            {item.stats.map((s, i) => (
+              <p key={i} className="font-karla font-400"
+                style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>{s}</p>
+            ))}
+            {item.extra}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -693,6 +702,7 @@ export default function FishingGame({
   const [noBiteFlash, setNoBiteFlash] = useState(false)
   const [baitOpen, setBaitOpen]       = useState(false)
   const [holdOpen, setHoldOpen]       = useState(false)
+  const [gearOpen, setGearOpen]       = useState(false)
   const [sellPending, setSellPending] = useState<number | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
   const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean } | null>(null)
@@ -894,6 +904,7 @@ export default function FishingGame({
     setPerfectFlash(false)
     setBaitOpen(false)
     setHoldOpen(false)
+    setGearOpen(false)
     setPhase('idle')
   }
 
@@ -955,22 +966,36 @@ export default function FishingGame({
         {/* UI content — fills full height as flex column */}
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem', paddingBottom: '1.25rem' }}>
 
-          <button
-            onClick={onBack}
-            className="font-karla font-600 uppercase tracking-[0.1em] mb-2 self-start"
-            style={{
-              fontSize: '0.6rem', color: 'rgba(255,255,255,0.75)',
-              background: 'rgba(4,10,18,0.72)', border: '1px solid rgba(255,255,255,0.18)',
-              borderRadius: 8, padding: '0.3rem 0.65rem',
-              cursor: 'pointer', touchAction: 'manipulation',
-            }}
-          >
-            ← Zones
-          </button>
-          <GearBar rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} lineTier={lineTier} />
+          {/* Header row — back button left, gear button right */}
+          <div className="flex items-center justify-between mb-3">
+            <button
+              onClick={onBack}
+              className="font-karla font-600 uppercase tracking-[0.1em]"
+              style={{
+                fontSize: '0.6rem', color: 'rgba(255,255,255,0.75)',
+                background: 'rgba(4,10,18,0.72)', border: '1px solid rgba(255,255,255,0.18)',
+                borderRadius: 8, padding: '0.3rem 0.65rem',
+                cursor: 'pointer', touchAction: 'manipulation',
+              }}
+            >
+              ← Zones
+            </button>
+            <button
+              onClick={() => setGearOpen(o => !o)}
+              className="font-karla font-600 uppercase tracking-[0.1em]"
+              style={{
+                fontSize: '0.6rem', color: 'rgba(255,255,255,0.75)',
+                background: 'rgba(4,10,18,0.72)', border: '1px solid rgba(255,255,255,0.18)',
+                borderRadius: 8, padding: '0.3rem 0.65rem',
+                cursor: 'pointer', touchAction: 'manipulation',
+              }}
+            >
+              Gear ▾
+            </button>
+          </div>
 
           {/* Phase content — grows to fill available space */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', marginTop: '0.75rem' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <AnimatePresence mode="wait">
 
               {/* ── IDLE / CASTING / HOOKED — single persistent element, updates in place ── */}
@@ -1291,6 +1316,36 @@ export default function FishingGame({
             <p className="font-karla font-600 text-center mt-4" style={{ fontSize: '0.62rem', color: '#4a4845' }}>
               <Link href="/marketplace/tackle-shop" style={{ color: '#5a5956', textDecoration: 'underline' }}>
                 Buy bait or upgrade gear
+              </Link>
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Gear drawer ── */}
+      <AnimatePresence>
+        {gearOpen && (
+          <motion.div key="gear-drawer"
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+              background: 'rgba(6,12,20,0.98)',
+              borderTop: '1px solid rgba(255,255,255,0.09)',
+              borderRadius: '18px 18px 0 0',
+              padding: '1.25rem 1rem 2rem',
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                style={{ fontSize: '0.6rem', color: '#6a6764' }}>Your Gear</p>
+              <button onClick={() => setGearOpen(false)}
+                style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+            </div>
+            <GearDrawerContent rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} lineTier={lineTier} />
+            <p className="font-karla font-600 text-center mt-4" style={{ fontSize: '0.62rem', color: '#4a4845' }}>
+              <Link href="/marketplace/tackle-shop" style={{ color: '#5a5956', textDecoration: 'underline' }}>
+                Upgrade gear at the Tackle Shop
               </Link>
             </p>
           </motion.div>
