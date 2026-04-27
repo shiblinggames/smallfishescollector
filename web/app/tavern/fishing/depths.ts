@@ -93,7 +93,7 @@ export function buildFishZones(
   zoneCatchMultiplier = 1.0,
 ): ZoneDef[] {
   const d = Math.max(1, Math.min(5, catchDifficulty)) - 1
-  const baseCatch = [110, 88, 66, 46, 28][d]
+  const baseCatch = [77, 62, 46, 32, 20][d]
   const baseSnag  = [ 18, 26, 36, 48, 58][d]
   const gapRight  = [ 28, 14,  5,  0,  0][d]
   const gapLeft   = [  0,  0,  5,  0,  0][d]
