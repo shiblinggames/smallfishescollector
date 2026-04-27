@@ -268,50 +268,6 @@ function GearDrawerContent({ rodTier, reelTier, hookTier, lineTier }: {
   )
 }
 
-// ─── ZoneSelector ────────────────────────────────────────────────────────────
-
-function ZoneSelector({ selectedZone, onSelect, rodTier }: {
-  selectedZone: string
-  onSelect: (zone: ZoneKey) => void
-  rodTier: number
-}) {
-  const rod = getRod(rodTier)
-  return (
-    <div className="grid grid-cols-4 gap-1.5">
-      {ZONES.map(z => {
-        const accessible = rod.habitats.includes(z)
-        const selected   = selectedZone === z
-        const color      = HABITAT_COLOR[z]
-        return (
-          <button key={z}
-            onClick={() => accessible && onSelect(z)}
-            style={{
-              padding: '0.5rem 0.25rem',
-              borderRadius: 10,
-              border: `1px solid ${selected ? color + '70' : accessible ? color + '28' : 'rgba(255,255,255,0.06)'}`,
-              background: selected ? color + '1c' : accessible ? color + '08' : 'rgba(255,255,255,0.02)',
-              opacity: accessible ? 1 : 0.38,
-              cursor: accessible ? 'pointer' : 'default',
-              transition: 'all 0.15s',
-              boxShadow: selected ? `0 0 12px ${color}22` : 'none',
-            }}
-          >
-            <p className="font-karla font-700 text-center leading-tight"
-              style={{ fontSize: '0.6rem', color: selected ? color : accessible ? color + 'aa' : '#4a4845' }}>
-              {HABITAT_LABEL[z]}
-            </p>
-            {!accessible && (
-              <p className="font-karla font-600 text-center" style={{ fontSize: '0.44rem', color: '#3a3835', marginTop: 2 }}>
-                Locked
-              </p>
-            )}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
 // ─── BaitSelector ─────────────────────────────────────────────────────────────
 
 function BaitSelector({ baitInventory, selectedBait, onSelect }: {
