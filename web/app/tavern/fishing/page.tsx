@@ -20,6 +20,7 @@ export default async function FishingPage() {
     { data: baitInventory },
     { data: fishInventory },
     { count: uniqueSpeciesCaught },
+    { data: rodRows },
   ] = await Promise.all([
     admin.from('profiles')
       .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp')
@@ -35,7 +36,12 @@ export default async function FishingPage() {
     admin.from('fish_collection')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id),
+    admin.from('rod_inventory')
+      .select('rod_tier')
+      .eq('user_id', user.id),
   ])
+
+  const ownedRods = (rodRows ?? []).map((r: { rod_tier: number }) => r.rod_tier)
 
   return (
     <>
@@ -59,6 +65,7 @@ export default async function FishingPage() {
             }
           }[]}
           uniqueSpeciesCaught={uniqueSpeciesCaught ?? 0}
+          ownedRods={ownedRods}
         />
 
       </main>

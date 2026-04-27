@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, sellFish, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { equipRod } from '@/app/marketplace/tackle-shop/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
 import { getHook, HOOKS } from '@/lib/hooks'
@@ -183,87 +184,204 @@ function DialSVG({
   )
 }
 
-// ─── GearDrawerContent ───────────────────────────────────────────────────────
+// ─── UnifiedGearDrawer ───────────────────────────────────────────────────────
 
-const HABITAT_DOT_ORDER = ['shallows', 'open_waters', 'deep', 'abyss'] as const
+function StatPill({ label, color, muted }: { label: string; color?: string; muted?: boolean }) {
+  const c = color ?? '#94a3b8'
+  return (
+    <span className="font-karla font-600" style={{
+      fontSize: '0.48rem',
+      color: muted ? '#4a4845' : `${c}cc`,
+      background: muted ? 'rgba(255,255,255,0.04)' : `${c}14`,
+      border: `1px solid ${muted ? 'rgba(255,255,255,0.08)' : c + '30'}`,
+      padding: '0.1rem 0.4rem', borderRadius: '2rem',
+    }}>{label}</span>
+  )
+}
 
-function GearDrawerContent({ rodTier, reelTier, hookTier, lineTier }: {
-  rodTier: number; reelTier: number; hookTier: number; lineTier: number
+function UnifiedGearDrawer({
+  baitInventory, selectedBait, onSelectBait,
+  equippedRodTier, ownedRods, onEquipRod,
+  reelTier, hookTier, lineTier,
+  onClose,
+}: {
+  baitInventory: BaitItem[]
+  selectedBait: string
+  onSelectBait: (type: string) => void
+  equippedRodTier: number
+  ownedRods: number[]
+  onEquipRod: (tier: number) => void
+  reelTier: number
+  hookTier: number
+  lineTier: number
+  onClose: () => void
 }) {
-  const rod  = getRod(rodTier)
+  const [activeSection, setActiveSection] = useState<string>('bait')
+
+  const rod  = getRod(equippedRodTier)
   const reel = getReel(reelTier)
   const hook = getHook(hookTier)
   const line = getLine(lineTier)
 
-  const dragPct        = Math.round((1 - reel.needleSpeedMultiplier) * 100)
-  const snagReduction  = Math.round((1 - line.penaltyMultiplier) * 100)
-  const catchZoneBonus = hook.tier * 3
+  const selectedBaitDef = BAITS.find(b => b.type === selectedBait)
+  const dragPct = Math.round((1 - reel.needleSpeedMultiplier) * 100)
+  const snagReduction = Math.round((1 - line.penaltyMultiplier) * 100)
 
-  const items = [
-    {
-      label: 'Rod', name: rod.name, color: rod.color,
-      upgradeable: true,
-      stats: [
-        rod.catchZoneBonus > 0 ? `+${rod.catchZoneBonus}° catch zone` : null,
-        rod.rarityBonus > 0 ? `+${Math.round(rod.rarityBonus * 100)}% rare fish bias` : null,
-        (!rod.catchZoneBonus && !rod.rarityBonus) ? 'Speed-focused' : null,
-      ].filter(Boolean) as string[],
-      extra: null,
-    },
-    {
-      label: 'Reel', name: reel.name, color: reel.color,
-      upgradeable: reelTier < REELS.length - 1,
-      stats: [dragPct > 0 ? `−${dragPct}% needle speed` : 'No drag reduction'],
-      extra: null,
-    },
-    {
-      label: 'Hook', name: hook.name, color: hook.color,
-      upgradeable: hookTier < HOOKS.length - 1,
-      stats: [
-        catchZoneBonus > 0 ? `+${catchZoneBonus}° wider catch zone` : 'No catch zone bonus',
-      ],
-      extra: null,
-    },
-    {
-      label: 'Line', name: line.name, color: line.color,
-      upgradeable: false,
-      stats: [snagReduction > 0 ? `−${snagReduction}% snag damage` : 'Standard snag damage'],
-      extra: null,
-    },
+  const sections: { key: string; label: string; subtitle: string; color: string }[] = [
+    { key: 'bait', label: 'Bait',  subtitle: selectedBaitDef?.name ?? '—', color: selectedBaitDef?.color ?? '#94a3b8' },
+    { key: 'rod',  label: 'Rod',   subtitle: rod.name,  color: rod.color  },
+    { key: 'reel', label: 'Reel',  subtitle: reel.name, color: reel.color },
+    { key: 'hook', label: 'Hook',  subtitle: hook.name, color: hook.color },
+    { key: 'line', label: 'Line',  subtitle: line.name, color: line.color },
   ]
 
+  const ownedRodDefs = RODS.filter(r => r.cost === 0 || ownedRods.includes(r.tier))
+
   return (
-    <div className="flex flex-col gap-2.5">
-      {items.map(item => (
-        <div key={item.label}
-          className="flex items-start gap-3 px-3 py-2.5 rounded-xl"
-          style={{ background: `${item.color}0e`, border: `1px solid ${item.color}35` }}>
-          <div style={{ width: 3, alignSelf: 'stretch', borderRadius: 2, background: item.color, flexShrink: 0 }} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2 mb-0.5">
-              <p className="font-karla font-600 uppercase tracking-[0.1em]"
-                style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.4)' }}>{item.label}</p>
-              <p className="font-karla font-700"
-                style={{ fontSize: '0.82rem', color: item.color }}>{item.name}</p>
-            </div>
-            {item.stats.map((s, i) => (
-              <p key={i} className="font-karla font-400"
-                style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>{s}</p>
-            ))}
-            {item.extra}
-          </div>
-          {item.upgradeable && (
-            <Link href="/marketplace/tackle-shop" className="shrink-0 font-karla font-700"
+    <div className="flex flex-col gap-1.5">
+      {sections.map(sec => {
+        const isOpen = activeSection === sec.key
+        return (
+          <div key={sec.key}>
+            <button
+              onClick={() => setActiveSection(isOpen ? '' : sec.key)}
               style={{
-                fontSize: '0.58rem', padding: '0.25rem 0.55rem', borderRadius: 7,
-                background: `${item.color}16`, border: `1px solid ${item.color}40`,
-                color: item.color, textDecoration: 'none', whiteSpace: 'nowrap',
+                width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                padding: '0.65rem 0.75rem', borderRadius: isOpen ? '10px 10px 0 0' : 10,
+                background: isOpen ? `${sec.color}12` : 'rgba(4,10,18,0.72)',
+                border: `1px solid ${isOpen ? sec.color + '45' : 'rgba(255,255,255,0.09)'}`,
+                cursor: 'pointer', transition: 'all 0.12s',
+              }}
+            >
+              <div style={{ width: 3, height: 18, background: sec.color, borderRadius: 2, flexShrink: 0 }} />
+              <p className="font-karla font-600 uppercase tracking-[0.12em]"
+                style={{ fontSize: '0.48rem', color: '#6a6764', minWidth: '2.5rem' }}>{sec.label}</p>
+              <p className="font-cinzel font-700"
+                style={{ fontSize: '0.78rem', color: isOpen ? sec.color : '#f0ede8', flex: 1, textAlign: 'left' }}>{sec.subtitle}</p>
+              <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.2)' }}>{isOpen ? '▴' : '▾'}</span>
+            </button>
+
+            {isOpen && (
+              <div style={{
+                borderRadius: '0 0 10px 10px', padding: '0.75rem',
+                background: 'rgba(4,10,18,0.85)',
+                border: `1px solid ${sec.color}30`, borderTop: 'none',
               }}>
-              Upgrade ↗
-            </Link>
-          )}
-        </div>
-      ))}
+
+                {/* ── Bait ── */}
+                {sec.key === 'bait' && (
+                  <BaitSelector baitInventory={baitInventory} selectedBait={selectedBait} onSelect={onSelectBait} />
+                )}
+
+                {/* ── Rod ── */}
+                {sec.key === 'rod' && (
+                  <div className="flex flex-col gap-1.5">
+                    {ownedRodDefs.map(r => {
+                      const isEquipped = r.tier === equippedRodTier
+                      const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
+                      return (
+                        <div key={r.tier} style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '0.55rem 0.7rem', borderRadius: 10,
+                          background: isEquipped ? `${r.color}12` : 'rgba(4,10,18,0.72)',
+                          border: `1px solid ${isEquipped ? r.color + '50' : 'rgba(255,255,255,0.09)'}`,
+                        }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f0ede8' }}>{r.name}</p>
+                            <div style={{ display: 'flex', gap: 3, marginTop: 3, flexWrap: 'wrap' }}>
+                              {speedPct > 0
+                                ? <StatPill label={`${speedPct}% faster bites`} color={r.color} />
+                                : speedPct < 0
+                                  ? <StatPill label={`${Math.abs(speedPct)}% slower bites`} color="#f87171" />
+                                  : <StatPill label="Base bite speed" muted />
+                              }
+                              {r.catchZoneBonus > 0 && <StatPill label={`+${r.catchZoneBonus}° catch zone`} color={r.color} />}
+                              {r.rarityBonus > 0 && <StatPill label={`+${Math.round(r.rarityBonus * 100)}% rare bias`} color={r.color} />}
+                            </div>
+                          </div>
+                          {isEquipped
+                            ? <span className="font-karla font-700" style={{ fontSize: '0.52rem', color: r.color, whiteSpace: 'nowrap' }}>✓ Equipped</span>
+                            : <button onClick={() => onEquipRod(r.tier)} className="font-karla font-700"
+                                style={{ fontSize: '0.55rem', padding: '0.28rem 0.6rem', borderRadius: 7, whiteSpace: 'nowrap',
+                                  background: `${r.color}16`, border: `1px solid ${r.color}44`, color: r.color, cursor: 'pointer' }}>
+                                Equip
+                              </button>
+                          }
+                        </div>
+                      )
+                    })}
+                    <Link href="/marketplace/tackle-shop" className="font-karla font-600 text-center block mt-1"
+                      style={{ fontSize: '0.58rem', color: '#5a5956', textDecoration: 'underline' }}>
+                      Buy more rods at the Tackle Shop ↗
+                    </Link>
+                  </div>
+                )}
+
+                {/* ── Reel ── */}
+                {sec.key === 'reel' && (
+                  <div className="flex flex-col gap-2">
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {dragPct > 0
+                        ? <StatPill label={`−${dragPct}% needle speed`} color={reel.color} />
+                        : <StatPill label="Base needle speed" muted />
+                      }
+                    </div>
+                    <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.5 }}>
+                      {reel.description}
+                    </p>
+                    {reelTier < REELS.length - 1 && (
+                      <Link href="/marketplace/tackle-shop" className="font-karla font-600"
+                        style={{ fontSize: '0.58rem', color: '#5a5956', textDecoration: 'underline' }}>
+                        Upgrade at the Tackle Shop ↗
+                      </Link>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Hook ── */}
+                {sec.key === 'hook' && (
+                  <div className="flex flex-col gap-2">
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {hookTier > 0
+                        ? <StatPill label={`+${hookTier * 3}° catch zone`} color={hook.color} />
+                        : <StatPill label="No catch zone bonus" muted />
+                      }
+                    </div>
+                    <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.5 }}>
+                      {hook.description}
+                    </p>
+                    {hookTier < HOOKS.length - 1 && (
+                      <Link href="/marketplace/tackle-shop" className="font-karla font-600"
+                        style={{ fontSize: '0.58rem', color: '#5a5956', textDecoration: 'underline' }}>
+                        Upgrade at the Tackle Shop ↗
+                      </Link>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Line ── */}
+                {sec.key === 'line' && (
+                  <div className="flex flex-col gap-2">
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {snagReduction > 0
+                        ? <StatPill label={`−${snagReduction}% snag zone`} color={line.color} />
+                        : <StatPill label="Standard snag zones" muted />
+                      }
+                    </div>
+                    <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.5 }}>
+                      {line.description}
+                    </p>
+                    <p className="font-karla font-300" style={{ fontSize: '0.58rem', color: '#4a4845' }}>
+                      Lines are earned by catching unique species — no purchase needed.
+                    </p>
+                  </div>
+                )}
+
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -668,6 +786,7 @@ function XPBarDisplay({ xp }: { xp: number }) {
 export default function FishingGame({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialInventory,
+  ownedRods: initialOwnedRods,
   selectedZone: initialZone, onBack,
 }: {
   hookTier: number
@@ -679,10 +798,13 @@ export default function FishingGame({
   initialBait: BaitItem[]
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
+  ownedRods: number[]
   selectedZone: ZoneKey
   onBack: () => void
 }) {
-  const rod  = getRod(rodTier)
+  const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
+  const [ownedRods, setOwnedRods] = useState(initialOwnedRods)
+  const rod  = getRod(equippedRodTier)
   const reel = getReel(reelTier)
   const hook = getHook(hookTier)
   const line = getLine(lineTier)
@@ -697,9 +819,8 @@ export default function FishingGame({
   const [baitInventory, setBaitInventory] = useState<BaitItem[]>(initialBait)
   const [inventory, setInventory]   = useState<InventoryItem[]>(initialInventory)
   const [doubloons, setDoubloons]   = useState(initialDoubloons)
-  const [baitOpen, setBaitOpen]       = useState(false)
-  const [holdOpen, setHoldOpen]       = useState(false)
-  const [gearOpen, setGearOpen]       = useState(false)
+  const [holdOpen, setHoldOpen]     = useState(false)
+  const [gearOpen, setGearOpen]     = useState(false)
   const [sellPending, setSellPending] = useState<number | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
   const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number } | null>(null)
@@ -804,7 +925,6 @@ export default function FishingGame({
     const currentQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
     if (currentQty <= 0) { setPhase('idle'); return }
 
-    setBaitOpen(false)
     deductBait(selectedBait)
     setPhase('casting')
 
@@ -921,10 +1041,17 @@ export default function FishingGame({
     setPerfectFlash(false)
     setBountyNotif(null)
     setLevelUpNotif(null)
-    setBaitOpen(false)
     setHoldOpen(false)
     setGearOpen(false)
     await doCast()
+  }
+
+  async function handleEquipRod(tier: number) {
+    const result = await equipRod(tier)
+    if (!('error' in result)) {
+      setEquippedRodTier(tier)
+      if (!ownedRods.includes(tier)) setOwnedRods(prev => [...prev, tier])
+    }
   }
 
   // Zone display helpers
@@ -1015,18 +1142,7 @@ export default function FishingGame({
             >
               ← {HABITAT_LABEL[selectedZone]}
             </button>
-            <button
-              onClick={() => setGearOpen(o => !o)}
-              className="font-karla font-600 uppercase tracking-[0.1em]"
-              style={{
-                fontSize: '0.6rem', color: 'rgba(255,255,255,0.75)',
-                background: 'rgba(4,10,18,0.72)', border: '1px solid rgba(255,255,255,0.18)',
-                borderRadius: 8, padding: '0.3rem 0.65rem',
-                cursor: 'pointer', touchAction: 'manipulation',
-              }}
-            >
-              Gear ▾
-            </button>
+            <div />
           </div>
 
           {/* XP bar */}
@@ -1306,41 +1422,39 @@ export default function FishingGame({
           {/* ── Bottom buttons — Bait + Fish Hold ── */}
           <div className="flex gap-3" style={{ paddingTop: '0.75rem' }}>
 
-            {/* Bait button */}
+            {/* Gear button */}
             <button
-              onClick={() => { setBaitOpen(o => !o); setHoldOpen(false) }}
+              onClick={() => { setGearOpen(o => !o); setHoldOpen(false) }}
               style={{
                 flex: 1, height: 72, borderRadius: 14,
-                background: baitOpen ? `${selectedBaitDef?.color ?? '#fff'}10` : 'rgba(4,10,18,0.72)',
-                border: `1px solid ${baitOpen ? (selectedBaitDef?.color ?? 'rgba(255,255,255,0.2)') + '45' : 'rgba(255,255,255,0.09)'}`,
+                background: gearOpen ? `${selectedBaitDef?.color ?? '#fff'}10` : 'rgba(4,10,18,0.72)',
+                border: `1px solid ${gearOpen ? (selectedBaitDef?.color ?? 'rgba(255,255,255,0.2)') + '45' : 'rgba(255,255,255,0.09)'}`,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
                 cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
               }}
             >
               <p className="font-karla font-600 uppercase tracking-[0.14em]"
-                style={{ fontSize: '0.52rem', color: '#6a6764' }}>Bait</p>
+                style={{ fontSize: '0.52rem', color: '#6a6764' }}>Gear</p>
               <p className="font-cinzel font-700"
                 style={{ fontSize: '0.82rem', color: selectedBaitDef?.color ?? '#f0ede8' }}>
                 {selectedBaitDef?.name ?? '—'}{selectedBaitQty > 0 ? ` ×${selectedBaitQty}` : ''}
               </p>
-              {selectedBaitDef && (
-                <p className="font-karla font-600" style={{ fontSize: '0.52rem', color: selectedBaitQty === 0 ? '#f87171' : 'rgba(255,255,255,0.4)' }}>
-                  {selectedBaitQty === 0
-                    ? 'None left'
-                    : selectedBaitDef.catchZoneBonus > 0
-                      ? `+${selectedBaitDef.catchZoneBonus}° catch zone`
-                      : selectedBaitDef.waitMult < 1.0
-                        ? `${Math.round((1 - selectedBaitDef.waitMult) * 100)}% faster bite`
-                        : selectedBaitDef.waitMult > 1.0
-                          ? `${Math.round((selectedBaitDef.waitMult - 1) * 100)}% slower bite`
-                          : 'No bonus'}
-                </p>
-              )}
+              <p className="font-karla font-600" style={{ fontSize: '0.52rem', color: selectedBaitQty === 0 ? '#f87171' : 'rgba(255,255,255,0.4)' }}>
+                {selectedBaitQty === 0
+                  ? 'No bait'
+                  : selectedBaitDef?.catchZoneBonus ?? 0 > 0
+                    ? `+${selectedBaitDef!.catchZoneBonus}° catch zone`
+                    : (selectedBaitDef?.waitMult ?? 1) < 1.0
+                      ? `${Math.round((1 - selectedBaitDef!.waitMult) * 100)}% faster bite`
+                      : (selectedBaitDef?.waitMult ?? 1) > 1.0
+                        ? `${Math.round((selectedBaitDef!.waitMult - 1) * 100)}% slower bite`
+                        : rod.name}
+              </p>
             </button>
 
             {/* Fish Hold button */}
             <button
-              onClick={() => { setHoldOpen(o => !o); setBaitOpen(false) }}
+              onClick={() => { setHoldOpen(o => !o); setGearOpen(false) }}
               style={{
                 flex: 1, height: 72, borderRadius: 14,
                 background: holdOpen ? 'rgba(240,192,64,0.08)' : 'rgba(4,10,18,0.72)',
@@ -1363,40 +1477,6 @@ export default function FishingGame({
 
         </div>
 
-      {/* ── Bait drawer ── */}
-      <AnimatePresence>
-        {baitOpen && (
-          <motion.div key="bait-drawer"
-            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
-            style={{
-              position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-              background: 'rgba(6,12,20,0.98)',
-              borderTop: '1px solid rgba(255,255,255,0.09)',
-              borderRadius: '18px 18px 0 0',
-              padding: '1.25rem 1rem 2rem',
-            }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                style={{ fontSize: '0.6rem', color: '#6a6764' }}>Select Bait</p>
-              <button onClick={() => setBaitOpen(false)}
-                style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
-            </div>
-            <BaitSelector
-              baitInventory={baitInventory}
-              selectedBait={selectedBait}
-              onSelect={(type) => { setSelectedBait(type); setBaitOpen(false) }}
-            />
-            <p className="font-karla font-600 text-center mt-4" style={{ fontSize: '0.62rem', color: '#4a4845' }}>
-              <Link href="/marketplace/tackle-shop" style={{ color: '#5a5956', textDecoration: 'underline' }}>
-                Buy bait or upgrade gear
-              </Link>
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* ── Gear drawer ── */}
       <AnimatePresence>
         {gearOpen && (
@@ -1409,20 +1489,27 @@ export default function FishingGame({
               borderTop: '1px solid rgba(255,255,255,0.09)',
               borderRadius: '18px 18px 0 0',
               padding: '1.25rem 1rem 2rem',
+              maxHeight: '82vh', overflowY: 'auto',
             }}
           >
             <div className="flex items-center justify-between mb-4">
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                style={{ fontSize: '0.6rem', color: '#6a6764' }}>Your Gear</p>
+                style={{ fontSize: '0.6rem', color: '#6a6764' }}>Gear</p>
               <button onClick={() => setGearOpen(false)}
                 style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
             </div>
-            <GearDrawerContent rodTier={rodTier} reelTier={reelTier} hookTier={hookTier} lineTier={lineTier} />
-            <p className="font-karla font-600 text-center mt-4" style={{ fontSize: '0.62rem', color: '#4a4845' }}>
-              <Link href="/marketplace/tackle-shop" style={{ color: '#5a5956', textDecoration: 'underline' }}>
-                Upgrade gear at the Tackle Shop
-              </Link>
-            </p>
+            <UnifiedGearDrawer
+              baitInventory={baitInventory}
+              selectedBait={selectedBait}
+              onSelectBait={setSelectedBait}
+              equippedRodTier={equippedRodTier}
+              ownedRods={ownedRods}
+              onEquipRod={handleEquipRod}
+              reelTier={reelTier}
+              hookTier={hookTier}
+              lineTier={lineTier}
+              onClose={() => setGearOpen(false)}
+            />
           </motion.div>
         )}
       </AnimatePresence>

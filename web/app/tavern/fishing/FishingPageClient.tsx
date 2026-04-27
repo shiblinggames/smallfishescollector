@@ -16,6 +16,7 @@ type InventoryItem = {
 export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
+  ownedRods,
 }: {
   hookTier: number
   rodTier: number
@@ -26,6 +27,7 @@ export default function FishingPageClient({
   initialBait: BaitItem[]
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
+  ownedRods: number[]
 }) {
   const [selectedZone, setSelectedZone] = useState<ZoneKey | null>(null)
 
@@ -44,6 +46,7 @@ export default function FishingPageClient({
       initialBait={initialBait}
       initialInventory={initialInventory}
       uniqueSpeciesCaught={uniqueSpeciesCaught}
+      ownedRods={ownedRods}
       selectedZone={selectedZone}
       onBack={() => setSelectedZone(null)}
     />
