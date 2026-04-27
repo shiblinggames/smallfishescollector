@@ -276,68 +276,70 @@ function BaitSelector({ baitInventory, selectedBait, onSelect }: {
   onSelect: (type: string) => void
 }) {
   const inventoryMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
-
   const ownedBaits = BAITS.filter(b => (inventoryMap[b.type] ?? 0) > 0 || b.type === selectedBait)
 
-  const selectedDef = BAITS.find(b => b.type === selectedBait)
-  const selectedQty = inventoryMap[selectedBait] ?? 0
-
   if (ownedBaits.length === 0) return (
-    <p className="font-karla font-600 text-center" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
+    <p className="font-karla font-600 text-center py-4" style={{ fontSize: '0.68rem', color: '#4a4845' }}>
       No bait in inventory
     </p>
   )
 
   return (
-    <div>
-      <p className="font-karla font-600 uppercase tracking-[0.12em] mb-1.5"
-        style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)' }}>Bait</p>
-
-      <div style={{ position: 'relative' }}>
-        <select
-          value={selectedBait}
-          onChange={e => onSelect(e.target.value)}
-          style={{
-            width: '100%',
-            appearance: 'none',
-            WebkitAppearance: 'none',
-            background: selectedDef ? `${selectedDef.color}14` : 'rgba(0,0,0,0.3)',
-            border: `1px solid ${selectedDef ? selectedDef.color + '50' : 'rgba(255,255,255,0.12)'}`,
-            borderRadius: 10,
-            color: '#f0ede8',
-            padding: '0.6rem 2.2rem 0.6rem 0.85rem',
-            fontSize: '0.82rem',
-            fontFamily: 'inherit',
-            cursor: 'pointer',
-            outline: 'none',
-            backdropFilter: 'blur(8px)',
-          }}
-        >
-          {ownedBaits.map(bait => {
-            const qty = inventoryMap[bait.type] ?? 0
-            return (
-              <option key={bait.type} value={bait.type}
-                style={{ background: '#1a1512', color: '#f0ede8' }}>
-                {bait.name}{qty > 0 ? ` ×${qty}` : ' (none)'}
-              </option>
-            )
-          })}
-        </select>
-        <span style={{
-          position: 'absolute', right: '0.85rem', top: '50%',
-          transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.35)',
-          pointerEvents: 'none', fontSize: '0.72rem',
-        }}>▾</span>
-      </div>
-
-      {selectedDef && (
-        <p className="font-karla font-600 mt-1.5" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.3)' }}>
-          {selectedQty} remaining
-          {selectedDef.catchZoneBonus > 0 && <span style={{ color: selectedDef.color }}> · +{selectedDef.catchZoneBonus}° catch zone</span>}
-          {selectedDef.waitMult < 1.0 && <span style={{ color: selectedDef.color }}> · {Math.round((1 - selectedDef.waitMult) * 100)}% faster bite</span>}
-          {selectedDef.waitMult > 1.0 && <span style={{ color: '#f87171' }}> · {Math.round((selectedDef.waitMult - 1) * 100)}% slower bite</span>}
-        </p>
-      )}
+    <div className="flex flex-col gap-1.5">
+      {ownedBaits.map(bait => {
+        const qty = inventoryMap[bait.type] ?? 0
+        const isSelected = bait.type === selectedBait
+        const c = bait.color
+        return (
+          <button key={bait.type}
+            onClick={() => onSelect(bait.type)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '0.6rem 0.75rem', borderRadius: 12, width: '100%',
+              background: isSelected ? `${c}12` : 'rgba(4,10,18,0.72)',
+              border: `1px solid ${isSelected ? c + '50' : 'rgba(255,255,255,0.09)'}`,
+              cursor: 'pointer', transition: 'border-color 0.12s',
+            }}
+          >
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0, opacity: qty > 0 ? 1 : 0.3 }} />
+            <div style={{ flex: 1, textAlign: 'left' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: qty > 0 ? '#f0ede8' : '#4a4845' }}>
+                {bait.name}
+              </p>
+              <div style={{ display: 'flex', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
+                {bait.catchZoneBonus > 0 && (
+                  <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: `${c}cc`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                    +{bait.catchZoneBonus}° catch zone
+                  </span>
+                )}
+                {bait.waitMult < 1.0 && (
+                  <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: `${c}cc`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                    {Math.round((1 - bait.waitMult) * 100)}% faster bite
+                  </span>
+                )}
+                {bait.waitMult > 1.0 && (
+                  <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: 'rgba(248,113,113,0.8)', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                    {Math.round((bait.waitMult - 1) * 100)}% slower bite
+                  </span>
+                )}
+                {!bait.catchZoneBonus && bait.waitMult === 1.0 && (
+                  <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: '#4a4845', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                    No bonus
+                  </span>
+                )}
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+              <p className="font-karla font-700" style={{ fontSize: '0.65rem', color: qty > 0 ? '#f0ede8' : '#4a4845' }}>
+                ×{qty}
+              </p>
+              {isSelected && (
+                <p className="font-karla font-600" style={{ fontSize: '0.44rem', color: c }}>selected</p>
+              )}
+            </div>
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -1308,49 +1310,54 @@ export default function FishingGame({
             <button
               onClick={() => { setBaitOpen(o => !o); setHoldOpen(false) }}
               style={{
-                flex: 1, height: 68, borderRadius: 14,
-                background: baitOpen ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.45)',
-                border: `1px solid ${baitOpen ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.09)'}`,
-                backdropFilter: 'blur(16px)',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                flex: 1, height: 72, borderRadius: 14,
+                background: baitOpen ? `${selectedBaitDef?.color ?? '#fff'}10` : 'rgba(4,10,18,0.72)',
+                border: `1px solid ${baitOpen ? (selectedBaitDef?.color ?? 'rgba(255,255,255,0.2)') + '45' : 'rgba(255,255,255,0.09)'}`,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
                 cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
               }}
             >
-              <p className="font-karla font-600 uppercase tracking-[0.12em]"
-                style={{ fontSize: '0.44rem', color: '#6a6764' }}>Bait</p>
-              <p className="font-karla font-700"
-                style={{ fontSize: '0.75rem', color: selectedBaitDef?.color ?? '#f0ede8' }}>
-                {selectedBaitDef?.name ?? '—'}
+              <p className="font-karla font-600 uppercase tracking-[0.14em]"
+                style={{ fontSize: '0.52rem', color: '#6a6764' }}>Bait</p>
+              <p className="font-cinzel font-700"
+                style={{ fontSize: '0.82rem', color: selectedBaitDef?.color ?? '#f0ede8' }}>
+                {selectedBaitDef?.name ?? '—'}{selectedBaitQty > 0 ? ` ×${selectedBaitQty}` : ''}
               </p>
-              <p className="font-karla font-600"
-                style={{ fontSize: '0.5rem', color: selectedBaitQty > 0 ? '#6a6764' : '#f87171' }}>
-                ×{selectedBaitQty} remaining
-              </p>
+              {selectedBaitDef && (
+                <p className="font-karla font-600" style={{ fontSize: '0.52rem', color: selectedBaitQty === 0 ? '#f87171' : 'rgba(255,255,255,0.4)' }}>
+                  {selectedBaitQty === 0
+                    ? 'None left'
+                    : selectedBaitDef.catchZoneBonus > 0
+                      ? `+${selectedBaitDef.catchZoneBonus}° catch zone`
+                      : selectedBaitDef.waitMult < 1.0
+                        ? `${Math.round((1 - selectedBaitDef.waitMult) * 100)}% faster bite`
+                        : selectedBaitDef.waitMult > 1.0
+                          ? `${Math.round((selectedBaitDef.waitMult - 1) * 100)}% slower bite`
+                          : 'No bonus'}
+                </p>
+              )}
             </button>
 
             {/* Fish Hold button */}
             <button
               onClick={() => { setHoldOpen(o => !o); setBaitOpen(false) }}
               style={{
-                flex: 1, height: 68, borderRadius: 14,
-                background: holdOpen ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.45)',
-                border: `1px solid ${holdOpen ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.09)'}`,
-                backdropFilter: 'blur(16px)',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                flex: 1, height: 72, borderRadius: 14,
+                background: holdOpen ? 'rgba(240,192,64,0.08)' : 'rgba(4,10,18,0.72)',
+                border: `1px solid ${holdOpen ? 'rgba(240,192,64,0.35)' : 'rgba(255,255,255,0.09)'}`,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
                 cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
               }}
             >
-              <p className="font-karla font-600 uppercase tracking-[0.12em]"
-                style={{ fontSize: '0.44rem', color: '#6a6764' }}>Fish Hold</p>
-              <p className="font-karla font-700"
-                style={{ fontSize: '0.75rem', color: holdTotalCount > 0 ? '#f0ede8' : '#4a4845' }}>
-                {holdTotalCount > 0 ? `${holdTotalCount} fish` : 'Empty'}
+              <p className="font-karla font-600 uppercase tracking-[0.14em]"
+                style={{ fontSize: '0.52rem', color: '#6a6764' }}>Fish Hold</p>
+              <p className="font-cinzel font-700"
+                style={{ fontSize: '0.82rem', color: holdTotalCount > 0 ? '#f0ede8' : '#4a4845' }}>
+                {holdTotalCount > 0 ? `Fish ×${holdTotalCount}` : 'Empty'}
               </p>
-              {holdTotalCount > 0 && (
-                <p className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#f0c040' }}>
-                  {holdTotalValue.toLocaleString()} ⟡
-                </p>
-              )}
+              <p className="font-karla font-600" style={{ fontSize: '0.52rem', color: holdTotalCount > 0 ? '#f0c040' : '#3a3835' }}>
+                {holdTotalCount > 0 ? `${holdTotalValue.toLocaleString()} ⟡` : 'No fish yet'}
+              </p>
             </button>
           </div>
 
@@ -1638,36 +1645,43 @@ export default function FishingGame({
                   const isPend = sellPending === item.fish_id
                   return (
                     <div key={item.fish_id}
-                      className="flex items-center gap-3 px-3 py-2 rounded-xl"
-                      style={{ background: `${hColor}0a`, border: `1px solid ${hColor}20` }}>
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                      style={{ background: 'rgba(4,10,18,0.72)', border: `1px solid ${hColor}28` }}>
+                      <div style={{ width: 3, alignSelf: 'stretch', background: hColor, borderRadius: 2, flexShrink: 0, opacity: 0.7 }} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.75rem', color: '#f0ede8' }}>{fish.name}</p>
-                          <span className="font-karla font-600 shrink-0"
-                            style={{ fontSize: '0.52rem', color: hColor, background: `${hColor}18`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                          <span className="font-karla font-700 shrink-0"
+                            style={{ fontSize: '0.52rem', color: hColor, background: `${hColor}18`, border: `1px solid ${hColor}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
                             ×{item.quantity}
                           </span>
                         </div>
-                        <p className="font-karla font-600 mt-0.5" style={{ fontSize: '0.58rem', color: '#f0c040' }}>
-                          {fish.sell_value.toLocaleString()} ⟡ each
-                          {item.quantity > 1 && <span style={{ color: '#6a6764' }}> · {(fish.sell_value * item.quantity).toLocaleString()} ⟡</span>}
-                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: '#f0c040' }}>
+                            {fish.sell_value.toLocaleString()} ⟡ each
+                          </p>
+                          {item.quantity > 1 && (
+                            <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.25)' }}>
+                              · {(fish.sell_value * item.quantity).toLocaleString()} ⟡ total
+                            </p>
+                          )}
+                        </div>
                       </div>
                       <div className="flex gap-1.5 shrink-0">
                         {item.quantity > 1 && (
                           <button onClick={() => handleSell(item.fish_id, item.quantity)} disabled={!!isPend}
                             className="font-karla font-700 uppercase tracking-[0.1em]"
-                            style={{ fontSize: '0.5rem', padding: '0.28rem 0.55rem', borderRadius: '0.5rem',
-                              background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.22)',
-                              color: '#f0c040', opacity: isPend ? 0.5 : 1, cursor: isPend ? 'default' : 'pointer' }}>
+                            style={{ fontSize: '0.48rem', padding: '0.28rem 0.55rem', borderRadius: 8,
+                              background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.2)',
+                              color: '#f0c040', opacity: isPend ? 0.4 : 1, cursor: isPend ? 'default' : 'pointer' }}>
                             Sell all
                           </button>
                         )}
                         <button onClick={() => handleSell(item.fish_id, 1)} disabled={!!isPend}
                           className="font-karla font-700 uppercase tracking-[0.1em]"
-                          style={{ fontSize: '0.5rem', padding: '0.28rem 0.55rem', borderRadius: '0.5rem',
-                            background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.35)',
-                            color: '#f0c040', opacity: isPend ? 0.5 : 1, cursor: isPend ? 'default' : 'pointer' }}>
+                          style={{ fontSize: '0.48rem', padding: '0.28rem 0.55rem', borderRadius: 8,
+                            background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.32)',
+                            color: '#f0c040', opacity: isPend ? 0.4 : 1, cursor: isPend ? 'default' : 'pointer' }}>
                           {isPend ? '…' : 'Sell 1'}
                         </button>
                       </div>
