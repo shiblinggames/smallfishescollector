@@ -395,12 +395,21 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained }: {
           <div style={{ textAlign: 'center' }}>
             <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
               style={{ fontSize: '0.72rem', color: '#fbbf24', textShadow: '0 0 10px rgba(251,191,36,0.7)' }}>Perfect Catch</p>
-            {xpGained > 0 && (
+            <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
+              {xpGained > 0 && (
+                <p className="font-karla font-700"
+                  style={{ fontSize: '0.62rem', color: '#86efac' }}>
+                  +{xpGained - Math.round(xpGained / 1.2)} bonus XP
+                </p>
+              )}
+              {xpGained > 0 && (
+                <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)' }}>·</span>
+              )}
               <p className="font-karla font-700"
-                style={{ fontSize: '0.62rem', color: '#86efac', marginTop: 2 }}>
-                +{xpGained - Math.round(xpGained / 1.2)} bonus XP
+                style={{ fontSize: '0.62rem', color: baitSaved ? '#86efac' : 'rgba(255,255,255,0.3)' }}>
+                {baitSaved ? 'Bait returned' : 'Bait used'}
               </p>
-            )}
+            </div>
           </div>
           <span style={{ fontSize: '0.7rem', color: '#fbbf24' }}>✦</span>
         </motion.div>
@@ -493,32 +502,6 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained }: {
             </p>
           </div>
 
-          {/* Bait callout — only shown on perfect casts */}
-          {isPerfect && (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35, duration: 0.2 }}
-              className="flex items-center gap-2 mt-3 px-3 py-2 rounded-xl"
-              style={{
-                background: baitSaved ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${baitSaved ? 'rgba(74,222,128,0.35)' : 'rgba(255,255,255,0.1)'}`,
-              }}
-            >
-              <span style={{
-                width: 7, height: 7, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
-                background: baitSaved ? '#4ade80' : '#4a4845',
-              }} />
-              <p className="font-karla font-700 uppercase tracking-[0.12em]"
-                style={{ fontSize: '0.6rem', color: baitSaved ? '#4ade80' : '#6a6764' }}>
-                {baitSaved ? 'Bait returned' : 'Bait used'}
-              </p>
-              {!baitSaved && (
-                <p className="font-karla font-400 ml-auto" style={{ fontSize: '0.55rem', color: '#4a4845' }}>
-                  no luck this time
-                </p>
-              )}
-            </motion.div>
-          )}
         </div>
       </motion.div>
     </div>
