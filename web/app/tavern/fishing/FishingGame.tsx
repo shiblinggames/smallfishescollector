@@ -916,11 +916,6 @@ export default function FishingGame({
           ))}
         </motion.div>
 
-        {/* Gradient — light at top so the scene shows, dark at bottom for readability */}
-        <div style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: 'linear-gradient(to bottom, rgba(8,18,28,0.05) 0%, rgba(8,18,28,0.18) 42%, rgba(8,18,28,0.72) 68%, rgba(8,18,28,0.97) 100%)',
-        }} />
 
         {/* UI content — fills full height as flex column */}
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem', paddingBottom: '1.25rem' }}>
@@ -949,48 +944,6 @@ export default function FishingGame({
                     </p>
                   </div>
 
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
-                    <AnimatePresence>
-                      {noBiteFlash && (
-                        <motion.p key="nobite"
-                          initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-                          className="font-karla font-600 text-center"
-                          style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
-                          No bite. Try again.
-                        </motion.p>
-                      )}
-                    </AnimatePresence>
-
-                    {hasBait && selectedBaitQty > 0 ? (
-                      <motion.button onClick={handleCast}
-                        className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-                        style={{
-                          width: 88, height: 88, borderRadius: '50%',
-                          background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.45), rgba(14,116,144,0.18))',
-                          border: '1px solid rgba(34,170,200,0.5)', cursor: 'pointer',
-                          fontSize: '0.72rem', color: '#67d4e8', touchAction: 'manipulation',
-                          boxShadow: '0 6px 0 rgba(0,0,0,0.6), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
-                        }}
-                        whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' }}
-                        transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                      >Cast</motion.button>
-                    ) : (
-                      <div className="text-center">
-                        <p className="font-karla font-600 mb-2" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)' }}>
-                          No compatible bait
-                        </p>
-                        <Link href="/marketplace/tackle-shop"
-                          className="font-karla font-700 uppercase tracking-[0.12em]"
-                          style={{
-                            fontSize: '0.65rem', color: '#f0c040',
-                            padding: '0.45rem 1rem', borderRadius: '2rem',
-                            border: '1px solid rgba(240,192,64,0.35)',
-                            background: 'rgba(240,192,64,0.08)',
-                          }}>Buy Bait</Link>
-                      </div>
-                    )}
-                  </div>
                 </motion.div>
               )}
 
@@ -1053,26 +1006,6 @@ export default function FishingGame({
 
                   <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}
                     needleColor={needleColor()} zoneOpacityFn={zoneOpacity} />
-
-                  {phase === 'catching' ? (
-                    <motion.button
-                      onPointerDown={e => { e.preventDefault(); handleReelIn() }}
-                      className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-                      style={{
-                        width: 88, height: 88, borderRadius: '50%',
-                        background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
-                        border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
-                        fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
-                        boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
-                      }}
-                      whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
-                      transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                    >Reel In</motion.button>
-                  ) : (
-                    <div style={{ width: 88, height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#4a4845' }}>…</p>
-                    </div>
-                  )}
                 </motion.div>
               )}
 
@@ -1097,23 +1030,96 @@ export default function FishingGame({
                     </motion.div>
                   )}
 
-                  <div className="flex justify-center">
-                    <motion.button onClick={handleCastAgain}
-                      className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-                      style={{
-                        width: 88, height: 88, borderRadius: '50%',
-                        background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.35), rgba(14,116,144,0.12))',
-                        border: '1px solid rgba(34,170,200,0.4)', cursor: 'pointer',
-                        fontSize: '0.65rem', color: '#67d4e8', touchAction: 'manipulation',
-                        boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
-                      }}
-                      whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
-                      transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                    >Cast Again</motion.button>
-                  </div>
                 </motion.div>
               )}
 
+            </AnimatePresence>
+          </div>
+
+          {/* ── Action button — same position every phase ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', paddingTop: '0.5rem', paddingBottom: '0.75rem' }}>
+            <AnimatePresence>
+              {noBiteFlash && (
+                <motion.p key="nobite"
+                  initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                  className="font-karla font-600 text-center"
+                  style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
+                  No bite. Try again.
+                </motion.p>
+              )}
+            </AnimatePresence>
+            <AnimatePresence mode="wait">
+              {phase === 'idle' && hasBait && selectedBaitQty > 0 && (
+                <motion.button key="cast" onClick={handleCast}
+                  className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                  style={{
+                    width: 88, height: 88, borderRadius: '50%',
+                    background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.45), rgba(14,116,144,0.18))',
+                    border: '1px solid rgba(34,170,200,0.5)', cursor: 'pointer',
+                    fontSize: '0.72rem', color: '#67d4e8', touchAction: 'manipulation',
+                    boxShadow: '0 6px 0 rgba(0,0,0,0.6), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+                  }}
+                  initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.92 }}
+                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' }}
+                  transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                >Cast</motion.button>
+              )}
+              {phase === 'idle' && (!hasBait || selectedBaitQty <= 0) && (
+                <motion.div key="nobait"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="text-center">
+                  <p className="font-karla font-600 mb-2" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)' }}>
+                    No compatible bait
+                  </p>
+                  <Link href="/marketplace/tackle-shop"
+                    className="font-karla font-700 uppercase tracking-[0.12em]"
+                    style={{ fontSize: '0.65rem', color: '#f0c040', padding: '0.45rem 1rem', borderRadius: '2rem', border: '1px solid rgba(240,192,64,0.35)', background: 'rgba(240,192,64,0.08)' }}>
+                    Buy Bait
+                  </Link>
+                </motion.div>
+              )}
+              {phase === 'catching' && (
+                <motion.button key="reel"
+                  onPointerDown={e => { e.preventDefault(); handleReelIn() }}
+                  className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                  style={{
+                    width: 88, height: 88, borderRadius: '50%',
+                    background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
+                    border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
+                    fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
+                    boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
+                  }}
+                  initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.92 }}
+                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
+                  transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                >Reel In</motion.button>
+              )}
+              {phase === 'reeling' && (
+                <motion.div key="reeling"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  style={{ width: 88, height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#4a4845' }}>…</p>
+                </motion.div>
+              )}
+              {phase === 'result' && (
+                <motion.button key="again" onClick={handleCastAgain}
+                  className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                  style={{
+                    width: 88, height: 88, borderRadius: '50%',
+                    background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.35), rgba(14,116,144,0.12))',
+                    border: '1px solid rgba(34,170,200,0.4)', cursor: 'pointer',
+                    fontSize: '0.65rem', color: '#67d4e8', touchAction: 'manipulation',
+                    boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+                  }}
+                  initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.92 }}
+                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
+                  transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                >Cast Again</motion.button>
+              )}
             </AnimatePresence>
           </div>
 
