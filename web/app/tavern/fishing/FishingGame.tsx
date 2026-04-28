@@ -109,7 +109,7 @@ type TourStep = {
 const TOUR_STEPS: TourStep[] = [
   {
     title: 'Fishing XP',
-    body: 'Every catch earns XP. Level up to unlock deeper zones with rarer fish.',
+    body: 'Every catch earns XP. Leveling up unlocks deeper zones with rarer fish, and also widens your catch window — so higher level players find reeling in a little easier.',
     cardStyle: { top: 96, left: 16, right: 16 },
     arrowDir: 'up', arrowAlign: 'center',
   },
