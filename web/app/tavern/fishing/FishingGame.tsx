@@ -70,6 +70,47 @@ const RARITY: Record<number, { label: string; color: string; hookedText: string 
   5: { label: 'Legendary', color: '#f59e0b', hookedText: "SOMETHING MASSIVE IS ON THE LINE!" },
 }
 
+// ─── Onboarding tour ─────────────────────────────────────────────────────────
+
+type TourStep = {
+  title: string
+  body: string
+  cardStyle: React.CSSProperties
+  maxWidth?: number | string
+  arrowDir: 'up' | 'down'
+  arrowAlign: 'left' | 'center' | 'right'
+}
+
+const TOUR_STEPS: TourStep[] = [
+  {
+    title: 'Fishing XP',
+    body: 'Every catch earns XP. Level up to unlock deeper zones with rarer fish.',
+    cardStyle: { top: 96, left: 16, right: 16 },
+    arrowDir: 'up', arrowAlign: 'center',
+  },
+  {
+    title: 'Collection',
+    body: "Every species you've caught lives here. Tap any fish to see its scientific name, fun fact, and sell value.",
+    cardStyle: { top: 56, right: 16 },
+    maxWidth: 210,
+    arrowDir: 'up', arrowAlign: 'right',
+  },
+  {
+    title: 'Gear',
+    body: 'Switch bait and upgrade your rod, reel, hook, and line. Better gear means faster bites and an easier catch.',
+    cardStyle: { bottom: 112, left: 16 },
+    maxWidth: 210,
+    arrowDir: 'down', arrowAlign: 'left',
+  },
+  {
+    title: 'Fish Hold',
+    body: 'Caught fish wait here. Sell them for doubloons whenever you like — no need to leave the zone.',
+    cardStyle: { bottom: 112, right: 16 },
+    maxWidth: 210,
+    arrowDir: 'down', arrowAlign: 'right',
+  },
+]
+
 // ─── Geometry helpers ─────────────────────────────────────────────────────────
 
 function polar(r: number, deg: number) {
@@ -881,6 +922,7 @@ export default function FishingGame({
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
   const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean; gemEarned?: boolean } | null>(null)
   const [challengeActive, setChallengeActive] = useState(false)
+  const [tourStep, setTourStep] = useState<number | null>(null)
   const [bountyNotif, setBountyNotif] = useState<FishingBountyCompletion | null>(null)
   const [perfectFlash, setPerfectFlash] = useState(false)
   const [retryFlash, setRetryFlash] = useState(false)
@@ -917,6 +959,12 @@ export default function FishingGame({
     Object.values(frameRefs.current).forEach(img => {
       if (img) img.decode().catch(() => {})
     })
+  }, [])
+
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem('fishing_tour_done')) setTourStep(0)
+    } catch {}
   }, [])
 
   // Scene background frame — animates during casting phase
@@ -1010,6 +1058,17 @@ export default function FishingGame({
       setAngle(angleRef.current)
       setPhase('catching')
     }, 1600)
+  }
+
+  function advanceTour() {
+    setTourStep(prev => {
+      if (prev === null) return null
+      if (prev >= TOUR_STEPS.length - 1) {
+        try { localStorage.setItem('fishing_tour_done', '1') } catch {}
+        return null
+      }
+      return prev + 1
+    })
   }
 
   // Phase 1 — cast (from idle)
@@ -1625,6 +1684,80 @@ export default function FishingGame({
           </div>
 
         </div>
+
+      {/* ── Onboarding tour ── */}
+      <AnimatePresence>
+        {tourStep !== null && !collectionOpen && !gearOpen && !holdOpen && (
+          <>
+            <motion.div
+              key="tour-backdrop"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={advanceTour}
+              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.62)', zIndex: 22, cursor: 'pointer' }}
+            />
+            <motion.div
+              key={`tour-${tourStep}`}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.18 }}
+              style={{
+                position: 'absolute', zIndex: 23,
+                background: '#0d1e2e',
+                border: `1px solid ${HABITAT_COLOR[selectedZone]}45`,
+                borderRadius: 14,
+                padding: '1rem 1.1rem',
+                maxWidth: TOUR_STEPS[tourStep].maxWidth ?? 'calc(100% - 2rem)',
+                ...TOUR_STEPS[tourStep].cardStyle,
+              }}
+            >
+              {/* Arrow caret */}
+              {(() => {
+                const step = TOUR_STEPS[tourStep]
+                const color = `${HABITAT_COLOR[selectedZone]}45`
+                const base: React.CSSProperties = {
+                  position: 'absolute', width: 10, height: 10, background: '#0d1e2e',
+                  transform: 'rotate(45deg)',
+                }
+                const pos: React.CSSProperties = step.arrowDir === 'up'
+                  ? { top: -6, ...(step.arrowAlign === 'center' ? { left: '50%', marginLeft: -5 } : step.arrowAlign === 'right' ? { right: 22 } : { left: 22 }) }
+                  : { bottom: -6, ...(step.arrowAlign === 'right' ? { right: 22 } : { left: 22 }) }
+                const border: React.CSSProperties = step.arrowDir === 'up'
+                  ? { borderTop: `1px solid ${color}`, borderLeft: `1px solid ${color}` }
+                  : { borderBottom: `1px solid ${color}`, borderRight: `1px solid ${color}` }
+                return <div style={{ ...base, ...pos, ...border }} />
+              })()}
+
+              <p className="font-cinzel font-700 mb-1.5"
+                style={{ fontSize: '0.82rem', color: HABITAT_COLOR[selectedZone] }}>
+                {TOUR_STEPS[tourStep].title}
+              </p>
+              <p className="font-karla font-400 mb-3"
+                style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
+                {TOUR_STEPS[tourStep].body}
+              </p>
+              <div className="flex items-center justify-between">
+                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845' }}>
+                  {tourStep + 1} / {TOUR_STEPS.length}
+                </p>
+                <button
+                  onClick={e => { e.stopPropagation(); advanceTour() }}
+                  className="font-karla font-700 uppercase tracking-[0.12em]"
+                  style={{
+                    fontSize: '0.68rem', cursor: 'pointer', touchAction: 'manipulation',
+                    color: HABITAT_COLOR[selectedZone],
+                    background: `${HABITAT_COLOR[selectedZone]}18`,
+                    border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
+                    borderRadius: 8, padding: '0.35rem 0.85rem',
+                  }}
+                >
+                  {tourStep === TOUR_STEPS.length - 1 ? 'Got it' : 'Next →'}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── Collection drawer ── */}
       <AnimatePresence>
