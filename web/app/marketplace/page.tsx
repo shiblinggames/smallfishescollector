@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import ShopCard from './ShopCard'
@@ -9,11 +10,12 @@ export default async function MarketplacePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('packs_available, doubloons, is_premium, premium_expires_at, gems')
-    .eq('id', user.id)
-    .single()
+  const admin = createAdminClient()
+
+  const [{ data: profile }, { data: marketState }] = await Promise.all([
+    supabase.from('profiles').select('packs_available, doubloons, is_premium, premium_expires_at, gems').eq('id', user.id).single(),
+    admin.from('market_state').select('mood').eq('id', 1).single(),
+  ])
 
   const isPremium =
     !!profile?.is_premium &&
@@ -73,6 +75,59 @@ export default async function MarketplacePage() {
         </div>
 
         <div className="px-6 pb-12 max-w-4xl mx-auto flex flex-col gap-6" style={{ position: 'relative', zIndex: 1 }}>
+
+          {/* Fish Market */}
+          <div>
+            <p className="font-karla font-600 uppercase tracking-[0.14em] text-[#6a6764] mb-3" style={{ fontSize: '0.65rem' }}>Market</p>
+            <Link href="/tavern/market" style={{ textDecoration: 'none', display: 'block' }}>
+              <div style={{
+                position: 'relative', overflow: 'hidden',
+                background: 'linear-gradient(135deg, rgba(14,22,38,1) 0%, rgba(8,18,32,1) 100%)',
+                border: '1px solid rgba(56,189,248,0.25)',
+                borderRadius: 16, padding: '1.25rem 1.25rem 1.1rem',
+              }}>
+                {/* Decorative sparkline bg */}
+                <svg aria-hidden viewBox="0 0 300 60" preserveAspectRatio="none"
+                  style={{ position: 'absolute', bottom: 0, right: 0, width: '55%', height: '70%', opacity: 0.07 }}>
+                  <polyline points="0,50 30,38 60,42 90,20 120,30 150,14 180,22 210,8 240,18 270,5 300,12"
+                    fill="none" stroke="#38bdf8" strokeWidth="3" strokeLinejoin="round" />
+                </svg>
+
+                <div className="flex items-start justify-between gap-4">
+                  <div style={{ flex: 1 }}>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span style={{
+                        width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                        background: marketState?.mood === 'kraken' ? '#ef4444' : marketState?.mood === 'storm' ? '#f59e0b' : '#4ade80',
+                        boxShadow: `0 0 6px ${marketState?.mood === 'kraken' ? '#ef4444' : marketState?.mood === 'storm' ? '#f59e0b' : '#4ade80'}`,
+                      }} />
+                      <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.58rem', color: '#6a9aaa' }}>
+                        Live · {marketState?.mood === 'kraken' ? 'Kraken Surge' : marketState?.mood === 'storm' ? 'Storm Warning' : 'Calm Market'}
+                      </p>
+                    </div>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#ffffff', lineHeight: 1.15, marginBottom: '0.4rem' }}>
+                      Fish Market
+                    </p>
+                    <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#6a8a9a', lineHeight: 1.5 }}>
+                      Trade your catch at hourly market prices.<br />Up to 2.5× base value.
+                    </p>
+                  </div>
+                  <div style={{
+                    flexShrink: 0, alignSelf: 'center',
+                    width: 40, height: 40, borderRadius: 12,
+                    background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#38bdf8',
+                  }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+                      <polyline points="16 7 22 7 22 13"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          </div>
 
           {/* Upgrades */}
           <div>
