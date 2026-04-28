@@ -3,7 +3,7 @@ export interface ShipDef {
   name: string
   cost: number
   description: string
-  dailyBonus: number
+  holdCapacity: number
   color: string
   imageUrl?: string
 }
@@ -12,37 +12,37 @@ export const SHIPS: ShipDef[] = [
   {
     tier: 0, name: 'Rowboat', cost: 0,
     description: 'A humble start on the open sea.',
-    dailyBonus: 0, color: '#a07858', imageUrl: '/models/rowboat.png',
+    holdCapacity: 20, color: '#a07858', imageUrl: '/models/rowboat.png',
   },
   {
-    tier: 1, name: 'Dinghy', cost: 150,
+    tier: 1, name: 'Dinghy', cost: 500,
     description: 'Small but reliable. More room for haul.',
-    dailyBonus: 10, color: '#9ca3af', imageUrl: '/models/dinghy.png',
+    holdCapacity: 40, color: '#9ca3af', imageUrl: '/models/dinghy.png',
   },
   {
-    tier: 2, name: 'Sloop', cost: 400,
+    tier: 2, name: 'Sloop', cost: 1500,
     description: 'A single-masted workhorse of the seas.',
-    dailyBonus: 20, color: '#60a5fa', imageUrl: '/models/sloop.png',
+    holdCapacity: 75, color: '#60a5fa', imageUrl: '/models/sloop.png',
   },
   {
-    tier: 3, name: 'Schooner', cost: 1000,
+    tier: 3, name: 'Schooner', cost: 5000,
     description: 'Twin masts and a steady hull. Earning starts here.',
-    dailyBonus: 35, color: '#4ade80', imageUrl: '/models/schooner.png',
+    holdCapacity: 120, color: '#4ade80', imageUrl: '/models/schooner.png',
   },
   {
-    tier: 4, name: 'Brigantine', cost: 2500,
+    tier: 4, name: 'Brigantine', cost: 15000,
     description: 'Fast and capable. A merchant\'s best friend.',
-    dailyBonus: 55, color: '#f0c040', imageUrl: '/models/brigantine.png',
+    holdCapacity: 180, color: '#f0c040', imageUrl: '/models/brigantine.png',
   },
   {
-    tier: 5, name: 'Galleon', cost: 6000,
+    tier: 5, name: 'Galleon', cost: 40000,
     description: 'A grand vessel. The sea respects your presence.',
-    dailyBonus: 80, color: '#a78bfa', imageUrl: '/models/galleon.png',
+    holdCapacity: 250, color: '#a78bfa', imageUrl: '/models/galleon.png',
   },
   {
-    tier: 6, name: 'Man-o-War', cost: 18000,
+    tier: 6, name: 'Man-o-War', cost: 100000,
     description: 'The most feared ship on the water.',
-    dailyBonus: 125, color: '#ff6b35', imageUrl: '/models/man-o-war.png',
+    holdCapacity: 350, color: '#ff6b35', imageUrl: '/models/man-o-war.png',
   },
 ]
 

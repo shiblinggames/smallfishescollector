@@ -3,8 +3,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import DailyBonusClient from './DailyBonusClient'
-import { getShip } from '@/lib/ships'
-
 export default async function DailyBonusPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -15,7 +13,7 @@ export default async function DailyBonusPage() {
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('packs_available, doubloons, is_premium, premium_expires_at, ship_tier, last_daily_claim, last_ship_claim, last_pack_claim, gems')
+    .select('packs_available, doubloons, is_premium, premium_expires_at, last_daily_claim, last_pack_claim, gems')
     .eq('id', user.id)
     .single()
 
@@ -23,7 +21,6 @@ export default async function DailyBonusPage() {
     !!profile?.premium_expires_at &&
     new Date(profile.premium_expires_at) > new Date()
 
-  const ship = getShip(profile?.ship_tier ?? 0)
   const baseAmount = isPremium ? 100 : 50
 
   return (
@@ -35,12 +32,8 @@ export default async function DailyBonusPage() {
           <h1 className="font-cinzel font-700 text-[#f0ede8] mb-6" style={{ fontSize: '1.4rem' }}>Daily Bonus</h1>
           <DailyBonusClient
             dailyClaimed={profile?.last_daily_claim === today}
-            shipClaimed={profile?.last_ship_claim === today}
             packClaimed={profile?.last_pack_claim === today}
             baseAmount={baseAmount}
-            shipAmount={ship.dailyBonus}
-            shipName={ship.name}
-            shipTier={profile?.ship_tier ?? 0}
             isPremium={isPremium}
           />
         </div>

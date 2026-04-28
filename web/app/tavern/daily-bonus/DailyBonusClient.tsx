@@ -2,36 +2,25 @@
 
 import { useState } from 'react'
 import { claimDailyBonus } from '@/app/actions/dailyBonus'
-import { claimShipBonus } from '@/app/actions/shipBonus'
 import { claimDailyPack } from '@/app/actions/dailyPack'
 import AchievementToast from '@/components/AchievementToast'
 
 interface Props {
   dailyClaimed: boolean
-  shipClaimed: boolean
   packClaimed: boolean
   baseAmount: number
-  shipAmount: number
-  shipName: string
-  shipTier: number
   isPremium: boolean
 }
 
 export default function DailyBonusClient({
   dailyClaimed: initialDailyClaimed,
-  shipClaimed: initialShipClaimed,
   packClaimed: initialPackClaimed,
   baseAmount,
-  shipAmount,
-  shipName,
-  shipTier,
   isPremium,
 }: Props) {
   const [dailyClaimed, setDailyClaimed] = useState(initialDailyClaimed)
-  const [shipClaimed, setShipClaimed] = useState(initialShipClaimed)
   const [packClaimed, setPackClaimed] = useState(initialPackClaimed)
   const [loadingDaily, setLoadingDaily] = useState(false)
-  const [loadingShip, setLoadingShip] = useState(false)
   const [loadingPack, setLoadingPack] = useState(false)
   const [achievementKeys, setAchievementKeys] = useState<string[]>([])
 
@@ -45,14 +34,6 @@ export default function DailyBonusClient({
       if (result.newAchievements?.length) setAchievementKeys(result.newAchievements)
     }
     setLoadingDaily(false)
-  }
-
-  async function handleClaimShip() {
-    if (shipClaimed || loadingShip) return
-    setLoadingShip(true)
-    const result = await claimShipBonus()
-    if (result.claimed) setShipClaimed(true)
-    setLoadingShip(false)
   }
 
   async function handleClaimPack() {
@@ -79,19 +60,6 @@ export default function DailyBonusClient({
           icon={<CoinIcon />}
           badge={isPremium ? 'Member' : undefined}
         />
-
-        {/* Ship bonus — only show if tier > 0 */}
-        {shipTier > 0 && (
-          <ClaimCard
-            eyebrow="Ship Earnings"
-            title={`+${shipAmount} ⟡`}
-            description={`Daily income from your ${shipName}.`}
-            claimed={shipClaimed}
-            loading={loadingShip}
-            onClaim={handleClaimShip}
-            icon={<ShipIcon />}
-          />
-        )}
 
         {/* Daily pack */}
         <ClaimCard
@@ -200,19 +168,6 @@ function CoinIcon() {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
       <circle cx="12" cy="12" r="9"/>
       <path d="M12 7v1.5M12 15.5V17M9.5 9.5C9.5 8.4 10.6 8 12 8s2.5.6 2.5 1.8c0 2.4-5 2-5 4.4C9.5 15.4 10.6 16 12 16s2.5-.5 2.5-1.7"/>
-    </svg>
-  )
-}
-
-function ShipIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 17 C4 21 20 21 22 17"/>
-      <path d="M3 17 L5 12 L19 12 L21 17"/>
-      <line x1="11" y1="12" x2="11" y2="4"/>
-      <path d="M11 4 L18 9 L11 12"/>
-      <line x1="7" y1="12" x2="7" y2="7"/>
-      <path d="M7 7 L11 9 L7 11"/>
     </svg>
   )
 }

@@ -13,7 +13,7 @@ export async function GET() {
   const today = new Date().toISOString().split('T')[0]
 
   const [{ data: profile }, { data: quiz }, { data: fotd }] = await Promise.all([
-    admin.from('profiles').select('last_daily_claim, last_ship_claim').eq('id', user.id).single(),
+    admin.from('profiles').select('last_daily_claim').eq('id', user.id).single(),
     admin.from('quiz_answers').select('id').eq('user_id', user.id).eq('date', today).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
   ])

@@ -41,8 +41,9 @@ export default async function MarketplacePage() {
     "Better hook, better shot at the gold zones. Perfect catches are where the real savings are.",
     "A good hook widens your catch window. A great hook lets you go for the edges.",
     "Enchanted hook? I've seen what comes up on one of those. Worth every doubloon.",
-    "The Rowboat's honest work. But there are seven ships in that yard for a reason.",
-    "Man-o-War's the top of the line. Nobody who sails one goes back.",
+    "Rowboat holds twenty fish. That's fine until you start hitting the deep zones.",
+    "Man-o-War holds three hundred and fifty. Nobody who upgrades to one ever goes back.",
+    "The hold fills faster than you think once you're fishing the abyss.",
   ]
   const shopkeepLine = shopkeepLines[Math.floor(Math.random() * shopkeepLines.length)]
 

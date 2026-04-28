@@ -5,7 +5,6 @@ import Nav from '@/components/Nav'
 import Link from 'next/link'
 import { getDailyWagered } from './actions'
 import { DAILY_CAP } from './constants'
-import { getShip } from '@/lib/ships'
 import { getWeeklyBounties } from '@/app/packs/bountyActions'
 import GameCard from './GameCard'
 import WelcomeModal from './WelcomeModal'
@@ -19,7 +18,7 @@ export default async function TavernPage() {
   const today = new Date().toISOString().split('T')[0]
 
   const [{ data: profile }, { data: fotdAttempt }, dailyWagered, bounties, { data: todayExpedition }] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_ship_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome, gems').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome, gems').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
     getWeeklyBounties(),
@@ -31,11 +30,9 @@ export default async function TavernPage() {
     !!profile?.premium_expires_at &&
     new Date(profile.premium_expires_at) > new Date()
 
-  const ship = getShip(profile?.ship_tier ?? 0)
   const baseAmount = isPremium ? 100 : 50
   const allClaimed =
     profile?.last_daily_claim === today &&
-    ((profile?.ship_tier ?? 0) === 0 || profile?.last_ship_claim === today) &&
     (!isPremium || profile?.last_pack_claim === today)
 
   const fotdDone = !!fotdAttempt && (fotdAttempt.solved || (fotdAttempt.guesses?.length ?? 0) >= 4)
@@ -73,7 +70,6 @@ export default async function TavernPage() {
     "Slow morning on the water. Fish aren't biting much today.",
     "Dropped a line myself before my shift. Came up empty. The deep ones are hiding.",
     "Those enchanted hooks — never believed in 'em myself. Then I saw what came up on one.",
-    "Twenty casts a day. Some folks use 'em all at once, some spread 'em out. Doesn't seem to matter.",
     "Best hook wins. Simple as that. The rusty one'll catch something, sure — just not the good stuff.",
     "Hit the gold zone on either edge and you might just keep your bait. Timing's everything.",
     "Perfect catch means a shot at your bait back. Good sailors barely burn through a worm.",
@@ -81,6 +77,9 @@ export default async function TavernPage() {
     "The abyss doesn't keep you waiting as long as it used to. Still just as likely to eat you alive.",
     "Don't sell your abyss catch at the dock price. Wait for the market to swing — it's worth it.",
     "Vampire squid, firefly squid — sounds like a nightmare. Pays like one too, in the good way.",
+    "Rowboat fills up fast if you're fishing the abyss. You'll be running to market every five minutes.",
+    "Man-o-War holds three hundred and fifty fish. Sailors have been known to disappear for days on one of those.",
+    "Running low on hold space? Head to market before your next cast. Learned that the hard way.",
     // Bounties
     "There's a bounty out on a deep water fish this week. Nobody's landed it yet.",
     "The abyss bounty's still up for grabs. Five hundred doubloons and a pack for whoever lands it.",
@@ -143,10 +142,9 @@ export default async function TavernPage() {
             href="/tavern/daily-bonus"
             eyebrow="Daily"
             title="Bonus"
-            statusText={allClaimed ? 'Come back tomorrow' : `${baseAmount + ship.dailyBonus} ⟡ available`}
+            statusText={allClaimed ? 'Come back tomorrow' : `${baseAmount} ⟡ available`}
             info={[
               `${baseAmount} ⟡ base daily bonus`,
-              ...(ship.dailyBonus > 0 ? [`+${ship.dailyBonus} ⟡ from your ${ship.name}`] : []),
               isPremium ? '1 free pack daily (Member)' : 'Upgrade to Member for a free daily pack',
             ]}
             icon={<CoinIcon />}

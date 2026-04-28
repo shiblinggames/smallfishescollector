@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
 import { getRod } from '@/lib/rods'
+import { getShip } from '@/lib/ships'
 import { checkAchievements } from '@/lib/checkAchievements'
 import { getWeekStart } from '@/lib/weekStart'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
@@ -99,7 +100,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, hook_tier, fishing_xp')
+    .select('rod_tier, hook_tier, fishing_xp, ship_tier')
     .eq('id', user.id)
     .single()
 
@@ -112,6 +113,17 @@ export async function castLine(baitType: string, habitat: string): Promise<
   const minLevel = ZONE_MIN_LEVEL[habitat] ?? 1
   if (fishingLevel < minLevel) {
     return { error: `Reach Fishing Level ${minLevel} to fish here` }
+  }
+
+  // Check fish hold capacity
+  const ship = getShip(profile.ship_tier ?? 0)
+  const { data: holdRows } = await admin
+    .from('fish_inventory')
+    .select('quantity')
+    .eq('user_id', user.id)
+  const totalFish = (holdRows ?? []).reduce((sum, r) => sum + (r.quantity ?? 0), 0)
+  if (totalFish >= ship.holdCapacity) {
+    return { error: `Fish hold full (${ship.holdCapacity}/${ship.holdCapacity}). Sell some fish to make room.` }
   }
 
   // Consume 1 bait

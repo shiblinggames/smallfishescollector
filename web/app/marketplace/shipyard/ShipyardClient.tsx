@@ -121,7 +121,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
                     </p>
                   )}
                   <p className="font-karla font-600 text-xs sm:text-sm" style={{ color: owned ? c : '#4a4845' }}>
-                    {ship.dailyBonus > 0 ? `+${ship.dailyBonus} ⟡/day` : 'Base'}
+                    {ship.holdCapacity} fish hold
                   </p>
                 </div>
               </div>
