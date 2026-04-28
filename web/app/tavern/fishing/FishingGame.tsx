@@ -70,6 +70,31 @@ const RARITY: Record<number, { label: string; color: string; hookedText: string 
   5: { label: 'Legendary', color: '#f59e0b', hookedText: "SOMETHING MASSIVE IS ON THE LINE!" },
 }
 
+// ─── Catch mechanics tour ────────────────────────────────────────────────────
+
+const CATCH_TOUR_STEPS = [
+  {
+    color: '#4ade80',
+    title: 'Catch Zone',
+    body: 'Land the needle anywhere in the green to catch the fish. Rarer fish have a narrower window — a better Hook widens it.',
+  },
+  {
+    color: '#f59e0b',
+    title: 'Perfect Zones',
+    body: 'The gold strips at the edges of the green are Perfects. Land here and you get a chance to save your bait for a free recast.',
+  },
+  {
+    color: '#f87171',
+    title: 'Snag Zones',
+    body: 'Hit a red zone and you lose the fish and your bait. Upgrade your Line to shrink these.',
+  },
+  {
+    color: '#94a3b8',
+    title: 'Needle Speed',
+    body: "Harder fish spin the needle faster. Deeper zones add random speed bursts and direction reversals. Upgrade your Reel to slow it down.",
+  },
+]
+
 // ─── Onboarding tour ─────────────────────────────────────────────────────────
 
 type TourStep = {
@@ -923,6 +948,8 @@ export default function FishingGame({
   const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean; gemEarned?: boolean } | null>(null)
   const [challengeActive, setChallengeActive] = useState(false)
   const [tourStep, setTourStep] = useState<number | null>(null)
+  const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
+  const catchTourShownRef = useRef(false)
   const [bountyNotif, setBountyNotif] = useState<FishingBountyCompletion | null>(null)
   const [perfectFlash, setPerfectFlash] = useState(false)
   const [retryFlash, setRetryFlash] = useState(false)
@@ -966,6 +993,15 @@ export default function FishingGame({
       if (!localStorage.getItem('fishing_tour_done')) setTourStep(0)
     } catch {}
   }, [])
+
+  useEffect(() => {
+    if (phase === 'catching' && !catchTourShownRef.current) {
+      catchTourShownRef.current = true
+      try {
+        if (!localStorage.getItem('fishing_catch_tour_done')) setCatchTourStep(0)
+      } catch {}
+    }
+  }, [phase])
 
   // Scene background frame — animates during casting phase
   const [sceneFrame, setSceneFrame] = useState<SceneFrame>('fishing')
@@ -1065,6 +1101,17 @@ export default function FishingGame({
       if (prev === null) return null
       if (prev >= TOUR_STEPS.length - 1) {
         try { localStorage.setItem('fishing_tour_done', '1') } catch {}
+        return null
+      }
+      return prev + 1
+    })
+  }
+
+  function advanceCatchTour() {
+    setCatchTourStep(prev => {
+      if (prev === null) return null
+      if (prev >= CATCH_TOUR_STEPS.length - 1) {
+        try { localStorage.setItem('fishing_catch_tour_done', '1') } catch {}
         return null
       }
       return prev + 1
@@ -1684,6 +1731,65 @@ export default function FishingGame({
           </div>
 
         </div>
+
+      {/* ── Catch mechanics tour ── */}
+      <AnimatePresence>
+        {catchTourStep !== null && (
+          <>
+            <motion.div
+              key="catch-tour-backdrop"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={advanceCatchTour}
+              style={{ position: 'absolute', inset: 0, background: 'rgba(4,8,16,0.82)', zIndex: 18, cursor: 'pointer' }}
+            />
+            <motion.div
+              key={`catch-tour-${catchTourStep}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.18 }}
+              style={{
+                position: 'absolute', bottom: 136, left: 16, right: 16, zIndex: 19,
+                background: '#0a1828',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderLeft: `3px solid ${CATCH_TOUR_STEPS[catchTourStep].color}`,
+                borderRadius: 14,
+                padding: '1rem 1.1rem',
+              }}
+            >
+              <div className="flex items-center gap-2.5 mb-2">
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: CATCH_TOUR_STEPS[catchTourStep].color, flexShrink: 0 }} />
+                <p className="font-cinzel font-700"
+                  style={{ fontSize: '0.85rem', color: CATCH_TOUR_STEPS[catchTourStep].color }}>
+                  {CATCH_TOUR_STEPS[catchTourStep].title}
+                </p>
+              </div>
+              <p className="font-karla font-400 mb-3"
+                style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.55 }}>
+                {CATCH_TOUR_STEPS[catchTourStep].body}
+              </p>
+              <div className="flex items-center justify-between">
+                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845' }}>
+                  {catchTourStep + 1} / {CATCH_TOUR_STEPS.length}
+                </p>
+                <button
+                  onClick={e => { e.stopPropagation(); advanceCatchTour() }}
+                  className="font-karla font-700 uppercase tracking-[0.12em]"
+                  style={{
+                    fontSize: '0.68rem', cursor: 'pointer', touchAction: 'manipulation',
+                    color: CATCH_TOUR_STEPS[catchTourStep].color,
+                    background: `${CATCH_TOUR_STEPS[catchTourStep].color}18`,
+                    border: `1px solid ${CATCH_TOUR_STEPS[catchTourStep].color}50`,
+                    borderRadius: 8, padding: '0.35rem 0.85rem',
+                  }}
+                >
+                  {catchTourStep === CATCH_TOUR_STEPS.length - 1 ? 'Got it' : 'Next →'}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── Onboarding tour ── */}
       <AnimatePresence>
