@@ -566,10 +566,10 @@ const ROD_IMG_STYLE = {
 
 // Tip position in SVG 0-100 space (for fishing line placement), per frame
 const ROD_TIP: Record<SceneFrame, [number, number]> = {
-  fishing: [37, 14],
-  windup:  [62, 8],
-  cast1:   [53, 6],
-  cast2:   [42, 16],
+  fishing: [37, 18],
+  windup:  [62, 12],
+  cast1:   [53, 10],
+  cast2:   [42, 20],
 }
 
 // Clockwise rotation around the handle point per frame
@@ -599,7 +599,7 @@ function RodOverlay({ frame, hookTier }: { frame: SceneFrame; hookTier: number }
           ...ROD_IMG_STYLE,
           aspectRatio: '1 / 1',
           objectFit: 'contain',
-          transformOrigin: '84% 70%',
+          transformOrigin: '91% 84%',
           transform: `rotate(${rotation}deg)`,
           pointerEvents: 'none',
           zIndex: 2,
