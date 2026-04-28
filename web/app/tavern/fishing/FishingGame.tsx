@@ -549,99 +549,10 @@ function BaitSelector({ baitInventory, selectedBait, onSelect }: {
 type SceneFrame = 'windup' | 'cast1' | 'cast2' | 'fishing'
 
 const FRAME_SRC: Record<SceneFrame, string> = {
-  windup:  '/windup-norod.jpeg',
-  cast1:   '/cast1-norod.jpeg',
-  cast2:   '/cast2-norod.jpeg',
-  fishing: '/fishing-norod.jpeg',
-}
-
-// Rod image: handle (thick end) is at ~84% from left, ~70% from top of the image.
-// The image div is positioned so the handle aligns with the character's hand.
-// Rotation is applied around the handle point per frame.
-const ROD_IMG_STYLE = {
-  left: '32%',
-  top: '14%',
-  width: '45%',
-} as const
-
-// Tip position in SVG 0-100 space (for fishing line placement), per frame
-const ROD_TIP: Record<SceneFrame, [number, number]> = {
-  fishing: [39, 17.25],
-  windup:  [64, 11.25],
-  cast1:   [55, 9.25],
-  cast2:   [44, 19.25],
-}
-
-// Clockwise rotation around the handle point per frame
-const ROD_ROTATION: Record<SceneFrame, number> = {
-  fishing:  0,
-  windup:   35,
-  cast1:   -20,
-  cast2:    -8,
-}
-
-const WATER_Y = 32
-
-function RodOverlay({ frame, hookTier }: { frame: SceneFrame; hookTier: number }) {
-  const [tx, ty] = ROD_TIP[frame]
-  const lineEndY = WATER_Y
-  const hookOffsetX = -5.25
-  const rotation = ROD_ROTATION[frame]
-  const hookDef = getHook(hookTier)
-
-  return (
-    <>
-      {/* Rod image — rotated around handle point */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/rod.png"
-        alt=""
-        style={{
-          position: 'absolute',
-          ...ROD_IMG_STYLE,
-          aspectRatio: '1 / 1',
-          objectFit: 'contain',
-          transformOrigin: '91% 84%',
-          transform: `rotate(${rotation}deg)`,
-          pointerEvents: 'none',
-          zIndex: 2,
-        }}
-      />
-{/* Fishing line — only on idle fishing frame */}
-      {frame === 'fishing' && (
-        <>
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3 }}>
-            <line x1={tx} y1={ty} x2={tx} y2={lineEndY}
-              stroke="rgba(255,255,255,0.55)" strokeWidth="0.3" />
-            {!hookDef.imageUrl && (
-              <path
-                d={`M ${tx} ${lineEndY - 0.5} L ${tx} ${lineEndY + 1.8} Q ${tx} ${lineEndY + 3} ${tx + 1.5} ${lineEndY + 3}`}
-                fill="none" stroke="rgba(210,210,210,0.9)" strokeWidth="0.35" strokeLinecap="round"
-              />
-            )}
-          </svg>
-          {/* Hook image at line end */}
-          {hookDef.imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={hookDef.imageUrl}
-              alt=""
-              style={{
-                position: 'absolute',
-                left: `calc(${tx}% + ${hookOffsetX}%)`,
-                top: `${lineEndY}%`,
-                width: '8%',
-                objectFit: 'contain',
-                pointerEvents: 'none',
-                zIndex: 4,
-              }}
-            />
-          )}
-        </>
-      )}
-    </>
-  )
+  windup:  '/windup.jpeg',
+  cast1:   '/cast1.jpeg',
+  cast2:   '/cast2.jpeg',
+  fishing: '/fishing.jpeg',
 }
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
@@ -1068,6 +979,7 @@ export default function FishingGame({
   selectedZone: ZoneKey
   onBack: () => void
 }) {
+
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
   const [ownedRods, setOwnedRods] = useState(initialOwnedRods)
   const [caughtFishIds, setCaughtFishIds] = useState(() => new Set(initialCaughtFishIds))
@@ -1520,7 +1432,6 @@ export default function FishingGame({
               }}
             />
           ))}
-          <RodOverlay frame={sceneFrame} hookTier={hookTier} />
         </motion.div>
 
 
