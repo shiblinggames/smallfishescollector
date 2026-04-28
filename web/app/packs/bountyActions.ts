@@ -49,12 +49,12 @@ async function ensureBounties(weekStart: string, admin: AdminClient): Promise<Bo
 
   if (existing) return existing as BountyRow
 
-  const { data: allFish } = await admin.from('fish_species').select('id, habitat')
+  const { data: allFish } = await admin.from('cards').select('id, zone').not('zone', 'is', null)
   if (!allFish) return null
 
   const byZone: Record<string, number[]> = { shallows: [], open_waters: [], deep: [], abyss: [] }
-  for (const fish of allFish as { id: number; habitat: string }[]) {
-    if (byZone[fish.habitat]) byZone[fish.habitat].push(fish.id)
+  for (const fish of allFish as { id: number; zone: string }[]) {
+    if (byZone[fish.zone]) byZone[fish.zone].push(fish.id)
   }
 
   for (const zone of ['shallows', 'open_waters', 'deep', 'abyss']) {
@@ -99,7 +99,7 @@ export async function getWeeklyBounties(): Promise<WeeklyBountiesResult | null> 
   ]
 
   const [{ data: fishList }, { data: progress }] = await Promise.all([
-    admin.from('fish_species').select('id, name, habitat').in('id', fishIds),
+    admin.from('cards').select('id, name, zone').in('id', fishIds),
     admin
       .from('weekly_bounty_progress')
       .select('shallows_completed, open_waters_completed, deep_completed, abyss_completed, shallows_claimed_at, open_waters_claimed_at, deep_claimed_at, abyss_claimed_at')
@@ -110,7 +110,7 @@ export async function getWeeklyBounties(): Promise<WeeklyBountiesResult | null> 
 
   if (!fishList) return null
 
-  const fishMap = new Map((fishList as { id: number; name: string; habitat: string }[]).map(f => [f.id, f]))
+  const fishMap = new Map((fishList as { id: number; name: string; zone: string }[]).map(f => [f.id, f]))
 
   const toFish = (id: number, zone: BountyFish['zone']): BountyFish => {
     const f = fishMap.get(id)
