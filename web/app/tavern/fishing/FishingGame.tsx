@@ -1637,17 +1637,21 @@ export default function FishingGame({
               background: 'rgba(6,12,20,0.98)',
               borderTop: '1px solid rgba(255,255,255,0.09)',
               borderRadius: '18px 18px 0 0',
-              padding: '1.25rem 1.1rem 2rem',
-              overflow: 'hidden',
+              maxHeight: '80vh',
+              display: 'flex', flexDirection: 'column',
             }}
           >
-            <div className="flex items-center justify-between mb-5">
+            {/* Sticky header */}
+            <div className="flex items-center justify-between flex-shrink-0"
+              style={{ padding: '1.25rem 1.1rem 0.75rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
                 style={{ fontSize: '0.72rem', color: '#6a6764' }}>Fish Collection</p>
               <button onClick={() => { setCollectionOpen(false); setExpandedZone(null); setTappedFishId(null) }}
                 style={{ color: '#4a4845', fontSize: '1.2rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
             </div>
 
+            {/* Scrollable body */}
+            <div style={{ overflowY: 'auto', padding: '0 1.1rem 2rem', overscrollBehavior: 'contain' }}>
             {ZONES.map(zone => {
               const zoneSpecies = allFishSpecies.filter(f => f.habitat === zone)
               const discoveredCount = zoneSpecies.filter(f => caughtFishIds.has(f.id)).length
@@ -1737,6 +1741,7 @@ export default function FishingGame({
                 </div>
               )
             })}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1835,7 +1840,7 @@ export default function FishingGame({
               borderTop: '1px solid rgba(255,255,255,0.09)',
               borderRadius: '18px 18px 0 0',
               padding: '1.25rem 1rem 2rem',
-              maxHeight: '82vh', overflowY: 'auto',
+              maxHeight: '82vh', overflowY: 'auto', overscrollBehavior: 'contain',
             }}
           >
             <div className="flex items-center justify-between mb-4">
@@ -2031,7 +2036,7 @@ export default function FishingGame({
               borderTop: '1px solid rgba(255,255,255,0.09)',
               borderRadius: '18px 18px 0 0',
               padding: '1.25rem 1rem 2rem',
-              maxHeight: '72vh', overflowY: 'auto',
+              maxHeight: '72vh', overflowY: 'auto', overscrollBehavior: 'contain',
             }}
           >
             <div className="flex items-center justify-between mb-3">
