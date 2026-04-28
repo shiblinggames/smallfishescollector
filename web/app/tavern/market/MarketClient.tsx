@@ -8,7 +8,7 @@ import type { MarketFishEntry, MarketState } from './page'
 const TOUR_STEPS = [
   {
     title: 'Fish Market',
-    body: 'This is where you sell your catch at live market prices — better than the quick-sell at the dock, but prices shift hourly.',
+    body: 'This is where you sell your catch at live market prices — much better than the 65% quick-sell at the dock, but prices shift hourly.',
     color: '#38bdf8',
   },
   {

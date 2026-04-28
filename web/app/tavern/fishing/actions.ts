@@ -347,7 +347,7 @@ export async function sellFish(
   if (!invRow || !fish || !profile) return { error: 'Data not found' }
   if (invRow.quantity < quantity) return { error: 'Not enough fish' }
 
-  const earned = Math.floor(fish.sell_value * 0.80) * quantity
+  const earned = Math.floor(fish.sell_value * 0.65) * quantity
   const newDoubloons = (profile.doubloons ?? 0) + earned
 
   await Promise.all([
