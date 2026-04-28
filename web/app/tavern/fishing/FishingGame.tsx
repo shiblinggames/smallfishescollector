@@ -566,10 +566,10 @@ const ROD_IMG_STYLE = {
 
 // Tip position in SVG 0-100 space (for fishing line placement), per frame
 const ROD_TIP: Record<SceneFrame, [number, number]> = {
-  fishing: [37, 18],
-  windup:  [62, 12],
-  cast1:   [53, 10],
-  cast2:   [42, 20],
+  fishing: [38, 15],
+  windup:  [63, 9],
+  cast1:   [54, 7],
+  cast2:   [43, 17],
 }
 
 // Clockwise rotation around the handle point per frame
@@ -611,7 +611,7 @@ function RodOverlay({ frame, hookTier }: { frame: SceneFrame; hookTier: number }
           <svg viewBox="0 0 100 100" preserveAspectRatio="none"
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3 }}>
             <line x1={tx} y1={ty} x2={tx} y2={WATER_Y}
-              stroke="rgba(255,255,255,0.22)" strokeWidth="0.12" />
+              stroke="rgba(255,255,255,0.55)" strokeWidth="0.3" />
             {!hookDef.imageUrl && (
               <path
                 d={`M ${tx} ${WATER_Y - 0.5} L ${tx} ${WATER_Y + 1.8} Q ${tx} ${WATER_Y + 3} ${tx + 1.5} ${WATER_Y + 3}`}
@@ -627,9 +627,9 @@ function RodOverlay({ frame, hookTier }: { frame: SceneFrame; hookTier: number }
               alt=""
               style={{
                 position: 'absolute',
-                left: `calc(${tx}% - 3%)`,
+                left: `calc(${tx}% - 4%)`,
                 top: `${WATER_Y}%`,
-                width: '6%',
+                width: '8%',
                 objectFit: 'contain',
                 pointerEvents: 'none',
                 zIndex: 4,
