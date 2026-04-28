@@ -69,7 +69,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
         src={src}
         alt={name}
         fill
-        className={`object-cover ${artImageClass[artEffect]}`}
+        className={`object-contain ${artImageClass[artEffect]}`}
         sizes="140px"
         unoptimized
       />
