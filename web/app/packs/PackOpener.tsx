@@ -337,7 +337,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
         <div className="flip-card-inner w-full h-full">
           <div className="flip-card-front w-full h-full overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/cardback.jpg" alt="" className="w-full h-full object-cover" />
+            <img src="/cardback.svg" alt="" className="w-full h-full object-cover" />
           </div>
           <div className="flip-card-back w-full h-full bg-black">
             <FishCard name={card.name} filename={card.filename} borderStyle={card.borderStyle} artEffect={card.artEffect} variantName={card.variantName} dropWeight={card.dropWeight} stats={{ strength: card.strength, agility: card.agility, wit: card.wit, luck: card.luck }} fill />
