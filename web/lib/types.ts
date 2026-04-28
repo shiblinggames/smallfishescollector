@@ -51,4 +51,8 @@ export interface DrawnCard {
   borderStyle: BorderStyle
   artEffect: ArtEffect
   dropWeight: number
+  strength: number
+  agility: number
+  wit: number
+  luck: number
 }

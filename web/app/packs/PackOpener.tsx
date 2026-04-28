@@ -379,7 +379,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
             <img src="/cardback.png" alt="" className="w-full h-full object-cover" />
           </div>
           <div className="flip-card-back w-full h-full bg-black flex items-center justify-center p-3" style={cardBackBorderStyle(card.borderStyle, card.artEffect)}>
-            <FishCard name={card.name} filename={card.filename} borderStyle={card.borderStyle} artEffect={card.artEffect} variantName={card.variantName} dropWeight={card.dropWeight} />
+            <FishCard name={card.name} filename={card.filename} borderStyle={card.borderStyle} artEffect={card.artEffect} variantName={card.variantName} dropWeight={card.dropWeight} stats={{ strength: card.strength, agility: card.agility, wit: card.wit, luck: card.luck }} />
           </div>
         </div>
         {shockwaveCards.has(i) && (() => {

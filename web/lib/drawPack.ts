@@ -80,5 +80,9 @@ function toDrawn(v: CardVariant): DrawnCard {
     borderStyle: v.border_style as BorderStyle,
     artEffect:   v.art_effect as ArtEffect,
     dropWeight:  v.drop_weight,
+    strength:    (card as any).strength ?? 0,
+    agility:     (card as any).agility  ?? 0,
+    wit:         (card as any).wit      ?? 0,
+    luck:        (card as any).luck     ?? 0,
   }
 }
