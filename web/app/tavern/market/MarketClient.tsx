@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, useCallback } from 'react'
 import Link from 'next/link'
-import { marketSellFish } from './actions'
+import { marketSellFish, liquidateAllFish } from './actions'
 import type { MarketFishEntry, MarketState } from './page'
 
 const TOUR_STEPS = [
@@ -314,6 +314,26 @@ export default function MarketClient({
   }
 
   const [browseExpanded, setBrowseExpanded] = useState(false)
+  const [liquidateConfirm, setLiquidateConfirm] = useState(false)
+  const [liquidating, setLiquidating] = useState(false)
+  const liquidateValue = portfolio.reduce(
+    (s, e) => s + Math.floor(e.sell_value * e.multiplier * 0.90 * 0.97) * e.quantity, 0
+  )
+
+  function handleLiquidate() {
+    if (liquidating) return
+    setLiquidating(true)
+    setLiquidateConfirm(false)
+    startTransition(async () => {
+      const res = await liquidateAllFish()
+      setLiquidating(false)
+      if ('error' in res) { showToast(res.error); return }
+      setDoubloons(res.doubloons)
+      showToast(`+${res.earned.toLocaleString()} ⟡ · ${res.fishSold} fish liquidated`)
+      setPortfolio([])
+    })
+  }
+
   const ownedIds = new Set(portfolio.map(e => e.fish_id))
   const browseAll = allMarket.filter(e => !ownedIds.has(e.fish_id))
   const browseList = browseExpanded ? browseAll : browseAll.slice(0, 10)
@@ -408,6 +428,59 @@ export default function MarketClient({
               <p className="font-karla font-400 text-center" style={{ fontSize: '0.62rem', color: '#4a4845' }}>
                 3% market fee applied to all sales
               </p>
+
+              {/* Liquidate */}
+              <div style={{
+                background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.15)',
+                borderRadius: 12, padding: '0.9rem 1rem',
+              }}>
+                <div className="flex items-start justify-between mb-1">
+                  <div>
+                    <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#f87171' }}>Liquidate All</p>
+                    <p className="font-karla font-400 mt-0.5" style={{ fontSize: '0.65rem', color: '#6a6764' }}>90% of market price · 3% fee still applies</p>
+                  </div>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f87171' }}>
+                    {liquidateValue.toLocaleString()} ⟡
+                  </p>
+                </div>
+                {!liquidateConfirm ? (
+                  <button
+                    onClick={() => setLiquidateConfirm(true)}
+                    disabled={liquidating}
+                    className="font-karla font-700 uppercase tracking-[0.1em] w-full mt-2"
+                    style={{
+                      fontSize: '0.62rem', padding: '0.6rem', borderRadius: 8,
+                      background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+                      color: '#f87171', cursor: 'pointer',
+                    }}>
+                    Liquidate Holdings
+                  </button>
+                ) : (
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => setLiquidateConfirm(false)}
+                      className="font-karla font-600 flex-1"
+                      style={{
+                        fontSize: '0.62rem', padding: '0.6rem', borderRadius: 8,
+                        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+                        color: '#6a6764', cursor: 'pointer',
+                      }}>
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleLiquidate}
+                      disabled={liquidating}
+                      className="font-karla font-700 uppercase tracking-[0.1em] flex-1"
+                      style={{
+                        fontSize: '0.62rem', padding: '0.6rem', borderRadius: 8,
+                        background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
+                        color: '#f87171', opacity: liquidating ? 0.5 : 1, cursor: liquidating ? 'default' : 'pointer',
+                      }}>
+                      {liquidating ? 'Selling…' : `Confirm · ${liquidateValue.toLocaleString()} ⟡`}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
