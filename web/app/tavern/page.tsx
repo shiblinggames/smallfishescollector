@@ -75,6 +75,12 @@ export default async function TavernPage() {
     "Those enchanted hooks — never believed in 'em myself. Then I saw what came up on one.",
     "Twenty casts a day. Some folks use 'em all at once, some spread 'em out. Doesn't seem to matter.",
     "Best hook wins. Simple as that. The rusty one'll catch something, sure — just not the good stuff.",
+    "Hit the gold zone on either edge and you might just keep your bait. Timing's everything.",
+    "Perfect catch means a shot at your bait back. Good sailors barely burn through a worm.",
+    "Blobfish. Ugliest thing in the sea. Fetches nearly a thousand doubloons at market though. Go figure.",
+    "The abyss doesn't keep you waiting as long as it used to. Still just as likely to eat you alive.",
+    "Don't sell your abyss catch at the dock price. Wait for the market to swing — it's worth it.",
+    "Vampire squid, firefly squid — sounds like a nightmare. Pays like one too, in the good way.",
     // Bounties
     "There's a bounty out on a deep water fish this week. Nobody's landed it yet.",
     "The abyss bounty's still up for grabs. Five hundred doubloons and a pack for whoever lands it.",

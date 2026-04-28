@@ -38,6 +38,11 @@ export default async function MarketplacePage() {
     "No refunds. Not because I'm stingy — just the nature of upgrades.",
     "The Iron hook's a solid choice. Underrated, if you ask me.",
     "Membership's my best seller. People like their daily packs.",
+    "Better hook, better shot at the gold zones. Perfect catches are where the real savings are.",
+    "A good hook widens your catch window. A great hook lets you go for the edges.",
+    "Enchanted hook? I've seen what comes up on one of those. Worth every doubloon.",
+    "The Rowboat's honest work. But there are seven ships in that yard for a reason.",
+    "Man-o-War's the top of the line. Nobody who sails one goes back.",
   ]
   const shopkeepLine = shopkeepLines[Math.floor(Math.random() * shopkeepLines.length)]
 
