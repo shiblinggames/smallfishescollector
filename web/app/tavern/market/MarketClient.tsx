@@ -348,14 +348,7 @@ export default function MarketClient({
   return (
     <main className="min-h-screen pb-24 sm:pb-0">
       {/* Header */}
-      <div className="px-5 pt-5 pb-3 max-w-lg mx-auto flex items-center justify-between">
-        <div>
-          <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: '#7a7774' }}>
-            <Link href="/tavern" style={{ color: '#6a6764', textDecoration: 'none' }}>Tavern</Link>
-            {' / '}Fish Market
-          </p>
-          <p className="font-cinzel font-700 mt-0.5" style={{ fontSize: '1.5rem', color: '#ffffff' }}>Fish Market</p>
-        </div>
+      <div className="px-5 pt-5 pb-3 max-w-lg mx-auto flex items-center justify-end">
         <div style={{ textAlign: 'right' }}>
           <p className="font-karla font-500" style={{ fontSize: '0.65rem', color: '#7a7774' }}>Next update</p>
           <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>{countdown}</p>
