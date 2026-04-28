@@ -566,10 +566,10 @@ const ROD_IMG_STYLE = {
 
 // Tip position in SVG 0-100 space (for fishing line placement), per frame
 const ROD_TIP: Record<SceneFrame, [number, number]> = {
-  fishing: [43, 10],
-  windup:  [68, 4],
-  cast1:   [59, 2],
-  cast2:   [48, 12],
+  fishing: [37, 14],
+  windup:  [62, 8],
+  cast1:   [53, 6],
+  cast2:   [42, 16],
 }
 
 // Clockwise rotation around the handle point per frame
