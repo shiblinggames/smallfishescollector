@@ -21,7 +21,7 @@ const DEFAULT_H = 196
 const R         = 12
 
 const artBg: Partial<Record<ArtEffect, string>> = {
-  ghost:        '#c8d8e8',
+  ghost:        '#1e3040',
   shadow:       '#020204',
   kraken:       '#001a10',
   'davy-jones': '#010620',

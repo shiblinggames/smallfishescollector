@@ -111,7 +111,7 @@ body {
 .art-rainbow { animation: hueRotate 4s linear infinite; }
 
 /* Ghost: washed-out bright filter */
-.art-ghost  { filter: brightness(2.8) saturate(0.05) contrast(0.85); }
+.art-ghost  { filter: brightness(1.6) saturate(0.08) contrast(0.8); }
 
 /* Shadow: near-silhouette */
 .art-shadow { filter: brightness(0.25) saturate(0); }
