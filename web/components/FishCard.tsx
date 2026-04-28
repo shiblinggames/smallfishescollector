@@ -69,6 +69,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
     </div>
   ) : (
     <>
+      <div className="absolute inset-0" style={{ background: '#0d1b2e' }} />
       <Image
         src={src}
         alt={name}
