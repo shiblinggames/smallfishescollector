@@ -549,10 +549,56 @@ function BaitSelector({ baitInventory, selectedBait, onSelect }: {
 type SceneFrame = 'windup' | 'cast1' | 'cast2' | 'fishing'
 
 const FRAME_SRC: Record<SceneFrame, string> = {
-  windup:  '/windup.jpg',
-  cast1:   '/cast1.jpg',
-  cast2:   '/cast2.jpeg',
-  fishing: '/fishing.jpeg',
+  windup:  '/windup-norod.jpeg',
+  cast1:   '/cast1-norod.jpeg',
+  cast2:   '/cast2-norod.jpeg',
+  fishing: '/fishing-norod.jpeg',
+}
+
+// Per-frame rod anchor points as % of the background div (0–100 in each axis)
+// handle = butt grip at character's hand, control = bezier midpoint, tip = rod tip
+const ROD_FRAMES: Record<SceneFrame, {
+  handle: [number, number]
+  control: [number, number]
+  tip: [number, number]
+  showLine: boolean
+  lineControl?: [number, number]
+  lineEnd?: [number, number]
+}> = {
+  fishing: { handle: [59, 23], control: [50, 16], tip: [36, 17], showLine: true,  lineControl: [32, 28], lineEnd: [27, 42] },
+  windup:  { handle: [60, 23], control: [64, 15], tip: [66, 11], showLine: false },
+  cast1:   { handle: [57, 21], control: [52, 12], tip: [50,  9], showLine: false },
+  cast2:   { handle: [57, 22], control: [48, 17], tip: [39, 19], showLine: false },
+}
+
+function RodOverlay({ frame, rod }: { frame: SceneFrame; rod: import('@/lib/rods').RodDef }) {
+  const cfg = ROD_FRAMES[frame]
+  const [hx, hy] = cfg.handle
+  const [cx, cy] = cfg.control
+  const [tx, ty] = cfg.tip
+  const sw = 1.6 + Math.min(rod.tier, 10) * 0.09
+  const rodPath = `M ${hx} ${hy} Q ${cx} ${cy} ${tx} ${ty}`
+  return (
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none"
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 2 }}>
+      {/* shadow */}
+      <path d={rodPath} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth={sw + 1.4} strokeLinecap="round" />
+      {/* rod body */}
+      <path d={rodPath} fill="none" stroke={rod.color} strokeWidth={sw} strokeLinecap="round" />
+      {/* highlight */}
+      <path d={rodPath} fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth={sw * 0.32} strokeLinecap="round" />
+      {/* fishing line + bobber */}
+      {cfg.showLine && cfg.lineEnd && (
+        <>
+          <path
+            d={`M ${tx} ${ty} Q ${cfg.lineControl![0]} ${cfg.lineControl![1]} ${cfg.lineEnd![0]} ${cfg.lineEnd![1]}`}
+            fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="0.3"
+          />
+          <circle cx={cfg.lineEnd![0]} cy={cfg.lineEnd![1]} r="0.75" fill="#f87171" stroke="rgba(0,0,0,0.35)" strokeWidth="0.2" />
+        </>
+      )}
+    </svg>
+  )
 }
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
@@ -1431,6 +1477,7 @@ export default function FishingGame({
               }}
             />
           ))}
+          <RodOverlay frame={sceneFrame} rod={rod} />
         </motion.div>
 
 
