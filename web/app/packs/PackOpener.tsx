@@ -126,8 +126,8 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     setRankUp(result.rankUp ?? null)
     pendingAchievements.current = result.newAchievements ?? []
     setCards(result.drawn)
-    setFlipped(new Array(5).fill(false))
-    setGlowClasses(new Array(5).fill(''))
+    setFlipped(new Array(result.drawn.length).fill(false))
+    setGlowClasses(new Array(result.drawn.length).fill(''))
     setFlash(result.isGodPack ? { type: 'godpack', key: Date.now() } : null)
     const newPacks = result.packsRemaining ?? packs - 1
     setPacks(newPacks)
@@ -421,29 +421,28 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
           <span className="font-cinzel font-700 text-[#f0ede8] leading-none" style={{ fontSize: '2rem' }}>{packs}</span>
           <span className="font-karla font-600 uppercase text-[#6a6764]" style={{ fontSize: '0.58rem', letterSpacing: '0.12em' }}>packs left</span>
         </div>
-        {/* Action button */}
-        {showAction && (
-          <button
-            onClick={outOfPacks ? reset : isDone ? openPack : flipAll}
-            disabled={isDone && loading && !outOfPacks}
-            className="rounded-full flex items-center justify-center select-none touch-manipulation disabled:opacity-40"
-            style={{
-              width: '5rem', height: '5rem',
-              background: 'rgba(255,255,255,0.10)',
-              border: '1px solid rgba(255,255,255,0.20)',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.18)',
-              backdropFilter: 'blur(12px)',
-              transition: 'transform 0.12s cubic-bezier(0.34,1.56,0.64,1)',
-            }}
-            onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.92)' }}
-            onPointerUp={(e) => { e.currentTarget.style.transform = '' }}
-            onPointerLeave={(e) => { e.currentTarget.style.transform = '' }}
-          >
-            <span className="font-karla font-800 uppercase text-[#f0ede8] text-center leading-snug" style={{ fontSize: '0.65rem', letterSpacing: '0.10em' }}>
-              {outOfPacks ? <>Buy<br/>More</> : isDone ? <>Open<br/>Another</> : <>Open<br/>All</>}
-            </span>
-          </button>
-        )}
+        {/* Action button — always rendered to prevent layout shift */}
+        <button
+          onClick={outOfPacks ? reset : isDone ? openPack : flipAll}
+          disabled={!showAction || (isDone && loading && !outOfPacks)}
+          className="rounded-full flex items-center justify-center select-none touch-manipulation disabled:opacity-40"
+          style={{
+            width: '5rem', height: '5rem',
+            visibility: showAction ? 'visible' : 'hidden',
+            background: 'rgba(255,255,255,0.10)',
+            border: '1px solid rgba(255,255,255,0.20)',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.18)',
+            backdropFilter: 'blur(12px)',
+            transition: 'transform 0.12s cubic-bezier(0.34,1.56,0.64,1)',
+          }}
+          onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.92)' }}
+          onPointerUp={(e) => { e.currentTarget.style.transform = '' }}
+          onPointerLeave={(e) => { e.currentTarget.style.transform = '' }}
+        >
+          <span className="font-karla font-800 uppercase text-[#f0ede8] text-center leading-snug" style={{ fontSize: '0.65rem', letterSpacing: '0.10em' }}>
+            {outOfPacks ? <>Buy<br/>More</> : isDone ? <>Open<br/>Another</> : <>Open<br/>All</>}
+          </span>
+        </button>
       </div>
     )
   }
