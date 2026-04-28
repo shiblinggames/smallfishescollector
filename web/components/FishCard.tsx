@@ -18,7 +18,8 @@ interface Props {
 
 const DEFAULT_W = 140
 const DEFAULT_H = 196
-const R         = 10
+const R         = 12   // outer corner radius
+const BORDER    = 9    // border width matching cardback frame proportions
 
 const artImageClass: Record<ArtEffect, string> = {
   normal:       '',
@@ -133,11 +134,16 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
     )
   } else {
     frame = (
-      <div className="relative overflow-hidden" style={{
+      <div style={{
         width: W, height: H, borderRadius: R,
-        boxShadow: 'inset 0 0 0 6px #1a2840, inset 0 0 0 7px rgba(50,110,200,0.15)',
+        background: '#1c2640',
+        padding: BORDER,
+        boxSizing: 'border-box',
+        flexShrink: 0,
       }}>
-        {innerContent}
+        <div className="relative overflow-hidden w-full h-full" style={{ borderRadius: R - BORDER }}>
+          {innerContent}
+        </div>
       </div>
     )
   }
