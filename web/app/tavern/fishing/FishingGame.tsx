@@ -324,8 +324,8 @@ function UnifiedGearDrawer({
               }}
             >
               <div style={{ width: 3, height: 18, background: sec.color, borderRadius: 2, flexShrink: 0 }} />
-              <p className="font-karla font-700 uppercase tracking-[0.12em]"
-                style={{ fontSize: '0.56rem', color: '#6a6764', minWidth: '2.5rem' }}>{sec.label}</p>
+              <p className="font-karla font-700 uppercase tracking-[0.1em]"
+                style={{ fontSize: '0.72rem', color: isOpen ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.45)', minWidth: '2.5rem' }}>{sec.label}</p>
               <p className="font-cinzel font-700"
                 style={{ fontSize: '0.78rem', color: isOpen ? sec.color : '#f0ede8', flex: 1, textAlign: 'left' }}>{sec.subtitle}</p>
               <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.2)' }}>{isOpen ? '▴' : '▾'}</span>
