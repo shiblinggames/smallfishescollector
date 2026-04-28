@@ -108,7 +108,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
-    { href: '/tavern/fishing', label: 'Fishing', badge: null,
+    { href: '/fishing', label: 'Fishing', badge: null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 4l4 4"/>
@@ -210,7 +210,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
-    { href: '/tavern/fishing', label: 'Fishing', badge: null,
+    { href: '/fishing', label: 'Fishing', badge: null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 4l4 4"/>

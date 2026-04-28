@@ -51,7 +51,7 @@ export default async function BountiesPage() {
 
         <div className="mt-8 text-center">
           <Link
-            href="/tavern/fishing"
+            href="/fishing"
             className="btn-ghost"
             style={{ fontSize: '0.8rem' }}
           >

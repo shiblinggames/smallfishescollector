@@ -464,7 +464,7 @@ export default function MarketClient({
               <p className="font-karla font-400" style={{ fontSize: '0.8rem', color: '#4a4845', marginBottom: '1.25rem' }}>
                 Head to the docks to catch something worth selling.
               </p>
-              <Link href="/tavern/fishing"
+              <Link href="/fishing"
                 className="font-karla font-700 uppercase tracking-[0.1em]"
                 style={{
                   fontSize: '0.7rem', padding: '0.6rem 1.4rem', borderRadius: '2rem',
