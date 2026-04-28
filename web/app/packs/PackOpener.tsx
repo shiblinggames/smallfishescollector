@@ -366,7 +366,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
 
   function renderCard(card: DrawnCard, i: number) {
     return (
-      <div key={i} className="relative w-full">
+      <div key={i} className="relative">
         <div
           ref={(el) => { cardRefs.current[i] = el }}
           className={`flip-card pack-card-size select-none ${flipped[i] ? 'flipped' : loading ? '' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}

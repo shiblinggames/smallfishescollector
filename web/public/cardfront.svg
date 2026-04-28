@@ -1,0 +1,75 @@
+<svg width="380" height="540" viewBox="0 0 380 540" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Small Fishes TCG card front border</title>
+<desc>TCG card front border frame with transparent interior, rope border, warm gold trim, and corner knots. Designed to overlay card artwork.</desc>
+
+<defs>
+  <clipPath id="cardShape">
+    <rect x="10" y="10" width="360" height="520" rx="18"/>
+  </clipPath>
+  <clipPath id="innerClear">
+    <rect x="44" y="44" width="292" height="452" rx="10"/>
+  </clipPath>
+  <mask id="borderMask">
+    <rect x="0" y="0" width="380" height="540" fill="white"/>
+    <rect x="44" y="44" width="292" height="452" rx="10" fill="black"/>
+  </mask>
+</defs>
+
+<!-- Outer card rounded rect — only the border area is filled, interior transparent -->
+<!-- We achieve this by drawing the full card shape but masking out the interior -->
+
+<!-- Card outer edge — very subtle rim -->
+<rect x="10" y="10" width="360" height="520" rx="18"
+  fill="none" stroke="#050e20" stroke-width="3"/>
+
+<!-- OUTER WARM GOLD BORDER -->
+<rect x="18" y="18" width="344" height="504" rx="14"
+  fill="none" stroke="#b8720a" stroke-width="2.5"/>
+<rect x="22" y="22" width="336" height="496" rx="12"
+  fill="none" stroke="#e8a820" stroke-width="0.8" opacity="0.6"/>
+
+<!-- Thin dark inner edge just before rope -->
+<rect x="30" y="30" width="320" height="480" rx="10"
+  fill="none" stroke="#050e20" stroke-width="1" opacity="0.6"/>
+
+<!-- ROPE BORDER - all four sides -->
+<g stroke="#7a4a0e" stroke-width="2.5" fill="none" opacity="0.9">
+  <!-- Top rope -->
+  <path d="M44 38 Q54 34 64 38 Q74 42 84 38 Q94 34 104 38 Q114 42 124 38 Q134 34 144 38 Q154 42 164 38 Q174 34 184 38 Q194 42 204 38 Q214 34 224 38 Q234 42 244 38 Q254 34 264 38 Q274 42 284 38 Q294 34 304 38 Q314 42 324 38 Q334 34 336 38"/>
+  <!-- Bottom rope -->
+  <path d="M44 502 Q54 506 64 502 Q74 498 84 502 Q94 506 104 502 Q114 498 124 502 Q134 506 144 502 Q154 498 164 502 Q174 506 184 502 Q194 498 204 502 Q214 506 224 502 Q234 498 244 502 Q254 506 264 502 Q274 498 284 502 Q294 506 304 502 Q314 498 324 502 Q334 506 336 502"/>
+  <!-- Left rope -->
+  <path d="M38 44 Q34 54 38 64 Q42 74 38 84 Q34 94 38 104 Q42 114 38 124 Q34 134 38 144 Q42 154 38 164 Q34 174 38 184 Q42 194 38 204 Q34 214 38 224 Q42 234 38 244 Q34 254 38 264 Q42 274 38 284 Q34 294 38 304 Q42 314 38 324 Q34 334 38 344 Q42 354 38 364 Q34 374 38 384 Q42 394 38 404 Q34 414 38 424 Q42 434 38 444 Q34 454 38 464 Q42 474 38 484 Q34 494 38 496"/>
+  <!-- Right rope -->
+  <path d="M342 44 Q346 54 342 64 Q338 74 342 84 Q346 94 342 104 Q338 114 342 124 Q346 134 342 144 Q338 154 342 164 Q346 174 342 184 Q338 194 342 204 Q346 214 342 224 Q338 234 342 244 Q346 254 342 264 Q338 274 342 284 Q346 294 342 304 Q338 314 342 324 Q346 334 342 344 Q338 354 342 364 Q346 374 342 384 Q338 394 342 404 Q346 414 342 424 Q338 434 342 444 Q346 454 342 464 Q338 474 342 484 Q346 494 342 496"/>
+</g>
+
+<!-- Corner rope knots -->
+<g fill="#6a3e0e" stroke="#b8720a" stroke-width="1">
+  <circle cx="40" cy="40" r="8"/>
+  <circle cx="340" cy="40" r="8"/>
+  <circle cx="40" cy="500" r="8"/>
+  <circle cx="340" cy="500" r="8"/>
+  <circle cx="40" cy="40" r="4" fill="#9a5e18"/>
+  <circle cx="340" cy="40" r="4" fill="#9a5e18"/>
+  <circle cx="40" cy="500" r="4" fill="#9a5e18"/>
+  <circle cx="340" cy="500" r="4" fill="#9a5e18"/>
+</g>
+
+<!-- Inner gold accent line — frames the transparent art area -->
+<rect x="44" y="44" width="292" height="452" rx="10"
+  fill="none" stroke="#b8720a" stroke-width="1.2" opacity="0.5"/>
+
+<!-- Very subtle corner accent marks inside the frame -->
+<g stroke="#e8a820" stroke-width="1.5" fill="none" opacity="0.4" stroke-linecap="round">
+  <!-- Top left -->
+  <path d="M50 60 L50 52 L62 52"/>
+  <!-- Top right -->
+  <path d="M330 60 L330 52 L318 52"/>
+  <!-- Bottom left -->
+  <path d="M50 480 L50 488 L62 488"/>
+  <!-- Bottom right -->
+  <path d="M330 480 L330 488 L318 488"/>
+</g>
+
+</svg>
