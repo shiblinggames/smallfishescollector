@@ -18,7 +18,6 @@ interface Props {
 
 const DEFAULT_W = 140
 const DEFAULT_H = 196
-const BORDER    = 4
 const R         = 10
 
 const artImageClass: Record<ArtEffect, string> = {
@@ -35,13 +34,6 @@ const artImageClass: Record<ArtEffect, string> = {
   divine:       'art-divine',
 }
 
-const insetShadow: Partial<Record<BorderStyle, string>> = {
-  standard: `inset 0 0 0 ${BORDER}px #1a1a2e`,
-  silver:   `inset 0 0 0 ${BORDER}px #9ca3af`,
-  gold:     `inset 0 0 0 ${BORDER}px #c8a84b`,
-  void:     `inset 0 0 0 ${BORDER}px #0d0010, inset 0 0 18px rgba(80,0,120,0.45)`,
-}
-
 function StatCell({ label, value }: { label: string; value: number }) {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
@@ -55,12 +47,11 @@ function StatCell({ label, value }: { label: string; value: number }) {
   )
 }
 
-export default function FishCard({ name, filename, borderStyle, artEffect, variantName, dropWeight, unowned, className = '', stats, cardW = DEFAULT_W, fill = false }: Props) {
+export default function FishCard({ name, filename, borderStyle: _borderStyle, artEffect, variantName, dropWeight, unowned, className = '', stats, cardW = DEFAULT_W, fill = false }: Props) {
   const W: number | string = fill ? '100%' : cardW
   const H: number | string = fill ? '100%' : Math.round(cardW * DEFAULT_H / DEFAULT_W)
   const src = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${filename}`
 
-  // Art + overlays + stats panel — all positioned inside the clipped inner frame
   const innerContent = unowned ? (
     <div style={{ width: '100%', height: '100%', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -82,14 +73,14 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
       {artEffect === 'holographic' && <div className="art-holographic" />}
       {artEffect === 'ghost'       && <div className="art-ghost-overlay" />}
       {artEffect === 'shadow'      && <div className="art-shadow-overlay" />}
-      {borderStyle === 'kraken'     && <div className="art-kraken-overlay" />}
-      {borderStyle === 'davy-jones' && <div className="art-davy-jones-overlay" />}
-      {borderStyle === 'golden-age' && <div className="art-golden-age-overlay" />}
-      {borderStyle === 'storm'      && <div className="art-storm-overlay" />}
-      {borderStyle === 'god'        && <><div className="art-divine-overlay" /><div className="art-divine-overlay-2" /></>}
+      {artEffect === 'kraken'      && <div className="art-kraken-overlay" />}
+      {artEffect === 'davy-jones'  && <div className="art-davy-jones-overlay" />}
+      {artEffect === 'golden-age'  && <div className="art-golden-age-overlay" />}
+      {artEffect === 'storm'       && <div className="art-storm-overlay" />}
+      {artEffect === 'divine'      && <><div className="art-divine-overlay" /><div className="art-divine-overlay-2" /></>}
 
       {/* Wanted stamp */}
-      {borderStyle === 'wanted' && (
+      {artEffect === 'wanted' && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 2 }}>
           <span className="font-cinzel font-900 tracking-[0.22em] uppercase rotate-[-18deg]"
             style={{ fontSize: '0.85rem', color: 'rgba(160,10,10,0.98)', border: '3px solid rgba(155,15,15,0.96)', padding: '0.15em 0.5em', mixBlendMode: 'multiply', textShadow: '0 0 4px rgba(180,20,20,0.6)', fontWeight: 900 }}>
@@ -129,15 +120,6 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
     </>
   )
 
-  // Clip wrapper — all border variants share this inner clipping div
-  function clipped(children: React.ReactNode) {
-    return (
-      <div className="absolute overflow-hidden" style={{ inset: BORDER, borderRadius: R - BORDER }}>
-        {children}
-      </div>
-    )
-  }
-
   let frame: React.ReactNode
 
   if (unowned) {
@@ -149,51 +131,13 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
         </svg>
       </div>
     )
-  } else if (borderStyle === 'void') {
-    frame = (
-      <div className="border-void-outer" style={{ width: W, height: H, borderRadius: R }}>
-        <div className="relative w-full h-full overflow-hidden" style={{ borderRadius: R }}>
-          {innerContent}
-          <div className="absolute inset-0 pointer-events-none" style={{ borderRadius: R, boxShadow: insetShadow.void }} />
-        </div>
-      </div>
-    )
-  } else if (['standard', 'silver', 'gold'].includes(borderStyle)) {
-    const shadow = insetShadow[borderStyle] ?? insetShadow.standard!
-    frame = (
-      <div className="relative overflow-hidden" style={{ width: W, height: H, borderRadius: R }}>
-        {innerContent}
-        <div className="absolute inset-0 pointer-events-none" style={{ borderRadius: R, boxShadow: shadow }} />
-      </div>
-    )
   } else {
-    // Spinning-ring border styles: prismatic, pearl, ghost, kraken, davy-jones, golden-age, storm, wanted, god
-    const borderClass: Partial<Record<BorderStyle, string>> = {
-      prismatic:     'border-prismatic',
-      pearl:         'border-pearl',
-      kraken:        'border-kraken',
-      'davy-jones':  'border-davy-jones',
-      'golden-age':  'border-golden-age',
-      storm:         'border-storm',
-      wanted:        'border-wanted',
-      god:           'border-god',
-    }
-    const outerClass: Partial<Record<BorderStyle, string>> = {
-      kraken:       'border-kraken-outer',
-      'davy-jones': 'border-davy-jones-outer',
-      'golden-age': 'border-golden-age-outer',
-      storm:        'border-storm-outer',
-      wanted:       'border-wanted-outer',
-      god:          'border-god-outer',
-    }
-    const ghostBorder = artEffect === 'ghost' ? 'border-ghost' : null
-    const ringClass = ghostBorder ?? borderClass[borderStyle] ?? 'border-prismatic'
-    const wrapClass = outerClass[borderStyle] ?? ''
-
     frame = (
-      <div className={`${wrapClass} relative`} style={{ width: W, height: H, borderRadius: R }}>
-        <div className={`absolute inset-0 ${ringClass}`} style={{ borderRadius: R }} />
-        {clipped(innerContent)}
+      <div className="relative overflow-hidden" style={{
+        width: W, height: H, borderRadius: R,
+        boxShadow: 'inset 0 0 0 6px #1a2840, inset 0 0 0 7px rgba(50,110,200,0.15)',
+      }}>
+        {innerContent}
       </div>
     )
   }

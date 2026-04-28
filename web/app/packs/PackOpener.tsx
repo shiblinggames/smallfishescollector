@@ -7,36 +7,10 @@ import { rarityFromVariant } from '@/lib/variants'
 import FishCard from '@/components/FishCard'
 import PrizeModal from '@/components/PrizeModal'
 import { openPack as openPackAction, buyPacksWithGems } from './actions'
-import type { DrawnCard, BorderStyle, ArtEffect } from '@/lib/types'
+import type { DrawnCard } from '@/lib/types'
 import type { OpenPackResponse } from './actions'
 import AchievementToast from '@/components/AchievementToast'
 
-function cardBackBorderStyle(borderStyle: BorderStyle, artEffect: ArtEffect): React.CSSProperties {
-  if (artEffect === 'ghost')  return { borderColor: 'rgba(200,210,220,0.45)' }
-  if (artEffect === 'shadow') return { borderColor: 'rgba(168,85,247,0.45)' }
-  switch (borderStyle) {
-    case 'pearl':       return { borderColor: 'rgba(232,213,175,0.45)' }
-    case 'void':        return { borderColor: 'rgba(168,85,247,0.45)' }
-    case 'kraken':      return { borderColor: 'rgba(0,204,153,0.45)' }
-    case 'davy-jones':  return { borderColor: 'rgba(30,106,144,0.45)' }
-    case 'golden-age':  return { borderColor: 'rgba(232,184,48,0.45)' }
-    case 'storm':       return { borderColor: 'rgba(74,136,200,0.45)' }
-    case 'wanted':      return { borderColor: 'rgba(170,64,16,0.45)' }
-    case 'god':         return {
-      borderColor: 'transparent',
-      backgroundImage: 'linear-gradient(#000 0 0), conic-gradient(#ffffff, #fff8d0, #ffe899, #fff4c0, #ffffff)',
-      backgroundOrigin: 'padding-box, border-box',
-      backgroundClip: 'padding-box, border-box',
-    }
-    case 'prismatic':   return {
-      borderColor: 'transparent',
-      backgroundImage: 'linear-gradient(#000 0 0), linear-gradient(90deg,#ff0080,#ff8c00,#ffe600,#00ff88,#00cfff,#8a5cf7)',
-      backgroundOrigin: 'padding-box, border-box',
-      backgroundClip: 'padding-box, border-box',
-    }
-    default:            return {}
-  }
-}
 
 interface Props {
   packsAvailable: number
@@ -365,7 +339,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/cardback.jpg" alt="" className="w-full h-full object-cover" />
           </div>
-          <div className="flip-card-back w-full h-full bg-black" style={cardBackBorderStyle(card.borderStyle, card.artEffect)}>
+          <div className="flip-card-back w-full h-full bg-black">
             <FishCard name={card.name} filename={card.filename} borderStyle={card.borderStyle} artEffect={card.artEffect} variantName={card.variantName} dropWeight={card.dropWeight} stats={{ strength: card.strength, agility: card.agility, wit: card.wit, luck: card.luck }} fill />
           </div>
         </div>
