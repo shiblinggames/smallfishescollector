@@ -495,7 +495,10 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
             <button onClick={reset} className="btn-ghost">Buy More Packs</button>
           )}
         </div>
-      ) : null}
+      ) : (
+        /* invisible placeholder keeps layout height stable during the flip-settle delay */
+        <div className="hidden sm:block" style={{ visibility: 'hidden' }}><button className="btn-ghost">Open All</button></div>
+      )}
     </div>
   )
 }
