@@ -11,7 +11,10 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-  const [tavernBadge, setTavernBadge] = useState(0)
+  const [tavernBadge, setTavernBadge] = useState(() => {
+    if (typeof window === 'undefined') return 0
+    return parseInt(localStorage.getItem('tavernBadge') ?? '0', 10) || 0
+  })
   const [achievementsBadge, setAchievementsBadge] = useState(false)
   const [displayDoubloons, setDisplayDoubloons] = useState(doubloons)
   const [displayGems, setDisplayGems] = useState(gems)
@@ -31,7 +34,9 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         const bonusDone = profile?.last_daily_claim === today
         const quizDone = quiz?.date === today
         const fotdDone = fotd?.date === today && (fotd.solved || (fotd.guesses?.length ?? 0) >= 4)
-        setTavernBadge([!bonusDone, !quizDone, !fotdDone].filter(Boolean).length)
+        const badge = [!bonusDone, !quizDone, !fotdDone].filter(Boolean).length
+        setTavernBadge(badge)
+        localStorage.setItem('tavernBadge', String(badge))
         const lastViewed = profile?.last_viewed_achievements_at
         const latestUnlocked = latestAchievement?.unlocked_at
         setAchievementsBadge(!!latestUnlocked && (!lastViewed || latestUnlocked > lastViewed))
