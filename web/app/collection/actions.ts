@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { doubloonValueFor, rarityFromVariant } from '@/lib/variants'
+import { rarityFromVariant } from '@/lib/variants'
 import { revalidatePath } from 'next/cache'
 
 export async function sellDuplicate(rowId: number, variantName: string, dropWeight: number) {
@@ -12,7 +12,6 @@ export async function sellDuplicate(rowId: number, variantName: string, dropWeig
 
   const admin = createAdminClient()
 
-  // Verify row belongs to user and is truly a duplicate (user owns >1 of this variant)
   const { data: row } = await admin
     .from('user_collection')
     .select('id, card_variant_id')
@@ -28,22 +27,10 @@ export async function sellDuplicate(rowId: number, variantName: string, dropWeig
     .eq('card_variant_id', row.card_variant_id)
   if ((count ?? 0) <= 1) return { error: 'Cannot sell your only copy' }
 
-  const earned = doubloonValueFor(variantName, dropWeight)
-
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons')
-    .eq('id', user.id)
-    .single()
-
-  await Promise.all([
-    admin.from('user_collection').delete().eq('id', rowId),
-    admin.from('profiles').update({ doubloons: (profile?.doubloons ?? 0) + earned }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: earned, reason: `Sold duplicate: ${variantName}` }),
-  ])
+  await admin.from('user_collection').delete().eq('id', rowId)
 
   revalidatePath('/collection')
-  return { earned }
+  return { sold: 1 }
 }
 
 export interface DuplicateBreakdownItem {
@@ -54,7 +41,6 @@ export interface DuplicateBreakdownItem {
   cardName: string
   filename: string
   extraCopies: number
-  doubloons: number
   rowIds: number[]
 }
 
@@ -69,7 +55,6 @@ export async function getDuplicatesBreakdown(): Promise<{ items: DuplicateBreakd
     .select('id, card_variant_id, card_variants(variant_name, border_style, art_effect, drop_weight, cards(name, filename))')
     .eq('user_id', user.id)
 
-  // Group by variant
   const grouped: Record<number, { rowIds: number[]; meta: DuplicateBreakdownItem }> = {}
   for (const row of rows ?? []) {
     const v = row.card_variants as unknown as {
@@ -88,7 +73,6 @@ export async function getDuplicatesBreakdown(): Promise<{ items: DuplicateBreakd
           cardName:    v.cards.name,
           filename:    v.cards.filename,
           extraCopies: 0,
-          doubloons:   0,
           rowIds:      [],
         },
       }
@@ -101,43 +85,30 @@ export async function getDuplicatesBreakdown(): Promise<{ items: DuplicateBreakd
   for (const { rowIds, meta } of Object.values(grouped)) {
     const extras = rowIds.length - 1
     if (extras <= 0) continue
-    const perCard = doubloonValueFor(meta.variantName, meta.dropWeight)
-    const earned = extras * perCard
-    items.push({ ...meta, extraCopies: extras, doubloons: earned, rowIds: rowIds.slice(1) })
-    total += earned
+    items.push({ ...meta, extraCopies: extras, rowIds: rowIds.slice(1) })
+    total += extras
   }
 
-  // Sort by rarity (highest value first)
-  items.sort((a, b) => doubloonValueFor(b.variantName, b.dropWeight) - doubloonValueFor(a.variantName, a.dropWeight))
+  items.sort((a, b) => b.dropWeight - a.dropWeight)
 
   return { items, total }
 }
 
-export async function sellAllDuplicates(): Promise<{ earned: number; sold: number } | { error: string }> {
+export async function sellAllDuplicates(): Promise<{ sold: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
   const breakdown = await getDuplicatesBreakdown()
   if ('error' in breakdown) return breakdown
-  if (breakdown.items.length === 0) return { earned: 0, sold: 0 }
+  if (breakdown.items.length === 0) return { sold: 0 }
 
   const admin = createAdminClient()
   const allRowIds = breakdown.items.flatMap((i) => i.rowIds)
   const totalSold = breakdown.items.reduce((sum, i) => sum + i.extraCopies, 0)
 
-  const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
-
-  await Promise.all([
-    admin.from('user_collection').delete().in('id', allRowIds),
-    admin.from('profiles').update({ doubloons: (profile?.doubloons ?? 0) + breakdown.total }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({
-      user_id: user.id,
-      amount: breakdown.total,
-      reason: `Sold ${totalSold} duplicate cards`,
-    }),
-  ])
+  await admin.from('user_collection').delete().in('id', allRowIds)
 
   revalidatePath('/collection')
-  return { earned: breakdown.total, sold: totalSold }
+  return { sold: totalSold }
 }

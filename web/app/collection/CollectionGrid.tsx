@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import FishCard from '@/components/FishCard'
 import type { Card } from '@/lib/types'
 import type { OwnedEntry, AllVariantEntry } from './page'
-import { rarityFromVariant, RARITY_COLOR, doubloonValueFor } from '@/lib/variants'
+import { rarityFromVariant, RARITY_COLOR } from '@/lib/variants'
 import { sellDuplicate, sellAllDuplicates, getDuplicatesBreakdown } from './actions'
 import type { DuplicateBreakdownItem } from './actions'
 import { updateUsername, updateShowcase } from '@/app/u/actions'
@@ -253,7 +253,6 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
     startTransition(async () => {
       const result = await sellDuplicate(rowIdToSell, entry.variantName, entry.dropWeight)
       if ('error' in result) return
-      setDoubloons((d) => d + result.earned)
       setOwnedState((prev) => {
         const updated = { ...prev }
         const entries = updated[cardId].map((e) =>
@@ -295,7 +294,6 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
     startTransition(async () => {
       const result = await sellAllDuplicates()
       if ('error' in result) return
-      setDoubloons((d) => d + result.earned)
       setOwnedState((prev) => {
         const updated: typeof prev = {}
         for (const [cardId, entries] of Object.entries(prev)) {
@@ -550,7 +548,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                             disabled={isPending}
                             className="font-karla font-600 text-[0.6rem] uppercase tracking-[0.12em] text-[#f0c040] hover:text-[#ffd966] transition-colors disabled:opacity-50"
                           >
-                            Sell 1 · +{doubloonValueFor(owned.variantName, owned.dropWeight)} ⟡
+                            Discard 1
                           </button>
                         </div>
                       )}
@@ -599,7 +597,6 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                         </div>
                         <div className="text-right shrink-0">
                           <p className="font-karla font-300 text-[0.62rem] text-[#a0a09a]">{item.extraCopies}× dupe</p>
-                          <p className="font-karla font-600 text-xs text-[#f0c040]">+{item.doubloons} ⟡</p>
                         </div>
                       </div>
                     )
@@ -607,7 +604,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                 </div>
                 <div className="flex items-center justify-between mb-6 pt-2">
                   <p className="font-karla font-600 text-sm text-[#f0ede8] uppercase tracking-[0.10em]">Total</p>
-                  <p className="font-cinzel font-700 text-[#f0c040] text-xl">{breakdownTotal.toLocaleString()} ⟡</p>
+                  <p className="font-cinzel font-700 text-[#f0ede8] text-xl">{breakdownTotal} cards</p>
                 </div>
                 <button
                   onClick={handleSellAll}
