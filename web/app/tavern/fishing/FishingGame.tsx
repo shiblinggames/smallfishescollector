@@ -576,29 +576,46 @@ function RodOverlay({ frame, rod }: { frame: SceneFrame; rod: RodDef }) {
   const [hx, hy] = cfg.handle
   const [cx, cy] = cfg.control
   const [tx, ty] = cfg.tip
-  const sw = 0.55 + Math.min(rod.tier, 10) * 0.04
-  const rodPath = `M ${hx} ${hy} Q ${cx} ${cy} ${tx} ${ty}`
-  // waterline y in SVG space — bobber sits here, line below is hidden under water
+  const maxSW = 1.3 + Math.min(rod.tier, 10) * 0.07  // thick at grip
+  const minSW = 0.15                                   // hair-thin at tip
+  const N = 16
+
+  // Divide the quadratic bezier into N segments, each thinner than the last
+  const bx = (t: number) => (1-t)*(1-t)*hx + 2*(1-t)*t*cx + t*t*tx
+  const by = (t: number) => (1-t)*(1-t)*hy + 2*(1-t)*t*cy + t*t*ty
+  const segs = Array.from({ length: N }, (_, i) => {
+    const t0 = i / N, t1 = (i + 1) / N, tm = (t0 + t1) / 2
+    return { x1: bx(t0), y1: by(t0), x2: bx(t1), y2: by(t1), sw: maxSW - (maxSW - minSW) * tm }
+  })
+
   const waterY = 36
+
   return (
     <svg viewBox="0 0 100 100" preserveAspectRatio="none"
       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 2 }}>
-      {/* shadow */}
-      <path d={rodPath} fill="none" stroke="rgba(0,0,0,0.45)" strokeWidth={sw + 0.6} strokeLinecap="round" />
-      {/* rod body */}
-      <path d={rodPath} fill="none" stroke={rod.color} strokeWidth={sw} strokeLinecap="round" />
-      {/* highlight */}
-      <path d={rodPath} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={sw * 0.35} strokeLinecap="round" />
-      {/* fishing line — above water */}
-      {cfg.showLine && cfg.lineEnd && (
+      {/* shadow — single thick path behind the rod */}
+      <path d={`M ${hx} ${hy} Q ${cx} ${cy} ${tx} ${ty}`}
+        fill="none" stroke="rgba(0,0,0,0.4)" strokeWidth={maxSW + 1} strokeLinecap="round" />
+      {/* tapered rod segments */}
+      {segs.map((s, i) => (
+        <line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
+          stroke={rod.color} strokeWidth={s.sw} strokeLinecap="round" />
+      ))}
+      {/* highlight — only on the thicker half */}
+      {segs.slice(0, N / 2).map((s, i) => (
+        <line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
+          stroke="rgba(255,255,255,0.22)" strokeWidth={s.sw * 0.28} strokeLinecap="round" />
+      ))}
+      {/* fishing line — straight down from tip to waterline, then hook */}
+      {cfg.showLine && (
         <>
           <line x1={tx} y1={ty} x2={tx} y2={waterY}
             stroke="rgba(255,255,255,0.55)" strokeWidth="0.25" />
-          {/* line continuing underwater, fading out */}
-          <line x1={tx} y1={waterY} x2={tx} y2={waterY + 28}
-            stroke="rgba(255,255,255,0.18)" strokeWidth="0.25" />
-          {/* bobber sitting on waterline */}
-          <ellipse cx={tx} cy={waterY} rx="0.7" ry="0.5" fill="#f87171" stroke="rgba(0,0,0,0.3)" strokeWidth="0.15" />
+          {/* hook at waterline: small J-shape */}
+          <path
+            d={`M ${tx} ${waterY - 0.5} L ${tx} ${waterY + 1.8} Q ${tx} ${waterY + 3} ${tx + 1.5} ${waterY + 3}`}
+            fill="none" stroke="rgba(210,210,210,0.9)" strokeWidth="0.35" strokeLinecap="round"
+          />
         </>
       )}
     </svg>
