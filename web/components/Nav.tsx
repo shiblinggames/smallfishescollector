@@ -6,9 +6,21 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { motion } from 'framer-motion'
 
+const PAGE_TINTS: [string, string][] = [
+  ['/tavern',      'rgba(180,120,30,0.10)'],
+  ['/fishing',     'rgba(14,116,144,0.10)'],
+  ['/expeditions', 'rgba(30,60,120,0.12)'],
+  ['/marketplace', 'rgba(120,80,180,0.08)'],
+]
+
+function navBg(tint: string | undefined) {
+  return tint ? `linear-gradient(${tint}, ${tint}), black` : 'black'
+}
+
 export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailable?: number; doubloons?: number; gems?: number }) {
   const router = useRouter()
   const pathname = usePathname()
+  const tint = PAGE_TINTS.find(([p]) => pathname === p || pathname.startsWith(p + '/'))?.[1]
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const [tavernBadge, setTavernBadge] = useState(() => {
@@ -259,7 +271,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   return (
     <>
       {/* Desktop top bar */}
-      <nav className="hidden sm:flex bg-black border-b border-[rgba(255,255,255,0.15)] px-6 py-4 items-center justify-between">
+      <nav className="hidden sm:flex border-b border-[rgba(255,255,255,0.15)] px-6 py-4 items-center justify-between" style={{ background: navBg(tint) }}>
         <Link href="/" className="flex items-center gap-2 font-cinzel font-700 text-[#f0ede8] tracking-wide text-sm uppercase">
           Small Fishes
           <span style={{ fontSize: '0.48rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.25)', color: '#f0c040', borderRadius: 4, padding: '0.15rem 0.4rem', letterSpacing: '0.12em', lineHeight: 1.4, fontFamily: 'inherit' }}>
@@ -298,7 +310,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
       </nav>
 
       {/* Mobile top strip */}
-      <div className="sm:hidden bg-black border-b border-[rgba(255,255,255,0.15)] px-4 py-2 flex justify-between items-center relative z-50" ref={menuRef}>
+      <div className="sm:hidden border-b border-[rgba(255,255,255,0.15)] px-4 py-2 flex justify-between items-center relative z-50" style={{ background: navBg(tint) }} ref={menuRef}>
         <Link href="/" className="flex items-center gap-1.5 font-cinzel font-700 text-[#f0ede8] tracking-wide text-xs uppercase">
           Small Fishes
           <span style={{ fontSize: '0.44rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.25)', color: '#f0c040', borderRadius: 4, padding: '0.15rem 0.35rem', letterSpacing: '0.12em', lineHeight: 1.4, fontFamily: 'inherit' }}>
@@ -338,7 +350,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
           <div
             className="absolute top-full left-0 right-0"
             style={{
-              background: '#0a0a0a',
+              background: tint ? `linear-gradient(${tint}, ${tint}), #0a0a0a` : '#0a0a0a',
               borderBottom: '1px solid rgba(255,255,255,0.15)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
             }}
@@ -379,7 +391,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
       </div>
 
       {/* Mobile bottom tab bar */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-black border-t border-[rgba(255,255,255,0.15)] flex">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[rgba(255,255,255,0.15)] flex" style={{ background: navBg(tint) }}>
         {mobileLinks.map(({ href, label, badge, icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
