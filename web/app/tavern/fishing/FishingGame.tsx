@@ -980,7 +980,7 @@ export default function FishingGame({
   const [holdOpen, setHoldOpen]         = useState(false)
   const [gearOpen, setGearOpen]         = useState(false)
   const [collectionOpen, setCollectionOpen] = useState(false)
-  const [uncheckedNewSpecies, setUncheckedNewSpecies] = useState(0)
+  const [uncheckedNewFishIds, setUncheckedNewFishIds] = useState<Set<number>>(new Set())
   const [expandedZone, setExpandedZone] = useState<string | null>(null)
   const [tappedFishId, setTappedFishId] = useState<number | null>(null)
   const [showingSummary, setShowingSummary] = useState(false)
@@ -1255,7 +1255,7 @@ export default function FishingGame({
         const { fish, baitSaved, isNewSpecies, bountyCompletion, xpGained, newXP } = res
         if (wasPerfect) setPerfectStreak(newStreak)
         setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge, perfectStreak: newStreak, streakBonusXP })
-        if (isNewSpecies) { setCaughtFishIds(prev => new Set([...prev, fish.id])); setUncheckedNewSpecies(n => n + 1) }
+        if (isNewSpecies) { setCaughtFishIds(prev => new Set([...prev, fish.id])); setUncheckedNewFishIds(prev => new Set([...prev, fish.id])) }
         const newCatches = [...sessionCatches, ...(doubleCatch ? [fish, fish] : [fish])]
         const newPerfects = sessionPerfects + (wasPerfect ? 1 : 0)
         const newNewSpecies = sessionNewSpecies + (isNewSpecies ? 1 : 0)
@@ -1429,7 +1429,7 @@ export default function FishingGame({
             </button>
 
             <button
-              onClick={() => { setCollectionOpen(o => !o); setGearOpen(false); setHoldOpen(false); setUncheckedNewSpecies(0) }}
+              onClick={() => { setCollectionOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
               className="font-karla font-600 uppercase tracking-[0.1em]"
               style={{
                 fontSize: '0.6rem', color: HABITAT_COLOR[selectedZone],
@@ -1440,7 +1440,7 @@ export default function FishingGame({
               }}
             >
               Collection
-              {uncheckedNewSpecies > 0 && (
+              {uncheckedNewFishIds.size > 0 && (
                 <span style={{
                   position: 'absolute', top: -4, right: -4,
                   minWidth: 14, height: 14, borderRadius: 7,
@@ -1448,10 +1448,10 @@ export default function FishingGame({
                   border: '1.5px solid #08121c',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '0.48rem', fontWeight: 700, color: '#fff',
-                  paddingInline: uncheckedNewSpecies > 9 ? '0.2rem' : 0,
+                  paddingInline: uncheckedNewFishIds.size > 9 ? '0.2rem' : 0,
                   fontFamily: 'var(--font-karla)',
                 }}>
-                  {uncheckedNewSpecies}
+                  {uncheckedNewFishIds.size}
                 </span>
               )}
             </button>
@@ -2013,11 +2013,17 @@ export default function FishingGame({
                                 border: `1px solid ${isTapped ? rarityColor + '40' : 'rgba(255,255,255,0.06)'}`,
                                 transition: 'background 0.15s, border-color 0.15s',
                               }}
-                              onClick={() => setTappedFishId(isTapped ? null : f.id)}
+                              onClick={() => {
+                                setTappedFishId(isTapped ? null : f.id)
+                                if (!isTapped) setUncheckedNewFishIds(prev => { const next = new Set(prev); next.delete(f.id); return next })
+                              }}
                             >
                               <span style={{ width: 8, height: 8, borderRadius: '50%', background: rarityColor, flexShrink: 0 }} />
                               <p className="font-cinzel font-700 flex-1 truncate"
                                 style={{ fontSize: '0.78rem', color: '#f0ede8' }}>{f.name}</p>
+                              {uncheckedNewFishIds.has(f.id) && (
+                                <span style={{ fontSize: '0.5rem', fontWeight: 700, color: '#f87171', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.3)', padding: '0.1rem 0.4rem', borderRadius: '2rem', flexShrink: 0, fontFamily: 'var(--font-karla)' }}>NEW</span>
+                              )}
                               <span style={{ fontSize: '0.7rem', color: '#4ade80', flexShrink: 0 }}>✓</span>
                             </button>
 
