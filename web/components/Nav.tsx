@@ -104,6 +104,15 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
+    { href: '/marketplace', label: 'Market', badge: null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2v10"/>
+          <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
+          <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
+        </svg>
+      )
+    },
     { href: '/packs', label: 'Packs', badge: packsAvailable && packsAvailable > 0 ? packsAvailable : null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -117,15 +126,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/>
           <circle cx="8" cy="16" r="3"/><circle cx="16" cy="16" r="3"/>
-        </svg>
-      )
-    },
-    { href: '/marketplace', label: 'Market', badge: null,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2v10"/>
-          <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
-          <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
         </svg>
       )
     },
@@ -206,6 +206,15 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
+    { href: '/marketplace', label: 'Market', badge: null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2v10"/>
+          <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
+          <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
+        </svg>
+      )
+    },
     { href: '/packs', label: 'Packs', badge: packsAvailable && packsAvailable > 0 ? packsAvailable : null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -219,15 +228,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/>
           <circle cx="8" cy="16" r="3"/><circle cx="16" cy="16" r="3"/>
-        </svg>
-      )
-    },
-    { href: '/marketplace', label: 'Market', badge: null,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2v10"/>
-          <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
-          <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
         </svg>
       )
     },
