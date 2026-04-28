@@ -62,61 +62,65 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
   ) : (
     <>
       <div className="absolute inset-0" style={{ background: '#0d1b2e' }} />
-      <Image
-        src={src}
-        alt={name}
-        fill
-        className={`object-contain object-top ${artImageClass[artEffect]}`}
-        sizes={fill ? '50vw' : `${W}px`}
-        unoptimized
-      />
-      {artEffect === 'holographic' && <div className="art-holographic" />}
-      {artEffect === 'ghost'       && <div className="art-ghost-overlay" />}
-      {artEffect === 'shadow'      && <div className="art-shadow-overlay" />}
-      {artEffect === 'kraken'      && <div className="art-kraken-overlay" />}
-      {artEffect === 'davy-jones'  && <div className="art-davy-jones-overlay" />}
-      {artEffect === 'golden-age'  && <div className="art-golden-age-overlay" />}
-      {artEffect === 'storm'       && <div className="art-storm-overlay" />}
-      {artEffect === 'divine'      && <><div className="art-divine-overlay" /><div className="art-divine-overlay-2" /></>}
+      {/* Clip art and text to the inner area defined by the golden border frame */}
+      {/* Insets: 44/380 = 11.58% horizontal, 44/540 = 8.15% vertical (cardfront.svg coords) */}
+      <div className="absolute overflow-hidden" style={{ left: '11.58%', top: '8.15%', right: '11.58%', bottom: '8.15%', borderRadius: 5 }}>
+        <Image
+          src={src}
+          alt={name}
+          fill
+          className={`object-contain object-top ${artImageClass[artEffect]}`}
+          sizes={fill ? '50vw' : `${W}px`}
+          unoptimized
+        />
+        {artEffect === 'holographic' && <div className="art-holographic" />}
+        {artEffect === 'ghost'       && <div className="art-ghost-overlay" />}
+        {artEffect === 'shadow'      && <div className="art-shadow-overlay" />}
+        {artEffect === 'kraken'      && <div className="art-kraken-overlay" />}
+        {artEffect === 'davy-jones'  && <div className="art-davy-jones-overlay" />}
+        {artEffect === 'golden-age'  && <div className="art-golden-age-overlay" />}
+        {artEffect === 'storm'       && <div className="art-storm-overlay" />}
+        {artEffect === 'divine'      && <><div className="art-divine-overlay" /><div className="art-divine-overlay-2" /></>}
 
-      {/* Wanted stamp */}
-      {artEffect === 'wanted' && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 2 }}>
-          <span className="font-cinzel font-900 tracking-[0.22em] uppercase rotate-[-18deg]"
-            style={{ fontSize: '0.85rem', color: 'rgba(160,10,10,0.98)', border: '3px solid rgba(155,15,15,0.96)', padding: '0.15em 0.5em', mixBlendMode: 'multiply', textShadow: '0 0 4px rgba(180,20,20,0.6)', fontWeight: 900 }}>
-            Wanted
-          </span>
-        </div>
-      )}
-
-      {/* Bottom gradient panel: name + rarity + stats */}
-      {(() => {
-        const rarity = (variantName && dropWeight != null) ? rarityFromVariant(variantName, dropWeight) : null
-        const rarityColor = rarity ? (RARITY_COLOR[rarity] ?? '#a0a09a') : null
-        return (
-          <div className="absolute left-0 right-0 pointer-events-none" style={{ zIndex: 3, bottom: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.90) 55%, transparent 100%)',
-            padding: '40px 10px 14px',
-          }}>
-            <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.75rem', color: '#f0ede8', marginBottom: 4, letterSpacing: '0.04em' }}>
-              {name}
-            </p>
-            {rarity && (
-              <p className="font-karla font-700 text-center uppercase tracking-[0.12em]" style={{ fontSize: '0.45rem', color: rarityColor!, marginBottom: stats ? 8 : 0 }}>
-                {rarity}
-              </p>
-            )}
-            {stats && (
-              <div style={{ display: 'flex' }}>
-                <StatCell label="STR" value={stats.strength} />
-                <StatCell label="AGI" value={stats.agility} />
-                <StatCell label="WIT" value={stats.wit} />
-                <StatCell label="LCK" value={stats.luck} />
-              </div>
-            )}
+        {/* Wanted stamp */}
+        {artEffect === 'wanted' && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 2 }}>
+            <span className="font-cinzel font-900 tracking-[0.22em] uppercase rotate-[-18deg]"
+              style={{ fontSize: '0.85rem', color: 'rgba(160,10,10,0.98)', border: '3px solid rgba(155,15,15,0.96)', padding: '0.15em 0.5em', mixBlendMode: 'multiply', textShadow: '0 0 4px rgba(180,20,20,0.6)', fontWeight: 900 }}>
+              Wanted
+            </span>
           </div>
-        )
-      })()}
+        )}
+
+        {/* Bottom gradient panel: name + rarity + stats */}
+        {(() => {
+          const rarity = (variantName && dropWeight != null) ? rarityFromVariant(variantName, dropWeight) : null
+          const rarityColor = rarity ? (RARITY_COLOR[rarity] ?? '#a0a09a') : null
+          return (
+            <div className="absolute left-0 right-0 pointer-events-none" style={{ zIndex: 3, bottom: 0,
+              background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.90) 55%, transparent 100%)',
+              padding: '40px 10px 10px',
+            }}>
+              <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.75rem', color: '#f0ede8', marginBottom: 4, letterSpacing: '0.04em' }}>
+                {name}
+              </p>
+              {rarity && (
+                <p className="font-karla font-700 text-center uppercase tracking-[0.12em]" style={{ fontSize: '0.45rem', color: rarityColor!, marginBottom: stats ? 8 : 0 }}>
+                  {rarity}
+                </p>
+              )}
+              {stats && (
+                <div style={{ display: 'flex' }}>
+                  <StatCell label="STR" value={stats.strength} />
+                  <StatCell label="AGI" value={stats.agility} />
+                  <StatCell label="WIT" value={stats.wit} />
+                  <StatCell label="LCK" value={stats.luck} />
+                </div>
+              )}
+            </div>
+          )
+        })()}
+      </div>
     </>
   )
 
