@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import type { BorderStyle, ArtEffect, CardStats } from '@/lib/types'
+import { rarityFromVariant, RARITY_COLOR } from '@/lib/variants'
 
 interface Props {
   name: string
@@ -97,23 +98,34 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
         </div>
       )}
 
-      {/* Bottom gradient panel: name + stats */}
-      <div className="absolute left-0 right-0 bottom-0 pointer-events-none" style={{ zIndex: 3,
-        background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.88) 50%, transparent 100%)',
-        padding: '36px 10px 12px',
-      }}>
-        <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.75rem', color: '#f0ede8', marginBottom: stats ? 8 : 0, letterSpacing: '0.04em' }}>
-          {name}
-        </p>
-        {stats && (
-          <div style={{ display: 'flex' }}>
-            <StatCell label="STR" value={stats.strength} />
-            <StatCell label="AGI" value={stats.agility} />
-            <StatCell label="WIT" value={stats.wit} />
-            <StatCell label="LCK" value={stats.luck} />
+      {/* Bottom gradient panel: name + rarity + stats */}
+      {(() => {
+        const rarity = (variantName && dropWeight != null) ? rarityFromVariant(variantName, dropWeight) : null
+        const rarityColor = rarity ? (RARITY_COLOR[rarity] ?? '#a0a09a') : null
+        return (
+          <div className="absolute left-0 right-0 pointer-events-none" style={{ zIndex: 3, bottom: 0,
+            background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.90) 55%, transparent 100%)',
+            padding: '40px 10px 14px',
+          }}>
+            <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.75rem', color: '#f0ede8', marginBottom: 4, letterSpacing: '0.04em' }}>
+              {name}
+            </p>
+            {rarity && (
+              <p className="font-karla font-700 text-center uppercase tracking-[0.12em]" style={{ fontSize: '0.45rem', color: rarityColor!, marginBottom: stats ? 8 : 0 }}>
+                {rarity}
+              </p>
+            )}
+            {stats && (
+              <div style={{ display: 'flex' }}>
+                <StatCell label="STR" value={stats.strength} />
+                <StatCell label="AGI" value={stats.agility} />
+                <StatCell label="WIT" value={stats.wit} />
+                <StatCell label="LCK" value={stats.luck} />
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        )
+      })()}
     </>
   )
 
