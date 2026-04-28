@@ -2,12 +2,11 @@ import Nav from '@/components/Nav'
 import Link from 'next/link'
 
 const RARITIES = [
-  { label: 'Common',    color: '#a0a09a', chance: '~70%',   note: 'Standard variant' },
-  { label: 'Uncommon',  color: '#4ade80', chance: '~25%',   note: 'Silver variant' },
-  { label: 'Rare',      color: '#60a5fa', chance: '~12%',   note: 'Gold variant' },
-  { label: 'Epic',      color: '#a78bfa', chance: '~4%',    note: 'Pearl or Holographic' },
-  { label: 'Legendary', color: '#f0c040', chance: '~0.5%',  note: 'Ghost, Shadow, or Prismatic' },
-  { label: 'Mythic',    color: '#ff3838', chance: '~0.2%',  note: 'Named variants — rarest of all' },
+  { label: 'Common',    color: '#a0a09a', chance: 'cards 1–3', note: 'Standard variant' },
+  { label: 'Rare',      color: '#60a5fa', chance: '~70%',      note: 'Gold variant' },
+  { label: 'Epic',      color: '#a78bfa', chance: '~27%',      note: 'Pearl or Holographic' },
+  { label: 'Legendary', color: '#f0c040', chance: '~2.5%',     note: 'Ghost, Shadow, or Prismatic' },
+  { label: 'Mythic',    color: '#ff3838', chance: '~0.5%',     note: 'Named variants — rarest of all' },
 ]
 
 export default function GuidePage() {
@@ -33,7 +32,7 @@ export default function GuidePage() {
           {/* Packs */}
           <Section title="Opening Packs">
             <p>
-              Each pack contains <Highlight>5 cards</Highlight> drawn from the full pool of fish and variants. Every pack is guaranteed at least one <span style={{ color: '#60a5fa' }}>Rare</span> or better — and after 20 packs without a Legendary, your next pack is guaranteed a <span style={{ color: '#f0c040' }}>Legendary</span> or better. The game keeps track, so you're never stuck in a dry spell forever.
+              Each pack contains <Highlight>4 cards</Highlight>. The first three are always Common — a mix of everyday fish from the shallows and open waters. The fourth card is where things get interesting: it's always at least <span style={{ color: '#60a5fa' }}>Rare</span>, and has a chance to be Epic, Legendary, or even Mythic. After 20 packs without a Legendary, your next pack is guaranteed one.
             </p>
             <p>
               You can open packs using <Highlight>doubloons ⟡</Highlight> (1 pack for 200 ⟡, 10 for 1,500 ⟡), or earn them through purchases from the Shibling Shop. Premium members also receive a free pack every day.

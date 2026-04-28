@@ -8,7 +8,7 @@ interface RarityTier {
 // Single source of truth for all rarity tiers.
 // To add a new rarity: add one entry here. Everything else derives from it.
 export const RARITY_TIERS: RarityTier[] = [
-  { name: 'Common',    color: '#8a8880', weightMin: 25,   variants: ['Standard', 'Silver'] },
+  { name: 'Common',    color: '#8a8880', weightMin: 25,   variants: ['Standard'] },
   { name: 'Rare',      color: '#60a5fa', weightMin: 12,   variants: ['Gold'] },
   { name: 'Epic',      color: '#a78bfa', weightMin: 4,    variants: ['Pearl', 'Holographic'] },
   { name: 'Legendary', color: '#f0c040', weightMin: 0.3,  variants: ['Ghost', 'Shadow', 'Prismatic'] },

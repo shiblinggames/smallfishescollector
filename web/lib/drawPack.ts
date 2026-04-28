@@ -1,71 +1,85 @@
 import type { CardVariant, DrawnCard, BorderStyle, ArtEffect } from './types'
-import { RARITY_TIERS, VARIANT_RARITY } from './variants'
 
-// God pack eligible = Epic and above. Derives automatically from RARITY_TIERS.
-// GOD variant has drop_weight=-1 and is excluded from god packs via the drop_weight>0 filter below
-const GOD_PACK_RARITY_NAMES = new Set(['Epic', 'Legendary', 'Mythic'])
-const GOD_PACK_ELIGIBLE = new Set(
-  RARITY_TIERS
-    .filter(t => GOD_PACK_RARITY_NAMES.has(t.name))
-    .flatMap(t => [...t.variants])
-)
+const GROUP1 = new Set(['bass','eel','flounder','goldfish','krill','minnow','piranha','pufferfish','red_snapper','salmon','sardine','tuna','angelfish','clownfish','koi'])
+const GROUP2 = new Set(['anglerfish','beluga_whale','blobfish','blue_marlin','lionfish','nurse_shark','oarfish','sailfish','swordfish','hammerhead_shark','manta_ray','whale_shark'])
+const GROUP3 = new Set(['goblin_shark','tiger_shark','blue_whale','giant_squid','great_white_shark','humpback_whale','orca'])
+const GROUP4 = new Set(['catfish','doby_mick'])
 
-const GOD_PACK_WEIGHTS: Record<string, number> = {
-  'Pearl':       20,
-  'Holographic': 20,
-  'Ghost':       18,
-  'Shadow':      16,
-  'Prismatic':   12,
-  'Kraken':       3,
-  'Davy Jones':   3,
-  'Golden Age':   3,
-  'Wanted':       3,
-  'Maelstrom':    3,
+const GROUPS: Set<string>[] = [GROUP1, GROUP2, GROUP3, GROUP4]
+const MYTHIC_NAMED = ['Kraken', 'Davy Jones', 'Golden Age', 'Wanted', 'Maelstrom']
+
+function rand() { return Math.random() }
+
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(rand() * arr.length)]
 }
 
-function weightedPick(variants: CardVariant[]): CardVariant {
-  const total = variants.reduce((sum, v) => sum + v.drop_weight, 0)
-  let r = Math.random() * total
-  for (const v of variants) {
-    r -= v.drop_weight
-    if (r <= 0) return v
-  }
-  return variants[variants.length - 1]
+function poolFor(variants: CardVariant[], group: Set<string>, variantName: string): CardVariant[] {
+  return variants.filter(v => group.has(v.cards!.slug.toLowerCase()) && v.variant_name === variantName)
 }
 
-export function drawGodPack(variants: CardVariant[]): DrawnCard[] {
-  const godPool = variants
-    .filter(v => GOD_PACK_ELIGIBLE.has(v.variant_name) && v.drop_weight > 0)
-    .map(v => ({ ...v, drop_weight: GOD_PACK_WEIGHTS[v.variant_name] ?? v.drop_weight }))
-  const drawn: DrawnCard[] = []
-  for (let i = 0; i < 4; i++) {
-    const picked = weightedPick(godPool)
-    const original = variants.find(v => v.id === picked.id)!
-    drawn.push(toDrawn(original))
+function pickGroup(weights: [number, number, number, number]): 0 | 1 | 2 | 3 {
+  const r = rand() * 100
+  let cumulative = 0
+  for (let i = 0; i < weights.length; i++) {
+    cumulative += weights[i]
+    if (r < cumulative) return i as 0 | 1 | 2 | 3
   }
-  return drawn
+  return 3
+}
+
+function pickMythicVariant(): string {
+  return rand() < 0.9 ? pickRandom(MYTHIC_NAMED) : 'GOD'
+}
+
+function pickLegendaryVariant(): string {
+  return pickRandom(['Ghost', 'Shadow', 'Prismatic'])
+}
+
+function pickEpicVariant(): string {
+  return rand() < 0.5 ? 'Pearl' : 'Holographic'
+}
+
+function pickCard4Variant(groupIdx: number, forceLegendary = false): string {
+  // Group 4 (Catfish, Doby Mick): Legendary 90%, Mythic 10%
+  if (groupIdx === 3) {
+    return rand() < 0.9 ? pickLegendaryVariant() : pickMythicVariant()
+  }
+  // Tide pity: skip Rare and Epic, roll only Legendary/Mythic
+  if (forceLegendary) {
+    return rand() < (2.5 / 3.0) ? pickLegendaryVariant() : pickMythicVariant()
+  }
+  const r = rand()
+  if (r < 0.70)  return 'Gold'
+  if (r < 0.97)  return pickEpicVariant()
+  if (r < 0.995) return pickLegendaryVariant()
+  return pickMythicVariant()
+}
+
+function drawCard123(variants: CardVariant[]): DrawnCard {
+  const groupIdx = rand() < 0.7 ? 0 : 1
+  const pool = poolFor(variants, GROUPS[groupIdx], 'Standard')
+  return toDrawn(pickRandom(pool))
+}
+
+function drawCard4(variants: CardVariant[], forceLegendary = false): DrawnCard {
+  const groupIdx = pickGroup([40, 35, 23, 2])
+  const variantName = pickCard4Variant(groupIdx, forceLegendary)
+  const pool = poolFor(variants, GROUPS[groupIdx], variantName)
+  return toDrawn(pickRandom(pool))
 }
 
 export function drawPack(variants: CardVariant[], forceLegendary = false): DrawnCard[] {
-  const drawn: DrawnCard[] = []
+  return [
+    drawCard123(variants),
+    drawCard123(variants),
+    drawCard123(variants),
+    drawCard4(variants, forceLegendary),
+  ]
+}
 
-  for (let i = 0; i < 4; i++) {
-    drawn.push(toDrawn(weightedPick(variants)))
-  }
-
-  // Guarantee at least 1 card with drop_weight ≤ 12 (Gold or rarer)
-  if (drawn.every(d => d.dropWeight > 12)) {
-    const rarePool = variants.filter(v => v.drop_weight <= 12)
-    if (rarePool.length > 0) drawn[3] = toDrawn(weightedPick(rarePool))
-  }
-
-  // Tide: guarantee a Legendary or better after 20 packs
-  if (forceLegendary && drawn.every(d => !['Legendary', 'Mythic'].includes(VARIANT_RARITY[d.variantName] ?? ''))) {
-    const legendaryPool = variants.filter(v => ['Legendary', 'Mythic'].includes(VARIANT_RARITY[v.variant_name] ?? ''))
-    if (legendaryPool.length > 0) drawn[3] = toDrawn(weightedPick(legendaryPool))
-  }
-
-  return drawn
+export function drawGodPack(variants: CardVariant[]): DrawnCard[] {
+  return [drawCard4(variants), drawCard4(variants), drawCard4(variants), drawCard4(variants)]
 }
 
 function toDrawn(v: CardVariant): DrawnCard {
