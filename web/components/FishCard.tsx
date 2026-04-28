@@ -74,14 +74,6 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
           sizes={fill ? '50vw' : `${W}px`}
           unoptimized
         />
-        {artEffect === 'holographic' && <div className="art-holographic" />}
-        {artEffect === 'ghost'       && <div className="art-ghost-overlay" />}
-        {artEffect === 'shadow'      && <div className="art-shadow-overlay" />}
-        {artEffect === 'kraken'      && <div className="art-kraken-overlay" />}
-        {artEffect === 'davy-jones'  && <div className="art-davy-jones-overlay" />}
-        {artEffect === 'golden-age'  && <div className="art-golden-age-overlay" />}
-        {artEffect === 'storm'       && <div className="art-storm-overlay" />}
-        {artEffect === 'divine'      && <><div className="art-divine-overlay" /><div className="art-divine-overlay-2" /></>}
 
         {/* Wanted stamp */}
         {artEffect === 'wanted' && (
@@ -142,6 +134,17 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
         {innerContent}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/cardfront.svg" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }} />
+        {/* Full-card art effect overlays — above the border SVG, clipped to the card's outer visible edge */}
+        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 11, clipPath: 'inset(1.85% 2.63% round 4.74%)' }}>
+          {artEffect === 'holographic' && <div className="art-holographic" />}
+          {artEffect === 'ghost'       && <div className="art-ghost-overlay" />}
+          {artEffect === 'shadow'      && <div className="art-shadow-overlay" />}
+          {artEffect === 'kraken'      && <div className="art-kraken-overlay" />}
+          {artEffect === 'davy-jones'  && <div className="art-davy-jones-overlay" />}
+          {artEffect === 'golden-age'  && <div className="art-golden-age-overlay" />}
+          {artEffect === 'storm'       && <div className="art-storm-overlay" />}
+          {artEffect === 'divine'      && <><div className="art-divine-overlay" /><div className="art-divine-overlay-2" /></>}
+        </div>
       </div>
     )
   }
