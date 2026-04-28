@@ -289,6 +289,27 @@ body {
 
 /* ── Maelstrom ── */
 .art-storm { filter: saturate(0.25) brightness(0.90) hue-rotate(205deg) contrast(1.15); }
+@keyframes stormBreath {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1.0;  }
+}
+.art-storm-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 28%,
+      rgba(50,110,255,0.22) 0%,
+      rgba(20,55,160,0.10) 40%,
+      transparent 68%
+    ),
+    radial-gradient(ellipse at 12% 88%, rgba(10,25,110,0.55) 0%, transparent 42%),
+    radial-gradient(ellipse at 88% 82%, rgba(10,25,110,0.50) 0%, transparent 42%),
+    radial-gradient(ellipse at  8% 8%,  rgba(12,28,120,0.40) 0%, transparent 38%),
+    radial-gradient(ellipse at 92% 6%,  rgba(12,28,120,0.40) 0%, transparent 38%);
+  mix-blend-mode: screen;
+  animation: stormBreath 5s ease-in-out infinite;
+  pointer-events: none;
+}
 @keyframes lightning {
   0%,    84.9%, 85.5%, 86.4%, 87.3%, 100% { opacity: 0;    }
   85%,   86%,   87%                        { opacity: 1.0;  }

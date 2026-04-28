@@ -26,7 +26,7 @@ const artBg: Partial<Record<ArtEffect, string>> = {
   kraken:       '#001a10',
   'davy-jones': '#010620',
   'golden-age': '#1e1400',
-  storm:        '#060a14',
+  storm:        'radial-gradient(ellipse at 50% 30%, #0d1a40 0%, #030609 100%)',
   wanted:       '#120800',
   divine:       '#0e0c08',
 }
@@ -155,7 +155,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
           {artEffect === 'kraken'      && <div className="art-kraken-overlay" />}
           {artEffect === 'davy-jones'  && <div className="art-davy-jones-overlay" />}
           {artEffect === 'golden-age'  && <div className="art-golden-age-overlay" />}
-          {artEffect === 'storm'       && <div className="art-storm-overlay" />}
+          {artEffect === 'storm'       && <><div className="art-storm-bg" /><div className="art-storm-overlay" /></>}
           {artEffect === 'wanted'      && <div className="art-wanted-overlay" />}
           {artEffect === 'divine'      && <><div className="art-divine-overlay" /><div className="art-divine-overlay-2" /></>}
         </div>
