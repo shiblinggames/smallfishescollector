@@ -1816,8 +1816,8 @@ export default function FishingGame({
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
                 style={{ fontSize: '0.6rem', color: '#7a7774' }}>Fish Hold</p>
               <p className="font-cinzel font-700"
-                style={{ fontSize: '0.88rem', color: holdTotalCount > 0 ? '#f0ede8' : '#4a4845' }}>
-                {holdTotalCount > 0 ? `Sell Fish ×${holdTotalCount}` : 'Empty'}
+                style={{ fontSize: '0.88rem', color: holdTotalCount >= holdCapacity ? '#f87171' : holdTotalCount > 0 ? '#f0ede8' : '#4a4845' }}>
+                {holdTotalCount} <span style={{ fontSize: '0.65rem', color: '#6a6764' }}>/ {holdCapacity}</span>
               </p>
               <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: holdTotalCount > 0 ? '#f0c040' : '#3a3835' }}>
                 {holdTotalCount > 0 ? `${holdTotalValue.toLocaleString()} ⟡` : 'No fish yet'}
