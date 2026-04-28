@@ -95,7 +95,7 @@ export default async function CollectionPage() {
           totalVariants={totalVariants ?? 0}
           totalVariantsByCardId={totalVariantsByCardId}
           allVariantsByCardId={allVariantsByCardId}
-          doubloons={profile?.doubloons ?? 0}
+          gems={profile?.gems ?? 0}
           username={profile?.username ?? ''}
           usernameChanged={profile?.username_changed ?? false}
           showcaseVariantIds={(profile?.showcase_variant_ids as number[] | null) ?? []}

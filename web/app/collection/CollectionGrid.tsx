@@ -6,7 +6,7 @@ import FishCard from '@/components/FishCard'
 import type { Card } from '@/lib/types'
 import type { OwnedEntry, AllVariantEntry } from './page'
 import { rarityFromVariant, RARITY_COLOR } from '@/lib/variants'
-import { sellDuplicate, sellAllDuplicates, getDuplicatesBreakdown } from './actions'
+import { sellDuplicate, sellAllDuplicates, getDuplicatesBreakdown, GEM_VALUES } from './actions'
 import type { DuplicateBreakdownItem } from './actions'
 import { updateUsername, updateShowcase } from '@/app/u/actions'
 import Link from 'next/link'
@@ -75,7 +75,7 @@ interface Props {
   totalVariants: number
   totalVariantsByCardId: Record<number, number>
   allVariantsByCardId: Record<number, AllVariantEntry[]>
-  doubloons: number
+  gems: number
   username: string
   usernameChanged: boolean
   showcaseVariantIds: number[]
@@ -158,10 +158,10 @@ function LockedVariant({ variantName, dropWeight }: { variantName: string; dropW
   )
 }
 
-export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId, allVariantsByCardId, doubloons: initialDoubloons, username: initialUsername, usernameChanged: initialUsernameChanged, showcaseVariantIds: initialShowcaseIds, isPremium }: Props) {
+export default function CollectionGrid({ allCards, ownedByCardId, totalVariants, totalVariantsByCardId, allVariantsByCardId, gems: initialGems, username: initialUsername, usernameChanged: initialUsernameChanged, showcaseVariantIds: initialShowcaseIds, isPremium }: Props) {
   const [modal, setModal] = useState<ModalCard | null>(null)
   const [pinnedVariants, setPinnedVariants] = useState<Record<number, number>>({})
-  const [doubloons, setDoubloons] = useState(initialDoubloons)
+  const [gems, setGems] = useState(initialGems)
   const [ownedState, setOwnedState] = useState(ownedByCardId)
   const [liquidateOpen, setLiquidateOpen] = useState(false)
   const [breakdown, setBreakdown] = useState<DuplicateBreakdownItem[] | null>(null)
@@ -254,6 +254,8 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
     startTransition(async () => {
       const result = await sellDuplicate(rowIdToSell, entry.variantName, entry.dropWeight)
       if ('error' in result) return
+      setGems(result.gems)
+      window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.gems }))
       setOwnedState((prev) => {
         const updated = { ...prev }
         const entries = updated[cardId].map((e) =>
@@ -295,6 +297,8 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
     startTransition(async () => {
       const result = await sellAllDuplicates()
       if ('error' in result) return
+      setGems(result.gems)
+      window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.gems }))
       setOwnedState((prev) => {
         const updated: typeof prev = {}
         for (const [cardId, entries] of Object.entries(prev)) {
@@ -381,21 +385,9 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
               <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.7rem' }}>
                 {fishDiscovered} of {allCards.length} fish discovered
               </p>
-              <div className="flex items-center gap-2">
-                <p className="font-karla font-600 text-[#f0c040]" style={{ fontSize: '0.75rem' }}>
-                  {doubloons.toLocaleString()} ⟡
-                </p>
-                {totalDupes > 0 && (
-                  <button
-                    onClick={openLiquidateModal}
-                    disabled={isPending}
-                    className="font-karla font-600 uppercase tracking-[0.12em] text-[#a0a09a] hover:text-[#f0ede8] transition-colors border border-[rgba(255,255,255,0.1)] rounded px-2 py-0.5"
-                    style={{ fontSize: '0.6rem' }}
-                  >
-                    Sell Dupes · {totalDupes}
-                  </button>
-                )}
-              </div>
+              <p className="font-karla font-600 text-[#f0c040]" style={{ fontSize: '0.75rem' }}>
+                {gems.toLocaleString()} ◆
+              </p>
             </div>
           </div>
         )}
@@ -404,8 +396,9 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
       {/* Always-visible action row */}
       <div className="px-6 max-w-sm mx-auto flex gap-2 mb-4">
         <button
-          onClick={() => { setProfileOpen(true); setShowUsernameForm(false); setUsernameError('') }}
-          className="flex-1 flex items-center justify-center gap-2 transition-colors"
+          onClick={openLiquidateModal}
+          disabled={isPending}
+          className="flex-1 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
           style={{
             background: 'rgba(255,255,255,0.08)',
             border: `1px solid ${rank.color}40`,
@@ -417,9 +410,9 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           onPointerLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={rank.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
           </svg>
-          <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: rank.color }}>Edit Profile</span>
+          <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: rank.color }}>Trade-in</span>
         </button>
         <a
           href="/achievements"
@@ -539,20 +532,24 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                           stats={{ strength: modal.card.strength ?? 0, agility: modal.card.agility ?? 0, wit: modal.card.wit ?? 0, luck: modal.card.luck ?? 0 }}
                         />
                       </div>
-                      {dupeCount > 0 && (
-                        <div className="flex flex-col items-center gap-1">
-                          <p className="font-karla font-300 text-[0.62rem] text-[#a0a09a]">
-                            {dupeCount} duplicate{dupeCount > 1 ? 's' : ''}
-                          </p>
-                          <button
-                            onClick={() => handleSellDuplicate(owned, modal.card.id)}
-                            disabled={isPending}
-                            className="font-karla font-600 text-[0.6rem] uppercase tracking-[0.12em] text-[#f0c040] hover:text-[#ffd966] transition-colors disabled:opacity-50"
-                          >
-                            Discard 1
-                          </button>
-                        </div>
-                      )}
+                      {dupeCount > 0 && (() => {
+                        const entryRarity = rarityFromVariant(owned.variantName, owned.dropWeight)
+                        const entryGemValue = GEM_VALUES[entryRarity] ?? 1
+                        return (
+                          <div className="flex flex-col items-center gap-1">
+                            <p className="font-karla font-300 text-[0.62rem] text-[#a0a09a]">
+                              {dupeCount} duplicate{dupeCount > 1 ? 's' : ''}
+                            </p>
+                            <button
+                              onClick={() => handleSellDuplicate(owned, modal.card.id)}
+                              disabled={isPending}
+                              className="font-karla font-600 text-[0.6rem] uppercase tracking-[0.12em] text-[#f0c040] hover:text-[#ffd966] transition-colors disabled:opacity-50"
+                            >
+                              Trade-in · +{entryGemValue} ◆
+                            </button>
+                          </div>
+                        )
+                      })()}
                     </div>
                   )
                 })}
@@ -561,7 +558,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
         </div>
       )}
 
-      {/* Liquidate modal */}
+      {/* Trade-in modal */}
       {liquidateOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center px-4"
@@ -569,52 +566,61 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
           onClick={() => setLiquidateOpen(false)}
         >
           <div
-            className="max-w-lg w-full p-8 relative max-h-[85vh] overflow-y-auto scrollbar-hide"
+            className="max-w-lg w-full relative max-h-[85vh] flex flex-col"
             style={{ background: '#0e0e0e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10 }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setLiquidateOpen(false)}
               className="absolute top-4 right-4 font-karla font-300 text-[#a0a09a] hover:text-[#f0ede8] text-xs uppercase tracking-widest transition-colors"
+              style={{ zIndex: 1 }}
             >
               Close
             </button>
-            <p className="sg-eyebrow text-center mb-1">Sell All Duplicates</p>
-            <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-8">Liquidate</p>
-            {!breakdown ? (
-              <p className="text-center font-karla font-300 text-[#a0a09a] text-sm">Loading…</p>
-            ) : breakdown.length === 0 ? (
-              <p className="text-center font-karla font-300 text-[#a0a09a] text-sm">No duplicates to sell.</p>
-            ) : (
-              <>
-                <div className="flex flex-col gap-2 mb-8">
+            <div className="overflow-y-auto scrollbar-hide p-8 flex-1">
+              <p className="sg-eyebrow text-center mb-1">Duplicates</p>
+              <p className="font-cinzel font-700 text-[#f0ede8] text-center text-xl mb-8">Trade-in</p>
+              {!breakdown ? (
+                <p className="text-center font-karla font-300 text-[#a0a09a] text-sm">Loading…</p>
+              ) : breakdown.length === 0 ? (
+                <p className="text-center font-karla font-300 text-[#a0a09a] text-sm">No duplicates to trade in.</p>
+              ) : (
+                <div className="flex flex-col gap-2">
                   {breakdown.map((item, i) => {
                     const rarity = rarityFromVariant(item.variantName, item.dropWeight)
+                    const totalItemGems = item.extraCopies * item.gemValue
                     return (
                       <div key={i} className="flex items-center justify-between gap-4 py-2 border-b border-[rgba(255,255,255,0.09)]">
                         <div>
                           <p className="font-karla font-600 text-xs text-[#f0ede8]">{item.cardName} · {item.variantName}</p>
-                          <p className="font-karla font-300 text-[0.62rem] mt-0.5" style={{ color: RARITY_COLOR[rarity] }}>{rarity}</p>
+                          <p className="font-karla font-300 text-[0.62rem] mt-0.5" style={{ color: RARITY_COLOR[rarity] }}>{rarity} · {item.gemValue} ◆ each</p>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="font-karla font-300 text-[0.62rem] text-[#a0a09a]">{item.extraCopies}× dupe</p>
+                          <p className="font-karla font-600 text-xs text-[#f0c040]">+{totalItemGems} ◆</p>
+                          <p className="font-karla font-300 text-[0.62rem] text-[#6a6764] mt-0.5">{item.extraCopies}× dupe</p>
                         </div>
                       </div>
                     )
                   })}
                 </div>
-                <div className="flex items-center justify-between mb-6 pt-2">
-                  <p className="font-karla font-600 text-sm text-[#f0ede8] uppercase tracking-[0.10em]">Total</p>
-                  <p className="font-cinzel font-700 text-[#f0ede8] text-xl">{breakdownTotal} cards</p>
+              )}
+            </div>
+            {breakdown && breakdown.length > 0 && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.13)', padding: '1rem 2rem' }}>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-karla font-600 text-xs text-[#a0a09a] uppercase tracking-[0.10em]">{breakdownTotal} cards</p>
+                  <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.1rem' }}>
+                    +{breakdown.reduce((s, i) => s + i.extraCopies * i.gemValue, 0)} ◆
+                  </p>
                 </div>
                 <button
                   onClick={handleSellAll}
                   disabled={isPending}
                   className="btn-ghost w-full disabled:opacity-50"
                 >
-                  {isPending ? 'Selling…' : `Confirm · Sell ${breakdown.reduce((s, i) => s + i.extraCopies, 0)} Cards`}
+                  {isPending ? 'Trading in…' : `Trade in all · ${breakdownTotal} cards`}
                 </button>
-              </>
+              </div>
             )}
           </div>
         </div>

@@ -5,6 +5,14 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { rarityFromVariant } from '@/lib/variants'
 import { revalidatePath } from 'next/cache'
 
+export const GEM_VALUES: Record<string, number> = {
+  Common:    1,
+  Rare:      5,
+  Epic:      10,
+  Legendary: 25,
+  Mythic:    50,
+}
+
 export async function sellDuplicate(rowId: number, variantName: string, dropWeight: number) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -27,10 +35,19 @@ export async function sellDuplicate(rowId: number, variantName: string, dropWeig
     .eq('card_variant_id', row.card_variant_id)
   if ((count ?? 0) <= 1) return { error: 'Cannot sell your only copy' }
 
-  await admin.from('user_collection').delete().eq('id', rowId)
+  const rarity = rarityFromVariant(variantName, dropWeight)
+  const gemValue = GEM_VALUES[rarity] ?? 1
+
+  const { data: profile } = await admin.from('profiles').select('gems').eq('id', user.id).single()
+  const newGems = (profile?.gems ?? 0) + gemValue
+
+  await Promise.all([
+    admin.from('user_collection').delete().eq('id', rowId),
+    admin.from('profiles').update({ gems: newGems }).eq('id', user.id),
+  ])
 
   revalidatePath('/collection')
-  return { sold: 1 }
+  return { sold: 1, gems: newGems }
 }
 
 export interface DuplicateBreakdownItem {
@@ -41,6 +58,7 @@ export interface DuplicateBreakdownItem {
   cardName: string
   filename: string
   extraCopies: number
+  gemValue: number
   rowIds: number[]
 }
 
@@ -63,6 +81,7 @@ export async function getDuplicatesBreakdown(): Promise<{ items: DuplicateBreakd
     } | null
     if (!v) continue
     if (!grouped[row.card_variant_id]) {
+      const rarity = rarityFromVariant(v.variant_name, v.drop_weight)
       grouped[row.card_variant_id] = {
         rowIds: [],
         meta: {
@@ -73,6 +92,7 @@ export async function getDuplicatesBreakdown(): Promise<{ items: DuplicateBreakd
           cardName:    v.cards.name,
           filename:    v.cards.filename,
           extraCopies: 0,
+          gemValue:    GEM_VALUES[rarity] ?? 1,
           rowIds:      [],
         },
       }
@@ -94,21 +114,28 @@ export async function getDuplicatesBreakdown(): Promise<{ items: DuplicateBreakd
   return { items, total }
 }
 
-export async function sellAllDuplicates(): Promise<{ sold: number } | { error: string }> {
+export async function sellAllDuplicates(): Promise<{ sold: number; gems: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
   const breakdown = await getDuplicatesBreakdown()
   if ('error' in breakdown) return breakdown
-  if (breakdown.items.length === 0) return { sold: 0 }
+  if (breakdown.items.length === 0) return { sold: 0, gems: 0 }
 
   const admin = createAdminClient()
   const allRowIds = breakdown.items.flatMap((i) => i.rowIds)
   const totalSold = breakdown.items.reduce((sum, i) => sum + i.extraCopies, 0)
+  const totalGems = breakdown.items.reduce((sum, i) => sum + i.extraCopies * i.gemValue, 0)
 
-  await admin.from('user_collection').delete().in('id', allRowIds)
+  const { data: profile } = await admin.from('profiles').select('gems').eq('id', user.id).single()
+  const newGems = (profile?.gems ?? 0) + totalGems
+
+  await Promise.all([
+    admin.from('user_collection').delete().in('id', allRowIds),
+    admin.from('profiles').update({ gems: newGems }).eq('id', user.id),
+  ])
 
   revalidatePath('/collection')
-  return { sold: totalSold }
+  return { sold: totalSold, gems: newGems }
 }
