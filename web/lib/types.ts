@@ -3,6 +3,13 @@ export type ArtEffect  = 'normal' | 'holographic' | 'rainbow' | 'ghost' | 'shado
 
 export type Zone = 'shallows' | 'open_waters' | 'deep' | 'abyss'
 
+export interface CardStats {
+  strength: number
+  agility: number
+  wit: number
+  luck: number
+}
+
 export interface Card {
   id: number
   name: string
@@ -10,6 +17,10 @@ export interface Card {
   filename: string
   tier: 1 | 2 | 3
   zone: Zone
+  strength: number
+  agility: number
+  wit: number
+  luck: number
 }
 
 export interface CardVariant {
