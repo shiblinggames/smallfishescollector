@@ -20,6 +20,15 @@ const DEFAULT_W = 140
 const DEFAULT_H = 196
 const R         = 12
 
+const artBg: Partial<Record<ArtEffect, string>> = {
+  kraken:       '#001a10',
+  'davy-jones': '#010620',
+  'golden-age': '#1a0e00',
+  storm:        '#060a14',
+  wanted:       '#120800',
+  divine:       '#0e0c08',
+}
+
 const artImageClass: Record<ArtEffect, string> = {
   normal:       '',
   holographic:  '',
@@ -62,7 +71,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
   ) : (
     <>
       {/* Clipped to the SVG card shape (x=10,y=10 in 380×540 = 2.63%/1.85%) so dark bg doesn't bleed into transparent SVG margin */}
-      <div className="absolute inset-0" style={{ background: '#0d1b2e', clipPath: 'inset(1.85% 2.63% round 4.74%)' }} />
+      <div className="absolute inset-0" style={{ background: artBg[artEffect] ?? '#0d1b2e', clipPath: 'inset(1.85% 2.63% round 4.74%)' }} />
       {/* Clip art and text to the inner area defined by the golden border frame */}
       {/* Insets: 44/380 = 11.58% horizontal, 44/540 = 8.15% vertical (cardfront.svg coords) */}
       <div className="absolute overflow-hidden" style={{ left: '11.58%', top: '8.15%', right: '11.58%', bottom: '8.15%', borderRadius: 5 }}>
