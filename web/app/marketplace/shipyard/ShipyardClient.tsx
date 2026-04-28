@@ -1,12 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import dynamic from 'next/dynamic'
 import { SHIPS } from '@/lib/ships'
 import { buyShip } from '@/app/shipyard/actions'
 import { EXPEDITION_SHIP_STATS, HULL_POINTS, STAT_ICONS, STAT_LABELS, STAT_DESCRIPTIONS } from '@/lib/expeditions'
-
-const ShipViewer3D = dynamic(() => import('./ShipViewer3D'), { ssr: false })
+import ShipViewer3D from './ShipViewer3D'
 
 export default function ShipyardClient({ shipTier: initialTier, doubloons: initialDoubloons }: { shipTier: number; doubloons: number }) {
   const [shipTier, setShipTier] = useState(initialTier)
@@ -42,20 +40,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
       </p>
 
       <div className="mb-5">
-        {previewShip.modelUrl ? (
-          <ShipViewer3D modelUrl={previewShip.modelUrl} color={previewShip.color} />
-        ) : (
-          <div style={{
-            width: '100%', height: 220, borderRadius: 14,
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <div style={{ width: 64, height: 64, opacity: 0.25 }}>
-              <ShipIconPreview tier={previewTier} color={previewShip.color} />
-            </div>
-          </div>
-        )}
+        <ShipViewer3D imageUrl={previewShip.imageUrl} color={previewShip.color} />
         <div className="flex items-center justify-center gap-2 mt-2.5">
           <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.85rem', color: previewShip.color }}>
             {previewShip.name}
@@ -346,6 +331,3 @@ function ShipIcon({ tier, color, owned, isActive }: { tier: number; color: strin
   )
 }
 
-function ShipIconPreview({ tier, color }: { tier: number; color: string }) {
-  return <ShipIcon tier={tier} color={color} owned={false} isActive={false} />
-}

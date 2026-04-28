@@ -1,12 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { STAT_ICONS, STAT_LABELS, type ExpeditionShipStats } from '@/lib/expeditions'
 import { SHIPS } from '@/lib/ships'
-
-const ShipViewer3D = dynamic(() => import('@/app/marketplace/shipyard/ShipViewer3D'), { ssr: false })
+import ShipViewer3D from '@/app/marketplace/shipyard/ShipViewer3D'
 
 const STATS = ['combat', 'navigation', 'durability', 'speed', 'luck'] as const
 const STAT_MAX = 20
@@ -23,10 +21,7 @@ export default function ShipInfoPanel({ ship, shipTier }: { ship: ExpeditionShip
       marginBottom: '1.25rem',
       overflow: 'hidden',
     }}>
-      {/* 3D viewer */}
-      {shipDef?.modelUrl && (
-        <ShipViewer3D modelUrl={shipDef.modelUrl} color={shipDef.color} height={150} />
-      )}
+      <ShipViewer3D imageUrl={shipDef?.imageUrl} color={shipDef?.color ?? '#a07858'} height={150} />
 
       {/* Collapsed header row */}
       <button
