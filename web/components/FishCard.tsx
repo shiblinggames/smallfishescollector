@@ -11,12 +11,14 @@ interface Props {
   unowned?: boolean
   className?: string
   stats?: CardStats
+  cardW?: number
+  fill?: boolean
 }
 
-const W      = 140   // card width px
-const H      = 196   // card height px
-const BORDER = 4     // ring thickness px
-const R      = 10    // corner radius px
+const DEFAULT_W = 140
+const DEFAULT_H = 196
+const BORDER    = 4
+const R         = 10
 
 const artImageClass: Record<ArtEffect, string> = {
   normal:       '',
@@ -52,7 +54,9 @@ function StatCell({ label, value }: { label: string; value: number }) {
   )
 }
 
-export default function FishCard({ name, filename, borderStyle, artEffect, variantName, dropWeight, unowned, className = '', stats }: Props) {
+export default function FishCard({ name, filename, borderStyle, artEffect, variantName, dropWeight, unowned, className = '', stats, cardW = DEFAULT_W, fill = false }: Props) {
+  const W: number | string = fill ? '100%' : cardW
+  const H: number | string = fill ? '100%' : Math.round(cardW * DEFAULT_H / DEFAULT_W)
   const src = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${filename}`
 
   // Art + overlays + stats panel — all positioned inside the clipped inner frame
@@ -70,7 +74,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
         alt={name}
         fill
         className={`object-contain ${artImageClass[artEffect]}`}
-        sizes="140px"
+        sizes={fill ? '50vw' : `${W}px`}
         unoptimized
       />
       {artEffect === 'holographic' && <div className="art-holographic" />}

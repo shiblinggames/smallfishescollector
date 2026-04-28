@@ -37,7 +37,7 @@ export function drawGodPack(variants: CardVariant[]): DrawnCard[] {
     .filter(v => GOD_PACK_ELIGIBLE.has(v.variant_name))
     .map(v => ({ ...v, drop_weight: GOD_PACK_WEIGHTS[v.variant_name] ?? v.drop_weight }))
   const drawn: DrawnCard[] = []
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 4; i++) {
     const picked = weightedPick(godPool)
     const original = variants.find(v => v.id === picked.id)!
     drawn.push(toDrawn(original))
@@ -48,7 +48,7 @@ export function drawGodPack(variants: CardVariant[]): DrawnCard[] {
 export function drawPack(variants: CardVariant[], forceLegendary = false): DrawnCard[] {
   const drawn: DrawnCard[] = []
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 4; i++) {
     drawn.push(toDrawn(weightedPick(variants)))
   }
 

@@ -378,8 +378,8 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/cardback.png" alt="" className="w-full h-full object-cover" />
           </div>
-          <div className="flip-card-back w-full h-full bg-black flex items-center justify-center p-3" style={cardBackBorderStyle(card.borderStyle, card.artEffect)}>
-            <FishCard name={card.name} filename={card.filename} borderStyle={card.borderStyle} artEffect={card.artEffect} variantName={card.variantName} dropWeight={card.dropWeight} stats={{ strength: card.strength, agility: card.agility, wit: card.wit, luck: card.luck }} />
+          <div className="flip-card-back w-full h-full bg-black" style={cardBackBorderStyle(card.borderStyle, card.artEffect)}>
+            <FishCard name={card.name} filename={card.filename} borderStyle={card.borderStyle} artEffect={card.artEffect} variantName={card.variantName} dropWeight={card.dropWeight} stats={{ strength: card.strength, agility: card.agility, wit: card.wit, luck: card.luck }} fill />
           </div>
         </div>
         {shockwaveCards.has(i) && (() => {
@@ -426,7 +426,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     const outOfPacks = isDone && packs === 0
     const show = someUnflipped || (isDone && packs > 0) || outOfPacks
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ height: 248 }}>
+      <div className="flex items-center justify-center">
         {show && (
           <button
             onClick={outOfPacks ? reset : isDone ? openPack : flipAll}
@@ -466,7 +466,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
 
   function renderPackCount() {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-1" style={{ height: 248 }}>
+      <div className="flex flex-col items-center justify-center gap-1">
         <span className="font-cinzel font-700 text-[#f0ede8] leading-none" style={{ fontSize: '1.6rem' }}>{packs}</span>
         <span className="font-karla font-600 uppercase text-[#a0a09a] text-center leading-tight" style={{ fontSize: '0.6rem', letterSpacing: '0.10em' }}>packs<br/>left</span>
         <button
@@ -538,18 +538,15 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
           </div>
         )
       })()}
-      {/* Mobile: 2×2 grid + flanked 5th card */}
-      <div className="sm:hidden flex flex-col items-center gap-2 w-full">
-        <div className="grid grid-cols-2 gap-2">
-          {cards.slice(0, 4).map((card, i) => renderCard(card, i))}
+      {/* Mobile: 2×2 grid */}
+      <div className="sm:hidden flex flex-col items-center gap-4 w-full">
+        <div className="grid grid-cols-2 gap-4 w-full">
+          {cards.map((card, i) => renderCard(card, i))}
         </div>
-        {cards[4] && (
-          <div className="flex items-center gap-2 w-full">
-            {swapped ? renderOpenAllButton() : renderPackCount()}
-            {renderCard(cards[4], 4)}
-            {swapped ? renderPackCount() : renderOpenAllButton()}
-          </div>
-        )}
+        <div className="flex items-center justify-center gap-10">
+          {swapped ? renderOpenAllButton() : renderPackCount()}
+          {swapped ? renderPackCount() : renderOpenAllButton()}
+        </div>
       </div>
 
       {/* Desktop: flex-wrap all cards */}
