@@ -99,13 +99,15 @@ function PortfolioCard({
   onSell: (fishId: number, qty: number) => void
   selling: boolean
 }) {
+  const [qty, setQty] = useState(entry.quantity)
+
   const pctChange = entry.prev_multiplier > 0
     ? ((entry.multiplier - entry.prev_multiplier) / entry.prev_multiplier) * 100
     : 0
   const up = pctChange >= 0
   const pctStr = `${up ? '+' : ''}${pctChange.toFixed(1)}%`
   const priceEach = Math.floor(entry.sell_value * entry.multiplier * 0.97)
-  const priceAll  = priceEach * entry.quantity
+  const priceAll  = priceEach * Math.min(qty, entry.quantity)
   const allHistory = [...entry.history, entry.multiplier]
   const histMax = allHistory.length > 0 ? Math.max(...allHistory) : entry.multiplier
   const histMin = allHistory.length > 0 ? Math.min(...allHistory) : entry.multiplier
@@ -176,32 +178,33 @@ function PortfolioCard({
         </p>
       </div>
 
-      {/* Row 4: sell buttons */}
-      <div className="flex gap-2">
+      {/* Row 4: qty + sell */}
+      <div className="flex gap-2 items-center">
+        <input
+          type="number"
+          min={1}
+          max={entry.quantity}
+          value={qty}
+          onChange={e => setQty(Math.max(1, Math.min(entry.quantity, parseInt(e.target.value) || 1)))}
+          disabled={selling}
+          className="font-karla font-600"
+          style={{
+            width: 64, padding: '0.55rem 0.5rem', borderRadius: 8, textAlign: 'center',
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)',
+            color: '#f0ede8', fontSize: '0.75rem', outline: 'none',
+          }}
+        />
         <button
-          onClick={() => onSell(entry.fish_id, 1)}
+          onClick={() => onSell(entry.fish_id, Math.min(qty, entry.quantity))}
           disabled={selling}
           className="font-karla font-700 uppercase tracking-[0.08em] flex-1"
           style={{
             fontSize: '0.65rem', padding: '0.6rem 0.75rem', borderRadius: 8,
-            background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
-            color: '#e0ddd8', opacity: selling ? 0.45 : 1, cursor: selling ? 'default' : 'pointer',
+            background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.35)',
+            color: '#f0c040', opacity: selling ? 0.45 : 1, cursor: selling ? 'default' : 'pointer',
           }}>
-          Sell 1
+          {selling ? '…' : `Sell · ${priceAll.toLocaleString()} ⟡`}
         </button>
-        {entry.quantity > 1 && (
-          <button
-            onClick={() => onSell(entry.fish_id, entry.quantity)}
-            disabled={selling}
-            className="font-karla font-700 uppercase tracking-[0.08em] flex-1"
-            style={{
-              fontSize: '0.65rem', padding: '0.6rem 0.75rem', borderRadius: 8,
-              background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.35)',
-              color: '#f0c040', opacity: selling ? 0.45 : 1, cursor: selling ? 'default' : 'pointer',
-            }}>
-            Sell All · {priceAll.toLocaleString()} ⟡
-          </button>
-        )}
       </div>
     </div>
   )
