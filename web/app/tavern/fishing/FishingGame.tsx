@@ -936,6 +936,7 @@ export default function FishingGame({
   const [holdOpen, setHoldOpen]         = useState(false)
   const [gearOpen, setGearOpen]         = useState(false)
   const [collectionOpen, setCollectionOpen] = useState(false)
+  const [uncheckedNewSpecies, setUncheckedNewSpecies] = useState(0)
   const [expandedZone, setExpandedZone] = useState<string | null>(null)
   const [tappedFishId, setTappedFishId] = useState<number | null>(null)
   const [showingSummary, setShowingSummary] = useState(false)
@@ -1203,7 +1204,7 @@ export default function FishingGame({
       } else {
         const { fish, baitSaved, isNewSpecies, bountyCompletion, xpGained, newXP } = res
         setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge })
-        if (isNewSpecies) setCaughtFishIds(prev => new Set([...prev, fish.id]))
+        if (isNewSpecies) { setCaughtFishIds(prev => new Set([...prev, fish.id])); setUncheckedNewSpecies(n => n + 1) }
         const newCatches = [...sessionCatches, ...(doubleCatch ? [fish, fish] : [fish])]
         const newPerfects = sessionPerfects + (wasPerfect ? 1 : 0)
         const newNewSpecies = sessionNewSpecies + (isNewSpecies ? 1 : 0)
@@ -1376,16 +1377,31 @@ export default function FishingGame({
               ← {HABITAT_LABEL[selectedZone]}
             </button>
             <button
-              onClick={() => { setCollectionOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
+              onClick={() => { setCollectionOpen(o => !o); setGearOpen(false); setHoldOpen(false); setUncheckedNewSpecies(0) }}
               className="font-karla font-600 uppercase tracking-[0.1em]"
               style={{
                 fontSize: '0.6rem', color: HABITAT_COLOR[selectedZone],
                 background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
                 borderRadius: 8, padding: '0.3rem 0.65rem',
                 cursor: 'pointer', touchAction: 'manipulation',
+                position: 'relative',
               }}
             >
               Collection
+              {uncheckedNewSpecies > 0 && (
+                <span style={{
+                  position: 'absolute', top: -4, right: -4,
+                  minWidth: 14, height: 14, borderRadius: 7,
+                  background: '#f87171',
+                  border: '1.5px solid #08121c',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.48rem', fontWeight: 700, color: '#fff',
+                  paddingInline: uncheckedNewSpecies > 9 ? '0.2rem' : 0,
+                  fontFamily: 'var(--font-karla)',
+                }}>
+                  {uncheckedNewSpecies}
+                </span>
+              )}
             </button>
           </div>
 
