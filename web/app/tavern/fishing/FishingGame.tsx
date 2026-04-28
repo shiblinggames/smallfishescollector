@@ -358,7 +358,7 @@ function UnifiedGearDrawer({
                     {ownedRodDefs.map(r => {
                       const isEquipped = r.tier === equippedRodTier
                       const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
-                      const hasSpecial = r.doubleCatchChance > 0 || r.retryOnMissChance > 0 || r.snagImmune || r.perfectZoneBonus > 0 || r.rarityBonus > 0
+                      const hasSpecial = r.doubleCatchChance > 0 || r.retryOnMissChance > 0 || r.snagImmune || r.perfectZoneBonus > 0 || r.rarityBonus > 0 || (r.jackpotChance ?? 0) > 0
                       return (
                         <div key={r.tier} style={{
                           display: 'flex', alignItems: 'center', gap: 10,
@@ -374,6 +374,7 @@ function UnifiedGearDrawer({
                               {r.snagImmune && <StatPill label="Snag immune" color={r.color} />}
                               {r.perfectZoneBonus > 0 && <StatPill label={`Perfect zone +${r.perfectZoneBonus}°`} color={r.color} />}
                               {r.rarityBonus > 0 && <StatPill label={`+${Math.round(r.rarityBonus * 100)}% rare bias`} color={r.color} />}
+                              {(r.jackpotChance ?? 0) > 0 && <StatPill label={`${Math.round(r.jackpotChance! * 100)}% jackpot ×${r.jackpotMultiplier}`} color={r.color} />}
                               {!hasSpecial && speedPct > 0 && <StatPill label={`${speedPct}% faster bites`} color={r.color} />}
                               {!hasSpecial && speedPct <= 0 && r.catchZoneBonus > 0 && <StatPill label={`+${r.catchZoneBonus}° catch zone`} color={r.color} />}
                               {!hasSpecial && speedPct <= 0 && r.catchZoneBonus === 0 && <StatPill label="Base rod" muted />}
@@ -556,7 +557,7 @@ const FRAME_SRC: Record<SceneFrame, string> = {
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0 }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
@@ -566,6 +567,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   gemEarned?: boolean
   perfectStreak?: number
   streakBonusXP?: number
+  jackpotMultiplier?: number
 }) {
   const habitatColor = HABITAT_COLOR[fish.habitat] ?? '#888'
   const habitatLabel = HABITAT_LABEL[fish.habitat] ?? fish.habitat
@@ -644,6 +646,24 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           </motion.div>
         )
       })()}
+
+      {/* Jackpot banner */}
+      {jackpotMultiplier && jackpotMultiplier > 1 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10, scale: 0.88 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 320, damping: 15 }}
+          className="flex items-center justify-center gap-2 mb-2 py-2 px-3 rounded-xl"
+          style={{ background: 'rgba(12,2,0,0.92)', border: '1px solid rgba(249,115,22,0.72)', boxShadow: '0 0 22px rgba(249,115,22,0.38)' }}
+        >
+          <span style={{ fontSize: '0.78rem', color: '#f97316' }}>★</span>
+          <div style={{ textAlign: 'center' }}>
+            <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
+              style={{ fontSize: '0.75rem', color: '#f97316', textShadow: '0 0 12px rgba(249,115,22,0.55)' }}>Jackpot!</p>
+            <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#fdba74' }}>×{jackpotMultiplier} fish landed</p>
+          </div>
+          <span style={{ fontSize: '0.78rem', color: '#f97316' }}>★</span>
+        </motion.div>
+      )}
 
       {/* Gem earned banner */}
       {gemEarned && (
@@ -990,7 +1010,7 @@ export default function FishingGame({
   const [sessionGems, setSessionGems] = useState(0)
   const [sellPending, setSellPending] = useState<number | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
-  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean; gemEarned?: boolean; perfectStreak: number; streakBonusXP: number } | null>(null)
+  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean; gemEarned?: boolean; perfectStreak: number; streakBonusXP: number; jackpotMultiplier?: number } | null>(null)
   const [challengeActive, setChallengeActive] = useState(false)
   const [perfectStreak, setPerfectStreak] = useState(0)
   const [tourStep, setTourStep] = useState<number | null>(null)
@@ -1238,9 +1258,12 @@ export default function FishingGame({
 
     // Twin-Strike rod: 25% chance to catch 2 fish
     const doubleCatch = rod.doubleCatchChance > 0 && Math.random() < rod.doubleCatchChance
+    // YOLO Rod: 10% chance to catch 100x fish
+    const jackpotHit = !doubleCatch && (rod.jackpotChance ?? 0) > 0 && Math.random() < rod.jackpotChance!
+    const jackpotMultiplier = jackpotHit ? (rod.jackpotMultiplier ?? 1) : 1
 
     startTransition(async () => {
-      const res = await reelIn(hookedFishRef.current!.fishId, zone.type as 'perfect' | 'catch', selectedBaitRef.current, doubleCatch, streakBonusXP)
+      const res = await reelIn(hookedFishRef.current!.fishId, zone.type as 'perfect' | 'catch', selectedBaitRef.current, doubleCatch, streakBonusXP, jackpotMultiplier)
 
       if (wonChallenge) {
         await awardPerfectChallengeGem()
@@ -1254,9 +1277,10 @@ export default function FishingGame({
       } else {
         const { fish, baitSaved, isNewSpecies, bountyCompletion, xpGained, newXP } = res
         if (wasPerfect) setPerfectStreak(newStreak)
-        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge, perfectStreak: newStreak, streakBonusXP })
+        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge, perfectStreak: newStreak, streakBonusXP, jackpotMultiplier: jackpotMultiplier > 1 ? jackpotMultiplier : undefined })
         if (isNewSpecies) { setCaughtFishIds(prev => new Set([...prev, fish.id])); setUncheckedNewFishIds(prev => new Set([...prev, fish.id])) }
-        const newCatches = [...sessionCatches, ...(doubleCatch ? [fish, fish] : [fish])]
+        const catchCount = doubleCatch ? 2 : jackpotMultiplier
+        const newCatches = [...sessionCatches, ...Array(catchCount).fill(fish)]
         const newPerfects = sessionPerfects + (wasPerfect ? 1 : 0)
         const newNewSpecies = sessionNewSpecies + (isNewSpecies ? 1 : 0)
         const newGems = sessionGems + (wonChallenge ? 1 : 0)
@@ -1290,7 +1314,7 @@ export default function FishingGame({
         if (newLevel > oldLevel) setLevelUpNotif(newLevel)
         setInventory(prev => {
           const existing = prev.find(i => i.fish_id === fish.id)
-          const addQty = doubleCatch ? 2 : 1
+          const addQty = doubleCatch ? 2 : jackpotMultiplier
           if (existing) return prev.map(i => i.fish_id === fish.id ? { ...i, quantity: i.quantity + addQty } : i)
           return [...prev, { fish_id: fish.id, quantity: addQty, fish_species: fish }]
         })
@@ -1645,7 +1669,7 @@ export default function FishingGame({
                   )}
 
                   {catchResult ? (
-                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} xpGained={catchResult.xpGained} doubleCatch={catchResult.doubleCatch} gemEarned={catchResult.gemEarned} perfectStreak={catchResult.perfectStreak} streakBonusXP={catchResult.streakBonusXP} />
+                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} xpGained={catchResult.xpGained} doubleCatch={catchResult.doubleCatch} gemEarned={catchResult.gemEarned} perfectStreak={catchResult.perfectStreak} streakBonusXP={catchResult.streakBonusXP} jackpotMultiplier={catchResult.jackpotMultiplier} />
                   ) : (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
                       <p className="font-cinzel font-700 mb-1"

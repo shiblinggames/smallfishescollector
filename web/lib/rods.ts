@@ -12,6 +12,8 @@ export interface RodDef {
   retryOnMissChance: number  // chance to retry the dial on miss or snag (0–1)
   snagImmune: boolean        // if true, snag zones count as miss — no extra bait lost
   perfectZoneBonus: number   // degrees added to the perfect zone (base is 5°)
+  jackpotChance?: number     // chance to catch jackpotMultiplier fish at once (0–1)
+  jackpotMultiplier?: number // how many fish on a jackpot hit
 }
 
 export const RODS: RodDef[] = [
@@ -98,6 +100,13 @@ export const RODS: RodDef[] = [
     description: 'Hand-rolled in gold leaf. Every catch brings two.',
     color: '#f0c040', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
     doubleCatchChance: 1.0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+  },
+  {
+    tier: 15, name: 'YOLO Rod', cost: 200000,
+    description: '10% chance to land 100 fish at once. The other 90%? Just a regular catch.',
+    color: '#f97316', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
+    doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    jackpotChance: 0.10, jackpotMultiplier: 100,
   },
   {
     tier: 14, name: 'Completionist Rod', cost: 0, earnedOnly: true,

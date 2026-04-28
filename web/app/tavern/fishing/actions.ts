@@ -154,6 +154,7 @@ export async function reelIn(
   baitType: string,
   doubleCatch = false,
   streakBonus = 0,
+  jackpotMultiplier = 1,
 ): Promise<
   | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; newAchievements: string[]; bountyCompletion?: FishingBountyCompletion; xpGained: number; newXP: number }
   | { caught: false; newAchievements: string[] }
@@ -221,8 +222,8 @@ export async function reelIn(
     }).eq('user_id', user.id).eq('fish_id', fishId)
   }
 
-  // Upsert sellable inventory (doubleCatch = Twin-Strike rod ability)
-  const catchQty = doubleCatch ? 2 : 1
+  // Upsert sellable inventory
+  const catchQty = doubleCatch ? 2 : jackpotMultiplier
   const { data: invRow } = await admin
     .from('fish_inventory')
     .select('quantity')
