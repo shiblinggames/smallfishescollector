@@ -81,7 +81,7 @@ const CATCH_TOUR_STEPS = [
   {
     color: '#f59e0b',
     title: 'Perfect Zones',
-    body: 'The gold strips at the edges of the green are Perfects. Land here and you get a chance to save your bait for a free recast.',
+    body: 'The gold strip in the centre of the green is a Perfect. Land here and you get a chance to save your bait for a free recast.',
   },
   {
     color: '#f87171',
@@ -91,7 +91,7 @@ const CATCH_TOUR_STEPS = [
   {
     color: '#94a3b8',
     title: 'Needle Speed',
-    body: "Harder fish spin the needle faster. Deeper zones add random speed bursts and direction reversals. Upgrade your Reel to slow it down.",
+    body: "Harder fish spin the needle faster. Deeper zones add random speed bursts and direction reversals. Upgrading your gear can make all of this easier.",
   },
 ]
 
