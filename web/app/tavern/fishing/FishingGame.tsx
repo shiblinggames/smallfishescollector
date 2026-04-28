@@ -8,7 +8,7 @@ import { equipRod } from '@/app/marketplace/tackle-shop/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
 import { getHook, HOOKS } from '@/lib/hooks'
-import { getRod, RODS } from '@/lib/rods'
+import { getRod, RODS, type RodDef } from '@/lib/rods'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS, getBait } from '@/lib/bait'
@@ -571,7 +571,7 @@ const ROD_FRAMES: Record<SceneFrame, {
   cast2:   { handle: [57, 22], control: [48, 17], tip: [39, 19], showLine: false },
 }
 
-function RodOverlay({ frame, rod }: { frame: SceneFrame; rod: import('@/lib/rods').RodDef }) {
+function RodOverlay({ frame, rod }: { frame: SceneFrame; rod: RodDef }) {
   const cfg = ROD_FRAMES[frame]
   const [hx, hy] = cfg.handle
   const [cx, cy] = cfg.control
