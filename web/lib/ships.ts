@@ -12,17 +12,17 @@ export const SHIPS: ShipDef[] = [
   {
     tier: 0, name: 'Rowboat', cost: 0,
     description: 'A humble start on the open sea.',
-    dailyBonus: 0, color: '#a07858',
+    dailyBonus: 0, color: '#a07858', imageUrl: '/models/rowboat.png',
   },
   {
     tier: 1, name: 'Dinghy', cost: 150,
     description: 'Small but reliable. More room for haul.',
-    dailyBonus: 10, color: '#9ca3af',
+    dailyBonus: 10, color: '#9ca3af', imageUrl: '/models/dinghy.png',
   },
   {
     tier: 2, name: 'Sloop', cost: 400,
     description: 'A single-masted workhorse of the seas.',
-    dailyBonus: 20, color: '#60a5fa',
+    dailyBonus: 20, color: '#60a5fa', imageUrl: '/models/sloop.png',
   },
   {
     tier: 3, name: 'Schooner', cost: 1000,
