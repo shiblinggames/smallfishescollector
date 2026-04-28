@@ -142,7 +142,9 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     setFlipped(new Array(5).fill(false))
     setGlowClasses(new Array(5).fill(''))
     setFlash(result.isGodPack ? { type: 'godpack', key: Date.now() } : null)
-    setPacks(result.packsRemaining ?? packs - 1)
+    const newPacks = result.packsRemaining ?? packs - 1
+    setPacks(newPacks)
+    window.dispatchEvent(new CustomEvent('packs-changed', { detail: newPacks }))
     setPhase('reveal')
     setLoading(false)
     router.refresh()
@@ -261,6 +263,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     if (!('error' in result)) {
       setPacks(result.packsAvailable)
       setGems(result.gems)
+      window.dispatchEvent(new CustomEvent('packs-changed', { detail: result.packsAvailable }))
       window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.gems }))
     }
     setBuyingWithGems(false)
