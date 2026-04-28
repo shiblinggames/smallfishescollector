@@ -151,71 +151,81 @@ export default function ZoneLanding({
               <motion.div
                 initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.2 }}
-                className="mb-4 rounded-2xl px-4 py-3.5"
+                className="mb-4 rounded-xl"
                 style={{
-                  background: `${HABITAT_COLOR[lastSession.zone] ?? '#888'}0f`,
-                  border: `1px solid ${HABITAT_COLOR[lastSession.zone] ?? '#888'}30`,
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px dashed rgba(255,255,255,0.14)',
                 }}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                      style={{ fontSize: '0.6rem', color: '#6a6764' }}>Last Session</p>
-                    <p className="font-cinzel font-700"
-                      style={{ fontSize: '0.9rem', color: HABITAT_COLOR[lastSession.zone] ?? '#888' }}>
+                {/* Header row */}
+                <div className="flex items-center justify-between px-4 py-2.5"
+                  style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="flex items-center gap-2.5">
+                    <p className="font-karla font-700 uppercase tracking-[0.18em]"
+                      style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.3)' }}>Last Session</p>
+                    <span className="font-karla font-600"
+                      style={{
+                        fontSize: '0.6rem', color: HABITAT_COLOR[lastSession.zone] ?? '#888',
+                        background: `${HABITAT_COLOR[lastSession.zone] ?? '#888'}18`,
+                        border: `1px solid ${HABITAT_COLOR[lastSession.zone] ?? '#888'}35`,
+                        padding: '0.15rem 0.55rem', borderRadius: '2rem',
+                      }}>
                       {HABITAT_LABEL[lastSession.zone] ?? lastSession.zone}
-                    </p>
+                    </span>
                   </div>
                   <button
                     onClick={() => { setLastSession(null); try { localStorage.removeItem('fishing_last_session') } catch {} }}
-                    style={{ color: '#4a4845', fontSize: '1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none', padding: '0.1rem 0.2rem' }}
+                    style={{ color: '#3a3835', fontSize: '1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none', padding: '0.1rem 0.2rem' }}
                   >✕</button>
                 </div>
 
-                {/* Rarity dots */}
-                <div className="flex items-center gap-2 mb-2.5 flex-wrap">
-                  <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8' }}>
-                    {lastSession.totalCaught}
-                  </p>
-                  <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>fish</p>
-                  <div className="flex gap-1.5 ml-1">
-                    {[1,2,3,4,5].map(r => {
-                      const count = lastSession.rarityCounts[r] ?? 0
-                      if (!count) return null
-                      return (
-                        <div key={r} className="flex items-center gap-1">
-                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: RARITY_COLOR[r] }} />
-                          <span className="font-karla font-600" style={{ fontSize: '0.65rem', color: RARITY_COLOR[r] }}>×{count}</span>
-                        </div>
-                      )
-                    })}
+                {/* Stats body */}
+                <div className="px-4 py-3">
+                  {/* Catch count + rarity dots */}
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8' }}>
+                      {lastSession.totalCaught}
+                    </p>
+                    <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)' }}>fish caught</p>
+                    <div className="flex gap-1.5 ml-1">
+                      {[1,2,3,4,5].map(r => {
+                        const count = lastSession.rarityCounts[r] ?? 0
+                        if (!count) return null
+                        return (
+                          <div key={r} className="flex items-center gap-1">
+                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: RARITY_COLOR[r] }} />
+                            <span className="font-karla font-600" style={{ fontSize: '0.65rem', color: RARITY_COLOR[r] }}>×{count}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                </div>
 
-                {/* Best catch */}
-                {lastSession.bestCatch && (
-                  <p className="font-karla font-400 mb-2.5" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>
-                    Best catch:{' '}
-                    <span className="font-cinzel font-700" style={{ color: RARITY_COLOR[lastSession.bestCatch.bite_rarity] ?? '#f0ede8' }}>
-                      {lastSession.bestCatch.name}
-                    </span>
-                  </p>
-                )}
+                  {/* Best catch */}
+                  {lastSession.bestCatch && (
+                    <p className="font-karla font-400 mb-2" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>
+                      Best:{' '}
+                      <span className="font-cinzel font-700" style={{ color: RARITY_COLOR[lastSession.bestCatch.bite_rarity] ?? '#f0ede8' }}>
+                        {lastSession.bestCatch.name}
+                      </span>
+                    </p>
+                  )}
 
-                {/* Stats row */}
-                <div className="flex gap-3 flex-wrap">
-                  {lastSession.xpGained > 0 && (
-                    <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#86efac' }}>+{lastSession.xpGained} XP</span>
-                  )}
-                  {lastSession.perfects > 0 && (
-                    <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#fbbf24' }}>{lastSession.perfects} perfect{lastSession.perfects > 1 ? 's' : ''}</span>
-                  )}
-                  {lastSession.newSpecies > 0 && (
-                    <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: HABITAT_COLOR[lastSession.zone] ?? '#888' }}>{lastSession.newSpecies} new species</span>
-                  )}
-                  {lastSession.gems > 0 && (
-                    <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#63e2b7' }}>+{lastSession.gems} gem{lastSession.gems > 1 ? 's' : ''}</span>
-                  )}
+                  {/* XP / perfects / new species / gems */}
+                  <div className="flex gap-3 flex-wrap">
+                    {lastSession.xpGained > 0 && (
+                      <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#86efac' }}>+{lastSession.xpGained} XP</span>
+                    )}
+                    {lastSession.perfects > 0 && (
+                      <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#fbbf24' }}>{lastSession.perfects} perfect{lastSession.perfects > 1 ? 's' : ''}</span>
+                    )}
+                    {lastSession.newSpecies > 0 && (
+                      <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.45)' }}>{lastSession.newSpecies} new species</span>
+                    )}
+                    {lastSession.gems > 0 && (
+                      <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#63e2b7' }}>+{lastSession.gems} gem{lastSession.gems > 1 ? 's' : ''}</span>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             )}
