@@ -308,7 +308,11 @@ function UnifiedGearDrawer({
       {sections.map(sec => {
         const isOpen = activeSection === sec.key
         return (
-          <div key={sec.key}>
+          <React.Fragment key={sec.key}>
+            {sec.key === 'rod' && (
+              <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '0.35rem 0 0.1rem' }} />
+            )}
+          <div>
             <button
               onClick={() => setActiveSection(isOpen ? '' : sec.key)}
               style={{
@@ -320,12 +324,13 @@ function UnifiedGearDrawer({
               }}
             >
               <div style={{ width: 3, height: 18, background: sec.color, borderRadius: 2, flexShrink: 0 }} />
-              <p className="font-karla font-600 uppercase tracking-[0.12em]"
-                style={{ fontSize: '0.48rem', color: '#6a6764', minWidth: '2.5rem' }}>{sec.label}</p>
+              <p className="font-karla font-700 uppercase tracking-[0.12em]"
+                style={{ fontSize: '0.56rem', color: '#6a6764', minWidth: '2.5rem' }}>{sec.label}</p>
               <p className="font-cinzel font-700"
                 style={{ fontSize: '0.78rem', color: isOpen ? sec.color : '#f0ede8', flex: 1, textAlign: 'left' }}>{sec.subtitle}</p>
               <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.2)' }}>{isOpen ? '▴' : '▾'}</span>
             </button>
+
 
             {isOpen && (
               <div style={{
@@ -336,7 +341,15 @@ function UnifiedGearDrawer({
 
                 {/* ── Bait ── */}
                 {sec.key === 'bait' && (
-                  <BaitSelector baitInventory={baitInventory} selectedBait={selectedBait} onSelect={onSelectBait} />
+                  <div className="flex flex-col gap-2">
+                    <BaitSelector baitInventory={baitInventory} selectedBait={selectedBait} onSelect={onSelectBait} />
+                    <Link href="/marketplace/tackle-shop" onClick={onClose}
+                      className="flex items-center justify-between px-3 py-2.5 rounded-xl mt-0.5"
+                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}>
+                      <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Buy more bait</span>
+                      <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#5a5956' }}>Tackle Shop ↗</span>
+                    </Link>
+                  </div>
                 )}
 
                 {/* ── Rod ── */}
@@ -377,9 +390,11 @@ function UnifiedGearDrawer({
                         </div>
                       )
                     })}
-                    <Link href="/marketplace/tackle-shop" className="font-karla font-600 text-center block mt-1"
-                      style={{ fontSize: '0.58rem', color: '#5a5956', textDecoration: 'underline' }}>
-                      Buy more rods at the Tackle Shop ↗
+                    <Link href="/marketplace/tackle-shop" onClick={onClose}
+                      className="flex items-center justify-between px-3 py-2.5 rounded-xl mt-0.5"
+                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}>
+                      <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Buy more rods</span>
+                      <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#5a5956' }}>Tackle Shop ↗</span>
                     </Link>
                   </div>
                 )}
@@ -396,12 +411,12 @@ function UnifiedGearDrawer({
                     <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.5 }}>
                       {reel.description}
                     </p>
-                    {reelTier < REELS.length - 1 && (
-                      <Link href="/marketplace/tackle-shop" className="font-karla font-600"
-                        style={{ fontSize: '0.58rem', color: '#5a5956', textDecoration: 'underline' }}>
-                        Upgrade at the Tackle Shop ↗
-                      </Link>
-                    )}
+                    <Link href="/marketplace/tackle-shop" onClick={onClose}
+                      className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}>
+                      <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Upgrade reel</span>
+                      <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#5a5956' }}>Tackle Shop ↗</span>
+                    </Link>
                   </div>
                 )}
 
@@ -417,12 +432,12 @@ function UnifiedGearDrawer({
                     <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.5 }}>
                       {hook.description}
                     </p>
-                    {hookTier < HOOKS.length - 1 && (
-                      <Link href="/marketplace/tackle-shop" className="font-karla font-600"
-                        style={{ fontSize: '0.58rem', color: '#5a5956', textDecoration: 'underline' }}>
-                        Upgrade at the Tackle Shop ↗
-                      </Link>
-                    )}
+                    <Link href="/marketplace/tackle-shop" onClick={onClose}
+                      className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}>
+                      <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Upgrade hook</span>
+                      <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#5a5956' }}>Tackle Shop ↗</span>
+                    </Link>
                   </div>
                 )}
 
@@ -447,6 +462,7 @@ function UnifiedGearDrawer({
               </div>
             )}
           </div>
+          </React.Fragment>
         )
       })}
     </div>
@@ -1376,6 +1392,27 @@ export default function FishingGame({
             >
               ← {HABITAT_LABEL[selectedZone]}
             </button>
+
+            <AnimatePresence>
+              {sessionPerfects > 0 && (
+                <motion.div
+                  key={sessionPerfects}
+                  initial={{ scale: 1.4, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 22 }}
+                  className="flex items-center gap-1"
+                  style={{
+                    background: 'rgba(245,158,11,0.12)',
+                    border: '1px solid rgba(245,158,11,0.38)',
+                    borderRadius: 8, padding: '0.28rem 0.6rem',
+                  }}
+                >
+                  <span style={{ fontSize: '0.58rem', color: '#f59e0b' }}>✦</span>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.65rem', color: '#f59e0b' }}>{sessionPerfects}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
             <button
               onClick={() => { setCollectionOpen(o => !o); setGearOpen(false); setHoldOpen(false); setUncheckedNewSpecies(0) }}
               className="font-karla font-600 uppercase tracking-[0.1em]"
