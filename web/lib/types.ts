@@ -15,7 +15,6 @@ export interface Card {
   name: string
   slug: string
   filename: string
-  tier: 1 | 2 | 3
   zone: Zone
   strength: number
   agility: number
@@ -46,7 +45,6 @@ export interface DrawnCard {
   name: string
   slug: string
   filename: string
-  tier: 1 | 2 | 3
   variantName: string
   borderStyle: BorderStyle
   artEffect: ArtEffect

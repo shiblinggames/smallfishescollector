@@ -29,7 +29,7 @@ export default async function CollectionPage() {
   if (!user) redirect('/login')
 
   const [{ data: allCards }, { data: owned }, { data: profile }, { count: totalVariants }, { data: allVariantsRaw }] = await Promise.all([
-    supabase.from('cards').select('*').order('tier').order('name'),
+    supabase.from('cards').select('*').order('zone').order('name'),
     supabase
       .from('user_collection')
       .select('id, card_variant_id, card_variants(id, variant_name, border_style, art_effect, drop_weight, card_id)')

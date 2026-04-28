@@ -125,14 +125,14 @@ function bestEntry(entries: OwnedEntry[]): OwnedEntry {
 
 interface ZoneConfig {
   id: string
-  tierFilter: number | null
+  zone: string
 }
 
 const ZONES: ZoneConfig[] = [
-  { id: 'shallows',    tierFilter: 1 },
-  { id: 'open-waters', tierFilter: 2 },
-  { id: 'deep',        tierFilter: 3 },
-  { id: 'abyss',       tierFilter: null },
+  { id: 'shallows',    zone: 'shallows' },
+  { id: 'open-waters', zone: 'open_waters' },
+  { id: 'deep',        zone: 'deep' },
+  { id: 'abyss',       zone: 'abyss' },
 ]
 
 const D = 140
@@ -245,8 +245,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
   const totalDupes = Object.values(ownedState).reduce((sum, entries) => sum + entries.reduce((s, e) => s + (e.count - 1), 0), 0)
 
   function zoneAllCards(zone: ZoneConfig): Card[] {
-    if (zone.id === 'abyss') return allCards.filter((c) => ABYSS_FISH.has(c.name))
-    return allCards.filter((c) => c.tier === zone.tierFilter && !ABYSS_FISH.has(c.name))
+    return allCards.filter((c) => c.zone === zone.zone)
   }
 
   function handleSellDuplicate(entry: OwnedEntry, cardId: number) {

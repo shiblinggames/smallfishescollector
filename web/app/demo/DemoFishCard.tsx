@@ -3,7 +3,6 @@ import { rarityFromVariant, RARITY_COLOR, IS_LEGENDARY_RARITY, IS_MYTHIC_RARITY,
 
 interface Props {
   name: string
-  tier: 1 | 2 | 3
   borderStyle: BorderStyle
   artEffect: ArtEffect
   variantName: string
@@ -12,14 +11,6 @@ interface Props {
 
 const D = 140
 const BORDER = 5
-
-const tierEmoji: Record<number, string> = { 1: '~', 2: '~~', 3: '~~~' }
-
-const tierBg: Record<number, string> = {
-  1: 'from-blue-950 to-cyan-950',
-  2: 'from-slate-900 to-blue-950',
-  3: 'from-indigo-950 to-purple-950',
-}
 
 const artClass: Record<ArtEffect, string> = {
   normal: '', holographic: '', rainbow: 'art-rainbow', ghost: 'art-ghost', shadow: 'art-shadow',
@@ -54,7 +45,7 @@ const mythicGradient: Partial<Record<BorderStyle, string>> = {
   'golden-age': 'linear-gradient(90deg,#8b6018,#f0c040,#ffd700,#f0c040,#8b6018)',
 }
 
-export default function DemoFishCard({ name, tier, borderStyle, artEffect, variantName, dropWeight }: Props) {
+export default function DemoFishCard({ name, borderStyle, artEffect, variantName, dropWeight }: Props) {
   const rarity = rarityFromVariant(variantName, dropWeight)
   const isPrismatic = borderStyle === 'prismatic'
   const isLegendary = IS_LEGENDARY_RARITY(rarity)
@@ -63,9 +54,8 @@ export default function DemoFishCard({ name, tier, borderStyle, artEffect, varia
   const mythicGrad  = mythicGradient[borderStyle]
   const labelText = `${rarity} · ${variantName}`
   const art = (
-    <div className={`w-full h-full bg-gradient-to-br ${tierBg[tier]} flex flex-col items-center justify-center gap-2 ${artClass[artEffect]}`}>
-      <span className="font-cinzel font-700 text-[#f0ede8] text-2xl">{tierEmoji[tier]}</span>
-      <span className="sg-eyebrow text-[0.55rem]">Tier {tier}</span>
+    <div className={`w-full h-full bg-gradient-to-br from-slate-900 to-blue-950 flex flex-col items-center justify-center ${artClass[artEffect]}`}>
+      <span className="sg-eyebrow text-[0.55rem]">{rarity}</span>
     </div>
   )
 

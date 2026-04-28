@@ -20,7 +20,6 @@ function variantToCard(v: CardVariant): DrawnCard {
     name:        card.name,
     slug:        card.slug,
     filename:    card.filename,
-    tier:        card.tier as 1 | 2 | 3,
     variantName: v.variant_name,
     borderStyle: v.border_style as BorderStyle,
     artEffect:   v.art_effect as ArtEffect,
