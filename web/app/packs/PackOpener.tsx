@@ -475,7 +475,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
       })()}
       {/* Mobile: 2×2 grid */}
       <div className="sm:hidden flex flex-col items-center w-full">
-        <div className="grid grid-cols-2 gap-3 w-full px-3 mb-10">
+        <div className="grid grid-cols-2 gap-4 w-full px-4 mb-10">
           {cards.map((card, i) => renderCard(card, i))}
         </div>
         {renderMobileActions()}
