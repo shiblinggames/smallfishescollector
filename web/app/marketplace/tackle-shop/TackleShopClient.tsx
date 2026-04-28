@@ -151,29 +151,29 @@ export default function TackleShopClient({
   // ── Landing ────────────────────────────────────────────────────────────
   if (section === null) {
     return (
-      <div className="px-6 max-w-sm sm:max-w-2xl mx-auto">
-        <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-5 text-[0.65rem] sm:text-xs">
+      <div className="px-6 max-w-4xl mx-auto">
+        <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-5" style={{ fontSize: '0.75rem' }}>
           Tackle Shop
         </p>
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-3">
           {CATEGORIES.map(({ key, label, desc, color, active }) => (
             <button
               key={key}
               onClick={() => { setSection(key); setError(null) }}
-              className="flex items-start gap-3 px-4 py-3.5 rounded-xl text-left transition-opacity active:opacity-70"
+              className="flex items-start gap-4 px-5 py-4 rounded-xl text-left transition-opacity active:opacity-70"
               style={{ background: `${color}0a`, border: `1px solid ${color}28` }}
             >
               <div style={{ width: 4, alignSelf: 'stretch', background: color, borderRadius: 2, flexShrink: 0, marginTop: 2 }} />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>{label}</p>
-                  <span className="font-karla font-600" style={{ fontSize: '0.58rem', color, background: `${color}18`, border: `1px solid ${color}30`, padding: '0.1rem 0.45rem', borderRadius: '2rem' }}>
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8' }}>{label}</p>
+                  <span className="font-karla font-600" style={{ fontSize: '0.72rem', color, background: `${color}18`, border: `1px solid ${color}30`, padding: '0.15rem 0.55rem', borderRadius: '2rem' }}>
                     {active}
                   </span>
                 </div>
-                <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.45 }}>{desc}</p>
+                <p className="font-karla font-300" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{desc}</p>
               </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 3 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 4 }}>
                 <path d="M9 18l6-6-6-6"/>
               </svg>
             </button>
@@ -188,24 +188,24 @@ export default function TackleShopClient({
   const sectionLabel = CATEGORIES.find(c => c.key === section)?.label ?? ''
 
   return (
-    <div className="px-6 max-w-sm sm:max-w-2xl mx-auto">
+    <div className="px-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => { setSection(null); setError(null) }}
           className="font-karla font-600"
-          style={{ fontSize: '0.72rem', color: '#6a6764' }}
+          style={{ fontSize: '0.85rem', color: '#6a6764' }}
         >
           ← Tackle Shop
         </button>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: sectionColor }}>{sectionLabel}</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: sectionColor }}>{sectionLabel}</p>
       </div>
 
       {error && <p className="font-karla font-300 text-red-400 text-xs text-center mb-3">{error}</p>}
 
       {/* ── Bait ── */}
       {section === 'bait' && (
-        <div className="flex flex-col gap-2 mb-4">
+        <div className="flex flex-col gap-2.5 mb-4">
           {shopBaits.map(bait => {
             const qty = baitMap[bait.type] ?? 0
             const bundleCost = bait.shopCost * bait.bundleSize
@@ -214,48 +214,48 @@ export default function TackleShopClient({
 
             return (
               <div key={bait.type}
-                className="flex items-center gap-3 px-3 py-3 rounded-xl"
+                className="flex items-center gap-4 px-4 py-4 rounded-xl"
                 style={{ background: `${bait.color}0a`, border: `1px solid ${bait.color}28` }}
               >
                 <div style={{
-                  width: 36, height: 36, borderRadius: 9, flexShrink: 0,
+                  width: 44, height: 44, borderRadius: 11, flexShrink: 0,
                   background: `${bait.color}18`, border: `1px solid ${bait.color}40`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: 3, background: bait.color }} />
+                  <div style={{ width: 13, height: 13, borderRadius: 4, background: bait.color }} />
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>
                     {bait.name}
                   </p>
-                  <p className="font-karla font-300" style={{ fontSize: '0.66rem', color: '#6a6764', marginBottom: 3 }}>
+                  <p className="font-karla font-300" style={{ fontSize: '0.8rem', color: '#6a6764', marginBottom: 4 }}>
                     {bait.description}
                   </p>
-                  <div className="flex gap-1 flex-wrap">
+                  <div className="flex gap-1.5 flex-wrap">
                     {bait.catchZoneBonus > 0 && (
                       <span className="font-karla font-600"
-                        style={{ fontSize: '0.5rem', color: bait.color, background: `${bait.color}14`, border: `1px solid ${bait.color}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                        style={{ fontSize: '0.65rem', color: bait.color, background: `${bait.color}14`, border: `1px solid ${bait.color}30`, padding: '0.15rem 0.5rem', borderRadius: '2rem' }}>
                         +{bait.catchZoneBonus}° catch zone
                       </span>
                     )}
                     {bait.waitMult < 1.0 && (
                       <span className="font-karla font-600"
-                        style={{ fontSize: '0.5rem', color: bait.color, background: `${bait.color}14`, border: `1px solid ${bait.color}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                        style={{ fontSize: '0.65rem', color: bait.color, background: `${bait.color}14`, border: `1px solid ${bait.color}30`, padding: '0.15rem 0.5rem', borderRadius: '2rem' }}>
                         {Math.round((1 - bait.waitMult) * 100)}% faster bite
                       </span>
                     )}
                     {bait.waitMult > 1.0 && (
                       <span className="font-karla font-600"
-                        style={{ fontSize: '0.5rem', color: '#f87171', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                        style={{ fontSize: '0.65rem', color: '#f87171', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', padding: '0.15rem 0.5rem', borderRadius: '2rem' }}>
                         {Math.round((bait.waitMult - 1) * 100)}% slower bite
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-1.5 shrink-0">
-                  <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: qty > 0 ? bait.color : '#4a4845' }}>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: qty > 0 ? bait.color : '#4a4845' }}>
                     ×{qty} owned
                   </p>
                   <button
@@ -263,9 +263,9 @@ export default function TackleShopClient({
                     disabled={!canAffordBait || isPending}
                     className="font-karla font-700"
                     style={{
-                      fontSize: '0.6rem',
-                      padding: '0.3rem 0.65rem',
-                      borderRadius: 8,
+                      fontSize: '0.75rem',
+                      padding: '0.4rem 0.85rem',
+                      borderRadius: 9,
                       background: canAffordBait ? `${bait.color}16` : 'rgba(255,255,255,0.04)',
                       border: `1px solid ${canAffordBait ? bait.color + '44' : 'rgba(255,255,255,0.08)'}`,
                       color: canAffordBait ? bait.color : '#4a4845',
@@ -280,7 +280,7 @@ export default function TackleShopClient({
               </div>
             )
           })}
-          <p className="font-karla font-300 text-center" style={{ fontSize: '0.6rem', color: '#3a3835', marginTop: 4 }}>
+          <p className="font-karla font-300 text-center" style={{ fontSize: '0.72rem', color: '#3a3835', marginTop: 4 }}>
             Luminous Lure &amp; Golden Lure are earned — not for sale
           </p>
         </div>
@@ -350,30 +350,30 @@ export default function TackleShopClient({
                           {hook.name}
                         </p>
                         {isActive && (
-                          <span className="font-karla font-600 uppercase tracking-[0.12em] text-[0.52rem] sm:text-[0.6rem]" style={{ color: c }}>Active</span>
+                          <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: c }}>Active</span>
                         )}
                         {owned && !isActive && (
-                          <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80] text-[0.52rem] sm:text-[0.6rem]">Owned</span>
+                          <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80]" style={{ fontSize: '0.65rem' }}>Owned</span>
                         )}
                       </div>
-                      <p className="font-karla font-300 text-[#6a6764] text-xs sm:text-sm">{hook.description}</p>
+                      <p className="font-karla font-300 text-[#6a6764] text-sm sm:text-base">{hook.description}</p>
 
                       {owned && hook.tier > 0 && (
                         <span className="font-karla font-600 inline-block mt-1.5"
-                          style={{ fontSize: '0.5rem', color: `${c}bb`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                          style={{ fontSize: '0.65rem', color: `${c}bb`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.12rem 0.5rem', borderRadius: '2rem' }}>
                           +{hook.tier * 3}° catch zone
                         </span>
                       )}
 
                       {isNext && (
-                        <p className="font-karla font-600 mt-1 text-xs sm:text-sm" style={{ color: canAffordHook ? c : '#6a6764' }}>
+                        <p className="font-karla font-600 mt-1 text-sm sm:text-base" style={{ color: canAffordHook ? c : '#6a6764' }}>
                           {isPending ? 'Upgrading…' : canAffordHook ? '↑ Tap to upgrade' : `${(hook.cost - doubloons).toLocaleString()} ⟡ short`}
                         </p>
                       )}
                     </div>
 
                     {!owned && (
-                      <p className="font-cinzel font-700 text-[#f0c040] shrink-0 text-sm sm:text-base">
+                      <p className="font-cinzel font-700 text-[#f0c040] shrink-0 text-base sm:text-lg">
                         {hook.cost.toLocaleString()} ⟡
                       </p>
                     )}
@@ -392,7 +392,7 @@ export default function TackleShopClient({
 
       {/* ── Rods ── */}
       {section === 'rod' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }} className="mb-4">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }} className="mb-4">
           {[...RODS].sort((a, b) => a.cost - b.cost).map(rod => {
             const owned = rod.cost === 0 || ownedRods.includes(rod.tier)
             const isActive = rod.tier === equippedRod
@@ -405,7 +405,7 @@ export default function TackleShopClient({
 
             const pill = (label: string) => (
               <span key={label} className="font-karla font-600"
-                style={{ fontSize: '0.44rem', color: `${c}bb`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.08rem 0.35rem', borderRadius: '2rem' }}>
+                style={{ fontSize: '0.62rem', color: `${c}bb`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>
                 {label}
               </span>
             )
@@ -414,22 +414,22 @@ export default function TackleShopClient({
               <div
                 key={rod.tier}
                 style={{
-                  padding: '0.65rem 0.6rem',
+                  padding: '0.9rem 0.85rem',
                   background: isActive ? `${c}0f` : owned ? `${c}08` : 'rgba(255,255,255,0.04)',
                   border: `1px solid ${isActive ? `${c}55` : owned ? `${c}28` : 'rgba(255,255,255,0.09)'}`,
-                  borderRadius: 10,
-                  display: 'flex', flexDirection: 'column', gap: 5,
+                  borderRadius: 12,
+                  display: 'flex', flexDirection: 'column', gap: 7,
                 }}
               >
                 {/* Name + status */}
                 <div>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: owned ? '#f0ede8' : '#6a6764', lineHeight: 1.25 }}>{rod.name}</p>
-                  {isActive && <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: c }}>Equipped</span>}
-                  {owned && !isActive && <span className="font-karla font-300 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: '#4ade80' }}>Owned</span>}
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? '#f0ede8' : '#6a6764', lineHeight: 1.25 }}>{rod.name}</p>
+                  {isActive && <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: c }}>Equipped</span>}
+                  {owned && !isActive && <span className="font-karla font-300 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#4ade80' }}>Owned</span>}
                 </div>
 
                 {/* Stat pills */}
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {rod.doubleCatchChance > 0 && pill(rod.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(rod.doubleCatchChance * 100)}% double catch`)}
                   {rod.retryOnMissChance > 0 && pill(`${Math.round(rod.retryOnMissChance * 100)}% miss retry`)}
                   {rod.snagImmune && pill('Snag immune')}
@@ -440,18 +440,18 @@ export default function TackleShopClient({
                 </div>
 
                 {/* Description */}
-                <p className="font-karla font-300" style={{ fontSize: '0.54rem', color: '#6a6764', lineHeight: 1.4, flex: 1 }}>{rod.description}</p>
+                <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#6a6764', lineHeight: 1.45, flex: 1 }}>{rod.description}</p>
 
                 {/* Price + action */}
                 <div className="mt-auto pt-1">
-                  {!owned && <p className="font-cinzel font-700 text-[#f0c040] mb-1" style={{ fontSize: '0.68rem' }}>{rod.cost.toLocaleString()} ⟡</p>}
+                  {!owned && <p className="font-cinzel font-700 text-[#f0c040] mb-1.5" style={{ fontSize: '0.88rem' }}>{rod.cost.toLocaleString()} ⟡</p>}
                   {!owned && (
                     <button
                       onClick={() => handlePurchaseRod(rod.tier)}
                       disabled={!canAfford || isPending}
                       className="font-karla font-700 w-full"
                       style={{
-                        fontSize: '0.52rem', padding: '0.28rem 0.4rem', borderRadius: 7,
+                        fontSize: '0.7rem', padding: '0.38rem 0.5rem', borderRadius: 8,
                         background: canAfford ? `${c}16` : 'rgba(255,255,255,0.04)',
                         border: `1px solid ${canAfford ? c + '44' : 'rgba(255,255,255,0.08)'}`,
                         color: canAfford ? c : '#4a4845',
@@ -468,7 +468,7 @@ export default function TackleShopClient({
                       disabled={isPending}
                       className="font-karla font-700 w-full"
                       style={{
-                        fontSize: '0.52rem', padding: '0.28rem 0.4rem', borderRadius: 7,
+                        fontSize: '0.7rem', padding: '0.38rem 0.5rem', borderRadius: 8,
                         background: `${c}16`, border: `1px solid ${c}44`,
                         color: c, cursor: isPending ? 'default' : 'pointer',
                         opacity: isEquipping ? 0.5 : 1,
@@ -477,7 +477,7 @@ export default function TackleShopClient({
                       {isEquipping ? '…' : 'Equip'}
                     </button>
                   )}
-                  {isActive && <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: `${c}88` }}>✓ In use</span>}
+                  {isActive && <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: `${c}88` }}>✓ In use</span>}
                 </div>
               </div>
             )
@@ -520,20 +520,20 @@ export default function TackleShopClient({
                         {reel.name}
                       </p>
                       {isActive && (
-                        <span className="font-karla font-600 uppercase tracking-[0.12em] text-[0.52rem]" style={{ color: c }}>Active</span>
+                        <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: c }}>Active</span>
                       )}
                       {owned && !isActive && (
-                        <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80] text-[0.52rem]">Owned</span>
+                        <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80]" style={{ fontSize: '0.65rem' }}>Owned</span>
                       )}
                     </div>
-                    <p className="font-karla font-300 text-[#6a6764] text-xs">{reel.description}</p>
+                    <p className="font-karla font-300 text-[#6a6764] text-sm">{reel.description}</p>
 
                     {owned && slowerPct > 0 && (
                       <span className="font-karla font-600 inline-block mt-1.5"
                         style={{
-                          fontSize: '0.5rem', color: `${c}bb`,
+                          fontSize: '0.65rem', color: `${c}bb`,
                           background: `${c}14`, border: `1px solid ${c}30`,
-                          padding: '0.1rem 0.4rem', borderRadius: '2rem',
+                          padding: '0.12rem 0.5rem', borderRadius: '2rem',
                         }}>
                         Needle {slowerPct}% slower
                       </span>
@@ -541,23 +541,23 @@ export default function TackleShopClient({
                     {owned && slowerPct === 0 && (
                       <span className="font-karla font-600 inline-block mt-1.5"
                         style={{
-                          fontSize: '0.5rem', color: '#6a6764',
+                          fontSize: '0.65rem', color: '#6a6764',
                           background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
-                          padding: '0.1rem 0.4rem', borderRadius: '2rem',
+                          padding: '0.12rem 0.5rem', borderRadius: '2rem',
                         }}>
                         Base speed
                       </span>
                     )}
 
                     {isNext && (
-                      <p className="font-karla font-600 mt-1.5 text-xs" style={{ color: canAffordReel ? c : '#6a6764' }}>
+                      <p className="font-karla font-600 mt-1.5 text-sm" style={{ color: canAffordReel ? c : '#6a6764' }}>
                         {isPending ? 'Upgrading…' : canAffordReel ? '↑ Tap to upgrade' : `${(reel.cost - doubloons).toLocaleString()} ⟡ short`}
                       </p>
                     )}
                   </div>
 
                   {!owned && (
-                    <p className="font-cinzel font-700 text-[#f0c040] text-sm shrink-0">
+                    <p className="font-cinzel font-700 text-[#f0c040] text-base shrink-0">
                       {reel.cost.toLocaleString()} ⟡
                     </p>
                   )}
@@ -576,7 +576,7 @@ export default function TackleShopClient({
       {/* ── Line ── */}
       {section === 'line' && (
         <div className="flex flex-col gap-2.5 mb-4">
-          <p className="font-karla font-300 text-center mb-1" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
+          <p className="font-karla font-300 text-center mb-1" style={{ fontSize: '0.82rem', color: '#6a6764' }}>
             Lines are earned by catching unique species — no purchase needed.
           </p>
           {LINES.map(line => {
@@ -601,32 +601,32 @@ export default function TackleShopClient({
                   <GearIcon color={c} owned={owned} isActive={isActive} label={`T${line.tier}`} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <p className="font-cinzel font-700 text-sm" style={{ color: owned ? '#f0ede8' : '#6a6764' }}>
+                      <p className="font-cinzel font-700 text-base" style={{ color: owned ? '#f0ede8' : '#6a6764' }}>
                         {line.name}
                       </p>
                       {isActive && (
-                        <span className="font-karla font-600 uppercase tracking-[0.12em] text-[0.52rem]" style={{ color: c }}>Active</span>
+                        <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: c }}>Active</span>
                       )}
                       {owned && !isActive && (
-                        <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80] text-[0.52rem]">Owned</span>
+                        <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80]" style={{ fontSize: '0.65rem' }}>Owned</span>
                       )}
                     </div>
-                    <p className="font-karla font-300 text-[#6a6764] text-xs">{line.description}</p>
+                    <p className="font-karla font-300 text-[#6a6764] text-sm">{line.description}</p>
 
                     {owned && (
                       <span className="font-karla font-600 inline-block mt-1.5"
                         style={{
-                          fontSize: '0.5rem', color: smallerPct > 0 ? `${c}bb` : '#6a6764',
+                          fontSize: '0.65rem', color: smallerPct > 0 ? `${c}bb` : '#6a6764',
                           background: smallerPct > 0 ? `${c}14` : 'rgba(255,255,255,0.05)',
                           border: `1px solid ${smallerPct > 0 ? `${c}30` : 'rgba(255,255,255,0.12)'}`,
-                          padding: '0.1rem 0.4rem', borderRadius: '2rem',
+                          padding: '0.12rem 0.5rem', borderRadius: '2rem',
                         }}>
                         {smallerPct > 0 ? `Snag zones ${smallerPct}% smaller` : 'Standard snag zones'}
                       </span>
                     )}
 
                     {!owned && line.unlockAt > 0 && (
-                      <p className="font-karla font-400 mt-1 text-[0.62rem]" style={{ color: '#5a5956' }}>
+                      <p className="font-karla font-400 mt-1" style={{ fontSize: '0.78rem', color: '#5a5956' }}>
                         Catch {line.unlockAt} unique species to unlock
                       </p>
                     )}
@@ -738,7 +738,7 @@ function GearIcon({ color, owned, isActive, label }: { color: string; owned: boo
         boxShadow: isActive ? `0 0 10px ${color}25` : 'none',
       }}
     >
-      <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: owned ? color : '#4a4845' }}>
+      <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: owned ? color : '#4a4845' }}>
         {label}
       </span>
     </div>
