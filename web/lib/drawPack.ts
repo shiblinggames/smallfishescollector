@@ -2,6 +2,7 @@ import type { CardVariant, DrawnCard, BorderStyle, ArtEffect } from './types'
 import { RARITY_TIERS, VARIANT_RARITY } from './variants'
 
 // God pack eligible = Epic and above. Derives automatically from RARITY_TIERS.
+// GOD variant has drop_weight=-1 and is excluded from god packs via the drop_weight>0 filter below
 const GOD_PACK_RARITY_NAMES = new Set(['Epic', 'Legendary', 'Mythic'])
 const GOD_PACK_ELIGIBLE = new Set(
   RARITY_TIERS
@@ -34,7 +35,7 @@ function weightedPick(variants: CardVariant[]): CardVariant {
 
 export function drawGodPack(variants: CardVariant[]): DrawnCard[] {
   const godPool = variants
-    .filter(v => GOD_PACK_ELIGIBLE.has(v.variant_name))
+    .filter(v => GOD_PACK_ELIGIBLE.has(v.variant_name) && v.drop_weight > 0)
     .map(v => ({ ...v, drop_weight: GOD_PACK_WEIGHTS[v.variant_name] ?? v.drop_weight }))
   const drawn: DrawnCard[] = []
   for (let i = 0; i < 4; i++) {
@@ -59,8 +60,8 @@ export function drawPack(variants: CardVariant[], forceLegendary = false): Drawn
   }
 
   // Tide: guarantee a Legendary or better after 20 packs
-  if (forceLegendary && drawn.every(d => !['Legendary', 'Mythic', 'Divine'].includes(VARIANT_RARITY[d.variantName] ?? ''))) {
-    const legendaryPool = variants.filter(v => ['Legendary', 'Mythic', 'Divine'].includes(VARIANT_RARITY[v.variant_name] ?? ''))
+  if (forceLegendary && drawn.every(d => !['Legendary', 'Mythic'].includes(VARIANT_RARITY[d.variantName] ?? ''))) {
+    const legendaryPool = variants.filter(v => ['Legendary', 'Mythic'].includes(VARIANT_RARITY[v.variant_name] ?? ''))
     if (legendaryPool.length > 0) drawn[3] = toDrawn(weightedPick(legendaryPool))
   }
 

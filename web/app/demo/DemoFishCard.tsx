@@ -1,5 +1,5 @@
 import type { BorderStyle, ArtEffect } from '@/lib/types'
-import { rarityFromVariant, RARITY_COLOR, IS_LEGENDARY_RARITY, IS_MYTHIC_RARITY, IS_DIVINE_RARITY } from '@/lib/variants'
+import { rarityFromVariant, RARITY_COLOR, IS_LEGENDARY_RARITY, IS_MYTHIC_RARITY } from '@/lib/variants'
 
 interface Props {
   name: string
@@ -50,7 +50,6 @@ export default function DemoFishCard({ name, borderStyle, artEffect, variantName
   const isPrismatic = borderStyle === 'prismatic'
   const isLegendary = IS_LEGENDARY_RARITY(rarity)
   const isMythic    = IS_MYTHIC_RARITY(rarity)
-  const isDivine    = IS_DIVINE_RARITY(rarity)
   const mythicGrad  = mythicGradient[borderStyle]
   const labelText = `${rarity} · ${variantName}`
   const art = (
@@ -179,12 +178,7 @@ export default function DemoFishCard({ name, borderStyle, artEffect, variantName
       {frame}
       <div className="text-center">
         <p className="font-karla font-400 text-sm text-[#f0ede8]">{name}</p>
-        {isDivine ? (
-          <p className="font-karla font-600 text-[0.6rem] uppercase tracking-[0.10em] whitespace-nowrap"
-             style={{ background: 'linear-gradient(90deg,#fffdf0,#ffe899,#fffdf0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            {labelText}
-          </p>
-        ) : isPrismatic || isLegendary ? (
+        {isPrismatic || isLegendary ? (
           <p className="font-karla font-600 text-[0.6rem] uppercase tracking-[0.10em] whitespace-nowrap"
              style={{ background: 'linear-gradient(90deg,#ff0080,#ff8c00,#ffe600,#00ff88,#00cfff,#8a5cf7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             {labelText}

@@ -102,6 +102,7 @@ interface PickerCard {
 }
 
 const VARIANT_RANK: Record<string, number> = {
+  'GOD':         14,
   'Davy Jones':  13,
   'Maelstrom':   12,
   'Kraken':      11,

@@ -61,7 +61,8 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
     </div>
   ) : (
     <>
-      <div className="absolute inset-0" style={{ background: '#0d1b2e' }} />
+      {/* Clipped to the SVG card shape (x=10,y=10 in 380×540 = 2.63%/1.85%) so dark bg doesn't bleed into transparent SVG margin */}
+      <div className="absolute inset-0" style={{ background: '#0d1b2e', clipPath: 'inset(1.85% 2.63% round 4.74%)' }} />
       {/* Clip art and text to the inner area defined by the golden border frame */}
       {/* Insets: 44/380 = 11.58% horizontal, 44/540 = 8.15% vertical (cardfront.svg coords) */}
       <div className="absolute overflow-hidden" style={{ left: '11.58%', top: '8.15%', right: '11.58%', bottom: '8.15%', borderRadius: 5 }}>
@@ -137,7 +138,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
     )
   } else {
     frame = (
-      <div className="relative overflow-hidden" style={{ width: W, height: H, borderRadius: R }}>
+      <div className="relative" style={{ width: W, height: H }}>
         {innerContent}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/cardfront.svg" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }} />

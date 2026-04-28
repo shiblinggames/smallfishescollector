@@ -144,7 +144,6 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     Epic:      { glow: 'reveal-glow-epic',      flash: 'epic'      },
     Legendary: { glow: 'reveal-glow-legendary', flash: 'legendary' },
     Mythic:    { glow: 'reveal-glow-mythic',    flash: 'mythic'    },
-    Divine:    { glow: 'reveal-glow-divine',    flash: 'divine'    },
   }
 
   function glowClassFor(rarity: string) {
@@ -163,11 +162,11 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     setGlowClasses((prev) => { const n = [...prev]; n[i] = glowClassFor(rarity); return n })
     triggerFlash(rarity)
     checkPrize(cards[i])
-    if (rarity === 'Mythic' || rarity === 'Divine') {
+    if (rarity === 'Mythic') {
       setMythicFeatured(i)
       setShockwaveCards((prev) => new Set([...prev, i]))
-      setTimeout(() => setMythicFeatured(null), rarity === 'Divine' ? 3500 : 2500)
-      setTimeout(() => setShockwaveCards((prev) => { const n = new Set(prev); n.delete(i); return n }), rarity === 'Divine' ? 2500 : 1600)
+      setTimeout(() => setMythicFeatured(null), 2500)
+      setTimeout(() => setShockwaveCards((prev) => { const n = new Set(prev); n.delete(i); return n }), 1600)
     }
     setFlipped((prev) => {
       const n = [...prev]
@@ -186,7 +185,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
   function flipAll() {
     cards.forEach((_, i) => resetTilt(i))
     const rarities = cards.map((c) => rarityFromVariant(c.variantName, c.dropWeight))
-    const priority = ['Divine', 'Mythic', 'Legendary', 'Epic']
+    const priority = ['Mythic', 'Legendary', 'Epic']
     const top = priority.find((r) => rarities.includes(r))
     if (top) triggerFlash(top)
     setGlowClasses(rarities.map(glowClassFor))
@@ -345,14 +344,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
         </div>
         {shockwaveCards.has(i) && (() => {
           const r = rarityFromVariant(card.variantName, card.dropWeight)
-          return r === 'Divine' ? (
-            <>
-              <div className="shockwave-ring shockwave-divine-1" />
-              <div className="shockwave-ring shockwave-divine-2" />
-              <div className="shockwave-ring shockwave-divine-3" />
-              <div className="shockwave-ring shockwave-divine-4" />
-            </>
-          ) : (
+          return (
             <>
               <div className="shockwave-ring" />
               <div className="shockwave-ring shockwave-ring-2" />

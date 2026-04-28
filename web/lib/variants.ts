@@ -8,13 +8,11 @@ interface RarityTier {
 // Single source of truth for all rarity tiers.
 // To add a new rarity: add one entry here. Everything else derives from it.
 export const RARITY_TIERS: RarityTier[] = [
-  { name: 'Common',    color: '#8a8880', weightMin: 50,  variants: ['Standard'] },
-  { name: 'Uncommon',  color: '#4ade80', weightMin: 25,  variants: ['Silver'] },
-  { name: 'Rare',      color: '#60a5fa', weightMin: 12,  variants: ['Gold'] },
-  { name: 'Epic',      color: '#a78bfa', weightMin: 4,   variants: ['Pearl', 'Holographic'] },
-  { name: 'Legendary', color: '#f0c040', weightMin: 0.3, variants: ['Ghost', 'Shadow', 'Prismatic'] },
-  { name: 'Mythic',    color: '#ff3838', weightMin: 0,   variants: ['Kraken', 'Davy Jones', 'Golden Age', 'Wanted', 'Maelstrom'] },
-  { name: 'Divine',    color: '#fffdf0', weightMin: -1,  variants: ['GOD'] },
+  { name: 'Common',    color: '#8a8880', weightMin: 25,   variants: ['Standard', 'Silver'] },
+  { name: 'Rare',      color: '#60a5fa', weightMin: 12,   variants: ['Gold'] },
+  { name: 'Epic',      color: '#a78bfa', weightMin: 4,    variants: ['Pearl', 'Holographic'] },
+  { name: 'Legendary', color: '#f0c040', weightMin: 0.3,  variants: ['Ghost', 'Shadow', 'Prismatic'] },
+  { name: 'Mythic',    color: '#ff3838', weightMin: -999, variants: ['Kraken', 'Davy Jones', 'Golden Age', 'Wanted', 'Maelstrom', 'GOD'] },
 ]
 
 export const VARIANT_RARITY: Record<string, string> = Object.fromEntries(
@@ -35,4 +33,3 @@ export function rarityFromVariant(variantName: string, dropWeight: number): stri
 
 export const IS_LEGENDARY_RARITY = (rarity: string) => rarity === 'Legendary'
 export const IS_MYTHIC_RARITY    = (rarity: string) => rarity === 'Mythic'
-export const IS_DIVINE_RARITY    = (rarity: string) => rarity === 'Divine'
