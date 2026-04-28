@@ -42,7 +42,7 @@ export default async function FishingPage() {
       .select('rod_tier')
       .eq('user_id', user.id),
     admin.from('fish_species')
-      .select('id, name, habitat, bite_rarity')
+      .select('id, name, scientific_name, fun_fact, habitat, bite_rarity, sell_value')
       .order('bite_rarity'),
     admin.from('fish_collection')
       .select('fish_id')
@@ -75,7 +75,7 @@ export default async function FishingPage() {
           }[]}
           uniqueSpeciesCaught={uniqueSpeciesCaught ?? 0}
           ownedRods={ownedRods}
-          allFishSpecies={(allSpecies ?? []) as { id: number; name: string; habitat: string; bite_rarity: number }[]}
+          allFishSpecies={(allSpecies ?? []) as { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }[]}
           caughtFishIds={caughtFishIds}
         />
 

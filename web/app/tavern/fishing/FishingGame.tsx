@@ -825,7 +825,7 @@ function XPBarDisplay({ xp }: { xp: number }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-type FishSpeciesBasic = { id: number; name: string; habitat: string; bite_rarity: number }
+type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }
 
 export default function FishingGame({
   hookTier, rodTier, reelTier, lineTier,
@@ -871,6 +871,12 @@ export default function FishingGame({
   const [gearOpen, setGearOpen]         = useState(false)
   const [collectionOpen, setCollectionOpen] = useState(false)
   const [expandedZone, setExpandedZone] = useState<string | null>(null)
+  const [tappedFishId, setTappedFishId] = useState<number | null>(null)
+  const [showingSummary, setShowingSummary] = useState(false)
+  const [sessionCatches, setSessionCatches] = useState<FishSpecies[]>([])
+  const [sessionPerfects, setSessionPerfects] = useState(0)
+  const [sessionNewSpecies, setSessionNewSpecies] = useState(0)
+  const [sessionGems, setSessionGems] = useState(0)
   const [sellPending, setSellPending] = useState<number | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
   const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean; gemEarned?: boolean } | null>(null)
@@ -1092,6 +1098,10 @@ export default function FishingGame({
         const { fish, baitSaved, isNewSpecies, bountyCompletion, xpGained, newXP } = res
         setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge })
         if (isNewSpecies) setCaughtFishIds(prev => new Set([...prev, fish.id]))
+        setSessionCatches(prev => [...prev, ...(doubleCatch ? [fish, fish] : [fish])])
+        if (wasPerfect) setSessionPerfects(p => p + 1)
+        if (isNewSpecies) setSessionNewSpecies(p => p + 1)
+        if (wonChallenge) setSessionGems(p => p + 1)
         if (bountyCompletion) setBountyNotif(bountyCompletion)
         const oldLevel = getLevelFromXP(fishingXP)
         const newLevel = getLevelFromXP(newXP)
@@ -1226,7 +1236,7 @@ export default function FishingGame({
           {/* Header row — back button left, gear button right */}
           <div className="flex items-center justify-between mb-2">
             <button
-              onClick={onBack}
+              onClick={() => sessionCatches.length > 0 ? setShowingSummary(true) : onBack()}
               className="font-karla font-600 uppercase tracking-[0.1em]"
               style={{
                 fontSize: '0.6rem', color: HABITAT_COLOR[selectedZone],
@@ -1605,15 +1615,15 @@ export default function FishingGame({
               background: 'rgba(6,12,20,0.98)',
               borderTop: '1px solid rgba(255,255,255,0.09)',
               borderRadius: '18px 18px 0 0',
-              padding: '1.25rem 1rem 2rem',
+              padding: '1.25rem 1.1rem 2rem',
               overflow: 'hidden',
             }}
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-5">
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                style={{ fontSize: '0.6rem', color: '#6a6764' }}>Fish Collection</p>
-              <button onClick={() => { setCollectionOpen(false); setExpandedZone(null) }}
-                style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+                style={{ fontSize: '0.72rem', color: '#6a6764' }}>Fish Collection</p>
+              <button onClick={() => { setCollectionOpen(false); setExpandedZone(null); setTappedFishId(null) }}
+                style={{ color: '#4a4845', fontSize: '1.2rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
             </div>
 
             {ZONES.map(zone => {
@@ -1623,51 +1633,80 @@ export default function FishingGame({
               const isExpanded = expandedZone === zone
 
               return (
-                <div key={zone} className="mb-2">
-                  {/* Zone header — tap to expand/collapse */}
+                <div key={zone} className="mb-1">
                   <button
-                    className="w-full flex items-center justify-between py-2"
-                    onClick={() => setExpandedZone(isExpanded ? null : zone)}
+                    className="w-full flex items-center justify-between py-2.5"
+                    onClick={() => { setExpandedZone(isExpanded ? null : zone); setTappedFishId(null) }}
                   >
-                    <div className="flex items-center gap-2">
-                      <div style={{ width: 3, height: 14, background: zoneColor, borderRadius: 2 }} />
+                    <div className="flex items-center gap-2.5">
+                      <div style={{ width: 3, height: 16, background: zoneColor, borderRadius: 2 }} />
                       <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                        style={{ fontSize: '0.55rem', color: zoneColor }}>{HABITAT_LABEL[zone]}</p>
+                        style={{ fontSize: '0.72rem', color: zoneColor }}>{HABITAT_LABEL[zone]}</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2.5">
                       <p className="font-karla font-600"
-                        style={{ fontSize: '0.52rem', color: discoveredCount === zoneSpecies.length ? zoneColor : '#6a6764' }}>
+                        style={{ fontSize: '0.68rem', color: discoveredCount === zoneSpecies.length ? zoneColor : '#6a6764' }}>
                         {discoveredCount} / {zoneSpecies.length} found
                       </p>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                         style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', flexShrink: 0 }}>
                         <path d="M6 9l6 6 6-6"/>
                       </svg>
                     </div>
                   </button>
 
-                  {/* Fish list — all in rarity order, discovered and undiscovered interleaved */}
                   {isExpanded && (
-                    <div className="flex flex-col gap-1 mt-1 mb-2">
+                    <div className="flex flex-col gap-1.5 mt-1 mb-3">
                       {zoneSpecies.map(f => {
                         const discovered = caughtFishIds.has(f.id)
-                        return discovered ? (
-                          <div key={f.id} className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg"
-                            style={{ background: 'rgba(4,10,18,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                            <span style={{
-                              width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-                              background: RARITY[f.bite_rarity]?.color ?? '#888',
-                            }} />
-                            <p className="font-cinzel font-700 flex-1 truncate"
-                              style={{ fontSize: '0.65rem', color: '#f0ede8' }}>{f.name}</p>
-                            <span style={{ fontSize: '0.7rem', color: '#4ade80', flexShrink: 0 }}>✓</span>
-                          </div>
-                        ) : (
-                          <div key={f.id} className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg"
+                        const isTapped = tappedFishId === f.id
+                        const rarityColor = RARITY[f.bite_rarity]?.color ?? '#888'
+
+                        if (!discovered) return (
+                          <div key={f.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
                             style={{ background: 'rgba(4,10,18,0.35)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: RARITY[f.bite_rarity]?.color ? RARITY[f.bite_rarity].color + '30' : '#2a2a2a', flexShrink: 0 }} />
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: rarityColor + '28', flexShrink: 0 }} />
                             <p className="font-karla font-600 flex-1"
-                              style={{ fontSize: '0.62rem', color: '#3a3835', letterSpacing: '0.05em' }}>??? Undiscovered</p>
+                              style={{ fontSize: '0.75rem', color: '#3a3835', letterSpacing: '0.04em' }}>??? Undiscovered</p>
+                          </div>
+                        )
+
+                        return (
+                          <div key={f.id}>
+                            <button
+                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left"
+                              style={{
+                                background: isTapped ? `${rarityColor}14` : 'rgba(4,10,18,0.6)',
+                                border: `1px solid ${isTapped ? rarityColor + '40' : 'rgba(255,255,255,0.06)'}`,
+                                transition: 'background 0.15s, border-color 0.15s',
+                              }}
+                              onClick={() => setTappedFishId(isTapped ? null : f.id)}
+                            >
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: rarityColor, flexShrink: 0 }} />
+                              <p className="font-cinzel font-700 flex-1 truncate"
+                                style={{ fontSize: '0.78rem', color: '#f0ede8' }}>{f.name}</p>
+                              <span style={{ fontSize: '0.7rem', color: '#4ade80', flexShrink: 0 }}>✓</span>
+                            </button>
+
+                            {isTapped && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                style={{ overflow: 'hidden' }}
+                              >
+                                <div className="px-3 pt-2 pb-3 mx-0.5 rounded-b-xl"
+                                  style={{ background: `${rarityColor}0a`, border: `1px solid ${rarityColor}25`, borderTop: 'none' }}>
+                                  <p className="font-karla font-300 italic mb-2"
+                                    style={{ fontSize: '0.68rem', color: rarityColor + 'aa' }}>{f.scientific_name}</p>
+                                  <p className="font-karla font-400 mb-3"
+                                    style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.55 }}>
+                                    &ldquo;{f.fun_fact}&rdquo;
+                                  </p>
+                                  <p className="font-cinzel font-700"
+                                    style={{ fontSize: '0.72rem', color: '#f0c040' }}>{f.sell_value.toLocaleString()} ⟡</p>
+                                </div>
+                              </motion.div>
+                            )}
                           </div>
                         )
                       })}
@@ -1678,6 +1717,88 @@ export default function FishingGame({
             })}
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* ── Session summary overlay ── */}
+      <AnimatePresence>
+        {showingSummary && (() => {
+          const xpGained = fishingXP - initialFishingXP
+          const rarityCounts = [1,2,3,4,5].map(r => ({ rarity: r, count: sessionCatches.filter(f => f.bite_rarity === r).length })).filter(r => r.count > 0)
+          const bestCatch = sessionCatches.reduce<FishSpecies | null>((best, f) => (!best || f.bite_rarity > best.bite_rarity) ? f : best, null)
+          const zoneColor = HABITAT_COLOR[selectedZone]
+
+          return (
+            <motion.div key="summary"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ position: 'absolute', inset: 0, zIndex: 30, background: 'rgba(4,8,16,0.96)', display: 'flex', flexDirection: 'column', padding: '1.5rem 1.25rem 2rem' }}
+            >
+              <p className="font-karla font-700 uppercase tracking-[0.16em] mb-1"
+                style={{ fontSize: '0.65rem', color: '#6a6764' }}>Session</p>
+              <p className="font-cinzel font-700 mb-6"
+                style={{ fontSize: '1.3rem', color: zoneColor }}>{HABITAT_LABEL[selectedZone]}</p>
+
+              <div className="flex flex-col gap-3 flex-1">
+                {/* Fish caught */}
+                <div className="px-4 py-3.5 rounded-2xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <p className="font-karla font-600 uppercase tracking-[0.12em] mb-2" style={{ fontSize: '0.6rem', color: '#6a6764' }}>Caught</p>
+                  <p className="font-cinzel font-700 mb-2" style={{ fontSize: '1.6rem', color: '#f0ede8' }}>{sessionCatches.length}</p>
+                  <div className="flex gap-3 flex-wrap">
+                    {rarityCounts.map(({ rarity, count }) => (
+                      <div key={rarity} className="flex items-center gap-1.5">
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: RARITY[rarity]?.color ?? '#888' }} />
+                        <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: RARITY[rarity]?.color ?? '#888' }}>×{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Best catch */}
+                {bestCatch && (
+                  <div className="px-4 py-3.5 rounded-2xl" style={{ background: `${RARITY[bestCatch.bite_rarity]?.color ?? '#888'}0d`, border: `1px solid ${RARITY[bestCatch.bite_rarity]?.color ?? '#888'}30` }}>
+                    <p className="font-karla font-600 uppercase tracking-[0.12em] mb-1" style={{ fontSize: '0.6rem', color: '#6a6764' }}>Best Catch</p>
+                    <div className="flex items-center gap-2">
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: RARITY[bestCatch.bite_rarity]?.color ?? '#888', flexShrink: 0 }} />
+                      <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8' }}>{bestCatch.name}</p>
+                    </div>
+                    <p className="font-karla font-300 italic mt-0.5" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)' }}>{bestCatch.scientific_name}</p>
+                  </div>
+                )}
+
+                {/* Stats row */}
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: 'XP Gained', value: `+${xpGained}` , color: '#86efac' },
+                    { label: 'Perfects', value: String(sessionPerfects), color: '#fbbf24' },
+                    { label: 'New Species', value: String(sessionNewSpecies), color: zoneColor },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} className="px-3 py-3 rounded-xl text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <p className="font-cinzel font-700 mb-0.5" style={{ fontSize: '1.1rem', color }}>{value}</p>
+                      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#6a6764' }}>{label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {sessionGems > 0 && (
+                  <div className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl"
+                    style={{ background: 'rgba(99,226,183,0.06)', border: '1px solid rgba(99,226,183,0.25)' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#63e2b7' }}>◆</span>
+                    <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#63e2b7' }}>
+                      +{sessionGems} Gem{sessionGems > 1 ? 's' : ''} from challenge{sessionGems > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={onBack}
+                className="font-karla font-700 uppercase tracking-[0.14em] w-full mt-5"
+                style={{ padding: '0.9rem', borderRadius: 14, background: `${zoneColor}20`, border: `1px solid ${zoneColor}60`, color: zoneColor, fontSize: '0.82rem', cursor: 'pointer' }}
+              >
+                Done
+              </button>
+            </motion.div>
+          )
+        })()}
       </AnimatePresence>
 
       {/* ── Gear drawer ── */}

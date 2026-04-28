@@ -13,7 +13,7 @@ type InventoryItem = {
   fish_species: FishSpecies
 }
 
-type FishSpeciesBasic = { id: number; name: string; habitat: string; bite_rarity: number }
+type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }
 
 export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
