@@ -555,70 +555,71 @@ const FRAME_SRC: Record<SceneFrame, string> = {
   fishing: '/fishing-norod.jpeg',
 }
 
-// Per-frame rod anchor points as % of the background div (0–100 in each axis)
-// handle = butt grip at character's hand, control = bezier midpoint, tip = rod tip
-const ROD_FRAMES: Record<SceneFrame, {
-  handle: [number, number]
-  control: [number, number]
-  tip: [number, number]
-  showLine: boolean
-  lineControl?: [number, number]
-  lineEnd?: [number, number]
-}> = {
-  fishing: { handle: [78, 34], control: [64, 22], tip: [46, 17], showLine: true,  lineControl: [46, 27], lineEnd: [46, 36] },
-  windup:  { handle: [79, 34], control: [78, 21], tip: [77, 14], showLine: false },
-  cast1:   { handle: [76, 32], control: [67, 17], tip: [62, 12], showLine: false },
-  cast2:   { handle: [76, 33], control: [64, 23], tip: [51, 24], showLine: false },
+// Rod image: handle (thick end) is at ~84% from left, ~70% from top of the image.
+// The image div is positioned so the handle aligns with the character's hand.
+// Rotation is applied around the handle point per frame.
+const ROD_IMG_STYLE = {
+  // left = handleX_pct - 0.84 * imgWidth_pct = 78% - 84%*45% = ~40%
+  left: '40%',
+  // top = handleY_pct - 0.70 * imgHeight_pct (img is square, height% = width_px/container_height_px * 100)
+  // approximated as 14% for a ~600px tall game screen
+  top: '14%',
+  width: '45%',
+} as const
+
+// Tip position in SVG 0-100 space (for fishing line placement), per frame
+const ROD_TIP: Record<SceneFrame, [number, number]> = {
+  fishing: [45, 20],
+  windup:  [72, 14],
+  cast1:   [63, 12],
+  cast2:   [52, 22],
 }
 
-function RodOverlay({ frame, rod }: { frame: SceneFrame; rod: RodDef }) {
-  const cfg = ROD_FRAMES[frame]
-  const [hx, hy] = cfg.handle
-  const [cx, cy] = cfg.control
-  const [tx, ty] = cfg.tip
-  const maxSW = 1.3 + Math.min(rod.tier, 10) * 0.07  // thick at grip
-  const minSW = 0.15                                   // hair-thin at tip
-  const N = 16
+// Clockwise rotation around the handle point per frame
+const ROD_ROTATION: Record<SceneFrame, number> = {
+  fishing:  0,
+  windup:   35,
+  cast1:   -20,
+  cast2:    -8,
+}
 
-  // Divide the quadratic bezier into N segments, each thinner than the last
-  const bx = (t: number) => (1-t)*(1-t)*hx + 2*(1-t)*t*cx + t*t*tx
-  const by = (t: number) => (1-t)*(1-t)*hy + 2*(1-t)*t*cy + t*t*ty
-  const segs = Array.from({ length: N }, (_, i) => {
-    const t0 = i / N, t1 = (i + 1) / N, tm = (t0 + t1) / 2
-    return { x1: bx(t0), y1: by(t0), x2: bx(t1), y2: by(t1), sw: maxSW - (maxSW - minSW) * tm }
-  })
+const WATER_Y = 36
 
-  const waterY = 36
+function RodOverlay({ frame }: { frame: SceneFrame }) {
+  const [tx, ty] = ROD_TIP[frame]
+  const rotation = ROD_ROTATION[frame]
 
   return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none"
-      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 2 }}>
-      {/* shadow — single thick path behind the rod */}
-      <path d={`M ${hx} ${hy} Q ${cx} ${cy} ${tx} ${ty}`}
-        fill="none" stroke="rgba(0,0,0,0.4)" strokeWidth={maxSW + 1} strokeLinecap="round" />
-      {/* tapered rod segments */}
-      {segs.map((s, i) => (
-        <line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
-          stroke={rod.color} strokeWidth={s.sw} strokeLinecap="round" />
-      ))}
-      {/* highlight — only on the thicker half */}
-      {segs.slice(0, N / 2).map((s, i) => (
-        <line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
-          stroke="rgba(255,255,255,0.22)" strokeWidth={s.sw * 0.28} strokeLinecap="round" />
-      ))}
-      {/* fishing line — straight down from tip to waterline, then hook */}
-      {cfg.showLine && (
-        <>
-          <line x1={tx} y1={ty} x2={tx} y2={waterY}
+    <>
+      {/* Rod image — rotated around handle point */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/rod.png"
+        alt=""
+        style={{
+          position: 'absolute',
+          ...ROD_IMG_STYLE,
+          aspectRatio: '1 / 1',
+          objectFit: 'contain',
+          transformOrigin: '84% 70%',
+          transform: `rotate(${rotation}deg)`,
+          pointerEvents: 'none',
+          zIndex: 2,
+        }}
+      />
+      {/* Fishing line + hook — only on idle fishing frame */}
+      {frame === 'fishing' && (
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3 }}>
+          <line x1={tx} y1={ty} x2={tx} y2={WATER_Y}
             stroke="rgba(255,255,255,0.55)" strokeWidth="0.25" />
-          {/* hook at waterline: small J-shape */}
           <path
-            d={`M ${tx} ${waterY - 0.5} L ${tx} ${waterY + 1.8} Q ${tx} ${waterY + 3} ${tx + 1.5} ${waterY + 3}`}
+            d={`M ${tx} ${WATER_Y - 0.5} L ${tx} ${WATER_Y + 1.8} Q ${tx} ${WATER_Y + 3} ${tx + 1.5} ${WATER_Y + 3}`}
             fill="none" stroke="rgba(210,210,210,0.9)" strokeWidth="0.35" strokeLinecap="round"
           />
-        </>
+        </svg>
       )}
-    </svg>
+    </>
   )
 }
 
@@ -1498,7 +1499,7 @@ export default function FishingGame({
               }}
             />
           ))}
-          <RodOverlay frame={sceneFrame} rod={rod} />
+          <RodOverlay frame={sceneFrame} />
         </motion.div>
 
 
