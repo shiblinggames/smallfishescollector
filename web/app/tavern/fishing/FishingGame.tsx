@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, sellFish, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { castLine, reelIn, sellFish, awardPerfectChallengeGem, type FishSpecies, type FishingBountyCompletion } from './actions'
 import { equipRod } from '@/app/marketplace/tackle-shop/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
@@ -474,13 +474,14 @@ const FRAME_SRC: Record<SceneFrame, string> = {
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
   isPerfect: boolean
   xpGained: number
   doubleCatch?: boolean
+  gemEarned?: boolean
 }) {
   const habitatColor = HABITAT_COLOR[fish.habitat] ?? '#888'
   const habitatLabel = HABITAT_LABEL[fish.habitat] ?? fish.habitat
@@ -531,6 +532,28 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             </div>
           </div>
           <span style={{ fontSize: '0.7rem', color: '#fbbf24' }}>✦</span>
+        </motion.div>
+      )}
+
+      {/* Gem earned banner */}
+      {gemEarned && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 22, delay: 0.15 }}
+          className="flex items-center justify-center gap-2 mb-2 py-2 px-3 rounded-xl"
+          style={{ background: 'rgba(0,8,12,0.88)', border: '1px solid rgba(99,226,183,0.55)' }}
+        >
+          <span style={{ fontSize: '0.72rem', color: '#63e2b7' }}>◆</span>
+          <div style={{ textAlign: 'center' }}>
+            <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
+              style={{ fontSize: '0.72rem', color: '#63e2b7', textShadow: '0 0 10px rgba(99,226,183,0.6)' }}>
+              Challenge Complete
+            </p>
+            <p className="font-karla font-600 mt-0.5" style={{ fontSize: '0.6rem', color: 'rgba(99,226,183,0.7)' }}>
+              +1 Gem
+            </p>
+          </div>
+          <span style={{ fontSize: '0.72rem', color: '#63e2b7' }}>◆</span>
         </motion.div>
       )}
 
@@ -850,7 +873,8 @@ export default function FishingGame({
   const [expandedZone, setExpandedZone] = useState<string | null>(null)
   const [sellPending, setSellPending] = useState<number | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
-  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean } | null>(null)
+  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean; gemEarned?: boolean } | null>(null)
+  const [challengeActive, setChallengeActive] = useState(false)
   const [bountyNotif, setBountyNotif] = useState<FishingBountyCompletion | null>(null)
   const [perfectFlash, setPerfectFlash] = useState(false)
   const [retryFlash, setRetryFlash] = useState(false)
@@ -1025,7 +1049,8 @@ export default function FishingGame({
         return
       }
 
-      // Miss/penalty: show result immediately, fire server call in background
+      // Miss/penalty: challenge fails
+      setChallengeActive(false)
       setMissResult(effectiveZoneType)
       setCatchResult(null)
       phaseRef.current = 'result'
@@ -1039,6 +1064,12 @@ export default function FishingGame({
     // Catch/perfect: freeze needle, wait for server before showing result
     const wasPerfect = zone.type === 'perfect'
     if (wasPerfect) setPerfectFlash(true)
+
+    // Challenge mechanic: non-perfect catch clears the challenge without reward
+    const wonChallenge = wasPerfect && challengeActive
+    const triggerChallenge = wasPerfect && !challengeActive && Math.random() < 0.10
+    if (!wasPerfect) setChallengeActive(false)
+
     phaseRef.current = 'reeling'
     setPhase('reeling')
 
@@ -1048,11 +1079,18 @@ export default function FishingGame({
     startTransition(async () => {
       const res = await reelIn(hookedFishRef.current!.fishId, zone.type as 'perfect' | 'catch', selectedBaitRef.current, doubleCatch)
 
+      if (wonChallenge) {
+        await awardPerfectChallengeGem()
+        setChallengeActive(false)
+      } else if (triggerChallenge) {
+        setChallengeActive(true)
+      }
+
       if ('error' in res || !res.caught) {
         setMissResult('miss')
       } else {
         const { fish, baitSaved, isNewSpecies, bountyCompletion, xpGained, newXP } = res
-        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch })
+        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge })
         if (isNewSpecies) setCaughtFishIds(prev => new Set([...prev, fish.id]))
         if (bountyCompletion) setBountyNotif(bountyCompletion)
         const oldLevel = getLevelFromXP(fishingXP)
@@ -1349,6 +1387,17 @@ export default function FishingGame({
                     )}
                   </div>
 
+                  {/* Double-perfect challenge taunt */}
+                  {challengeActive && phase === 'catching' && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                      className="font-karla font-700 text-center"
+                      style={{ fontSize: '0.65rem', color: '#f59e0b', letterSpacing: '0.04em', marginBottom: 4 }}
+                    >
+                      I bet you can&apos;t do that again.
+                    </motion.p>
+                  )}
+
                   <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}
                     needleColor={needleColor()} zoneOpacityFn={zoneOpacity} />
                 </motion.div>
@@ -1390,7 +1439,7 @@ export default function FishingGame({
                   )}
 
                   {catchResult ? (
-                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} xpGained={catchResult.xpGained} doubleCatch={catchResult.doubleCatch} />
+                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} xpGained={catchResult.xpGained} doubleCatch={catchResult.doubleCatch} gemEarned={catchResult.gemEarned} />
                   ) : (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
                       <p className="font-cinzel font-700 mb-1"
