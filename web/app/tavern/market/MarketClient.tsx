@@ -313,8 +313,10 @@ export default function MarketClient({
     })
   }
 
+  const [browseExpanded, setBrowseExpanded] = useState(false)
   const ownedIds = new Set(portfolio.map(e => e.fish_id))
-  const browseList = allMarket.filter(e => !ownedIds.has(e.fish_id))
+  const browseAll = allMarket.filter(e => !ownedIds.has(e.fish_id))
+  const browseList = browseExpanded ? browseAll : browseAll.slice(0, 10)
 
   return (
     <main className="min-h-screen pb-24 sm:pb-0">
@@ -411,22 +413,34 @@ export default function MarketClient({
         </div>
 
         {/* ── All Market Prices ── */}
-        {browseList.length > 0 && (
+        {browseAll.length > 0 && (
           <div>
             <p className="font-karla font-700 uppercase tracking-[0.14em] mb-1" style={{ fontSize: '0.65rem', color: '#7a7774' }}>
               Market Prices
             </p>
             <p className="font-karla font-400 mb-3" style={{ fontSize: '0.7rem', color: '#5a5754' }}>
-              Fish you don&apos;t currently own
+              Species you&apos;ve discovered but aren&apos;t holding
             </p>
             <div style={{
               background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)',
               borderRadius: 12, padding: '0 0.75rem',
             }}>
-              {browseList.map((entry, i) => (
+              {browseList.map(entry => (
                 <BrowseRow key={entry.fish_id} entry={entry} />
               ))}
             </div>
+            {browseAll.length > 10 && (
+              <button
+                onClick={() => setBrowseExpanded(v => !v)}
+                className="font-karla font-600 w-full mt-2"
+                style={{
+                  fontSize: '0.7rem', padding: '0.6rem', borderRadius: 10,
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#7a7774', cursor: 'pointer',
+                }}>
+                {browseExpanded ? '↑ Show less' : `↓ Show all ${browseAll.length} species`}
+              </button>
+            )}
           </div>
         )}
 

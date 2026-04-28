@@ -41,7 +41,7 @@ export default async function MarketPage() {
     quantity: number
   }
 
-  const [{ data: profile }, marketRes, inventoryRes, stateRes] = await Promise.all([
+  const [{ data: profile }, marketRes, inventoryRes, stateRes, collectionRes] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     admin.from('fish_market')
       .select('fish_id, multiplier, prev_multiplier, history, fish_species(id, name, habitat, bite_rarity, sell_value)'),
@@ -50,12 +50,15 @@ export default async function MarketPage() {
       .eq('user_id', user.id)
       .gt('quantity', 0),
     admin.from('market_state').select('mood, next_update_at').eq('id', 1).single(),
+    admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
   ])
 
   const inventoryMap = new Map<number, number>()
   for (const row of (inventoryRes.data ?? []) as InvRow[]) {
     inventoryMap.set(row.fish_id, row.quantity)
   }
+
+  const discoveredIds = new Set((collectionRes.data ?? []).map(r => r.fish_id))
 
   const allMarket: MarketFishEntry[] = ((marketRes.data ?? []) as unknown as MarketRow[])
     .filter(r => r.fish_species != null)
@@ -73,6 +76,7 @@ export default async function MarketPage() {
     .sort((a, b) => b.sell_value * b.multiplier - a.sell_value * a.multiplier)
 
   const portfolio = allMarket.filter(e => e.quantity > 0)
+  const discovered = allMarket.filter(e => discoveredIds.has(e.fish_id))
 
   const state: MarketState = {
     mood: (stateRes.data?.mood ?? 'calm') as MarketState['mood'],
@@ -86,7 +90,7 @@ export default async function MarketPage() {
         doubloons={profile?.doubloons ?? 0}
         gems={profile?.gems ?? 0}
       />
-      <MarketClient portfolio={portfolio} allMarket={allMarket} marketState={state} doubloons={profile?.doubloons ?? 0} />
+      <MarketClient portfolio={portfolio} allMarket={discovered} marketState={state} doubloons={profile?.doubloons ?? 0} />
     </>
   )
 }
