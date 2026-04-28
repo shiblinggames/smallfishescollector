@@ -366,7 +366,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
 
   function renderCard(card: DrawnCard, i: number) {
     return (
-      <div key={i} className="relative">
+      <div key={i} className="relative w-full">
         <div
           ref={(el) => { cardRefs.current[i] = el }}
           className={`flip-card pack-card-size select-none ${flipped[i] ? 'flipped' : loading ? '' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
@@ -422,7 +422,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
   }
 
   return (
-    <div className="flex flex-col items-center gap-4 sm:gap-10 pb-20 sm:pb-0">
+    <div className="flex flex-col items-center gap-4 sm:gap-10 pb-20 sm:pb-0 w-full">
       <AchievementToast keys={achievementKeys} onDone={() => setAchievementKeys([])} />
       {flash && <div key={flash.key} className={`reveal-flash reveal-flash-${flash.type}`} />}
       {prize && (

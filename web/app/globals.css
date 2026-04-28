@@ -269,8 +269,8 @@ body {
 .art-wanted { filter: sepia(0.95) brightness(0.9) contrast(1.1) saturate(0.75); }
 
 /* ── Pack card responsive size ── */
-.pack-card-size { width: calc(50vw - 24px); height: calc((50vw - 24px) * 1.4); }
-@media (min-width: 640px) { .pack-card-size { width: 200px; height: 280px; } }
+.pack-card-size { width: 100%; aspect-ratio: 5 / 7; }
+@media (min-width: 640px) { .pack-card-size { width: 200px; height: 280px; aspect-ratio: auto; } }
 
 /* ── Daily bonus toast ── */
 @keyframes fadeInDown {

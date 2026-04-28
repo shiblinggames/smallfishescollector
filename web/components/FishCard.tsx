@@ -18,8 +18,7 @@ interface Props {
 
 const DEFAULT_W = 140
 const DEFAULT_H = 196
-const R         = 12   // outer corner radius
-const BORDER    = 6    // border width
+const R         = 12
 
 const artImageClass: Record<ArtEffect, string> = {
   normal:       '',
@@ -134,16 +133,10 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
     )
   } else {
     frame = (
-      <div style={{
-        width: W, height: H, borderRadius: R,
-        background: '#1c2640',
-        padding: BORDER,
-        boxSizing: 'border-box',
-        flexShrink: 0,
-      }}>
-        <div className="relative overflow-hidden w-full h-full" style={{ borderRadius: R - BORDER, boxShadow: 'inset 0 0 12px rgba(0,0,0,0.7)' }}>
-          {innerContent}
-        </div>
+      <div className="relative overflow-hidden" style={{ width: W, height: H, borderRadius: R }}>
+        {innerContent}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/cardfront.svg" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }} />
       </div>
     )
   }
