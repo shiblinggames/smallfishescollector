@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ZONE_RARITY_RATES, ZONE_MIN_LEVEL } from './zoneData'
+import { ZONE_MIN_LEVEL } from './zoneData'
 
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 export type ZoneKey = typeof ZONES[number]
@@ -26,19 +26,18 @@ const HABITAT_TAGLINE: Record<string, string> = {
   abyss:       'The unknown depths',
 }
 
-const RARITY_COLORS: Record<number, string> = {
-  1: '#94a3b8',
-  2: '#4ade80',
-  3: '#60a5fa',
-  4: '#c084fc',
-  5: '#f59e0b',
+const ZONE_DIFFICULTY: Record<string, number> = {
+  shallows:    1,
+  open_waters: 2,
+  deep:        3,
+  abyss:       4,
 }
-const RARITY_LABELS: Record<number, string> = {
-  1: 'Common',
-  2: 'Uncommon',
-  3: 'Rare',
-  4: 'Epic',
-  5: 'Legendary',
+
+const ZONE_CONDITIONS: Record<string, string[]> = {
+  shallows:    ['Stable needle', 'Wider catch window', 'No reversals'],
+  open_waters: ['Occasional speed changes', 'Mild currents', 'Rare direction reversals'],
+  deep:        ['Frequent speed changes', 'Needle reverses direction', 'Tighter catch window'],
+  abyss:       ['Unpredictable needle', 'Constant reversals', 'Smallest catch window'],
 }
 
 const HOW_IT_WORKS = [
@@ -100,7 +99,7 @@ export default function ZoneLanding({
             <div>
               <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
                 style={{ fontSize: '1.1rem', color: '#f0ede8' }}>
-                Fishing
+                Level {fishingLevel}
               </p>
               <p className="font-karla font-400" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)' }}>
                 Choose your zone
@@ -129,23 +128,25 @@ export default function ZoneLanding({
               const minLevel = ZONE_MIN_LEVEL[zone] ?? 1
               const accessible = fishingLevel >= minLevel
               const color = HABITAT_COLOR[zone]
-              const rates = ZONE_RARITY_RATES[zone]
-              const total = Object.values(rates).reduce((s, v) => s + v, 0)
+              const difficulty = ZONE_DIFFICULTY[zone]
+              const conditions = ZONE_CONDITIONS[zone]
 
               return (
                 <motion.div key={zone}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, delay: i * 0.06 }}
+                  onClick={() => accessible && onSelect(zone)}
                   style={{
                     border: `1px solid ${accessible ? color + '80' : 'rgba(255,255,255,0.15)'}`,
                     background: accessible ? `${color}22` : 'rgba(255,255,255,0.06)',
                     borderRadius: 14,
                     padding: '1rem 1rem 0.9rem',
                     opacity: accessible ? 1 : 0.65,
+                    cursor: accessible ? 'pointer' : 'default',
                   }}
                 >
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start justify-between mb-2.5">
                     <div>
                       <p className="font-cinzel font-700"
                         style={{ fontSize: '1.05rem', color: accessible ? color : '#8a8784' }}>
@@ -156,66 +157,44 @@ export default function ZoneLanding({
                         {HABITAT_TAGLINE[zone]}
                       </p>
                     </div>
-                    {!accessible && (
-                      <span className="font-karla font-700 uppercase tracking-[0.1em] shrink-0"
-                        style={{
-                          fontSize: '0.58rem', color: '#8a8784',
-                          background: 'rgba(255,255,255,0.08)',
-                          border: '1px solid rgba(255,255,255,0.18)',
-                          padding: '0.28rem 0.65rem', borderRadius: '2rem',
-                        }}>
-                        Locked
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Rarity bar */}
-                  <div className="mb-3">
-                    <div className="flex mb-2" style={{ height: 6, borderRadius: 3, overflow: 'hidden', gap: 1 }}>
-                      {[1, 2, 3, 4, 5].map(tier => (
-                        <div key={tier} style={{
-                          flex: rates[tier] / total,
-                          background: RARITY_COLORS[tier],
-                          opacity: accessible ? 1 : 0.3,
-                        }} />
-                      ))}
-                    </div>
-                    <div className="flex gap-3 flex-wrap">
-                      {[1, 2, 3, 4, 5].map(tier => (
-                        <span key={tier} className="font-karla font-600"
+                    <div className="flex flex-col items-end gap-1.5 shrink-0 ml-3">
+                      {/* Difficulty dots */}
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4].map(d => (
+                          <div key={d} style={{
+                            width: 7, height: 7, borderRadius: '50%',
+                            background: d <= difficulty
+                              ? (accessible ? color : '#5a5956')
+                              : 'rgba(255,255,255,0.12)',
+                          }} />
+                        ))}
+                      </div>
+                      {!accessible && (
+                        <span className="font-karla font-700 uppercase tracking-[0.1em]"
                           style={{
-                            fontSize: '0.62rem',
-                            color: accessible ? RARITY_COLORS[tier] : '#5a5956',
+                            fontSize: '0.58rem', color: '#8a8784',
+                            background: 'rgba(255,255,255,0.08)',
+                            border: '1px solid rgba(255,255,255,0.18)',
+                            padding: '0.28rem 0.65rem', borderRadius: '2rem',
                           }}>
-                          {RARITY_LABELS[tier]} {rates[tier]}%
+                          Lv {minLevel}
                         </span>
-                      ))}
+                      )}
                     </div>
                   </div>
 
-                  {accessible ? (
-                    <button
-                      onClick={() => onSelect(zone)}
-                      className="w-full font-karla font-700 uppercase tracking-[0.12em]"
-                      style={{
-                        padding: '0.7rem',
-                        borderRadius: 10,
-                        background: `${color}30`,
-                        border: `1px solid ${color}80`,
-                        color,
-                        fontSize: '0.75rem',
-                        cursor: 'pointer',
-                        touchAction: 'manipulation',
-                      }}
-                    >
-                      Fish Here →
-                    </button>
-                  ) : (
-                    <p className="font-karla font-600 text-center"
-                      style={{ fontSize: '0.65rem', color: '#6a6764' }}>
-                      Reach Fishing Level {minLevel} to unlock
-                    </p>
-                  )}
+                  {/* Conditions */}
+                  <div className="flex flex-col gap-1">
+                    {conditions.map(cond => (
+                      <div key={cond} className="flex items-center gap-1.5">
+                        <div style={{ width: 3, height: 3, borderRadius: '50%', background: accessible ? color + 'aa' : '#3a3835', flexShrink: 0 }} />
+                        <p className="font-karla font-400"
+                          style={{ fontSize: '0.72rem', color: accessible ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.2)' }}>
+                          {cond}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </motion.div>
               )
             })}
