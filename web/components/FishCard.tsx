@@ -43,11 +43,11 @@ const insetShadow: Partial<Record<BorderStyle, string>> = {
 
 function StatCell({ label, value }: { label: string; value: number }) {
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-      <span className="font-karla font-600 uppercase" style={{ fontSize: '0.44rem', color: '#7a7470', letterSpacing: '0.06em' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+      <span className="font-karla font-600 uppercase" style={{ fontSize: '0.55rem', color: '#7a7470', letterSpacing: '0.06em' }}>
         {label}
       </span>
-      <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8', lineHeight: 1 }}>
+      <span className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8', lineHeight: 1 }}>
         {value}
       </span>
     </div>
@@ -74,7 +74,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
         src={src}
         alt={name}
         fill
-        className={`object-contain ${artImageClass[artEffect]}`}
+        className={`object-contain object-top ${artImageClass[artEffect]}`}
         sizes={fill ? '50vw' : `${W}px`}
         unoptimized
       />
@@ -99,10 +99,10 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
 
       {/* Bottom gradient panel: name + stats */}
       <div className="absolute left-0 right-0 bottom-0 pointer-events-none" style={{ zIndex: 3,
-        background: 'linear-gradient(to top, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.82) 55%, transparent 100%)',
-        padding: '22px 8px 9px',
+        background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.88) 50%, transparent 100%)',
+        padding: '36px 10px 12px',
       }}>
-        <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.6rem', color: '#f0ede8', marginBottom: stats ? 6 : 0, letterSpacing: '0.04em' }}>
+        <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.75rem', color: '#f0ede8', marginBottom: stats ? 8 : 0, letterSpacing: '0.04em' }}>
           {name}
         </p>
         {stats && (
