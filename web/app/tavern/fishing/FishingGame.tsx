@@ -76,12 +76,12 @@ const CATCH_TOUR_STEPS = [
   {
     color: '#4ade80',
     title: 'Catch Zone',
-    body: 'Land the needle anywhere in the green to catch the fish. Rarer fish have a narrower window — a better Hook widens it.',
+    body: 'Land the dial anywhere in the green to catch the fish. Rarer fish have a narrower window — a better Hook widens it.',
   },
   {
     color: '#f59e0b',
     title: 'Perfect Zones',
-    body: 'The gold strip in the centre of the green is a Perfect. Land here and you get a chance to save your bait for a free recast.',
+    body: 'The gold strips at the edges of the green are Perfect zones. Land here and you get a chance to save your bait for a free recast.',
   },
   {
     color: '#f87171',
@@ -90,8 +90,8 @@ const CATCH_TOUR_STEPS = [
   },
   {
     color: '#94a3b8',
-    title: 'Needle Speed',
-    body: "Harder fish spin the needle faster. Deeper zones add random speed bursts and direction reversals. Upgrading your gear can make all of this easier.",
+    title: 'Dial Speed',
+    body: "Harder fish spin the dial faster. Deeper zones add random speed bursts and direction reversals. Upgrading your gear can make all of this easier.",
   },
 ]
 
@@ -129,7 +129,7 @@ const TOUR_STEPS: TourStep[] = [
   },
   {
     title: 'Fish Hold',
-    body: 'Caught fish wait here. Sell them for doubloons whenever you like — no need to leave the zone.',
+    body: 'Caught fish wait here. Quick-sell everything instantly at 65% of base value, or head to the Fish Market to sell at live hourly prices — up to 2.5× base.',
     cardStyle: { bottom: 112, right: 16 },
     maxWidth: 210,
     arrowDir: 'down', arrowAlign: 'right',

@@ -18,12 +18,12 @@ const TOUR_STEPS = [
   },
   {
     title: 'Your Portfolio',
-    body: 'Fish you\'re holding show up here with the live market price. Each card shows the price trend, 24h high/low, and sparkline history.',
+    body: 'Fish you\'re holding show up here with the live market price, sparkline history, and sell buttons. You can also Liquidate All at the bottom to instantly cash out everything at 90% market price.',
     color: '#4ade80',
   },
   {
     title: 'Market Prices',
-    body: 'Below your portfolio, you can browse prices for every fish — even ones you don\'t own yet. Useful for knowing what to target next.',
+    body: 'Below your portfolio you can browse prices for fish you\'ve already discovered. New species stay hidden until you catch them for the first time.',
     color: '#c084fc',
   },
   {
