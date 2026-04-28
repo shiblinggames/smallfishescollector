@@ -549,8 +549,8 @@ function BaitSelector({ baitInventory, selectedBait, onSelect }: {
 type SceneFrame = 'windup' | 'cast1' | 'cast2' | 'fishing'
 
 const FRAME_SRC: Record<SceneFrame, string> = {
-  windup:  '/windup.jpeg',
-  cast1:   '/cast1.jpeg',
+  windup:  '/windup.jpg',
+  cast1:   '/cast1.jpg',
   cast2:   '/cast2.jpeg',
   fishing: '/fishing.jpeg',
 }
