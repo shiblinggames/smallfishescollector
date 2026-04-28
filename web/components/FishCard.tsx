@@ -26,7 +26,7 @@ const artBg: Partial<Record<ArtEffect, string>> = {
   kraken:       '#001a10',
   'davy-jones': '#010620',
   'golden-age': '#1e1400',
-  storm:        'radial-gradient(ellipse at 50% 30%, #0d1a40 0%, #030609 100%)',
+  storm:        'radial-gradient(ellipse at 50% 30%, #151220 0%, #050406 100%)',
   wanted:       '#120800',
   divine:       '#0e0c08',
 }
