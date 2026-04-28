@@ -318,6 +318,12 @@ body {
 }
 
 /* ── Reveal glow effects ── */
+@keyframes reveal-glow-rare {
+  0%   { filter: drop-shadow(0 0 16px rgba(96,165,250,0.9)); }
+  100% { filter: drop-shadow(0 0 0px rgba(96,165,250,0)); }
+}
+.reveal-glow-rare { animation: reveal-glow-rare 1.5s ease-out forwards; }
+
 @keyframes reveal-glow-epic {
   0%   { filter: drop-shadow(0 0 22px rgba(168,85,247,0.95)); }
   100% { filter: drop-shadow(0 0 0px rgba(168,85,247,0)); }

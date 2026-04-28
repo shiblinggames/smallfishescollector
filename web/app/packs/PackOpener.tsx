@@ -141,6 +141,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
 
   // To add reveal effects for a new rarity, add one entry here.
   const RARITY_EFFECTS: Record<string, { glow: string; flash: string }> = {
+    Rare:      { glow: 'reveal-glow-rare',      flash: ''          },
     Epic:      { glow: 'reveal-glow-epic',      flash: 'epic'      },
     Legendary: { glow: 'reveal-glow-legendary', flash: 'legendary' },
     Mythic:    { glow: 'reveal-glow-mythic',    flash: 'mythic'    },
@@ -152,7 +153,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
 
   function triggerFlash(rarity: string) {
     const fx = RARITY_EFFECTS[rarity]
-    if (fx) setFlash({ type: fx.flash, key: Date.now() })
+    if (fx?.flash) setFlash({ type: fx.flash, key: Date.now() })
   }
 
   function flipCard(i: number) {
