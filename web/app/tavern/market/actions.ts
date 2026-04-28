@@ -18,7 +18,7 @@ export async function liquidateAllFish(): Promise<
       .eq('user_id', user.id)
       .gt('quantity', 0),
     admin.from('fish_market').select('fish_id, multiplier'),
-    admin.from('profiles').select('doubloons').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, is_premium, premium_expires_at').eq('id', user.id).single(),
   ])
 
   if (!profile) return { error: 'Profile not found' }
@@ -32,13 +32,16 @@ export async function liquidateAllFish(): Promise<
     multiplierMap.set(row.fish_id, Number(row.multiplier))
   }
 
+  const isPremium = !!profile.is_premium && !!profile.premium_expires_at && new Date(profile.premium_expires_at) > new Date()
+  const fee = isPremium ? 1.0 : 0.97
+
   let totalEarned = 0
   let totalFishSold = 0
 
   for (const item of inventory) {
     const sellValue = item.fish_species?.sell_value ?? 0
     const multiplier = multiplierMap.get(item.fish_id) ?? 1.0
-    const priceEach = Math.floor(sellValue * multiplier * 0.90 * 0.97)
+    const priceEach = Math.floor(sellValue * multiplier * 0.90 * fee)
     totalEarned += priceEach * item.quantity
     totalFishSold += item.quantity
   }
@@ -78,15 +81,17 @@ export async function marketSellFish(
   const [{ data: invRow }, { data: fish }, { data: profile }, { data: market }] = await Promise.all([
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', fishId).single(),
     admin.from('fish_species').select('sell_value').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, is_premium, premium_expires_at').eq('id', user.id).single(),
     admin.from('fish_market').select('multiplier').eq('fish_id', fishId).single(),
   ])
 
   if (!invRow || !fish || !profile) return { error: 'Data not found' }
   if (invRow.quantity < quantity) return { error: 'Not enough fish' }
 
+  const isPremium = !!profile.is_premium && !!profile.premium_expires_at && new Date(profile.premium_expires_at) > new Date()
+  const fee = isPremium ? 1.0 : 0.97
   const multiplier = market?.multiplier ?? 1.0
-  const priceEach = Math.floor(fish.sell_value * Number(multiplier) * 0.97)
+  const priceEach = Math.floor(fish.sell_value * Number(multiplier) * fee)
   const earned = priceEach * quantity
   const newDoubloons = (profile.doubloons ?? 0) + earned
 

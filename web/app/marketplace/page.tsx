@@ -177,8 +177,8 @@ export default async function MarketplacePage() {
                 description={isPremium ? "You're a Member — thanks!" : "Support us & get daily perks."}
                 info={
                   isPremium
-                    ? ['Daily pack active', '100 ⟡ daily bonus active', 'Member badge on your profile']
-                    : ['1 free pack every day', '100 ⟡ daily (vs. 50 free)', 'Member badge on your profile']
+                    ? ['Daily pack active', '100 ⟡ daily bonus active', 'No market fees', 'Member badge active']
+                    : ['1 free pack every day', '100 ⟡ daily (vs. 50 free)', 'No market transaction fees', 'Member badge on profile']
                 }
                 icon={<StarIcon />}
                 badge={isPremium ? 'Member' : undefined}

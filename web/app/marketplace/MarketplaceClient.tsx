@@ -77,7 +77,7 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
           <svg width="11" height="11" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
           </svg>
-          <p className="font-karla font-600 text-[#f0c040]" style={{ fontSize: '0.72rem' }}>You&apos;re a Small Fishes Member — enjoy your daily pack and bonus doubloons.</p>
+          <p className="font-karla font-600 text-[#f0c040]" style={{ fontSize: '0.72rem' }}>You&apos;re a Small Fishes Member — daily pack, bonus doubloons, and no market fees.</p>
         </div>
       ) : (
         <div style={{ background: 'rgba(240,192,64,0.05)', border: '1px solid rgba(240,192,64,0.18)', borderRadius: 14, overflow: 'hidden' }}>
@@ -89,12 +89,13 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
               <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#f0c040]" style={{ fontSize: '0.6rem' }}>Small Fishes Membership</p>
             </div>
             <p className="font-karla font-300 text-[#a09d98] mb-4" style={{ fontSize: '0.78rem', lineHeight: 1.55 }}>
-              Support our small crew and get daily perks to keep your collection growing.
+              Support our indie studio and get daily perks to fish, collect, and trade better.
             </p>
             <div className="flex flex-col gap-2 mb-4">
               {[
                 { icon: '📦', text: '1 free pack every day' },
                 { icon: '⟡', text: '100 doubloons daily (vs. 50 free)' },
+                { icon: '◈', text: 'No market transaction fees (3% waived)' },
                 { icon: '★', text: 'Member badge on your profile' },
               ].map(({ icon, text }) => (
                 <div key={text} className="flex items-center gap-2.5">

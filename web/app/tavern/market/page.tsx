@@ -42,7 +42,7 @@ export default async function MarketPage() {
   }
 
   const [{ data: profile }, marketRes, inventoryRes, stateRes, collectionRes] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, gems, is_premium, premium_expires_at').eq('id', user.id).single(),
     admin.from('fish_market')
       .select('fish_id, multiplier, prev_multiplier, history, fish_species(id, name, habitat, bite_rarity, sell_value)'),
     admin.from('fish_inventory')
@@ -90,7 +90,13 @@ export default async function MarketPage() {
         doubloons={profile?.doubloons ?? 0}
         gems={profile?.gems ?? 0}
       />
-      <MarketClient portfolio={portfolio} allMarket={discovered} marketState={state} doubloons={profile?.doubloons ?? 0} />
+      <MarketClient
+        portfolio={portfolio}
+        allMarket={discovered}
+        marketState={state}
+        doubloons={profile?.doubloons ?? 0}
+        isPremium={!!profile?.is_premium && !!profile?.premium_expires_at && new Date(profile.premium_expires_at) > new Date()}
+      />
     </>
   )
 }

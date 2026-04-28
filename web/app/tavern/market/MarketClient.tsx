@@ -98,19 +98,22 @@ function PortfolioCard({
   entry,
   onSell,
   selling,
+  isPremium,
 }: {
   entry: MarketFishEntry
   onSell: (fishId: number, qty: number) => void
   selling: boolean
+  isPremium: boolean
 }) {
   const [qty, setQty] = useState(entry.quantity)
+  const fee = isPremium ? 1.0 : 0.97
 
   const pctChange = entry.prev_multiplier > 0
     ? ((entry.multiplier - entry.prev_multiplier) / entry.prev_multiplier) * 100
     : 0
   const up = pctChange >= 0
   const pctStr = `${up ? '+' : ''}${pctChange.toFixed(1)}%`
-  const priceEach = Math.floor(entry.sell_value * entry.multiplier * 0.97)
+  const priceEach = Math.floor(entry.sell_value * entry.multiplier * fee)
   const priceAll  = priceEach * Math.min(qty, entry.quantity)
   const allHistory = [...entry.history, entry.multiplier]
   const histMax = allHistory.length > 0 ? Math.max(...allHistory) : entry.multiplier
@@ -171,11 +174,11 @@ function PortfolioCard({
         </div>
         <div>
           <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#6a6764' }}>24h High</p>
-          <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#4ade80' }}>{Math.floor(entry.sell_value * histMax * 0.97).toLocaleString()}</p>
+          <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#4ade80' }}>{Math.floor(entry.sell_value * histMax * fee).toLocaleString()}</p>
         </div>
         <div>
           <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#6a6764' }}>24h Low</p>
-          <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#f87171' }}>{Math.floor(entry.sell_value * histMin * 0.97).toLocaleString()}</p>
+          <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#f87171' }}>{Math.floor(entry.sell_value * histMin * fee).toLocaleString()}</p>
         </div>
         <p className="font-karla font-700 ml-auto" style={{ fontSize: '0.72rem', color: '#9a9488' }}>
           {entry.multiplier.toFixed(2)}×
@@ -257,11 +260,13 @@ export default function MarketClient({
   allMarket,
   marketState,
   doubloons: initialDoubloons,
+  isPremium,
 }: {
   portfolio: MarketFishEntry[]
   allMarket: MarketFishEntry[]
   marketState: MarketState
   doubloons: number
+  isPremium: boolean
 }) {
   const [portfolio, setPortfolio] = useState(initialPortfolio)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
@@ -294,8 +299,9 @@ export default function MarketClient({
   const countdown = useCountdown(marketState.next_update_at)
   const mood = MOOD_CONFIG[marketState.mood] ?? MOOD_CONFIG.calm
 
+  const fee = isPremium ? 1.0 : 0.97
   const totalMarketValue = portfolio.reduce(
-    (s, e) => s + Math.floor(e.sell_value * e.multiplier * 0.97) * e.quantity, 0
+    (s, e) => s + Math.floor(e.sell_value * e.multiplier * fee) * e.quantity, 0
   )
   const totalCount = portfolio.reduce((s, e) => s + e.quantity, 0)
 
@@ -325,7 +331,7 @@ export default function MarketClient({
   const [liquidateConfirm, setLiquidateConfirm] = useState(false)
   const [liquidating, setLiquidating] = useState(false)
   const liquidateValue = portfolio.reduce(
-    (s, e) => s + Math.floor(e.sell_value * e.multiplier * 0.90 * 0.97) * e.quantity, 0
+    (s, e) => s + Math.floor(e.sell_value * e.multiplier * 0.90 * fee) * e.quantity, 0
   )
 
   function handleLiquidate() {
@@ -481,6 +487,7 @@ export default function MarketClient({
                   entry={entry}
                   onSell={handleSell}
                   selling={selling === entry.fish_id}
+                  isPremium={isPremium}
                 />
               ))}
               <p className="font-karla font-400 text-center" style={{ fontSize: '0.62rem', color: '#4a4845' }}>
