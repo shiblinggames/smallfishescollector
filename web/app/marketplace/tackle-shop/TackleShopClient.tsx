@@ -309,20 +309,7 @@ export default function TackleShopClient({
       {section === 'hook' && (
         <>
           <div className="mb-5">
-            {HOOKS[previewTier]?.modelUrl ? (
-              <HookViewer3D modelUrl={HOOKS[previewTier].modelUrl} color={HOOKS[previewTier].color} tier={previewTier} />
-            ) : (
-              <div style={{
-                width: '100%', height: 220, borderRadius: 14,
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.07)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <div style={{ width: 56, height: 56, opacity: 0.2 }}>
-                  <HookIcon tier={previewTier} color={HOOKS[previewTier]?.color ?? '#f0c040'} owned={false} isActive={false} />
-                </div>
-              </div>
-            )}
+            <HookViewer3D imageUrl={HOOKS[previewTier]?.imageUrl} color={HOOKS[previewTier]?.color ?? '#f0c040'} tier={previewTier} />
             <div className="flex items-center justify-center gap-2 mt-2.5">
               <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.85rem', color: HOOKS[previewTier]?.color }}>
                 {HOOKS[previewTier]?.name}
