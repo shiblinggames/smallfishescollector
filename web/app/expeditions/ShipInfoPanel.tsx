@@ -3,57 +3,58 @@
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { STAT_ICONS, STAT_LABELS, STAT_DESCRIPTIONS, type ExpeditionShipStats } from '@/lib/expeditions'
+import { STAT_ICONS, STAT_LABELS, type ExpeditionShipStats } from '@/lib/expeditions'
 import { SHIPS } from '@/lib/ships'
 
 const ShipViewer3D = dynamic(() => import('@/app/marketplace/shipyard/ShipViewer3D'), { ssr: false })
 
 const STATS = ['combat', 'navigation', 'durability', 'speed', 'luck'] as const
+const STAT_MAX = 20
 
 export default function ShipInfoPanel({ ship, shipTier }: { ship: ExpeditionShipStats; shipTier: number }) {
   const shipDef = SHIPS[shipTier]
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <div
-      style={{
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: 12,
-        marginBottom: '1.25rem',
-        overflow: 'hidden',
-      }}
-    >
-      {/* 3D ship viewer */}
+    <div style={{
+      background: 'rgba(255,255,255,0.03)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 14,
+      marginBottom: '1.25rem',
+      overflow: 'hidden',
+    }}>
+      {/* 3D viewer */}
       {shipDef?.modelUrl && (
-        <ShipViewer3D modelUrl={shipDef.modelUrl} color={shipDef.color} height={160} />
+        <ShipViewer3D modelUrl={shipDef.modelUrl} color={shipDef.color} height={150} />
       )}
 
-      {/* Header row — always visible, click to expand */}
+      {/* Collapsed header row */}
       <button
         onClick={() => setExpanded(e => !e)}
-        style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '0.875rem 1rem', textAlign: 'left' }}
+        style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '0.875rem 1rem 0.75rem', textAlign: 'left' }}
       >
-        <div className="flex items-center justify-between">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#6a6764', marginBottom: 2 }}>
+            <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: '#4a4845', marginBottom: 2 }}>
               Your Ship
             </p>
-            <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.88rem' }}>
+            <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.95rem' }}>
               {ship.name}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {/* Mini stat pips */}
+            <div style={{ display: 'flex', gap: '0.6rem' }}>
               {STATS.map(stat => (
                 <div key={stat} style={{ textAlign: 'center' }}>
-                  <p style={{ fontSize: '0.7rem', lineHeight: 1 }}>{STAT_ICONS[stat]}</p>
-                  <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.72rem' }}>{ship[stat]}</p>
+                  <p style={{ fontSize: '0.65rem', lineHeight: 1, marginBottom: 1 }}>{STAT_ICONS[stat]}</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.65rem', color: '#f0c040' }}>{ship[stat]}</p>
                 </div>
               ))}
             </div>
             <svg
-              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6a6764" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5"
+              strokeLinecap="round" strokeLinejoin="round"
               style={{ flexShrink: 0, transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'none' }}
             >
               <polyline points="6 9 12 15 18 9"/>
@@ -62,27 +63,34 @@ export default function ShipInfoPanel({ ship, shipTier }: { ship: ExpeditionShip
         </div>
       </button>
 
-      {/* Expanded: full stat breakdown */}
+      {/* Expanded stat bars */}
       {expanded && (
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '0.875rem 1rem' }}>
-          <div className="flex flex-col gap-3 mb-4">
-            {STATS.map(stat => (
-              <div key={stat} className="flex items-start gap-3">
-                <div style={{ width: 90, flexShrink: 0 }}>
-                  <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#f0ede8' }}>
-                    {STAT_ICONS[stat]} {STAT_LABELS[stat]}
-                  </p>
-                  <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1rem' }}>{ship[stat]}</p>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '0.875rem 1rem 0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '0.875rem' }}>
+            {STATS.map(stat => {
+              const pct = Math.round((ship[stat] / STAT_MAX) * 100)
+              return (
+                <div key={stat}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                    <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#a0a09a' }}>
+                      {STAT_ICONS[stat]} {STAT_LABELS[stat]}
+                    </span>
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f0c040' }}>{ship[stat]}</span>
+                  </div>
+                  <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)' }}>
+                    <div style={{
+                      height: '100%', borderRadius: 2, width: `${pct}%`,
+                      background: pct > 70 ? '#f0c040' : pct > 40 ? '#a0c080' : '#5a7a6a',
+                      transition: 'width 0.3s',
+                    }} />
+                  </div>
                 </div>
-                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a0a09a', lineHeight: 1.6, paddingTop: 1 }}>
-                  {STAT_DESCRIPTIONS[stat]}
-                </p>
-              </div>
-            ))}
+              )
+            })}
           </div>
-          <div className="flex items-center justify-between">
-            <p className="font-karla" style={{ fontSize: '0.62rem', color: '#4a4845' }}>
-              {ship.crewSlots} crew slots
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p className="font-karla" style={{ fontSize: '0.6rem', color: '#4a4845' }}>
+              {ship.crewSlots} crew slot{ship.crewSlots !== 1 ? 's' : ''}
             </p>
             <Link
               href="/marketplace/shipyard"

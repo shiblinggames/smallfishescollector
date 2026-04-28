@@ -30,7 +30,6 @@ export default async function ExpeditionsPage() {
   const doubloons = profile?.doubloons ?? 0
   const todayExpeditions = (expeditionRows ?? []) as Expedition[]
 
-  // Check if user owns Catfish or Doby Mick (for Davy Jones gate)
   const { data: specialCrew } = await admin
     .from('user_collection')
     .select('card_variants(cards(slug))')
@@ -49,68 +48,82 @@ export default async function ExpeditionsPage() {
 
   return (
     <>
-      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={doubloons} />
-      <main className="min-h-screen pb-24 sm:pb-0 pt-6">
-        <div className="px-6 max-w-4xl mx-auto">
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={doubloons} gems={profile?.gems ?? 0} />
+      <main className="min-h-screen pb-24 sm:pb-0">
+
+        {/* Ambient background */}
+        <div aria-hidden style={{
+          position: 'fixed', top: 0, left: 0, right: 0, height: '70%',
+          background: 'radial-gradient(ellipse 90% 60% at 50% 0%, rgba(30,60,120,0.18) 0%, transparent 100%)',
+          pointerEvents: 'none', zIndex: 0,
+        }} />
+
+        <div className="px-5 max-w-lg mx-auto" style={{ position: 'relative', zIndex: 1, paddingTop: '2rem' }}>
 
           {/* Header */}
-          <div className="mb-6">
-            <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.4rem', marginBottom: '0.3rem' }}>
+          <div style={{ marginBottom: '1.75rem' }}>
+            <p className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#4a6a8a', marginBottom: '0.4rem' }}>
+              Daily Voyage
+            </p>
+            <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.7rem', lineHeight: 1.1, marginBottom: '0.5rem' }}>
               Expeditions
             </h1>
-            <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.78rem' }}>
-              Send your ship into dangerous waters. One expedition per day — choose wisely.
+            <p className="font-karla" style={{ fontSize: '0.75rem', color: '#5a5855', lineHeight: 1.6 }}>
+              One voyage per day. Choose your zone, load your crew, and set sail.
             </p>
           </div>
 
           {/* Resume banner */}
           {activeExpedition && (
-            <div
-              style={{
-                background: 'rgba(240,192,64,0.08)',
-                border: '1px solid rgba(240,192,64,0.2)',
-                borderRadius: 12,
-                padding: '0.875rem 1rem',
-                marginBottom: '1.25rem',
-              }}
+            <Link
+              href={`/expeditions/voyage?id=${activeExpedition.id}`}
+              style={{ textDecoration: 'none', display: 'block', marginBottom: '1.25rem' }}
             >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#f0c040', marginBottom: 2 }}>
-                    Expedition in Progress
-                  </p>
-                  <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.88rem' }}>
-                    {ZONES[activeExpedition.zone].name}
-                  </p>
-                  <p className="font-karla" style={{ fontSize: '0.68rem', color: '#a0a09a', marginTop: 1 }}>
-                    Node {activeExpedition.current_node + 1} of {ZONES[activeExpedition.zone].length - 1}
-                  </p>
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(240,192,64,0.10) 0%, rgba(240,160,40,0.05) 100%)',
+                border: '1px solid rgba(240,192,64,0.28)',
+                borderRadius: 14,
+                padding: '1rem 1.1rem',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                    background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1rem',
+                  }}>
+                    {ZONES[activeExpedition.zone].icon}
+                  </div>
+                  <div>
+                    <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: '#f0c040', marginBottom: 2 }}>
+                      Voyage in Progress
+                    </p>
+                    <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.9rem' }}>
+                      {ZONES[activeExpedition.zone].name}
+                    </p>
+                    <p className="font-karla" style={{ fontSize: '0.65rem', color: '#a0906a', marginTop: 1 }}>
+                      Event {activeExpedition.current_node + 1} of {ZONES[activeExpedition.zone].length - 1}
+                    </p>
+                  </div>
                 </div>
-                <Link
-                  href={`/expeditions/voyage?id=${activeExpedition.id}`}
-                  className="font-karla font-700 uppercase tracking-[0.1em]"
-                  style={{
-                    fontSize: '0.62rem',
-                    color: '#f0c040',
-                    background: 'rgba(240,192,64,0.12)',
-                    border: '1px solid rgba(240,192,64,0.25)',
-                    borderRadius: 8,
-                    padding: '0.4rem 0.75rem',
-                    textDecoration: 'none',
-                    flexShrink: 0,
-                  }}
-                >
+                <div style={{
+                  flexShrink: 0,
+                  background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.25)',
+                  borderRadius: 8, padding: '0.45rem 0.8rem',
+                  fontSize: '0.6rem', color: '#f0c040',
+                }} className="font-karla font-700 uppercase tracking-[0.1em]">
                   Resume →
-                </Link>
+                </div>
               </div>
-            </div>
+            </Link>
           )}
 
-          {/* Ship info */}
+          {/* Ship panel */}
           <ShipInfoPanel ship={EXPEDITION_SHIP_STATS[shipTier]} shipTier={shipTier} />
 
-          {/* Zone grid */}
-          <div className="grid grid-cols-2 gap-3 pb-12">
+          {/* Zone cards */}
+          <div className="flex flex-col gap-3 pb-16">
             {ZONE_ORDER.map(zoneKey => {
               const expedition = todayExpeditions.find(e => e.zone === zoneKey) ?? null
               return (
