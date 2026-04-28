@@ -13,7 +13,7 @@ const TOUR_STEPS = [
   },
   {
     title: 'Market Mood',
-    body: 'The mood banner at the top tells you the current volatility. Calm means small swings. Storm means bigger moves. Kraken means anything goes.',
+    body: 'The mood banner shows current market conditions. Calm = stable. Storm/Kraken = choppy (either direction). Tide Rising/Bounty Season = prices climbing. Low Tide/Cursed Waters = prices falling.',
     color: '#f59e0b',
   },
   {
@@ -48,10 +48,14 @@ const RARITY_COLOR: Record<number, string> = {
   5: '#fb923c',
 }
 
-const MOOD_CONFIG = {
-  calm:   { color: '#38bdf8', bg: 'rgba(56,189,248,0.1)',  border: 'rgba(56,189,248,0.25)', label: 'Calm Market',   desc: 'Prices stable. Low volatility.' },
-  storm:  { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.25)', label: 'Storm Warning', desc: 'Choppy prices. Higher swings expected.' },
-  kraken: { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',  border: 'rgba(239,68,68,0.25)',  label: 'Kraken Surge',  desc: 'Extreme volatility. Anything can happen.' },
+const MOOD_CONFIG: Record<string, { color: string; bg: string; border: string; label: string; desc: string }> = {
+  calm:           { color: '#38bdf8', bg: 'rgba(56,189,248,0.1)',   border: 'rgba(56,189,248,0.25)',  label: 'Calm Market',     desc: 'Prices stable. Small swings.' },
+  storm:          { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',   border: 'rgba(245,158,11,0.25)',  label: 'Storm',           desc: 'Choppy market. Could go either way.' },
+  kraken:         { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.25)',   label: 'Kraken',          desc: 'Extreme volatility. Anything can happen.' },
+  tide_rising:    { color: '#4ade80', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.25)',  label: 'Tide Rising',     desc: 'Prices trending up. Good time to hold.' },
+  bounty_season:  { color: '#f0c040', bg: 'rgba(240,192,64,0.1)',   border: 'rgba(240,192,64,0.25)', label: 'Bounty Season',   desc: 'Strong upward pressure. Rare fish climbing.' },
+  low_tide:       { color: '#94a3b8', bg: 'rgba(148,163,184,0.1)',  border: 'rgba(148,163,184,0.25)', label: 'Low Tide',        desc: 'Prices drifting down. Consider selling.' },
+  cursed_waters:  { color: '#c084fc', bg: 'rgba(192,132,252,0.1)',  border: 'rgba(192,132,252,0.25)', label: 'Cursed Waters',   desc: 'Heavy sell pressure. Prices falling fast.' },
 }
 
 function Sparkline({ history, current, up, height = 40 }: { history: number[]; current: number; up: boolean; height?: number }) {
@@ -288,7 +292,7 @@ export default function MarketClient({
   }
 
   const countdown = useCountdown(marketState.next_update_at)
-  const mood = MOOD_CONFIG[marketState.mood]
+  const mood = MOOD_CONFIG[marketState.mood] ?? MOOD_CONFIG.calm
 
   const totalMarketValue = portfolio.reduce(
     (s, e) => s + Math.floor(e.sell_value * e.multiplier * 0.97) * e.quantity, 0
@@ -618,6 +622,40 @@ function MoodIcon({ mood, color }: { mood: string; color: string }) {
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M19 16.9A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/>
         <polyline points="13 11 9 17 15 17 11 23"/>
+      </svg>
+    )
+  }
+  if (mood === 'tide_rising') {
+    return (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="17 11 12 6 7 11"/>
+        <polyline points="17 18 12 13 7 18"/>
+      </svg>
+    )
+  }
+  if (mood === 'bounty_season') {
+    return (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M12 7v1.5M12 15.5V17M9.5 9.5C9.5 8.4 10.6 8 12 8s2.5.6 2.5 1.8c0 2.4-5 2-5 4.4C9.5 15.4 10.6 16 12 16s2.5-.5 2.5-1.7"/>
+      </svg>
+    )
+  }
+  if (mood === 'low_tide') {
+    return (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="17 6 12 11 7 6"/>
+        <polyline points="17 13 12 18 7 13"/>
+      </svg>
+    )
+  }
+  if (mood === 'cursed_waters') {
+    return (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="8" r="5"/>
+        <path d="M9 8h.01M15 8h.01"/>
+        <path d="M9 11s1 2 3 2 3-2 3-2"/>
+        <path d="M12 13v8M8 17l4 4 4-4"/>
       </svg>
     )
   }
