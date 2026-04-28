@@ -92,9 +92,9 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
         {/* Wanted stamp */}
         {artEffect === 'wanted' && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 2 }}>
-            <span className="font-cinzel font-900 tracking-[0.22em] uppercase rotate-[-18deg]"
-              style={{ fontSize: '0.85rem', color: 'rgba(160,10,10,0.98)', border: '3px solid rgba(155,15,15,0.96)', padding: '0.15em 0.5em', mixBlendMode: 'multiply', textShadow: '0 0 4px rgba(180,20,20,0.6)', fontWeight: 900 }}>
-              Wanted
+            <span className="font-cinzel font-900 uppercase rotate-[-18deg]"
+              style={{ fontSize: '1rem', letterSpacing: '0.2em', color: 'rgba(190,15,15,1)', border: '2.5px solid rgba(175,15,15,0.95)', padding: '0.1em 0.55em', fontWeight: 900, background: 'rgba(0,0,0,0.18)', textShadow: '0 0 8px rgba(210,20,20,0.65)', boxShadow: '0 0 0 1px rgba(175,15,15,0.35), 0 0 12px rgba(190,15,15,0.3)' }}>
+              WANTED
             </span>
           </div>
         )}
@@ -156,6 +156,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
           {artEffect === 'davy-jones'  && <div className="art-davy-jones-overlay" />}
           {artEffect === 'golden-age'  && <div className="art-golden-age-overlay" />}
           {artEffect === 'storm'       && <div className="art-storm-overlay" />}
+          {artEffect === 'wanted'      && <div className="art-wanted-overlay" />}
           {artEffect === 'divine'      && <><div className="art-divine-overlay" /><div className="art-divine-overlay-2" /></>}
         </div>
       </div>

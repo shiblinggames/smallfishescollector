@@ -309,7 +309,22 @@ body {
 }
 
 /* ── Wanted ── */
-.art-wanted { filter: sepia(0.95) brightness(0.9) contrast(1.1) saturate(0.75); }
+.art-wanted { filter: sepia(0.9) brightness(0.85) contrast(1.15) saturate(0.7); }
+@keyframes wantedFlicker {
+  0%, 35%, 37%, 70%, 72%, 100% { opacity: 0.80; }
+  36%, 71%                      { opacity: 1.00; }
+}
+.art-wanted-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 50%,
+    rgba(60,4,2,0.0)   22%,
+    rgba(110,8,4,0.28) 55%,
+    rgba(170,8,4,0.62) 100%
+  );
+  animation: wantedFlicker 8s ease-in-out infinite;
+  pointer-events: none;
+}
 
 /* ── Pack card responsive size ── */
 .pack-card-size { width: 100%; aspect-ratio: 5 / 7; }
