@@ -83,6 +83,11 @@ export default async function CollectionPage() {
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
+      <div style={{ background: 'rgba(251,191,36,0.08)', borderBottom: '1px solid rgba(251,191,36,0.2)', padding: '0.55rem 1.5rem', textAlign: 'center' }}>
+        <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#fbbf24' }}>
+          🚧 Under Construction — This feature is still being worked on.
+        </p>
+      </div>
       <main className="min-h-screen pt-6">
         <CollectionGrid
           allCards={(allCards ?? []) as Card[]}

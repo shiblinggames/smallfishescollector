@@ -23,6 +23,11 @@ export default async function PacksPage() {
   return (
     <>
       <Nav packsAvailable={packsAvailable} doubloons={doubloons} gems={gems} />
+      <div style={{ background: 'rgba(251,191,36,0.08)', borderBottom: '1px solid rgba(251,191,36,0.2)', padding: '0.55rem 1.5rem', textAlign: 'center' }}>
+        <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#fbbf24' }}>
+          🚧 Under Construction — This feature is still being worked on.
+        </p>
+      </div>
       <main className="min-h-screen px-6 py-4 sm:py-0 flex flex-col items-center sm:justify-center">
         <PackOpener packsAvailable={packsAvailable} gems={gems} />
         {stats && <PackStatsToggle stats={stats} history={history} />}

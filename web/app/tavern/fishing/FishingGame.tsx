@@ -2380,9 +2380,19 @@ export default function FishingGame({
             }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                style={{ fontSize: '0.6rem', color: '#6a6764' }}>Fish Hold</p>
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                  style={{ fontSize: '0.6rem', color: '#6a6764', marginBottom: 2 }}>Fish Hold</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: holdTotalCount >= holdCapacity ? '#f87171' : '#f0ede8', lineHeight: 1.1 }}>
+                  {holdTotalCount} <span style={{ fontSize: '1rem', color: '#6a6764' }}>/ {holdCapacity}</span>
+                </p>
+                {inventory.length > 0 && (
+                  <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: 2 }}>
+                    {inventory.length} species · <Link href="/marketplace/shipyard" className="font-karla font-600" style={{ color: '#6a6764', textDecoration: 'none' }}>Need more storage? →</Link>
+                  </p>
+                )}
+              </div>
               <button onClick={() => setHoldOpen(false)}
                 style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
             </div>
@@ -2393,18 +2403,6 @@ export default function FishingGame({
               </p>
             ) : (
               <div className="flex flex-col gap-3">
-                {/* Summary */}
-                <div style={{ textAlign: 'center', padding: '0.5rem 0 0.25rem' }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: holdTotalCount >= holdCapacity ? '#f87171' : '#f0ede8' }}>
-                    {holdTotalCount} <span style={{ fontSize: '0.9rem', color: '#6a6764' }}>/ {holdCapacity}</span>
-                  </p>
-                  <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#6a6764', marginTop: 2 }}>
-                    {inventory.length} species in hold
-                  </p>
-                  <Link href="/marketplace/shipyard" className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#6a6764', textDecoration: 'none', marginTop: 4, display: 'inline-block' }}>
-                    Need more storage? →
-                  </Link>
-                </div>
 
                 {/* Quick Sell */}
                 <div style={{
