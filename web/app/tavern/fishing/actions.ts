@@ -347,7 +347,7 @@ export async function sellFish(
   if (!invRow || !fish || !profile) return { error: 'Data not found' }
   if (invRow.quantity < quantity) return { error: 'Not enough fish' }
 
-  const earned = fish.sell_value * quantity
+  const earned = Math.floor(fish.sell_value * 0.80) * quantity
   const newDoubloons = (profile.doubloons ?? 0) + earned
 
   await Promise.all([
@@ -356,7 +356,7 @@ export async function sellFish(
       .eq('user_id', user.id).eq('fish_id', fishId),
     admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
-      user_id: user.id, amount: earned, reason: 'Sold fish',
+      user_id: user.id, amount: earned, reason: 'Sold fish (quick-sell)',
     }),
   ])
 

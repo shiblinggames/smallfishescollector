@@ -18,12 +18,13 @@ export default async function TavernPage() {
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const [{ data: profile }, { data: fotdAttempt }, dailyWagered, bounties, { data: todayExpedition }] = await Promise.all([
+  const [{ data: profile }, { data: fotdAttempt }, dailyWagered, bounties, { data: todayExpedition }, { data: marketState }] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_ship_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome, gems').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
     getWeeklyBounties(),
     admin.from('expeditions').select('status, zone, loot').eq('user_id', user.id).eq('expedition_date', today).maybeSingle(),
+    admin.from('market_state').select('mood').eq('id', 1).single(),
   ])
 
   const isPremium =
@@ -220,6 +221,24 @@ export default async function TavernPage() {
             icon={<AnchorIcon />}
             completed={crownCapReached}
           />
+          <GameCard
+            href="/tavern/market"
+            eyebrow="Market"
+            title="Fish Market"
+            statusText={
+              marketState?.mood === 'kraken' ? 'Kraken surge — extreme volatility' :
+              marketState?.mood === 'storm'  ? 'Storm warning — choppy prices' :
+              'Prices updating hourly'
+            }
+            info={[
+              'Sell your catch at live market prices',
+              'Prices shift hourly based on mood',
+              'Calm / Storm / Kraken affect volatility',
+              '3% market fee on all sales',
+              'Quick-sell in fishing hold at 80%',
+            ]}
+            icon={<MarketIcon />}
+          />
         </div>
 
         <div className="px-6 pb-16 text-center">
@@ -282,6 +301,15 @@ function HookIcon() {
       <path d="M12 3v9"/>
       <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
       <circle cx="12" cy="3" r="1.2" fill="currentColor" stroke="none"/>
+    </svg>
+  )
+}
+
+function MarketIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+      <polyline points="16 7 22 7 22 13"/>
     </svg>
   )
 }
