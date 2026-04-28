@@ -49,10 +49,10 @@ const ZONE_DIFFICULTY: Record<string, number> = {
 }
 
 const ZONE_CONDITIONS: Record<string, string[]> = {
-  shallows:    ['Stable needle', 'Wider catch window', 'No reversals'],
+  shallows:    ['Steady, easy to time', 'Wider catch window', 'No reversals'],
   open_waters: ['Occasional speed changes', 'Mild currents', 'Rare direction reversals'],
-  deep:        ['Frequent speed changes', 'Needle reverses direction', 'Tighter catch window'],
-  abyss:       ['Unpredictable needle', 'Constant reversals', 'Smallest catch window'],
+  deep:        ['Frequent speed changes', 'Dial reverses direction', 'Tighter catch window'],
+  abyss:       ['Erratic, hard to time', 'Constant reversals', 'Smallest catch window'],
 }
 
 const HOW_IT_WORKS = [
@@ -66,11 +66,11 @@ const HOW_IT_WORKS = [
   },
   {
     title: 'Fish Speed',
-    body: "The needle speed depends on the fish's difficulty — harder fish spin faster. Upgrade your reel to slow it down.",
+    body: "Harder fish make the dial spin faster and are trickier to time. Upgrading your reel slows the dial down across the board.",
   },
   {
     title: 'Zone Conditions',
-    body: 'Deeper zones have stronger currents. The needle changes speed more often, randomly reverses direction, and the catch window is smaller. The same fish is significantly harder to reel in from the Abyss than the Shallows.',
+    body: 'Deeper zones have stronger currents — the dial speeds up and reverses direction more often, and the catch window shrinks. The same fish is significantly harder to land from the Abyss than the Shallows.',
   },
   {
     title: 'Snag Zones',
@@ -78,7 +78,7 @@ const HOW_IT_WORKS = [
   },
   {
     title: 'Gear Summary',
-    body: 'Rod → faster bites. Reel → slows the needle. Hook → widens the catch zone. Line → shrinks snag zones. Bait → faster bites + wider catch zone.',
+    body: 'Rod → faster bites. Reel → slows the dial. Hook → widens the catch zone. Line → shrinks snag zones. Bait → faster bites + wider catch zone.',
   },
 ]
 
