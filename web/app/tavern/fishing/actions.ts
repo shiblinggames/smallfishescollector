@@ -153,6 +153,7 @@ export async function reelIn(
   result: 'perfect' | 'catch' | 'miss' | 'penalty',
   baitType: string,
   doubleCatch = false,
+  streakBonus = 0,
 ): Promise<
   | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; newAchievements: string[]; bountyCompletion?: FishingBountyCompletion; xpGained: number; newXP: number }
   | { caught: false; newAchievements: string[] }
@@ -251,7 +252,7 @@ export async function reelIn(
   // Track abyss streak for achievements
   const isAbyssPerfect = result === 'perfect' && fish.habitat === 'abyss'
   const newAbyssStreak = isAbyssPerfect ? (profile.fishing_abyss_streak ?? 0) + 1 : 0
-  const xpGained = catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect')
+  const xpGained = catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + (result === 'perfect' ? streakBonus : 0)
   const newXP = (profile.fishing_xp ?? 0) + xpGained
 
   await admin.from('profiles').update({ fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP }).eq('id', user.id)

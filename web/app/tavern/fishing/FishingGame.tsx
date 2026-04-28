@@ -556,7 +556,7 @@ const FRAME_SRC: Record<SceneFrame, string> = {
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0 }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
@@ -564,6 +564,8 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   xpGained: number
   doubleCatch?: boolean
   gemEarned?: boolean
+  perfectStreak?: number
+  streakBonusXP?: number
 }) {
   const habitatColor = HABITAT_COLOR[fish.habitat] ?? '#888'
   const habitatLabel = HABITAT_LABEL[fish.habitat] ?? fish.habitat
@@ -586,36 +588,62 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
     <div style={{ position: 'relative' }}>
 
       {/* Perfect catch banner */}
-      {isPerfect && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-          className="flex items-center justify-center gap-2 mb-2 py-2 px-3 rounded-xl"
-          style={{ background: 'rgba(8,4,0,0.88)', border: '1px solid rgba(245,158,11,0.65)' }}
-        >
-          <span style={{ fontSize: '0.7rem', color: '#fbbf24' }}>✦</span>
-          <div style={{ textAlign: 'center' }}>
-            <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
-              style={{ fontSize: '0.72rem', color: '#fbbf24', textShadow: '0 0 10px rgba(251,191,36,0.7)' }}>Perfect Catch</p>
-            <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
-              {xpGained > 0 && (
-                <p className="font-karla font-700"
-                  style={{ fontSize: '0.62rem', color: '#86efac' }}>
-                  +{xpGained - Math.round(xpGained / 1.2)} bonus XP
+      {isPerfect && (() => {
+        const s = Math.min(perfectStreak, 6)
+        const isCombo = perfectStreak >= 2
+        const titleSize = 0.72 + (s - 1) * 0.05
+        const iconSize  = 0.70 + (s - 1) * 0.05
+        const borderAlpha = Math.min(0.65 + (s - 1) * 0.06, 0.95)
+        const glow = `0 0 ${10 + (s - 1) * 5}px rgba(251,191,36,${0.4 + (s - 1) * 0.08})`
+        const basePerfectBonus = Math.round((xpGained - streakBonusXP) * 0.2 / 1.2)
+        return (
+          <motion.div
+            key={perfectStreak}
+            initial={{ opacity: 0, y: -10, scale: isCombo ? 0.88 : 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 400, damping: isCombo ? 18 : 22 }}
+            className="flex items-center justify-center gap-2 mb-2 py-2 px-3 rounded-xl"
+            style={{ background: 'rgba(8,4,0,0.88)', border: `1px solid rgba(245,158,11,${borderAlpha})`, boxShadow: glow }}
+          >
+            <span style={{ fontSize: `${iconSize}rem`, color: '#fbbf24' }}>✦</span>
+            <div style={{ textAlign: 'center' }}>
+              <div className="flex items-center justify-center gap-1.5">
+                <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
+                  style={{ fontSize: `${titleSize}rem`, color: '#fbbf24', textShadow: glow }}>
+                  Perfect Catch
                 </p>
-              )}
-              {xpGained > 0 && (
+                {isCombo && (
+                  <p className="font-cinzel font-700"
+                    style={{ fontSize: `${titleSize + 0.06}rem`, color: '#fbbf24', textShadow: glow }}>
+                    ×{perfectStreak}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
+                {basePerfectBonus > 0 && (
+                  <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#86efac' }}>
+                    +{basePerfectBonus} bonus XP
+                  </p>
+                )}
+                {streakBonusXP > 0 && (
+                  <>
+                    <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)' }}>·</span>
+                    <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#fbbf24' }}>
+                      +{streakBonusXP} streak XP
+                    </p>
+                  </>
+                )}
                 <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)' }}>·</span>
-              )}
-              <p className="font-karla font-700"
-                style={{ fontSize: '0.62rem', color: baitSaved ? '#86efac' : 'rgba(255,255,255,0.3)' }}>
-                {baitSaved ? 'Bait returned' : 'Bait used'}
-              </p>
+                <p className="font-karla font-700"
+                  style={{ fontSize: '0.62rem', color: baitSaved ? '#86efac' : 'rgba(255,255,255,0.3)' }}>
+                  {baitSaved ? 'Bait returned' : 'Bait used'}
+                </p>
+              </div>
             </div>
-          </div>
-          <span style={{ fontSize: '0.7rem', color: '#fbbf24' }}>✦</span>
-        </motion.div>
-      )}
+            <span style={{ fontSize: `${iconSize}rem`, color: '#fbbf24' }}>✦</span>
+          </motion.div>
+        )
+      })()}
 
       {/* Gem earned banner */}
       {gemEarned && (
@@ -962,8 +990,9 @@ export default function FishingGame({
   const [sessionGems, setSessionGems] = useState(0)
   const [sellPending, setSellPending] = useState<number | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
-  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean; gemEarned?: boolean } | null>(null)
+  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean; gemEarned?: boolean; perfectStreak: number; streakBonusXP: number } | null>(null)
   const [challengeActive, setChallengeActive] = useState(false)
+  const [perfectStreak, setPerfectStreak] = useState(0)
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
   const catchTourShownRef = useRef(false)
@@ -1178,8 +1207,9 @@ export default function FishingGame({
         return
       }
 
-      // Miss/penalty: challenge fails
+      // Miss/penalty: challenge and streak fail
       setChallengeActive(false)
+      setPerfectStreak(0)
       setMissResult(effectiveZoneType)
       setCatchResult(null)
       phaseRef.current = 'result'
@@ -1194,10 +1224,14 @@ export default function FishingGame({
     const wasPerfect = zone.type === 'perfect'
     if (wasPerfect) setPerfectFlash(true)
 
+    // Consecutive perfect streak
+    const newStreak = wasPerfect ? perfectStreak + 1 : 0
+    const streakBonusXP = wasPerfect ? perfectStreak * 5 : 0  // streak 1=0, 2=+5, 3=+10 …
+
     // Challenge mechanic: non-perfect catch clears the challenge without reward
     const wonChallenge = wasPerfect && challengeActive
     const triggerChallenge = wasPerfect && !challengeActive && Math.random() < 0.10
-    if (!wasPerfect) setChallengeActive(false)
+    if (!wasPerfect) { setChallengeActive(false); setPerfectStreak(0) }
 
     phaseRef.current = 'reeling'
     setPhase('reeling')
@@ -1206,7 +1240,7 @@ export default function FishingGame({
     const doubleCatch = rod.doubleCatchChance > 0 && Math.random() < rod.doubleCatchChance
 
     startTransition(async () => {
-      const res = await reelIn(hookedFishRef.current!.fishId, zone.type as 'perfect' | 'catch', selectedBaitRef.current, doubleCatch)
+      const res = await reelIn(hookedFishRef.current!.fishId, zone.type as 'perfect' | 'catch', selectedBaitRef.current, doubleCatch, streakBonusXP)
 
       if (wonChallenge) {
         await awardPerfectChallengeGem()
@@ -1219,7 +1253,8 @@ export default function FishingGame({
         setMissResult('miss')
       } else {
         const { fish, baitSaved, isNewSpecies, bountyCompletion, xpGained, newXP } = res
-        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge })
+        if (wasPerfect) setPerfectStreak(newStreak)
+        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge, perfectStreak: newStreak, streakBonusXP })
         if (isNewSpecies) { setCaughtFishIds(prev => new Set([...prev, fish.id])); setUncheckedNewSpecies(n => n + 1) }
         const newCatches = [...sessionCatches, ...(doubleCatch ? [fish, fish] : [fish])]
         const newPerfects = sessionPerfects + (wasPerfect ? 1 : 0)
@@ -1393,26 +1428,6 @@ export default function FishingGame({
               ← {HABITAT_LABEL[selectedZone]}
             </button>
 
-            <AnimatePresence>
-              {sessionPerfects > 0 && (
-                <motion.div
-                  key={sessionPerfects}
-                  initial={{ scale: 1.4, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 22 }}
-                  className="flex items-center gap-1"
-                  style={{
-                    background: 'rgba(245,158,11,0.12)',
-                    border: '1px solid rgba(245,158,11,0.38)',
-                    borderRadius: 8, padding: '0.28rem 0.6rem',
-                  }}
-                >
-                  <span style={{ fontSize: '0.58rem', color: '#f59e0b' }}>✦</span>
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.65rem', color: '#f59e0b' }}>{sessionPerfects}</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
             <button
               onClick={() => { setCollectionOpen(o => !o); setGearOpen(false); setHoldOpen(false); setUncheckedNewSpecies(0) }}
               className="font-karla font-600 uppercase tracking-[0.1em]"
@@ -1630,7 +1645,7 @@ export default function FishingGame({
                   )}
 
                   {catchResult ? (
-                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} xpGained={catchResult.xpGained} doubleCatch={catchResult.doubleCatch} gemEarned={catchResult.gemEarned} />
+                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} xpGained={catchResult.xpGained} doubleCatch={catchResult.doubleCatch} gemEarned={catchResult.gemEarned} perfectStreak={catchResult.perfectStreak} streakBonusXP={catchResult.streakBonusXP} />
                   ) : (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
                       <p className="font-cinzel font-700 mb-1"
