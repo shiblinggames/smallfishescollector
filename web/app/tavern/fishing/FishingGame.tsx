@@ -802,10 +802,13 @@ function XPBarDisplay({ xp }: { xp: number }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+type FishSpeciesBasic = { id: number; name: string; habitat: string; bite_rarity: number }
+
 export default function FishingGame({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialInventory,
   ownedRods: initialOwnedRods,
+  allFishSpecies, initialCaughtFishIds,
   selectedZone: initialZone, onBack,
 }: {
   hookTier: number
@@ -818,11 +821,14 @@ export default function FishingGame({
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
   ownedRods: number[]
+  allFishSpecies: FishSpeciesBasic[]
+  initialCaughtFishIds: number[]
   selectedZone: ZoneKey
   onBack: () => void
 }) {
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
   const [ownedRods, setOwnedRods] = useState(initialOwnedRods)
+  const [caughtFishIds, setCaughtFishIds] = useState(() => new Set(initialCaughtFishIds))
   const rod  = getRod(equippedRodTier)
   const reel = getReel(reelTier)
   const hook = getHook(hookTier)
@@ -838,8 +844,9 @@ export default function FishingGame({
   const [baitInventory, setBaitInventory] = useState<BaitItem[]>(initialBait)
   const [inventory, setInventory]   = useState<InventoryItem[]>(initialInventory)
   const [doubloons, setDoubloons]   = useState(initialDoubloons)
-  const [holdOpen, setHoldOpen]     = useState(false)
-  const [gearOpen, setGearOpen]     = useState(false)
+  const [holdOpen, setHoldOpen]         = useState(false)
+  const [gearOpen, setGearOpen]         = useState(false)
+  const [collectionOpen, setCollectionOpen] = useState(false)
   const [sellPending, setSellPending] = useState<number | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
   const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean } | null>(null)
@@ -1045,6 +1052,7 @@ export default function FishingGame({
       } else {
         const { fish, baitSaved, isNewSpecies, bountyCompletion, xpGained, newXP } = res
         setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch })
+        if (isNewSpecies) setCaughtFishIds(prev => new Set([...prev, fish.id]))
         if (bountyCompletion) setBountyNotif(bountyCompletion)
         const oldLevel = getLevelFromXP(fishingXP)
         const newLevel = getLevelFromXP(newXP)
@@ -1190,7 +1198,18 @@ export default function FishingGame({
             >
               ← {HABITAT_LABEL[selectedZone]}
             </button>
-            <div />
+            <button
+              onClick={() => { setCollectionOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
+              className="font-karla font-600 uppercase tracking-[0.1em]"
+              style={{
+                fontSize: '0.6rem', color: HABITAT_COLOR[selectedZone],
+                background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
+                borderRadius: 8, padding: '0.3rem 0.65rem',
+                cursor: 'pointer', touchAction: 'manipulation',
+              }}
+            >
+              Collection
+            </button>
           </div>
 
           {/* XP bar */}
@@ -1524,6 +1543,79 @@ export default function FishingGame({
           </div>
 
         </div>
+
+      {/* ── Collection drawer ── */}
+      <AnimatePresence>
+        {collectionOpen && (
+          <motion.div key="collection-drawer"
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+              background: 'rgba(6,12,20,0.98)',
+              borderTop: '1px solid rgba(255,255,255,0.09)',
+              borderRadius: '18px 18px 0 0',
+              padding: '1.25rem 1rem 2rem',
+              maxHeight: '85vh', overflowY: 'auto',
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                style={{ fontSize: '0.6rem', color: '#6a6764' }}>Fish Collection</p>
+              <button onClick={() => setCollectionOpen(false)}
+                style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+            </div>
+
+            {ZONES.map(zone => {
+              const zoneSpecies = allFishSpecies.filter(f => f.habitat === zone)
+              const discoveredHere = zoneSpecies.filter(f => caughtFishIds.has(f.id))
+              const undiscoveredHere = zoneSpecies.filter(f => !caughtFishIds.has(f.id))
+              const zoneColor = HABITAT_COLOR[zone]
+
+              return (
+                <div key={zone} className="mb-5">
+                  {/* Zone header */}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div style={{ width: 3, height: 14, background: zoneColor, borderRadius: 2 }} />
+                      <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                        style={{ fontSize: '0.55rem', color: zoneColor }}>{HABITAT_LABEL[zone]}</p>
+                    </div>
+                    <p className="font-karla font-600"
+                      style={{ fontSize: '0.52rem', color: discoveredHere.length === zoneSpecies.length ? zoneColor : '#6a6764' }}>
+                      {discoveredHere.length} / {zoneSpecies.length} found
+                    </p>
+                  </div>
+
+                  {/* Fish list */}
+                  <div className="flex flex-col gap-1">
+                    {discoveredHere.map(f => (
+                      <div key={f.id} className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg"
+                        style={{ background: 'rgba(4,10,18,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <span style={{
+                          width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                          background: RARITY[f.bite_rarity]?.color ?? '#888',
+                        }} />
+                        <p className="font-cinzel font-700 flex-1 truncate"
+                          style={{ fontSize: '0.65rem', color: '#f0ede8' }}>{f.name}</p>
+                        <span style={{ fontSize: '0.7rem', color: '#4ade80', flexShrink: 0 }}>✓</span>
+                      </div>
+                    ))}
+                    {undiscoveredHere.map((_, i) => (
+                      <div key={`unk-${zone}-${i}`} className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg"
+                        style={{ background: 'rgba(4,10,18,0.35)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#2a2a2a', flexShrink: 0 }} />
+                        <p className="font-karla font-600 flex-1"
+                          style={{ fontSize: '0.62rem', color: '#3a3835', letterSpacing: '0.05em' }}>??? Undiscovered</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Gear drawer ── */}
       <AnimatePresence>
