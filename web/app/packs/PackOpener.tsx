@@ -62,21 +62,8 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
   const [shockwaveCards, setShockwaveCards] = useState<Set<number>>(new Set())
   const [mythicFeatured, setMythicFeatured] = useState<number | null>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
-  const [swapped, setSwapped] = useState(false)
   const [achievementKeys, setAchievementKeys] = useState<string[]>([])
   const pendingAchievements = useRef<string[]>([])
-
-  useEffect(() => {
-    if (localStorage.getItem('packOpenSide') === 'left') setSwapped(true)
-  }, [])
-
-  function toggleSwap() {
-    setSwapped(prev => {
-      const next = !prev
-      localStorage.setItem('packOpenSide', next ? 'left' : 'right')
-      return next
-    })
-  }
 
   function getInner(i: number) {
     return cardRefs.current[i]?.querySelector('.flip-card-inner') as HTMLElement | null
@@ -405,7 +392,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
 
   function renderCard(card: DrawnCard, i: number) {
     return (
-      <div key={i} className="flex flex-col items-center gap-2">
+      <div key={i} className="relative">
         <div
           ref={(el) => { cardRefs.current[i] = el }}
           className={`flip-card pack-card-size select-none ${flipped[i] ? 'flipped' : loading ? '' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
@@ -416,72 +403,47 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
         >
           {renderFlipInner(card, i)}
         </div>
-        {flipped[i] && newVariantIds.has(card.variantId) && <p className="new-badge">New</p>}
-      </div>
-    )
-  }
-
-  function renderOpenAllButton() {
-    const isDone = phase === 'done'
-    const outOfPacks = isDone && packs === 0
-    const show = someUnflipped || (isDone && packs > 0) || outOfPacks
-    return (
-      <div className="flex items-center justify-center">
-        {show && (
-          <button
-            onClick={outOfPacks ? reset : isDone ? openPack : flipAll}
-            disabled={isDone && loading && !outOfPacks}
-            className="w-[4.5rem] h-[4.5rem] rounded-full flex items-center justify-center select-none touch-manipulation"
-            style={{
-              background: 'rgba(255,255,255,0.10)',
-              border: '1px solid rgba(255,255,255,0.18)',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.18)',
-              backdropFilter: 'blur(12px)',
-              transition: 'transform 0.1s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.1s ease, background 0.1s ease',
-            }}
-            onPointerDown={(e) => {
-              e.currentTarget.style.transform = 'scale(0.91)'
-              e.currentTarget.style.background = 'rgba(255,255,255,0.18)'
-              e.currentTarget.style.boxShadow = '0 1px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.18)'
-            }}
-            onPointerUp={(e) => {
-              e.currentTarget.style.transform = ''
-              e.currentTarget.style.background = 'rgba(255,255,255,0.10)'
-              e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.18)'
-            }}
-            onPointerLeave={(e) => {
-              e.currentTarget.style.transform = ''
-              e.currentTarget.style.background = 'rgba(255,255,255,0.10)'
-              e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.18)'
-            }}
-          >
-            <span className="font-karla font-900 uppercase text-[#f0ede8] text-center leading-snug" style={{ fontSize: '0.68rem', letterSpacing: '0.10em' }}>
-              {outOfPacks ? <>Buy<br/>More</> : isDone ? <>Open<br/>Another</> : <>Open<br/>All</>}
-            </span>
-          </button>
+        {flipped[i] && newVariantIds.has(card.variantId) && (
+          <p className="new-badge absolute left-0 right-0 text-center" style={{ bottom: '-1.4rem' }}>New</p>
         )}
       </div>
     )
   }
 
-  function renderPackCount() {
+  function renderMobileActions() {
+    const isDone = phase === 'done'
+    const outOfPacks = isDone && packs === 0
+    const showAction = someUnflipped || (isDone && packs > 0) || outOfPacks
     return (
-      <div className="flex flex-col items-center justify-center gap-1">
-        <span className="font-cinzel font-700 text-[#f0ede8] leading-none" style={{ fontSize: '1.6rem' }}>{packs}</span>
-        <span className="font-karla font-600 uppercase text-[#a0a09a] text-center leading-tight" style={{ fontSize: '0.6rem', letterSpacing: '0.10em' }}>packs<br/>left</span>
-        <button
-          onClick={toggleSwap}
-          className="mt-3 touch-manipulation rounded-full flex items-center justify-center"
-          style={{ width: 32, height: 32, background: 'rgba(255,255,255,0.13)', border: '1px solid rgba(255,255,255,0.12)', color: '#f0ede8', transition: 'background 0.07s ease, transform 0.07s ease' }}
-          onPointerDown={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.transform = 'scale(0.90)' }}
-          onPointerUp={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.13)'; e.currentTarget.style.transform = '' }}
-          onPointerLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.13)'; e.currentTarget.style.transform = '' }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M7 16H17M17 16L14 13M17 16L14 19"/>
-            <path d="M17 8H7M7 8L10 5M7 8L10 11"/>
-          </svg>
-        </button>
+      <div className="flex items-center justify-between w-full px-6 py-2">
+        {/* Pack count */}
+        <div className="flex flex-col gap-0.5">
+          <span className="font-cinzel font-700 text-[#f0ede8] leading-none" style={{ fontSize: '2rem' }}>{packs}</span>
+          <span className="font-karla font-600 uppercase text-[#6a6764]" style={{ fontSize: '0.58rem', letterSpacing: '0.12em' }}>packs left</span>
+        </div>
+        {/* Action button */}
+        {showAction && (
+          <button
+            onClick={outOfPacks ? reset : isDone ? openPack : flipAll}
+            disabled={isDone && loading && !outOfPacks}
+            className="rounded-full flex items-center justify-center select-none touch-manipulation disabled:opacity-40"
+            style={{
+              width: '5rem', height: '5rem',
+              background: 'rgba(255,255,255,0.10)',
+              border: '1px solid rgba(255,255,255,0.20)',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.18)',
+              backdropFilter: 'blur(12px)',
+              transition: 'transform 0.12s cubic-bezier(0.34,1.56,0.64,1)',
+            }}
+            onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.92)' }}
+            onPointerUp={(e) => { e.currentTarget.style.transform = '' }}
+            onPointerLeave={(e) => { e.currentTarget.style.transform = '' }}
+          >
+            <span className="font-karla font-800 uppercase text-[#f0ede8] text-center leading-snug" style={{ fontSize: '0.65rem', letterSpacing: '0.10em' }}>
+              {outOfPacks ? <>Buy<br/>More</> : isDone ? <>Open<br/>Another</> : <>Open<br/>All</>}
+            </span>
+          </button>
+        )}
       </div>
     )
   }
@@ -539,14 +501,11 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
         )
       })()}
       {/* Mobile: 2×2 grid */}
-      <div className="sm:hidden flex flex-col items-center gap-6 w-full">
-        <div className="grid grid-cols-2 gap-3 w-full px-3">
+      <div className="sm:hidden flex flex-col items-center w-full">
+        <div className="grid grid-cols-2 gap-3 w-full px-3 mb-10">
           {cards.map((card, i) => renderCard(card, i))}
         </div>
-        <div className="flex items-center justify-center gap-12 px-6 w-full">
-          {swapped ? renderOpenAllButton() : renderPackCount()}
-          {swapped ? renderPackCount() : renderOpenAllButton()}
-        </div>
+        {renderMobileActions()}
       </div>
 
       {/* Desktop: flex-wrap all cards */}
