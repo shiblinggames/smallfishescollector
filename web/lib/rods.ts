@@ -2,6 +2,7 @@ export interface RodDef {
   tier: number
   name: string
   cost: number
+  earnedOnly?: boolean       // if true, cannot be purchased — claimed via special action
   description: string
   color: string
   rarityBonus: number      // shifts rarity distribution toward rares (0 = no effect)
@@ -97,6 +98,12 @@ export const RODS: RodDef[] = [
     description: 'Hand-rolled in gold leaf. Every catch brings two.',
     color: '#f0c040', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
     doubleCatchChance: 1.0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+  },
+  {
+    tier: 14, name: 'Completionist Rod', cost: 0, earnedOnly: true,
+    description: 'Forged from the soul of every species in the sea. Every advantage, no compromises.',
+    color: '#e8c84a', rarityBonus: 0.50, biteIntervalMs: 1000, catchZoneBonus: 16,
+    doubleCatchChance: 1.0, retryOnMissChance: 0.50, snagImmune: true, perfectZoneBonus: 5,
   },
 ]
 

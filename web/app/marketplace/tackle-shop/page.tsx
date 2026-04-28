@@ -11,10 +11,12 @@ export default async function TackleShopPage() {
 
   const admin = createAdminClient()
 
-  const [{ data: profile }, { data: baitInventory }, { data: rodRows }] = await Promise.all([
-    supabase.from('profiles').select('hook_tier, rod_tier, reel_tier, line_tier, doubloons, packs_available, gems').eq('id', user.id).single(),
+  const [{ data: profile }, { data: baitInventory }, { data: rodRows }, { count: uniqueSpecies }, { count: totalSpecies }] = await Promise.all([
+    supabase.from('profiles').select('hook_tier, rod_tier, reel_tier, line_tier, doubloons, packs_available, gems, fishing_xp').eq('id', user.id).single(),
     admin.from('bait_inventory').select('bait_type, quantity').eq('user_id', user.id),
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),
+    admin.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    admin.from('fish_species').select('*', { count: 'exact', head: true }),
   ])
 
   const ownedRods = (rodRows ?? []).map(r => r.rod_tier)
@@ -31,6 +33,9 @@ export default async function TackleShopPage() {
           lineTier={profile?.line_tier ?? 0}
           doubloons={profile?.doubloons ?? 0}
           baitInventory={baitInventory ?? []}
+          fishingXP={profile?.fishing_xp ?? 0}
+          uniqueSpeciesCaught={uniqueSpecies ?? 0}
+          totalSpecies={totalSpecies ?? 0}
         />
       </main>
     </>

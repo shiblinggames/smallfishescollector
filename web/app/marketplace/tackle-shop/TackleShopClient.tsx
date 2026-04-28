@@ -8,7 +8,8 @@ import { REELS } from '@/lib/reels'
 import { LINES } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
 import { buyHook } from '@/app/hooks/actions'
-import { buyBait, purchaseRod, equipRod, buyReel } from './actions'
+import { buyBait, purchaseRod, equipRod, buyReel, claimCompletionistRod } from './actions'
+import { getLevelFromXP } from '@/lib/fishingLevel'
 
 const HookViewer3D = dynamic(() => import('./HookViewer3D'), { ssr: false })
 
@@ -24,6 +25,9 @@ export default function TackleShopClient({
   lineTier,
   doubloons: initialDoubloons,
   baitInventory: initialBait,
+  fishingXP,
+  uniqueSpeciesCaught,
+  totalSpecies,
 }: {
   hookTier: number
   equippedRod: number
@@ -32,6 +36,9 @@ export default function TackleShopClient({
   lineTier: number
   doubloons: number
   baitInventory: BaitInventoryItem[]
+  fishingXP: number
+  uniqueSpeciesCaught: number
+  totalSpecies: number
 }) {
   const [section, setSection] = useState<Section>(null)
   const [hookTier, setHookTier] = useState(initialHookTier)
@@ -45,6 +52,7 @@ export default function TackleShopClient({
   const [buyingBait, setBuyingBait] = useState<string | null>(null)
   const [buyingRod, setBuyingRod] = useState<number | null>(null)
   const [equippingRod, setEquippingRod] = useState<number | null>(null)
+  const [isClaiming, setIsClaiming] = useState(false)
   const [previewTier, setPreviewTier] = useState(initialHookTier)
 
   const baitMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
@@ -97,6 +105,17 @@ export default function TackleShopClient({
       const result = await buyReel()
       if ('error' in result) { setError(result.error) }
       else { setReelTier(result.reelTier); setDoubloons(result.doubloons); broadcastDoubloons(result.doubloons) }
+    })
+  }
+
+  function handleClaimCompletionistRod() {
+    setError(null)
+    setIsClaiming(true)
+    startTransition(async () => {
+      const result = await claimCompletionistRod()
+      setIsClaiming(false)
+      if ('error' in result) { setError(result.error) }
+      else { setOwnedRods(result.ownedRods) }
     })
   }
 
@@ -391,10 +410,122 @@ export default function TackleShopClient({
       )}
 
       {/* ── Rods ── */}
-      {section === 'rod' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }} className="mb-4">
-          {[...RODS].sort((a, b) => a.cost - b.cost).map(rod => {
-            const owned = rod.cost === 0 || ownedRods.includes(rod.tier)
+      {section === 'rod' && (() => {
+        const compRod = RODS.find(r => r.tier === 14)!
+        const compOwned = ownedRods.includes(14)
+        const compActive = equippedRod === 14
+        const playerLevel = getLevelFromXP(fishingXP)
+        const isLevelOk = playerLevel >= 100
+        const isSpeciesOk = totalSpecies > 0 && uniqueSpeciesCaught >= totalSpecies
+        const eligible = isLevelOk && isSpeciesOk && !compOwned
+        const c = compRod.color
+
+        return (
+          <>
+            {/* Completionist Rod — featured card */}
+            <div className="mb-5" style={{
+              padding: '1rem 1rem',
+              background: compOwned ? `${c}10` : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${compOwned ? `${c}55` : eligible ? `${c}40` : 'rgba(255,255,255,0.1)'}`,
+              boxShadow: compOwned ? `0 0 24px ${c}18` : eligible ? `0 0 16px ${c}14` : 'none',
+              borderRadius: 14,
+            }}>
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: compOwned || eligible ? '#f0ede8' : '#6a6764' }}>
+                      {compRod.name}
+                    </p>
+                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: c, background: `${c}18`, border: `1px solid ${c}30`, padding: '0.15rem 0.5rem', borderRadius: '2rem' }}>
+                      Mastery
+                    </span>
+                    {compActive && <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: c }}>Equipped</span>}
+                    {compOwned && !compActive && <span className="font-karla font-300 uppercase tracking-[0.1em] text-[#4ade80]" style={{ fontSize: '0.58rem' }}>Owned</span>}
+                  </div>
+                  <p className="font-karla font-300" style={{ fontSize: '0.78rem', color: '#6a6764', lineHeight: 1.45 }}>{compRod.description}</p>
+                </div>
+              </div>
+
+              {/* Stat pills */}
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {[
+                  'Always double catch',
+                  '50% miss retry',
+                  'Snag immune',
+                  `+${compRod.rarityBonus * 100}% rare bias`,
+                  `+${compRod.catchZoneBonus}° catch zone`,
+                  `Perfect zone +${compRod.perfectZoneBonus}°`,
+                  'Fastest bites',
+                ].map(label => (
+                  <span key={label} className="font-karla font-600" style={{ fontSize: '0.62rem', color: `${c}cc`, background: `${c}14`, border: `1px solid ${c}28`, padding: '0.15rem 0.5rem', borderRadius: '2rem' }}>
+                    {label}
+                  </span>
+                ))}
+              </div>
+
+              {/* Progress or action */}
+              {!compOwned && (
+                <div className="flex flex-col gap-2 mb-3">
+                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#5a5956' }}>Unlock Requirements</p>
+                  {/* Level */}
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="font-karla font-300" style={{ fontSize: '0.72rem', color: isLevelOk ? '#4ade80' : '#6a6764' }}>Level</span>
+                      <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: isLevelOk ? '#4ade80' : '#f0ede8' }}>{Math.min(playerLevel, 100)}/100</span>
+                    </div>
+                    <div style={{ height: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.min(playerLevel / 100, 1) * 100}%`, background: isLevelOk ? '#4ade80' : c, borderRadius: 2, transition: 'width 0.4s ease' }} />
+                    </div>
+                  </div>
+                  {/* Species */}
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="font-karla font-300" style={{ fontSize: '0.72rem', color: isSpeciesOk ? '#4ade80' : '#6a6764' }}>Species caught</span>
+                      <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: isSpeciesOk ? '#4ade80' : '#f0ede8' }}>{uniqueSpeciesCaught}/{totalSpecies}</span>
+                    </div>
+                    <div style={{ height: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: totalSpecies > 0 ? `${(uniqueSpeciesCaught / totalSpecies) * 100}%` : '0%', background: isSpeciesOk ? '#4ade80' : c, borderRadius: 2, transition: 'width 0.4s ease' }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {eligible && (
+                <button
+                  onClick={handleClaimCompletionistRod}
+                  disabled={isPending}
+                  className="font-karla font-700 w-full"
+                  style={{
+                    fontSize: '0.8rem', padding: '0.55rem 1rem', borderRadius: 10,
+                    background: `${c}20`, border: `1px solid ${c}60`,
+                    color: c, cursor: isPending ? 'default' : 'pointer',
+                    opacity: isClaiming ? 0.5 : 1,
+                  }}
+                >
+                  {isClaiming ? 'Claiming…' : '✦ Claim Completionist Rod'}
+                </button>
+              )}
+              {compOwned && !compActive && (
+                <button
+                  onClick={() => handleEquipRod(14)}
+                  disabled={isPending}
+                  className="font-karla font-700 w-full"
+                  style={{
+                    fontSize: '0.7rem', padding: '0.45rem 0.5rem', borderRadius: 9,
+                    background: `${c}16`, border: `1px solid ${c}44`,
+                    color: c, cursor: isPending ? 'default' : 'pointer',
+                    opacity: equippingRod === 14 && isPending ? 0.5 : 1,
+                  }}
+                >
+                  {equippingRod === 14 && isPending ? '…' : 'Equip'}
+                </button>
+              )}
+              {compActive && <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: `${c}88` }}>✓ In use</span>}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }} className="mb-4">
+              {[...RODS].filter(r => !r.earnedOnly).sort((a, b) => a.cost - b.cost).map(rod => {
+                const owned = (rod.cost === 0 && !rod.earnedOnly) || ownedRods.includes(rod.tier)
             const isActive = rod.tier === equippedRod
             const canAfford = doubloons >= rod.cost
             const isBuying = buyingRod === rod.tier && isPending
@@ -482,8 +613,10 @@ export default function TackleShopClient({
               </div>
             )
           })}
-        </div>
-      )}
+            </div>
+          </>
+        )
+      })()}
 
       {/* ── Reels ── */}
       {section === 'reel' && (

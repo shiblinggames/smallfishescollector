@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
 import { RODS } from '@/lib/rods'
 import { REELS } from '@/lib/reels'
+import { getLevelFromXP } from '@/lib/fishingLevel'
 import { revalidatePath } from 'next/cache'
 
 export async function buyBait(
@@ -70,9 +71,9 @@ export async function purchaseRod(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const rod = RODS[rodTier]
+  const rod = RODS.find(r => r.tier === rodTier)
   if (!rod) return { error: 'Invalid rod' }
-  if (rod.cost === 0) return { error: 'This rod is free — just equip it' }
+  if (rod.cost === 0 || rod.earnedOnly) return { error: 'This rod cannot be purchased' }
 
   const admin = createAdminClient()
 
@@ -102,6 +103,37 @@ export async function purchaseRod(
 
   revalidatePath('/marketplace/tackle-shop')
   return { doubloons: newDoubloons, ownedRods }
+}
+
+export async function claimCompletionistRod(): Promise<{ ownedRods: number[] } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const COMPLETIONIST_TIER = 14
+  const admin = createAdminClient()
+
+  const [{ data: profile }, { data: alreadyOwned }, { count: uniqueSpecies }, { count: totalSpecies }] = await Promise.all([
+    admin.from('profiles').select('fishing_xp').eq('id', user.id).single(),
+    admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id).eq('rod_tier', COMPLETIONIST_TIER).maybeSingle(),
+    admin.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    admin.from('fish_species').select('*', { count: 'exact', head: true }),
+  ])
+
+  if (!profile) return { error: 'Profile not found' }
+  if (alreadyOwned) return { error: 'Already owned' }
+
+  const level = getLevelFromXP(profile.fishing_xp ?? 0)
+  if (level < 100) return { error: `Need level 100 (you're level ${level})` }
+  if ((uniqueSpecies ?? 0) < (totalSpecies ?? Infinity)) return { error: `Catch all ${totalSpecies} species first` }
+
+  await admin.from('rod_inventory').insert({ user_id: user.id, rod_tier: COMPLETIONIST_TIER })
+
+  const { data: rows } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id)
+  const ownedRods = (rows ?? []).map(r => r.rod_tier)
+
+  revalidatePath('/marketplace/tackle-shop')
+  return { ownedRods }
 }
 
 export async function equipRod(

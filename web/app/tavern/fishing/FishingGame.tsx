@@ -301,7 +301,7 @@ function UnifiedGearDrawer({
     { key: 'line', label: 'Line',  subtitle: line.name, color: line.color },
   ]
 
-  const ownedRodDefs = RODS.filter(r => r.cost === 0 || ownedRods.includes(r.tier))
+  const ownedRodDefs = RODS.filter(r => (r.cost === 0 && !r.earnedOnly) || ownedRods.includes(r.tier))
 
   return (
     <div className="flex flex-col gap-1.5">
