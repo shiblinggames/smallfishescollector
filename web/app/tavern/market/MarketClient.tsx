@@ -312,6 +312,7 @@ export default function MarketClient({
       setSelling(null)
       if ('error' in res) { showToast(res.error); return }
       setDoubloons(res.doubloons)
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
       showToast(`+${res.earned.toLocaleString()} ⟡`)
       setPortfolio(prev =>
         prev.map(e => e.fish_id === fishId ? { ...e, quantity: e.quantity - qty } : e)
@@ -336,6 +337,7 @@ export default function MarketClient({
       setLiquidating(false)
       if ('error' in res) { showToast(res.error); return }
       setDoubloons(res.doubloons)
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
       showToast(`+${res.earned.toLocaleString()} ⟡ · ${res.fishSold} fish liquidated`)
       setPortfolio([])
     })
