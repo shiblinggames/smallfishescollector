@@ -27,8 +27,8 @@ const TOUR_STEPS = [
     color: '#c084fc',
   },
   {
-    title: 'Timing your sell',
-    body: 'Prices mean-revert toward 1× over time, but rare fish swing harder. Selling during a Kraken surge on an abyss fish can earn 2× base value.',
+    title: 'When should I sell?',
+    body: 'Check the sparkline — if a fish has been climbing, now might be a good time. Rarer fish move more dramatically. When the mood is Kraken, prices can go very high or very low.',
     color: '#fb923c',
   },
 ]
