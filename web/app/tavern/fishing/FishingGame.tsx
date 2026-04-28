@@ -566,10 +566,10 @@ const ROD_IMG_STYLE = {
 
 // Tip position in SVG 0-100 space (for fishing line placement), per frame
 const ROD_TIP: Record<SceneFrame, [number, number]> = {
-  fishing: [38, 15],
-  windup:  [63, 9],
-  cast1:   [54, 7],
-  cast2:   [43, 17],
+  fishing: [39, 17.25],
+  windup:  [64, 11.25],
+  cast1:   [55, 9.25],
+  cast2:   [44, 19.25],
 }
 
 // Clockwise rotation around the handle point per frame
@@ -582,8 +582,16 @@ const ROD_ROTATION: Record<SceneFrame, number> = {
 
 const WATER_Y = 36
 
-function RodOverlay({ frame, hookTier, debugTip }: { frame: SceneFrame; hookTier: number; debugTip?: [number, number] }) {
+function RodOverlay({ frame, hookTier, debugTip, debugLineEndY, debugHookOffsetX, debugMode }: {
+  frame: SceneFrame; hookTier: number
+  debugTip?: [number, number]
+  debugLineEndY?: number
+  debugHookOffsetX?: number
+  debugMode?: 'tip' | 'hook'
+}) {
   const [tx, ty] = debugTip ?? ROD_TIP[frame]
+  const lineEndY = debugLineEndY ?? WATER_Y
+  const hookOffsetX = debugHookOffsetX ?? -4
   const rotation = ROD_ROTATION[frame]
   const hookDef = getHook(hookTier)
 
@@ -605,8 +613,8 @@ function RodOverlay({ frame, hookTier, debugTip }: { frame: SceneFrame; hookTier
           zIndex: 2,
         }}
       />
-      {/* Debug crosshair — shows current tip position */}
-      {debugTip && (
+      {/* Debug crosshair — tip mode: on rod tip; hook mode: on line end */}
+      {debugTip && debugMode === 'tip' && (
         <div style={{
           position: 'absolute', left: `${tx}%`, top: `${ty}%`,
           width: 16, height: 16, transform: 'translate(-50%, -50%)',
@@ -617,16 +625,27 @@ function RodOverlay({ frame, hookTier, debugTip }: { frame: SceneFrame; hookTier
           <div style={{ position: 'absolute', top: '50%', left: '50%', width: 6, height: 6, borderRadius: '50%', background: 'red', transform: 'translate(-50%, -50%)' }} />
         </div>
       )}
+      {debugTip && debugMode === 'hook' && (
+        <div style={{
+          position: 'absolute', left: `${tx + hookOffsetX + 4}%`, top: `${lineEndY}%`,
+          width: 16, height: 16, transform: 'translate(-50%, -50%)',
+          zIndex: 999, pointerEvents: 'none',
+        }}>
+          <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 2, background: '#00ff88', transform: 'translateY(-50%)' }} />
+          <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 2, background: '#00ff88', transform: 'translateX(-50%)' }} />
+          <div style={{ position: 'absolute', top: '50%', left: '50%', width: 6, height: 6, borderRadius: '50%', background: '#00ff88', transform: 'translate(-50%, -50%)' }} />
+        </div>
+      )}
       {/* Fishing line — only on idle fishing frame */}
       {frame === 'fishing' && (
         <>
           <svg viewBox="0 0 100 100" preserveAspectRatio="none"
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3 }}>
-            <line x1={tx} y1={ty} x2={tx} y2={WATER_Y}
+            <line x1={tx} y1={ty} x2={tx} y2={lineEndY}
               stroke="rgba(255,255,255,0.55)" strokeWidth="0.3" />
             {!hookDef.imageUrl && (
               <path
-                d={`M ${tx} ${WATER_Y - 0.5} L ${tx} ${WATER_Y + 1.8} Q ${tx} ${WATER_Y + 3} ${tx + 1.5} ${WATER_Y + 3}`}
+                d={`M ${tx} ${lineEndY - 0.5} L ${tx} ${lineEndY + 1.8} Q ${tx} ${lineEndY + 3} ${tx + 1.5} ${lineEndY + 3}`}
                 fill="none" stroke="rgba(210,210,210,0.9)" strokeWidth="0.35" strokeLinecap="round"
               />
             )}
@@ -639,8 +658,8 @@ function RodOverlay({ frame, hookTier, debugTip }: { frame: SceneFrame; hookTier
               alt=""
               style={{
                 position: 'absolute',
-                left: `calc(${tx}% - 4%)`,
-                top: `${WATER_Y}%`,
+                left: `calc(${tx}% + ${hookOffsetX}%)`,
+                top: `${lineEndY}%`,
                 width: '8%',
                 objectFit: 'contain',
                 pointerEvents: 'none',
@@ -1079,8 +1098,11 @@ export default function FishingGame({
   onBack: () => void
 }) {
   const [isDebug, setIsDebug] = useState(false)
+  const [debugMode, setDebugMode] = useState<'tip' | 'hook'>('tip')
   const [debugTipX, setDebugTipX] = useState(ROD_TIP.fishing[0])
   const [debugTipY, setDebugTipY] = useState(ROD_TIP.fishing[1])
+  const [debugLineEndY, setDebugLineEndY] = useState(WATER_Y)
+  const [debugHookOffsetX, setDebugHookOffsetX] = useState(-4)
   useEffect(() => { setIsDebug(window.location.search.includes('debug=true')) }, [])
 
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
@@ -1535,7 +1557,11 @@ export default function FishingGame({
               }}
             />
           ))}
-          <RodOverlay frame={sceneFrame} hookTier={hookTier} debugTip={isDebug ? [debugTipX, debugTipY] : undefined} />
+          <RodOverlay frame={sceneFrame} hookTier={hookTier}
+            debugTip={isDebug ? [debugTipX, debugTipY] : undefined}
+            debugLineEndY={isDebug ? debugLineEndY : undefined}
+            debugHookOffsetX={isDebug ? debugHookOffsetX : undefined}
+            debugMode={debugMode} />
         </motion.div>
 
 
@@ -2554,7 +2580,7 @@ export default function FishingGame({
         )}
       </AnimatePresence>
 
-      {/* ── Rod tip calibration tool ── */}
+      {/* ── Calibration tool ── */}
       {isDebug && (
         <div style={{
           position: 'fixed', bottom: 140, left: '50%', transform: 'translateX(-50%)',
@@ -2562,27 +2588,58 @@ export default function FishingGame({
           padding: '1rem 1.25rem', borderRadius: 14, zIndex: 1000,
           width: '85%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 10,
         }}>
-          <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, letterSpacing: '0.1em' }}>ROD TIP CALIBRATION</div>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ color: 'white', fontSize: 12 }}>X — {debugTipX.toFixed(2)}</span>
-            <input type="range" min="0" max="100" step="0.25" value={debugTipX}
-              onChange={e => setDebugTipX(parseFloat(e.target.value))}
-              style={{ width: '100%', accentColor: '#D4A940' }} />
-          </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ color: 'white', fontSize: 12 }}>Y — {debugTipY.toFixed(2)}</span>
-            <input type="range" min="0" max="100" step="0.25" value={debugTipY}
-              onChange={e => setDebugTipY(parseFloat(e.target.value))}
-              style={{ width: '100%', accentColor: '#D4A940' }} />
-          </label>
-          <div style={{
-            background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '8px 10px',
-            fontFamily: 'monospace', fontSize: 11, color: '#D4A940', lineHeight: 1.7,
-          }}>
-            fishing: [{debugTipX.toFixed(2)}, {debugTipY.toFixed(2)}]
+          {/* Mode toggle */}
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(['tip', 'hook'] as const).map(m => (
+              <button key={m} onClick={() => setDebugMode(m)} style={{
+                flex: 1, padding: '4px 0', borderRadius: 8, fontSize: 11, cursor: 'pointer',
+                background: debugMode === m ? '#D4A940' : 'rgba(255,255,255,0.08)',
+                color: debugMode === m ? '#000' : 'rgba(255,255,255,0.5)',
+                border: 'none', fontWeight: debugMode === m ? 700 : 400,
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+              }}>{m === 'tip' ? 'Rod Tip' : 'Hook'}</button>
+            ))}
           </div>
+
+          {debugMode === 'tip' && (<>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ color: 'white', fontSize: 12 }}>X — {debugTipX.toFixed(2)}</span>
+              <input type="range" min="0" max="100" step="0.25" value={debugTipX}
+                onChange={e => setDebugTipX(parseFloat(e.target.value))}
+                style={{ width: '100%', accentColor: '#D4A940' }} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ color: 'white', fontSize: 12 }}>Y — {debugTipY.toFixed(2)}</span>
+              <input type="range" min="0" max="100" step="0.25" value={debugTipY}
+                onChange={e => setDebugTipY(parseFloat(e.target.value))}
+                style={{ width: '100%', accentColor: '#D4A940' }} />
+            </label>
+            <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '8px 10px', fontFamily: 'monospace', fontSize: 11, color: '#D4A940', lineHeight: 1.7 }}>
+              fishing: [{debugTipX.toFixed(2)}, {debugTipY.toFixed(2)}]
+            </div>
+          </>)}
+
+          {debugMode === 'hook' && (<>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ color: 'white', fontSize: 12 }}>Line end Y — {debugLineEndY.toFixed(2)}</span>
+              <input type="range" min="0" max="100" step="0.25" value={debugLineEndY}
+                onChange={e => setDebugLineEndY(parseFloat(e.target.value))}
+                style={{ width: '100%', accentColor: '#00ff88' }} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ color: 'white', fontSize: 12 }}>Hook offset X — {debugHookOffsetX.toFixed(2)}</span>
+              <input type="range" min="-15" max="15" step="0.25" value={debugHookOffsetX}
+                onChange={e => setDebugHookOffsetX(parseFloat(e.target.value))}
+                style={{ width: '100%', accentColor: '#00ff88' }} />
+            </label>
+            <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '8px 10px', fontFamily: 'monospace', fontSize: 11, color: '#00ff88', lineHeight: 1.7 }}>
+              WATER_Y = {debugLineEndY.toFixed(2)}<br />
+              hookOffsetX = {debugHookOffsetX.toFixed(2)}
+            </div>
+          </>)}
+
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
-            Drag until crosshair sits on rod tip, then share the values above.
+            {debugMode === 'tip' ? 'Align red crosshair with rod tip.' : 'Align green crosshair with line end. Adjust hook X offset to center hook on line.'}
           </div>
         </div>
       )}
