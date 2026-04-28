@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import FishingPageClient from './FishingPageClient'
 import { claimDailyBait } from './actions'
+import { getShip } from '@/lib/ships'
 
 export default async function FishingPage() {
   const supabase = await createClient()
@@ -25,7 +26,7 @@ export default async function FishingPage() {
     { data: collectionRows },
   ] = await Promise.all([
     admin.from('profiles')
-      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp')
+      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, ship_tier')
       .eq('id', user.id)
       .single(),
     admin.from('bait_inventory')
@@ -51,6 +52,7 @@ export default async function FishingPage() {
 
   const ownedRods = (rodRows ?? []).map((r: { rod_tier: number }) => r.rod_tier)
   const caughtFishIds = (collectionRows ?? []).map((r: { fish_id: number }) => r.fish_id)
+  const holdCapacity = getShip(profile?.ship_tier ?? 0).holdCapacity
 
   return (
     <>
@@ -73,6 +75,7 @@ export default async function FishingPage() {
               bite_rarity: number; catch_difficulty: number; catch_score: number; sell_value: number
             }
           }[]}
+          holdCapacity={holdCapacity}
           uniqueSpeciesCaught={uniqueSpeciesCaught ?? 0}
           ownedRods={ownedRods}
           allFishSpecies={(allSpecies ?? []) as { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }[]}

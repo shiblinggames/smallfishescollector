@@ -58,7 +58,7 @@ const ZONE_CONDITIONS: Record<string, string[]> = {
 const HOW_IT_WORKS = [
   {
     title: 'Cast & Wait',
-    body: 'Each cast uses one bait. A fish is selected the moment you cast — rarer fish take longer to bite. Better rod and bait reduce the wait.',
+    body: 'Each cast uses one bait. A fish is selected the moment you cast — rarer fish take longer to bite. Better rod and bait reduce the wait. You can fish as much as you have bait for.',
   },
   {
     title: 'Reel In',
@@ -77,8 +77,12 @@ const HOW_IT_WORKS = [
     body: 'Red zones on the dial snag your line — you lose the fish and your bait. Upgrade your line to shrink them.',
   },
   {
+    title: 'Fish Hold',
+    body: "Your ship determines how many fish you can hold. When your hold is full you can't cast — head to the market to sell, then come back. Upgrade your ship at the Shipyard to carry more.",
+  },
+  {
     title: 'Gear Summary',
-    body: 'Rod → faster bites. Reel → slows the dial. Hook → widens the catch zone. Line → shrinks snag zones. Bait → faster bites + wider catch zone.',
+    body: 'Rod → faster bites. Reel → slows the dial. Hook → widens the catch zone. Line → shrinks snag zones. Bait → faster bites + wider catch zone. Ship → fish hold capacity.',
   },
 ]
 

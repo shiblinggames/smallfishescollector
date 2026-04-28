@@ -960,6 +960,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 export default function FishingGame({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialInventory,
+  holdCapacity,
   ownedRods: initialOwnedRods,
   allFishSpecies, initialCaughtFishIds,
   selectedZone: initialZone, onBack,
@@ -973,6 +974,7 @@ export default function FishingGame({
   initialBait: BaitItem[]
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
+  holdCapacity: number
   ownedRods: number[]
   allFishSpecies: FishSpeciesBasic[]
   initialCaughtFishIds: number[]
@@ -2393,12 +2395,15 @@ export default function FishingGame({
               <div className="flex flex-col gap-3">
                 {/* Summary */}
                 <div style={{ textAlign: 'center', padding: '0.5rem 0 0.25rem' }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8' }}>
-                    {holdTotalCount} fish
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: holdTotalCount >= holdCapacity ? '#f87171' : '#f0ede8' }}>
+                    {holdTotalCount} <span style={{ fontSize: '0.9rem', color: '#6a6764' }}>/ {holdCapacity}</span>
                   </p>
                   <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#6a6764', marginTop: 2 }}>
                     {inventory.length} species in hold
                   </p>
+                  <Link href="/marketplace/shipyard" className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#6a6764', textDecoration: 'none', marginTop: 4, display: 'inline-block' }}>
+                    Need more storage? →
+                  </Link>
                 </div>
 
                 {/* Quick Sell */}
