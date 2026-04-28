@@ -13,7 +13,7 @@ const D = 140
 const BORDER = 5
 
 const artClass: Record<ArtEffect, string> = {
-  normal: '', holographic: '', rainbow: 'art-rainbow', ghost: 'art-ghost', shadow: 'art-shadow',
+  normal: '', holographic: '', rainbow: 'art-rainbow', ghost: 'art-ghost', shadow: 'art-shadow', pearl: 'art-pearl',
   kraken: 'art-kraken', 'davy-jones': 'art-davy-jones', 'golden-age': 'art-golden-age',
   storm: 'art-storm', wanted: 'art-wanted', divine: 'art-divine',
 }

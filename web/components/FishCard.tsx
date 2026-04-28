@@ -21,6 +21,8 @@ const DEFAULT_H = 196
 const R         = 12
 
 const artBg: Partial<Record<ArtEffect, string>> = {
+  ghost:        '#c8d8e8',
+  shadow:       '#020204',
   kraken:       '#001a10',
   'davy-jones': '#010620',
   'golden-age': '#1a0e00',
@@ -35,6 +37,7 @@ const artImageClass: Record<ArtEffect, string> = {
   rainbow:      'art-rainbow',
   ghost:        'art-ghost',
   shadow:       'art-shadow',
+  pearl:        'art-pearl',
   kraken:       'art-kraken',
   'davy-jones': 'art-davy-jones',
   'golden-age': 'art-golden-age',
@@ -83,6 +86,8 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
           sizes={fill ? '50vw' : `${W}px`}
           unoptimized
         />
+        {artEffect === 'pearl'        && <div className="art-pearl-overlay" />}
+        {artEffect === 'holographic' && <div className="art-holographic" />}
 
         {/* Wanted stamp */}
         {artEffect === 'wanted' && (
@@ -145,7 +150,6 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
         <img src="/cardfront.svg" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }} />
         {/* Full-card art effect overlays — above the border SVG, clipped to the card's outer visible edge */}
         <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 11, clipPath: 'inset(1.85% 2.63% round 4.74%)' }}>
-          {artEffect === 'holographic' && <div className="art-holographic" />}
           {artEffect === 'ghost'       && <div className="art-ghost-overlay" />}
           {artEffect === 'shadow'      && <div className="art-shadow-overlay" />}
           {artEffect === 'kraken'      && <div className="art-kraken-overlay" />}

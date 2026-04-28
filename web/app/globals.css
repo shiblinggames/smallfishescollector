@@ -162,6 +162,35 @@ body {
   pointer-events: none;
 }
 
+/* Pearl: soft milky filter + slow nacreous shimmer */
+.art-pearl { filter: brightness(1.1) saturate(0.72) contrast(1.04); }
+@property --pearl-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes pearlSheen {
+  from { --pearl-angle: 0deg; }
+  to   { --pearl-angle: 360deg; }
+}
+.art-pearl-overlay {
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(
+    from var(--pearl-angle),
+    rgba(255,255,255,0.0),
+    rgba(255,235,210,0.22),
+    rgba(210,235,255,0.24),
+    rgba(255,210,235,0.20),
+    rgba(225,255,225,0.22),
+    rgba(255,255,255,0.0)
+  );
+  mix-blend-mode: screen;
+  animation: pearlSheen 10s linear infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
 /* Holographic: spinning conic overlay with color blend */
 @property --holo-angle {
   syntax: '<angle>';
