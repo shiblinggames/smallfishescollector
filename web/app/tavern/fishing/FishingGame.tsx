@@ -565,10 +565,10 @@ const ROD_FRAMES: Record<SceneFrame, {
   lineControl?: [number, number]
   lineEnd?: [number, number]
 }> = {
-  fishing: { handle: [64, 33], control: [55, 24], tip: [41, 25], showLine: true,  lineControl: [38, 28], lineEnd: [35, 31] },
-  windup:  { handle: [65, 33], control: [69, 23], tip: [71, 19], showLine: false },
-  cast1:   { handle: [62, 31], control: [57, 20], tip: [55, 17], showLine: false },
-  cast2:   { handle: [62, 32], control: [53, 25], tip: [44, 27], showLine: false },
+  fishing: { handle: [78, 34], control: [64, 22], tip: [46, 17], showLine: true,  lineControl: [46, 27], lineEnd: [46, 36] },
+  windup:  { handle: [79, 34], control: [78, 21], tip: [77, 14], showLine: false },
+  cast1:   { handle: [76, 32], control: [67, 17], tip: [62, 12], showLine: false },
+  cast2:   { handle: [76, 33], control: [64, 23], tip: [51, 24], showLine: false },
 }
 
 function RodOverlay({ frame, rod }: { frame: SceneFrame; rod: RodDef }) {
@@ -579,7 +579,7 @@ function RodOverlay({ frame, rod }: { frame: SceneFrame; rod: RodDef }) {
   const sw = 0.55 + Math.min(rod.tier, 10) * 0.04
   const rodPath = `M ${hx} ${hy} Q ${cx} ${cy} ${tx} ${ty}`
   // waterline y in SVG space — bobber sits here, line below is hidden under water
-  const waterY = 31
+  const waterY = 36
   return (
     <svg viewBox="0 0 100 100" preserveAspectRatio="none"
       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 2 }}>
@@ -589,15 +589,16 @@ function RodOverlay({ frame, rod }: { frame: SceneFrame; rod: RodDef }) {
       <path d={rodPath} fill="none" stroke={rod.color} strokeWidth={sw} strokeLinecap="round" />
       {/* highlight */}
       <path d={rodPath} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={sw * 0.35} strokeLinecap="round" />
-      {/* fishing line — tip to waterline */}
+      {/* fishing line — above water */}
       {cfg.showLine && cfg.lineEnd && (
         <>
-          <path
-            d={`M ${tx} ${ty} Q ${cfg.lineControl![0]} ${cfg.lineControl![1]} ${cfg.lineEnd![0]} ${waterY}`}
-            fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="0.25"
-          />
+          <line x1={tx} y1={ty} x2={tx} y2={waterY}
+            stroke="rgba(255,255,255,0.55)" strokeWidth="0.25" />
+          {/* line continuing underwater, fading out */}
+          <line x1={tx} y1={waterY} x2={tx} y2={waterY + 28}
+            stroke="rgba(255,255,255,0.18)" strokeWidth="0.25" />
           {/* bobber sitting on waterline */}
-          <ellipse cx={cfg.lineEnd![0]} cy={waterY} rx="0.7" ry="0.5" fill="#f87171" stroke="rgba(0,0,0,0.3)" strokeWidth="0.15" />
+          <ellipse cx={tx} cy={waterY} rx="0.7" ry="0.5" fill="#f87171" stroke="rgba(0,0,0,0.3)" strokeWidth="0.15" />
         </>
       )}
     </svg>
