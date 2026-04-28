@@ -25,7 +25,7 @@ const artBg: Partial<Record<ArtEffect, string>> = {
   shadow:       '#020204',
   kraken:       '#001a10',
   'davy-jones': '#010620',
-  'golden-age': '#1a0e00',
+  'golden-age': '#1e1400',
   storm:        '#060a14',
   wanted:       '#120800',
   divine:       '#0e0c08',
