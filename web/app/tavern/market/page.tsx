@@ -53,7 +53,7 @@ export default async function MarketPage() {
     fish_species: { id: number; name: string; habitat: string; bite_rarity: number; sell_value: number } | null
   }
 
-  const portfolio: MarketFishEntry[] = ((inventoryRes.data ?? []) as InvRow[])
+  const portfolio: MarketFishEntry[] = ((inventoryRes.data ?? []) as unknown as InvRow[])
     .filter(r => r.fish_species != null)
     .map(r => {
       const species = r.fish_species!
