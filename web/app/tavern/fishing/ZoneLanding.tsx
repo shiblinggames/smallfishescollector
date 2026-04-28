@@ -1,8 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ZONE_MIN_LEVEL } from './zoneData'
+
+type LastSession = {
+  zone: string
+  totalCaught: number
+  xpGained: number
+  perfects: number
+  newSpecies: number
+  gems: number
+  bestCatch: { name: string; bite_rarity: number; scientific_name: string } | null
+  rarityCounts: Record<string, number>
+}
+
+const RARITY_COLOR: Record<number, string> = {
+  1: '#94a3b8', 2: '#4ade80', 3: '#60a5fa', 4: '#c084fc', 5: '#f59e0b',
+}
 
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 export type ZoneKey = typeof ZONES[number]
@@ -74,6 +89,14 @@ export default function ZoneLanding({
   onSelect: (zone: ZoneKey) => void
 }) {
   const [modalOpen, setModalOpen] = useState(false)
+  const [lastSession, setLastSession] = useState<LastSession | null>(null)
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('fishing_last_session')
+      if (stored) setLastSession(JSON.parse(stored))
+    } catch {}
+  }, [])
 
   return (
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0"
@@ -121,6 +144,82 @@ export default function ZoneLanding({
               i
             </button>
           </div>
+
+          {/* Last session card */}
+          <AnimatePresence>
+            {lastSession && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+                className="mb-4 rounded-2xl px-4 py-3.5"
+                style={{
+                  background: `${HABITAT_COLOR[lastSession.zone] ?? '#888'}0f`,
+                  border: `1px solid ${HABITAT_COLOR[lastSession.zone] ?? '#888'}30`,
+                }}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                      style={{ fontSize: '0.6rem', color: '#6a6764' }}>Last Session</p>
+                    <p className="font-cinzel font-700"
+                      style={{ fontSize: '0.9rem', color: HABITAT_COLOR[lastSession.zone] ?? '#888' }}>
+                      {HABITAT_LABEL[lastSession.zone] ?? lastSession.zone}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setLastSession(null); try { localStorage.removeItem('fishing_last_session') } catch {} }}
+                    style={{ color: '#4a4845', fontSize: '1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none', padding: '0.1rem 0.2rem' }}
+                  >✕</button>
+                </div>
+
+                {/* Rarity dots */}
+                <div className="flex items-center gap-2 mb-2.5 flex-wrap">
+                  <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8' }}>
+                    {lastSession.totalCaught}
+                  </p>
+                  <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>fish</p>
+                  <div className="flex gap-1.5 ml-1">
+                    {[1,2,3,4,5].map(r => {
+                      const count = lastSession.rarityCounts[r] ?? 0
+                      if (!count) return null
+                      return (
+                        <div key={r} className="flex items-center gap-1">
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: RARITY_COLOR[r] }} />
+                          <span className="font-karla font-600" style={{ fontSize: '0.65rem', color: RARITY_COLOR[r] }}>×{count}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Best catch */}
+                {lastSession.bestCatch && (
+                  <p className="font-karla font-400 mb-2.5" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>
+                    Best catch:{' '}
+                    <span className="font-cinzel font-700" style={{ color: RARITY_COLOR[lastSession.bestCatch.bite_rarity] ?? '#f0ede8' }}>
+                      {lastSession.bestCatch.name}
+                    </span>
+                  </p>
+                )}
+
+                {/* Stats row */}
+                <div className="flex gap-3 flex-wrap">
+                  {lastSession.xpGained > 0 && (
+                    <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#86efac' }}>+{lastSession.xpGained} XP</span>
+                  )}
+                  {lastSession.perfects > 0 && (
+                    <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#fbbf24' }}>{lastSession.perfects} perfect{lastSession.perfects > 1 ? 's' : ''}</span>
+                  )}
+                  {lastSession.newSpecies > 0 && (
+                    <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: HABITAT_COLOR[lastSession.zone] ?? '#888' }}>{lastSession.newSpecies} new species</span>
+                  )}
+                  {lastSession.gems > 0 && (
+                    <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#63e2b7' }}>+{lastSession.gems} gem{lastSession.gems > 1 ? 's' : ''}</span>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Zone cards */}
           <div className="flex flex-col gap-3">

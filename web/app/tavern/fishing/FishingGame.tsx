@@ -1098,10 +1098,32 @@ export default function FishingGame({
         const { fish, baitSaved, isNewSpecies, bountyCompletion, xpGained, newXP } = res
         setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge })
         if (isNewSpecies) setCaughtFishIds(prev => new Set([...prev, fish.id]))
-        setSessionCatches(prev => [...prev, ...(doubleCatch ? [fish, fish] : [fish])])
-        if (wasPerfect) setSessionPerfects(p => p + 1)
-        if (isNewSpecies) setSessionNewSpecies(p => p + 1)
-        if (wonChallenge) setSessionGems(p => p + 1)
+        const newCatches = [...sessionCatches, ...(doubleCatch ? [fish, fish] : [fish])]
+        const newPerfects = sessionPerfects + (wasPerfect ? 1 : 0)
+        const newNewSpecies = sessionNewSpecies + (isNewSpecies ? 1 : 0)
+        const newGems = sessionGems + (wonChallenge ? 1 : 0)
+        setSessionCatches(newCatches)
+        if (wasPerfect) setSessionPerfects(newPerfects)
+        if (isNewSpecies) setSessionNewSpecies(newNewSpecies)
+        if (wonChallenge) setSessionGems(newGems)
+
+        // Persist session to localStorage so Nav-away still surfaces a last session card
+        try {
+          const bestCatch = newCatches.reduce<FishSpecies | null>((b, f) => (!b || f.bite_rarity > b.bite_rarity) ? f : b, null)
+          const rarityCounts: Record<number, number> = {}
+          newCatches.forEach(f => { rarityCounts[f.bite_rarity] = (rarityCounts[f.bite_rarity] ?? 0) + 1 })
+          localStorage.setItem('fishing_last_session', JSON.stringify({
+            zone: selectedZone,
+            totalCaught: newCatches.length,
+            xpGained: newXP - initialFishingXP,
+            perfects: newPerfects,
+            newSpecies: newNewSpecies,
+            gems: newGems,
+            bestCatch: bestCatch ? { name: bestCatch.name, bite_rarity: bestCatch.bite_rarity, scientific_name: bestCatch.scientific_name } : null,
+            rarityCounts,
+          }))
+        } catch {}
+
         if (bountyCompletion) setBountyNotif(bountyCompletion)
         const oldLevel = getLevelFromXP(fishingXP)
         const newLevel = getLevelFromXP(newXP)
