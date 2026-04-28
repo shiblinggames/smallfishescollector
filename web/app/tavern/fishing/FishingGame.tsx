@@ -1749,20 +1749,20 @@ export default function FishingGame({
             <button
               onClick={() => { setGearOpen(o => !o); setHoldOpen(false) }}
               style={{
-                flex: 1, height: 72, borderRadius: 14,
+                flex: 1, height: 80, borderRadius: 14,
                 background: gearOpen ? `${selectedBaitDef?.color ?? '#fff'}10` : 'rgba(4,10,18,0.72)',
                 border: `1px solid ${gearOpen ? (selectedBaitDef?.color ?? 'rgba(255,255,255,0.2)') + '45' : 'rgba(255,255,255,0.09)'}`,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
                 cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
               }}
             >
-              <p className="font-karla font-600 uppercase tracking-[0.14em]"
-                style={{ fontSize: '0.52rem', color: '#6a6764' }}>Gear</p>
+              <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                style={{ fontSize: '0.6rem', color: '#7a7774' }}>Gear</p>
               <p className="font-cinzel font-700"
-                style={{ fontSize: '0.82rem', color: selectedBaitDef?.color ?? '#f0ede8' }}>
+                style={{ fontSize: '0.92rem', color: selectedBaitDef?.color ?? '#f0ede8' }}>
                 {selectedBaitDef?.name ?? '—'}{selectedBaitQty > 0 ? ` ×${selectedBaitQty}` : ''}
               </p>
-              <p className="font-karla font-600" style={{ fontSize: '0.52rem', color: selectedBaitQty === 0 ? '#f87171' : 'rgba(255,255,255,0.4)' }}>
+              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: selectedBaitQty === 0 ? '#f87171' : 'rgba(255,255,255,0.45)' }}>
                 {selectedBaitQty === 0
                   ? 'No bait'
                   : selectedBaitDef?.catchZoneBonus ?? 0 > 0
@@ -1779,20 +1779,20 @@ export default function FishingGame({
             <button
               onClick={() => { setHoldOpen(o => !o); setGearOpen(false) }}
               style={{
-                flex: 1, height: 72, borderRadius: 14,
+                flex: 1, height: 80, borderRadius: 14,
                 background: holdOpen ? 'rgba(240,192,64,0.08)' : 'rgba(4,10,18,0.72)',
                 border: `1px solid ${holdOpen ? 'rgba(240,192,64,0.35)' : 'rgba(255,255,255,0.09)'}`,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
                 cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
               }}
             >
-              <p className="font-karla font-600 uppercase tracking-[0.14em]"
-                style={{ fontSize: '0.52rem', color: '#6a6764' }}>Fish Hold</p>
+              <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                style={{ fontSize: '0.6rem', color: '#7a7774' }}>Fish Hold</p>
               <p className="font-cinzel font-700"
-                style={{ fontSize: '0.82rem', color: holdTotalCount > 0 ? '#f0ede8' : '#4a4845' }}>
-                {holdTotalCount > 0 ? `Fish ×${holdTotalCount}` : 'Empty'}
+                style={{ fontSize: '0.88rem', color: holdTotalCount > 0 ? '#f0ede8' : '#4a4845' }}>
+                {holdTotalCount > 0 ? `Sell Fish ×${holdTotalCount}` : 'Empty'}
               </p>
-              <p className="font-karla font-600" style={{ fontSize: '0.52rem', color: holdTotalCount > 0 ? '#f0c040' : '#3a3835' }}>
+              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: holdTotalCount > 0 ? '#f0c040' : '#3a3835' }}>
                 {holdTotalCount > 0 ? `${holdTotalValue.toLocaleString()} ⟡` : 'No fish yet'}
               </p>
             </button>
