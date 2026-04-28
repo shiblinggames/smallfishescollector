@@ -1569,8 +1569,7 @@ export default function FishingGame({
 
             {ZONES.map(zone => {
               const zoneSpecies = allFishSpecies.filter(f => f.habitat === zone)
-              const discoveredHere = zoneSpecies.filter(f => caughtFishIds.has(f.id))
-              const undiscoveredHere = zoneSpecies.filter(f => !caughtFishIds.has(f.id))
+              const discoveredCount = zoneSpecies.filter(f => caughtFishIds.has(f.id)).length
               const zoneColor = HABITAT_COLOR[zone]
               const isExpanded = expandedZone === zone
 
@@ -1588,8 +1587,8 @@ export default function FishingGame({
                     </div>
                     <div className="flex items-center gap-2">
                       <p className="font-karla font-600"
-                        style={{ fontSize: '0.52rem', color: discoveredHere.length === zoneSpecies.length ? zoneColor : '#6a6764' }}>
-                        {discoveredHere.length} / {zoneSpecies.length} found
+                        style={{ fontSize: '0.52rem', color: discoveredCount === zoneSpecies.length ? zoneColor : '#6a6764' }}>
+                        {discoveredCount} / {zoneSpecies.length} found
                       </p>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                         style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', flexShrink: 0 }}>
@@ -1598,29 +1597,31 @@ export default function FishingGame({
                     </div>
                   </button>
 
-                  {/* Fish list */}
+                  {/* Fish list — all in rarity order, discovered and undiscovered interleaved */}
                   {isExpanded && (
                     <div className="flex flex-col gap-1 mt-1 mb-2">
-                      {discoveredHere.map(f => (
-                        <div key={f.id} className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg"
-                          style={{ background: 'rgba(4,10,18,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                          <span style={{
-                            width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-                            background: RARITY[f.bite_rarity]?.color ?? '#888',
-                          }} />
-                          <p className="font-cinzel font-700 flex-1 truncate"
-                            style={{ fontSize: '0.65rem', color: '#f0ede8' }}>{f.name}</p>
-                          <span style={{ fontSize: '0.7rem', color: '#4ade80', flexShrink: 0 }}>✓</span>
-                        </div>
-                      ))}
-                      {undiscoveredHere.map((_, i) => (
-                        <div key={`unk-${zone}-${i}`} className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg"
-                          style={{ background: 'rgba(4,10,18,0.35)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#2a2a2a', flexShrink: 0 }} />
-                          <p className="font-karla font-600 flex-1"
-                            style={{ fontSize: '0.62rem', color: '#3a3835', letterSpacing: '0.05em' }}>??? Undiscovered</p>
-                        </div>
-                      ))}
+                      {zoneSpecies.map(f => {
+                        const discovered = caughtFishIds.has(f.id)
+                        return discovered ? (
+                          <div key={f.id} className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg"
+                            style={{ background: 'rgba(4,10,18,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                            <span style={{
+                              width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                              background: RARITY[f.bite_rarity]?.color ?? '#888',
+                            }} />
+                            <p className="font-cinzel font-700 flex-1 truncate"
+                              style={{ fontSize: '0.65rem', color: '#f0ede8' }}>{f.name}</p>
+                            <span style={{ fontSize: '0.7rem', color: '#4ade80', flexShrink: 0 }}>✓</span>
+                          </div>
+                        ) : (
+                          <div key={f.id} className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg"
+                            style={{ background: 'rgba(4,10,18,0.35)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: RARITY[f.bite_rarity]?.color ? RARITY[f.bite_rarity].color + '30' : '#2a2a2a', flexShrink: 0 }} />
+                            <p className="font-karla font-600 flex-1"
+                              style={{ fontSize: '0.62rem', color: '#3a3835', letterSpacing: '0.05em' }}>??? Undiscovered</p>
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                 </div>

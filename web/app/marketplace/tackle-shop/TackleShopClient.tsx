@@ -124,7 +124,7 @@ export default function TackleShopClient({
     {
       key: 'bait', label: 'Bait', color: '#34d399',
       desc: 'Consumables used per cast. Better bait attracts fish faster and increases your chances of rare catches.',
-      active: `${totalBait} in stock`,
+      active: `${totalBait} owned`,
     },
     {
       key: 'hook', label: 'Hooks', color: HOOKS[hookTier]?.color ?? '#f0c040',
