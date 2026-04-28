@@ -466,7 +466,7 @@ body {
 .art-wanted { filter: sepia(0.95) brightness(0.9) contrast(1.1) saturate(0.75); }
 
 /* ── Pack card responsive size ── */
-.pack-card-size { width: calc(50vw - 8px); height: calc((50vw - 8px) * 1.4); }
+.pack-card-size { width: calc(50vw - 18px); height: calc((50vw - 18px) * 1.4); }
 @media (min-width: 640px) { .pack-card-size { width: 200px; height: 280px; } }
 
 /* ── Daily bonus toast ── */

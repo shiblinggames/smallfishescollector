@@ -539,11 +539,11 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
         )
       })()}
       {/* Mobile: 2×2 grid */}
-      <div className="sm:hidden flex flex-col items-center gap-4 w-full">
-        <div className="grid grid-cols-2 gap-4 w-full">
+      <div className="sm:hidden flex flex-col items-center gap-6 w-full">
+        <div className="grid grid-cols-2 gap-3 w-full px-3">
           {cards.map((card, i) => renderCard(card, i))}
         </div>
-        <div className="flex items-center justify-center gap-10">
+        <div className="flex items-center justify-center gap-12 px-6 w-full">
           {swapped ? renderOpenAllButton() : renderPackCount()}
           {swapped ? renderPackCount() : renderOpenAllButton()}
         </div>

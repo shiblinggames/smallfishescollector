@@ -186,7 +186,7 @@ export default function FishCard({ name, filename, borderStyle, artEffect, varia
   }
 
   return (
-    <div className={`fish-card flex flex-col items-center ${className}`}>
+    <div className={`fish-card flex flex-col items-center ${fill ? 'w-full h-full' : ''} ${className}`}>
       {frame}
     </div>
   )
