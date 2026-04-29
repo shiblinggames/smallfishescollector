@@ -577,7 +577,12 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
             borderColor={`${enemyColor}55`}
           />
           <div style={{ position: 'relative', height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: enemyHitAnim }}>
-            <span style={{ fontSize: '3.5rem', lineHeight: 1 }}>{ENEMY_AVATAR[cs.enemyId] ?? '☠'}</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`${ENEMY_IMG_BASE}enemytier${enemy.tier}.png`}
+              alt={enemy.name}
+              style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }}
+            />
             {showResult && log && log.enemyDodged && (
               <Hitsplat text="DODGED!" color="#4ade80" animKey={log.round} />
             )}

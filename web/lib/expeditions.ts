@@ -181,7 +181,8 @@ export interface EnemyLootTable {
 export interface EnemyDef {
   id: string
   name: string
-  image: string | null  // filename in enemy-arts storage bucket
+  image: string | null  // portrait filename in enemy-arts bucket (circular avatar)
+  tier: number          // determines which boat image is shown in combat (enemytier{N}.png)
   maxHp: number
   damage: number  // max damage per shot (min is always 1)
   dodge: number   // same scale as crew dodge: dodge*5 = dodge%
@@ -210,6 +211,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
     id: 'brute',
     name: 'Reef Raider',
     image: null,
+    tier: 1,
     maxHp: 20,
     damage: 6,
     dodge: 0,
@@ -225,6 +227,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
     id: 'sniper',
     name: "Crow's Nest Marksman",
     image: null,
+    tier: 1,
     maxHp: 25,
     damage: 14,
     dodge: 2,
@@ -240,6 +243,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
     id: 'corsair',
     name: 'Saltwater Corsair',
     image: null,
+    tier: 1,
     maxHp: 35,
     damage: 10,
     dodge: 2,
@@ -263,6 +267,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
     id: 'barnacle_pete',
     name: 'Barnacle Pete',
     image: 'barnacle_pete.png',
+    tier: 1,
     maxHp: 50,
     damage: 10,
     dodge: 1,
