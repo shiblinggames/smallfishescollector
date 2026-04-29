@@ -221,6 +221,7 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
               cs={cs}
               phase={phase}
               crew={crew}
+              crewLoadout={exp.crew_loadout ?? []}
               ship={ship}
               runBuffs={runBuffs}
               isBoss={nodeType === 'boss'}
@@ -296,9 +297,25 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes hitsplat-pop {
-          0%   { opacity: 0; transform: translateX(-50%) translateY(-20%) scale(0.3); }
-          55%  { opacity: 1; transform: translateX(-50%) translateY(-60%) scale(1.25); }
-          100% { opacity: 1; transform: translateX(-50%) translateY(-55%) scale(1); }
+          0%   { opacity: 0; transform: translateX(-50%) translateY(-10%) scale(0.2) rotate(-12deg); }
+          55%  { opacity: 1; transform: translateX(-50%) translateY(-65%) scale(1.3) rotate(4deg); }
+          100% { opacity: 1; transform: translateX(-50%) translateY(-58%) scale(1) rotate(0deg); }
+        }
+        @keyframes combat-enemy-hit {
+          0%,100% { transform: translateX(0); }
+          20%     { transform: translateX(-5px) rotate(-1.5deg); }
+          40%     { transform: translateX(5px)  rotate(1.5deg); }
+          60%     { transform: translateX(-3px); }
+          80%     { transform: translateX(3px); }
+        }
+        @keyframes combat-defend-pulse {
+          0%   { box-shadow: 0 0 0 0 rgba(74,222,128,0.5); }
+          50%  { box-shadow: 0 0 0 8px rgba(74,222,128,0.1); }
+          100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+        }
+        @keyframes combat-reload-flash {
+          0%,100% { opacity: 1; }
+          40%     { opacity: 0.55; filter: brightness(1.6) hue-rotate(30deg); }
         }
       `}</style>
     </main>
@@ -313,24 +330,27 @@ const ENEMY_AVATAR: Record<string, string> = {
   barnacle_pete:  '🐡',
 }
 
-function Hitsplat({ text, color, big }: { text: string; color: string; big?: boolean }) {
+function Hitsplat({ text, color, big, animKey }: { text: string; color: string; big?: boolean; animKey?: string | number }) {
   return (
-    <div style={{
+    <div key={animKey} style={{
       position: 'absolute', top: '50%', left: '50%',
-      animation: 'hitsplat-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards',
+      animation: 'hitsplat-pop 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards',
       pointerEvents: 'none', zIndex: 20, whiteSpace: 'nowrap',
     }}>
       <div style={{
-        background: 'rgba(0,0,0,0.85)',
+        background: 'rgba(8,6,4,0.9)',
         border: `2px solid ${color}`,
-        borderRadius: big ? 9 : 6,
-        padding: big ? '0.3rem 0.65rem' : '0.15rem 0.45rem',
-        boxShadow: `0 0 10px ${color}55`,
+        borderRadius: big ? 10 : 6,
+        padding: big ? '0.3rem 0.7rem' : '0.18rem 0.48rem',
+        boxShadow: big ? `0 0 14px ${color}88, 0 0 4px ${color}` : `0 0 6px ${color}55`,
+        outline: big ? `1px solid ${color}44` : 'none',
+        outlineOffset: big ? 3 : 0,
       }}>
         <p className="font-cinzel font-700" style={{
-          fontSize: big ? '1.05rem' : '0.72rem',
+          fontSize: big ? '1.1rem' : '0.75rem',
           color, lineHeight: 1,
-          textShadow: big ? `0 0 14px ${color}` : 'none',
+          textShadow: big ? `0 0 16px ${color}` : 'none',
+          letterSpacing: big ? '0.04em' : 'normal',
         }}>{text}</p>
       </div>
     </div>
@@ -346,11 +366,12 @@ function StatRow({ label, value, color }: { label: string; value: string | numbe
   )
 }
 
-function CombatView({ enemy, cs, phase, crew, ship, runBuffs, isBoss, isPending, currentDurability, maxDurability, onAction, onNextRound }: {
+function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBoss, isPending, currentDurability, maxDurability, onAction, onNextRound }: {
   enemy: EnemyDef
   cs: NonNullable<Expedition['combat_state']>
   phase: Phase
   crew: { count: number; power: number; dodge: number; fortune: number }
+  crewLoadout: import('@/lib/expeditions').CrewCard[]
   ship: ShipStats
   runBuffs: RunBuff[]
   isBoss: boolean
@@ -380,8 +401,12 @@ function CombatView({ enemy, cs, phase, crew, ship, runBuffs, isBoss, isPending,
   const fireMultLabel = cs.playerCharges === 0 ? '—' : cs.playerCharges === 1 ? '×1' : cs.playerCharges === 2 ? '×2.5' : '×5'
   const dmgRange = crew.count >= effectivePower ? String(effectivePower) : `${crew.count}–${effectivePower}`
 
-  const nextEnemyAction = enemy.pattern[(cs.enemyPatternIndex + 1) % enemy.pattern.length]
-  const nextEnemyLabel = nextEnemyAction === 'fire' ? 'Firing!' : nextEnemyAction === 'defend' ? 'Defending' : 'Reloading'
+  const enemyHitAnim = showResult && log && log.playerAction === 'fire' && log.playerDamageDealt > 0
+    ? 'combat-enemy-hit 0.45s ease' : 'none'
+  const playerPanelAnim = showResult && log && log.playerAction === 'defend'
+    ? 'combat-defend-pulse 0.7s ease' : 'none'
+  const playerImgAnim = showResult && log && log.playerAction === 'reload'
+    ? 'combat-reload-flash 0.5s ease' : 'none'
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
@@ -396,19 +421,19 @@ function CombatView({ enemy, cs, phase, crew, ship, runBuffs, isBoss, isPending,
       <div style={{ display: 'flex', gap: '0.625rem', flexShrink: 0 }}>
 
         {/* Player panel */}
-        <div style={{ flex: 1, background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.16)', borderRadius: 14, padding: '0.75rem 0.625rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+        <div style={{ flex: 1, background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.16)', borderRadius: 14, padding: '0.75rem 0.625rem', display: 'flex', flexDirection: 'column', gap: '0.35rem', animation: playerPanelAnim }}>
           <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: '#4a6a8a' }}>Your Ship</p>
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', animation: playerImgAnim }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={ship.image} alt={ship.name} style={{ width: '100%', height: 96, objectFit: 'contain', objectPosition: 'bottom', display: 'block' }} />
+            <img src={ship.image} alt={ship.name} style={{ width: '100%', height: 88, objectFit: 'contain', objectPosition: 'bottom', display: 'block' }} />
             {showResult && log && log.playerDamageTaken > 0 && (
-              <Hitsplat text={`-${log.playerDamageTaken}`} color="#f87171" />
+              <Hitsplat text={`-${log.playerDamageTaken}`} color="#f87171" animKey={log.round} />
             )}
             {showResult && log && log.playerDodged && (
-              <Hitsplat text="DODGED!" color="#4ade80" />
+              <Hitsplat text="DODGED!" color="#4ade80" animKey={log.round} />
             )}
           </div>
-          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.68rem', color: '#f0ede8', lineHeight: 1.2 }}>{ship.name}</p>
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.62rem', color: '#f0ede8', lineHeight: 1.2 }}>{ship.name}</p>
           {/* HP bar */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
@@ -426,26 +451,49 @@ function CombatView({ enemy, cs, phase, crew, ship, runBuffs, isBoss, isPending,
             ))}
             <p className="font-karla font-600" style={{ fontSize: '0.48rem', color: '#f0c040', marginLeft: 2 }}>{fireMultLabel}</p>
           </div>
-          {/* Ship + crew stats */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.35rem', marginTop: '0.1rem', display: 'flex', flexDirection: 'column' }}>
+          {/* Ship stats */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.3rem', marginTop: '0.05rem', display: 'flex', flexDirection: 'column' }}>
             <StatRow label="DMG" value={dmgRange} color="#f87171" />
             <StatRow label="DGE" value={`${dodgeChance}%`} color="#60a5fa" />
             <StatRow label="FTN" value={crew.fortune} color="#f0c040" />
             <StatRow label="ARM" value={effectiveArmor} color="#4ade80" />
-            <StatRow label="SPD" value={ship.speed} color="#a78bfa" />
           </div>
+          {/* Crew portraits */}
+          {crewLoadout.length > 0 && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.3rem', marginTop: '0.05rem', display: 'flex', flexDirection: 'column', gap: '0.28rem' }}>
+              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.38rem', color: '#4a4845' }}>Crew</p>
+              {crewLoadout.map((card, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.15)' }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p className="font-karla font-600 truncate" style={{ fontSize: '0.42rem', color: '#c0bdb8', lineHeight: 1.2 }}>{card.name}</p>
+                    <div style={{ display: 'flex', gap: '0.3rem' }}>
+                      <span className="font-cinzel font-700" style={{ fontSize: '0.4rem', color: '#f87171' }}>{card.power}</span>
+                      <span className="font-karla" style={{ fontSize: '0.38rem', color: '#4a4845' }}>PWR</span>
+                      <span className="font-cinzel font-700" style={{ fontSize: '0.4rem', color: '#60a5fa' }}>{card.dodge}</span>
+                      <span className="font-karla" style={{ fontSize: '0.38rem', color: '#4a4845' }}>DGE</span>
+                      <span className="font-cinzel font-700" style={{ fontSize: '0.4rem', color: '#f0c040' }}>{card.fortune}</span>
+                      <span className="font-karla" style={{ fontSize: '0.38rem', color: '#4a4845' }}>FTN</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Enemy panel */}
         <div style={{ flex: 1, background: `${enemyColor}08`, border: `1px solid ${enemyColor}20`, borderRadius: 14, padding: '0.75rem 0.625rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
           <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: enemyColor, opacity: 0.8 }}>{isBoss ? 'Boss' : 'Enemy'}</p>
-          <div style={{ position: 'relative', height: 96, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'relative', height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: enemyHitAnim }}>
             <span style={{ fontSize: '3.5rem', lineHeight: 1 }}>{ENEMY_AVATAR[cs.enemyId] ?? '☠'}</span>
             {showResult && log && log.playerDamageDealt > 0 && (
               <Hitsplat
                 text={log.critHit ? `⚡ ${log.playerDamageDealt}` : `-${log.playerDamageDealt}`}
-                color={log.critHit ? '#f0c040' : '#a78bfa'}
+                color={log.critHit ? '#f0c040' : '#f87171'}
                 big={!!log.critHit}
+                animKey={log.round}
               />
             )}
           </div>
@@ -467,9 +515,29 @@ function CombatView({ enemy, cs, phase, crew, ship, runBuffs, isBoss, isPending,
             ))}
           </div>
           {/* Enemy stats */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.35rem', marginTop: '0.1rem', display: 'flex', flexDirection: 'column' }}>
-            <StatRow label="DMG" value={enemy.damage} color={enemyColor} />
-            <StatRow label="NEXT" value={nextEnemyLabel} color={nextEnemyAction === 'fire' ? '#f87171' : nextEnemyAction === 'defend' ? '#4ade80' : '#60a5fa'} />
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.3rem', marginTop: '0.05rem', display: 'flex', flexDirection: 'column' }}>
+            <StatRow label="MAX HP" value={enemy.maxHp} color={enemyColor} />
+            <StatRow label="DMG" value={enemy.damage} color="#f87171" />
+            <StatRow label="GOLD" value={`${enemy.goldReward} ✦`} color="#f0c040" />
+            {/* Attack pattern */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.22rem 0' }}>
+              <p className="font-karla font-600 uppercase tracking-[0.06em]" style={{ fontSize: '0.44rem', color: '#4a4845' }}>Pattern</p>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                {enemy.pattern.map((action, i) => {
+                  const isCurrent = i === cs.enemyPatternIndex % enemy.pattern.length
+                  const col = action === 'fire' ? '#f87171' : action === 'defend' ? '#4ade80' : '#60a5fa'
+                  return (
+                    <div key={i} title={action} style={{
+                      width: isCurrent ? 10 : 8, height: isCurrent ? 10 : 8,
+                      borderRadius: '50%', background: col,
+                      opacity: isCurrent ? 1 : 0.3,
+                      border: isCurrent ? `1px solid rgba(255,255,255,0.5)` : 'none',
+                      transition: 'all 0.3s',
+                    }} />
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>
