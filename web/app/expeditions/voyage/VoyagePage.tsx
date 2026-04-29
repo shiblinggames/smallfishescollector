@@ -293,7 +293,14 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
         />
       )}
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes hitsplat-pop {
+          0%   { opacity: 0; transform: translateX(-50%) translateY(-20%) scale(0.3); }
+          55%  { opacity: 1; transform: translateX(-50%) translateY(-60%) scale(1.25); }
+          100% { opacity: 1; transform: translateX(-50%) translateY(-55%) scale(1); }
+        }
+      `}</style>
     </main>
   )
 }
@@ -304,6 +311,30 @@ const ENEMY_AVATAR: Record<string, string> = {
   brute:          '⚔',
   sniper:         '🔭',
   barnacle_pete:  '🐡',
+}
+
+function Hitsplat({ text, color, big }: { text: string; color: string; big?: boolean }) {
+  return (
+    <div style={{
+      position: 'absolute', top: '50%', left: '50%',
+      animation: 'hitsplat-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards',
+      pointerEvents: 'none', zIndex: 20, whiteSpace: 'nowrap',
+    }}>
+      <div style={{
+        background: 'rgba(0,0,0,0.85)',
+        border: `2px solid ${color}`,
+        borderRadius: big ? 9 : 6,
+        padding: big ? '0.3rem 0.65rem' : '0.15rem 0.45rem',
+        boxShadow: `0 0 10px ${color}55`,
+      }}>
+        <p className="font-cinzel font-700" style={{
+          fontSize: big ? '1.05rem' : '0.72rem',
+          color, lineHeight: 1,
+          textShadow: big ? `0 0 14px ${color}` : 'none',
+        }}>{text}</p>
+      </div>
+    </div>
+  )
 }
 
 function StatRow({ label, value, color }: { label: string; value: string | number; color: string }) {
@@ -367,8 +398,16 @@ function CombatView({ enemy, cs, phase, crew, ship, runBuffs, isBoss, isPending,
         {/* Player panel */}
         <div style={{ flex: 1, background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.16)', borderRadius: 14, padding: '0.75rem 0.625rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
           <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: '#4a6a8a' }}>Your Ship</p>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={ship.image} alt={ship.name} style={{ width: '100%', height: 96, objectFit: 'contain', objectPosition: 'bottom' }} />
+          <div style={{ position: 'relative' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={ship.image} alt={ship.name} style={{ width: '100%', height: 96, objectFit: 'contain', objectPosition: 'bottom', display: 'block' }} />
+            {showResult && log && log.playerDamageTaken > 0 && (
+              <Hitsplat text={`-${log.playerDamageTaken}`} color="#f87171" />
+            )}
+            {showResult && log && log.playerDodged && (
+              <Hitsplat text="DODGED!" color="#4ade80" />
+            )}
+          </div>
           <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.68rem', color: '#f0ede8', lineHeight: 1.2 }}>{ship.name}</p>
           {/* HP bar */}
           <div>
@@ -400,8 +439,15 @@ function CombatView({ enemy, cs, phase, crew, ship, runBuffs, isBoss, isPending,
         {/* Enemy panel */}
         <div style={{ flex: 1, background: `${enemyColor}08`, border: `1px solid ${enemyColor}20`, borderRadius: 14, padding: '0.75rem 0.625rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
           <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: enemyColor, opacity: 0.8 }}>{isBoss ? 'Boss' : 'Enemy'}</p>
-          <div style={{ height: 96, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'relative', height: 96, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ fontSize: '3.5rem', lineHeight: 1 }}>{ENEMY_AVATAR[cs.enemyId] ?? '☠'}</span>
+            {showResult && log && log.playerDamageDealt > 0 && (
+              <Hitsplat
+                text={log.critHit ? `⚡ ${log.playerDamageDealt}` : `-${log.playerDamageDealt}`}
+                color={log.critHit ? '#f0c040' : '#a78bfa'}
+                big={!!log.critHit}
+              />
+            )}
           </div>
           <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.68rem', color: '#f0ede8', lineHeight: 1.2 }}>{enemy.name}</p>
           {/* HP bar */}
@@ -442,38 +488,13 @@ function CombatView({ enemy, cs, phase, crew, ship, runBuffs, isBoss, isPending,
       {/* Spacer + round result anchored to bottom of spacer */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', minHeight: '2rem' }}>
         {showResult && log && (
-          <div style={{
-            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
-            borderRadius: 10, padding: '0.625rem 0.875rem',
-          }}>
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.4rem' }}>
-              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4a4845' }}>Round {log.round + 1}</p>
-              <p className="font-karla" style={{ fontSize: '0.44rem', color: '#4a4845' }}>·</p>
-              <p className="font-karla" style={{ fontSize: '0.44rem', color: '#6a6764' }}>
-                You: <span style={{ color: '#f0ede8' }}>{log.playerAction === 'reload' ? 'Reloaded' : log.playerAction === 'fire' ? `Fired (${log.playerChargesBefore} charge${log.playerChargesBefore !== 1 ? 's' : ''})` : 'Defended'}</span>
-                {' '}·{' '}
-                Enemy: <span style={{ color: '#f0ede8' }}>{log.enemyAction === 'reload' ? 'Reloaded' : log.enemyAction === 'fire' ? 'Fired' : 'Defended'}</span>
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-              {log.playerDamageDealt > 0 && (
-                <p className="font-karla" style={{ fontSize: '0.65rem', color: log.critHit ? '#f0c040' : '#a78bfa' }}>
-                  {log.critHit ? '⚡ Crit! ' : ''}Hit for <strong>{log.playerDamageDealt}</strong>
-                </p>
-              )}
-              {log.playerDodged && (
-                <p className="font-karla" style={{ fontSize: '0.65rem', color: '#4ade80' }}>Dodged!</p>
-              )}
-              {log.playerDamageTaken > 0 && (
-                <p className="font-karla" style={{ fontSize: '0.65rem', color: '#f87171' }}>
-                  Took <strong>{log.playerDamageTaken}</strong>
-                </p>
-              )}
-              {log.playerDamageDealt === 0 && !log.playerDodged && log.playerDamageTaken === 0 && (
-                <p className="font-karla" style={{ fontSize: '0.65rem', color: '#4a4845' }}>Both sides repositioned</p>
-              )}
-            </div>
-          </div>
+          <p className="font-karla text-center" style={{ fontSize: '0.48rem', color: '#4a4845' }}>
+            <span style={{ color: '#6a6764' }}>Round {log.round + 1}</span>
+            {' · '}
+            You: <span style={{ color: '#a0a09a' }}>{log.playerAction === 'reload' ? 'Reloaded' : log.playerAction === 'fire' ? `Fired (${log.playerChargesBefore}×)` : 'Defended'}</span>
+            {' · '}
+            Enemy: <span style={{ color: '#a0a09a' }}>{log.enemyAction === 'reload' ? 'Reloaded' : log.enemyAction === 'fire' ? 'Fired' : 'Defended'}</span>
+          </p>
         )}
         {resolving && (
           <p className="font-karla text-center" style={{ fontSize: '0.6rem', color: '#4a4845' }}>Resolving...</p>
