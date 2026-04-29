@@ -6,6 +6,8 @@ import type { BorderStyle, ArtEffect } from '@/lib/types'
 import type { ShipStats } from '@/lib/expeditions'
 import { saveCrew } from './actions'
 
+const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
+
 type CollectionCard = {
   collectionId: number
   variantId: number
@@ -149,50 +151,67 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
           </button>
         </div>
 
-        {/* Card slots row */}
-        <div style={{ display: 'flex', gap: '0.625rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
+        {/* Crew slots row */}
+        <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
           {slots.map((card, i) => (
-            <div key={i} style={{ flexShrink: 0 }}>
+            <div key={i} style={{ flexShrink: 0, width: 76, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
               {card ? (
-                <div style={{ position: 'relative' }}>
-                  <div
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => openPickerForSlot(i)}
-                  >
-                    <FishCard
-                      name={card.name}
-                      filename={card.filename}
-                      borderStyle={card.borderStyle as BorderStyle}
-                      artEffect={card.artEffect as ArtEffect}
-                      variantName={card.variantName}
-                      dropWeight={card.dropWeight}
-                      stats={{ power: card.power, dodge: card.dodge, fortune: card.fortune }}
-                      cardW={CARD_W}
-                    />
+                <>
+                  <div style={{ position: 'relative', width: 76 }}>
+                    {/* Image window */}
+                    <div
+                      onClick={() => openPickerForSlot(i)}
+                      style={{
+                        width: 76, height: 76,
+                        borderRadius: 10,
+                        border: '1.5px solid rgba(255,255,255,0.18)',
+                        overflow: 'hidden',
+                        background: '#080a0e',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={IMG_BASE + card.filename}
+                        alt={card.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
+                      />
+                    </div>
+                    <button
+                      onClick={(e) => removeFromSlot(i, e)}
+                      style={{
+                        position: 'absolute', top: -6, right: -6,
+                        width: 17, height: 17, borderRadius: '50%',
+                        background: 'rgba(8,8,10,0.9)', border: '1px solid rgba(255,255,255,0.2)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', zIndex: 5, padding: 0,
+                      }}
+                    >
+                      <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="3.5" strokeLinecap="round">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                      </svg>
+                    </button>
                   </div>
-                  <button
-                    onClick={(e) => removeFromSlot(i, e)}
-                    style={{
-                      position: 'absolute', top: 5, right: 5,
-                      width: 18, height: 18, borderRadius: '50%',
-                      background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.18)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', zIndex: 5, padding: 0,
-                    }}
-                  >
-                    <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="3.5" strokeLinecap="round">
-                      <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                  </button>
-                </div>
+                  <p className="font-karla font-600 text-center truncate" style={{ fontSize: '0.55rem', color: '#c0bdb8', lineHeight: 1.2, width: '100%' }}>{card.name}</p>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
+                    {STAT_COLS.map(s => (
+                      <div key={s.key} style={{ textAlign: 'center' }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: s.color, lineHeight: 1 }}>
+                          {card[s.key]}
+                        </p>
+                        <p className="font-karla font-600 uppercase" style={{ fontSize: '0.36rem', color: '#5a5856', marginTop: 1, letterSpacing: '0.05em' }}>{s.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <button
                   onClick={() => openPickerForSlot(i)}
                   style={{
-                    width: CARD_W, height: CARD_H,
+                    width: 76, height: 76,
                     background: 'rgba(255,255,255,0.02)',
-                    border: '1px dashed rgba(255,255,255,0.1)',
-                    borderRadius: 8,
+                    border: '1.5px dashed rgba(255,255,255,0.1)',
+                    borderRadius: 10,
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                     cursor: 'pointer', gap: 5, padding: 0,
                   }}
@@ -200,7 +219,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="2.5" strokeLinecap="round">
                     <path d="M12 5v14M5 12h14"/>
                   </svg>
-                  <p className="font-karla" style={{ fontSize: '0.42rem', color: '#3a3835' }}>Empty</p>
+                  <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845' }}>Empty</p>
                 </button>
               )}
             </div>
@@ -209,13 +228,13 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
 
         {/* Crew totals */}
         {slots.some(Boolean) && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '1.75rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '1.75rem', marginTop: '0.875rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
             {STAT_COLS.map(s => (
               <div key={s.key} style={{ textAlign: 'center' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: s.color, lineHeight: 1 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: s.color, lineHeight: 1 }}>
                   {s.key === 'power' ? totalPower : s.key === 'dodge' ? totalDodge : totalFortune}
                 </p>
-                <p className="font-karla font-600 uppercase" style={{ fontSize: '0.38rem', color: '#6a6764', marginTop: 2, letterSpacing: '0.06em' }}>{s.label}</p>
+                <p className="font-karla font-600 uppercase" style={{ fontSize: '0.4rem', color: '#6a6764', marginTop: 3, letterSpacing: '0.06em' }}>Total {s.label}</p>
               </div>
             ))}
           </div>
