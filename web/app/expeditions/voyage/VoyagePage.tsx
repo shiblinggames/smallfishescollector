@@ -288,7 +288,7 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
               isPending={isPending}
               currentDurability={currentDurability}
               maxDurability={maxDurability}
-              playerAvatarUrl={playerAvatarUrl}
+              onCrewClick={() => setShowCrewSheet(true)}
               onAction={handleCombatAction}
             />
           </div>
@@ -493,7 +493,7 @@ function CircleAvatar({ src, fallback, size, borderColor }: { src: string | null
   )
 }
 
-function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBoss, isPending, currentDurability, maxDurability, playerAvatarUrl, onAction }: {
+function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBoss, isPending, currentDurability, maxDurability, onCrewClick, onAction }: {
   enemy: EnemyDef
   cs: NonNullable<Expedition['combat_state']>
   phase: Phase
@@ -505,7 +505,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
   isPending: boolean
   currentDurability: number
   maxDurability: number
-  playerAvatarUrl: string | null
+  onCrewClick: () => void
   onAction: (a: CombatAction) => void
 }) {
   const resolving = phase.type === 'resolving'
@@ -565,7 +565,17 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
 
         {/* Player panel */}
         <div style={{ flex: 1, background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.16)', borderRadius: 14, padding: '0.75rem 0.625rem', display: 'flex', flexDirection: 'column', gap: '0.35rem', animation: playerPanelAnim }}>
-          <CircleAvatar src={playerAvatarUrl} fallback="⚓" size={36} borderColor="rgba(96,165,250,0.35)" />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+            <button onClick={onCrewClick} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+              <CircleAvatar
+                src={crewLoadout[0] ? IMG_BASE + crewLoadout[0].filename : null}
+                fallback="⚓"
+                size={36}
+                borderColor="rgba(96,165,250,0.35)"
+              />
+            </button>
+            <p className="font-karla" style={{ fontSize: '0.36rem', color: '#4a4845', lineHeight: 1 }}>tap for crew</p>
+          </div>
           <div style={{ position: 'relative', animation: playerImgAnim }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={ship.image} alt={ship.name} style={{ width: '100%', height: 88, objectFit: 'contain', objectPosition: 'bottom', display: 'block' }} />
@@ -585,7 +595,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
               <Hitsplat text="DODGED!" color="#4ade80" animKey={log.round} />
             )}
           </div>
-          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.62rem', color: '#f0ede8', lineHeight: 1.2 }}>{ship.name}</p>
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.62rem', color: '#f0ede8', lineHeight: 1.2 }}>{crewLoadout[0]?.name ?? ship.name}</p>
           {/* HP bar */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
@@ -610,29 +620,6 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
             <StatRow label="FTN" value={crew.fortune} color="#f0c040" />
             <StatRow label="ARM" value={effectiveArmor} color="#4ade80" />
           </div>
-          {/* Crew portraits */}
-          {crewLoadout.length > 0 && (
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.3rem', marginTop: '0.05rem', display: 'flex', flexDirection: 'column', gap: '0.28rem' }}>
-              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.38rem', color: '#4a4845' }}>Crew</p>
-              {crewLoadout.map((card, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.15)' }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="font-karla font-600 truncate" style={{ fontSize: '0.42rem', color: '#c0bdb8', lineHeight: 1.2 }}>{card.name}</p>
-                    <div style={{ display: 'flex', gap: '0.3rem' }}>
-                      <span className="font-cinzel font-700" style={{ fontSize: '0.4rem', color: '#f87171' }}>{card.power}</span>
-                      <span className="font-karla" style={{ fontSize: '0.38rem', color: '#4a4845' }}>PWR</span>
-                      <span className="font-cinzel font-700" style={{ fontSize: '0.4rem', color: '#60a5fa' }}>{card.dodge}</span>
-                      <span className="font-karla" style={{ fontSize: '0.38rem', color: '#4a4845' }}>DGE</span>
-                      <span className="font-cinzel font-700" style={{ fontSize: '0.4rem', color: '#f0c040' }}>{card.fortune}</span>
-                      <span className="font-karla" style={{ fontSize: '0.38rem', color: '#4a4845' }}>FTN</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Enemy panel */}
