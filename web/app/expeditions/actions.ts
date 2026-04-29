@@ -222,7 +222,7 @@ export async function takeCombatAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  if (!['reload', 'fire', 'defend'].includes(action)) return { error: 'Invalid action' }
+  if (!['reload', 'fire', 'fire_heavy', 'defend'].includes(action)) return { error: 'Invalid action' }
 
   const admin = createAdminClient()
   const { data } = await admin

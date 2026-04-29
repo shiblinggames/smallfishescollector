@@ -478,10 +478,11 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
   const enemyColor = isBoss ? '#f87171' : '#a78bfa'
   const enemyHpColor = enemyHpPct < 30 ? '#f87171' : enemyColor
 
-  const fireMultLabel = cs.playerCharges === 0 ? '—' : cs.playerCharges === 1 ? '×1' : cs.playerCharges === 2 ? '×2.5' : '×5'
+  const canLightFire = cs.playerCharges >= 1
+  const canHeavyFire = cs.playerCharges === 3
   const dmgRange = crew.count >= effectivePower ? String(effectivePower) : `${crew.count}–${effectivePower}`
 
-  const enemyHitAnim = showResult && log && log.playerAction === 'fire' && log.playerDamageDealt > 0
+  const enemyHitAnim = showResult && log && (log.playerAction === 'fire' || log.playerAction === 'fire_heavy') && log.playerDamageDealt > 0
     ? 'combat-enemy-hit 0.45s ease' : 'none'
   const playerPanelAnim = showResult && log && log.playerAction === 'defend'
     ? 'combat-defend-pulse 0.7s ease' : 'none'
@@ -640,7 +641,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
           <p className="font-karla text-center" style={{ fontSize: '0.48rem', color: '#4a4845' }}>
             <span style={{ color: '#6a6764' }}>Round {log.round + 1}</span>
             {' · '}
-            You: <span style={{ color: '#a0a09a' }}>{log.playerAction === 'reload' ? 'Reloaded' : log.playerAction === 'fire' ? `Fired (${log.playerChargesBefore}×)` : 'Defended'}</span>
+            You: <span style={{ color: '#a0a09a' }}>{log.playerAction === 'reload' ? 'Reloaded' : log.playerAction === 'fire' ? 'Fired ×1' : log.playerAction === 'fire_heavy' ? 'Volley ×2' : 'Defended'}</span>
             {' · '}
             Enemy: <span style={{ color: '#a0a09a' }}>{log.enemyAction === 'reload' ? 'Reloaded' : log.enemyAction === 'fire' ? 'Fired' : 'Defended'}</span>
           </p>
@@ -650,31 +651,32 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
         )}
       </div>
 
-      {/* Action buttons */}
+      {/* Action buttons — 2×2 grid */}
       <div style={{ flexShrink: 0 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
           {([
-            { action: 'reload' as const, icon: '⚙',  label: 'Reload',  sublabel: '+1 charge',      color: '#60a5fa' },
-            { action: 'fire'   as const, icon: '💥', label: 'Fire',    sublabel: cs.playerCharges === 0 ? 'no charges' : `${fireMultLabel} dmg`, color: cs.playerCharges === 0 ? '#4a4845' : '#f87171', dim: cs.playerCharges === 0 },
-            { action: 'defend' as const, icon: '🛡',  label: 'Defend',  sublabel: `${dodgeChance}% dodge`, color: '#4ade80' },
+            { action: 'reload'     as const, icon: '⚙',  label: 'Reload',  sublabel: '+1 charge',           color: '#60a5fa', dim: false },
+            { action: 'fire'       as const, icon: '💥', label: 'Fire',    sublabel: '×1 dmg · 1 charge',   color: '#f87171', dim: !canLightFire },
+            { action: 'defend'     as const, icon: '🛡',  label: 'Defend',  sublabel: `${dodgeChance}% dodge`, color: '#4ade80', dim: false },
+            { action: 'fire_heavy' as const, icon: '🔥', label: 'Volley',  sublabel: '×2 dmg · 3 charges',  color: '#f0c040', dim: !canHeavyFire },
           ] as const).map(btn => (
             <button
               key={btn.action}
-              onClick={() => !buttonsDisabled && onAction(btn.action)}
-              disabled={buttonsDisabled}
+              onClick={() => !buttonsDisabled && !btn.dim && onAction(btn.action)}
+              disabled={buttonsDisabled || btn.dim}
               style={{
                 padding: '0.875rem 0.375rem',
-                background: buttonsDisabled ? 'rgba(255,255,255,0.03)' : `${btn.color}12`,
-                border: `1px solid ${buttonsDisabled ? 'rgba(255,255,255,0.07)' : `${btn.color}35`}`,
+                background: (buttonsDisabled || btn.dim) ? 'rgba(255,255,255,0.03)' : `${btn.color}12`,
+                border: `1px solid ${(buttonsDisabled || btn.dim) ? 'rgba(255,255,255,0.07)' : `${btn.color}35`}`,
                 borderRadius: 12,
-                cursor: buttonsDisabled ? 'default' : 'pointer',
+                cursor: (buttonsDisabled || btn.dim) ? 'default' : 'pointer',
                 textAlign: 'center',
-                opacity: ('dim' in btn && btn.dim && !buttonsDisabled) ? 0.4 : 1,
+                opacity: btn.dim && !buttonsDisabled ? 0.35 : 1,
                 transition: 'opacity 0.2s',
               }}
             >
               <p style={{ fontSize: '1.4rem', marginBottom: 3 }}>{btn.icon}</p>
-              <p className="font-karla font-700" style={{ fontSize: '0.65rem', color: buttonsDisabled ? '#4a4845' : btn.color, lineHeight: 1.2 }}>{btn.label}</p>
+              <p className="font-karla font-700" style={{ fontSize: '0.65rem', color: (buttonsDisabled || btn.dim) ? '#4a4845' : btn.color, lineHeight: 1.2 }}>{btn.label}</p>
               <p className="font-karla" style={{ fontSize: '0.5rem', color: '#4a4845', marginTop: 2 }}>{btn.sublabel}</p>
             </button>
           ))}

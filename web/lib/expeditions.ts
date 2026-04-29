@@ -2,7 +2,7 @@
 
 export type ZoneKey = 'coral_run' | 'bertuna_triangle' | 'sunken_reach' | 'davy_jones_locker'
 export type ExpeditionStatus = 'active' | 'completed' | 'failed'
-export type CombatAction = 'reload' | 'fire' | 'defend'
+export type CombatAction = 'reload' | 'fire' | 'fire_heavy' | 'defend'
 export type NodeType = 'fight' | 'event' | 'shop' | 'boss'
 
 export interface ShipStats {
@@ -293,7 +293,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
 
 // ── Combat resolution ─────────────────────────────────────────────────────────
 
-export const FIRE_MULTIPLIERS: Record<number, number> = { 0: 0, 1: 1, 2: 2.5, 3: 5 }
+// fire = light attack (1 charge, ×1). fire_heavy = volley (3 charges, ×2).
+export const FIRE_MULTIPLIERS = { light: 1, heavy: 2 } as const
 
 export interface RoundResolution {
   newState: CombatState
@@ -321,17 +322,25 @@ export function resolveRound(
   const effectiveArmor  = ship.armor   + buffArmor
 
   // Can fire?
-  const playerCanFire = playerAction === 'fire' && state.playerCharges > 0
+  const playerIsLightFire = playerAction === 'fire'       && state.playerCharges >= 1
+  const playerIsHeavyFire = playerAction === 'fire_heavy' && state.playerCharges === 3
+  const playerCanFire = playerIsLightFire || playerIsHeavyFire
   const enemyCanFire  = rawEnemyAction === 'fire' && state.enemyCharges > 0
   // Enemy falls back to reload if it tries to fire with no charges
   const enemyAction: CombatAction = rawEnemyAction === 'fire' && !enemyCanFire ? 'reload' : rawEnemyAction
 
   // New charge counts
   let newPlayerCharges = state.playerCharges
-  if (playerAction === 'reload') newPlayerCharges = Math.min(state.playerCharges + 1, 3)
-  else if (playerCanFire)        newPlayerCharges = 0
-  // defend: unchanged; attempted fire with 0 charges acts as reload
-  else if (playerAction === 'fire') newPlayerCharges = Math.min(state.playerCharges + 1, 3)
+  if (playerAction === 'reload') {
+    newPlayerCharges = Math.min(state.playerCharges + 1, 3)
+  } else if (playerIsLightFire) {
+    newPlayerCharges = state.playerCharges - 1  // spend exactly 1
+  } else if (playerIsHeavyFire) {
+    newPlayerCharges = 0                         // spend all 3
+  } else if (playerAction === 'fire' || playerAction === 'fire_heavy') {
+    newPlayerCharges = Math.min(state.playerCharges + 1, 3)  // invalid fire → reload
+  }
+  // defend: unchanged
 
   let newEnemyCharges = state.enemyCharges
   if (enemyAction === 'reload') newEnemyCharges = Math.min(state.enemyCharges + 1, 3)
@@ -342,7 +351,7 @@ export function resolveRound(
   let critHit = false
   let enemyDodged = false
   if (playerCanFire) {
-    const mult = FIRE_MULTIPLIERS[state.playerCharges] ?? 1
+    const mult = playerIsHeavyFire ? FIRE_MULTIPLIERS.heavy : FIRE_MULTIPLIERS.light
     const maxDmg = Math.max(1, Math.floor(effectivePower * mult))
     const minDmg = Math.max(1, crew.count)
     const base = minDmg >= maxDmg ? maxDmg : Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg
@@ -409,7 +418,9 @@ export function resolveRound(
 
   const roundLog: CombatRoundLog = {
     round: state.round,
-    playerAction: playerCanFire ? 'fire' : (playerAction === 'fire' ? 'reload' : playerAction),
+    playerAction: playerCanFire
+      ? (playerIsHeavyFire ? 'fire_heavy' : 'fire')
+      : (playerAction === 'fire' || playerAction === 'fire_heavy') ? 'reload' : playerAction,
     playerChargesBefore: state.playerCharges,
     enemyAction,
     enemyChargesBefore: state.enemyCharges,
