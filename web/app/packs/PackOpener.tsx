@@ -371,7 +371,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
           {renderFlipInner(card, i)}
         </div>
         {flipped[i] && newVariantIds.has(card.variantId) && (
-          <p className="new-badge absolute left-0 right-0 text-center" style={{ bottom: '-1.4rem' }}>New</p>
+          <p className="new-badge absolute left-0 right-0 text-center pointer-events-none" style={{ top: '0.7rem', zIndex: 20 }}>New</p>
         )}
       </div>
     )
