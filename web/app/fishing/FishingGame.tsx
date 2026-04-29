@@ -1783,8 +1783,13 @@ export default function FishingGame({
                 cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
               }}
             >
-              <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                style={{ fontSize: '0.6rem', color: '#7a7774' }}>Gear</p>
+              <div className="flex items-center gap-1">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#7a7774" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                </svg>
+                <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                  style={{ fontSize: '0.6rem', color: '#7a7774' }}>Equip Gear</p>
+              </div>
               <p className="font-cinzel font-700"
                 style={{ fontSize: '0.92rem', color: selectedBaitDef?.color ?? '#f0ede8' }}>
                 {selectedBaitDef?.name ?? '—'}{selectedBaitQty > 0 ? ` ×${selectedBaitQty}` : ''}
@@ -1813,14 +1818,19 @@ export default function FishingGame({
                 cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
               }}
             >
-              <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                style={{ fontSize: '0.6rem', color: '#7a7774' }}>Fish Hold</p>
+              <div className="flex items-center gap-1">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#7a7774" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="8"/><path d="M12 8v4l2 2"/><path d="M8 3l1.5 2M16 3l-1.5 2"/>
+                </svg>
+                <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                  style={{ fontSize: '0.6rem', color: '#7a7774' }}>Sell Fish</p>
+              </div>
               <p className="font-cinzel font-700"
                 style={{ fontSize: '0.88rem', color: holdTotalCount >= holdCapacity ? '#f87171' : holdTotalCount > 0 ? '#f0ede8' : '#4a4845' }}>
                 {holdTotalCount} <span style={{ fontSize: '0.65rem', color: '#6a6764' }}>/ {holdCapacity}</span>
               </p>
               <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: holdTotalCount > 0 ? '#f0c040' : '#3a3835' }}>
-                {holdTotalCount > 0 ? `${holdTotalValue.toLocaleString()} ⟡` : 'No fish yet'}
+                {holdTotalCount > 0 ? `${holdTotalValue.toLocaleString()} ⟡ · sell →` : 'No fish yet'}
               </p>
             </button>
           </div>
