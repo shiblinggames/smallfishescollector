@@ -2445,6 +2445,55 @@ export default function FishingGame({
                   </button>
                 </div>
 
+                {/* Fish Manifest */}
+                <div style={{
+                  background: 'rgba(4,10,20,0.6)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: 14, padding: '0.75rem 0.75rem 0.6rem',
+                }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.16em] mb-2"
+                    style={{ fontSize: '0.5rem', color: '#3a3835' }}>Cargo Manifest</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {[...inventory]
+                      .sort((a, b) => (b.fish_species.sell_value * b.quantity) - (a.fish_species.sell_value * a.quantity))
+                      .map(item => {
+                        const color = HABITAT_COLOR[item.fish_species.habitat] ?? '#94a3b8'
+                        const quickVal = Math.floor(item.fish_species.sell_value * 0.65) * item.quantity
+                        return (
+                          <div key={item.fish_id} style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '0.45rem 0.6rem',
+                            background: `${color}0c`,
+                            border: `1px solid ${color}22`,
+                            borderLeft: `3px solid ${color}88`,
+                            borderRadius: 8,
+                          }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p className="font-cinzel font-700"
+                                style={{ fontSize: '0.65rem', color: '#d8d4ce', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {item.fish_species.name}
+                              </p>
+                              <p className="font-karla font-400"
+                                style={{ fontSize: '0.52rem', color: color + '99', fontStyle: 'italic', marginTop: 1 }}>
+                                {HABITAT_LABEL[item.fish_species.habitat] ?? item.fish_species.habitat}
+                              </p>
+                            </div>
+                            <span className="font-karla font-700"
+                              style={{ fontSize: '0.6rem', color: color + 'bb',
+                                background: color + '14', border: `1px solid ${color}28`,
+                                padding: '0.08rem 0.35rem', borderRadius: 5, flexShrink: 0 }}>
+                              ×{item.quantity}
+                            </span>
+                            <span className="font-cinzel font-600"
+                              style={{ fontSize: '0.6rem', color: '#f0c04088', minWidth: '3rem', textAlign: 'right', flexShrink: 0 }}>
+                              {quickVal.toLocaleString()} ⟡
+                            </span>
+                          </div>
+                        )
+                      })}
+                  </div>
+                </div>
+
                 {/* Go to Market */}
                 <Link
                   href="/tavern/market"
