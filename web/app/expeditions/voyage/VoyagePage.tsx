@@ -8,6 +8,7 @@ import {
 } from '../actions'
 import {
   ENEMIES, EXPEDITION_SHIP_STATS, ZONES, EXPEDITION_ITEMS, RARITY_COLORS,
+  CORAL_RUN_EVENTS, CORAL_RUN_SHOP,
   computeTotalCrewStats,
   type Expedition, type NodeType, type CombatAction, type CombatRoundLog,
   type EventNodeDef, type ShopOption, type ZoneLoot, type RunBuff, type ShipStats, type EnemyDef,
@@ -47,6 +48,8 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
     : initNodeType === 'shop'  ? { type: 'shop'  }
     : { type: 'idle' }
   )
+  const [currentEvent, setCurrentEvent] = useState<EventNodeDef | null>(initEvent)
+  const [activeShopOptions, setActiveShopOptions] = useState<ShopOption[] | null>(shopOptions)
   const [showCrewSheet, setShowCrewSheet] = useState(false)
 
   const ship = EXPEDITION_SHIP_STATS[exp.ship_tier] ?? EXPEDITION_SHIP_STATS[0]
@@ -68,12 +71,19 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
       return
     }
     const nextNode = zone.nodes[nextNodeIndex]
-    setNodeType(nextNode?.type ?? 'fight')
-    setPhase(
-      nextNode?.type === 'event' ? { type: 'event' } :
-      nextNode?.type === 'shop'  ? { type: 'shop'  } :
-      { type: 'idle' }
-    )
+    const nextType = nextNode?.type ?? 'fight'
+    setNodeType(nextType)
+    if (nextType === 'event') {
+      const pool = CORAL_RUN_EVENTS
+      const idx = (exp.id * 997 + nextNodeIndex * 31) % pool.length
+      setCurrentEvent(pool[idx])
+      setPhase({ type: 'event' })
+    } else if (nextType === 'shop') {
+      setActiveShopOptions(CORAL_RUN_SHOP)
+      setPhase({ type: 'shop' })
+    } else {
+      setPhase({ type: 'idle' })
+    }
   }
 
   function handleCombatAction(action: CombatAction) {
@@ -217,9 +227,9 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
         )}
 
         {/* Event */}
-        {nodeType === 'event' && (phase.type === 'event' || phase.type === 'event_result') && initEvent && (
+        {nodeType === 'event' && (phase.type === 'event' || phase.type === 'event_result') && currentEvent && (
           <EventView
-            event={initEvent}
+            event={currentEvent}
             phase={phase}
             isPending={isPending}
             onChoice={handleEventChoice}
@@ -228,9 +238,9 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
         )}
 
         {/* Shop */}
-        {nodeType === 'shop' && phase.type === 'shop' && shopOptions && (
+        {nodeType === 'shop' && phase.type === 'shop' && activeShopOptions && (
           <ShopView
-            options={shopOptions}
+            options={activeShopOptions}
             expeditionId={exp.id}
             runGold={exp.run_gold ?? 0}
             onRunGoldChange={(newGold) => setExp(prev => ({ ...prev, run_gold: newGold }))}
