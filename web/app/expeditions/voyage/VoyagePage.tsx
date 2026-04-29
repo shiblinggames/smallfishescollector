@@ -32,6 +32,7 @@ type Phase =
   | { type: 'idle' }
   | { type: 'resolving' }
   | { type: 'round_result'; log: CombatRoundLog }
+  | { type: 'enemy_sinking';  goldEarned: number; runItemDropped: string | null; permItemDropped: string | null; enemyName: string; newCombatState: CombatState | null; nextNodeIndex: number; zoneComplete: boolean }
   | { type: 'enemy_defeated'; goldEarned: number; runItemDropped: string | null; permItemDropped: string | null; enemyName: string; newCombatState: CombatState | null; nextNodeIndex: number; zoneComplete: boolean }
   | { type: 'zone_complete' }
   | { type: 'failed' }
@@ -127,8 +128,7 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
         if (result.expeditionFailed) {
           setPhase({ type: 'failed' })
         } else {
-          setPhase({
-            type: 'enemy_defeated',
+          const defeatPayload = {
             goldEarned: result.goldEarned,
             runItemDropped: result.runItemDropped,
             permItemDropped: result.permItemDropped,
@@ -136,7 +136,10 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
             newCombatState: result.newCombatState,
             nextNodeIndex: exp.current_node + 1,
             zoneComplete: result.zoneComplete,
-          })
+          }
+          setPhase({ type: 'enemy_sinking', ...defeatPayload })
+          await new Promise(r => setTimeout(r, 950))
+          setPhase({ type: 'enemy_defeated', ...defeatPayload })
         }
       } else {
         setPhase({ type: 'idle' })
@@ -413,6 +416,12 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
           48%  { transform: translateX(5px) rotate(1.5deg); }
           100% { transform: translateX(0) rotate(0deg); }
         }
+        @keyframes combat-enemy-sink {
+          0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+          15%  { transform: translateY(6px) rotate(-4deg); opacity: 0.9; }
+          55%  { transform: translateY(48px) rotate(-10deg); opacity: 0.55; filter: brightness(0.6); }
+          100% { transform: translateY(110px) rotate(-14deg); opacity: 0; filter: brightness(0.2); }
+        }
         @keyframes combat-player-hit {
           0%,100% { transform: translateX(0); }
           20%     { transform: translateX(5px) rotate(1.5deg); }
@@ -502,7 +511,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
   const resolving = phase.type === 'resolving'
   const showResult = phase.type === 'round_result'
   const log = showResult ? (phase as { type: 'round_result'; log: CombatRoundLog }).log : null
-  const buttonsDisabled = resolving || isPending || showResult
+  const buttonsDisabled = resolving || isPending || showResult || phase.type === 'enemy_sinking'
 
   const buffPower = runBuffs.filter(b => b.effect === 'power').reduce((s, b) => s + b.value, 0)
   const buffArmor = runBuffs.filter(b => b.effect === 'armor').reduce((s, b) => s + b.value, 0)
@@ -529,6 +538,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
   const fireMultLabel  = cs.playerCharges === 3 ? '×2 rdy' : cs.playerCharges >= 1 ? '×1' : ''
   const dmgRange = crew.count >= effectivePower ? String(effectivePower) : `${crew.count}–${effectivePower}`
 
+  const isSinking    = phase.type === 'enemy_sinking'
   const enemyHitAnim = showResult && log && (log.playerAction === 'fire' || log.playerAction === 'fire_heavy') && log.playerDamageDealt > 0
     ? 'combat-enemy-hit 0.45s ease' : 'none'
   const playerPanelAnim = showResult && log && log.playerAction === 'defend'
@@ -633,12 +643,12 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
             size={36}
             borderColor={`${enemyColor}55`}
           />
-          <div style={{ position: 'relative', height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: enemyHitAnim }}>
+          <div style={{ position: 'relative', height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', animation: enemyHitAnim }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`${ENEMY_IMG_BASE}enemytier${enemy.tier}.png`}
               alt={enemy.name}
-              style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }}
+              style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block', animation: isSinking ? 'combat-enemy-sink 0.9s ease-in forwards' : 'none' }}
             />
             {showCannonHit && log && (
               <>
