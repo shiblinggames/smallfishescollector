@@ -13,7 +13,7 @@ export default function GuidePage() {
   return (
     <>
       <Nav />
-      <main className="min-h-screen px-6 py-14 pb-24 sm:pb-14 flex flex-col items-center">
+      <main className="min-h-screen px-6 py-14 sm:pb-14 flex flex-col items-center">
         <p className="sg-eyebrow text-center mb-3">Small Fishes Collector</p>
         <h1
           className="font-cinzel font-700 text-[#f0ede8] text-center leading-[0.92] tracking-[-0.01em] mb-4"

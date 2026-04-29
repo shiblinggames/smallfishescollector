@@ -50,7 +50,7 @@ export default async function MarketplacePage() {
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
-      <main className="min-h-screen pb-24 sm:pb-0">
+      <main className="min-h-screen">
         {/* Ambient glow */}
         <div aria-hidden style={{
           position: 'fixed', top: 0, left: 0, right: 0, height: '60%',

@@ -47,7 +47,7 @@ export default async function SocialPage() {
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
-      <main className="min-h-screen pt-8 pb-24 sm:pb-0">
+      <main className="min-h-screen pt-8">
         <div className="px-6 max-w-4xl mx-auto mb-6">
           <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Social</p>
           <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.4rem' }}>Your Crew</h1>

@@ -45,7 +45,7 @@ export default async function AchievementsPage() {
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
-      <main className="min-h-screen pb-24 sm:pb-0 pt-8">
+      <main className="min-h-screen pt-8">
         <div className="px-6 max-w-2xl mx-auto">
 
           {/* Header */}

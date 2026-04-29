@@ -104,7 +104,7 @@ export default async function TavernPage() {
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       {!profile?.has_seen_welcome && <WelcomeModal />}
-      <main className="min-h-screen pb-24 sm:pb-0">
+      <main className="min-h-screen">
         {/* Lantern light — warm amber glow from above */}
         <div aria-hidden style={{
           position: 'fixed', top: 0, left: 0, right: 0, height: '60%',
