@@ -485,11 +485,11 @@ function Hitsplat({ text, color, big, scale = 1, animKey }: { text: string; colo
   )
 }
 
-function StatRow({ label, value, color }: { label: string; value: string | number; color: string }) {
+function StatTile({ label, value, color }: { label: string; value: string | number; color: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.18rem 0' }}>
-      <p className="font-karla font-600 uppercase tracking-[0.06em]" style={{ fontSize: '0.52rem', color: '#8a8784' }}>{label}</p>
-      <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color }}>{value}</p>
+    <div style={{ textAlign: 'center', padding: '0.25rem 0.1rem' }}>
+      <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color, lineHeight: 1.1 }}>{value}</p>
+      <p className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: '#7a7875', marginTop: 3 }}>{label}</p>
     </div>
   )
 }
@@ -629,11 +629,11 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
             <p className="font-karla font-600" style={{ fontSize: '0.48rem', color: '#f0c040', marginLeft: 2 }}>{fireMultLabel}</p>
           </div>
           {/* Ship stats */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.3rem', marginTop: '0.05rem', display: 'flex', flexDirection: 'column' }}>
-            <StatRow label="DMG" value={dmgRange} color="#f87171" />
-            <StatRow label="DGE" value={`+${dodgeBonus}%`} color="#60a5fa" />
-            <StatRow label="CRIT" value={`${Math.min(Math.floor(crew.fortune / 2), 50)}%`} color="#f0c040" />
-            <StatRow label="ARM" value={effectiveArmor} color="#4ade80" />
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.25rem', marginTop: '0.05rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.1rem' }}>
+            <StatTile label="DMG" value={dmgRange} color="#f87171" />
+            <StatTile label="DGE" value={`+${dodgeBonus}%`} color="#60a5fa" />
+            <StatTile label="CRIT" value={`${Math.min(Math.floor(crew.fortune / 2), 50)}%`} color="#f0c040" />
+            <StatTile label="ARM" value={effectiveArmor} color="#4ade80" />
           </div>
         </div>
 
@@ -693,13 +693,17 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
               <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i < cs.enemyCharges ? enemyColor : 'rgba(255,255,255,0.1)' }} />
             ))}
           </div>
-          {/* Enemy stats — mirrors player panel */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.3rem', marginTop: '0.05rem', display: 'flex', flexDirection: 'column' }}>
-            <StatRow label="DMG" value={`1–${enemy.damage}`} color="#f87171" />
-            <StatRow label="DGE" value={`${Math.min(enemy.dodge * 5, 70)}%`} color="#60a5fa" />
-            <StatRow label="CRIT" value={`${Math.min(enemy.fortune * 4, 60)}%`} color="#f0c040" />
-            <StatRow label="ARM" value={enemy.armor} color="#4ade80" />
-            <StatRow label="SPD" value={enemy.speed} color="#a78bfa" />
+          {/* Enemy stats */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.25rem', marginTop: '0.05rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.1rem' }}>
+              <StatTile label="DMG" value={`1–${enemy.damage}`} color="#f87171" />
+              <StatTile label="DGE" value={`${Math.min(enemy.dodge * 5, 70)}%`} color="#60a5fa" />
+              <StatTile label="CRIT" value={`${Math.min(enemy.fortune * 4, 60)}%`} color="#f0c040" />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem' }}>
+              <StatTile label="ARM" value={enemy.armor} color="#4ade80" />
+              <StatTile label="SPD" value={enemy.speed} color="#a78bfa" />
+            </div>
           </div>
         </div>
       </div>
