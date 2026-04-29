@@ -113,6 +113,28 @@ function slotRollReels(): SlotSymbolId[] {
   return [slotWeightedRandom(), slotWeightedRandom(), slotWeightedRandom()]
 }
 
+export interface SlotStats {
+  spins: number
+  net: number
+  biggestWin: number
+}
+
+export async function getSlotStats(): Promise<SlotStats> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { spins: 0, net: 0, biggestWin: 0 }
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('slot_spins')
+    .select('wager, payout')
+    .eq('user_id', user.id)
+  const rows = data ?? []
+  const spins = rows.length
+  const net = rows.reduce((s, r) => s + (r.payout - r.wager), 0)
+  const biggestWin = rows.reduce((max, r) => Math.max(max, r.payout - r.wager), 0)
+  return { spins, net, biggestWin }
+}
+
 export async function getSlotsDailyWagered(): Promise<number> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

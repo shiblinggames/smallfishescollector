@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { spinSlots } from './actions'
-import type { SlotSpinResult } from './actions'
+import type { SlotSpinResult, SlotStats } from './actions'
 import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOTS_DAILY_CAP, SLOTS_MIN_BET, SLOTS_MAX_BET } from './constants'
 import type { SlotSymbolId } from './constants'
 
@@ -21,13 +21,14 @@ function symColor(id: SlotSymbolId) {
   return SLOT_SYMBOLS_LIST.find((s) => s.id === id)?.color ?? '#f0c040'
 }
 
-function AnchorSVG({ size }: { size: number }) {
+function HookImage({ size }: { size: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <circle cx="12" cy="5" r="2" />
-      <path d="M12 7v10M8 17c0 0 1 2 4 2s4-2 4-2M7 11h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-      <path d="M7 17c-2-1-3-3-3-5h3M17 17c2-1 3-3 3-5h-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/models/hooks/legendary-hook.png"
+      alt="Hook"
+      style={{ width: size, height: size, objectFit: 'contain', display: 'block' }}
+    />
   )
 }
 
@@ -35,8 +36,8 @@ function SlotSymbolDisplay({ id, size = 56 }: { id: SlotSymbolId; size?: number 
   const sym = SLOT_SYMBOLS_LIST.find((s) => s.id === id)!
   if (id === 'anchor') {
     return (
-      <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', color: sym.color }}>
-        <AnchorSVG size={Math.round(size * 0.72)} />
+      <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <HookImage size={Math.round(size * 0.9)} />
       </div>
     )
   }
@@ -122,9 +123,10 @@ const BET_PRESETS = [10, 25, 50, 100, 250, 500]
 interface Props {
   doubloons: number
   dailyWagered: number
+  initialStats: SlotStats
 }
 
-export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered: initialWagered }: Props) {
+export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered: initialWagered, initialStats }: Props) {
   const [doubloons, setDoubloons] = useState(initialDoubloons)
   const [dailyWagered, setDailyWagered] = useState(initialWagered)
   const [wager, setWager] = useState(25)
@@ -142,12 +144,21 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
   const [wonMainReels, setWonMainReels] = useState(false)
   const [wonBonusReels, setWonBonusReels] = useState(false)
   const [winSym, setWinSym] = useState<SlotSymbolId | null>(null)
+  const [stats, setStats] = useState<SlotStats>(initialStats)
   const [flashKey, setFlashKey] = useState(0)
   const [flashColor, setFlashColor] = useState('#f0c040')
   const [jackpotShake, setJackpotShake] = useState(false)
 
   const dailyRemaining = SLOTS_DAILY_CAP - dailyWagered
   const canSpin = !spinning && wager >= SLOTS_MIN_BET && wager <= Math.min(SLOTS_MAX_BET, doubloons, dailyRemaining) && dailyRemaining > 0
+
+  function applyStats(net: number) {
+    setStats((prev) => ({
+      spins: prev.spins + 1,
+      net: prev.net + net,
+      biggestWin: net > prev.biggestWin ? net : prev.biggestWin,
+    }))
+  }
 
   function triggerWin(sym: SlotSymbolId, isBonus: boolean) {
     const color = symColor(sym)
@@ -209,6 +220,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
         setTimeout(() => {
           const bonusWin = result.bonus!.outcome === 'win'
           if (bonusWin) triggerWin(result.bonus!.reels[0], true)
+          applyStats(result.net)
           setDoubloons(result.newDoubloons)
           setDailyWagered(result.dailyWagered)
           setLastResult(result)
@@ -222,6 +234,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
     } else if (result.outcome === 'win') {
       setTimeout(() => {
         triggerWin(result.reels[0], false)
+        applyStats(result.net)
         setDoubloons(result.newDoubloons)
         setDailyWagered(result.dailyWagered)
         setLastResult(result)
@@ -231,6 +244,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
       }, lastMainStop + 150)
     } else {
       setTimeout(() => {
+        applyStats(result.net)
         setDoubloons(result.newDoubloons)
         setDailyWagered(result.dailyWagered)
         setLastResult(result)
@@ -415,6 +429,33 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
             : `Spin · ${wager} ⟡`}
         </button>
 
+        {/* Stats */}
+        {stats.spins > 0 && (
+          <div className="w-full rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] px-4 pt-3 pb-2" style={{ fontSize: '0.6rem' }}>
+              Your Stats
+            </p>
+            <div className="grid grid-cols-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="flex flex-col items-center py-3 px-2" style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+                <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>{stats.spins.toLocaleString()}</p>
+                <p className="font-karla text-[#6a6764] mt-0.5" style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Spins</p>
+              </div>
+              <div className="flex flex-col items-center py-3 px-2" style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: stats.net >= 0 ? '#4ade80' : '#f87171' }}>
+                  {stats.net >= 0 ? '+' : ''}{stats.net.toLocaleString()}
+                </p>
+                <p className="font-karla text-[#6a6764] mt-0.5" style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Net ⟡</p>
+              </div>
+              <div className="flex flex-col items-center py-3 px-2">
+                <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1rem' }}>
+                  {stats.biggestWin > 0 ? `+${stats.biggestWin.toLocaleString()}` : '—'}
+                </p>
+                <p className="font-karla text-[#6a6764] mt-0.5" style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Best Win</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Payout table */}
         <div className="w-full rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
           <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] px-4 pt-3 pb-2" style={{ fontSize: '0.6rem' }}>
@@ -430,10 +471,10 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
             </div>
           ))}
           <div className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ width: 30, height: 30, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399' }}>
-              <AnchorSVG size={22} />
+            <div style={{ width: 30, height: 30, flexShrink: 0 }}>
+              <HookImage size={30} />
             </div>
-            <span className="font-karla text-sm flex-1" style={{ color: '#34d399' }}>Anchor</span>
+            <span className="font-karla text-sm flex-1" style={{ color: '#34d399' }}>Hook</span>
             <span className="font-cinzel font-700 text-sm" style={{ color: '#34d399' }}>Free Spin</span>
           </div>
         </div>

@@ -20,7 +20,7 @@ export const SLOT_SYMBOLS_LIST: {
   { id: 'rare',      filename: 'Blue_Marlin.png', color: '#60a5fa', weight: 22, label: 'Blue Marlin' },
   { id: 'legendary', filename: 'Blue_Whale.png',  color: '#a78bfa', weight: 10, label: 'Blue Whale' },
   { id: 'catfish',   filename: 'Catfish.png',      color: '#f0c040', weight: 3,  label: 'Catfish' },
-  { id: 'anchor',                                   color: '#34d399', weight: 15, label: 'Anchor' },
+  { id: 'anchor',                                   color: '#34d399', weight: 15, label: 'Hook' },
 ]
 
 export const SLOT_PAYOUTS: Record<SlotSymbolId, number> = {
