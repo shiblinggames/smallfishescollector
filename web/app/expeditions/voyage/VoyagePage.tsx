@@ -45,11 +45,13 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
 
   const [exp, setExp] = useState(initExp)
   const [nodeType, setNodeType] = useState<NodeType>(initNodeType)
-  const [phase, setPhase] = useState<Phase>(
-    initNodeType === 'event' ? { type: 'event' }
-    : initNodeType === 'shop'  ? { type: 'shop'  }
-    : { type: 'idle' }
-  )
+  const [phase, setPhase] = useState<Phase>(() => {
+    if (initNodeType === 'event') return { type: 'event' }
+    if (initNodeType === 'shop')  return { type: 'shop'  }
+    // If current_node is past all nodes the boss was beaten but reward not yet claimed
+    if (initExp.current_node >= ZONES[initExp.zone].nodes.length) return { type: 'zone_complete' }
+    return { type: 'idle' }
+  })
   const [currentEvent, setCurrentEvent] = useState<EventNodeDef | null>(initEvent)
   const [activeShopOptions, setActiveShopOptions] = useState<ShopOption[] | null>(shopOptions)
   const [showCrewSheet, setShowCrewSheet] = useState(false)
