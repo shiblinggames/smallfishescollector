@@ -475,8 +475,8 @@ function Hitsplat({ text, color, big, scale = 1, animKey }: { text: string; colo
 function StatRow({ label, value, color }: { label: string; value: string | number; color: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.18rem 0' }}>
-      <p className="font-karla font-600 uppercase tracking-[0.06em]" style={{ fontSize: '0.44rem', color: '#4a4845' }}>{label}</p>
-      <p className="font-cinzel font-700" style={{ fontSize: '0.62rem', color }}>{value}</p>
+      <p className="font-karla font-600 uppercase tracking-[0.06em]" style={{ fontSize: '0.52rem', color: '#8a8784' }}>{label}</p>
+      <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color }}>{value}</p>
     </div>
   )
 }
