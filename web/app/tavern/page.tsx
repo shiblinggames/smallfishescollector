@@ -3,8 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
-import { getDailyWagered } from './actions'
-import { DAILY_CAP } from './constants'
+import { getDailyWagered, getSlotsDailyWagered } from './actions'
+import { DAILY_CAP, SLOTS_DAILY_CAP } from './constants'
 import { getWeeklyBounties } from '@/app/packs/bountyActions'
 import GameCard from './GameCard'
 import WelcomeModal from './WelcomeModal'
@@ -17,10 +17,11 @@ export default async function TavernPage() {
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const [{ data: profile }, { data: fotdAttempt }, dailyWagered, bounties, { data: todayExpedition }] = await Promise.all([
+  const [{ data: profile }, { data: fotdAttempt }, dailyWagered, slotsDailyWagered, bounties, { data: todayExpedition }] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome, gems').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
+    getSlotsDailyWagered(),
     getWeeklyBounties(),
     admin.from('expeditions').select('status, zone, loot').eq('user_id', user.id).eq('expedition_date', today).maybeSingle(),
   ])
@@ -37,6 +38,7 @@ export default async function TavernPage() {
 
   const fotdDone = !!fotdAttempt && (fotdAttempt.solved || (fotdAttempt.guesses?.length ?? 0) >= 4)
   const crownCapReached = dailyWagered >= DAILY_CAP
+  const slotsCapReached = slotsDailyWagered >= SLOTS_DAILY_CAP
   const bountyProgress = bounties?.progress
   const bountyCount = bountyProgress ? Object.values(bountyProgress).filter(Boolean).length : 0
   const bountyClaimed = bounties?.claimed
@@ -224,6 +226,20 @@ export default async function TavernPage() {
             icon={<AnchorIcon />}
             completed={crownCapReached}
           />
+          <GameCard
+            href="/tavern/slots"
+            eyebrow="Game"
+            title="Fish Slots"
+            statusText={slotsCapReached ? 'Daily limit reached' : 'Match three fish to win'}
+            info={[
+              'Sardine × 3 → 2× · Marlin × 3 → 10×',
+              'Blue Whale × 3 → 50× · Catfish × 3 → 200×',
+              'Three anchors → free bonus spin',
+              '1,000 ⟡ daily wagering limit',
+            ]}
+            icon={<SlotsIcon />}
+            completed={slotsCapReached}
+          />
         </div>
 
         <div className="px-6 pb-16 text-center">
@@ -296,6 +312,17 @@ function BountyIcon() {
       <circle cx="12" cy="8" r="4"/>
       <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
       <path d="M9 8l1.5 1.5L13 7"/>
+    </svg>
+  )
+}
+
+function SlotsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="6" width="20" height="13" rx="2"/>
+      <path d="M8 6V4M12 6V4M16 6V4"/>
+      <path d="M6 12h3M10.5 12h3M15 12h3"/>
+      <path d="M7.5 15v0M12 15v0M16.5 15v0"/>
     </svg>
   )
 }
