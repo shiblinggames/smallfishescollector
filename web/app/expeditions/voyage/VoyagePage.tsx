@@ -648,7 +648,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
           <div key={`e-${cs.round}`} style={{ position: 'relative', height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', animation: enemyHitAnim }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`${ENEMY_IMG_BASE}enemytier${enemy.tier}.png`}
+              src={isBoss ? `${ENEMY_IMG_BASE}enemytier${enemy.tier}boss.png` : enemy.elite ? `${ENEMY_IMG_BASE}enemytier${enemy.tier}elite.png` : `${ENEMY_IMG_BASE}enemytier${enemy.tier}.png`}
               alt={enemy.name}
               style={{ width: '100%', height: 88, objectFit: 'contain', objectPosition: 'bottom', display: 'block', animation: isSinking ? 'combat-enemy-sink 0.9s ease-in forwards' : 'none', opacity: phase.type === 'enemy_defeated' ? 0 : 1 }}
             />
