@@ -34,9 +34,9 @@ const CARD_W = 80
 const CARD_H = Math.round(CARD_W * 196 / 140)
 
 const STAT_COLS = [
-  { key: 'power'   as const, label: 'PWR', color: '#f87171' },
-  { key: 'dodge'   as const, label: 'DGE', color: '#60a5fa' },
-  { key: 'fortune' as const, label: 'FTN', color: '#f0c040' },
+  { key: 'power'   as const, label: 'PWR', symbol: '⚔', color: '#f87171' },
+  { key: 'dodge'   as const, label: 'DGE', symbol: '◇', color: '#60a5fa' },
+  { key: 'fortune' as const, label: 'FTN', symbol: '★', color: '#f0c040' },
 ]
 
 export default function CrewRoster({ shipStats, collection, savedCrewVariantIds }: Props) {
@@ -199,7 +199,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
                         <p className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: s.color, lineHeight: 1 }}>
                           {card[s.key]}
                         </p>
-                        <p className="font-karla font-600 uppercase" style={{ fontSize: '0.36rem', color: '#5a5856', marginTop: 1, letterSpacing: '0.05em' }}>{s.label}</p>
+                        <p style={{ fontSize: '0.46rem', color: '#5a5856', marginTop: 1, lineHeight: 1 }}>{s.symbol}</p>
                       </div>
                     ))}
                   </div>
