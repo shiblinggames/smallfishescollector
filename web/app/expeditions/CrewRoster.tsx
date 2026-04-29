@@ -101,6 +101,11 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
   const totalPower   = slots.reduce((s, c, i) => s + (c ? Math.floor(c.power   * (i === 0 ? 1 : 0.8)) : 0), 0)
   const totalDodge   = slots.reduce((s, c, i) => s + (c ? Math.floor(c.dodge   * (i === 0 ? 1 : 0.8)) : 0), 0)
   const totalFortune = slots.reduce((s, c, i) => s + (c ? Math.floor(c.fortune * (i === 0 ? 1 : 0.8)) : 0), 0)
+  const assignedCount = slots.filter(Boolean).length
+  const dmgMin    = Math.max(1, assignedCount)
+  const dmgMax    = Math.max(1, totalPower)
+  const dodgePct  = Math.min(50 + Math.floor(totalDodge / 2), 100)
+  const critPct   = Math.min(Math.floor(totalFortune / 2), 50)
 
   return (
     <div style={{ marginBottom: '1.75rem' }}>
@@ -114,17 +119,18 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.85rem' }}>⚓</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={shipStats.image} alt="" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0, opacity: 0.92 }} />
           <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.85rem' }}>{shipStats.name}</p>
         </div>
         <div style={{ display: 'flex', gap: '1.25rem' }}>
           {[
-            { label: 'DUR', value: shipStats.durability, color: '#60a5fa' },
-            { label: 'SPD', value: shipStats.speed,      color: '#f0c040' },
-            { label: 'ARM', value: shipStats.armor,       color: '#4ade80' },
+            { label: 'DMG',   value: assignedCount > 0 ? `${dmgMin}–${dmgMax}` : '—', color: '#f87171' },
+            { label: 'DODGE', value: assignedCount > 0 ? `${dodgePct}%`         : '—', color: '#60a5fa' },
+            { label: 'CRIT',  value: assignedCount > 0 ? `${critPct}%`          : '—', color: '#f0c040' },
           ].map(s => (
             <div key={s.label} style={{ textAlign: 'center' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: s.color, lineHeight: 1 }}>{s.value}</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: assignedCount > 0 ? s.color : '#3a3835', lineHeight: 1 }}>{s.value}</p>
               <p className="font-karla font-600 uppercase" style={{ fontSize: '0.38rem', color: '#6a6764', marginTop: 2, letterSpacing: '0.06em' }}>{s.label}</p>
             </div>
           ))}

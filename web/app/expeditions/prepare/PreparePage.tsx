@@ -66,7 +66,6 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
 
   const dmgMin     = Math.max(1, assignedCount)
   const dmgMax     = Math.max(1, totalPower)
-  const dmgVolley  = Math.max(1, totalPower * 2)
   const dodgeTotal = Math.min(50 + Math.floor(totalDodge / 2), 100)
   const critChance = Math.min(Math.floor(totalFortune / 2), 50)
 
@@ -111,9 +110,10 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
           padding: '0.875rem 1rem',
           marginBottom: '1.25rem',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '1rem' }}>⚓</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={shipStats.image} alt="" style={{ width: 36, height: 36, objectFit: 'contain', flexShrink: 0, opacity: 0.92 }} />
               <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0ede8' }}>{shipStats.name}</p>
             </div>
             <p className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845' }}>
@@ -121,16 +121,24 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
             </p>
           </div>
           <div style={{ display: 'flex', gap: '1.5rem' }}>
-            {[
-              { label: 'Durability', value: shipStats.durability, color: '#60a5fa' },
-              { label: 'Speed',      value: shipStats.speed,      color: '#f0c040' },
-              { label: 'Armor',      value: shipStats.armor,      color: '#4ade80' },
-            ].map(s => (
-              <div key={s.label}>
-                <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4a4845', marginBottom: 2 }}>{s.label}</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: s.color }}>{s.value}</p>
-              </div>
-            ))}
+            <div style={{ textAlign: 'left' }}>
+              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4a4845', marginBottom: 2 }}>Damage</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: assignedCount > 0 ? '#f87171' : '#3a3835' }}>
+                {assignedCount > 0 ? `${dmgMin}–${dmgMax}` : '—'}
+              </p>
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4a4845', marginBottom: 2 }}>Dodge</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: assignedCount > 0 ? '#60a5fa' : '#3a3835' }}>
+                {assignedCount > 0 ? `${dodgeTotal}%` : '—'}
+              </p>
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4a4845', marginBottom: 2 }}>Crit Chance</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: assignedCount > 0 ? '#f0c040' : '#3a3835' }}>
+                {assignedCount > 0 ? `${critChance}%` : '—'}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -222,7 +230,7 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
           </div>
         </div>
 
-        {/* Crew totals + combat preview */}
+        {/* Crew totals */}
         <div style={{
           background: 'rgba(255,255,255,0.03)',
           border: '1px solid rgba(255,255,255,0.06)',
@@ -230,8 +238,7 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
           padding: '0.75rem 1rem',
           marginBottom: '1.25rem',
         }}>
-          {/* Raw totals */}
-          <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-around' }}>
             {[
               { label: 'Total Power',   val: totalPower,   color: '#f87171' },
               { label: 'Total Dodge',   val: totalDodge,   color: '#60a5fa' },
@@ -242,36 +249,6 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
                 <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#6a6764', marginTop: 2 }}>{s.label}</p>
               </div>
             ))}
-          </div>
-
-          {/* Combat preview */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.625rem' }}>
-            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.4rem', color: '#4a4845', marginBottom: '0.5rem', textAlign: 'center' }}>Combat Preview</p>
-            <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-              <div style={{ textAlign: 'center' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: assignedCount > 0 ? '#f87171' : '#2a2825' }}>
-                  {assignedCount > 0 ? `${dmgMin}–${dmgMax}` : '—'}
-                </p>
-                <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845', marginTop: 2 }}>
-                  {assignedCount > 0 ? `${dmgMin}–${dmgVolley} volley` : ''}
-                </p>
-                <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.4rem', color: '#6a6764', marginTop: 2 }}>Damage</p>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: assignedCount > 0 ? '#60a5fa' : '#2a2825' }}>
-                  {assignedCount > 0 ? `${dodgeTotal}%` : '—'}
-                </p>
-                <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845', marginTop: 2 }}>when defending</p>
-                <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.4rem', color: '#6a6764', marginTop: 2 }}>Dodge</p>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: assignedCount > 0 ? '#f0c040' : '#2a2825' }}>
-                  {assignedCount > 0 ? `${critChance}%` : '—'}
-                </p>
-                <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845', marginTop: 2 }}>&nbsp;</p>
-                <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.4rem', color: '#6a6764', marginTop: 2 }}>Crit Chance</p>
-              </div>
-            </div>
           </div>
         </div>
 
