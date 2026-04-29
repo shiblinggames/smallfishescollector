@@ -411,6 +411,13 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
           48%  { transform: translateX(5px) rotate(1.5deg); }
           100% { transform: translateX(0) rotate(0deg); }
         }
+        @keyframes combat-player-hit {
+          0%,100% { transform: translateX(0); }
+          20%     { transform: translateX(5px) rotate(1.5deg); }
+          40%     { transform: translateX(-5px) rotate(-1.5deg); }
+          60%     { transform: translateX(3px); }
+          80%     { transform: translateX(-3px); }
+        }
       `}</style>
     </main>
   )
@@ -525,8 +532,9 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
   const playerPanelAnim = showResult && log && log.playerAction === 'defend'
     ? 'combat-defend-pulse 0.7s ease' : 'none'
   const playerImgAnim = showResult && log
-    ? log.playerAction === 'reload'     ? 'combat-reload-flash 0.5s ease'
-    : log.playerAction === 'fire_heavy' ? 'combat-recoil 0.55s ease'
+    ? log.playerAction === 'reload'                           ? 'combat-reload-flash 0.5s ease'
+    : log.playerAction === 'fire_heavy'                       ? 'combat-recoil 0.55s ease'
+    : (!log.playerDodged && log.playerDamageTaken > 0)        ? 'combat-player-hit 0.45s ease'
     : 'none' : 'none'
   const showCannonHit = showResult && log && (log.playerAction === 'fire' || log.playerAction === 'fire_heavy') && log.playerDamageDealt > 0
   const isVolley      = !!(showResult && log?.playerAction === 'fire_heavy' && log.playerDamageDealt > 0)
