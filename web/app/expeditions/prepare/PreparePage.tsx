@@ -59,9 +59,9 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
     setCrew(prev => { const next = [...prev]; next[slot] = null; return next })
   }
 
-  const totalPower   = crew.reduce((s, c) => s + (c?.power   ?? 0), 0)
-  const totalDodge   = crew.reduce((s, c) => s + (c?.dodge   ?? 0), 0)
-  const totalFortune = crew.reduce((s, c) => s + (c?.fortune ?? 0), 0)
+  const totalPower   = crew.reduce((s, c, i) => s + (c ? Math.floor(c.power   * (i === 0 ? 1 : 0.8)) : 0), 0)
+  const totalDodge   = crew.reduce((s, c, i) => s + (c ? Math.floor(c.dodge   * (i === 0 ? 1 : 0.8)) : 0), 0)
+  const totalFortune = crew.reduce((s, c, i) => s + (c ? Math.floor(c.fortune * (i === 0 ? 1 : 0.8)) : 0), 0)
   const assignedCount = crew.filter(Boolean).length
 
   function depart() {
@@ -137,11 +137,13 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
             </p>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {crew.map((card, slot) =>
-              card ? (
+            {crew.map((card, slot) => {
+              const isCaptain = slot === 0
+              const effectiveMult = isCaptain ? 1 : 0.8
+              return card ? (
                 <div key={slot} style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: isCaptain ? 'rgba(240,192,64,0.05)' : 'rgba(255,255,255,0.05)',
+                  border: isCaptain ? '1px solid rgba(240,192,64,0.35)' : '1px solid rgba(255,255,255,0.1)',
                   borderRadius: 12,
                   padding: '0.75rem 0.875rem',
                   display: 'flex', alignItems: 'center', gap: '0.75rem',
@@ -153,16 +155,21 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={IMG_BASE + card.filename} alt={card.name}
-                      style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${(RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764')}50` }}
+                      style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: isCaptain ? '2px solid rgba(240,192,64,0.6)' : `2px solid ${(RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764')}50` }}
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.82rem', color: '#f0ede8', lineHeight: 1.2 }}>{card.name}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.82rem', color: '#f0ede8', lineHeight: 1.2 }}>{card.name}</p>
+                        {isCaptain && (
+                          <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.4rem', color: '#f0c040', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.3)', borderRadius: 4, padding: '0.1rem 0.35rem', flexShrink: 0 }}>Captain</span>
+                        )}
+                      </div>
                       <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764', marginTop: 2 }}>{card.rarity}</p>
                     </div>
                     <div style={{ display: 'flex', gap: '0.875rem', flexShrink: 0 }}>
                       {STAT_COLS.map(s => (
                         <div key={s.label} style={{ textAlign: 'center' }}>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: s.color }}>{card[s.key]}</p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: s.color }}>{Math.floor(card[s.key] * effectiveMult)}</p>
                           <p className="font-karla" style={{ fontSize: '0.42rem', color: '#6a6764', marginTop: 1 }}>{s.label}</p>
                         </div>
                       ))}
@@ -182,8 +189,8 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
                   key={slot}
                   onClick={() => setPickerSlot(slot)}
                   style={{
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px dashed rgba(255,255,255,0.09)',
+                    background: isCaptain ? 'rgba(240,192,64,0.02)' : 'rgba(255,255,255,0.02)',
+                    border: isCaptain ? '1px dashed rgba(240,192,64,0.22)' : '1px dashed rgba(255,255,255,0.09)',
                     borderRadius: 12,
                     padding: '0.875rem 1rem',
                     cursor: 'pointer',
@@ -193,17 +200,20 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
                 >
                   <div style={{
                     width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-                    background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.08)',
+                    background: isCaptain ? 'rgba(240,192,64,0.04)' : 'rgba(255,255,255,0.03)',
+                    border: isCaptain ? '1px dashed rgba(240,192,64,0.2)' : '1px dashed rgba(255,255,255,0.08)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="2.5" strokeLinecap="round">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isCaptain ? 'rgba(240,192,64,0.35)' : 'rgba(255,255,255,0.18)'} strokeWidth="2.5" strokeLinecap="round">
                       <path d="M12 5v14M5 12h14"/>
                     </svg>
                   </div>
-                  <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#7a7470' }}>Add crew member</p>
+                  <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: isCaptain ? '#8a7840' : '#7a7470' }}>
+                    {isCaptain ? 'Assign captain' : 'Add crew member'}
+                  </p>
                 </button>
               )
-            )}
+            })}
           </div>
         </div>
 
@@ -321,8 +331,12 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
           >
             <div style={{ padding: '1rem 1.25rem 0.875rem', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#4a6a8a', marginBottom: 3 }}>Slot {pickerSlot + 1}</p>
-                <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.05rem' }}>Assign Crew</p>
+                <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: pickerSlot === 0 ? '#f0c040' : '#4a6a8a', marginBottom: 3 }}>
+                  {pickerSlot === 0 ? 'Captain' : `Slot ${pickerSlot! + 1}`}
+                </p>
+                <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.05rem' }}>
+                  {pickerSlot === 0 ? 'Assign Captain' : 'Assign Crew'}
+                </p>
               </div>
               <button
                 onClick={() => setPickerSlot(null)}

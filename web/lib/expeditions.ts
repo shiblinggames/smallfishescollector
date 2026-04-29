@@ -155,12 +155,15 @@ export function applyVariantBoosts(
 
 export function computeTotalCrewStats(crew: CrewCard[]): TotalCrewStats {
   return crew.reduce(
-    (totals, card) => ({
-      count:   totals.count   + 1,
-      power:   totals.power   + card.power,
-      dodge:   totals.dodge   + card.dodge,
-      fortune: totals.fortune + card.fortune,
-    }),
+    (totals, card, i) => {
+      const mult = i === 0 ? 1.0 : 0.8
+      return {
+        count:   totals.count   + 1,
+        power:   totals.power   + Math.floor(card.power   * mult),
+        dodge:   totals.dodge   + Math.floor(card.dodge   * mult),
+        fortune: totals.fortune + Math.floor(card.fortune * mult),
+      }
+    },
     { count: 0, power: 0, dodge: 0, fortune: 0 },
   )
 }

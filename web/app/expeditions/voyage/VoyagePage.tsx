@@ -1107,23 +1107,36 @@ function CrewSheet({ expedition, ship, crew, maxDurability, currentDurability, r
           <div>
             <p className="font-karla font-600 uppercase tracking-[0.1em] mb-2" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Crew</p>
             <div className="flex flex-col gap-2">
-              {(expedition.crew_loadout ?? []).map((card, i) => (
-                <div key={i} className="flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '0.5rem 0.625rem' }}>
-                  <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#f0ede8' }}>{card.name}</p>
-                    <p className="font-karla" style={{ fontSize: '0.55rem', color: RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764' }}>{card.rarity}</p>
-                  </div>
-                  <div className="flex gap-3">
-                    {[{ v: card.power, c: '#f87171', l: 'PWR' }, { v: card.dodge, c: '#60a5fa', l: 'DGE' }, { v: card.fortune, c: '#f0c040', l: 'FTN' }].map(s => (
-                      <div key={s.l} style={{ textAlign: 'center' }}>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.c }}>{s.v}</p>
-                        <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845' }}>{s.l}</p>
+              {(expedition.crew_loadout ?? []).map((card, i) => {
+                const isCaptain = i === 0
+                const mult = isCaptain ? 1 : 0.8
+                return (
+                  <div key={i} className="flex items-center gap-2" style={{
+                    background: isCaptain ? 'rgba(240,192,64,0.05)' : 'rgba(255,255,255,0.04)',
+                    border: isCaptain ? '1px solid rgba(240,192,64,0.22)' : '1px solid transparent',
+                    borderRadius: 8, padding: '0.5rem 0.625rem',
+                  }}>
+                    <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: isCaptain ? '2px solid rgba(240,192,64,0.5)' : 'none' }} />
+                    <div className="flex-1 min-w-0">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#f0ede8' }}>{card.name}</p>
+                        {isCaptain && (
+                          <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.38rem', color: '#f0c040', background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.25)', borderRadius: 3, padding: '0.08rem 0.3rem', flexShrink: 0 }}>Captain</span>
+                        )}
                       </div>
-                    ))}
+                      <p className="font-karla" style={{ fontSize: '0.55rem', color: RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764' }}>{card.rarity}</p>
+                    </div>
+                    <div className="flex gap-3">
+                      {[{ v: card.power, c: '#f87171', l: 'PWR' }, { v: card.dodge, c: '#60a5fa', l: 'DGE' }, { v: card.fortune, c: '#f0c040', l: 'FTN' }].map(s => (
+                        <div key={s.l} style={{ textAlign: 'center' }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.c }}>{Math.floor(s.v * mult)}</p>
+                          <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845' }}>{s.l}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
           {runBuffs.length > 0 && (
