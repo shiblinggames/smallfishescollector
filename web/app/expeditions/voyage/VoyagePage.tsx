@@ -103,8 +103,10 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
       setExp(prev => ({
         ...prev,
         hull_damage: maxDurability - result.newDurability,
-        // Keep old cs alive so the arena stays visible during the round-result delay
-        combat_state: result.combatOver ? prev.combat_state : result.newCombatState,
+        // On kill: zero out HP so the bar drains during the round-result window; newCombatState applied on continue
+        combat_state: result.combatOver
+          ? (prev.combat_state ? { ...prev.combat_state, enemyHp: 0 } : prev.combat_state)
+          : result.newCombatState,
         current_node: result.combatOver && !result.expeditionFailed
           ? prev.current_node + 1
           : prev.current_node,
