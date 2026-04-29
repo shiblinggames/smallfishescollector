@@ -168,11 +168,11 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
   }
 
   return (
-    <main className="min-h-screen pb-24 sm:pb-0 pt-5 sm:[zoom:1.4]" style={{ position: 'relative', zIndex: 1 }}>
-      <div className="px-5 max-w-lg mx-auto">
+    <main className="min-h-screen pb-24 sm:pb-0 pt-5 sm:[zoom:1.4]" style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div className="px-5 max-w-lg mx-auto w-full" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
 
         {/* Progress header */}
-        <div style={{ marginBottom: '1.25rem' }}>
+        <div style={{ marginBottom: '1.25rem', flexShrink: 0 }}>
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span style={{ fontSize: '0.9rem' }}>{zoneIcon}</span>
@@ -215,20 +215,22 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
 
         {/* Combat */}
         {(nodeType === 'fight' || nodeType === 'boss') && enemy && cs && (
-          <CombatView
-            enemy={enemy}
-            cs={cs}
-            phase={phase}
-            crew={crew}
-            ship={ship}
-            runBuffs={runBuffs}
-            isBoss={nodeType === 'boss'}
-            isPending={isPending}
-            currentDurability={currentDurability}
-            maxDurability={maxDurability}
-            onAction={handleCombatAction}
-            onNextRound={handleNextRound}
-          />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <CombatView
+              enemy={enemy}
+              cs={cs}
+              phase={phase}
+              crew={crew}
+              ship={ship}
+              runBuffs={runBuffs}
+              isBoss={nodeType === 'boss'}
+              isPending={isPending}
+              currentDurability={currentDurability}
+              maxDurability={maxDurability}
+              onAction={handleCombatAction}
+              onNextRound={handleNextRound}
+            />
+          </div>
         )}
 
         {/* Event */}
@@ -304,6 +306,15 @@ const ENEMY_AVATAR: Record<string, string> = {
   barnacle_pete:  '🐡',
 }
 
+function StatRow({ label, value, color }: { label: string; value: string | number; color: string }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.18rem 0' }}>
+      <p className="font-karla font-600 uppercase tracking-[0.06em]" style={{ fontSize: '0.44rem', color: '#4a4845' }}>{label}</p>
+      <p className="font-cinzel font-700" style={{ fontSize: '0.62rem', color }}>{value}</p>
+    </div>
+  )
+}
+
 function CombatView({ enemy, cs, phase, crew, ship, runBuffs, isBoss, isPending, currentDurability, maxDurability, onAction, onNextRound }: {
   enemy: EnemyDef
   cs: NonNullable<Expedition['combat_state']>
@@ -336,188 +347,180 @@ function CombatView({ enemy, cs, phase, crew, ship, runBuffs, isBoss, isPending,
   const enemyHpColor = enemyHpPct < 30 ? '#f87171' : enemyColor
 
   const fireMultLabel = cs.playerCharges === 0 ? '—' : cs.playerCharges === 1 ? '×1' : cs.playerCharges === 2 ? '×2.5' : '×5'
+  const dmgRange = crew.count >= effectivePower ? String(effectivePower) : `${crew.count}–${effectivePower}`
+
+  const nextEnemyAction = enemy.pattern[(cs.enemyPatternIndex + 1) % enemy.pattern.length]
+  const nextEnemyLabel = nextEnemyAction === 'fire' ? 'Firing!' : nextEnemyAction === 'defend' ? 'Defending' : 'Reloading'
 
   return (
-    <div>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+
       {isBoss && (
-        <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2 text-center" style={{ fontSize: '0.5rem', color: '#f87171', letterSpacing: '0.2em' }}>
+        <p className="font-karla font-700 uppercase tracking-[0.14em] text-center" style={{ fontSize: '0.5rem', color: '#f87171', letterSpacing: '0.2em', flexShrink: 0 }}>
           ⚠ Boss Encounter ⚠
         </p>
       )}
 
-      {/* Arena — two combatants side by side */}
-      <div style={{
-        background: 'rgba(255,255,255,0.03)',
-        border: `1px solid ${isBoss ? 'rgba(248,113,113,0.18)' : 'rgba(255,255,255,0.08)'}`,
-        borderRadius: 16,
-        padding: '0.875rem',
-        marginBottom: '0.625rem',
-      }}>
-        <div style={{ display: 'flex', gap: '0.625rem', marginBottom: '0.75rem' }}>
+      {/* Two panels side by side */}
+      <div style={{ display: 'flex', gap: '0.625rem', flexShrink: 0 }}>
 
-          {/* Player panel */}
-          <div style={{ flex: 1, background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.18)', borderRadius: 12, padding: '0.75rem 0.625rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
-            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: '#4a6a8a' }}>Your Ship</p>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={ship.image} alt={ship.name} style={{ width: 56, height: 56, objectFit: 'contain', objectPosition: 'bottom' }} />
-            <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.65rem', color: '#f0ede8', lineHeight: 1.2 }}>{ship.name}</p>
-            {/* HP bar */}
-            <div style={{ width: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a6a8a' }}>HP</p>
-                <p className="font-karla font-600" style={{ fontSize: '0.48rem', color: playerHpColor }}>{currentDurability}/{maxDurability}</p>
-              </div>
-              <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${playerHpPct}%`, background: playerHpColor, borderRadius: 3, transition: 'width 0.4s ease, background 0.4s ease' }} />
-              </div>
+        {/* Player panel */}
+        <div style={{ flex: 1, background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.16)', borderRadius: 14, padding: '0.75rem 0.625rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: '#4a6a8a' }}>Your Ship</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={ship.image} alt={ship.name} style={{ width: '100%', height: 96, objectFit: 'contain', objectPosition: 'bottom' }} />
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.68rem', color: '#f0ede8', lineHeight: 1.2 }}>{ship.name}</p>
+          {/* HP bar */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+              <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a6a8a' }}>HP</p>
+              <p className="font-karla font-600" style={{ fontSize: '0.48rem', color: playerHpColor }}>{currentDurability}/{maxDurability}</p>
             </div>
-            {/* Charge dots */}
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-              {[0, 1, 2].map(i => (
-                <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i < cs.playerCharges ? '#f0c040' : 'rgba(255,255,255,0.1)', transition: 'background 0.3s' }} />
-              ))}
-              <p className="font-karla font-600" style={{ fontSize: '0.48rem', color: '#f0c040', marginLeft: 2 }}>{fireMultLabel}</p>
+            <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${playerHpPct}%`, background: playerHpColor, borderRadius: 3, transition: 'width 0.4s ease, background 0.4s ease' }} />
             </div>
           </div>
-
-          {/* VS */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, width: 20 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.55rem', color: '#2a2825' }}>VS</p>
+          {/* Charge dots */}
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            {[0, 1, 2].map(i => (
+              <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i < cs.playerCharges ? '#f0c040' : 'rgba(255,255,255,0.1)', transition: 'background 0.3s' }} />
+            ))}
+            <p className="font-karla font-600" style={{ fontSize: '0.48rem', color: '#f0c040', marginLeft: 2 }}>{fireMultLabel}</p>
           </div>
-
-          {/* Enemy panel */}
-          <div style={{ flex: 1, background: `${enemyColor}0a`, border: `1px solid ${enemyColor}22`, borderRadius: 12, padding: '0.75rem 0.625rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
-            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: enemyColor, opacity: 0.7 }}>{isBoss ? 'Boss' : 'Enemy'}</p>
-            <div style={{ fontSize: '2.2rem', lineHeight: 1, padding: '0.25rem 0' }}>{ENEMY_AVATAR[cs.enemyId] ?? '☠'}</div>
-            <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.65rem', color: '#f0ede8', lineHeight: 1.2 }}>{enemy.name}</p>
-            {/* HP bar */}
-            <div style={{ width: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845' }}>HP</p>
-                <p className="font-karla font-600" style={{ fontSize: '0.48rem', color: enemyHpColor }}>{cs.enemyHp}/{enemy.maxHp}</p>
-              </div>
-              <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${enemyHpPct}%`, background: enemyHpColor, borderRadius: 3, transition: 'width 0.4s ease, background 0.4s ease' }} />
-              </div>
-            </div>
-            {/* Enemy charge dots */}
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-              {[0, 1, 2].map(i => (
-                <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i < cs.enemyCharges ? enemyColor : 'rgba(255,255,255,0.1)' }} />
-              ))}
-              <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845', marginLeft: 2 }}>{enemy.damage} dmg</p>
-            </div>
+          {/* Ship + crew stats */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.35rem', marginTop: '0.1rem', display: 'flex', flexDirection: 'column' }}>
+            <StatRow label="DMG" value={dmgRange} color="#f87171" />
+            <StatRow label="DGE" value={`${dodgeChance}%`} color="#60a5fa" />
+            <StatRow label="FTN" value={crew.fortune} color="#f0c040" />
+            <StatRow label="ARM" value={effectiveArmor} color="#4ade80" />
+            <StatRow label="SPD" value={ship.speed} color="#a78bfa" />
           </div>
         </div>
 
-        {/* Stat strip */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.5rem', display: 'flex', justifyContent: 'space-around' }}>
-          {[
-            { label: 'DMG', val: crew.count >= effectivePower ? String(effectivePower) : `${crew.count}-${effectivePower}`, color: '#f87171' },
-            { label: 'DGE', val: `${dodgeChance}%`,     color: '#60a5fa' },
-            { label: 'FTN', val: crew.fortune,           color: '#f0c040' },
-            { label: 'ARM', val: effectiveArmor,         color: '#4ade80' },
-          ].map(s => (
-            <div key={s.label} style={{ textAlign: 'center' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: s.color }}>{s.val}</p>
-              <p className="font-karla" style={{ fontSize: '0.4rem', color: '#4a4845', marginTop: 1 }}>{s.label}</p>
+        {/* Enemy panel */}
+        <div style={{ flex: 1, background: `${enemyColor}08`, border: `1px solid ${enemyColor}20`, borderRadius: 14, padding: '0.75rem 0.625rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: enemyColor, opacity: 0.8 }}>{isBoss ? 'Boss' : 'Enemy'}</p>
+          <div style={{ height: 96, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: '3.5rem', lineHeight: 1 }}>{ENEMY_AVATAR[cs.enemyId] ?? '☠'}</span>
+          </div>
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.68rem', color: '#f0ede8', lineHeight: 1.2 }}>{enemy.name}</p>
+          {/* HP bar */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+              <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845' }}>HP</p>
+              <p className="font-karla font-600" style={{ fontSize: '0.48rem', color: enemyHpColor }}>{cs.enemyHp}/{enemy.maxHp}</p>
             </div>
+            <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${enemyHpPct}%`, background: enemyHpColor, borderRadius: 3, transition: 'width 0.4s ease, background 0.4s ease' }} />
+            </div>
+          </div>
+          {/* Enemy charge dots */}
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            {[0, 1, 2].map(i => (
+              <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i < cs.enemyCharges ? enemyColor : 'rgba(255,255,255,0.1)' }} />
+            ))}
+          </div>
+          {/* Enemy stats */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.35rem', marginTop: '0.1rem', display: 'flex', flexDirection: 'column' }}>
+            <StatRow label="DMG" value={enemy.damage} color={enemyColor} />
+            <StatRow label="NEXT" value={nextEnemyLabel} color={nextEnemyAction === 'fire' ? '#f87171' : nextEnemyAction === 'defend' ? '#4ade80' : '#60a5fa'} />
+          </div>
+        </div>
+      </div>
+
+      {/* Active buffs */}
+      {runBuffs.length > 0 && (
+        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', flexShrink: 0 }}>
+          {runBuffs.map((buff, i) => (
+            <span key={i} className="font-karla font-600" style={{ fontSize: '0.46rem', color: '#4ade80', background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.18)', borderRadius: 4, padding: '0.12rem 0.38rem' }}>
+              +{buff.value} {buff.effect.charAt(0).toUpperCase() + buff.effect.slice(1)}
+            </span>
           ))}
         </div>
+      )}
 
-        {/* Active buffs */}
-        {runBuffs.length > 0 && (
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.4rem', marginTop: '0.4rem', display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-            {runBuffs.map((buff, i) => (
-              <span key={i} className="font-karla font-600" style={{ fontSize: '0.46rem', color: '#4ade80', background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.18)', borderRadius: 4, padding: '0.12rem 0.38rem' }}>
-                +{buff.value} {buff.effect.charAt(0).toUpperCase() + buff.effect.slice(1)}
-              </span>
+      {/* Spacer + round result anchored to bottom of spacer */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', minHeight: '2rem' }}>
+        {showResult && log && (
+          <div style={{
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
+            borderRadius: 10, padding: '0.625rem 0.875rem',
+          }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.4rem' }}>
+              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4a4845' }}>Round {log.round + 1}</p>
+              <p className="font-karla" style={{ fontSize: '0.44rem', color: '#4a4845' }}>·</p>
+              <p className="font-karla" style={{ fontSize: '0.44rem', color: '#6a6764' }}>
+                You: <span style={{ color: '#f0ede8' }}>{log.playerAction === 'reload' ? 'Reloaded' : log.playerAction === 'fire' ? `Fired (${log.playerChargesBefore} charge${log.playerChargesBefore !== 1 ? 's' : ''})` : 'Defended'}</span>
+                {' '}·{' '}
+                Enemy: <span style={{ color: '#f0ede8' }}>{log.enemyAction === 'reload' ? 'Reloaded' : log.enemyAction === 'fire' ? 'Fired' : 'Defended'}</span>
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              {log.playerDamageDealt > 0 && (
+                <p className="font-karla" style={{ fontSize: '0.65rem', color: log.critHit ? '#f0c040' : '#a78bfa' }}>
+                  {log.critHit ? '⚡ Crit! ' : ''}Hit for <strong>{log.playerDamageDealt}</strong>
+                </p>
+              )}
+              {log.playerDodged && (
+                <p className="font-karla" style={{ fontSize: '0.65rem', color: '#4ade80' }}>Dodged!</p>
+              )}
+              {log.playerDamageTaken > 0 && (
+                <p className="font-karla" style={{ fontSize: '0.65rem', color: '#f87171' }}>
+                  Took <strong>{log.playerDamageTaken}</strong>
+                </p>
+              )}
+              {log.playerDamageDealt === 0 && !log.playerDodged && log.playerDamageTaken === 0 && (
+                <p className="font-karla" style={{ fontSize: '0.65rem', color: '#4a4845' }}>Both sides repositioned</p>
+              )}
+            </div>
+          </div>
+        )}
+        {resolving && (
+          <p className="font-karla text-center" style={{ fontSize: '0.6rem', color: '#4a4845' }}>Resolving...</p>
+        )}
+      </div>
+
+      {/* Action buttons */}
+      <div style={{ flexShrink: 0 }}>
+        {showResult ? (
+          <button
+            onClick={onNextRound}
+            disabled={isPending}
+            style={{ width: '100%', padding: '0.875rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, cursor: 'pointer' }}
+            className="font-karla font-700 uppercase tracking-[0.1em]"
+          >
+            <span style={{ fontSize: '0.72rem', color: '#a0a09a' }}>Next Round →</span>
+          </button>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+            {([
+              { action: 'reload' as const, icon: '⚙',  label: 'Reload',  sublabel: '+1 charge',      color: '#60a5fa' },
+              { action: 'fire'   as const, icon: '💥', label: 'Fire',    sublabel: cs.playerCharges === 0 ? 'no charges' : `${fireMultLabel} dmg`, color: cs.playerCharges === 0 ? '#4a4845' : '#f87171', dim: cs.playerCharges === 0 },
+              { action: 'defend' as const, icon: '🛡',  label: 'Defend',  sublabel: `${dodgeChance}% dodge`, color: '#4ade80' },
+            ] as const).map(btn => (
+              <button
+                key={btn.action}
+                onClick={() => !buttonsDisabled && onAction(btn.action)}
+                disabled={buttonsDisabled}
+                style={{
+                  padding: '0.875rem 0.375rem',
+                  background: buttonsDisabled ? 'rgba(255,255,255,0.03)' : `${btn.color}12`,
+                  border: `1px solid ${buttonsDisabled ? 'rgba(255,255,255,0.07)' : `${btn.color}35`}`,
+                  borderRadius: 12,
+                  cursor: buttonsDisabled ? 'default' : 'pointer',
+                  textAlign: 'center',
+                  opacity: ('dim' in btn && btn.dim && !buttonsDisabled) ? 0.4 : 1,
+                  transition: 'opacity 0.2s',
+                }}
+              >
+                <p style={{ fontSize: '1.4rem', marginBottom: 3 }}>{btn.icon}</p>
+                <p className="font-karla font-700" style={{ fontSize: '0.65rem', color: buttonsDisabled ? '#4a4845' : btn.color, lineHeight: 1.2 }}>{btn.label}</p>
+                <p className="font-karla" style={{ fontSize: '0.5rem', color: '#4a4845', marginTop: 2 }}>{btn.sublabel}</p>
+              </button>
             ))}
           </div>
         )}
       </div>
-
-      {/* Round result strip */}
-      {showResult && log && (
-        <div style={{
-          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
-          borderRadius: 10, padding: '0.625rem 0.875rem', marginBottom: '0.625rem',
-        }}>
-          {/* Actions taken */}
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.4rem' }}>
-            <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4a4845' }}>Round {log.round + 1}</p>
-            <p className="font-karla" style={{ fontSize: '0.44rem', color: '#4a4845' }}>·</p>
-            <p className="font-karla" style={{ fontSize: '0.44rem', color: '#6a6764' }}>
-              You: <span style={{ color: '#f0ede8' }}>{log.playerAction === 'reload' ? 'Reloaded' : log.playerAction === 'fire' ? `Fired (${log.playerChargesBefore} charge${log.playerChargesBefore !== 1 ? 's' : ''})` : 'Defended'}</span>
-              {' '}·{' '}
-              Enemy: <span style={{ color: '#f0ede8' }}>{log.enemyAction === 'reload' ? 'Reloaded' : log.enemyAction === 'fire' ? 'Fired' : 'Defended'}</span>
-            </p>
-          </div>
-          {/* Outcomes */}
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            {log.playerDamageDealt > 0 && (
-              <p className="font-karla" style={{ fontSize: '0.65rem', color: log.critHit ? '#f0c040' : '#a78bfa' }}>
-                {log.critHit ? '⚡ Crit! ' : ''}Hit for <strong>{log.playerDamageDealt}</strong>
-              </p>
-            )}
-            {log.playerDodged && (
-              <p className="font-karla" style={{ fontSize: '0.65rem', color: '#4ade80' }}>Dodged!</p>
-            )}
-            {log.playerDamageTaken > 0 && (
-              <p className="font-karla" style={{ fontSize: '0.65rem', color: '#f87171' }}>
-                Took <strong>{log.playerDamageTaken}</strong>
-              </p>
-            )}
-            {log.playerDamageDealt === 0 && !log.playerDodged && log.playerDamageTaken === 0 && (
-              <p className="font-karla" style={{ fontSize: '0.65rem', color: '#4a4845' }}>Both sides repositioned</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Action buttons or Next Round */}
-      {showResult ? (
-        <button
-          onClick={onNextRound}
-          disabled={isPending}
-          style={{ width: '100%', padding: '0.875rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, cursor: 'pointer' }}
-          className="font-karla font-700 uppercase tracking-[0.1em]"
-        >
-          <span style={{ fontSize: '0.72rem', color: '#a0a09a' }}>Next Round →</span>
-        </button>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
-          {([
-            { action: 'reload' as const, icon: '⚙',  label: 'Reload',  sublabel: '+1 charge',      color: '#60a5fa' },
-            { action: 'fire'   as const, icon: '💥', label: 'Fire',    sublabel: cs.playerCharges === 0 ? 'no charges' : `${fireMultLabel} dmg`, color: cs.playerCharges === 0 ? '#4a4845' : '#f87171', dim: cs.playerCharges === 0 },
-            { action: 'defend' as const, icon: '🛡',  label: 'Defend',  sublabel: `${dodgeChance}% dodge`, color: '#4ade80' },
-          ] as const).map(btn => (
-            <button
-              key={btn.action}
-              onClick={() => !buttonsDisabled && onAction(btn.action)}
-              disabled={buttonsDisabled}
-              style={{
-                padding: '0.75rem 0.375rem',
-                background: buttonsDisabled ? 'rgba(255,255,255,0.03)' : `${btn.color}12`,
-                border: `1px solid ${buttonsDisabled ? 'rgba(255,255,255,0.07)' : `${btn.color}35`}`,
-                borderRadius: 12,
-                cursor: buttonsDisabled ? 'default' : 'pointer',
-                textAlign: 'center',
-                opacity: ('dim' in btn && btn.dim && !buttonsDisabled) ? 0.4 : 1,
-                transition: 'opacity 0.2s',
-              }}
-            >
-              <p style={{ fontSize: '1.25rem', marginBottom: 3 }}>{btn.icon}</p>
-              <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: buttonsDisabled ? '#4a4845' : btn.color, lineHeight: 1.2 }}>{btn.label}</p>
-              <p className="font-karla" style={{ fontSize: '0.48rem', color: '#4a4845', marginTop: 2 }}>{btn.sublabel}</p>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {resolving && (
-        <p className="font-karla text-center mt-3" style={{ fontSize: '0.6rem', color: '#4a4845' }}>Resolving...</p>
-      )}
     </div>
   )
 }
