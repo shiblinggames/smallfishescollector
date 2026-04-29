@@ -64,6 +64,12 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
   const totalFortune = crew.reduce((s, c, i) => s + (c ? Math.floor(c.fortune * (i === 0 ? 1 : 0.8)) : 0), 0)
   const assignedCount = crew.filter(Boolean).length
 
+  const dmgMin     = Math.max(1, assignedCount)
+  const dmgMax     = Math.max(1, totalPower)
+  const dmgVolley  = Math.max(1, totalPower * 2)
+  const dodgeTotal = Math.min(50 + Math.floor(totalDodge / 2), 100)
+  const critChance = Math.min(Math.floor(totalFortune / 2), 50)
+
   function depart() {
     setError(null)
     startTransition(async () => {
@@ -216,25 +222,57 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
           </div>
         </div>
 
-        {/* Crew totals */}
+        {/* Crew totals + combat preview */}
         <div style={{
           background: 'rgba(255,255,255,0.03)',
           border: '1px solid rgba(255,255,255,0.06)',
           borderRadius: 12,
           padding: '0.75rem 1rem',
           marginBottom: '1.25rem',
-          display: 'flex', justifyContent: 'space-around',
         }}>
-          {[
-            { label: 'Total Power',   val: totalPower,   color: '#f87171' },
-            { label: 'Total Dodge',   val: totalDodge,   color: '#60a5fa' },
-            { label: 'Total Fortune', val: totalFortune, color: '#f0c040' },
-          ].map(s => (
-            <div key={s.label} style={{ textAlign: 'center' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: s.val > 0 ? s.color : '#2a2825' }}>{s.val}</p>
-              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#6a6764', marginTop: 2 }}>{s.label}</p>
+          {/* Raw totals */}
+          <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '0.75rem' }}>
+            {[
+              { label: 'Total Power',   val: totalPower,   color: '#f87171' },
+              { label: 'Total Dodge',   val: totalDodge,   color: '#60a5fa' },
+              { label: 'Total Fortune', val: totalFortune, color: '#f0c040' },
+            ].map(s => (
+              <div key={s.label} style={{ textAlign: 'center' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: s.val > 0 ? s.color : '#2a2825' }}>{s.val}</p>
+                <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#6a6764', marginTop: 2 }}>{s.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Combat preview */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.625rem' }}>
+            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.4rem', color: '#4a4845', marginBottom: '0.5rem', textAlign: 'center' }}>Combat Preview</p>
+            <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+              <div style={{ textAlign: 'center' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: assignedCount > 0 ? '#f87171' : '#2a2825' }}>
+                  {assignedCount > 0 ? `${dmgMin}–${dmgMax}` : '—'}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845', marginTop: 2 }}>
+                  {assignedCount > 0 ? `${dmgMin}–${dmgVolley} volley` : ''}
+                </p>
+                <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.4rem', color: '#6a6764', marginTop: 2 }}>Damage</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: assignedCount > 0 ? '#60a5fa' : '#2a2825' }}>
+                  {assignedCount > 0 ? `${dodgeTotal}%` : '—'}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845', marginTop: 2 }}>when defending</p>
+                <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.4rem', color: '#6a6764', marginTop: 2 }}>Dodge</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: assignedCount > 0 ? '#f0c040' : '#2a2825' }}>
+                  {assignedCount > 0 ? `${critChance}%` : '—'}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845', marginTop: 2 }}>&nbsp;</p>
+                <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.4rem', color: '#6a6764', marginTop: 2 }}>Crit Chance</p>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
 
         {/* Item */}
