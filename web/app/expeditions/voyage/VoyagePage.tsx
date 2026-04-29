@@ -470,7 +470,8 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
   const buffArmor = runBuffs.filter(b => b.effect === 'armor').reduce((s, b) => s + b.value, 0)
   const effectivePower = crew.power + buffPower
   const effectiveArmor = ship.armor + buffArmor
-  const dodgeChance = Math.min(crew.dodge * 5, 70)
+  const dodgeChance = Math.min(50 + Math.floor(crew.dodge / 2), 100)
+  const dodgeBonus  = dodgeChance - 50
 
   const playerHpPct = maxDurability > 0 ? (currentDurability / maxDurability) * 100 : 0
   const enemyHpPct = (cs.enemyHp / enemy.maxHp) * 100
@@ -540,7 +541,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
           {/* Ship stats */}
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.3rem', marginTop: '0.05rem', display: 'flex', flexDirection: 'column' }}>
             <StatRow label="DMG" value={dmgRange} color="#f87171" />
-            <StatRow label="DGE" value={`${dodgeChance}%`} color="#60a5fa" />
+            <StatRow label="DGE" value={`+${dodgeBonus}%`} color="#60a5fa" />
             <StatRow label="FTN" value={crew.fortune} color="#f0c040" />
             <StatRow label="ARM" value={effectiveArmor} color="#4ade80" />
           </div>
@@ -657,7 +658,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
           {([
             { action: 'reload'     as const, icon: '⚙',  label: 'Reload',  sublabel: '+1 charge',           color: '#60a5fa', dim: false },
             { action: 'fire'       as const, icon: '💥', label: 'Fire',    sublabel: '×1 dmg · 1 charge',   color: '#f87171', dim: !canLightFire },
-            { action: 'defend'     as const, icon: '🛡',  label: 'Defend',  sublabel: `${dodgeChance}% dodge`, color: '#4ade80', dim: false },
+            { action: 'defend'     as const, icon: '🛡',  label: 'Defend',  sublabel: `+${dodgeBonus}% dodge`, color: '#4ade80', dim: false },
             { action: 'fire_heavy' as const, icon: '🔥', label: 'Volley',  sublabel: '×2 dmg · 3 charges',  color: '#f0c040', dim: !canHeavyFire },
           ] as const).map(btn => (
             <button
