@@ -44,12 +44,12 @@ export default async function ExpeditionsPage() {
       <main className="min-h-screen pb-24 sm:pb-0">
 
         {/* Background image */}
-        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/expedition-background.jpg"
             alt=""
-            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
           />
           <div style={{
             position: 'absolute', inset: 0,
