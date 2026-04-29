@@ -17,13 +17,12 @@ export default async function TavernPage() {
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const [{ data: profile }, { data: fotdAttempt }, dailyWagered, slotsDailyWagered, bounties, { data: todayExpedition }] = await Promise.all([
+  const [{ data: profile }, { data: fotdAttempt }, dailyWagered, slotsDailyWagered, bounties] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome, gems').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
     getSlotsDailyWagered(),
     getWeeklyBounties(),
-    admin.from('expeditions').select('status, zone, loot').eq('user_id', user.id).eq('expedition_date', today).maybeSingle(),
   ])
 
   const isPremium =
@@ -46,28 +45,12 @@ export default async function TavernPage() {
   const bountyAllDone = bountyCount === 4
 
 
-  const expeditionStatus = todayExpedition?.status ?? null
-  const expeditionDone = expeditionStatus === 'completed' || expeditionStatus === 'failed'
-  const expeditionLoot = (todayExpedition?.loot as { doubloons?: number } | null)?.doubloons ?? 0
-  const expeditionStatusText =
-    expeditionStatus === 'completed' ? `Complete — ${expeditionLoot.toLocaleString()} ⟡ earned` :
-    expeditionStatus === 'failed' ? 'Failed — come back tomorrow' :
-    expeditionStatus === 'active' ? 'Expedition in progress' :
-    'Choose your zone · 1 per day'
-
   const bartenderLines = [
     // Fish of the Day
     "Heard the fish today is a tricky one. Three sailors guessed wrong on the first clue.",
     "Someone cracked the fish of the day on the very first guess this morning. Haven't seen that in weeks.",
     "Don't even look at today's fish without your first clue. Trust me on that one.",
     "The fish of the day's been stumping everyone. Clue by clue, they're getting closer.",
-    // Expeditions
-    "Two ships didn't make it back from the Bertuna Triangle last week. Beautiful zone. Deadly.",
-    "Coral Run's looking calm today. Good time to send a ship out if you've been holding off.",
-    "Word from the docks — something massive spotted near the Sunken Reach. Might want to wait on that one.",
-    "Nobody talks about Davy Jones' Locker and smiles. But the ones who make it back smile plenty.",
-    "The Sunken Reach is no joke. Pack your best crew before you go near that place.",
-    "Expedition season's picking up. Lost count of the ships heading out this week.",
     // Fishing
     "Slow morning on the water. Fish aren't biting much today.",
     "Dropped a line myself before my shift. Came up empty. The deep ones are hiding.",
@@ -166,20 +149,6 @@ export default async function TavernPage() {
             icon={<FishIcon />}
             completed={fotdDone}
             streak={profile?.fotd_streak ?? 0}
-          />
-          <GameCard
-            href="/expeditions"
-            eyebrow="Daily"
-            title="Expedition"
-            statusText={expeditionStatusText}
-            info={[
-              'Choose a zone and send your ship out',
-              'Assign crew to boost your stats',
-              'Pass events to earn doubloons and cards',
-              'One expedition per day',
-            ]}
-            icon={<ShipIcon />}
-            completed={expeditionDone}
           />
         </div>
 
@@ -280,18 +249,6 @@ function AnchorIcon() {
       <circle cx="12" cy="5" r="2"/>
       <path d="M12 7v10M8 17c0 0 1 2 4 2s4-2 4-2M7 11h10"/>
       <path d="M7 17c-2-1-3-3-3-5h3M17 17c2-1 3-3 3-5h-3"/>
-    </svg>
-  )
-}
-
-function ShipIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 17l1.5 3h15L21 17"/>
-      <path d="M3 17c2 1 4.5 1.5 9 1.5S19 18 21 17"/>
-      <path d="M12 2v11"/>
-      <path d="M5 10l7 4 7-4"/>
-      <path d="M8 6l4-4 4 4"/>
     </svg>
   )
 }
