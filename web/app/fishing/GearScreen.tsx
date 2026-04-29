@@ -178,11 +178,14 @@ export default function GearScreen({
           />
           <div style={{ textAlign: 'center', marginTop: 6 }}>
             <p className="font-cinzel font-700" style={{ fontSize: '0.65rem', color: ship.color, lineHeight: 1.2 }}>{ship.name}</p>
+            <p className="font-karla font-600" style={{ fontSize: '0.54rem', color: ship.color + 'aa', marginTop: 3 }}>
+              {ship.holdCapacity} inventory slots
+            </p>
             <Link
               href="/marketplace/shipyard"
               onClick={onClose}
               className="font-karla font-600"
-              style={{ fontSize: '0.48rem', color: '#4a4845', textDecoration: 'none', letterSpacing: '0.1em' }}
+              style={{ fontSize: '0.48rem', color: '#4a4845', textDecoration: 'none', letterSpacing: '0.1em', marginTop: 2, display: 'inline-block' }}
             >
               upgrade ↗
             </Link>
