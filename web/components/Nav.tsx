@@ -158,6 +158,14 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   ]
 
   const mobileMenuLinks = [
+    { href: '/profile', label: 'Profile', badge: false,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="8" r="4"/>
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+        </svg>
+      )
+    },
     { href: '/expeditions', label: 'Expeditions', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -300,12 +308,22 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
               {displayDoubloons.toLocaleString()} ⟡
             </span>
           )}
-          <button
-            onClick={signOut}
-            className="py-2 px-2 text-[0.68rem] font-karla font-600 uppercase tracking-[0.20em] text-[#a0a09a] hover:text-[#f0ede8] active:text-[#f0ede8] transition-colors duration-200"
+          <Link
+            href="/profile"
+            className="flex items-center justify-center rounded-full transition-all duration-200"
+            style={{
+              width: 34, height: 34,
+              border: pathname === '/profile' ? '1px solid rgba(240,192,64,0.45)' : '1px solid rgba(255,255,255,0.15)',
+              background: pathname === '/profile' ? 'rgba(240,192,64,0.08)' : 'transparent',
+            }}
+            onMouseOver={undefined}
           >
-            Sign Out
-          </button>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
+              stroke={pathname === '/profile' ? '#f0c040' : '#a0a09a'}>
+              <circle cx="12" cy="8" r="4"/>
+              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
+          </Link>
         </div>
       </nav>
 
