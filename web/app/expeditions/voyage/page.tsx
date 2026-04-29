@@ -24,7 +24,7 @@ export default async function ExpeditionsVoyagePage({
   const admin = createAdminClient()
 
   const [{ data: profile }, stateResult] = await Promise.all([
-    admin.from('profiles').select('packs_available, doubloons, gems, avatar_url').eq('id', user.id).single(),
+    admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     getExpeditionState(expeditionId),
   ])
 
@@ -48,7 +48,7 @@ export default async function ExpeditionsVoyagePage({
         shopOptions={shopOptions}
         zoneName={zoneConfig.name}
         zoneIcon={zoneConfig.icon}
-        playerAvatarUrl={(profile as { avatar_url?: string | null })?.avatar_url ?? null}
+        playerAvatarUrl={null}
       />
     </div>
   )
