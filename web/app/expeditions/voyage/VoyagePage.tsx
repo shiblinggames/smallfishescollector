@@ -637,7 +637,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
             <img
               src={`${ENEMY_IMG_BASE}enemytier${enemy.tier}.png`}
               alt={enemy.name}
-              style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block', animation: isSinking ? 'combat-enemy-sink 0.9s ease-in forwards' : 'none', opacity: phase.type === 'enemy_defeated' ? 0 : 1 }}
+              style={{ width: '100%', height: 88, objectFit: 'contain', objectPosition: 'bottom', display: 'block', animation: isSinking ? 'combat-enemy-sink 0.9s ease-in forwards' : 'none', opacity: phase.type === 'enemy_defeated' ? 0 : 1 }}
             />
             {showCannonHit && log && (
               <>
