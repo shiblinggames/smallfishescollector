@@ -415,7 +415,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
   }
 
   return (
-    <div className="flex flex-col items-center gap-4 sm:gap-10 pb-20 sm:pb-0 w-full">
+    <div className="flex flex-col items-center gap-4 sm:gap-10 w-full">
       <AchievementToast keys={achievementKeys} onDone={() => setAchievementKeys([])} />
       {flash && <div key={flash.key} className={`reveal-flash reveal-flash-${flash.type}`} />}
       {prize && (
@@ -468,7 +468,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
       })()}
       {/* Mobile: 2×2 grid */}
       <div className="sm:hidden flex flex-col items-center w-full">
-        <div className="grid grid-cols-2 gap-4 w-full px-4 mb-10">
+        <div className="grid grid-cols-2 gap-3 w-full px-3 mb-2">
           {cards.map((card, i) => renderCard(card, i))}
         </div>
         {renderMobileActions()}
