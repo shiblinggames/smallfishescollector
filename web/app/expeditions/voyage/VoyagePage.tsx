@@ -617,7 +617,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.3rem', marginTop: '0.05rem', display: 'flex', flexDirection: 'column' }}>
             <StatRow label="DMG" value={dmgRange} color="#f87171" />
             <StatRow label="DGE" value={`+${dodgeBonus}%`} color="#60a5fa" />
-            <StatRow label="FTN" value={crew.fortune} color="#f0c040" />
+            <StatRow label="CRIT" value={`${Math.min(Math.floor(crew.fortune / 2), 50)}%`} color="#f0c040" />
             <StatRow label="ARM" value={effectiveArmor} color="#4ade80" />
           </div>
         </div>
@@ -682,7 +682,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.3rem', marginTop: '0.05rem', display: 'flex', flexDirection: 'column' }}>
             <StatRow label="DMG" value={`1–${enemy.damage}`} color="#f87171" />
             <StatRow label="DGE" value={`${Math.min(enemy.dodge * 5, 70)}%`} color="#60a5fa" />
-            <StatRow label="FTN" value={enemy.fortune} color="#f0c040" />
+            <StatRow label="CRIT" value={`${Math.min(enemy.fortune * 4, 60)}%`} color="#f0c040" />
             <StatRow label="ARM" value={enemy.armor} color="#4ade80" />
             <StatRow label="SPD" value={enemy.speed} color="#a78bfa" />
           </div>
