@@ -21,6 +21,7 @@ interface Props {
   doubloons: number
   collection: CollectionCard[]
   userItems: Array<{ itemId: string; quantity: number }>
+  savedCrewVariantIds: number[]
 }
 
 const STAT_COLS = [
@@ -29,10 +30,19 @@ const STAT_COLS = [
   { key: 'fortune' as const, label: 'FTN', color: '#f0c040' },
 ]
 
-export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, collection, userItems }: Props) {
+export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, collection, userItems, savedCrewVariantIds }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [crew, setCrew] = useState<(CollectionCard | null)[]>(Array(shipStats.crewSlots).fill(null))
+  const [crew, setCrew] = useState<(CollectionCard | null)[]>(() => {
+    const slots: (CollectionCard | null)[] = Array(shipStats.crewSlots).fill(null)
+    savedCrewVariantIds.forEach((vid, i) => {
+      if (i < shipStats.crewSlots) {
+        const card = collection.find(c => c.variantId === vid)
+        if (card) slots[i] = card
+      }
+    })
+    return slots
+  })
   const [equippedItem, setEquippedItem] = useState<string | null>(null)
   const [pickerSlot, setPickerSlot] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -122,7 +132,7 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
         <div style={{ marginBottom: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
             <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Crew</p>
-            <p className="font-karla" style={{ fontSize: '0.52rem', color: assignedCount === shipStats.crewSlots ? '#4ade80' : '#4a4845' }}>
+            <p className="font-karla" style={{ fontSize: '0.52rem', color: assignedCount === shipStats.crewSlots ? '#4ade80' : '#6a6764' }}>
               {assignedCount}/{shipStats.crewSlots} assigned
             </p>
           </div>
@@ -153,14 +163,14 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
                       {STAT_COLS.map(s => (
                         <div key={s.label} style={{ textAlign: 'center' }}>
                           <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: s.color }}>{card[s.key]}</p>
-                          <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845', marginTop: 1 }}>{s.label}</p>
+                          <p className="font-karla" style={{ fontSize: '0.42rem', color: '#6a6764', marginTop: 1 }}>{s.label}</p>
                         </div>
                       ))}
                     </div>
                   </button>
                   <button
                     onClick={() => removeCard(slot)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', flexShrink: 0, color: '#3a3835', lineHeight: 1 }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', flexShrink: 0, color: '#6a6764', lineHeight: 1 }}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                       <path d="M18 6L6 18M6 6l12 12"/>
@@ -190,7 +200,7 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
                       <path d="M12 5v14M5 12h14"/>
                     </svg>
                   </div>
-                  <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#3a3835' }}>Add crew member</p>
+                  <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#7a7470' }}>Add crew member</p>
                 </button>
               )
             )}
@@ -213,7 +223,7 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
           ].map(s => (
             <div key={s.label} style={{ textAlign: 'center' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: s.val > 0 ? s.color : '#2a2825' }}>{s.val}</p>
-              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4a4845', marginTop: 2 }}>{s.label}</p>
+              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#6a6764', marginTop: 2 }}>{s.label}</p>
             </div>
           ))}
         </div>

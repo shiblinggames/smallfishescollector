@@ -25,7 +25,7 @@ export default async function ExpeditionsPreparePage({
   const admin = createAdminClient()
 
   const [{ data: profile }, collection, userItems] = await Promise.all([
-    admin.from('profiles').select('packs_available, doubloons, ship_tier, gems').eq('id', user.id).single(),
+    admin.from('profiles').select('packs_available, doubloons, ship_tier, gems, saved_crew').eq('id', user.id).single(),
     getCollectionForCrew(),
     getUserItems(),
   ])
@@ -56,6 +56,7 @@ export default async function ExpeditionsPreparePage({
         doubloons={profile?.doubloons ?? 0}
         collection={collection}
         userItems={userItems}
+        savedCrewVariantIds={(profile?.saved_crew as number[] | null) ?? []}
       />
     </>
   )
