@@ -578,7 +578,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
             </button>
             <p className="font-karla" style={{ fontSize: '0.36rem', color: '#4a4845', lineHeight: 1 }}>tap for crew</p>
           </div>
-          <div style={{ position: 'relative', animation: playerImgAnim }}>
+          <div key={`p-${cs.round}`} style={{ position: 'relative', animation: playerImgAnim }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={ship.image} alt={ship.name} style={{ width: '100%', height: 88, objectFit: 'contain', objectPosition: 'bottom', display: 'block' }} />
             {showResult && log && !log.playerDodged && log.playerDamageTaken > 0 && (
@@ -632,7 +632,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
             size={36}
             borderColor={`${enemyColor}55`}
           />
-          <div style={{ position: 'relative', height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', animation: enemyHitAnim }}>
+          <div key={`e-${cs.round}`} style={{ position: 'relative', height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', animation: enemyHitAnim }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`${ENEMY_IMG_BASE}enemytier${enemy.tier}.png`}
