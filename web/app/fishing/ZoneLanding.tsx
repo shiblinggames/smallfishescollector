@@ -276,8 +276,8 @@ export default function ZoneLanding({
                   transition={{ duration: 0.2, delay: i * 0.06 }}
                   onClick={() => accessible && onSelect(zone)}
                   style={{
-                    border: `1px solid ${accessible ? color + '80' : 'rgba(255,255,255,0.15)'}`,
-                    background: accessible ? `${color}22` : 'rgba(255,255,255,0.06)',
+                    border: `1px solid ${accessible ? color + 'aa' : 'rgba(255,255,255,0.18)'}`,
+                    background: accessible ? `${color}3a` : 'rgba(255,255,255,0.08)',
                     borderRadius: 14,
                     padding: '1rem 1rem 0.9rem',
                     opacity: accessible ? 1 : 0.65,
@@ -327,7 +327,7 @@ export default function ZoneLanding({
                       <div key={cond} className="flex items-center gap-1.5">
                         <div style={{ width: 3, height: 3, borderRadius: '50%', background: accessible ? color + 'aa' : '#3a3835', flexShrink: 0 }} />
                         <p className="font-karla font-400"
-                          style={{ fontSize: '0.72rem', color: accessible ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.2)' }}>
+                          style={{ fontSize: '0.72rem', color: accessible ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.2)' }}>
                           {cond}
                         </p>
                       </div>
