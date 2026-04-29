@@ -100,9 +100,12 @@ export interface Expedition {
 
 export const EXPEDITION_SHIP_STATS: Record<number, ShipStats> = {
   0: { name: 'Rowboat',    image: '/models/rowboat.png',    durability: 20, speed: 2,  armor: 1, crewSlots: 1 },
-  1: { name: 'Sloop',      image: '/models/sloop.png',      durability: 35, speed: 4,  armor: 2, crewSlots: 2 },
-  2: { name: 'Brigantine', image: '/models/brigantine.png', durability: 55, speed: 6,  armor: 4, crewSlots: 3 },
-  3: { name: 'Galleon',    image: '/models/galleon.png',    durability: 80, speed: 9,  armor: 6, crewSlots: 4 },
+  1: { name: 'Dinghy',     image: '/models/dinghy.png',     durability: 27, speed: 3,  armor: 1, crewSlots: 1 },
+  2: { name: 'Sloop',      image: '/models/sloop.png',      durability: 35, speed: 4,  armor: 2, crewSlots: 2 },
+  3: { name: 'Schooner',   image: '/models/schooner.png',   durability: 45, speed: 5,  armor: 3, crewSlots: 2 },
+  4: { name: 'Brigantine', image: '/models/brigantine.png', durability: 55, speed: 6,  armor: 4, crewSlots: 3 },
+  5: { name: 'Galleon',    image: '/models/galleon.png',    durability: 70, speed: 8,  armor: 5, crewSlots: 4 },
+  6: { name: 'Man-o-War',  image: '/models/man-o-war.png',  durability: 90, speed: 11, armor: 8, crewSlots: 5 },
 }
 
 // ── Crew stats ────────────────────────────────────────────────────────────────

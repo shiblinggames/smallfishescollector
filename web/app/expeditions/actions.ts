@@ -2,7 +2,6 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { revalidatePath } from 'next/cache'
 import { RARITY_TIERS } from '@/lib/variants'
 import {
   ZONES, EXPEDITION_SHIP_STATS, ENEMIES, EXPEDITION_ITEMS,
@@ -195,7 +194,6 @@ export async function startExpedition(
 
   if (error || !expedition) return { error: 'Failed to start expedition' }
 
-  revalidatePath('/expeditions')
   return { expeditionId: expedition.id }
 }
 
@@ -609,7 +607,6 @@ export async function claimZoneReward(
     }).eq('id', expeditionId),
   ])
 
-  revalidatePath('/expeditions')
   return loot
 }
 
