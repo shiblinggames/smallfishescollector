@@ -50,10 +50,10 @@ function SlotSymbolDisplay({ id, size = 56 }: { id: SlotSymbolId; size?: number 
   )
 }
 
-function Reel({ symbol, rolling, delay, won, winColor }: {
+// Each reel stops independently — no delay prop needed
+function Reel({ symbol, rolling, won, winColor }: {
   symbol: SlotSymbolId
   rolling: boolean
-  delay: number
   won: boolean
   winColor?: string
 }) {
@@ -69,16 +69,17 @@ function Reel({ symbol, rolling, delay, won, winColor }: {
         setDisplay(ALL_IDS[idx])
       }, 80)
     } else {
+      // Small snap delay so the last cycling frame has time to render
       timeoutRef.current = setTimeout(() => {
         if (intervalRef.current) clearInterval(intervalRef.current)
         setDisplay(symbol)
-      }, delay)
+      }, 60)
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [rolling, symbol, delay])
+  }, [rolling, symbol])
 
   const sym = SLOT_SYMBOLS_LIST.find((s) => s.id === display)!
   const color = won && winColor ? winColor : sym.color
@@ -104,6 +105,18 @@ function Reel({ symbol, rolling, delay, won, winColor }: {
   )
 }
 
+// Stop reels left-to-right with a gap between each
+function stopReels(
+  setter: (v: boolean[]) => void,
+  baseDelay: number,
+  gap = 300,
+): number {
+  setTimeout(() => setter([false, true,  true]),  baseDelay)
+  setTimeout(() => setter([false, false, true]),  baseDelay + gap)
+  setTimeout(() => setter([false, false, false]), baseDelay + gap * 2)
+  return baseDelay + gap * 2  // ms when last reel stops
+}
+
 const BET_PRESETS = [10, 25, 50, 100, 250, 500]
 
 interface Props {
@@ -116,9 +129,9 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
   const [dailyWagered, setDailyWagered] = useState(initialWagered)
   const [wager, setWager] = useState(25)
   const [spinning, setSpinning] = useState(false)
-  const [mainRolling, setMainRolling] = useState(false)
+  const [mainRolling, setMainRolling] = useState([false, false, false])
   const [reels, setReels] = useState<SlotSymbolId[]>(['common', 'rare', 'legendary'])
-  const [bonusRolling, setBonusRolling] = useState(false)
+  const [bonusRolling, setBonusRolling] = useState([false, false, false])
   const [bonusReels, setBonusReels] = useState<SlotSymbolId[]>(['common', 'rare', 'legendary'])
   const [showBonus, setShowBonus] = useState(false)
   const [lastResult, setLastResult] = useState<SlotSpinResult | null>(null)
@@ -149,11 +162,6 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
     }
   }
 
-  function triggerAnchorFlash() {
-    setFlashColor('#34d399')
-    setFlashKey((k) => k + 1)
-  }
-
   async function handleSpin() {
     if (!canSpin) return
     setError(null)
@@ -165,46 +173,53 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
     setWinSym(null)
     setJackpotShake(false)
     setSpinning(true)
-    setMainRolling(true)
+    setMainRolling([true, true, true])
 
     const result = await spinSlots(wager)
 
     if ('error' in result) {
       setSpinning(false)
-      setMainRolling(false)
+      setMainRolling([false, false, false])
       setError(result.error)
       return
     }
 
     setReels(result.reels)
-    setTimeout(() => setMainRolling(false), 1200)
+
+    // Stop main reels left → right, 300ms apart, starting at 1200ms
+    const lastMainStop = stopReels(setMainRolling, 1200, 300)
+    // lastMainStop = 1800ms, last reel snaps at ~1860ms
 
     if (result.bonus) {
-      // 3 anchors — teal flash when they all land, then show bonus section
-      setTimeout(() => triggerAnchorFlash(), 1750)
+      // Flash teal when all anchors have landed
+      setTimeout(() => {
+        setFlashColor('#34d399')
+        setFlashKey((k) => k + 1)
+      }, lastMainStop + 150)
+
+      // Show bonus section shortly after
       setTimeout(() => {
         setShowBonus(true)
         setBonusReels(result.bonus!.reels)
+        setBonusRolling([true, true, true])
+
+        // Stop bonus reels left → right
+        const lastBonusStop = stopReels(setBonusRolling, 1000, 300)
+
         setTimeout(() => {
-          setBonusRolling(true)
-          setTimeout(() => {
-            setBonusRolling(false)
-            const bonusWin = result.bonus!.outcome === 'win'
-            const settle = bonusWin ? 600 : 550
-            setTimeout(() => {
-              if (bonusWin) triggerWin(result.bonus!.reels[0], true)
-              setDoubloons(result.newDoubloons)
-              setDailyWagered(result.dailyWagered)
-              setLastResult(result)
-              setShowResult(true)
-              setSpinning(false)
-              window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
-            }, settle)
-          }, 1200)
-        }, 700)
-      }, 1950)
+          const bonusWin = result.bonus!.outcome === 'win'
+          if (bonusWin) triggerWin(result.bonus!.reels[0], true)
+          setDoubloons(result.newDoubloons)
+          setDailyWagered(result.dailyWagered)
+          setLastResult(result)
+          setShowResult(true)
+          setSpinning(false)
+          window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
+        }, lastBonusStop + 200)
+
+      }, lastMainStop + 500)
+
     } else if (result.outcome === 'win') {
-      // All 3 reels land at 1200+440=1640ms, celebrate at 1750ms
       setTimeout(() => {
         triggerWin(result.reels[0], false)
         setDoubloons(result.newDoubloons)
@@ -213,7 +228,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
         setShowResult(true)
         setSpinning(false)
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
-      }, 1750)
+      }, lastMainStop + 150)
     } else {
       setTimeout(() => {
         setDoubloons(result.newDoubloons)
@@ -222,7 +237,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
         setShowResult(true)
         setSpinning(false)
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
-      }, 1400)
+      }, lastMainStop + 150)
     }
   }
 
@@ -296,8 +311,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
             <Reel
               key={i}
               symbol={sym}
-              rolling={mainRolling}
-              delay={i * 220}
+              rolling={mainRolling[i]}
               won={wonMainReels}
               winColor={wonMainReels ? winColor : undefined}
             />
@@ -322,8 +336,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                 <Reel
                   key={i}
                   symbol={sym}
-                  rolling={bonusRolling}
-                  delay={i * 220}
+                  rolling={bonusRolling[i]}
                   won={wonBonusReels}
                   winColor={wonBonusReels ? winColor : undefined}
                 />
@@ -349,13 +362,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
               >
                 {WIN_LABEL[winSym]}
               </p>
-              <p
-                className="font-cinzel font-700 mt-1"
-                style={{
-                  fontSize: isJackpot ? '1.5rem' : '1.25rem',
-                  color: '#f0ede8',
-                }}
-              >
+              <p className="font-cinzel font-700 mt-1" style={{ fontSize: isJackpot ? '1.5rem' : '1.25rem', color: '#f0ede8' }}>
                 +{lastResult.net.toLocaleString()} ⟡
               </p>
               <p className="font-karla font-400 text-[#6a6764] text-xs mt-1">
