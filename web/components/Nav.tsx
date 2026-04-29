@@ -139,11 +139,12 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
-    { href: '/packs', label: 'Packs', badge: displayPacks && displayPacks > 0 ? displayPacks : null,
+    { href: '/expeditions', label: 'Expeditions', badge: null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="8" y="3" width="12" height="16" rx="1.5"/>
-          <rect x="4" y="6" width="12" height="16" rx="1.5"/>
+          <path d="M3 17c2 4 16 4 18 0"/><path d="M4 17L6 12l13 0 2 5"/>
+          <line x1="10" y1="12" x2="10" y2="4"/>
+          <path d="M10 4L17 9 10 12"/>
         </svg>
       )
     },
@@ -166,12 +167,11 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
-    { href: '/expeditions', label: 'Expeditions', badge: false,
+    { href: '/packs', label: 'Packs', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 17c2 4 16 4 18 0"/><path d="M4 17L6 12l13 0 2 5"/>
-          <line x1="10" y1="12" x2="10" y2="4"/>
-          <path d="M10 4L17 9 10 12"/>
+          <rect x="8" y="3" width="12" height="16" rx="1.5"/>
+          <rect x="4" y="6" width="12" height="16" rx="1.5"/>
         </svg>
       )
     },

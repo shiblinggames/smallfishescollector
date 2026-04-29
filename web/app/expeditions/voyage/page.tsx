@@ -39,7 +39,7 @@ export default async function ExpeditionsVoyagePage({
   const zoneConfig = ZONES[expedition.zone]
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <VoyagePage
         expedition={expedition}
@@ -49,6 +49,6 @@ export default async function ExpeditionsVoyagePage({
         zoneName={zoneConfig.name}
         zoneIcon={zoneConfig.icon}
       />
-    </>
+    </div>
   )
 }

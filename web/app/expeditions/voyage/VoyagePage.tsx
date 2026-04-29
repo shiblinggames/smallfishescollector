@@ -168,7 +168,7 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
   }
 
   return (
-    <main className="min-h-screen pb-24 sm:pb-0 pt-5 sm:[zoom:1.4]" style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column' }}>
+    <main className="pb-24 sm:pb-0 pt-5 sm:[zoom:1.4]" style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       <div className="px-5 max-w-lg mx-auto w-full" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
 
         {/* Progress header */}
