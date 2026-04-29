@@ -35,6 +35,22 @@ export default async function ExpeditionsPage() {
 
   return (
     <>
+      {/* Background image — sits above the black body but below all page content */}
+      <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/expedition-background.jpg"
+          alt=""
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
+        />
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0.92) 100%)',
+        }} />
+      </div>
+
+      {/* All content — stacking context above the background */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={doubloons} gems={profile?.gems ?? 0} />
       <div style={{ background: 'rgba(251,191,36,0.08)', borderBottom: '1px solid rgba(251,191,36,0.2)', padding: '0.55rem 1.5rem', textAlign: 'center' }}>
         <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#fbbf24' }}>
@@ -43,21 +59,7 @@ export default async function ExpeditionsPage() {
       </div>
       <main className="min-h-screen pb-24 sm:pb-0">
 
-        {/* Background image */}
-        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/expedition-background.jpg"
-            alt=""
-            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
-          />
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0.92) 100%)',
-          }} />
-        </div>
-
-        <div className="px-5 max-w-lg mx-auto" style={{ position: 'relative', zIndex: 1, paddingTop: '1rem' }}>
+        <div className="px-5 max-w-lg mx-auto" style={{ paddingTop: '1rem' }}>
 
           {/* Header */}
           <div style={{ marginBottom: '1.25rem' }}>
@@ -140,6 +142,7 @@ export default async function ExpeditionsPage() {
 
         </div>
       </main>
+      </div>
     </>
   )
 }
