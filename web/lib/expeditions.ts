@@ -608,8 +608,8 @@ export const ZONES: Record<ZoneKey, ZoneConfig> = {
     ],
     fightEnemyPool: ['brute', 'sniper', 'corsair'],
     bossId: 'barnacle_pete',
-    itemDropPool: [],
-    itemDropChance: 0,
+    itemDropPool: ['powder_keg', 'patched_hull', 'anchor_chain', 'bait_barrel', 'lucky_lure'],
+    itemDropChance: 0.30,
   },
   bertuna_triangle: {
     name: 'The Bertuna Triangle',

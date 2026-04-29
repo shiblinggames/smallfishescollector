@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
 import {
-  ZONES, EXPEDITION_SHIP_STATS, ENEMIES,
+  ZONES, EXPEDITION_SHIP_STATS, ENEMIES, EXPEDITION_ITEMS, computeTotalCrewStats,
   type Expedition, type ZoneLoot,
 } from '@/lib/expeditions'
 
@@ -19,8 +19,12 @@ async function claimRewardInline(
   const variance = 0.8 + Math.random() * 0.4
   const doubloons = Math.floor(zone.baseDoubloons * variance)
 
+  const crew = computeTotalCrewStats(expedition.crew_loadout ?? [])
+  const fortuneBonus = Math.min(crew.fortune / 200, 0.15)
+  const effectiveDropChance = zone.itemDropChance + fortuneBonus
+
   let itemDropped: string | null = null
-  if (zone.itemDropPool.length > 0 && Math.random() < zone.itemDropChance) {
+  if (zone.itemDropPool.length > 0 && Math.random() < effectiveDropChance) {
     const pool = zone.itemDropPool
     itemDropped = pool[Math.floor(Math.random() * pool.length)]
 
@@ -158,17 +162,22 @@ export default async function ExpeditionsResultsPage({
                   </p>
                   <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764' }}>Doubloons</p>
                 </div>
-                {loot.itemDropped && (
-                  <div style={{
-                    background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.25)',
-                    borderRadius: 8, padding: '0.4rem 0.75rem',
-                  }}>
-                    <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#a78bfa' }}>
-                      {loot.itemDropped.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                    </p>
-                    <p className="font-karla" style={{ fontSize: '0.58rem', color: '#6a6764' }}>Item dropped</p>
-                  </div>
-                )}
+                {loot.itemDropped && (() => {
+                  const item = EXPEDITION_ITEMS[loot.itemDropped]
+                  return (
+                    <div style={{
+                      background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.25)',
+                      borderRadius: 8, padding: '0.4rem 0.75rem',
+                    }}>
+                      <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#a78bfa' }}>
+                        {item?.name ?? loot.itemDropped.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                      </p>
+                      <p className="font-karla" style={{ fontSize: '0.58rem', color: '#6a6764' }}>
+                        {item?.effectDescription ?? 'Permanent item'}
+                      </p>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           )}
