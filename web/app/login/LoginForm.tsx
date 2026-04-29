@@ -34,29 +34,44 @@ export default function LoginForm() {
 
   if (sent) {
     return (
-      <div className="sg-card p-8 text-center space-y-3">
-        <p className="sg-eyebrow">Check Your Email</p>
-        <p className="font-karla font-400 text-[#f0ede8] leading-relaxed">
-          We sent a sign-in link to{' '}
-          <span className="text-[#f0c040]">{email}</span>.
-        </p>
-        <p className="font-karla font-300 text-[#a0a09a] text-sm">
-          Click the link in the email to sign in. You can close this tab.
+      <div className="text-center space-y-3" style={{
+        background: 'rgba(0,0,0,0.45)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: 14,
+        padding: '2rem 1.75rem',
+        backdropFilter: 'blur(8px)',
+      }}>
+        <p className="font-karla font-600 uppercase tracking-[0.18em]" style={{ fontSize: '0.58rem', color: '#5a9aaa' }}>Check Your Email</p>
+        <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.1rem' }}>Link sent.</p>
+        <p className="font-karla font-300 text-[#a0a09a]" style={{ fontSize: '0.82rem', lineHeight: 1.6 }}>
+          We sent a sign-in link to <span className="text-[#f0c040]">{email}</span>.<br />
+          Click the link to sign in — you can close this tab.
         </p>
       </div>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="sg-card p-8 space-y-6">
+    <form onSubmit={handleSubmit} style={{
+      background: 'rgba(0,0,0,0.45)',
+      border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: 14,
+      padding: '1.75rem',
+      backdropFilter: 'blur(8px)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '1.25rem',
+    }}>
       {error && (
-        <p className="text-sm font-karla border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-400">
+        <p className="font-karla text-sm border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-400" style={{ borderRadius: 8 }}>
           {error}
         </p>
       )}
 
-      <div className="space-y-1.5">
-        <label className="sg-eyebrow block">Email</label>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <label className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.58rem', color: '#6a6764' }}>
+          Email
+        </label>
         <input
           type="email"
           required
@@ -72,9 +87,9 @@ export default function LoginForm() {
       </button>
 
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-[rgba(255,255,255,0.15)]" />
-        <span className="font-karla font-300 text-[#a0a09a] text-xs tracking-widest">OR</span>
-        <div className="flex-1 h-px bg-[rgba(255,255,255,0.15)]" />
+        <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
+        <span className="font-karla font-300 tracking-widest" style={{ fontSize: '0.62rem', color: '#4a4845' }}>OR</span>
+        <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
       </div>
 
       <GoogleButton next={next} />
