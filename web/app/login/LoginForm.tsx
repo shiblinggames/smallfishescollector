@@ -8,6 +8,7 @@ import GoogleButton from '@/components/GoogleButton'
 export default function LoginForm() {
   const searchParams = useSearchParams()
   const next = searchParams.get('next') ?? '/packs'
+  const [showEmail, setShowEmail] = useState(false)
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
@@ -52,47 +53,52 @@ export default function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{
-      background: 'rgba(0,0,0,0.45)',
-      border: '1px solid rgba(255,255,255,0.1)',
-      borderRadius: 14,
-      padding: '1.75rem',
-      backdropFilter: 'blur(8px)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '1.25rem',
-    }}>
-      {error && (
-        <p className="font-karla text-sm border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-400" style={{ borderRadius: 8 }}>
-          {error}
-        </p>
-      )}
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <label className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.58rem', color: '#6a6764' }}>
-          Email
-        </label>
-        <input
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="sg-input"
-          placeholder="you@example.com"
-        />
-      </div>
-
-      <button type="submit" disabled={loading} className="btn-ghost w-full">
-        {loading ? 'Sending…' : 'Send Sign-In Link'}
-      </button>
-
-      <div className="flex items-center gap-3">
-        <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
-        <span className="font-karla font-300 tracking-widest" style={{ fontSize: '0.62rem', color: '#4a4845' }}>OR</span>
-        <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
-      </div>
-
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* Primary action */}
       <GoogleButton next={next} />
-    </form>
+
+      {/* Email fallback */}
+      {!showEmail ? (
+        <button
+          type="button"
+          onClick={() => setShowEmail(true)}
+          className="font-karla font-300 transition-colors"
+          style={{ fontSize: '0.72rem', color: '#4a4845', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#a0a09a')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#4a4845')}
+        >
+          or sign in with email
+        </button>
+      ) : (
+        <form onSubmit={handleSubmit} style={{
+          background: 'rgba(0,0,0,0.45)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 14,
+          padding: '1.25rem',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.875rem',
+        }}>
+          {error && (
+            <p className="font-karla text-sm border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-400" style={{ borderRadius: 8 }}>
+              {error}
+            </p>
+          )}
+          <input
+            type="email"
+            required
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="sg-input"
+            placeholder="your@email.com"
+          />
+          <button type="submit" disabled={loading} className="btn-ghost w-full">
+            {loading ? 'Sending…' : 'Send Sign-In Link'}
+          </button>
+        </form>
+      )}
+    </div>
   )
 }
