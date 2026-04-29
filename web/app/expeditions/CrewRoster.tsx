@@ -177,20 +177,6 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
                         style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
                       />
                     </div>
-                    <button
-                      onClick={(e) => removeFromSlot(i, e)}
-                      style={{
-                        position: 'absolute', top: -6, right: -6,
-                        width: 17, height: 17, borderRadius: '50%',
-                        background: 'rgba(8,8,10,0.9)', border: '1px solid rgba(255,255,255,0.2)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer', zIndex: 5, padding: 0,
-                      }}
-                    >
-                      <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="3.5" strokeLinecap="round">
-                        <path d="M18 6L6 18M6 6l12 12"/>
-                      </svg>
-                    </button>
                   </div>
                   <p className="font-karla font-600 text-center truncate" style={{ fontSize: '0.55rem', color: '#c0bdb8', lineHeight: 1.2, width: '100%' }}>{card.name}</p>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
