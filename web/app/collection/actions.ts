@@ -68,18 +68,25 @@ export async function getDuplicatesBreakdown(): Promise<{ items: DuplicateBreakd
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
-  const { data: rows } = await admin
-    .from('user_collection')
-    .select('id, card_variant_id, card_variants(variant_name, border_style, art_effect, drop_weight, cards(name, filename))')
-    .eq('user_id', user.id)
+  const [{ data: rows }, { data: cardsData }] = await Promise.all([
+    admin
+      .from('user_collection')
+      .select('id, card_variant_id, card_variants(variant_name, border_style, art_effect, drop_weight, card_id)')
+      .eq('user_id', user.id),
+    admin.from('cards').select('id, name, filename'),
+  ])
+
+  const cardsById: Record<number, { name: string; filename: string }> = {}
+  for (const c of cardsData ?? []) cardsById[c.id] = { name: c.name, filename: c.filename }
 
   const grouped: Record<number, { rowIds: number[]; meta: DuplicateBreakdownItem }> = {}
   for (const row of rows ?? []) {
     const v = row.card_variants as unknown as {
-      variant_name: string; border_style: string; art_effect: string; drop_weight: number
-      cards: { name: string; filename: string }
+      variant_name: string; border_style: string; art_effect: string; drop_weight: number; card_id: number
     } | null
     if (!v) continue
+    const card = cardsById[v.card_id]
+    if (!card) continue
     if (!grouped[row.card_variant_id]) {
       const rarity = rarityFromVariant(v.variant_name, v.drop_weight)
       grouped[row.card_variant_id] = {
@@ -89,8 +96,8 @@ export async function getDuplicatesBreakdown(): Promise<{ items: DuplicateBreakd
           borderStyle: v.border_style,
           artEffect:   v.art_effect,
           dropWeight:  v.drop_weight,
-          cardName:    v.cards.name,
-          filename:    v.cards.filename,
+          cardName:    card.name,
+          filename:    card.filename,
           extraCopies: 0,
           gemValue:    GEM_VALUES[rarity] ?? 1,
           rowIds:      [],
