@@ -142,6 +142,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
               setLastResult(result)
               setShowResult(true)
               setSpinning(false)
+              window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
             }, 1400)
           }, 1200)
         }, 700)
@@ -153,6 +154,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
         setLastResult(result)
         setShowResult(true)
         setSpinning(false)
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
       }, 1400)
     }
   }

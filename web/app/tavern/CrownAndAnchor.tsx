@@ -148,6 +148,7 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
       setDoubloons(result.newDoubloons)
       setDailyWagered(result.dailyWagered)
       setLastResult(result)
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
     }, 1400)
   }
 
