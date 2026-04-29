@@ -70,14 +70,14 @@ export default async function ExpeditionsPage() {
           }} />
         </div>
 
-        <div className="px-5 max-w-lg mx-auto" style={{ position: 'relative', zIndex: 1, paddingTop: '2rem' }}>
+        <div className="px-5 max-w-lg mx-auto" style={{ position: 'relative', zIndex: 1, paddingTop: '1rem' }}>
 
           {/* Header */}
-          <div style={{ marginBottom: '1.75rem' }}>
-            <p className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#4a6a8a', marginBottom: '0.4rem' }}>
+          <div style={{ marginBottom: '1.25rem' }}>
+            <p className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#4a6a8a', marginBottom: '0.3rem' }}>
               Daily Voyage
             </p>
-            <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.7rem', lineHeight: 1.1, marginBottom: '0.5rem' }}>
+            <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.7rem', lineHeight: 1.1, marginBottom: '0.3rem' }}>
               Expeditions
             </h1>
             <p className="font-karla" style={{ fontSize: '0.75rem', color: '#5a5855', lineHeight: 1.6 }}>
