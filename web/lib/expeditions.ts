@@ -181,6 +181,7 @@ export interface EnemyLootTable {
 export interface EnemyDef {
   id: string
   name: string
+  image: string | null  // filename in enemy-arts storage bucket
   maxHp: number
   damage: number  // max damage per shot (min is always 1)
   dodge: number   // same scale as crew dodge: dodge*5 = dodge%
@@ -208,6 +209,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
   brute: {
     id: 'brute',
     name: 'Reef Raider',
+    image: null,
     maxHp: 20,
     damage: 6,
     dodge: 0,
@@ -222,6 +224,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
   sniper: {
     id: 'sniper',
     name: "Crow's Nest Marksman",
+    image: null,
     maxHp: 25,
     damage: 14,
     dodge: 2,
@@ -236,6 +239,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
   corsair: {
     id: 'corsair',
     name: 'Saltwater Corsair',
+    image: null,
     maxHp: 35,
     damage: 10,
     dodge: 2,
@@ -258,6 +262,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
   barnacle_pete: {
     id: 'barnacle_pete',
     name: 'Barnacle Pete',
+    image: 'barnacle_pete.png',
     maxHp: 50,
     damage: 10,
     dodge: 1,

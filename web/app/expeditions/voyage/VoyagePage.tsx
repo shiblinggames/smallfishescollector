@@ -15,7 +15,8 @@ import {
   type CombatState,
 } from '@/lib/expeditions'
 
-const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
+const IMG_BASE       = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
+const ENEMY_IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/enemy-arts/'
 
 interface Props {
   expedition: Expedition
@@ -24,6 +25,7 @@ interface Props {
   shopOptions: ShopOption[] | null
   zoneName: string
   zoneIcon: string
+  playerAvatarUrl: string | null
 }
 
 type Phase =
@@ -39,7 +41,7 @@ type Phase =
   | { type: 'claiming_loot' }
   | { type: 'loot_result'; loot: ZoneLoot }
 
-export default function VoyagePage({ expedition: initExp, nodeType: initNodeType, currentEvent: initEvent, shopOptions, zoneName, zoneIcon }: Props) {
+export default function VoyagePage({ expedition: initExp, nodeType: initNodeType, currentEvent: initEvent, shopOptions, zoneName, zoneIcon, playerAvatarUrl }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -281,6 +283,7 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
               isPending={isPending}
               currentDurability={currentDurability}
               maxDurability={maxDurability}
+              playerAvatarUrl={playerAvatarUrl}
               onAction={handleCombatAction}
             />
           </div>
@@ -430,7 +433,20 @@ function StatRow({ label, value, color }: { label: string; value: string | numbe
   )
 }
 
-function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBoss, isPending, currentDurability, maxDurability, onAction }: {
+function CircleAvatar({ src, fallback, size, borderColor }: { src: string | null; fallback: string; size: number; borderColor: string }) {
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', border: `1.5px solid ${borderColor}`, flexShrink: 0, background: 'rgba(0,0,0,0.4)' }}>
+      {src
+        ? <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: size * 0.42 }}>{fallback}</span>
+          </div>
+      }
+    </div>
+  )
+}
+
+function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBoss, isPending, currentDurability, maxDurability, playerAvatarUrl, onAction }: {
   enemy: EnemyDef
   cs: NonNullable<Expedition['combat_state']>
   phase: Phase
@@ -442,6 +458,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
   isPending: boolean
   currentDurability: number
   maxDurability: number
+  playerAvatarUrl: string | null
   onAction: (a: CombatAction) => void
 }) {
   const resolving = phase.type === 'resolving'
@@ -485,7 +502,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
 
         {/* Player panel */}
         <div style={{ flex: 1, background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.16)', borderRadius: 14, padding: '0.75rem 0.625rem', display: 'flex', flexDirection: 'column', gap: '0.35rem', animation: playerPanelAnim }}>
-          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: '#4a6a8a' }}>Your Ship</p>
+          <CircleAvatar src={playerAvatarUrl} fallback="⚓" size={36} borderColor="rgba(96,165,250,0.35)" />
           <div style={{ position: 'relative', animation: playerImgAnim }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={ship.image} alt={ship.name} style={{ width: '100%', height: 88, objectFit: 'contain', objectPosition: 'bottom', display: 'block' }} />
@@ -553,7 +570,12 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
 
         {/* Enemy panel */}
         <div style={{ flex: 1, background: `${enemyColor}08`, border: `1px solid ${enemyColor}20`, borderRadius: 14, padding: '0.75rem 0.625rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: enemyColor, opacity: 0.8 }}>{isBoss ? 'Boss' : 'Enemy'}</p>
+          <CircleAvatar
+            src={enemy.image ? ENEMY_IMG_BASE + enemy.image : null}
+            fallback={ENEMY_AVATAR[cs.enemyId] ?? '☠'}
+            size={36}
+            borderColor={`${enemyColor}55`}
+          />
           <div style={{ position: 'relative', height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: enemyHitAnim }}>
             <span style={{ fontSize: '3.5rem', lineHeight: 1 }}>{ENEMY_AVATAR[cs.enemyId] ?? '☠'}</span>
             {showResult && log && log.enemyDodged && (
