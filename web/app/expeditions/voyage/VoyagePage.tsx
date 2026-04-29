@@ -168,7 +168,7 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
   }
 
   return (
-    <main className="min-h-screen pb-24 sm:pb-0 pt-5" style={{ position: 'relative', zIndex: 1 }}>
+    <main className="min-h-screen pb-24 sm:pb-0 pt-5 sm:[zoom:1.4]" style={{ position: 'relative', zIndex: 1 }}>
       <div className="px-5 max-w-lg mx-auto">
 
         {/* Progress header */}
@@ -177,6 +177,11 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
             <div className="flex items-center gap-2">
               <span style={{ fontSize: '0.9rem' }}>{zoneIcon}</span>
               <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#6a6764' }}>{zoneName}</p>
+              {exp.equipped_item && EXPEDITION_ITEMS[exp.equipped_item] && (
+                <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: '#a78bfa', background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 4, padding: '0.1rem 0.35rem' }}>
+                  ⚗ {EXPEDITION_ITEMS[exp.equipped_item].name}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#f0c040' }}>
@@ -419,6 +424,17 @@ function CombatView({ enemy, cs, phase, crew, ship, runBuffs, isBoss, isPending,
             </div>
           ))}
         </div>
+
+        {/* Active buffs */}
+        {runBuffs.length > 0 && (
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.4rem', marginTop: '0.4rem', display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+            {runBuffs.map((buff, i) => (
+              <span key={i} className="font-karla font-600" style={{ fontSize: '0.46rem', color: '#4ade80', background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.18)', borderRadius: 4, padding: '0.12rem 0.38rem' }}>
+                +{buff.value} {buff.effect.charAt(0).toUpperCase() + buff.effect.slice(1)}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Round result strip */}

@@ -57,7 +57,7 @@ export default async function ExpeditionsResultsPage({
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main className="min-h-screen pb-24 sm:pb-0 pt-6">
-        <div className="px-6 max-w-lg mx-auto pb-12">
+        <div className="px-6 max-w-lg mx-auto pb-12 sm:[zoom:1.4]">
 
           {/* Header */}
           <div className="mb-5">

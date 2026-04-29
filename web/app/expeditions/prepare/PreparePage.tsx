@@ -74,7 +74,7 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
     : []
 
   return (
-    <main className="min-h-screen pb-24 sm:pb-0 pt-6">
+    <main className="min-h-screen pb-24 sm:pb-0 pt-6 sm:[zoom:1.4]">
       <div className="px-5 max-w-lg mx-auto">
 
         {/* Header */}
