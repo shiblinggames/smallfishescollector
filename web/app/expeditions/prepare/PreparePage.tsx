@@ -139,7 +139,6 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {crew.map((card, slot) => {
               const isCaptain = slot === 0
-              const effectiveMult = isCaptain ? 1 : 0.8
               return card ? (
                 <div key={slot} style={{
                   background: isCaptain ? 'rgba(240,192,64,0.05)' : 'rgba(255,255,255,0.05)',
@@ -169,7 +168,7 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
                     <div style={{ display: 'flex', gap: '0.875rem', flexShrink: 0 }}>
                       {STAT_COLS.map(s => (
                         <div key={s.label} style={{ textAlign: 'center' }}>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: s.color }}>{Math.floor(card[s.key] * effectiveMult)}</p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: s.color }}>{card[s.key]}</p>
                           <p className="font-karla" style={{ fontSize: '0.42rem', color: '#6a6764', marginTop: 1 }}>{s.label}</p>
                         </div>
                       ))}

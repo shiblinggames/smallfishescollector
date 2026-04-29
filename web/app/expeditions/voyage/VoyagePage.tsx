@@ -610,7 +610,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
               <Hitsplat text="DODGED!" color="#4ade80" animKey={log.round} />
             )}
           </div>
-          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.62rem', color: '#f0ede8', lineHeight: 1.2 }}>{crewLoadout[0]?.name ?? ship.name}</p>
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.62rem', color: '#f0ede8', lineHeight: 1.2 }}>{ship.name}</p>
           {/* HP bar */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
@@ -1109,7 +1109,6 @@ function CrewSheet({ expedition, ship, crew, maxDurability, currentDurability, r
             <div className="flex flex-col gap-2">
               {(expedition.crew_loadout ?? []).map((card, i) => {
                 const isCaptain = i === 0
-                const mult = isCaptain ? 1 : 0.8
                 return (
                   <div key={i} className="flex items-center gap-2" style={{
                     background: isCaptain ? 'rgba(240,192,64,0.05)' : 'rgba(255,255,255,0.04)',
@@ -1129,7 +1128,7 @@ function CrewSheet({ expedition, ship, crew, maxDurability, currentDurability, r
                     <div className="flex gap-3">
                       {[{ v: card.power, c: '#f87171', l: 'PWR' }, { v: card.dodge, c: '#60a5fa', l: 'DGE' }, { v: card.fortune, c: '#f0c040', l: 'FTN' }].map(s => (
                         <div key={s.l} style={{ textAlign: 'center' }}>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.c }}>{Math.floor(s.v * mult)}</p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.c }}>{s.v}</p>
                           <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845' }}>{s.l}</p>
                         </div>
                       ))}

@@ -97,9 +97,9 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
     ? collection.filter(c => !assignedVariantIds.has(c.variantId) || slots[pickerSlot]?.variantId === c.variantId)
     : collection
 
-  const totalPower   = slots.reduce((s, c) => s + (c?.power   ?? 0), 0)
-  const totalDodge   = slots.reduce((s, c) => s + (c?.dodge   ?? 0), 0)
-  const totalFortune = slots.reduce((s, c) => s + (c?.fortune ?? 0), 0)
+  const totalPower   = slots.reduce((s, c, i) => s + (c ? Math.floor(c.power   * (i === 0 ? 1 : 0.8)) : 0), 0)
+  const totalDodge   = slots.reduce((s, c, i) => s + (c ? Math.floor(c.dodge   * (i === 0 ? 1 : 0.8)) : 0), 0)
+  const totalFortune = slots.reduce((s, c, i) => s + (c ? Math.floor(c.fortune * (i === 0 ? 1 : 0.8)) : 0), 0)
 
   return (
     <div style={{ marginBottom: '1.75rem' }}>
@@ -153,63 +153,73 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
 
         {/* Crew slots row */}
         <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
-          {slots.map((card, i) => (
-            <div key={i} style={{ flexShrink: 0, width: 76, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
-              {card ? (
-                <>
-                  <div style={{ position: 'relative', width: 76 }}>
-                    {/* Image window */}
-                    <div
-                      onClick={() => openPickerForSlot(i)}
-                      style={{
-                        width: 76, height: 76,
-                        borderRadius: 10,
-                        border: '1.5px solid rgba(255,255,255,0.18)',
-                        overflow: 'hidden',
-                        background: '#080a0e',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={IMG_BASE + card.filename}
-                        alt={card.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
-                      />
-                    </div>
-                  </div>
-                  <p className="font-karla font-600 text-center truncate" style={{ fontSize: '0.55rem', color: '#c0bdb8', lineHeight: 1.2, width: '100%' }}>{card.name}</p>
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
-                    {STAT_COLS.map(s => (
-                      <div key={s.key} style={{ textAlign: 'center' }}>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: s.color, lineHeight: 1 }}>
-                          {card[s.key]}
-                        </p>
-                        <p style={{ fontSize: '0.46rem', color: '#5a5856', marginTop: 1, lineHeight: 1 }}>{s.symbol}</p>
+          {slots.map((card, i) => {
+            const isCaptain = i === 0
+            return (
+              <div key={i} style={{ flexShrink: 0, width: 76, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+                {card ? (
+                  <>
+                    <div style={{ position: 'relative', width: 76 }}>
+                      {isCaptain && (
+                        <div style={{ position: 'absolute', top: -8, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 1 }}>
+                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.36rem', color: '#f0c040', background: 'rgba(240,192,64,0.15)', border: '1px solid rgba(240,192,64,0.3)', borderRadius: 3, padding: '0.08rem 0.3rem' }}>Captain</span>
+                        </div>
+                      )}
+                      {/* Image window */}
+                      <div
+                        onClick={() => openPickerForSlot(i)}
+                        style={{
+                          width: 76, height: 76,
+                          borderRadius: 10,
+                          border: isCaptain ? '1.5px solid rgba(240,192,64,0.5)' : '1.5px solid rgba(255,255,255,0.18)',
+                          overflow: 'hidden',
+                          background: '#080a0e',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={IMG_BASE + card.filename}
+                          alt={card.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
+                        />
                       </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <button
-                  onClick={() => openPickerForSlot(i)}
-                  style={{
-                    width: 76, height: 76,
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1.5px dashed rgba(255,255,255,0.1)',
-                    borderRadius: 10,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', gap: 5, padding: 0,
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="2.5" strokeLinecap="round">
-                    <path d="M12 5v14M5 12h14"/>
-                  </svg>
-                  <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845' }}>Empty</p>
-                </button>
-              )}
-            </div>
-          ))}
+                    </div>
+                    <p className="font-karla font-600 text-center truncate" style={{ fontSize: '0.55rem', color: isCaptain ? '#d4b870' : '#c0bdb8', lineHeight: 1.2, width: '100%' }}>{card.name}</p>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
+                      {STAT_COLS.map(s => (
+                        <div key={s.key} style={{ textAlign: 'center' }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: s.color, lineHeight: 1 }}>
+                            {card[s.key]}
+                          </p>
+                          <p style={{ fontSize: '0.46rem', color: '#5a5856', marginTop: 1, lineHeight: 1 }}>{s.symbol}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => openPickerForSlot(i)}
+                    style={{
+                      width: 76, height: 76,
+                      background: isCaptain ? 'rgba(240,192,64,0.02)' : 'rgba(255,255,255,0.02)',
+                      border: isCaptain ? '1.5px dashed rgba(240,192,64,0.2)' : '1.5px dashed rgba(255,255,255,0.1)',
+                      borderRadius: 10,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', gap: 5, padding: 0,
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isCaptain ? 'rgba(240,192,64,0.25)' : 'rgba(255,255,255,0.15)'} strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    <p className="font-karla" style={{ fontSize: '0.42rem', color: isCaptain ? '#6a5820' : '#4a4845' }}>
+                      {isCaptain ? 'Captain' : 'Empty'}
+                    </p>
+                  </button>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         {/* Crew totals */}
@@ -248,10 +258,12 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
               <div>
                 {pickerSlot !== null ? (
                   <>
-                    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.48rem', color: '#4a6a8a', marginBottom: 3 }}>
-                      Slot {pickerSlot + 1} · Select
+                    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.48rem', color: pickerSlot === 0 ? '#f0c040' : '#4a6a8a', marginBottom: 3 }}>
+                      {pickerSlot === 0 ? 'Captain' : `Slot ${pickerSlot + 1} · Select`}
                     </p>
-                    <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>Assign Crew Member</p>
+                    <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>
+                      {pickerSlot === 0 ? 'Assign Captain' : 'Assign Crew Member'}
+                    </p>
                   </>
                 ) : (
                   <>
