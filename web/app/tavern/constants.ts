@@ -1,8 +1,8 @@
 export const SYMBOLS = ['anchor', 'crown', 'heart', 'diamond', 'spade', 'club'] as const
 export type Symbol = typeof SYMBOLS[number]
 
-export const DAILY_CAP = 500
-export const MAX_BET   = 200
+export const DAILY_CAP = 5000
+export const MAX_BET   = 500
 export const MIN_BET   = 10
 
 // ─── Fish Slots ───────────────────────────────────────────────────────────────
@@ -33,4 +33,4 @@ export const SLOT_PAYOUTS: Record<SlotSymbolId, number> = {
 
 export const SLOTS_MIN_BET   = 10
 export const SLOTS_MAX_BET   = 500
-export const SLOTS_DAILY_CAP = 1000
+export const SLOTS_DAILY_CAP = 5000

@@ -89,7 +89,7 @@ export default async function TavernPage() {
     // Crown & Anchor
     "Careful with the dice today. Saw a sailor lose four rounds straight on the anchor. Bad luck going around.",
     "Crown and Anchor's been running hot this week. Or maybe it's just the dice. Who knows.",
-    "Five hundred doubloons is the limit at the tables. House rules. Don't bother arguing — I made the rules.",
+    "Five thousand doubloons is the limit at the tables. House rules. Don't bother arguing — I made the rules.",
     // General tavern
     "What'll it be? Oh — you're just browsing. Fair enough.",
     "Stay for a round. The Tentacle-Tonic's fresh today.",
@@ -221,7 +221,7 @@ export default async function TavernPage() {
             info={[
               'Pick a symbol and place your wager',
               '1 match → 1× · 2 matches → 2× · 3 → 3×',
-              '500 ⟡ daily wagering limit',
+              '5,000 ⟡ daily wagering limit',
             ]}
             icon={<AnchorIcon />}
             completed={crownCapReached}
@@ -235,7 +235,7 @@ export default async function TavernPage() {
               'Sardine × 3 → 2× · Marlin × 3 → 10×',
               'Blue Whale × 3 → 50× · Catfish × 3 → 200×',
               'Three anchors → free bonus spin',
-              '1,000 ⟡ daily wagering limit',
+              '5,000 ⟡ daily wagering limit',
             ]}
             icon={<SlotsIcon />}
             completed={slotsCapReached}
