@@ -58,7 +58,7 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
   const [currentEvent, setCurrentEvent] = useState<EventNodeDef | null>(initEvent)
   const [activeShopOptions, setActiveShopOptions] = useState<ShopOption[] | null>(shopOptions)
   const [showCrewSheet, setShowCrewSheet] = useState(false)
-  const [abandonConfirm, setAbandonConfirm] = useState(false)
+  const [showAbandonModal, setShowAbandonModal] = useState(false)
 
   const ship = EXPEDITION_SHIP_STATS[exp.ship_tier] ?? EXPEDITION_SHIP_STATS[0]
   const runBuffs: RunBuff[] = exp.run_buffs ?? []
@@ -225,34 +225,13 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
                 ⚓ Crew
               </button>
               {phase.type !== 'failed' && phase.type !== 'zone_complete' && phase.type !== 'loot_result' && (
-                abandonConfirm ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <span className="font-karla" style={{ fontSize: '0.48rem', color: '#f87171' }}>Abandon?</span>
-                    <button
-                      onClick={handleAbandon}
-                      disabled={isPending}
-                      style={{ background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.35)', borderRadius: 5, padding: '0.15rem 0.4rem', cursor: 'pointer', fontSize: '0.48rem', color: '#f87171' }}
-                      className="font-karla font-700"
-                    >
-                      Yes
-                    </button>
-                    <button
-                      onClick={() => setAbandonConfirm(false)}
-                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 5, padding: '0.15rem 0.4rem', cursor: 'pointer', fontSize: '0.48rem', color: '#6a6764' }}
-                      className="font-karla font-700"
-                    >
-                      No
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setAbandonConfirm(true)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.52rem', color: '#6a3a3a' }}
-                    className="font-karla font-600 uppercase tracking-[0.08em]"
-                  >
-                    Abandon
-                  </button>
-                )
+                <button
+                  onClick={() => setShowAbandonModal(true)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.52rem', color: '#6a3a3a' }}
+                  className="font-karla font-600 uppercase tracking-[0.08em]"
+                >
+                  Abandon
+                </button>
               )}
               <div className="flex items-center gap-1.5">
                 <div style={{ width: 44, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
@@ -363,6 +342,40 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
           runBuffs={runBuffs}
           onClose={() => setShowCrewSheet(false)}
         />
+      )}
+
+      {showAbandonModal && (
+        <div
+          onClick={() => setShowAbandonModal(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '1.5rem' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: '#0f0f0e', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 18, width: '100%', maxWidth: 340, padding: '1.75rem 1.5rem' }}
+          >
+            <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8', marginBottom: '0.5rem' }}>Abandon Voyage?</p>
+            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#6a6764', lineHeight: 1.55, marginBottom: '1.5rem' }}>
+              Your ship will be marked as lost. No doubloons or items will be awarded for this run.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={handleAbandon}
+                disabled={isPending}
+                style={{ flex: 1, padding: '0.75rem', background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.35)', borderRadius: 10, cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.5 : 1 }}
+                className="font-karla font-700 uppercase tracking-[0.08em]"
+              >
+                <span style={{ fontSize: '0.62rem', color: '#f87171' }}>Abandon</span>
+              </button>
+              <button
+                onClick={() => setShowAbandonModal(false)}
+                style={{ flex: 1, padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, cursor: 'pointer' }}
+                className="font-karla font-700 uppercase tracking-[0.08em]"
+              >
+                <span style={{ fontSize: '0.62rem', color: '#a0a09e' }}>Keep Sailing</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <style>{`
