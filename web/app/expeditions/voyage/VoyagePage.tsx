@@ -541,6 +541,9 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
           <div style={{ position: 'relative', animation: playerImgAnim }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={ship.image} alt={ship.name} style={{ width: '100%', height: 88, objectFit: 'contain', objectPosition: 'bottom', display: 'block' }} />
+            {showResult && log && !log.playerDodged && log.playerDamageTaken > 0 && (
+              <span style={{ position: 'absolute', right: '18%', top: '38%', fontSize: '0.95rem', animation: 'cannon-shot-r 0.55s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💥</span>
+            )}
             {showResult && log && log.playerDamageTaken > 0 && (
               <Hitsplat
                 text={log.enemyCrit ? `⚡ ${log.playerDamageTaken}` : `-${log.playerDamageTaken}`}
@@ -620,10 +623,9 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
             />
             {showCannonHit && log && (
               <>
-                <span style={{ position: 'absolute', left: '12%', top: '38%', fontSize: isVolley ? '1.4rem' : '0.95rem', animation: 'cannon-shot-l 0.55s ease forwards', pointerEvents: 'none', zIndex: 10, filter: isVolley ? 'brightness(1.6)' : 'none' }}>💥</span>
-                <span style={{ position: 'absolute', right: '12%', top: '38%', fontSize: isVolley ? '1.4rem' : '0.95rem', animation: 'cannon-shot-r 0.55s ease forwards', pointerEvents: 'none', zIndex: 10, filter: isVolley ? 'brightness(1.6)' : 'none' }}>💥</span>
+                <span style={{ position: 'absolute', left: '18%', top: '38%', fontSize: isVolley ? '1.4rem' : '0.95rem', animation: 'cannon-shot-l 0.55s ease forwards', pointerEvents: 'none', zIndex: 10, filter: isVolley ? 'brightness(1.6)' : 'none' }}>💥</span>
                 {isVolley && (
-                  <span style={{ position: 'absolute', left: '50%', top: '18%', transform: 'translateX(-50%)', fontSize: '1.7rem', animation: 'cannon-shot-l 0.65s 0.1s ease forwards', pointerEvents: 'none', zIndex: 10 }}>🔥</span>
+                  <span style={{ position: 'absolute', left: '42%', top: '20%', fontSize: '1.7rem', animation: 'cannon-shot-l 0.65s 0.1s ease forwards', pointerEvents: 'none', zIndex: 10 }}>🔥</span>
                 )}
               </>
             )}
