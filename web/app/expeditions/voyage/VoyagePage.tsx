@@ -161,9 +161,9 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
     setPhase({ type: 'claiming_loot' })
     startTransition(async () => {
       const loot = await claimZoneReward(exp.id)
-      if ('error' in loot) return
+      if ('error' in loot) { setPhase({ type: 'zone_complete' }); return }
       window.dispatchEvent(new CustomEvent('doubloons-changed'))
-      setPhase({ type: 'loot_result', loot })
+      router.push(`/expeditions/results?id=${exp.id}`)
     })
   }
 
