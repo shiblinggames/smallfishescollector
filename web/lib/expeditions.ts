@@ -85,6 +85,7 @@ export interface Expedition {
   crew_loadout: CrewCard[]
   events: NodeResult[]
   hull_damage: number
+  run_gold: number
   combat_state: CombatState | null
   equipped_item: string | null
   run_buffs: RunBuff[]
@@ -136,6 +137,7 @@ export interface EnemyDef {
   name: string
   maxHp: number
   damage: number
+  goldReward: number
   pattern: CombatAction[]
 }
 
@@ -145,6 +147,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
     name: 'Reef Raider',
     maxHp: 20,
     damage: 6,
+    goldReward: 25,
     pattern: ['reload', 'fire', 'reload', 'fire'],
   },
   sniper: {
@@ -152,6 +155,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
     name: "Crow's Nest Marksman",
     maxHp: 25,
     damage: 14,
+    goldReward: 30,
     pattern: ['reload', 'reload', 'reload', 'fire'],
   },
   barnacle_pete: {
@@ -159,6 +163,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
     name: 'Barnacle Pete',
     maxHp: 50,
     damage: 10,
+    goldReward: 60,
     pattern: ['reload', 'fire', 'reload', 'fire', 'reload', 'reload', 'fire'],
   },
 }
@@ -315,7 +320,7 @@ export function initCombatState(enemyId: string, equippedItem: string | null): C
 
 // ── Zone events ───────────────────────────────────────────────────────────────
 
-export type EventEffectType = 'heal' | 'damage' | 'doubloons' | 'buff' | 'nothing'
+export type EventEffectType = 'heal' | 'damage' | 'gold' | 'buff' | 'nothing'
 
 export interface EventEffect {
   type: EventEffectType
@@ -358,7 +363,7 @@ export const CORAL_RUN_EVENTS: EventNodeDef[] = [
     name: 'Abandoned Wreck',
     flavor: 'A half-sunken merchant sloop drifts ahead. Could be salvage. Could be a trap.',
     choices: [
-      { label: 'Board and salvage (+20 ⟡)', effect: { type: 'doubloons', value: 20 } },
+      { label: 'Board and salvage (+20 Gold)', effect: { type: 'gold', value: 20 } },
       { label: "Leave it — something's not right", effect: { type: 'nothing' } },
     ],
   },

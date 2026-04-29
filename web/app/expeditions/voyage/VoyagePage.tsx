@@ -86,11 +86,15 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
       setExp(prev => ({
         ...prev,
         hull_damage: maxDurability - result.newDurability,
-        combat_state: result.combatOver ? null : result.newCombatState,
+        // Keep old cs alive so the arena stays visible during the round-result delay
+        combat_state: result.combatOver ? prev.combat_state : result.newCombatState,
         current_node: result.combatOver && !result.expeditionFailed
           ? prev.current_node + 1
           : prev.current_node,
         status: result.expeditionFailed ? 'failed' : prev.status,
+        run_gold: result.combatOver && result.goldEarned > 0
+          ? (prev.run_gold ?? 0) + result.goldEarned
+          : prev.run_gold,
       }))
 
       setPhase({ type: 'round_result', log: result.roundLog })
@@ -100,6 +104,8 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
         if (result.expeditionFailed) {
           setPhase({ type: 'failed' })
         } else {
+          // Apply next node's combat state (new enemy, or null for event/shop)
+          setExp(prev => ({ ...prev, combat_state: result.newCombatState }))
           advanceToNextNode(exp.current_node + 1, result.zoneComplete)
         }
       }
@@ -120,12 +126,14 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
         current_node: result.newCurrentNode,
         hull_damage: result.newDurability !== undefined ? maxDurability - result.newDurability : prev.hull_damage,
         run_buffs: result.buff ? [...(prev.run_buffs ?? []), result.buff] : prev.run_buffs,
+        run_gold: result.goldBonus ? (prev.run_gold ?? 0) + result.goldBonus : prev.run_gold,
       }))
       setPhase({ type: 'event_result', result })
     })
   }
 
   function handleEventContinue(result: EventChoiceResult) {
+    setExp(prev => ({ ...prev, combat_state: result.newCombatState }))
     advanceToNextNode(result.newCurrentNode, result.zoneComplete)
   }
 
@@ -134,7 +142,7 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
     startTransition(async () => {
       const result = await leaveShop(exp.id)
       if ('error' in result) return
-      setExp(prev => ({ ...prev, current_node: result.newCurrentNode }))
+      setExp(prev => ({ ...prev, current_node: result.newCurrentNode, combat_state: result.newCombatState }))
       advanceToNextNode(result.newCurrentNode, result.zoneComplete)
     })
   }
@@ -161,6 +169,9 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
               <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#6a6764' }}>{zoneName}</p>
             </div>
             <div className="flex items-center gap-3">
+              <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#f0c040' }}>
+                ✦ {exp.run_gold ?? 0}
+              </p>
               <button
                 onClick={() => setShowCrewSheet(true)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.52rem', color: '#6a6764' }}
@@ -221,6 +232,8 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
           <ShopView
             options={shopOptions}
             expeditionId={exp.id}
+            runGold={exp.run_gold ?? 0}
+            onRunGoldChange={(newGold) => setExp(prev => ({ ...prev, run_gold: newGold }))}
             isPending={isPending}
             onLeave={handleLeaveShop}
           />
@@ -518,7 +531,7 @@ function EventView({ event, phase, isPending, onChoice, onContinue }: {
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '0.875rem 1rem', marginBottom: '1rem' }}>
             {result.effectType === 'heal'      && result.value > 0      && <p className="font-karla" style={{ fontSize: '0.78rem', color: '#4ade80' }}>✦ Hull repaired (+{result.value} Durability)</p>}
             {result.effectType === 'damage'    && result.value > 0      && <p className="font-karla" style={{ fontSize: '0.78rem', color: '#f87171' }}>⚠ Hull damaged (−{result.value} Durability)</p>}
-            {result.effectType === 'doubloons' && (result.doubloonBonus ?? 0) > 0 && <p className="font-karla" style={{ fontSize: '0.78rem', color: '#f0c040' }}>✦ +{result.doubloonBonus} ⟡ found</p>}
+            {result.effectType === 'gold' && (result.goldBonus ?? 0) > 0 && <p className="font-karla" style={{ fontSize: '0.78rem', color: '#f0c040' }}>✦ +{result.goldBonus} Gold found</p>}
             {result.effectType === 'buff'      && result.buff           && <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a78bfa' }}>✦ +{result.buff.value} {result.buff.effect} for this run</p>}
             {result.effectType === 'nothing'   && <p className="font-karla" style={{ fontSize: '0.78rem', color: '#6a6764' }}>You press on.</p>}
           </div>
@@ -537,9 +550,11 @@ function EventView({ event, phase, isPending, onChoice, onContinue }: {
 
 // ── Shop ──────────────────────────────────────────────────────────────────────
 
-function ShopView({ options, expeditionId, isPending, onLeave }: {
+function ShopView({ options, expeditionId, runGold, onRunGoldChange, isPending, onLeave }: {
   options: ShopOption[]
   expeditionId: number
+  runGold: number
+  onRunGoldChange: (newGold: number) => void
   isPending: boolean
   onLeave: () => void
 }) {
@@ -547,21 +562,24 @@ function ShopView({ options, expeditionId, isPending, onLeave }: {
   const [purchased, setPurchased] = useState<string[]>([])
   const [feedback, setFeedback] = useState<string | null>(null)
 
-  function buy(itemId: string) {
+  function buy(itemId: string, cost: number) {
     startTransition(async () => {
       const result = await buyShopItem(expeditionId, itemId)
       if ('error' in result) { setFeedback(result.error); return }
       setPurchased(prev => [...prev, itemId])
       setFeedback(null)
-      window.dispatchEvent(new CustomEvent('doubloons-changed'))
+      onRunGoldChange(runGold - cost)
     })
   }
 
   return (
     <div>
       <p className="font-karla font-700 uppercase tracking-[0.12em] mb-2" style={{ fontSize: '0.52rem', color: '#4ade80' }}>⚓ Port Stop</p>
-      <p className="font-cinzel font-700 text-[#f0ede8] mb-1" style={{ fontSize: '1.15rem' }}>Supply Shop</p>
-      <p className="font-karla mb-5" style={{ fontSize: '0.72rem', color: '#6a6764' }}>Spend doubloons to prepare for what lies ahead.</p>
+      <div className="flex items-center justify-between mb-1">
+        <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.15rem' }}>Supply Shop</p>
+        <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#f0c040' }}>✦ {runGold} Gold</p>
+      </div>
+      <p className="font-karla mb-5" style={{ fontSize: '0.72rem', color: '#6a6764' }}>Spend your run gold to prepare for what lies ahead.</p>
       <div className="flex flex-col gap-2.5 mb-4">
         {options.map(opt => {
           const bought = purchased.includes(opt.id)
@@ -581,12 +599,12 @@ function ShopView({ options, expeditionId, isPending, onLeave }: {
                 <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#4ade80', flexShrink: 0 }}>✓ Bought</p>
               ) : (
                 <button
-                  onClick={() => buy(opt.id)}
-                  disabled={isPending}
-                  style={{ flexShrink: 0, padding: '0.4rem 0.75rem', background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.25)', borderRadius: 8, cursor: 'pointer', fontSize: '0.65rem', color: '#f0c040' }}
+                  onClick={() => buy(opt.id, opt.cost)}
+                  disabled={isPending || runGold < opt.cost}
+                  style={{ flexShrink: 0, padding: '0.4rem 0.75rem', background: runGold < opt.cost ? 'rgba(255,255,255,0.04)' : 'rgba(240,192,64,0.1)', border: `1px solid ${runGold < opt.cost ? 'rgba(255,255,255,0.08)' : 'rgba(240,192,64,0.25)'}`, borderRadius: 8, cursor: runGold < opt.cost ? 'default' : 'pointer', fontSize: '0.65rem', color: runGold < opt.cost ? '#4a4845' : '#f0c040', opacity: runGold < opt.cost ? 0.5 : 1 }}
                   className="font-karla font-700"
                 >
-                  {opt.cost} ⟡
+                  ✦ {opt.cost}
                 </button>
               )}
             </div>

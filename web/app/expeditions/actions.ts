@@ -209,7 +209,8 @@ export interface CombatActionResult {
   zoneComplete: boolean
   newDurability: number
   maxDurability: number
-  newCombatState: CombatState
+  newCombatState: CombatState | null
+  goldEarned: number
 }
 
 export async function takeCombatAction(
@@ -255,6 +256,7 @@ export async function takeCombatAction(
   let newCurrentNode = exp.current_node
   let newStatus: string = exp.status
   let newCombatState: CombatState | null = resolution.newState
+  let goldEarned = 0
 
   const zone = ZONES[exp.zone]
   const nodeResults: NodeResult[] = [...(exp.events ?? [])]
@@ -273,6 +275,7 @@ export async function takeCombatAction(
     } else {
       newCurrentNode = exp.current_node + 1
       newCombatState = null
+      goldEarned = ENEMIES[exp.combat_state!.enemyId]?.goldReward ?? 0
 
       // Check zone complete (advanced past last node)
       if (newCurrentNode >= zone.nodes.length) {
@@ -298,6 +301,7 @@ export async function takeCombatAction(
   }
   if (combatOver) {
     update.current_node = newCurrentNode
+    if (goldEarned > 0) update.run_gold = (exp.run_gold ?? 0) + goldEarned
     if (expeditionFailed) {
       update.status = 'failed'
       update.completed_at = new Date().toISOString()
@@ -314,7 +318,8 @@ export async function takeCombatAction(
     zoneComplete,
     newDurability: resolution.newDurability,
     maxDurability,
-    newCombatState: resolution.newState,
+    newCombatState,
+    goldEarned,
   }
 }
 
@@ -327,8 +332,9 @@ export interface EventChoiceResult {
   zoneComplete: boolean
   newDurability?: number
   maxDurability?: number
-  doubloonBonus?: number
+  goldBonus?: number
   buff?: RunBuff
+  newCombatState: CombatState | null
 }
 
 export async function makeEventChoice(
@@ -368,7 +374,7 @@ export async function makeEventChoice(
   const effect = choice.effect
   let newHullDamage = exp.hull_damage ?? 0
   let newRunBuffs = [...runBuffs]
-  let doubloonBonus = 0
+  let goldBonus = 0
 
   if (effect.type === 'heal') {
     const healed = Math.min(effect.value ?? 0, exp.hull_damage ?? 0)
@@ -377,8 +383,8 @@ export async function makeEventChoice(
     newHullDamage = Math.min(maxDurability, newHullDamage + (effect.value ?? 0))
   } else if (effect.type === 'buff' && effect.buff) {
     newRunBuffs.push(effect.buff)
-  } else if (effect.type === 'doubloons') {
-    doubloonBonus = effect.value ?? 0
+  } else if (effect.type === 'gold') {
+    goldBonus = effect.value ?? 0
   }
 
   const nodeResults: NodeResult[] = [
@@ -407,15 +413,7 @@ export async function makeEventChoice(
     current_node: newCurrentNode,
     combat_state: newCombatState,
   }
-
-  if (doubloonBonus > 0) {
-    const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
-    const newDoubloons = (profile?.doubloons ?? 0) + doubloonBonus
-    await Promise.all([
-      admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
-      admin.from('doubloon_transactions').insert({ user_id: user.id, amount: doubloonBonus, reason: `Expedition event: ${event.id}` }),
-    ])
-  }
+  if (goldBonus > 0) update.run_gold = (exp.run_gold ?? 0) + goldBonus
 
   await admin.from('expeditions').update(update).eq('id', expeditionId)
 
@@ -426,8 +424,9 @@ export async function makeEventChoice(
     zoneComplete,
     newDurability: maxDurability - newHullDamage,
     maxDurability,
-    doubloonBonus,
+    goldBonus,
     buff: effect.buff,
+    newCombatState,
   }
 }
 
@@ -461,14 +460,8 @@ export async function buyShopItem(
   const item = shopItems.find(s => s.id === shopItemId)
   if (!item) return { error: 'Item not found' }
 
-  const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
-  if ((profile?.doubloons ?? 0) < item.cost) return { error: 'Not enough doubloons' }
-
-  const newDoubloons = (profile?.doubloons ?? 0) - item.cost
-  await Promise.all([
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -item.cost, reason: `Expedition shop: ${item.label}` }),
-  ])
+  const currentGold = exp.run_gold ?? 0
+  if (currentGold < item.cost) return { error: 'Not enough gold' }
 
   const ship = EXPEDITION_SHIP_STATS[exp.ship_tier] ?? EXPEDITION_SHIP_STATS[0]
   const runBuffs = exp.run_buffs ?? []
@@ -484,10 +477,10 @@ export async function buyShopItem(
     newRunBuffs.push(effect.buff)
   }
 
-  // Buying from shop doesn't advance the node — use skipShop or another buy to advance
   await admin.from('expeditions').update({
     hull_damage: newHullDamage,
     run_buffs: newRunBuffs,
+    run_gold: currentGold - item.cost,
   }).eq('id', expeditionId)
 
   return { ok: true, newDurability: maxDurability - newHullDamage, maxDurability, buff: effect.buff }
@@ -495,7 +488,7 @@ export async function buyShopItem(
 
 export async function leaveShop(
   expeditionId: number,
-): Promise<{ newCurrentNode: number; zoneComplete: boolean } | { error: string }> {
+): Promise<{ newCurrentNode: number; zoneComplete: boolean; newCombatState: CombatState | null } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -540,7 +533,7 @@ export async function leaveShop(
     combat_state: newCombatState,
   }).eq('id', expeditionId)
 
-  return { newCurrentNode, zoneComplete }
+  return { newCurrentNode, zoneComplete, newCombatState }
 }
 
 // ── Zone reward ───────────────────────────────────────────────────────────────
