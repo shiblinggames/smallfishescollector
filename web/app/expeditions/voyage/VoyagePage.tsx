@@ -111,8 +111,9 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
 
       setPhase({ type: 'round_result', log: result.roundLog })
 
+      await new Promise(r => setTimeout(r, 1500))
+
       if (result.combatOver) {
-        await new Promise(r => setTimeout(r, 1200))
         if (result.expeditionFailed) {
           setPhase({ type: 'failed' })
         } else {
@@ -125,12 +126,10 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
             zoneComplete: result.zoneComplete,
           })
         }
+      } else {
+        setPhase({ type: 'idle' })
       }
     })
-  }
-
-  function handleNextRound() {
-    setPhase({ type: 'idle' })
   }
 
   function handleEnemyDefeatedContinue() {
@@ -243,7 +242,6 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
               currentDurability={currentDurability}
               maxDurability={maxDurability}
               onAction={handleCombatAction}
-              onNextRound={handleNextRound}
             />
           </div>
         )}
@@ -389,7 +387,7 @@ function StatRow({ label, value, color }: { label: string; value: string | numbe
   )
 }
 
-function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBoss, isPending, currentDurability, maxDurability, onAction, onNextRound }: {
+function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBoss, isPending, currentDurability, maxDurability, onAction }: {
   enemy: EnemyDef
   cs: NonNullable<Expedition['combat_state']>
   phase: Phase
@@ -402,7 +400,6 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
   currentDurability: number
   maxDurability: number
   onAction: (a: CombatAction) => void
-  onNextRound: () => void
 }) {
   const resolving = phase.type === 'resolving'
   const showResult = phase.type === 'round_result'
@@ -594,44 +591,33 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
 
       {/* Action buttons */}
       <div style={{ flexShrink: 0 }}>
-        {showResult ? (
-          <button
-            onClick={onNextRound}
-            disabled={isPending}
-            style={{ width: '100%', padding: '0.875rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, cursor: 'pointer' }}
-            className="font-karla font-700 uppercase tracking-[0.1em]"
-          >
-            <span style={{ fontSize: '0.72rem', color: '#a0a09a' }}>Next Round →</span>
-          </button>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
-            {([
-              { action: 'reload' as const, icon: '⚙',  label: 'Reload',  sublabel: '+1 charge',      color: '#60a5fa' },
-              { action: 'fire'   as const, icon: '💥', label: 'Fire',    sublabel: cs.playerCharges === 0 ? 'no charges' : `${fireMultLabel} dmg`, color: cs.playerCharges === 0 ? '#4a4845' : '#f87171', dim: cs.playerCharges === 0 },
-              { action: 'defend' as const, icon: '🛡',  label: 'Defend',  sublabel: `${dodgeChance}% dodge`, color: '#4ade80' },
-            ] as const).map(btn => (
-              <button
-                key={btn.action}
-                onClick={() => !buttonsDisabled && onAction(btn.action)}
-                disabled={buttonsDisabled}
-                style={{
-                  padding: '0.875rem 0.375rem',
-                  background: buttonsDisabled ? 'rgba(255,255,255,0.03)' : `${btn.color}12`,
-                  border: `1px solid ${buttonsDisabled ? 'rgba(255,255,255,0.07)' : `${btn.color}35`}`,
-                  borderRadius: 12,
-                  cursor: buttonsDisabled ? 'default' : 'pointer',
-                  textAlign: 'center',
-                  opacity: ('dim' in btn && btn.dim && !buttonsDisabled) ? 0.4 : 1,
-                  transition: 'opacity 0.2s',
-                }}
-              >
-                <p style={{ fontSize: '1.4rem', marginBottom: 3 }}>{btn.icon}</p>
-                <p className="font-karla font-700" style={{ fontSize: '0.65rem', color: buttonsDisabled ? '#4a4845' : btn.color, lineHeight: 1.2 }}>{btn.label}</p>
-                <p className="font-karla" style={{ fontSize: '0.5rem', color: '#4a4845', marginTop: 2 }}>{btn.sublabel}</p>
-              </button>
-            ))}
-          </div>
-        )}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+          {([
+            { action: 'reload' as const, icon: '⚙',  label: 'Reload',  sublabel: '+1 charge',      color: '#60a5fa' },
+            { action: 'fire'   as const, icon: '💥', label: 'Fire',    sublabel: cs.playerCharges === 0 ? 'no charges' : `${fireMultLabel} dmg`, color: cs.playerCharges === 0 ? '#4a4845' : '#f87171', dim: cs.playerCharges === 0 },
+            { action: 'defend' as const, icon: '🛡',  label: 'Defend',  sublabel: `${dodgeChance}% dodge`, color: '#4ade80' },
+          ] as const).map(btn => (
+            <button
+              key={btn.action}
+              onClick={() => !buttonsDisabled && onAction(btn.action)}
+              disabled={buttonsDisabled}
+              style={{
+                padding: '0.875rem 0.375rem',
+                background: buttonsDisabled ? 'rgba(255,255,255,0.03)' : `${btn.color}12`,
+                border: `1px solid ${buttonsDisabled ? 'rgba(255,255,255,0.07)' : `${btn.color}35`}`,
+                borderRadius: 12,
+                cursor: buttonsDisabled ? 'default' : 'pointer',
+                textAlign: 'center',
+                opacity: ('dim' in btn && btn.dim && !buttonsDisabled) ? 0.4 : 1,
+                transition: 'opacity 0.2s',
+              }}
+            >
+              <p style={{ fontSize: '1.4rem', marginBottom: 3 }}>{btn.icon}</p>
+              <p className="font-karla font-700" style={{ fontSize: '0.65rem', color: buttonsDisabled ? '#4a4845' : btn.color, lineHeight: 1.2 }}>{btn.label}</p>
+              <p className="font-karla" style={{ fontSize: '0.5rem', color: '#4a4845', marginTop: 2 }}>{btn.sublabel}</p>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )
