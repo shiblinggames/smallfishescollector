@@ -3,8 +3,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
-import { ZONES, ZONE_ORDER, type Expedition } from '@/lib/expeditions'
+import { ZONES, ZONE_ORDER, EXPEDITION_SHIP_STATS, type Expedition } from '@/lib/expeditions'
 import ZoneCard from './ZoneCard'
+import CrewRoster from './CrewRoster'
+import { getCollectionForCrew } from './actions'
 
 export default async function ExpeditionsPage() {
   const supabase = await createClient()
@@ -13,9 +15,9 @@ export default async function ExpeditionsPage() {
 
   const admin = createAdminClient()
 
-  const [{ data: profile }, { data: expeditionRows }] = await Promise.all([
+  const [{ data: profile }, { data: expeditionRows }, collection] = await Promise.all([
     admin.from('profiles')
-      .select('packs_available, doubloons, ship_tier, gems')
+      .select('packs_available, doubloons, ship_tier, gems, saved_crew')
       .eq('id', user.id)
       .single(),
     admin.from('expeditions')
@@ -24,11 +26,14 @@ export default async function ExpeditionsPage() {
       .in('status', ['active', 'completed', 'failed'])
       .order('started_at', { ascending: false })
       .limit(20),
+    getCollectionForCrew(),
   ])
 
   const shipTier = profile?.ship_tier ?? 0
   const doubloons = profile?.doubloons ?? 0
   const recentExpeditions = (expeditionRows ?? []) as Expedition[]
+  const savedCrewVariantIds: number[] = (profile?.saved_crew as number[] | null) ?? []
+  const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
 
   const activeExpedition = recentExpeditions.find(e => e.status === 'active') ?? null
 
@@ -59,6 +64,14 @@ export default async function ExpeditionsPage() {
       <main className="min-h-screen pb-24 sm:pb-0">
 
         <div className="px-5 max-w-lg mx-auto sm:[zoom:1.4]" style={{ paddingTop: '1rem' }}>
+
+          {/* Crew roster */}
+          <CrewRoster
+            shipStats={shipStats}
+            shipTier={shipTier}
+            collection={collection}
+            savedCrewVariantIds={savedCrewVariantIds}
+          />
 
           {/* Header */}
           <div style={{ marginBottom: '1.25rem' }}>

@@ -148,14 +148,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
-    { href: '/collection', label: 'Collection', badge: null,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/>
-          <circle cx="8" cy="16" r="3"/><circle cx="16" cy="16" r="3"/>
-        </svg>
-      )
-    },
   ]
 
   const mobileMenuLinks = [
@@ -263,14 +255,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <rect x="8" y="3" width="12" height="16" rx="1.5"/>
           <rect x="4" y="6" width="12" height="16" rx="1.5"/>
-        </svg>
-      )
-    },
-    { href: '/collection', label: 'Collection', badge: null,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/>
-          <circle cx="8" cy="16" r="3"/><circle cx="16" cy="16" r="3"/>
         </svg>
       )
     },

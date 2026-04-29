@@ -619,6 +619,10 @@ export async function getCollectionForCrew(): Promise<Array<{
   name: string
   slug: string
   filename: string
+  borderStyle: string
+  artEffect: string
+  variantName: string
+  dropWeight: number
   rarity: string
   power: number
   dodge: number
@@ -631,7 +635,7 @@ export async function getCollectionForCrew(): Promise<Array<{
   const admin = createAdminClient()
   const { data } = await admin
     .from('user_collection')
-    .select('id, card_variant_id, card_variants(id, variant_name, drop_weight, cards(id, name, slug, filename, tier, power, dodge, fortune, mythic_power, mythic_dodge, mythic_fortune))')
+    .select('id, card_variant_id, card_variants(id, variant_name, border_style, art_effect, drop_weight, cards(id, name, slug, filename, tier, power, dodge, fortune, mythic_power, mythic_dodge, mythic_fortune))')
     .eq('user_id', user.id)
 
   if (!data) return []
@@ -639,7 +643,7 @@ export async function getCollectionForCrew(): Promise<Array<{
   const seen = new Set<number>()
   type Row = {
     id: number; card_variant_id: number
-    card_variants: { id: number; variant_name: string; drop_weight: number; cards: { id: number; name: string; slug: string; filename: string; tier: number; power: number; dodge: number; fortune: number; mythic_power: number; mythic_dodge: number; mythic_fortune: number } }
+    card_variants: { id: number; variant_name: string; border_style: string; art_effect: string; drop_weight: number; cards: { id: number; name: string; slug: string; filename: string; tier: number; power: number; dodge: number; fortune: number; mythic_power: number; mythic_dodge: number; mythic_fortune: number } }
   }
 
   const result = []
@@ -659,6 +663,10 @@ export async function getCollectionForCrew(): Promise<Array<{
       name: card.name,
       slug: card.slug,
       filename: card.filename,
+      borderStyle: v.border_style,
+      artEffect: v.art_effect,
+      variantName: v.variant_name,
+      dropWeight: v.drop_weight,
       rarity,
       power: stats.power,
       dodge: stats.dodge,
@@ -668,6 +676,14 @@ export async function getCollectionForCrew(): Promise<Array<{
 
   result.sort((a, b) => (b.power + b.dodge + b.fortune) - (a.power + a.dodge + a.fortune))
   return result
+}
+
+export async function saveCrew(variantIds: number[]): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const admin = createAdminClient()
+  await admin.from('profiles').update({ saved_crew: variantIds }).eq('id', user.id)
 }
 
 export async function getUserItems(): Promise<Array<{ itemId: string; quantity: number }>> {
