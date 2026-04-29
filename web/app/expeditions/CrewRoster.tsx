@@ -104,8 +104,8 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
 
       {/* Ship bar */}
       <div style={{
-        background: 'rgba(255,255,255,0.05)',
-        border: '1px solid rgba(255,255,255,0.1)',
+        background: 'rgba(6,8,12,0.82)',
+        border: '1px solid rgba(255,255,255,0.14)',
         borderRadius: '14px 14px 0 0',
         padding: '0.75rem 1rem',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -122,7 +122,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
           ].map(s => (
             <div key={s.label} style={{ textAlign: 'center' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: s.color, lineHeight: 1 }}>{s.value}</p>
-              <p className="font-karla font-600 uppercase" style={{ fontSize: '0.38rem', color: '#4a4845', marginTop: 2, letterSpacing: '0.06em' }}>{s.label}</p>
+              <p className="font-karla font-600 uppercase" style={{ fontSize: '0.38rem', color: '#6a6764', marginTop: 2, letterSpacing: '0.06em' }}>{s.label}</p>
             </div>
           ))}
         </div>
@@ -130,8 +130,8 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
 
       {/* Crew section */}
       <div style={{
-        background: 'rgba(255,255,255,0.02)',
-        border: '1px solid rgba(255,255,255,0.1)',
+        background: 'rgba(6,8,12,0.75)',
+        border: '1px solid rgba(255,255,255,0.14)',
         borderTop: 'none',
         borderRadius: '0 0 14px 14px',
         padding: '0.875rem 1rem',
@@ -166,6 +166,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
                       artEffect={card.artEffect as ArtEffect}
                       variantName={card.variantName}
                       dropWeight={card.dropWeight}
+                      stats={{ power: card.power, dodge: card.dodge, fortune: card.fortune }}
                       cardW={CARD_W}
                     />
                   </div>
@@ -214,7 +215,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
                 <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: s.color, lineHeight: 1 }}>
                   {s.key === 'power' ? totalPower : s.key === 'dodge' ? totalDodge : totalFortune}
                 </p>
-                <p className="font-karla font-600 uppercase" style={{ fontSize: '0.38rem', color: '#4a4845', marginTop: 2, letterSpacing: '0.06em' }}>{s.label}</p>
+                <p className="font-karla font-600 uppercase" style={{ fontSize: '0.38rem', color: '#6a6764', marginTop: 2, letterSpacing: '0.06em' }}>{s.label}</p>
               </div>
             ))}
           </div>
@@ -292,6 +293,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
                           artEffect={card.artEffect as ArtEffect}
                           variantName={card.variantName}
                           dropWeight={card.dropWeight}
+                          stats={{ power: card.power, dodge: card.dodge, fortune: card.fortune }}
                           cardW={100}
                         />
                         {isActive && pickerSlot === null && (
