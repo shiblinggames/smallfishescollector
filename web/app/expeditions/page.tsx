@@ -73,19 +73,6 @@ export default async function ExpeditionsPage() {
             savedCrewVariantIds={savedCrewVariantIds}
           />
 
-          {/* Header */}
-          <div style={{ marginBottom: '1.25rem' }}>
-            <p className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#4a6a8a', marginBottom: '0.3rem' }}>
-              Roguelike Combat
-            </p>
-            <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.7rem', lineHeight: 1.1, marginBottom: '0.3rem' }}>
-              Expeditions
-            </h1>
-            <p className="font-karla" style={{ fontSize: '0.75rem', color: '#5a5855', lineHeight: 1.6 }}>
-              Choose a zone, load your crew, and fight your way to the boss.
-            </p>
-          </div>
-
           {/* Resume banner */}
           {activeExpedition && (
             <Link
