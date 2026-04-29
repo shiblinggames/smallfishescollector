@@ -532,9 +532,9 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
   const playerPanelAnim = showResult && log && log.playerAction === 'defend'
     ? 'combat-defend-pulse 0.7s ease' : 'none'
   const playerImgAnim = showResult && log
-    ? log.playerAction === 'reload'                           ? 'combat-reload-flash 0.5s ease'
+    ? (!log.playerDodged && log.playerDamageTaken > 0)        ? 'combat-player-hit 0.45s ease'
     : log.playerAction === 'fire_heavy'                       ? 'combat-recoil 0.55s ease'
-    : (!log.playerDodged && log.playerDamageTaken > 0)        ? 'combat-player-hit 0.45s ease'
+    : log.playerAction === 'reload'                           ? 'combat-reload-flash 0.5s ease'
     : 'none' : 'none'
   const showCannonHit = showResult && log && (log.playerAction === 'fire' || log.playerAction === 'fire_heavy') && log.playerDamageDealt > 0
   const isVolley      = !!(showResult && log?.playerAction === 'fire_heavy' && log.playerDamageDealt > 0)
