@@ -173,7 +173,8 @@ export interface LootEntry {
 }
 
 export interface EnemyLootTable {
-  dropChance: number  // 0–1
+  type: 'run' | 'permanent'  // run = applied this fight, not kept; permanent = goes to inventory
+  dropChance: number          // 0–1
   pool: LootEntry[]
 }
 
@@ -245,11 +246,12 @@ export const ENEMIES: Record<string, EnemyDef> = {
     pattern: ['reload', 'fire', 'defend', 'reload', 'fire'],
     elite: true,
     lootTable: {
+      type: 'run',
       dropChance: 0.30,
       pool: [
-        { itemId: 'powder_keg', weight: 3 },
-        { itemId: 'patched_hull', weight: 3 },
-        { itemId: 'anchor_chain', weight: 2 },
+        { itemId: 'repair_kit',       weight: 3 },
+        { itemId: 'gunpowder_cache',  weight: 2 },
+        { itemId: 'iron_bolts',       weight: 2 },
       ],
     },
   },
@@ -266,9 +268,10 @@ export const ENEMIES: Record<string, EnemyDef> = {
     pattern: ['reload', 'fire', 'reload', 'fire', 'reload', 'reload', 'fire'],
     elite: true,
     lootTable: {
+      type: 'permanent',
       dropChance: 0.60,
       pool: [
-        { itemId: 'powder_keg',  weight: 3 },
+        { itemId: 'powder_keg',   weight: 3 },
         { itemId: 'patched_hull', weight: 3 },
         { itemId: 'anchor_chain', weight: 2 },
         { itemId: 'bait_barrel',  weight: 2 },
@@ -651,7 +654,37 @@ export const ZONES: Record<ZoneKey, ZoneConfig> = {
 
 export const ZONE_ORDER: ZoneKey[] = ['coral_run', 'bertuna_triangle', 'sunken_reach', 'davy_jones_locker']
 
-// ── Items ─────────────────────────────────────────────────────────────────────
+// ── Run items (dropped mid-expedition, applied immediately, not kept) ─────────
+
+export interface RunItemDef {
+  id: string
+  name: string
+  effectDescription: string
+  effect: EventEffect
+}
+
+export const RUN_ITEMS: Record<string, RunItemDef> = {
+  repair_kit: {
+    id: 'repair_kit',
+    name: 'Repair Kit',
+    effectDescription: 'Restore 12 hull durability',
+    effect: { type: 'heal', value: 12 },
+  },
+  gunpowder_cache: {
+    id: 'gunpowder_cache',
+    name: 'Gunpowder Cache',
+    effectDescription: '+2 Power for this run',
+    effect: { type: 'buff', buff: { source: 'gunpowder_cache', effect: 'power', value: 2 } },
+  },
+  iron_bolts: {
+    id: 'iron_bolts',
+    name: 'Iron Bolts',
+    effectDescription: '+1 Armor for this run',
+    effect: { type: 'buff', buff: { source: 'iron_bolts', effect: 'armor', value: 1 } },
+  },
+}
+
+// ── Items (permanent — equip before run, persisted to inventory) ──────────────
 
 export interface ExpeditionItem {
   id: string

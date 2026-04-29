@@ -7,7 +7,7 @@ import {
   type CombatActionResult, type EventChoiceResult,
 } from '../actions'
 import {
-  ENEMIES, EXPEDITION_SHIP_STATS, ZONES, EXPEDITION_ITEMS, RARITY_COLORS,
+  ENEMIES, EXPEDITION_SHIP_STATS, ZONES, EXPEDITION_ITEMS, RUN_ITEMS, RARITY_COLORS,
   CORAL_RUN_EVENTS, CORAL_RUN_SHOP,
   computeTotalCrewStats,
   type Expedition, type NodeType, type CombatAction, type CombatRoundLog,
@@ -30,7 +30,7 @@ type Phase =
   | { type: 'idle' }
   | { type: 'resolving' }
   | { type: 'round_result'; log: CombatRoundLog }
-  | { type: 'enemy_defeated'; goldEarned: number; itemDropped: string | null; enemyName: string; newCombatState: CombatState | null; nextNodeIndex: number; zoneComplete: boolean }
+  | { type: 'enemy_defeated'; goldEarned: number; runItemDropped: string | null; permItemDropped: string | null; enemyName: string; newCombatState: CombatState | null; nextNodeIndex: number; zoneComplete: boolean }
   | { type: 'zone_complete' }
   | { type: 'failed' }
   | { type: 'event' }
@@ -110,6 +110,9 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
         run_gold: result.combatOver && result.goldEarned > 0
           ? (prev.run_gold ?? 0) + result.goldEarned
           : prev.run_gold,
+        run_buffs: result.combatOver && result.runItemBuff
+          ? [...(prev.run_buffs ?? []), result.runItemBuff]
+          : prev.run_buffs,
       }))
 
       setPhase({ type: 'round_result', log: result.roundLog })
@@ -123,7 +126,8 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
           setPhase({
             type: 'enemy_defeated',
             goldEarned: result.goldEarned,
-            itemDropped: result.itemDropped,
+            runItemDropped: result.runItemDropped,
+            permItemDropped: result.permItemDropped,
             enemyName: ENEMIES[cs?.enemyId ?? '']?.name ?? 'Enemy',
             newCombatState: result.newCombatState,
             nextNodeIndex: exp.current_node + 1,
@@ -335,7 +339,8 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
         <EnemyDefeatedModal
           enemyName={phase.enemyName}
           goldEarned={phase.goldEarned}
-          itemDropped={phase.itemDropped}
+          runItemDropped={phase.runItemDropped}
+          permItemDropped={phase.permItemDropped}
           onContinue={handleEnemyDefeatedContinue}
         />
       )}
@@ -654,13 +659,16 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
 
 // ── Enemy defeated modal ──────────────────────────────────────────────────────
 
-function EnemyDefeatedModal({ enemyName, goldEarned, itemDropped, onContinue }: {
+function EnemyDefeatedModal({ enemyName, goldEarned, runItemDropped, permItemDropped, onContinue }: {
   enemyName: string
   goldEarned: number
-  itemDropped: string | null
+  runItemDropped: string | null
+  permItemDropped: string | null
   onContinue: () => void
 }) {
-  const droppedItem = itemDropped ? EXPEDITION_ITEMS[itemDropped] : null
+  const runItem  = runItemDropped  ? RUN_ITEMS[runItemDropped]        : null
+  const permItem = permItemDropped ? EXPEDITION_ITEMS[permItemDropped] : null
+  const hasLoot  = !!(runItem || permItem)
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 40,
@@ -670,13 +678,13 @@ function EnemyDefeatedModal({ enemyName, goldEarned, itemDropped, onContinue }: 
     }}>
       <div style={{
         background: '#0f0e0c',
-        border: `1px solid ${droppedItem ? 'rgba(167,139,250,0.35)' : 'rgba(240,192,64,0.25)'}`,
+        border: `1px solid ${hasLoot ? 'rgba(167,139,250,0.35)' : 'rgba(240,192,64,0.25)'}`,
         borderRadius: 18,
         padding: '1.75rem 1.5rem',
         width: '100%',
         maxWidth: 320,
         textAlign: 'center',
-        boxShadow: droppedItem
+        boxShadow: hasLoot
           ? '0 0 40px rgba(167,139,250,0.12), 0 8px 32px rgba(0,0,0,0.6)'
           : '0 0 40px rgba(240,192,64,0.08), 0 8px 32px rgba(0,0,0,0.6)',
       }}>
@@ -692,30 +700,38 @@ function EnemyDefeatedModal({ enemyName, goldEarned, itemDropped, onContinue }: 
           border: '1px solid rgba(240,192,64,0.2)',
           borderRadius: 12,
           padding: '0.875rem',
-          marginBottom: droppedItem ? '0.75rem' : '1.25rem',
+          marginBottom: hasLoot ? '0.75rem' : '1.25rem',
         }}>
           <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.44rem', color: '#6a6764', marginBottom: '0.35rem' }}>Gold Earned</p>
           <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0c040', lineHeight: 1 }}>
             +{goldEarned} ✦
           </p>
         </div>
-        {droppedItem && (
-          <div style={{
-            background: 'rgba(167,139,250,0.08)',
-            border: '1px solid rgba(167,139,250,0.28)',
-            borderRadius: 12,
-            padding: '0.875rem',
-            marginBottom: '1.25rem',
-          }}>
-            <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.44rem', color: '#a78bfa', marginBottom: '0.35rem' }}>Item Drop!</p>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0ede8', marginBottom: 3, lineHeight: 1.2 }}>{droppedItem.name}</p>
-            <p className="font-karla" style={{ fontSize: '0.58rem', color: '#6a6764' }}>{droppedItem.effectDescription}</p>
+
+        {/* Run item — applied this fight, not kept */}
+        {runItem && (
+          <div style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.25)', borderRadius: 12, padding: '0.875rem', marginBottom: '0.75rem' }}>
+            <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.44rem', color: '#60a5fa', marginBottom: '0.35rem' }}>Supplies Found</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0ede8', marginBottom: 3, lineHeight: 1.2 }}>{runItem.name}</p>
+            <p className="font-karla" style={{ fontSize: '0.58rem', color: '#6a6764' }}>{runItem.effectDescription}</p>
+            <p className="font-karla" style={{ fontSize: '0.48rem', color: '#4a4845', marginTop: 4, fontStyle: 'italic' }}>Applied this run — not kept</p>
           </div>
         )}
+
+        {/* Permanent item — goes to inventory */}
+        {permItem && (
+          <div style={{ background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.28)', borderRadius: 12, padding: '0.875rem', marginBottom: '0.75rem' }}>
+            <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.44rem', color: '#a78bfa', marginBottom: '0.35rem' }}>Rare Drop!</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0ede8', marginBottom: 3, lineHeight: 1.2 }}>{permItem.name}</p>
+            <p className="font-karla" style={{ fontSize: '0.58rem', color: '#6a6764' }}>{permItem.effectDescription}</p>
+            <p className="font-karla" style={{ fontSize: '0.48rem', color: '#4a4845', marginTop: 4, fontStyle: 'italic' }}>Added to your inventory</p>
+          </div>
+        )}
+
         <button
           onClick={onContinue}
           style={{
-            width: '100%',
+            width: '100%', marginTop: hasLoot ? 0 : undefined,
             padding: '0.875rem',
             background: 'rgba(240,192,64,0.12)',
             border: '1px solid rgba(240,192,64,0.3)',

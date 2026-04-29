@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { RARITY_TIERS } from '@/lib/variants'
 import {
-  ZONES, EXPEDITION_SHIP_STATS, ENEMIES, EXPEDITION_ITEMS,
+  ZONES, EXPEDITION_SHIP_STATS, ENEMIES, EXPEDITION_ITEMS, RUN_ITEMS,
   CORAL_RUN_EVENTS, CORAL_RUN_SHOP,
   applyVariantBoosts, computeTotalCrewStats, resolveRound, initCombatState, rollLootTable,
   type ZoneKey, type CombatAction, type Expedition, type CombatState,
@@ -209,7 +209,9 @@ export interface CombatActionResult {
   maxDurability: number
   newCombatState: CombatState | null
   goldEarned: number
-  itemDropped: string | null
+  runItemDropped: string | null    // applied this fight, not kept
+  runItemBuff: RunBuff | null      // buff from run item, if any
+  permItemDropped: string | null   // added to inventory
 }
 
 export async function takeCombatAction(
@@ -246,7 +248,7 @@ export async function takeCombatAction(
 
   const resolution = resolveRound(exp.combat_state, action, crew, ship, currentDurability, runBuffs)
 
-  const newHullDamage = maxDurability - resolution.newDurability
+  let newHullDamage = maxDurability - resolution.newDurability
   const combatOver = resolution.combatOver
   const playerWon = resolution.playerWon
   const expeditionFailed = combatOver && !playerWon
@@ -256,7 +258,9 @@ export async function takeCombatAction(
   let newStatus: string = exp.status
   let newCombatState: CombatState | null = resolution.newState
   let goldEarned = 0
-  let itemDropped: string | null = null
+  let runItemDropped: string | null = null
+  let runItemBuff: RunBuff | null = null
+  let permItemDropped: string | null = null
 
   const zone = ZONES[exp.zone]
   const nodeResults: NodeResult[] = [...(exp.events ?? [])]
@@ -280,21 +284,38 @@ export async function takeCombatAction(
 
       // Roll item drop for elite enemies
       if (defeatedEnemy?.elite && defeatedEnemy.lootTable) {
-        itemDropped = rollLootTable(defeatedEnemy.lootTable)
-        if (itemDropped) {
-          const { data: existingItem } = await admin
-            .from('expedition_items')
-            .select('id, quantity')
-            .eq('user_id', user.id)
-            .eq('item_id', itemDropped)
-            .maybeSingle()
-          if (existingItem) {
-            await admin.from('expedition_items')
-              .update({ quantity: existingItem.quantity + 1 })
-              .eq('id', existingItem.id)
+        const droppedId = rollLootTable(defeatedEnemy.lootTable)
+        if (droppedId) {
+          if (defeatedEnemy.lootTable.type === 'run') {
+            // Apply immediately to this run — not kept
+            runItemDropped = droppedId
+            const runItem = RUN_ITEMS[droppedId]
+            if (runItem) {
+              const effect = runItem.effect
+              if (effect.type === 'heal') {
+                const healed = Math.min(effect.value ?? 0, newHullDamage)
+                newHullDamage = Math.max(0, newHullDamage - healed)
+              } else if (effect.type === 'buff' && effect.buff) {
+                runItemBuff = effect.buff
+              }
+            }
           } else {
-            await admin.from('expedition_items')
-              .insert({ user_id: user.id, item_id: itemDropped, quantity: 1 })
+            // Permanent — add to player's inventory
+            permItemDropped = droppedId
+            const { data: existingItem } = await admin
+              .from('expedition_items')
+              .select('id, quantity')
+              .eq('user_id', user.id)
+              .eq('item_id', permItemDropped)
+              .maybeSingle()
+            if (existingItem) {
+              await admin.from('expedition_items')
+                .update({ quantity: existingItem.quantity + 1 })
+                .eq('id', existingItem.id)
+            } else {
+              await admin.from('expedition_items')
+                .insert({ user_id: user.id, item_id: permItemDropped, quantity: 1 })
+            }
           }
         }
       }
@@ -324,6 +345,7 @@ export async function takeCombatAction(
   if (combatOver) {
     update.current_node = newCurrentNode
     if (goldEarned > 0) update.run_gold = (exp.run_gold ?? 0) + goldEarned
+    if (runItemBuff) update.run_buffs = [...(exp.run_buffs ?? []), runItemBuff]
     if (expeditionFailed) {
       update.status = 'failed'
       update.completed_at = new Date().toISOString()
@@ -338,11 +360,13 @@ export async function takeCombatAction(
     playerWon,
     expeditionFailed,
     zoneComplete,
-    newDurability: resolution.newDurability,
+    newDurability: maxDurability - newHullDamage,
     maxDurability,
     newCombatState,
     goldEarned,
-    itemDropped,
+    runItemDropped,
+    runItemBuff,
+    permItemDropped,
   }
 }
 
