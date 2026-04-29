@@ -57,6 +57,7 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, doublo
   const router = useRouter()
   const theme = ZONE_THEME[zoneKey]
 
+  const isUnderConstruction = zoneKey !== 'coral_run'
   const tierLocked = shipTier < config.requiredShipTier
   const fundsLocked = !tierLocked && doubloons < config.entryCost
   const isLocked = tierLocked || fundsLocked
@@ -64,9 +65,10 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, doublo
   const isCompleted = expedition?.status === 'completed'
   const isFailed = expedition?.status === 'failed'
   const isAttempted = isCompleted || isFailed
-  const interactive = !isLocked || isActive || isAttempted
+  const interactive = !isUnderConstruction && (!isLocked || isActive || isAttempted)
 
   function handleClick() {
+    if (isUnderConstruction) return
     if (isActive) { router.push(`/expeditions/voyage?id=${expedition!.id}`); return }
     if (isAttempted) { router.push(`/expeditions/results?id=${expedition!.id}`); return }
     if (isLocked) return
@@ -79,7 +81,7 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, doublo
   if (tierLocked) lockReason = `Requires ${['Rowboat','Dinghy','Sloop','Schooner','Brigantine','Galleon','Man-o-War'][config.requiredShipTier]}`
   else if (fundsLocked) lockReason = `Need ${config.entryCost.toLocaleString()} ⟡ to enter`
 
-  const dimCard = (isLocked && !fundsLocked) || isFailed
+  const dimCard = isUnderConstruction || (isLocked && !fundsLocked) || isFailed
 
   return (
     <div
@@ -155,7 +157,16 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, doublo
           </div>
 
           {/* Right badge */}
-          {isActive && (
+          {isUnderConstruction && (
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{
+              fontSize: '0.48rem', color: '#fbbf24', flexShrink: 0, marginTop: 2,
+              background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.28)',
+              borderRadius: 6, padding: '0.25rem 0.5rem',
+            }}>
+              🚧 Coming Soon
+            </span>
+          )}
+          {!isUnderConstruction && isActive && (
             <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{
               fontSize: '0.5rem', color: theme.color, flexShrink: 0, marginTop: 2,
               background: `${theme.color}15`, border: `1px solid ${theme.color}35`,
@@ -164,7 +175,7 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, doublo
               Resume →
             </span>
           )}
-          {isCompleted && (
+          {!isUnderConstruction && isCompleted && (
             <div style={{
               flexShrink: 0, marginTop: 2,
               background: `${theme.color}15`, border: `1px solid ${theme.color}35`,
