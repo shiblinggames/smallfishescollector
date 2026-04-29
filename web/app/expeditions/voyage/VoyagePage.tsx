@@ -479,8 +479,9 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
   const enemyColor = isBoss ? '#f87171' : '#a78bfa'
   const enemyHpColor = enemyHpPct < 30 ? '#f87171' : enemyColor
 
-  const canLightFire = cs.playerCharges >= 1
-  const canHeavyFire = cs.playerCharges === 3
+  const canLightFire   = cs.playerCharges >= 1
+  const canHeavyFire   = cs.playerCharges === 3
+  const fireMultLabel  = cs.playerCharges === 3 ? '×2 rdy' : cs.playerCharges >= 1 ? '×1' : ''
   const dmgRange = crew.count >= effectivePower ? String(effectivePower) : `${crew.count}–${effectivePower}`
 
   const enemyHitAnim = showResult && log && (log.playerAction === 'fire' || log.playerAction === 'fire_heavy') && log.playerDamageDealt > 0
