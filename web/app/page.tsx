@@ -10,7 +10,7 @@ export default async function HomePage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6 py-16">
       <div className="text-center max-w-lg">
-        <p className="sg-eyebrow mb-6">Digital Collectibles</p>
+        <p className="sg-eyebrow mb-6">Shibling Games</p>
         <h1 className="font-cinzel font-black text-[#f0ede8] leading-[0.92] tracking-[-0.01em] mb-4"
             style={{ fontSize: 'clamp(2.6rem, 8vw, 5rem)' }}>
           Small Fishes.
@@ -48,6 +48,14 @@ export default async function HomePage() {
                className="font-karla font-600 text-[0.7rem] uppercase tracking-[0.12em] text-[#a0a09a] hover:text-[#f0ede8] transition-colors">
               TikTok
             </a>
+          </div>
+          <div className="flex justify-center gap-4 mt-4">
+            <Link href="/privacy" className="font-karla font-300 text-[0.65rem] text-[#3a3835] hover:text-[#6a6764] transition-colors">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="font-karla font-300 text-[0.65rem] text-[#3a3835] hover:text-[#6a6764] transition-colors">
+              Terms of Service
+            </Link>
           </div>
         </div>
       </div>
