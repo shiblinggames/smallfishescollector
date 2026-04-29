@@ -341,7 +341,7 @@ export function resolveRound(
     const maxDmg = Math.max(1, Math.floor(effectivePower * mult))
     const minDmg = Math.max(1, crew.count)
     const base = minDmg >= maxDmg ? maxDmg : Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg
-    const critChance = Math.min(crew.fortune * 4, 60)
+    const critChance = Math.min(crew.fortune / 2, 50)
     critHit = Math.random() * 100 < critChance
     const raw = critHit ? Math.floor(base * 2) : base
     // Enemy dodge
@@ -379,7 +379,7 @@ export function resolveRound(
   function applyEnemyShot() {
     if (!enemyCanFire) return
     if (playerAction === 'defend') {
-      const dodgeChance = Math.min(crew.dodge * 5, 70)
+      const dodgeChance = Math.min(50 + crew.dodge / 2, 100)
       if (Math.random() * 100 < dodgeChance) { playerDodged = true; return }
       const reduced = Math.floor(enemyShotDamage * 0.5)
       playerDamageTaken = Math.max(1, reduced - effectiveArmor)
