@@ -52,11 +52,13 @@ function SlotSymbolDisplay({ id, size = 56 }: { id: SlotSymbolId; size?: number 
 }
 
 // Each reel stops independently — no delay prop needed
-function Reel({ symbol, rolling, won, winColor }: {
+function Reel({ symbol, rolling, won, winColor, nearMiss, nearMissOdd }: {
   symbol: SlotSymbolId
   rolling: boolean
   won: boolean
   winColor?: string
+  nearMiss?: boolean    // part of the 2-of-3 matching pair
+  nearMissOdd?: boolean // the reel that broke the combo
 }) {
   const [display, setDisplay] = useState<SlotSymbolId>(symbol)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -85,19 +87,29 @@ function Reel({ symbol, rolling, won, winColor }: {
   const sym = SLOT_SYMBOLS_LIST.find((s) => s.id === display)!
   const color = won && winColor ? winColor : sym.color
 
+  const borderColor = won ? color : nearMiss ? '#f97316' : nearMissOdd ? 'rgba(255,255,255,0.06)' : (rolling ? 'rgba(255,255,255,0.10)' : color)
+  const bg = won ? `${color}22` : nearMiss ? '#f9731618' : (rolling ? 'rgba(255,255,255,0.07)' : `${color}18`)
+  const shadow = won
+    ? `0 0 28px ${color}70, 0 0 56px ${color}30`
+    : nearMiss ? '0 0 18px #f9731660'
+    : (rolling ? 'none' : `0 0 20px ${color}38`)
+  const anim = won
+    ? 'reel-pop 0.55s cubic-bezier(0.36,0.07,0.19,0.97) forwards'
+    : nearMissOdd ? 'near-miss-wobble 0.55s ease-out'
+    : nearMiss ? 'near-miss-pulse 1.6s ease-in-out infinite'
+    : 'none'
+
   return (
     <div
       style={{
         width: 96, height: 96,
-        background: won ? `${color}22` : (rolling ? 'rgba(255,255,255,0.07)' : `${color}18`),
-        border: `2.5px solid ${won ? color : (rolling ? 'rgba(255,255,255,0.10)' : color)}`,
+        background: bg,
+        border: `2.5px solid ${borderColor}`,
         borderRadius: 18,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: won
-          ? `0 0 28px ${color}70, 0 0 56px ${color}30`
-          : (rolling ? 'none' : `0 0 20px ${color}38`),
+        boxShadow: shadow,
         overflow: 'hidden',
-        animation: won ? 'reel-pop 0.55s cubic-bezier(0.36,0.07,0.19,0.97) forwards' : 'none',
+        animation: anim,
         transition: 'border-color 0.15s, background 0.15s',
       }}
     >
@@ -242,7 +254,20 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
         setSpinning(false)
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
       }, lastMainStop + 150)
+    } else if (result.outcome === 'refund') {
+      setTimeout(() => {
+        setFlashColor('#34d399')
+        setFlashKey((k) => k + 1)
+        applyStats(result.net)
+        setDoubloons(result.newDoubloons)
+        setDailyWagered(result.dailyWagered)
+        setLastResult(result)
+        setShowResult(true)
+        setSpinning(false)
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
+      }, lastMainStop + 150)
     } else {
+      // near_miss or lose
       setTimeout(() => {
         applyStats(result.net)
         setDoubloons(result.newDoubloons)
@@ -257,6 +282,14 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
 
   const winColor = winSym ? symColor(winSym) : '#f0c040'
   const isJackpot = winSym === 'catfish'
+
+  // Near-miss: which 2 reels match, and which is the odd one out
+  const isNearMiss = showResult && lastResult?.outcome === 'near_miss'
+  const nearMissSymbol = isNearMiss
+    ? (reels[0] === reels[1] ? reels[0] : reels[0] === reels[2] ? reels[0] : reels[1])
+    : null
+  // Refund: 2 anchors lit up teal
+  const isRefund = showResult && lastResult?.outcome === 'refund'
 
   return (
     <>
@@ -290,6 +323,18 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
         @keyframes glow-pulse {
           0%, 100% { opacity: 1; }
           50%       { opacity: 0.65; }
+        }
+        @keyframes near-miss-pulse {
+          0%, 100% { box-shadow: 0 0 12px #f9731640; }
+          50%       { box-shadow: 0 0 28px #f9731680; }
+        }
+        @keyframes near-miss-wobble {
+          0%, 100%  { transform: translateX(0); }
+          18%       { transform: translateX(-6px); }
+          36%       { transform: translateX(6px); }
+          54%       { transform: translateX(-4px); }
+          72%       { transform: translateX(4px); }
+          88%       { transform: translateX(-2px); }
         }
       `}</style>
 
@@ -326,8 +371,10 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
               key={i}
               symbol={sym}
               rolling={mainRolling[i]}
-              won={wonMainReels}
-              winColor={wonMainReels ? winColor : undefined}
+              won={wonMainReels || (isRefund && sym === 'anchor')}
+              winColor={wonMainReels ? winColor : isRefund ? '#34d399' : undefined}
+              nearMiss={!!(isNearMiss && nearMissSymbol && sym === nearMissSymbol)}
+              nearMissOdd={!!(isNearMiss && nearMissSymbol && sym !== nearMissSymbol)}
             />
           ))}
         </div>
@@ -381,6 +428,24 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
               </p>
               <p className="font-karla font-400 text-[#6a6764] text-xs mt-1">
                 {SLOT_PAYOUTS[winSym]}× your bet
+              </p>
+            </div>
+          ) : showResult && lastResult?.outcome === 'refund' ? (
+            <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>
+              <p className="font-cinzel font-700 tracking-wide" style={{ fontSize: '1.1rem', color: '#34d399', textShadow: '0 0 24px #34d39960', letterSpacing: '0.04em', lineHeight: 1.1 }}>
+                2 Hooks · Refund!
+              </p>
+              <p className="font-karla font-400 mt-1" style={{ fontSize: '0.85rem', color: '#34d399' }}>
+                Wager returned
+              </p>
+            </div>
+          ) : showResult && lastResult?.outcome === 'near_miss' ? (
+            <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>
+              <p className="font-cinzel font-700 tracking-wide" style={{ fontSize: '1.1rem', color: '#f97316', textShadow: '0 0 24px #f9731660', letterSpacing: '0.04em', lineHeight: 1.1 }}>
+                So Close!
+              </p>
+              <p className="font-cinzel font-700 mt-1" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>
+                {lastResult.net.toLocaleString()} ⟡
               </p>
             </div>
           ) : showResult && lastResult && lastResult.net === 0 ? (
@@ -459,7 +524,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
         {/* Payout table */}
         <div className="w-full rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
           <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] px-4 pt-3 pb-2" style={{ fontSize: '0.6rem' }}>
-            Payouts — match all three
+            Payouts
           </p>
           {SLOT_SYMBOLS_LIST.filter((s) => s.id !== 'anchor').map((sym) => (
             <div key={sym.id} className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
@@ -471,10 +536,17 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
             </div>
           ))}
           <div className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ width: 30, height: 30, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+              <HookImage size={14} /><HookImage size={14} />
+            </div>
+            <span className="font-karla text-sm flex-1" style={{ color: '#34d399' }}>2 Hooks (anywhere)</span>
+            <span className="font-cinzel font-700 text-sm" style={{ color: '#34d399' }}>Refund</span>
+          </div>
+          <div className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ width: 30, height: 30, flexShrink: 0 }}>
               <HookImage size={30} />
             </div>
-            <span className="font-karla text-sm flex-1" style={{ color: '#34d399' }}>Hook</span>
+            <span className="font-karla text-sm flex-1" style={{ color: '#34d399' }}>3 Hooks</span>
             <span className="font-cinzel font-700 text-sm" style={{ color: '#34d399' }}>Free Spin</span>
           </div>
         </div>

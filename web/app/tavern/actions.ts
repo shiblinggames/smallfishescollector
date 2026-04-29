@@ -87,7 +87,7 @@ export async function rollDice(symbol: Symbol, wager: number): Promise<RollResul
 
 export interface SlotSpinResult {
   reels: SlotSymbolId[]
-  outcome: 'win' | 'lose' | 'bonus'
+  outcome: 'win' | 'lose' | 'bonus' | 'refund' | 'near_miss'
   payout: number
   net: number
   newDoubloons: number
@@ -176,12 +176,14 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   const reels = slotRollReels()
   const [a, b, c] = reels
   const allSame = a === b && b === c
+  const anchorCount = reels.filter(r => r === 'anchor').length
 
-  let outcome: 'win' | 'lose' | 'bonus'
+  let outcome: 'win' | 'lose' | 'bonus' | 'refund' | 'near_miss'
   let payout = 0
   let bonus: SlotSpinResult['bonus'] | undefined
 
   if (allSame && a === 'anchor') {
+    // 3 anchors → bonus spin
     outcome = 'bonus'
     const bonusReels = slotRollReels()
     const [ba, bb, bc] = bonusReels
@@ -193,11 +195,18 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
       bonus = { reels: bonusReels, outcome: 'lose', payout: 0 }
     }
     payout = wager + bonus.payout
+  } else if (anchorCount === 2) {
+    // 2 anchors anywhere → refund
+    outcome = 'refund'
+    payout = wager
   } else if (allSame) {
+    // 3 of same non-anchor → win
     outcome = 'win'
     payout = wager * SLOT_PAYOUTS[a]
   } else {
-    outcome = 'lose'
+    // 2 of same non-anchor (no anchors) → near miss, otherwise plain loss
+    const twoMatch = anchorCount === 0 && (a === b || a === c || b === c)
+    outcome = twoMatch ? 'near_miss' : 'lose'
     payout = 0
   }
 
@@ -205,8 +214,10 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   const newDoubloons = profile.doubloons + net
 
   const outcomeLabel =
-    outcome === 'win' ? `${SLOT_PAYOUTS[a]}× on ${a}` :
-    outcome === 'bonus' ? `bonus spin (${bonus!.outcome})` :
+    outcome === 'win'      ? `${SLOT_PAYOUTS[a]}× on ${a}` :
+    outcome === 'bonus'    ? `bonus spin (${bonus!.outcome})` :
+    outcome === 'refund'   ? '2 anchors — refund' :
+    outcome === 'near_miss' ? 'near miss' :
     'no match'
 
   await Promise.all([
