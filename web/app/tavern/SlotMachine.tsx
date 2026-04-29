@@ -25,7 +25,7 @@ function HookImage({ size }: { size: number }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/models/hooks/legendary-hook.png"
+      src="/models/hooks/steel-hook.png"
       alt="Hook"
       style={{ width: size, height: size, objectFit: 'contain', display: 'block' }}
     />
