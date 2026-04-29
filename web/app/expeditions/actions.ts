@@ -700,6 +700,27 @@ export async function getUserItems(): Promise<Array<{ itemId: string; quantity: 
   return (data ?? []).map((r: { item_id: string; quantity: number }) => ({ itemId: r.item_id, quantity: r.quantity }))
 }
 
+export async function abandonExpedition(
+  expeditionId: number,
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('expeditions')
+    .update({ status: 'failed', completed_at: new Date().toISOString() })
+    .eq('id', expeditionId)
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .select('id')
+    .single()
+
+  if (!data) return { error: 'Expedition not found or already ended' }
+  return { ok: true }
+}
+
 export async function getTodayExpeditions(): Promise<Expedition[]> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
