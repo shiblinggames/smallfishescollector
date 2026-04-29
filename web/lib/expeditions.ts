@@ -113,17 +113,44 @@ export const EXPEDITION_SHIP_STATS: Record<number, ShipStats> = {
 
 // ── Crew stats ────────────────────────────────────────────────────────────────
 
-const CREW_BASE_STATS: Record<string, { power: number; dodge: number; fortune: number }> = {
-  common:    { power: 2, dodge: 2, fortune: 1 },
-  uncommon:  { power: 3, dodge: 2, fortune: 2 },
-  rare:      { power: 4, dodge: 3, fortune: 2 },
-  epic:      { power: 5, dodge: 4, fortune: 3 },
-  legendary: { power: 7, dodge: 5, fortune: 5 },
-  mythic:    { power: 10, dodge: 7, fortune: 7 },
-}
+const MYTHIC_VARIANTS = new Set(['Kraken', 'Davy Jones', 'Golden Age', 'Wanted', 'Maelstrom', 'GOD'])
 
-export function getCrewStats(rarity: string): { power: number; dodge: number; fortune: number } {
-  return CREW_BASE_STATS[rarity.toLowerCase()] ?? CREW_BASE_STATS.common
+export function applyVariantBoosts(
+  base: { power: number; dodge: number; fortune: number },
+  variantName: string,
+  mythic: { power: number; dodge: number; fortune: number },
+): { power: number; dodge: number; fortune: number } {
+  if (MYTHIC_VARIANTS.has(variantName)) return { ...mythic }
+
+  const result = { ...base }
+  type S = 'power' | 'dodge' | 'fortune'
+  const [primary, secondary, tertiary] = (['power', 'dodge', 'fortune'] as S[])
+    .sort((a, b) => base[b] - base[a])
+
+  switch (variantName) {
+    case 'Gold':
+      result[primary] += 4
+      break
+    case 'Pearl':
+      result[primary] += 4
+      result[secondary] += 3
+      break
+    case 'Holographic':
+      result[secondary] += 4
+      result[tertiary] += 3
+      break
+    case 'Ghost':
+      result.power += 5; result.dodge += 4; result.fortune += 3
+      break
+    case 'Shadow':
+      result.power += 4; result.dodge += 4; result.fortune += 4
+      break
+    case 'Prismatic':
+      result.power += 3; result.dodge += 4; result.fortune += 5
+      break
+  }
+
+  return result
 }
 
 export function computeTotalCrewStats(crew: CrewCard[]): TotalCrewStats {

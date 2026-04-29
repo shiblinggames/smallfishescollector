@@ -93,7 +93,7 @@ export async function openPack(): Promise<OpenPackResponse> {
   // Fetch variants server-side
   const { data: variantRows } = await admin
     .from('card_variants')
-    .select('id, card_id, variant_name, border_style, art_effect, drop_weight, cards(id, name, slug, filename, zone, strength, agility, wit, luck)')
+    .select('id, card_id, variant_name, border_style, art_effect, drop_weight, cards(id, name, slug, filename, zone, power, dodge, fortune, mythic_power, mythic_dodge, mythic_fortune)')
 
   const variants = (variantRows ?? []) as unknown as CardVariant[]
   const isGodPack = Math.random() < 0.001

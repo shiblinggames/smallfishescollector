@@ -95,10 +95,9 @@ interface PickerCard {
   dropWeight: number
   name: string
   filename: string
-  strength: number
-  agility: number
-  wit: number
-  luck: number
+  power: number
+  dodge: number
+  fortune: number
 }
 
 const VARIANT_RANK: Record<string, number> = {
@@ -192,10 +191,9 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
       dropWeight: e.dropWeight,
       name: card.name,
       filename: card.filename,
-      strength: card.strength ?? 0,
-      agility:  card.agility  ?? 0,
-      wit:      card.wit      ?? 0,
-      luck:     card.luck     ?? 0,
+      power:   card.power   ?? 0,
+      dodge:   card.dodge   ?? 0,
+      fortune: card.fortune ?? 0,
     }))
   }).sort((a, b) => a.dropWeight - b.dropWeight)
 
@@ -469,7 +467,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                         borderStyle={best?.borderStyle ?? 'standard'}
                         artEffect={best?.artEffect ?? 'normal'}
                         unowned={!isOwned}
-                        stats={isOwned ? { strength: card.strength ?? 0, agility: card.agility ?? 0, wit: card.wit ?? 0, luck: card.luck ?? 0 } : undefined}
+                        stats={isOwned ? { power: card.power ?? 0, dodge: card.dodge ?? 0, fortune: card.fortune ?? 0 } : undefined}
                       />
                     </div>
                     <p className="font-karla font-300 text-[0.62rem] text-[#a0a09a] tracking-wide">
@@ -529,7 +527,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                           artEffect={owned.artEffect}
                           variantName={owned.variantName}
                           dropWeight={owned.dropWeight}
-                          stats={{ strength: modal.card.strength ?? 0, agility: modal.card.agility ?? 0, wit: modal.card.wit ?? 0, luck: modal.card.luck ?? 0 }}
+                          stats={{ power: modal.card.power ?? 0, dodge: modal.card.dodge ?? 0, fortune: modal.card.fortune ?? 0 }}
                         />
                       </div>
                       {dupeCount > 0 && (() => {
@@ -722,7 +720,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                             artEffect={card.artEffect as any}
                             variantName={card.variantName}
                             dropWeight={card.dropWeight}
-                            stats={{ strength: card.strength, agility: card.agility, wit: card.wit, luck: card.luck }}
+                            stats={{ power: card.power, dodge: card.dodge, fortune: card.fortune }}
                           />
                         </div>
                         {isSelected && (

@@ -24,10 +24,12 @@ function variantToCard(v: CardVariant): DrawnCard {
     borderStyle: v.border_style as BorderStyle,
     artEffect:   v.art_effect as ArtEffect,
     dropWeight:  v.drop_weight,
-    strength:    (card as any).strength ?? 0,
-    agility:     (card as any).agility  ?? 0,
-    wit:         (card as any).wit      ?? 0,
-    luck:        (card as any).luck     ?? 0,
+    power:          (card as any).power          ?? 0,
+    dodge:          (card as any).dodge          ?? 0,
+    fortune:        (card as any).fortune        ?? 0,
+    mythic_power:   (card as any).mythic_power   ?? 0,
+    mythic_dodge:   (card as any).mythic_dodge   ?? 0,
+    mythic_fortune: (card as any).mythic_fortune ?? 0,
   }
 }
 

@@ -6,7 +6,7 @@ import { RARITY_TIERS } from '@/lib/variants'
 import {
   ZONES, EXPEDITION_SHIP_STATS, ENEMIES, EXPEDITION_ITEMS,
   CORAL_RUN_EVENTS, CORAL_RUN_SHOP,
-  getCrewStats, computeTotalCrewStats, resolveRound, initCombatState,
+  applyVariantBoosts, computeTotalCrewStats, resolveRound, initCombatState,
   type ZoneKey, type CombatAction, type Expedition, type CombatState,
   type NodeResult, type NodeType, type EventNodeDef, type ShopOption,
   type CombatRoundLog, type ZoneLoot, type RunBuff,
@@ -631,7 +631,7 @@ export async function getCollectionForCrew(): Promise<Array<{
   const admin = createAdminClient()
   const { data } = await admin
     .from('user_collection')
-    .select('id, card_variant_id, card_variants(id, variant_name, drop_weight, cards(id, name, slug, filename, tier, zone))')
+    .select('id, card_variant_id, card_variants(id, variant_name, drop_weight, cards(id, name, slug, filename, tier, power, dodge, fortune, mythic_power, mythic_dodge, mythic_fortune))')
     .eq('user_id', user.id)
 
   if (!data) return []
@@ -639,7 +639,7 @@ export async function getCollectionForCrew(): Promise<Array<{
   const seen = new Set<number>()
   type Row = {
     id: number; card_variant_id: number
-    card_variants: { id: number; variant_name: string; drop_weight: number; cards: { id: number; name: string; slug: string; filename: string; tier: number; zone: string } }
+    card_variants: { id: number; variant_name: string; drop_weight: number; cards: { id: number; name: string; slug: string; filename: string; tier: number; power: number; dodge: number; fortune: number; mythic_power: number; mythic_dodge: number; mythic_fortune: number } }
   }
 
   const result = []
@@ -649,7 +649,9 @@ export async function getCollectionForCrew(): Promise<Array<{
     const v = row.card_variants
     const card = v.cards
     const rarity = RARITY_TIERS.find(t => t.variants.includes(v.variant_name))?.name ?? 'Common'
-    const stats = getCrewStats(rarity)
+    const base = { power: card.power, dodge: card.dodge, fortune: card.fortune }
+    const mythic = { power: card.mythic_power, dodge: card.mythic_dodge, fortune: card.mythic_fortune }
+    const stats = applyVariantBoosts(base, v.variant_name, mythic)
     result.push({
       collectionId: row.id,
       cardId: card.id,

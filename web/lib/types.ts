@@ -4,10 +4,9 @@ export type ArtEffect  = 'normal' | 'holographic' | 'rainbow' | 'ghost' | 'shado
 export type Zone = 'shallows' | 'open_waters' | 'deep' | 'abyss'
 
 export interface CardStats {
-  strength: number
-  agility: number
-  wit: number
-  luck: number
+  power: number
+  dodge: number
+  fortune: number
 }
 
 export interface Card {
@@ -16,10 +15,12 @@ export interface Card {
   slug: string
   filename: string
   zone: Zone
-  strength: number
-  agility: number
-  wit: number
-  luck: number
+  power: number
+  dodge: number
+  fortune: number
+  mythic_power: number
+  mythic_dodge: number
+  mythic_fortune: number
 }
 
 export interface CardVariant {
@@ -49,8 +50,10 @@ export interface DrawnCard {
   borderStyle: BorderStyle
   artEffect: ArtEffect
   dropWeight: number
-  strength: number
-  agility: number
-  wit: number
-  luck: number
+  power: number
+  dodge: number
+  fortune: number
+  mythic_power: number
+  mythic_dodge: number
+  mythic_fortune: number
 }
