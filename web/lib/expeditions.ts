@@ -167,6 +167,16 @@ export function computeTotalCrewStats(crew: CrewCard[]): TotalCrewStats {
 
 // ── Enemies ───────────────────────────────────────────────────────────────────
 
+export interface LootEntry {
+  itemId: string
+  weight: number
+}
+
+export interface EnemyLootTable {
+  dropChance: number  // 0–1
+  pool: LootEntry[]
+}
+
 export interface EnemyDef {
   id: string
   name: string
@@ -178,6 +188,19 @@ export interface EnemyDef {
   speed: number   // same scale as ship speed
   goldReward: number
   pattern: CombatAction[]
+  elite: boolean
+  lootTable: EnemyLootTable | null
+}
+
+export function rollLootTable(table: EnemyLootTable): string | null {
+  if (Math.random() >= table.dropChance) return null
+  const total = table.pool.reduce((s, e) => s + e.weight, 0)
+  let roll = Math.random() * total
+  for (const entry of table.pool) {
+    roll -= entry.weight
+    if (roll <= 0) return entry.itemId
+  }
+  return table.pool[table.pool.length - 1]?.itemId ?? null
 }
 
 export const ENEMIES: Record<string, EnemyDef> = {
@@ -192,6 +215,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
     speed: 3,
     goldReward: 25,
     pattern: ['reload', 'fire', 'reload', 'fire'],
+    elite: false,
+    lootTable: null,
   },
   sniper: {
     id: 'sniper',
@@ -204,6 +229,29 @@ export const ENEMIES: Record<string, EnemyDef> = {
     speed: 2,
     goldReward: 30,
     pattern: ['reload', 'reload', 'reload', 'fire'],
+    elite: false,
+    lootTable: null,
+  },
+  corsair: {
+    id: 'corsair',
+    name: 'Saltwater Corsair',
+    maxHp: 35,
+    damage: 10,
+    dodge: 2,
+    armor: 1,
+    fortune: 2,
+    speed: 4,
+    goldReward: 45,
+    pattern: ['reload', 'fire', 'defend', 'reload', 'fire'],
+    elite: true,
+    lootTable: {
+      dropChance: 0.30,
+      pool: [
+        { itemId: 'powder_keg', weight: 3 },
+        { itemId: 'patched_hull', weight: 3 },
+        { itemId: 'anchor_chain', weight: 2 },
+      ],
+    },
   },
   barnacle_pete: {
     id: 'barnacle_pete',
@@ -216,6 +264,17 @@ export const ENEMIES: Record<string, EnemyDef> = {
     speed: 4,
     goldReward: 60,
     pattern: ['reload', 'fire', 'reload', 'fire', 'reload', 'reload', 'fire'],
+    elite: true,
+    lootTable: {
+      dropChance: 0.60,
+      pool: [
+        { itemId: 'powder_keg',  weight: 3 },
+        { itemId: 'patched_hull', weight: 3 },
+        { itemId: 'anchor_chain', weight: 2 },
+        { itemId: 'bait_barrel',  weight: 2 },
+        { itemId: 'lucky_lure',   weight: 2 },
+      ],
+    },
   },
 }
 
@@ -523,10 +582,10 @@ export const ZONES: Record<ZoneKey, ZoneConfig> = {
       { type: 'shop' },
       { type: 'boss' },
     ],
-    fightEnemyPool: ['brute', 'sniper'],
+    fightEnemyPool: ['brute', 'sniper', 'corsair'],
     bossId: 'barnacle_pete',
-    itemDropPool: ['powder_keg', 'patched_hull', 'anchor_chain', 'bait_barrel', 'lucky_lure'],
-    itemDropChance: 0.25,
+    itemDropPool: [],
+    itemDropChance: 0,
   },
   bertuna_triangle: {
     name: 'The Bertuna Triangle',

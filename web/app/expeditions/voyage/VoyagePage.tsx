@@ -30,7 +30,7 @@ type Phase =
   | { type: 'idle' }
   | { type: 'resolving' }
   | { type: 'round_result'; log: CombatRoundLog }
-  | { type: 'enemy_defeated'; goldEarned: number; enemyName: string; newCombatState: CombatState | null; nextNodeIndex: number; zoneComplete: boolean }
+  | { type: 'enemy_defeated'; goldEarned: number; itemDropped: string | null; enemyName: string; newCombatState: CombatState | null; nextNodeIndex: number; zoneComplete: boolean }
   | { type: 'zone_complete' }
   | { type: 'failed' }
   | { type: 'event' }
@@ -123,6 +123,7 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
           setPhase({
             type: 'enemy_defeated',
             goldEarned: result.goldEarned,
+            itemDropped: result.itemDropped,
             enemyName: ENEMIES[cs?.enemyId ?? '']?.name ?? 'Enemy',
             newCombatState: result.newCombatState,
             nextNodeIndex: exp.current_node + 1,
@@ -334,6 +335,7 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
         <EnemyDefeatedModal
           enemyName={phase.enemyName}
           goldEarned={phase.goldEarned}
+          itemDropped={phase.itemDropped}
           onContinue={handleEnemyDefeatedContinue}
         />
       )}
@@ -383,6 +385,7 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
 const ENEMY_AVATAR: Record<string, string> = {
   brute:          '⚔',
   sniper:         '🔭',
+  corsair:        '🏴‍☠️',
   barnacle_pete:  '🐡',
 }
 
@@ -651,11 +654,13 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
 
 // ── Enemy defeated modal ──────────────────────────────────────────────────────
 
-function EnemyDefeatedModal({ enemyName, goldEarned, onContinue }: {
+function EnemyDefeatedModal({ enemyName, goldEarned, itemDropped, onContinue }: {
   enemyName: string
   goldEarned: number
+  itemDropped: string | null
   onContinue: () => void
 }) {
+  const droppedItem = itemDropped ? EXPEDITION_ITEMS[itemDropped] : null
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 40,
@@ -665,13 +670,15 @@ function EnemyDefeatedModal({ enemyName, goldEarned, onContinue }: {
     }}>
       <div style={{
         background: '#0f0e0c',
-        border: '1px solid rgba(240,192,64,0.25)',
+        border: `1px solid ${droppedItem ? 'rgba(167,139,250,0.35)' : 'rgba(240,192,64,0.25)'}`,
         borderRadius: 18,
         padding: '1.75rem 1.5rem',
         width: '100%',
         maxWidth: 320,
         textAlign: 'center',
-        boxShadow: '0 0 40px rgba(240,192,64,0.08), 0 8px 32px rgba(0,0,0,0.6)',
+        boxShadow: droppedItem
+          ? '0 0 40px rgba(167,139,250,0.12), 0 8px 32px rgba(0,0,0,0.6)'
+          : '0 0 40px rgba(240,192,64,0.08), 0 8px 32px rgba(0,0,0,0.6)',
       }}>
         <p style={{ fontSize: '2rem', marginBottom: '0.6rem' }}>⚔️</p>
         <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.48rem', color: '#4ade80', marginBottom: '0.4rem' }}>
@@ -685,13 +692,26 @@ function EnemyDefeatedModal({ enemyName, goldEarned, onContinue }: {
           border: '1px solid rgba(240,192,64,0.2)',
           borderRadius: 12,
           padding: '0.875rem',
-          marginBottom: '1.25rem',
+          marginBottom: droppedItem ? '0.75rem' : '1.25rem',
         }}>
           <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.44rem', color: '#6a6764', marginBottom: '0.35rem' }}>Gold Earned</p>
           <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0c040', lineHeight: 1 }}>
             +{goldEarned} ✦
           </p>
         </div>
+        {droppedItem && (
+          <div style={{
+            background: 'rgba(167,139,250,0.08)',
+            border: '1px solid rgba(167,139,250,0.28)',
+            borderRadius: 12,
+            padding: '0.875rem',
+            marginBottom: '1.25rem',
+          }}>
+            <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.44rem', color: '#a78bfa', marginBottom: '0.35rem' }}>Item Drop!</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0ede8', marginBottom: 3, lineHeight: 1.2 }}>{droppedItem.name}</p>
+            <p className="font-karla" style={{ fontSize: '0.58rem', color: '#6a6764' }}>{droppedItem.effectDescription}</p>
+          </div>
+        )}
         <button
           onClick={onContinue}
           style={{

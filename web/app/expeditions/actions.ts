@@ -6,7 +6,7 @@ import { RARITY_TIERS } from '@/lib/variants'
 import {
   ZONES, EXPEDITION_SHIP_STATS, ENEMIES, EXPEDITION_ITEMS,
   CORAL_RUN_EVENTS, CORAL_RUN_SHOP,
-  applyVariantBoosts, computeTotalCrewStats, resolveRound, initCombatState,
+  applyVariantBoosts, computeTotalCrewStats, resolveRound, initCombatState, rollLootTable,
   type ZoneKey, type CombatAction, type Expedition, type CombatState,
   type NodeResult, type NodeType, type EventNodeDef, type ShopOption,
   type CombatRoundLog, type ZoneLoot, type RunBuff,
@@ -209,6 +209,7 @@ export interface CombatActionResult {
   maxDurability: number
   newCombatState: CombatState | null
   goldEarned: number
+  itemDropped: string | null
 }
 
 export async function takeCombatAction(
@@ -255,6 +256,7 @@ export async function takeCombatAction(
   let newStatus: string = exp.status
   let newCombatState: CombatState | null = resolution.newState
   let goldEarned = 0
+  let itemDropped: string | null = null
 
   const zone = ZONES[exp.zone]
   const nodeResults: NodeResult[] = [...(exp.events ?? [])]
@@ -273,7 +275,29 @@ export async function takeCombatAction(
     } else {
       newCurrentNode = exp.current_node + 1
       newCombatState = null
-      goldEarned = ENEMIES[exp.combat_state!.enemyId]?.goldReward ?? 0
+      const defeatedEnemy = ENEMIES[exp.combat_state!.enemyId]
+      goldEarned = defeatedEnemy?.goldReward ?? 0
+
+      // Roll item drop for elite enemies
+      if (defeatedEnemy?.elite && defeatedEnemy.lootTable) {
+        itemDropped = rollLootTable(defeatedEnemy.lootTable)
+        if (itemDropped) {
+          const { data: existingItem } = await admin
+            .from('expedition_items')
+            .select('id, quantity')
+            .eq('user_id', user.id)
+            .eq('item_id', itemDropped)
+            .maybeSingle()
+          if (existingItem) {
+            await admin.from('expedition_items')
+              .update({ quantity: existingItem.quantity + 1 })
+              .eq('id', existingItem.id)
+          } else {
+            await admin.from('expedition_items')
+              .insert({ user_id: user.id, item_id: itemDropped, quantity: 1 })
+          }
+        }
+      }
 
       // Check zone complete (advanced past last node)
       if (newCurrentNode >= zone.nodes.length) {
@@ -318,6 +342,7 @@ export async function takeCombatAction(
     maxDurability,
     newCombatState,
     goldEarned,
+    itemDropped,
   }
 }
 
