@@ -303,7 +303,7 @@ function CombatView({ enemy, cs, phase, crew, ship, runBuffs, isBoss, isPending,
   enemy: EnemyDef
   cs: NonNullable<Expedition['combat_state']>
   phase: Phase
-  crew: { power: number; dodge: number; fortune: number }
+  crew: { count: number; power: number; dodge: number; fortune: number }
   ship: ShipStats
   runBuffs: RunBuff[]
   isBoss: boolean
@@ -408,7 +408,7 @@ function CombatView({ enemy, cs, phase, crew, ship, runBuffs, isBoss, isPending,
         {/* Stat strip */}
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.5rem', display: 'flex', justifyContent: 'space-around' }}>
           {[
-            { label: 'PWR', val: effectivePower,        color: '#f87171' },
+            { label: 'DMG', val: crew.count >= effectivePower ? String(effectivePower) : `${crew.count}-${effectivePower}`, color: '#f87171' },
             { label: 'DGE', val: `${dodgeChance}%`,     color: '#60a5fa' },
             { label: 'FTN', val: crew.fortune,           color: '#f0c040' },
             { label: 'ARM', val: effectiveArmor,         color: '#4ade80' },
@@ -712,7 +712,7 @@ function FailedView({ onDone }: { onDone: () => void }) {
 function CrewSheet({ expedition, ship, crew, maxDurability, currentDurability, runBuffs, onClose }: {
   expedition: Expedition
   ship: ShipStats
-  crew: { power: number; dodge: number; fortune: number }
+  crew: { count: number; power: number; dodge: number; fortune: number }
   maxDurability: number
   currentDurability: number
   runBuffs: RunBuff[]

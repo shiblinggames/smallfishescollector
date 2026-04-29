@@ -28,6 +28,7 @@ export interface CrewCard {
 }
 
 export interface TotalCrewStats {
+  count: number
   power: number
   dodge: number
   fortune: number
@@ -126,11 +127,12 @@ export function getCrewStats(rarity: string): { power: number; dodge: number; fo
 export function computeTotalCrewStats(crew: CrewCard[]): TotalCrewStats {
   return crew.reduce(
     (totals, card) => ({
+      count:   totals.count   + 1,
       power:   totals.power   + card.power,
       dodge:   totals.dodge   + card.dodge,
       fortune: totals.fortune + card.fortune,
     }),
-    { power: 0, dodge: 0, fortune: 0 },
+    { count: 0, power: 0, dodge: 0, fortune: 0 },
   )
 }
 
@@ -219,12 +221,14 @@ export function resolveRound(
   if (enemyAction === 'reload') newEnemyCharges = Math.min(state.enemyCharges + 1, 3)
   else if (enemyCanFire)        newEnemyCharges = 0
 
-  // Compute player shot damage
+  // Compute player shot damage — roll between crewCount (min) and effectivePower*mult (max)
   let playerDamageDealt = 0
   let critHit = false
   if (playerCanFire) {
     const mult = FIRE_MULTIPLIERS[state.playerCharges] ?? 1
-    const base = Math.max(1, Math.floor(effectivePower * mult))
+    const maxDmg = Math.max(1, Math.floor(effectivePower * mult))
+    const minDmg = Math.max(1, crew.count)
+    const base = minDmg >= maxDmg ? maxDmg : Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg
     const critChance = Math.min(crew.fortune * 4, 60)
     critHit = Math.random() * 100 < critChance
     playerDamageDealt = critHit ? Math.floor(base * 2) : base
