@@ -160,15 +160,24 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     if (flipped[i] || loading) return
     resetTilt(i)
     const rarity = rarityFromVariant(cards[i].variantName, cards[i].dropWeight)
-    setGlowClasses((prev) => { const n = [...prev]; n[i] = glowClassFor(rarity); return n })
-    triggerFlash(rarity)
     checkPrize(cards[i])
+
     if (rarity === 'Mythic') {
-      setMythicFeatured(i)
-      setShockwaveCards((prev) => new Set([...prev, i]))
-      setTimeout(() => setMythicFeatured(null), 2500)
-      setTimeout(() => setShockwaveCards((prev) => { const n = new Set(prev); n.delete(i); return n }), 1600)
+      // Delay all mythic effects until after the 0.6s flip completes
+      const FLIP_MS = 660
+      setTimeout(() => {
+        triggerFlash(rarity)
+        setGlowClasses((prev) => { const n = [...prev]; n[i] = glowClassFor(rarity); return n })
+        setMythicFeatured(i)
+        setShockwaveCards((prev) => new Set([...prev, i]))
+      }, FLIP_MS)
+      setTimeout(() => setMythicFeatured(null), FLIP_MS + 2500)
+      setTimeout(() => setShockwaveCards((prev) => { const n = new Set(prev); n.delete(i); return n }), FLIP_MS + 1600)
+    } else {
+      setGlowClasses((prev) => { const n = [...prev]; n[i] = glowClassFor(rarity); return n })
+      triggerFlash(rarity)
     }
+
     setFlipped((prev) => {
       const n = [...prev]
       n[i] = true
