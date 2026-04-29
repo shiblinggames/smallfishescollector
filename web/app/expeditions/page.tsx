@@ -56,12 +56,19 @@ export default async function ExpeditionsPage() {
       </div>
       <main className="min-h-screen pb-24 sm:pb-0">
 
-        {/* Ambient background */}
-        <div aria-hidden style={{
-          position: 'fixed', top: 0, left: 0, right: 0, height: '70%',
-          background: 'radial-gradient(ellipse 90% 60% at 50% 0%, rgba(30,60,120,0.18) 0%, transparent 100%)',
-          pointerEvents: 'none', zIndex: 0,
-        }} />
+        {/* Background image */}
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/expedition-background.jpg"
+            alt=""
+            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
+          />
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0.92) 100%)',
+          }} />
+        </div>
 
         <div className="px-5 max-w-lg mx-auto" style={{ position: 'relative', zIndex: 1, paddingTop: '2rem' }}>
 
