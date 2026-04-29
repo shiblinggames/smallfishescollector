@@ -425,7 +425,8 @@ const ENEMY_AVATAR: Record<string, string> = {
   barnacle_pete:  '🐡',
 }
 
-function Hitsplat({ text, color, big, animKey }: { text: string; color: string; big?: boolean; animKey?: string | number }) {
+function Hitsplat({ text, color, big, scale = 1, animKey }: { text: string; color: string; big?: boolean; scale?: number; animKey?: string | number }) {
+  const s = scale
   return (
     <div key={animKey} style={{
       position: 'absolute', top: '50%', left: '50%',
@@ -434,17 +435,17 @@ function Hitsplat({ text, color, big, animKey }: { text: string; color: string; 
     }}>
       <div style={{
         background: 'rgba(8,6,4,0.9)',
-        border: `2px solid ${color}`,
-        borderRadius: big ? 10 : 6,
-        padding: big ? '0.3rem 0.7rem' : '0.18rem 0.48rem',
-        boxShadow: big ? `0 0 14px ${color}88, 0 0 4px ${color}` : `0 0 6px ${color}55`,
+        border: `${Math.max(1, Math.round(2 * s))}px solid ${color}`,
+        borderRadius: Math.round((big ? 10 : 6) * s),
+        padding: big ? `${0.3 * s}rem ${0.7 * s}rem` : `${0.18 * s}rem ${0.48 * s}rem`,
+        boxShadow: big ? `0 0 ${14 * s}px ${color}88, 0 0 ${4 * s}px ${color}` : `0 0 ${6 * s}px ${color}55`,
         outline: big ? `1px solid ${color}44` : 'none',
         outlineOffset: big ? 3 : 0,
       }}>
         <p className="font-cinzel font-700" style={{
-          fontSize: big ? '1.1rem' : '0.75rem',
+          fontSize: big ? `${1.1 * s}rem` : `${0.75 * s}rem`,
           color, lineHeight: 1,
-          textShadow: big ? `0 0 16px ${color}` : 'none',
+          textShadow: big ? `0 0 ${16 * s}px ${color}` : 'none',
           letterSpacing: big ? '0.04em' : 'normal',
         }}>{text}</p>
       </div>
@@ -498,6 +499,13 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
   const buffArmor = runBuffs.filter(b => b.effect === 'armor').reduce((s, b) => s + b.value, 0)
   const effectivePower = crew.power + buffPower
   const effectiveArmor = ship.armor + buffArmor
+
+  const playerDmgScale = (log && log.playerDamageDealt > 0)
+    ? Math.min(0.85 + log.playerDamageDealt / Math.max(effectivePower, 1), 2.1)
+    : 1
+  const enemyDmgScale = (log && log.playerDamageTaken > 0)
+    ? Math.min(0.85 + log.playerDamageTaken / Math.max(enemy.damage, 1), 2.1)
+    : 1
   const dodgeChance = Math.min(50 + Math.floor(crew.dodge / 2), 100)
   const dodgeBonus  = dodgeChance - 50
 
@@ -542,13 +550,14 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={ship.image} alt={ship.name} style={{ width: '100%', height: 88, objectFit: 'contain', objectPosition: 'bottom', display: 'block' }} />
             {showResult && log && !log.playerDodged && log.playerDamageTaken > 0 && (
-              <span style={{ position: 'absolute', right: '18%', top: '38%', fontSize: '0.95rem', animation: 'cannon-shot-r 0.55s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💥</span>
+              <span style={{ position: 'absolute', right: '14%', top: '35%', fontSize: `${0.95 * enemyDmgScale}rem`, animation: 'cannon-shot-r 0.55s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💥</span>
             )}
             {showResult && log && log.playerDamageTaken > 0 && (
               <Hitsplat
                 text={log.enemyCrit ? `⚡ ${log.playerDamageTaken}` : `-${log.playerDamageTaken}`}
                 color={log.enemyCrit ? '#f0c040' : '#f87171'}
                 big={!!log.enemyCrit}
+                scale={enemyDmgScale}
                 animKey={log.round}
               />
             )}
@@ -623,9 +632,12 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
             />
             {showCannonHit && log && (
               <>
-                <span style={{ position: 'absolute', left: '18%', top: '38%', fontSize: isVolley ? '1.4rem' : '0.95rem', animation: 'cannon-shot-l 0.55s ease forwards', pointerEvents: 'none', zIndex: 10, filter: isVolley ? 'brightness(1.6)' : 'none' }}>💥</span>
+                <span style={{ position: 'absolute', left: '14%', top: '35%', fontSize: `${(isVolley ? 1.35 : 0.95) * playerDmgScale}rem`, animation: 'cannon-shot-l 0.55s ease forwards', pointerEvents: 'none', zIndex: 10, filter: isVolley ? 'brightness(1.6)' : 'none' }}>💥</span>
                 {isVolley && (
-                  <span style={{ position: 'absolute', left: '42%', top: '20%', fontSize: '1.7rem', animation: 'cannon-shot-l 0.65s 0.1s ease forwards', pointerEvents: 'none', zIndex: 10 }}>🔥</span>
+                  <>
+                    <span style={{ position: 'absolute', left: '30%', top: '52%', fontSize: `${1.35 * playerDmgScale}rem`, animation: 'cannon-shot-l 0.55s 0.08s ease forwards', pointerEvents: 'none', zIndex: 10, filter: 'brightness(1.6)' }}>💥</span>
+                    <span style={{ position: 'absolute', left: '40%', top: '16%', fontSize: `${1.6 * playerDmgScale}rem`, animation: 'cannon-shot-l 0.65s 0.15s ease forwards', pointerEvents: 'none', zIndex: 10 }}>🔥</span>
+                  </>
                 )}
               </>
             )}
@@ -637,6 +649,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
                 text={log.critHit ? `⚡ ${log.playerDamageDealt}` : `-${log.playerDamageDealt}`}
                 color={log.critHit ? '#f0c040' : '#f87171'}
                 big={!!log.critHit}
+                scale={playerDmgScale}
                 animKey={log.round}
               />
             )}
