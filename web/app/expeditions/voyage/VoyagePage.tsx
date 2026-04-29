@@ -384,9 +384,10 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
           50%  { box-shadow: 0 0 0 8px rgba(74,222,128,0.1); }
           100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
         }
-        @keyframes combat-reload-flash {
-          0%,100% { opacity: 1; }
-          40%     { opacity: 0.55; filter: brightness(1.6) hue-rotate(30deg); }
+        @keyframes combat-reload-border {
+          0%   { box-shadow: 0 0 0 0 rgba(96,165,250,0); }
+          30%  { box-shadow: 0 0 0 6px rgba(96,165,250,0.5), inset 0 0 14px rgba(96,165,250,0.12); }
+          100% { box-shadow: 0 0 0 0 rgba(96,165,250,0); }
         }
         .combat-btn {
           touch-action: manipulation;
@@ -541,12 +542,13 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
   const isSinking    = phase.type === 'enemy_sinking'
   const enemyHitAnim = showResult && log && (log.playerAction === 'fire' || log.playerAction === 'fire_heavy') && log.playerDamageDealt > 0
     ? 'combat-enemy-hit 0.45s ease' : 'none'
-  const playerPanelAnim = showResult && log && log.playerAction === 'defend'
-    ? 'combat-defend-pulse 0.7s ease' : 'none'
+  const playerPanelAnim = showResult && log
+    ? log.playerAction === 'defend' ? 'combat-defend-pulse 0.7s ease'
+    : log.playerAction === 'reload' ? 'combat-reload-border 0.55s ease'
+    : 'none' : 'none'
   const playerImgAnim = showResult && log
-    ? (!log.playerDodged && log.playerDamageTaken > 0)        ? 'combat-player-hit 0.45s ease'
-    : log.playerAction === 'fire_heavy'                       ? 'combat-recoil 0.55s ease'
-    : log.playerAction === 'reload'                           ? 'combat-reload-flash 0.5s ease'
+    ? (!log.playerDodged && log.playerDamageTaken > 0) ? 'combat-player-hit 0.45s ease'
+    : log.playerAction === 'fire_heavy'                ? 'combat-recoil 0.55s ease'
     : 'none' : 'none'
   const showCannonHit = showResult && log && (log.playerAction === 'fire' || log.playerAction === 'fire_heavy') && log.playerDamageDealt > 0
   const isVolley      = !!(showResult && log?.playerAction === 'fire_heavy' && log.playerDamageDealt > 0)
@@ -700,21 +702,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
         </div>
       )}
 
-      {/* Spacer + round result anchored to bottom of spacer */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', minHeight: 0 }}>
-        {showResult && log && (
-          <p className="font-karla text-center" style={{ fontSize: '0.48rem', color: '#4a4845' }}>
-            <span style={{ color: '#6a6764' }}>Round {log.round + 1}</span>
-            {' · '}
-            You: <span style={{ color: '#a0a09a' }}>{log.playerAction === 'reload' ? 'Reloaded' : log.playerAction === 'fire' ? 'Fired ×1' : log.playerAction === 'fire_heavy' ? 'Volley ×2' : 'Defended'}</span>
-            {' · '}
-            Enemy: <span style={{ color: '#a0a09a' }}>{log.enemyAction === 'reload' ? 'Reloaded' : log.enemyAction === 'fire' ? 'Fired' : 'Defended'}</span>
-          </p>
-        )}
-        {resolving && (
-          <p className="font-karla text-center" style={{ fontSize: '0.6rem', color: '#4a4845' }}>Resolving...</p>
-        )}
-      </div>
+      <div style={{ flex: 1, minHeight: 0 }} />
 
       {/* Action buttons — 2×2 grid */}
       <div style={{ flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
