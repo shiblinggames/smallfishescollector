@@ -406,7 +406,7 @@ export async function claimDailyBait(userId: string): Promise<void> {
 
   if (profile?.bait_last_topup === todayStr) return
 
-  const DAILY_WORMS = 10
+  const DAILY_WORMS = 20
 
   const { data: existing } = await admin
     .from('bait_inventory')
