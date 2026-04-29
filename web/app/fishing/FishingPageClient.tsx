@@ -18,7 +18,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
-  holdCapacity, ownedRods, allFishSpecies, caughtFishIds,
+  holdCapacity, shipTier, ownedRods, allFishSpecies, caughtFishIds,
 }: {
   hookTier: number
   rodTier: number
@@ -30,6 +30,7 @@ export default function FishingPageClient({
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
   holdCapacity: number
+  shipTier: number
   ownedRods: number[]
   allFishSpecies: FishSpeciesBasic[]
   caughtFishIds: number[]
@@ -52,6 +53,7 @@ export default function FishingPageClient({
       initialInventory={initialInventory}
       uniqueSpeciesCaught={uniqueSpeciesCaught}
       holdCapacity={holdCapacity}
+      shipTier={shipTier}
       ownedRods={ownedRods}
       allFishSpecies={allFishSpecies}
       initialCaughtFishIds={caughtFishIds}

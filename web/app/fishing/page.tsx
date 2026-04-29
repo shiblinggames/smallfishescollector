@@ -76,6 +76,7 @@ export default async function FishingPage() {
             }
           }[]}
           holdCapacity={holdCapacity}
+          shipTier={profile?.ship_tier ?? 0}
           uniqueSpeciesCaught={uniqueSpeciesCaught ?? 0}
           ownedRods={ownedRods}
           allFishSpecies={(allSpecies ?? []) as { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }[]}

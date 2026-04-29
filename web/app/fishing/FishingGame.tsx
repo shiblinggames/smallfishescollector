@@ -12,6 +12,7 @@ import { getRod, RODS, type RodDef } from '@/lib/rods'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS, getBait } from '@/lib/bait'
+import GearScreen from './GearScreen'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -960,7 +961,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 export default function FishingGame({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialInventory,
-  holdCapacity,
+  holdCapacity, shipTier,
   ownedRods: initialOwnedRods,
   allFishSpecies, initialCaughtFishIds,
   selectedZone: initialZone, onBack,
@@ -975,6 +976,7 @@ export default function FishingGame({
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
   holdCapacity: number
+  shipTier: number
   ownedRods: number[]
   allFishSpecies: FishSpeciesBasic[]
   initialCaughtFishIds: number[]
@@ -2202,7 +2204,7 @@ export default function FishingGame({
               <button onClick={() => setGearOpen(false)}
                 style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
             </div>
-            <UnifiedGearDrawer
+            <GearScreen
               baitInventory={baitInventory}
               selectedBait={selectedBait}
               onSelectBait={setSelectedBait}
@@ -2212,6 +2214,7 @@ export default function FishingGame({
               reelTier={reelTier}
               hookTier={hookTier}
               lineTier={lineTier}
+              shipTier={shipTier}
               onClose={() => setGearOpen(false)}
             />
           </motion.div>
