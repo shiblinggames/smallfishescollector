@@ -50,7 +50,9 @@ export interface CombatRoundLog {
   playerDamageDealt: number
   playerDamageTaken: number
   playerDodged: boolean
+  enemyDodged: boolean
   critHit: boolean
+  enemyCrit: boolean
   enemyHpAfter: number
   playerDurabilityAfter: number
 }
@@ -142,7 +144,11 @@ export interface EnemyDef {
   id: string
   name: string
   maxHp: number
-  damage: number
+  damage: number  // max damage per shot (min is always 1)
+  dodge: number   // same scale as crew dodge: dodge*5 = dodge%
+  armor: number   // flat damage reduction on incoming player shots
+  fortune: number // fortune*4 = crit%
+  speed: number   // same scale as ship speed
   goldReward: number
   pattern: CombatAction[]
 }
@@ -153,6 +159,10 @@ export const ENEMIES: Record<string, EnemyDef> = {
     name: 'Reef Raider',
     maxHp: 20,
     damage: 6,
+    dodge: 0,
+    armor: 0,
+    fortune: 0,
+    speed: 3,
     goldReward: 25,
     pattern: ['reload', 'fire', 'reload', 'fire'],
   },
@@ -161,6 +171,10 @@ export const ENEMIES: Record<string, EnemyDef> = {
     name: "Crow's Nest Marksman",
     maxHp: 25,
     damage: 14,
+    dodge: 2,
+    armor: 0,
+    fortune: 3,
+    speed: 2,
     goldReward: 30,
     pattern: ['reload', 'reload', 'reload', 'fire'],
   },
@@ -169,6 +183,10 @@ export const ENEMIES: Record<string, EnemyDef> = {
     name: 'Barnacle Pete',
     maxHp: 50,
     damage: 10,
+    dodge: 1,
+    armor: 3,
+    fortune: 2,
+    speed: 4,
     goldReward: 60,
     pattern: ['reload', 'fire', 'reload', 'fire', 'reload', 'reload', 'fire'],
   },
@@ -177,7 +195,6 @@ export const ENEMIES: Record<string, EnemyDef> = {
 // ── Combat resolution ─────────────────────────────────────────────────────────
 
 export const FIRE_MULTIPLIERS: Record<number, number> = { 0: 0, 1: 1, 2: 2.5, 3: 5 }
-const ENEMY_BASE_SPEED = 3
 
 export interface RoundResolution {
   newState: CombatState
@@ -221,9 +238,10 @@ export function resolveRound(
   if (enemyAction === 'reload') newEnemyCharges = Math.min(state.enemyCharges + 1, 3)
   else if (enemyCanFire)        newEnemyCharges = 0
 
-  // Compute player shot damage — roll between crewCount (min) and effectivePower*mult (max)
+  // Player shot damage — roll between crewCount (min) and effectivePower*mult (max)
   let playerDamageDealt = 0
   let critHit = false
+  let enemyDodged = false
   if (playerCanFire) {
     const mult = FIRE_MULTIPLIERS[state.playerCharges] ?? 1
     const maxDmg = Math.max(1, Math.floor(effectivePower * mult))
@@ -231,15 +249,27 @@ export function resolveRound(
     const base = minDmg >= maxDmg ? maxDmg : Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg
     const critChance = Math.min(crew.fortune * 4, 60)
     critHit = Math.random() * 100 < critChance
-    playerDamageDealt = critHit ? Math.floor(base * 2) : base
+    const raw = critHit ? Math.floor(base * 2) : base
+    // Enemy dodge
+    const enemyDodgeChance = Math.min(enemy.dodge * 5, 70)
+    enemyDodged = Math.random() * 100 < enemyDodgeChance
+    playerDamageDealt = enemyDodged ? 0 : Math.max(0, raw - enemy.armor)
+    if (enemyDodged) critHit = false
   }
 
-  // Compute enemy shot damage (before armor/dodge)
-  const enemyShotDamage = enemyCanFire ? enemy.damage : 0
+  // Enemy shot damage — roll 1 to enemy.damage, possible crit
+  let enemyShotDamage = 0
+  let enemyCrit = false
+  if (enemyCanFire) {
+    const base = Math.floor(Math.random() * enemy.damage) + 1
+    const enemyCritChance = Math.min(enemy.fortune * 4, 60)
+    enemyCrit = Math.random() * 100 < enemyCritChance
+    enemyShotDamage = enemyCrit ? Math.floor(base * 2) : base
+  }
 
-  // Speed roll (only matters if both fire)
+  // Speed roll
   const playerSpeedRoll = Math.floor(Math.random() * 20) + 1 + ship.speed
-  const enemySpeedRoll  = Math.floor(Math.random() * 20) + 1 + ENEMY_BASE_SPEED
+  const enemySpeedRoll  = Math.floor(Math.random() * 20) + 1 + enemy.speed
   const playerFirst = playerSpeedRoll >= enemySpeedRoll
 
   // Resolve in order
@@ -257,7 +287,6 @@ export function resolveRound(
     if (playerAction === 'defend') {
       const dodgeChance = Math.min(crew.dodge * 5, 70)
       if (Math.random() * 100 < dodgeChance) { playerDodged = true; return }
-      // Defending: 50% bonus reduction on top of armor
       const reduced = Math.floor(enemyShotDamage * 0.5)
       playerDamageTaken = Math.max(1, reduced - effectiveArmor)
     } else {
@@ -289,7 +318,9 @@ export function resolveRound(
     playerDamageDealt,
     playerDamageTaken,
     playerDodged,
+    enemyDodged,
     critHit,
+    enemyCrit,
     enemyHpAfter,
     playerDurabilityAfter: newDurability,
   }

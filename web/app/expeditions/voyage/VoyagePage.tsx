@@ -449,7 +449,12 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={ship.image} alt={ship.name} style={{ width: '100%', height: 88, objectFit: 'contain', objectPosition: 'bottom', display: 'block' }} />
             {showResult && log && log.playerDamageTaken > 0 && (
-              <Hitsplat text={`-${log.playerDamageTaken}`} color="#f87171" animKey={log.round} />
+              <Hitsplat
+                text={log.enemyCrit ? `⚡ ${log.playerDamageTaken}` : `-${log.playerDamageTaken}`}
+                color={log.enemyCrit ? '#f0c040' : '#f87171'}
+                big={!!log.enemyCrit}
+                animKey={log.round}
+              />
             )}
             {showResult && log && log.playerDodged && (
               <Hitsplat text="DODGED!" color="#4ade80" animKey={log.round} />
@@ -510,7 +515,10 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
           <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: enemyColor, opacity: 0.8 }}>{isBoss ? 'Boss' : 'Enemy'}</p>
           <div style={{ position: 'relative', height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: enemyHitAnim }}>
             <span style={{ fontSize: '3.5rem', lineHeight: 1 }}>{ENEMY_AVATAR[cs.enemyId] ?? '☠'}</span>
-            {showResult && log && log.playerDamageDealt > 0 && (
+            {showResult && log && log.enemyDodged && (
+              <Hitsplat text="DODGED!" color="#4ade80" animKey={log.round} />
+            )}
+            {showResult && log && !log.enemyDodged && log.playerDamageDealt > 0 && (
               <Hitsplat
                 text={log.critHit ? `⚡ ${log.playerDamageDealt}` : `-${log.playerDamageDealt}`}
                 color={log.critHit ? '#f0c040' : '#f87171'}
@@ -536,30 +544,13 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
               <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i < cs.enemyCharges ? enemyColor : 'rgba(255,255,255,0.1)' }} />
             ))}
           </div>
-          {/* Enemy stats */}
+          {/* Enemy stats — mirrors player panel */}
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.3rem', marginTop: '0.05rem', display: 'flex', flexDirection: 'column' }}>
-            <StatRow label="MAX HP" value={enemy.maxHp} color={enemyColor} />
-            <StatRow label="DMG" value={enemy.damage} color="#f87171" />
-            <StatRow label="GOLD" value={`${enemy.goldReward} ✦`} color="#f0c040" />
-            {/* Attack pattern */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.22rem 0' }}>
-              <p className="font-karla font-600 uppercase tracking-[0.06em]" style={{ fontSize: '0.44rem', color: '#4a4845' }}>Pattern</p>
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                {enemy.pattern.map((action, i) => {
-                  const isCurrent = i === cs.enemyPatternIndex % enemy.pattern.length
-                  const col = action === 'fire' ? '#f87171' : action === 'defend' ? '#4ade80' : '#60a5fa'
-                  return (
-                    <div key={i} title={action} style={{
-                      width: isCurrent ? 10 : 8, height: isCurrent ? 10 : 8,
-                      borderRadius: '50%', background: col,
-                      opacity: isCurrent ? 1 : 0.3,
-                      border: isCurrent ? `1px solid rgba(255,255,255,0.5)` : 'none',
-                      transition: 'all 0.3s',
-                    }} />
-                  )
-                })}
-              </div>
-            </div>
+            <StatRow label="DMG" value={`1–${enemy.damage}`} color="#f87171" />
+            <StatRow label="DGE" value={`${Math.min(enemy.dodge * 5, 70)}%`} color="#60a5fa" />
+            <StatRow label="FTN" value={enemy.fortune} color="#f0c040" />
+            <StatRow label="ARM" value={enemy.armor} color="#4ade80" />
+            <StatRow label="SPD" value={enemy.speed} color="#a78bfa" />
           </div>
         </div>
       </div>
