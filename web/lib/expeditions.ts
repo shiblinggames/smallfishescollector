@@ -7,6 +7,7 @@ export type NodeType = 'fight' | 'event' | 'shop' | 'boss'
 
 export interface ShipStats {
   name: string
+  image: string
   durability: number
   speed: number
   armor: number
@@ -98,10 +99,10 @@ export interface Expedition {
 // ── Ship stats ────────────────────────────────────────────────────────────────
 
 export const EXPEDITION_SHIP_STATS: Record<number, ShipStats> = {
-  0: { name: 'Rowboat',    durability: 20, speed: 2,  armor: 1, crewSlots: 1 },
-  1: { name: 'Sloop',      durability: 35, speed: 4,  armor: 2, crewSlots: 2 },
-  2: { name: 'Brigantine', durability: 55, speed: 6,  armor: 4, crewSlots: 3 },
-  3: { name: 'Galleon',    durability: 80, speed: 9,  armor: 6, crewSlots: 4 },
+  0: { name: 'Rowboat',    image: '/models/rowboat.png',    durability: 20, speed: 2,  armor: 1, crewSlots: 1 },
+  1: { name: 'Sloop',      image: '/models/sloop.png',      durability: 35, speed: 4,  armor: 2, crewSlots: 2 },
+  2: { name: 'Brigantine', image: '/models/brigantine.png', durability: 55, speed: 6,  armor: 4, crewSlots: 3 },
+  3: { name: 'Galleon',    image: '/models/galleon.png',    durability: 80, speed: 9,  armor: 6, crewSlots: 4 },
 }
 
 // ── Crew stats ────────────────────────────────────────────────────────────────

@@ -353,7 +353,8 @@ function CombatView({ enemy, cs, phase, crew, ship, runBuffs, isBoss, isPending,
           {/* Player panel */}
           <div style={{ flex: 1, background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.18)', borderRadius: 12, padding: '0.75rem 0.625rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
             <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: '#4a6a8a' }}>Your Ship</p>
-            <div style={{ fontSize: '2.2rem', lineHeight: 1, padding: '0.25rem 0' }}>⚓</div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={ship.image} alt={ship.name} style={{ width: 56, height: 56, objectFit: 'contain', objectPosition: 'bottom' }} />
             <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.65rem', color: '#f0ede8', lineHeight: 1.2 }}>{ship.name}</p>
             {/* HP bar */}
             <div style={{ width: '100%' }}>
