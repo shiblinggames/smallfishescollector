@@ -52,6 +52,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
   })
   const [pickerSlot, setPickerSlot] = useState<number | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [showBreakdown, setShowBreakdown] = useState(false)
   const [, startTransition] = useTransition()
 
   const assignedVariantIds = new Set(slots.filter(Boolean).map(c => c!.variantId))
@@ -160,11 +161,6 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
                 {card ? (
                   <>
                     <div style={{ position: 'relative', width: 76 }}>
-                      {isCaptain && (
-                        <div style={{ position: 'absolute', top: -8, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 1 }}>
-                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.36rem', color: '#f0c040', background: 'rgba(240,192,64,0.15)', border: '1px solid rgba(240,192,64,0.3)', borderRadius: 3, padding: '0.08rem 0.3rem' }}>Captain</span>
-                        </div>
-                      )}
                       {/* Image window */}
                       <div
                         onClick={() => openPickerForSlot(i)}
@@ -184,6 +180,11 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
                           style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
                         />
                       </div>
+                      {isCaptain && (
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 1 }}>
+                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.36rem', color: '#f0c040', background: 'rgba(10,8,4,0.82)', borderTop: '1px solid rgba(240,192,64,0.35)', padding: '0.15rem 0.5rem', borderRadius: '0 0 8px 8px', display: 'block', width: '100%', textAlign: 'center' }}>Captain</span>
+                        </div>
+                      )}
                     </div>
                     <p className="font-karla font-600 text-center truncate" style={{ fontSize: '0.55rem', color: isCaptain ? '#d4b870' : '#c0bdb8', lineHeight: 1.2, width: '100%' }}>{card.name}</p>
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
@@ -224,15 +225,64 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
 
         {/* Crew totals */}
         {slots.some(Boolean) && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '1.75rem', marginTop: '0.875rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-            {STAT_COLS.map(s => (
-              <div key={s.key} style={{ textAlign: 'center' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: s.color, lineHeight: 1 }}>
-                  {s.key === 'power' ? totalPower : s.key === 'dodge' ? totalDodge : totalFortune}
-                </p>
-                <p className="font-karla font-600 uppercase" style={{ fontSize: '0.4rem', color: '#6a6764', marginTop: 3, letterSpacing: '0.06em' }}>Total {s.label}</p>
+          <div style={{ marginTop: '0.875rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <button
+              onClick={() => setShowBreakdown(b => !b)}
+              style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '1.75rem' }}>
+                {STAT_COLS.map(s => (
+                  <div key={s.key} style={{ textAlign: 'center' }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: s.color, lineHeight: 1 }}>
+                      {s.key === 'power' ? totalPower : s.key === 'dodge' ? totalDodge : totalFortune}
+                    </p>
+                    <p className="font-karla font-600 uppercase" style={{ fontSize: '0.4rem', color: '#6a6764', marginTop: 3, letterSpacing: '0.06em' }}>Total {s.label}</p>
+                  </div>
+                ))}
               </div>
-            ))}
+              <p className="font-karla" style={{ fontSize: '0.4rem', color: '#4a4845', marginTop: '0.5rem', textAlign: 'center' }}>
+                {showBreakdown ? '▲ hide breakdown' : '▼ how is this calculated?'}
+              </p>
+            </button>
+
+            {showBreakdown && (
+              <div style={{ marginTop: '0.625rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                {/* Header row */}
+                <div style={{ display: 'flex', alignItems: 'center', paddingBottom: '0.3rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p className="font-karla font-600 uppercase tracking-[0.06em]" style={{ fontSize: '0.38rem', color: '#4a4845', flex: 1 }}>Crew</p>
+                  {STAT_COLS.map(s => (
+                    <p key={s.key} className="font-karla font-600 uppercase" style={{ fontSize: '0.38rem', color: s.color, width: 28, textAlign: 'right' }}>{s.label}</p>
+                  ))}
+                </div>
+                {slots.map((card, i) => {
+                  if (!card) return null
+                  const isCaptain = i === 0
+                  const mult = isCaptain ? 1 : 0.8
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0 }}>
+                        <p className="font-karla font-600 truncate" style={{ fontSize: '0.5rem', color: isCaptain ? '#d4b870' : '#8a8784' }}>{card.name}</p>
+                        <span className="font-karla" style={{ fontSize: '0.38rem', color: isCaptain ? 'rgba(240,192,64,0.6)' : '#4a4845', flexShrink: 0 }}>{isCaptain ? '×1.0' : '×0.8'}</span>
+                      </div>
+                      {STAT_COLS.map(s => (
+                        <p key={s.key} className="font-cinzel font-700" style={{ fontSize: '0.5rem', color: s.color, width: 28, textAlign: 'right' }}>
+                          {Math.floor(card[s.key] * mult)}
+                        </p>
+                      ))}
+                    </div>
+                  )
+                })}
+                {/* Total row */}
+                <div style={{ display: 'flex', alignItems: 'center', paddingTop: '0.3rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.38rem', color: '#6a6764', flex: 1 }}>Total</p>
+                  {STAT_COLS.map(s => (
+                    <p key={s.key} className="font-cinzel font-700" style={{ fontSize: '0.5rem', color: s.color, width: 28, textAlign: 'right' }}>
+                      {s.key === 'power' ? totalPower : s.key === 'dodge' ? totalDodge : totalFortune}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
