@@ -5,10 +5,65 @@ import Nav from '@/components/Nav'
 import Link from 'next/link'
 import {
   ZONES, EXPEDITION_SHIP_STATS, ENEMIES,
-  type Expedition,
+  type Expedition, type ZoneLoot,
 } from '@/lib/expeditions'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
+
+async function claimRewardInline(
+  admin: ReturnType<typeof import('@/lib/supabase/admin').createAdminClient>,
+  expedition: Expedition,
+  userId: string,
+): Promise<ZoneLoot> {
+  const zone = ZONES[expedition.zone]
+  const variance = 0.8 + Math.random() * 0.4
+  const doubloons = Math.floor(zone.baseDoubloons * variance)
+
+  let itemDropped: string | null = null
+  if (zone.itemDropPool.length > 0 && Math.random() < zone.itemDropChance) {
+    const pool = zone.itemDropPool
+    itemDropped = pool[Math.floor(Math.random() * pool.length)]
+
+    const { data: existingItem } = await admin
+      .from('expedition_items')
+      .select('id, quantity')
+      .eq('user_id', userId)
+      .eq('item_id', itemDropped)
+      .maybeSingle()
+
+    if (existingItem) {
+      await admin.from('expedition_items').update({ quantity: existingItem.quantity + 1 }).eq('id', existingItem.id)
+    } else {
+      await admin.from('expedition_items').insert({ user_id: userId, item_id: itemDropped, quantity: 1 })
+    }
+  }
+
+  const loot: ZoneLoot = { doubloons, itemDropped }
+
+  // Mark completed atomically — only if still active (prevents double-claim)
+  const { data: claimed } = await admin
+    .from('expeditions')
+    .update({ status: 'completed', loot, completed_at: new Date().toISOString() })
+    .eq('id', expedition.id)
+    .eq('status', 'active')
+    .select('id')
+    .single()
+
+  if (claimed) {
+    const { data: profileData } = await admin.from('profiles').select('doubloons').eq('id', userId).single()
+    const newDoubloons = (profileData?.doubloons ?? 0) + doubloons
+    await Promise.all([
+      admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', userId),
+      admin.from('doubloon_transactions').insert({
+        user_id: userId,
+        amount: doubloons,
+        reason: `Expedition reward: ${zone.name}`,
+      }),
+    ])
+  }
+
+  return loot
+}
 
 export default async function ExpeditionsResultsPage({
   searchParams,
@@ -31,11 +86,20 @@ export default async function ExpeditionsResultsPage({
   ])
 
   if (!expeditionRow) redirect('/expeditions')
-  const expedition = expeditionRow as Expedition
-
-  if (expedition.status === 'active') redirect(`/expeditions/voyage?id=${expeditionId}`)
+  let expedition = expeditionRow as Expedition
 
   const zoneConfig = ZONES[expedition.zone]
+
+  if (expedition.status === 'active') {
+    if (expedition.current_node >= zoneConfig.nodes.length) {
+      // Zone complete but reward not yet claimed — claim it now server-side
+      const loot = await claimRewardInline(admin, expedition, user.id)
+      expedition = { ...expedition, status: 'completed', loot }
+    } else {
+      redirect(`/expeditions/voyage?id=${expeditionId}`)
+    }
+  }
+
   const ship = EXPEDITION_SHIP_STATS[expedition.ship_tier] ?? EXPEDITION_SHIP_STATS[0]
   const runBuffs = expedition.run_buffs ?? []
   const durabilityBuff = runBuffs.filter(b => b.effect === 'durability').reduce((s, b) => s + b.value, 0)
@@ -137,7 +201,6 @@ export default async function ExpeditionsResultsPage({
                 Voyage Log
               </p>
               {events.map((result, i) => {
-                const win = result.outcome === 'win'
                 const enemyId = (result.details as Record<string, unknown>)?.enemyId as string | undefined
                 const enemy = enemyId ? ENEMIES[enemyId] : null
                 return (

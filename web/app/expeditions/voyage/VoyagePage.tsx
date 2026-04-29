@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  takeCombatAction, makeEventChoice, buyShopItem, leaveShop, claimZoneReward,
+  takeCombatAction, makeEventChoice, buyShopItem, leaveShop,
   type CombatActionResult, type EventChoiceResult,
 } from '../actions'
 import {
@@ -173,13 +173,8 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
   }
 
   function handleClaimLoot() {
-    setPhase({ type: 'claiming_loot' })
-    startTransition(async () => {
-      const loot = await claimZoneReward(exp.id)
-      if ('error' in loot) { setPhase({ type: 'zone_complete' }); return }
-      window.dispatchEvent(new CustomEvent('doubloons-changed'))
-      router.push(`/expeditions/results?id=${exp.id}`)
-    })
+    // Navigate hard — results page claims the reward server-side on load
+    window.location.href = `/expeditions/results?id=${exp.id}`
   }
 
   return (
