@@ -1,15 +1,15 @@
-export type Stat = 'combat' | 'navigation' | 'durability' | 'speed' | 'luck'
+// ── Types ─────────────────────────────────────────────────────────────────────
+
 export type ZoneKey = 'coral_run' | 'bertuna_triangle' | 'sunken_reach' | 'davy_jones_locker'
 export type ExpeditionStatus = 'active' | 'completed' | 'failed'
-export type DifficultyTier = 'easy' | 'standard' | 'crisis'
+export type CombatAction = 'reload' | 'fire' | 'defend'
+export type NodeType = 'fight' | 'event' | 'shop' | 'boss'
 
-export interface ExpeditionShipStats {
+export interface ShipStats {
   name: string
-  combat: number
-  navigation: number
   durability: number
   speed: number
-  luck: number
+  armor: number
   crewSlots: number
 }
 
@@ -20,74 +20,59 @@ export interface CrewCard {
   name: string
   slug: string
   filename: string
-  fishTier: 1 | 2 | 3
   rarity: string
   power: number
+  dodge: number
+  fortune: number
 }
 
-export type CrewLoadout = Record<Stat, CrewCard[]>
-
-export interface EventMechanics {
-  stat: Stat | null
-  difficultyTier: DifficultyTier
-  threshold?: number
+export interface TotalCrewStats {
+  power: number
+  dodge: number
+  fortune: number
 }
 
-export interface EventChoice {
-  label: string
-  successText: string
-  failText: string
-  isNoRoll?: boolean
-  cost?: number
+export interface RunBuff {
+  source: string
+  effect: 'power' | 'dodge' | 'fortune' | 'armor' | 'durability'
+  value: number
 }
 
-export interface EventNode {
+export interface CombatRoundLog {
+  round: number
+  playerAction: CombatAction
+  playerChargesBefore: number
+  enemyAction: CombatAction
+  enemyChargesBefore: number
+  playerFirst: boolean
+  playerDamageDealt: number
+  playerDamageTaken: number
+  playerDodged: boolean
+  critHit: boolean
+  enemyHpAfter: number
+  playerDurabilityAfter: number
+}
+
+export interface CombatState {
+  enemyId: string
+  enemyHp: number
+  enemyCharges: number
+  enemyPatternIndex: number
+  playerCharges: number
+  round: number
+  log: CombatRoundLog[]
+}
+
+export interface NodeResult {
   nodeIndex: number
-  eventType: string
-  name: string
-  flavor: string
-  isCrisis: boolean
-  isPenalty?: boolean
-  mechanics: EventMechanics
-  choices: EventChoice[]
+  type: NodeType
+  outcome: 'win' | 'lose' | 'skipped' | 'event' | 'shop'
+  details?: Record<string, unknown>
 }
 
-export interface EventResult {
-  nodeIndex: number
-  eventType: string
-  choiceIndex: number
-  outcome: 'success' | 'fail'
-  text: string
-  noRoll?: boolean
-  stat?: Stat | null
-  roll?: number
-  crewRoll?: number
-  base?: number
-  crewBonus?: number
-  total?: number
-  threshold?: number
-  hullDamage?: number
-  lootPenalty?: number
-  costPenalty?: number
-  expeditionFailed?: boolean
-  failReason?: string
-  skipNextNode?: boolean
-  penaltyEventIndex?: number
-  lootBonus?: number
-  hullRepair?: number
-  doubloonBonus?: number
-}
-
-export interface LootResult {
+export interface ZoneLoot {
   doubloons: number
-  lootRarity: string
-  roll: number
-  crewRoll: number
-  total: number
-  base: number
-  crewBonus: number
-  finalScore: number
-  successBonus: number
+  itemDropped: string | null
 }
 
 export interface Expedition {
@@ -97,20 +82,345 @@ export interface Expedition {
   ship_tier: number
   status: ExpeditionStatus
   current_node: number
-  events: EventResult[]
-  crew_loadout: CrewLoadout
-  loot: LootResult | null
+  crew_loadout: CrewCard[]
+  events: NodeResult[]
   hull_damage: number
+  combat_state: CombatState | null
+  equipped_item: string | null
+  run_buffs: RunBuff[]
+  loot: ZoneLoot | null
   expedition_date: string
   started_at: string
   completed_at: string | null
 }
 
-export interface DailyExpeditionRow {
-  id: number
-  expedition_date: string
-  zone: ZoneKey
-  event_sequence: EventNode[]
+// ── Ship stats ────────────────────────────────────────────────────────────────
+
+export const EXPEDITION_SHIP_STATS: Record<number, ShipStats> = {
+  0: { name: 'Rowboat',    durability: 20, speed: 2,  armor: 1, crewSlots: 1 },
+  1: { name: 'Sloop',      durability: 35, speed: 4,  armor: 2, crewSlots: 2 },
+  2: { name: 'Brigantine', durability: 55, speed: 6,  armor: 4, crewSlots: 3 },
+  3: { name: 'Galleon',    durability: 80, speed: 9,  armor: 6, crewSlots: 4 },
+}
+
+// ── Crew stats ────────────────────────────────────────────────────────────────
+
+const CREW_BASE_STATS: Record<string, { power: number; dodge: number; fortune: number }> = {
+  common:    { power: 2, dodge: 2, fortune: 1 },
+  uncommon:  { power: 3, dodge: 2, fortune: 2 },
+  rare:      { power: 4, dodge: 3, fortune: 2 },
+  epic:      { power: 5, dodge: 4, fortune: 3 },
+  legendary: { power: 7, dodge: 5, fortune: 5 },
+  mythic:    { power: 10, dodge: 7, fortune: 7 },
+}
+
+export function getCrewStats(rarity: string): { power: number; dodge: number; fortune: number } {
+  return CREW_BASE_STATS[rarity.toLowerCase()] ?? CREW_BASE_STATS.common
+}
+
+export function computeTotalCrewStats(crew: CrewCard[]): TotalCrewStats {
+  return crew.reduce(
+    (totals, card) => ({
+      power:   totals.power   + card.power,
+      dodge:   totals.dodge   + card.dodge,
+      fortune: totals.fortune + card.fortune,
+    }),
+    { power: 0, dodge: 0, fortune: 0 },
+  )
+}
+
+// ── Enemies ───────────────────────────────────────────────────────────────────
+
+export interface EnemyDef {
+  id: string
+  name: string
+  maxHp: number
+  damage: number
+  pattern: CombatAction[]
+}
+
+export const ENEMIES: Record<string, EnemyDef> = {
+  brute: {
+    id: 'brute',
+    name: 'Reef Raider',
+    maxHp: 20,
+    damage: 6,
+    pattern: ['reload', 'fire', 'reload', 'fire'],
+  },
+  sniper: {
+    id: 'sniper',
+    name: "Crow's Nest Marksman",
+    maxHp: 25,
+    damage: 14,
+    pattern: ['reload', 'reload', 'reload', 'fire'],
+  },
+  barnacle_pete: {
+    id: 'barnacle_pete',
+    name: 'Barnacle Pete',
+    maxHp: 50,
+    damage: 10,
+    pattern: ['reload', 'fire', 'reload', 'fire', 'reload', 'reload', 'fire'],
+  },
+}
+
+// ── Combat resolution ─────────────────────────────────────────────────────────
+
+export const FIRE_MULTIPLIERS: Record<number, number> = { 0: 0, 1: 1, 2: 2.5, 3: 5 }
+const ENEMY_BASE_SPEED = 3
+
+export interface RoundResolution {
+  newState: CombatState
+  newDurability: number
+  roundLog: CombatRoundLog
+  combatOver: boolean
+  playerWon: boolean
+}
+
+export function resolveRound(
+  state: CombatState,
+  playerAction: CombatAction,
+  crew: TotalCrewStats,
+  ship: ShipStats,
+  currentDurability: number,
+  runBuffs: RunBuff[],
+): RoundResolution {
+  const enemy = ENEMIES[state.enemyId]
+  const rawEnemyAction = enemy.pattern[state.enemyPatternIndex % enemy.pattern.length]
+
+  // Buffed stats
+  const buffPower   = runBuffs.filter(b => b.effect === 'power').reduce((s, b) => s + b.value, 0)
+  const buffArmor   = runBuffs.filter(b => b.effect === 'armor').reduce((s, b) => s + b.value, 0)
+  const effectivePower  = crew.power   + buffPower
+  const effectiveArmor  = ship.armor   + buffArmor
+
+  // Can fire?
+  const playerCanFire = playerAction === 'fire' && state.playerCharges > 0
+  const enemyCanFire  = rawEnemyAction === 'fire' && state.enemyCharges > 0
+  // Enemy falls back to reload if it tries to fire with no charges
+  const enemyAction: CombatAction = rawEnemyAction === 'fire' && !enemyCanFire ? 'reload' : rawEnemyAction
+
+  // New charge counts
+  let newPlayerCharges = state.playerCharges
+  if (playerAction === 'reload') newPlayerCharges = Math.min(state.playerCharges + 1, 3)
+  else if (playerCanFire)        newPlayerCharges = 0
+  // defend: unchanged; attempted fire with 0 charges acts as reload
+  else if (playerAction === 'fire') newPlayerCharges = Math.min(state.playerCharges + 1, 3)
+
+  let newEnemyCharges = state.enemyCharges
+  if (enemyAction === 'reload') newEnemyCharges = Math.min(state.enemyCharges + 1, 3)
+  else if (enemyCanFire)        newEnemyCharges = 0
+
+  // Compute player shot damage
+  let playerDamageDealt = 0
+  let critHit = false
+  if (playerCanFire) {
+    const mult = FIRE_MULTIPLIERS[state.playerCharges] ?? 1
+    const base = Math.max(1, Math.floor(effectivePower * mult))
+    const critChance = Math.min(crew.fortune * 4, 60)
+    critHit = Math.random() * 100 < critChance
+    playerDamageDealt = critHit ? Math.floor(base * 2) : base
+  }
+
+  // Compute enemy shot damage (before armor/dodge)
+  const enemyShotDamage = enemyCanFire ? enemy.damage : 0
+
+  // Speed roll (only matters if both fire)
+  const playerSpeedRoll = Math.floor(Math.random() * 20) + 1 + ship.speed
+  const enemySpeedRoll  = Math.floor(Math.random() * 20) + 1 + ENEMY_BASE_SPEED
+  const playerFirst = playerSpeedRoll >= enemySpeedRoll
+
+  // Resolve in order
+  let enemyHpAfter = state.enemyHp
+  let newDurability = currentDurability
+  let playerDamageTaken = 0
+  let playerDodged = false
+
+  function applyPlayerShot() {
+    enemyHpAfter = Math.max(0, enemyHpAfter - playerDamageDealt)
+  }
+
+  function applyEnemyShot() {
+    if (!enemyCanFire) return
+    if (playerAction === 'defend') {
+      const dodgeChance = Math.min(crew.dodge * 5, 70)
+      if (Math.random() * 100 < dodgeChance) { playerDodged = true; return }
+      // Defending: 50% bonus reduction on top of armor
+      const reduced = Math.floor(enemyShotDamage * 0.5)
+      playerDamageTaken = Math.max(1, reduced - effectiveArmor)
+    } else {
+      playerDamageTaken = Math.max(1, enemyShotDamage - effectiveArmor)
+    }
+    newDurability = Math.max(0, newDurability - playerDamageTaken)
+  }
+
+  if (playerCanFire && enemyCanFire) {
+    if (playerFirst) {
+      applyPlayerShot()
+      if (enemyHpAfter > 0) applyEnemyShot()
+    } else {
+      applyEnemyShot()
+      if (newDurability > 0) applyPlayerShot()
+    }
+  } else {
+    applyPlayerShot()
+    applyEnemyShot()
+  }
+
+  const roundLog: CombatRoundLog = {
+    round: state.round,
+    playerAction: playerCanFire ? 'fire' : (playerAction === 'fire' ? 'reload' : playerAction),
+    playerChargesBefore: state.playerCharges,
+    enemyAction,
+    enemyChargesBefore: state.enemyCharges,
+    playerFirst: playerCanFire && enemyCanFire ? playerFirst : true,
+    playerDamageDealt,
+    playerDamageTaken,
+    playerDodged,
+    critHit,
+    enemyHpAfter,
+    playerDurabilityAfter: newDurability,
+  }
+
+  const newState: CombatState = {
+    ...state,
+    enemyHp: enemyHpAfter,
+    enemyCharges: newEnemyCharges,
+    enemyPatternIndex: state.enemyPatternIndex + 1,
+    playerCharges: newPlayerCharges,
+    round: state.round + 1,
+    log: [...state.log, roundLog],
+  }
+
+  return {
+    newState,
+    newDurability,
+    roundLog,
+    combatOver: enemyHpAfter <= 0 || newDurability <= 0,
+    playerWon: enemyHpAfter <= 0,
+  }
+}
+
+export function initCombatState(enemyId: string, equippedItem: string | null): CombatState {
+  const startCharges = equippedItem === 'powder_keg' ? 1 : 0
+  return {
+    enemyId,
+    enemyHp: ENEMIES[enemyId].maxHp,
+    enemyCharges: 0,
+    enemyPatternIndex: 0,
+    playerCharges: startCharges,
+    round: 0,
+    log: [],
+  }
+}
+
+// ── Zone events ───────────────────────────────────────────────────────────────
+
+export type EventEffectType = 'heal' | 'damage' | 'doubloons' | 'buff' | 'nothing'
+
+export interface EventEffect {
+  type: EventEffectType
+  value?: number
+  buff?: RunBuff
+}
+
+export interface EventChoice {
+  label: string
+  effect: EventEffect
+}
+
+export interface EventNodeDef {
+  id: string
+  name: string
+  flavor: string
+  choices: EventChoice[]
+}
+
+export const CORAL_RUN_EVENTS: EventNodeDef[] = [
+  {
+    id: 'calm_waters',
+    name: 'Calm Waters',
+    flavor: 'The reef stretches ahead in glassy stillness. Your crew spots a freshwater spring on a nearby rock — a rare find in these salty shallows.',
+    choices: [
+      { label: 'Collect fresh water and patch the hull (+8 Durability)', effect: { type: 'heal', value: 8 } },
+      { label: 'Press on — no time to stop', effect: { type: 'nothing' } },
+    ],
+  },
+  {
+    id: 'squall',
+    name: 'Sudden Squall',
+    flavor: 'A short but vicious storm rises from nowhere. Waves crash over the deck and splinter a section of hull before you can brace.',
+    choices: [
+      { label: 'Brace for impact (−6 Durability)', effect: { type: 'damage', value: 6 } },
+    ],
+  },
+  {
+    id: 'abandoned_wreck',
+    name: 'Abandoned Wreck',
+    flavor: 'A half-sunken merchant sloop drifts ahead. Could be salvage. Could be a trap.',
+    choices: [
+      { label: 'Board and salvage (+20 ⟡)', effect: { type: 'doubloons', value: 20 } },
+      { label: "Leave it — something's not right", effect: { type: 'nothing' } },
+    ],
+  },
+  {
+    id: 'powder_stash',
+    name: 'Stockpiled Powder',
+    flavor: "Your bosun found a forgotten crate of gunpowder wedged in the hold. Enough to load the cannons right now.",
+    choices: [
+      { label: 'Load the cannons (+2 Power for this run)', effect: { type: 'buff', buff: { source: 'powder_stash', effect: 'power', value: 2 } } },
+      { label: 'Toss it overboard — too risky', effect: { type: 'nothing' } },
+    ],
+  },
+  {
+    id: 'fortify_hull',
+    name: 'Floating Timber',
+    flavor: 'A raft of loose timber drifts alongside you — must have fallen off a logging ship. Your carpenter eyes it greedily.',
+    choices: [
+      { label: 'Patch the hull with the timber (+10 Durability)', effect: { type: 'heal', value: 10 } },
+      { label: 'No time for carpentry', effect: { type: 'nothing' } },
+    ],
+  },
+]
+
+// ── Shop ──────────────────────────────────────────────────────────────────────
+
+export interface ShopOption {
+  id: string
+  label: string
+  description: string
+  cost: number
+  effect: EventEffect
+}
+
+export const CORAL_RUN_SHOP: ShopOption[] = [
+  {
+    id: 'repair_small',
+    label: 'Hull Repair',
+    description: 'Patch up the ship (+12 Durability)',
+    cost: 20,
+    effect: { type: 'heal', value: 12 },
+  },
+  {
+    id: 'sharpen_powder',
+    label: 'Fine-Ground Powder',
+    description: 'Better gunpowder for the rest of the run (+3 Power)',
+    cost: 30,
+    effect: { type: 'buff', buff: { source: 'fine_powder', effect: 'power', value: 3 } },
+  },
+  {
+    id: 'iron_plating',
+    label: 'Iron Plating',
+    description: 'Bolt iron sheets to the hull (+2 Armor)',
+    cost: 35,
+    effect: { type: 'buff', buff: { source: 'iron_plating', effect: 'armor', value: 2 } },
+  },
+]
+
+// ── Zone config ───────────────────────────────────────────────────────────────
+
+export interface ZoneNodeConfig {
+  type: NodeType
+  enemyPool?: string[]
 }
 
 export interface ZoneConfig {
@@ -118,40 +428,14 @@ export interface ZoneConfig {
   icon: string
   description: string
   requiredShipTier: number
-  specialCrewRequired: string[] | null
-  length: number
-  difficulty: Record<DifficultyTier, [number, number]>
-  eventTypes: string[]
-  crisisTypes: string[]
-  drops: string[]
   entryCost: number
+  baseDoubloons: number
+  nodes: ZoneNodeConfig[]
+  fightEnemyPool: string[]
+  bossId: string
+  itemDropPool: string[]
+  itemDropChance: number
 }
-
-export const EXPEDITION_SHIP_STATS: Record<number, ExpeditionShipStats> = {
-  0: { name: 'Rowboat',    combat: 3,  navigation: 3,  durability: 3,  speed: 4,  luck: 4,  crewSlots: 1  },
-  1: { name: 'Dinghy',     combat: 5,  navigation: 5,  durability: 4,  speed: 6,  luck: 5,  crewSlots: 2  },
-  2: { name: 'Sloop',      combat: 7,  navigation: 8,  durability: 6,  speed: 10, luck: 7,  crewSlots: 3  },
-  3: { name: 'Schooner',   combat: 9,  navigation: 11, durability: 8,  speed: 13, luck: 9,  crewSlots: 4  },
-  4: { name: 'Brigantine', combat: 12, navigation: 13, durability: 11, speed: 15, luck: 12, crewSlots: 5  },
-  5: { name: 'Galleon',    combat: 16, navigation: 14, durability: 15, speed: 13, luck: 14, crewSlots: 7  },
-  6: { name: 'Man-o-War',  combat: 20, navigation: 17, durability: 20, speed: 11, luck: 18, crewSlots: 10 },
-}
-
-const CREW_POWER_TABLE: Record<string, Record<number, number>> = {
-  common:    { 1: 1,  2: 2,  3: 3  },
-  uncommon:  { 1: 2,  2: 3,  3: 4  },
-  rare:      { 1: 3,  2: 4,  3: 6  },
-  epic:      { 1: 5,  2: 6,  3: 8  },
-  legendary: { 1: 7,  2: 9,  3: 11 },
-  mythic:    { 1: 10, 2: 12, 3: 15 },
-  divine:    { 1: 14, 2: 17, 3: 20 },
-}
-
-export function getCrewPower(rarity: string, fishTier: number): number {
-  return CREW_POWER_TABLE[rarity.toLowerCase()]?.[fishTier] ?? 1
-}
-
-export const HULL_POINTS: Record<number, number> = { 0: 3, 1: 4, 2: 5, 3: 6, 4: 8, 5: 10, 6: 14 }
 
 export const ZONES: Record<ZoneKey, ZoneConfig> = {
   coral_run: {
@@ -159,122 +443,127 @@ export const ZONES: Record<ZoneKey, ZoneConfig> = {
     icon: '🌊',
     description: 'Familiar coastlines and reef passages. Safe enough for new crews.',
     requiredShipTier: 0,
-    specialCrewRequired: null,
-    length: 4,
-    difficulty: { easy: [2, 3], standard: [4, 6], crisis: [7, 10] },
-    eventTypes: ['rival_pirates', 'mild_storm', 'merchant_vessel', 'stranded_ship', 'fog', 'fishing_spot', 'hidden_cove'],
-    crisisTypes: ['storm', 'sea_creature'],
-    drops: ['common', 'uncommon', 'rare'],
     entryCost: 25,
+    baseDoubloons: 80,
+    nodes: [
+      { type: 'fight' },
+      { type: 'event' },
+      { type: 'fight' },
+      { type: 'shop' },
+      { type: 'boss' },
+    ],
+    fightEnemyPool: ['brute', 'sniper'],
+    bossId: 'barnacle_pete',
+    itemDropPool: ['powder_keg', 'patched_hull', 'anchor_chain', 'bait_barrel', 'lucky_lure'],
+    itemDropChance: 0.25,
   },
   bertuna_triangle: {
     name: 'The Bertuna Triangle',
     icon: '🧭',
-    description: 'The stretch where ships go missing. Rival pirates, sea fog, cursed winds.',
+    description: 'The stretch where ships go missing.',
     requiredShipTier: 2,
-    specialCrewRequired: null,
-    length: 6,
-    difficulty: { easy: [5, 8], standard: [9, 13], crisis: [15, 20] },
-    eventTypes: ['rival_pirates', 'ghost_ship', 'whirlpool', 'storm', 'sea_creature', 'cursed_cargo', 'merchant_vessel'],
-    crisisTypes: ['ghost_ship', 'rival_pirates'],
-    drops: ['uncommon', 'rare', 'epic'],
     entryCost: 75,
+    baseDoubloons: 200,
+    nodes: [
+      { type: 'fight' },
+      { type: 'event' },
+      { type: 'fight' },
+      { type: 'fight' },
+      { type: 'shop' },
+      { type: 'boss' },
+    ],
+    fightEnemyPool: ['brute', 'sniper'],
+    bossId: 'barnacle_pete',
+    itemDropPool: [],
+    itemDropChance: 0,
   },
   sunken_reach: {
     name: 'The Sunken Reach',
     icon: '🌑',
-    description: 'Below the known charts. Sea monsters, shipwrecks, pressure that cracks lesser hulls.',
+    description: 'Below the known charts.',
     requiredShipTier: 4,
-    specialCrewRequired: null,
-    length: 8,
-    difficulty: { easy: [8, 12], standard: [13, 18], crisis: [20, 26] },
-    eventTypes: ['sea_monster', 'shipwreck_salvage', 'rival_pirates', 'cursed_ship', 'storm', 'whirlpool'],
-    crisisTypes: ['kraken_warning', 'sea_monster'],
-    drops: ['rare', 'epic', 'legendary'],
     entryCost: 200,
+    baseDoubloons: 500,
+    nodes: [
+      { type: 'fight' },
+      { type: 'event' },
+      { type: 'fight' },
+      { type: 'fight' },
+      { type: 'shop' },
+      { type: 'boss' },
+    ],
+    fightEnemyPool: ['brute', 'sniper'],
+    bossId: 'barnacle_pete',
+    itemDropPool: [],
+    itemDropChance: 0,
   },
   davy_jones_locker: {
     name: "Davy Jones' Locker",
     icon: '💀',
-    description: 'No charts exist. Only Catfish and Doby Mick know the way.',
+    description: 'No charts exist.',
     requiredShipTier: 6,
-    specialCrewRequired: ['Catfish', 'Doby_Mick'],
-    length: 10,
-    difficulty: { easy: [12, 16], standard: [18, 24], crisis: [26, 32] },
-    eventTypes: ['kraken_attack', 'ghost_armada', 'cursed_treasure', 'abyss_creature', 'void_storm', 'davy_jones_encounter'],
-    crisisTypes: ['kraken_attack', 'davy_jones_encounter'],
-    drops: ['legendary', 'mythic', 'divine'],
     entryCost: 500,
+    baseDoubloons: 1200,
+    nodes: [
+      { type: 'fight' },
+      { type: 'event' },
+      { type: 'fight' },
+      { type: 'fight' },
+      { type: 'shop' },
+      { type: 'boss' },
+    ],
+    fightEnemyPool: ['brute', 'sniper'],
+    bossId: 'barnacle_pete',
+    itemDropPool: [],
+    itemDropChance: 0,
   },
 }
 
-export const EVENT_MECHANICS: Record<string, EventMechanics> = {
-  rival_pirates:         { stat: 'combat',      difficultyTier: 'standard' },
-  mild_storm:            { stat: 'durability',  difficultyTier: 'easy'     },
-  storm:                 { stat: 'durability',  difficultyTier: 'standard' },
-  ghost_ship:            { stat: 'combat',      difficultyTier: 'standard' },
-  merchant_vessel:       { stat: 'luck',        difficultyTier: 'easy'     },
-  stranded_ship:         { stat: null,          difficultyTier: 'easy'     },
-  fog:                   { stat: 'navigation',  difficultyTier: 'easy'     },
-  fishing_spot:          { stat: 'luck',        difficultyTier: 'easy'     },
-  hidden_cove:           { stat: 'navigation',  difficultyTier: 'easy'     },
-  whirlpool:             { stat: 'navigation',  difficultyTier: 'standard' },
-  sea_creature:          { stat: 'combat',      difficultyTier: 'standard' },
-  cursed_cargo:          { stat: 'luck',        difficultyTier: 'standard' },
-  cursed_ship:           { stat: 'navigation',  difficultyTier: 'standard' },
-  sea_monster:           { stat: 'combat',      difficultyTier: 'crisis'   },
-  shipwreck_salvage:     { stat: 'luck',        difficultyTier: 'standard' },
-  kraken_warning:        { stat: 'speed',       difficultyTier: 'crisis'   },
-  kraken_attack:         { stat: 'combat',      difficultyTier: 'crisis'   },
-  ghost_armada:          { stat: 'combat',      difficultyTier: 'crisis'   },
-  cursed_treasure:       { stat: 'luck',        difficultyTier: 'standard' },
-  abyss_creature:        { stat: 'combat',      difficultyTier: 'crisis'   },
-  void_storm:            { stat: 'durability',  difficultyTier: 'crisis'   },
-  davy_jones_encounter:  { stat: 'luck',        difficultyTier: 'crisis'   },
+export const ZONE_ORDER: ZoneKey[] = ['coral_run', 'bertuna_triangle', 'sunken_reach', 'davy_jones_locker']
+
+// ── Items ─────────────────────────────────────────────────────────────────────
+
+export interface ExpeditionItem {
+  id: string
+  name: string
+  description: string
+  effectDescription: string
 }
 
-export interface RollResult {
-  base: number
-  crewBonus: number
-  crewRoll: number
-  roll: number
-  total: number
+export const EXPEDITION_ITEMS: Record<string, ExpeditionItem> = {
+  powder_keg: {
+    id: 'powder_keg',
+    name: 'Powder Keg',
+    description: 'A pre-loaded keg ready to go.',
+    effectDescription: 'Start each run with 1 charge already loaded',
+  },
+  patched_hull: {
+    id: 'patched_hull',
+    name: 'Patched Hull',
+    description: 'Pre-voyage repairs to weak spots.',
+    effectDescription: 'Start each run with +10 Durability',
+  },
+  anchor_chain: {
+    id: 'anchor_chain',
+    name: 'Anchor Chain',
+    description: 'Heavy iron links bolted to the hull.',
+    effectDescription: '+2 Armor for the entire run',
+  },
+  bait_barrel: {
+    id: 'bait_barrel',
+    name: 'Bait Barrel',
+    description: 'A fresh barrel of premium bait.',
+    effectDescription: '+5 free worms per day',
+  },
+  lucky_lure: {
+    id: 'lucky_lure',
+    name: 'Lucky Lure',
+    description: 'Carved from a sailor\'s lucky coin.',
+    effectDescription: 'Improved catch rates when fishing',
+  },
 }
 
-export function rollStat(stat: Stat, crewAssigned: CrewCard[], shipTier: number): RollResult {
-  const stats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
-  const base = stats[stat]
-  const crewBonus = crewAssigned.reduce((sum, card) => sum + card.power, 0)
-  // Floor = shipTier + 1, so higher-tier ships can't roll embarrassingly low
-  const floor = shipTier + 1
-  const roll = floor + Math.floor(Math.random() * Math.max(1, base - floor + 1))
-  const crewRoll = crewBonus > 0 ? Math.floor(Math.random() * crewBonus) + 1 : 0
-  return { base, crewBonus, roll, crewRoll, total: roll + crewRoll }
-}
-
-export const STAT_LABELS: Record<Stat, string> = {
-  combat:     'Combat',
-  navigation: 'Navigation',
-  durability: 'Durability',
-  speed:      'Speed',
-  luck:       'Luck',
-}
-
-export const STAT_ICONS: Record<Stat, string> = {
-  combat:     '⚔️',
-  navigation: '🧭',
-  durability: '🛡️',
-  speed:      '💨',
-  luck:       '🍀',
-}
-
-export const STAT_DESCRIPTIONS: Record<Stat, string> = {
-  combat:     'Fighting pirates and sea creatures. Fail and take a loot penalty.',
-  navigation: 'Fog, whirlpools, tricky passages. Succeed and skip the next event. Fail and face a detour.',
-  durability: 'Your hull HP. Failed hull events deal damage equal to how badly you missed. Reach zero and the voyage ends.',
-  speed:      'Your escape rating. Roll Speed when abandoning to recover your entry fee.',
-  luck:       'Rolled at voyage end. Determines loot quality and doubloons earned.',
-}
+// ── Rarity colors (kept for shared use) ──────────────────────────────────────
 
 export const RARITY_COLORS: Record<string, string> = {
   common:    '#8a8880',
@@ -283,16 +572,4 @@ export const RARITY_COLORS: Record<string, string> = {
   epic:      '#a78bfa',
   legendary: '#f0c040',
   mythic:    '#ff3838',
-  divine:    '#fffdf0',
 }
-
-export const BASE_DOUBLOONS: Record<ZoneKey, number> = {
-  coral_run:          80,
-  bertuna_triangle:   200,
-  sunken_reach:       500,
-  davy_jones_locker:  1200,
-}
-
-export const ZONE_ORDER: ZoneKey[] = ['coral_run', 'bertuna_triangle', 'sunken_reach', 'davy_jones_locker']
-
-export const STATS: Stat[] = ['combat', 'navigation', 'durability', 'speed', 'luck']

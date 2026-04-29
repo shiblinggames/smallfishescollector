@@ -13,7 +13,6 @@ export default async function ExpeditionsPage() {
   if (!user) redirect('/login')
 
   const admin = createAdminClient()
-  const today = new Date().toISOString().split('T')[0]
 
   const [{ data: profile }, { data: expeditionRows }] = await Promise.all([
     admin.from('profiles')
@@ -23,28 +22,16 @@ export default async function ExpeditionsPage() {
     admin.from('expeditions')
       .select('*')
       .eq('user_id', user.id)
-      .eq('expedition_date', today),
+      .in('status', ['active', 'completed', 'failed'])
+      .order('started_at', { ascending: false })
+      .limit(20),
   ])
 
   const shipTier = profile?.ship_tier ?? 0
   const doubloons = profile?.doubloons ?? 0
-  const todayExpeditions = (expeditionRows ?? []) as Expedition[]
+  const recentExpeditions = (expeditionRows ?? []) as Expedition[]
 
-  const { data: specialCrew } = await admin
-    .from('user_collection')
-    .select('card_variants(cards(slug))')
-    .eq('user_id', user.id)
-
-  type SpecialRow = { card_variants: { cards: { slug: string } } | null }
-  const ownedSlugs = new Set(
-    (specialCrew as unknown as SpecialRow[]).flatMap(row =>
-      row.card_variants?.cards?.slug ? [row.card_variants.cards.slug] : []
-    )
-  )
-  const hasSpecialCrew = ownedSlugs.has('Catfish') || ownedSlugs.has('Doby_Mick')
-
-  const activeExpedition = todayExpeditions.find(e => e.status === 'active') ?? null
-  const dailyUsed = todayExpeditions.some(e => e.status === 'completed' || e.status === 'failed')
+  const activeExpedition = recentExpeditions.find(e => e.status === 'active') ?? null
 
   return (
     <>
@@ -75,13 +62,13 @@ export default async function ExpeditionsPage() {
           {/* Header */}
           <div style={{ marginBottom: '1.25rem' }}>
             <p className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#4a6a8a', marginBottom: '0.3rem' }}>
-              Daily Voyage
+              Roguelike Combat
             </p>
             <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.7rem', lineHeight: 1.1, marginBottom: '0.3rem' }}>
               Expeditions
             </h1>
             <p className="font-karla" style={{ fontSize: '0.75rem', color: '#5a5855', lineHeight: 1.6 }}>
-              One voyage per day. Choose your zone, load your crew, and set sail.
+              Choose a zone, load your crew, and fight your way to the boss.
             </p>
           </div>
 
@@ -115,7 +102,7 @@ export default async function ExpeditionsPage() {
                       {ZONES[activeExpedition.zone].name}
                     </p>
                     <p className="font-karla" style={{ fontSize: '0.65rem', color: '#a0906a', marginTop: 1 }}>
-                      Event {activeExpedition.current_node + 1} of {ZONES[activeExpedition.zone].length - 1}
+                      Node {activeExpedition.current_node + 1} of {ZONES[activeExpedition.zone].nodes.length}
                     </p>
                   </div>
                 </div>
@@ -137,7 +124,7 @@ export default async function ExpeditionsPage() {
           {/* Zone cards */}
           <div className="flex flex-col gap-3 pb-16">
             {ZONE_ORDER.map(zoneKey => {
-              const expedition = todayExpeditions.find(e => e.zone === zoneKey) ?? null
+              const expedition = recentExpeditions.find(e => e.zone === zoneKey && e.status === 'active') ?? null
               return (
                 <ZoneCard
                   key={zoneKey}
@@ -145,9 +132,7 @@ export default async function ExpeditionsPage() {
                   config={ZONES[zoneKey]}
                   expedition={expedition}
                   shipTier={shipTier}
-                  hasSpecialCrew={hasSpecialCrew}
                   doubloons={doubloons}
-                  dailyUsed={dailyUsed}
                 />
               )
             })}

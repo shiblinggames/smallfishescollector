@@ -3,493 +3,611 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { checkAchievements } from '@/lib/checkAchievements'
-import {
-  ZONES, EXPEDITION_SHIP_STATS, BASE_DOUBLOONS,
-  rollStat, getCrewPower,
-  type ZoneKey, type CrewLoadout, type EventNode, type EventResult, type LootResult,
-  type Expedition, type DailyExpeditionRow,
-} from '@/lib/expeditions'
-import { ensureDailyExpeditionContent } from './generate'
 import { RARITY_TIERS } from '@/lib/variants'
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function weightedPick<T extends { drop_weight: number }>(pool: T[]): T {
-  const total = pool.reduce((s, v) => s + v.drop_weight, 0)
-  let r = Math.random() * total
-  for (const v of pool) {
-    r -= v.drop_weight
-    if (r <= 0) return v
-  }
-  return pool[pool.length - 1]
-}
+import {
+  ZONES, EXPEDITION_SHIP_STATS, ENEMIES, EXPEDITION_ITEMS,
+  CORAL_RUN_EVENTS, CORAL_RUN_SHOP,
+  getCrewStats, computeTotalCrewStats, resolveRound, initCombatState,
+  type ZoneKey, type CombatAction, type Expedition, type CombatState,
+  type NodeResult, type NodeType, type EventNodeDef, type ShopOption,
+  type CombatRoundLog, type ZoneLoot, type RunBuff,
+} from '@/lib/expeditions'
 
 function today(): string {
   return new Date().toISOString().split('T')[0]
 }
 
-// ── Public Actions ─────────────────────────────────────────────────────────────
+function pickEventForNode(zone: ZoneKey, nodeIndex: number, expeditionId: number): EventNodeDef {
+  const pool = zone === 'coral_run' ? CORAL_RUN_EVENTS : CORAL_RUN_EVENTS
+  const idx = (expeditionId * 997 + nodeIndex * 31) % pool.length
+  return pool[idx]
+}
+
+function shopForZone(zone: ZoneKey): ShopOption[] {
+  return zone === 'coral_run' ? CORAL_RUN_SHOP : CORAL_RUN_SHOP
+}
+
+function pickFightEnemy(zone: ZoneKey, nodeIndex: number, expeditionId: number): string {
+  const pool = ZONES[zone].fightEnemyPool
+  const idx = (expeditionId * 1009 + nodeIndex * 53) % pool.length
+  return pool[idx]
+}
+
+// ── State hydration ───────────────────────────────────────────────────────────
+
+export interface ExpeditionStateResponse {
+  expedition: Expedition
+  nodeType: NodeType
+  currentEvent: EventNodeDef | null
+  shopOptions: ShopOption[] | null
+}
+
+export async function getExpeditionState(
+  expeditionId: number,
+): Promise<ExpeditionStateResponse | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('expeditions')
+    .select('*')
+    .eq('id', expeditionId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!data) return { error: 'Expedition not found' }
+  let exp = data as Expedition
+
+  const zone = ZONES[exp.zone]
+  const nodes = zone.nodes
+  const nodeConfig = nodes[exp.current_node]
+
+  if (!nodeConfig) {
+    return { expedition: exp, nodeType: 'boss', currentEvent: null, shopOptions: null }
+  }
+
+  const nodeType = nodeConfig.type
+
+  // Auto-init combat state when landing on a fight/boss node
+  if ((nodeType === 'fight' || nodeType === 'boss') && !exp.combat_state) {
+    const enemyId = nodeType === 'boss'
+      ? zone.bossId
+      : pickFightEnemy(exp.zone, exp.current_node, exp.id)
+
+    const ship = EXPEDITION_SHIP_STATS[exp.ship_tier] ?? EXPEDITION_SHIP_STATS[0]
+    // Apply equipped item bonus to starting charges
+    const cs = initCombatState(enemyId, exp.equipped_item)
+    // Apply patched_hull item: +10 durability at run start is already handled in startExpedition
+
+    await admin
+      .from('expeditions')
+      .update({ combat_state: cs })
+      .eq('id', expeditionId)
+
+    exp = { ...exp, combat_state: cs }
+  }
+
+  const currentEvent = nodeType === 'event'
+    ? pickEventForNode(exp.zone, exp.current_node, exp.id)
+    : null
+
+  const shopOptions = nodeType === 'shop' ? shopForZone(exp.zone) : null
+
+  return { expedition: exp, nodeType, currentEvent, shopOptions }
+}
+
+// ── Start expedition ──────────────────────────────────────────────────────────
 
 export async function startExpedition(
   zone: ZoneKey,
-  crewLoadout: CrewLoadout
+  crewLoadout: Expedition['crew_loadout'],
+  equippedItem: string | null,
 ): Promise<{ expeditionId: number } | { error: string }> {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { error: 'Unauthorized' }
-
-    const admin = createAdminClient()
-    const date = today()
-    const zoneConfig = ZONES[zone]
-
-    const { data: existingToday } = await admin
-      .from('expeditions')
-      .select('id, status')
-      .eq('user_id', user.id)
-      .eq('expedition_date', date)
-      .limit(1)
-      .maybeSingle()
-
-    if (existingToday) {
-      if (existingToday.status === 'active') return { error: 'You already have an expedition in progress.' }
-      return { error: 'You have already used your daily expedition. Come back tomorrow.' }
-    }
-
-    const { data: profile } = await admin
-      .from('profiles')
-      .select('doubloons, ship_tier')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile) return { error: 'Profile not found' }
-
-    // Zone tier gate
-    const shipTier = profile.ship_tier ?? 0
-    if (shipTier < zoneConfig.requiredShipTier) {
-      return { error: `Requires ${EXPEDITION_SHIP_STATS[zoneConfig.requiredShipTier].name} or better` }
-    }
-
-    // Special crew gate (Davy Jones)
-    if (zoneConfig.specialCrewRequired) {
-      const allCrew = (Object.values(crewLoadout) as CrewLoadout[keyof CrewLoadout][]).flat()
-      const crewSlugs = allCrew.map(c => c.slug)
-      const hasSpecial = zoneConfig.specialCrewRequired.some(s => crewSlugs.includes(s))
-      if (!hasSpecial) {
-        return { error: `Requires Catfish or Doby Mick in your crew` }
-      }
-    }
-
-    // Entry cost check
-    if ((profile.doubloons ?? 0) < zoneConfig.entryCost) {
-      return { error: `Not enough doubloons (need ${zoneConfig.entryCost} ⟡)` }
-    }
-
-    // One attempt per zone per day
-    const { data: existing } = await admin
-      .from('expeditions')
-      .select('id, status')
-      .eq('user_id', user.id)
-      .eq('zone', zone)
-      .eq('expedition_date', date)
-      .maybeSingle()
-
-    if (existing) {
-      if (existing.status === 'active') return { expeditionId: existing.id }
-      return { error: 'Already attempted this zone today' }
-    }
-
-    // Ensure daily content exists (generates if needed — first player of the day)
-    try {
-      await ensureDailyExpeditionContent(zone, date)
-    } catch (genErr) {
-      console.error('[startExpedition] content generation failed:', genErr)
-      const msg = genErr instanceof Error ? genErr.message : String(genErr)
-      return { error: `Generation failed: ${msg}` }
-    }
-
-    // Deduct entry cost
-    const newDoubloons = profile.doubloons - zoneConfig.entryCost
-    await Promise.all([
-      admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
-      admin.from('doubloon_transactions').insert({
-        user_id: user.id,
-        amount: -zoneConfig.entryCost,
-        reason: `Expedition entry: ${zoneConfig.name}`,
-      }),
-    ])
-
-    const { data: expedition, error } = await admin
-      .from('expeditions')
-      .insert({
-        user_id: user.id,
-        zone,
-        ship_tier: shipTier,
-        crew_loadout: crewLoadout,
-        expedition_date: date,
-        status: 'active',
-        current_node: 0,
-      })
-      .select('id')
-      .single()
-
-    if (error || !expedition) return { error: 'Failed to start expedition' }
-
-    revalidatePath('/expeditions')
-    return { expeditionId: expedition.id }
-  } catch (err) {
-    console.error('[startExpedition] unexpected error:', err)
-    return { error: 'Something went wrong — please try again' }
-  }
-}
-
-export async function resolveChoice(
-  expeditionId: number,
-  nodeIndex: number,
-  choiceIndex: number
-): Promise<EventResult | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
-  const date = today()
+  const zoneConfig = ZONES[zone]
 
-  const { data: expedition } = await admin
-    .from('expeditions')
-    .select('*')
-    .eq('id', expeditionId)
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .eq('expedition_date', date)
-    .single()
-
-  if (!expedition) return { error: 'Expedition not found' }
-
-  const { data: dailyData } = await admin
-    .from('daily_expeditions')
-    .select('event_sequence')
-    .eq('expedition_date', date)
-    .eq('zone', expedition.zone)
-    .single()
-
-  if (!dailyData) return { error: 'Daily content not found' }
-
-  const exp = expedition as Expedition
-  const eventSequence = (dailyData as { event_sequence: EventNode[] }).event_sequence
-  const eventNode = eventSequence[nodeIndex]
-  if (!eventNode) return { error: 'Invalid node' }
-
-  const choice = eventNode.choices[choiceIndex]
-  if (!choice) return { error: 'Invalid choice' }
-
-  const zoneConfig = ZONES[exp.zone]
-  const normalCount = zoneConfig.length - 1  // indices 0..normalCount-1 are regular events
-
-  // No-roll path
-  if (choice.isNoRoll) {
-    const result: EventResult = {
-      nodeIndex,
-      eventType: eventNode.eventType,
-      choiceIndex,
-      outcome: 'success',
-      text: choice.successText,
-      noRoll: true,
-      ...(choice.cost ? { costPenalty: choice.cost } : {}),
-    }
-    await saveProgress(admin, expeditionId, result, exp.events, nodeIndex + 1)
-    return result
-  }
-
-  const mechanics = eventNode.mechanics
-  const stat = mechanics.stat ?? 'luck'
-  const [min, max] = zoneConfig.difficulty[mechanics.difficultyTier]
-  const threshold = eventNode.mechanics.threshold ?? (Math.floor(Math.random() * (max - min + 1)) + min)
-  const crewForStat = exp.crew_loadout[stat] ?? []
-  const rollResult = rollStat(stat, crewForStat, exp.ship_tier)
-  const success = rollResult.total >= threshold
-
-  const result: EventResult = {
-    nodeIndex,
-    eventType: eventNode.eventType,
-    choiceIndex,
-    stat,
-    roll: rollResult.roll,
-    base: rollResult.base,
-    crewBonus: rollResult.crewBonus,
-    crewRoll: rollResult.crewRoll,
-    total: rollResult.total,
-    threshold,
-    outcome: success ? 'success' : 'fail',
-    text: success ? choice.successText : choice.failText,
-  }
-
-  const isNavEvent = mechanics.stat === 'navigation'
-  const crewDurabilityBonus = (exp.crew_loadout.durability ?? []).reduce((s: number, c: { power: number }) => s + c.power, 0)
-  const hullMax = (EXPEDITION_SHIP_STATS[exp.ship_tier]?.durability ?? 3) + crewDurabilityBonus
-
-  if (success) {
-    if (isNavEvent) result.skipNextNode = true
-    if (['merchant_vessel', 'fishing_spot', 'cursed_treasure', 'cursed_cargo'].includes(eventNode.eventType)) {
-      result.lootBonus = eventNode.eventType === 'cursed_treasure' ? 0.3 : 0.2
-    } else if (eventNode.eventType === 'stranded_ship') {
-      result.hullRepair = Math.max(1, Math.ceil(hullMax * 0.25))
-    } else if (['hidden_cove', 'shipwreck_salvage'].includes(eventNode.eventType)) {
-      result.doubloonBonus = Math.floor(BASE_DOUBLOONS[exp.zone] * 0.2)
-    }
-  }
-
-  if (!success) {
-    const isHullEvent = mechanics.stat === 'combat' || mechanics.stat === 'durability'
-    if (isHullEvent) {
-      result.hullDamage = threshold - rollResult.total
-    } else {
-      result.lootPenalty = 0.2
-    }
-    if (isNavEvent) {
-      const penaltyEventsUsed = (exp.events ?? []).filter(e => e.nodeIndex >= normalCount).length
-      if (penaltyEventsUsed < 2) {
-        result.penaltyEventIndex = normalCount + penaltyEventsUsed
-      }
-    }
-  }
-
-  const newHullDamage = Math.max(0, (exp.hull_damage ?? 0) + (result.hullDamage ?? 0) - (result.hullRepair ?? 0))
-  if (newHullDamage >= hullMax) {
-    result.expeditionFailed = true
-    result.failReason = 'Your ship could not take any more damage. You limp back to port.'
-    const newEvents = [...(exp.events ?? []), result]
-    await admin.from('expeditions').update({
-      status: 'failed',
-      current_node: nodeIndex + 1,
-      events: newEvents,
-      hull_damage: newHullDamage,
-      completed_at: new Date().toISOString(),
-    }).eq('id', expeditionId)
-    return result
-  }
-
-  const nextNode = result.skipNextNode
-    ? Math.min(nodeIndex + 2, normalCount)
-    : nodeIndex + 1
-  await saveProgress(admin, expeditionId, result, exp.events, nextNode, newHullDamage)
-  return result
-}
-
-async function saveProgress(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  admin: any,
-  expeditionId: number,
-  result: EventResult,
-  existingEvents: EventResult[],
-  nextNode: number,
-  newHullDamage?: number,
-) {
-  const updatedEvents = [...(existingEvents ?? []), result]
-  const update: Record<string, unknown> = {
-    current_node: nextNode,
-    events: updatedEvents,
-  }
-  if (newHullDamage !== undefined) update.hull_damage = newHullDamage
-  await admin.from('expeditions').update(update).eq('id', expeditionId)
-}
-
-export async function resolvePenaltyEvent(
-  expeditionId: number,
-  penaltyEventNodeIndex: number,
-  choiceIndex: number
-): Promise<EventResult | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-  const date = today()
-
-  const { data: expedition } = await admin
-    .from('expeditions')
-    .select('*')
-    .eq('id', expeditionId)
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .eq('expedition_date', date)
-    .single()
-
-  if (!expedition) return { error: 'Expedition not found' }
-
-  const { data: dailyData } = await admin
-    .from('daily_expeditions')
-    .select('event_sequence')
-    .eq('expedition_date', date)
-    .eq('zone', expedition.zone)
-    .single()
-
-  if (!dailyData) return { error: 'Daily content not found' }
-
-  const exp = expedition as Expedition
-  const eventSequence = (dailyData as { event_sequence: EventNode[] }).event_sequence
-  const eventNode = eventSequence[penaltyEventNodeIndex]
-  if (!eventNode || !eventNode.isPenalty) return { error: 'Invalid penalty event' }
-
-  const choice = eventNode.choices[choiceIndex]
-  if (!choice) return { error: 'Invalid choice' }
-
-  const zoneConfig = ZONES[exp.zone]
-
-  if (choice.isNoRoll) {
-    const result: EventResult = {
-      nodeIndex: penaltyEventNodeIndex,
-      eventType: eventNode.eventType,
-      choiceIndex,
-      outcome: 'success',
-      text: choice.successText,
-      noRoll: true,
-      ...(choice.cost ? { costPenalty: choice.cost } : {}),
-    }
-    const updatedEvents = [...(exp.events ?? []), result]
-    await admin.from('expeditions').update({ events: updatedEvents }).eq('id', expeditionId)
-    return result
-  }
-
-  const mechanics = eventNode.mechanics
-  const stat = mechanics.stat ?? 'luck'
-  const [min, max] = zoneConfig.difficulty[mechanics.difficultyTier]
-  const threshold = eventNode.mechanics.threshold ?? (Math.floor(Math.random() * (max - min + 1)) + min)
-  const crewForStat = exp.crew_loadout[stat] ?? []
-  const rollResult = rollStat(stat, crewForStat, exp.ship_tier)
-  const success = rollResult.total >= threshold
-
-  const result: EventResult = {
-    nodeIndex: penaltyEventNodeIndex,
-    eventType: eventNode.eventType,
-    choiceIndex,
-    stat,
-    roll: rollResult.roll,
-    base: rollResult.base,
-    crewBonus: rollResult.crewBonus,
-    crewRoll: rollResult.crewRoll,
-    total: rollResult.total,
-    threshold,
-    outcome: success ? 'success' : 'fail',
-    text: success ? choice.successText : choice.failText,
-  }
-
-  if (!success) {
-    const isHullEvent = mechanics.stat === 'combat' || mechanics.stat === 'durability'
-    if (isHullEvent) {
-      result.hullDamage = threshold - rollResult.total
-    } else {
-      result.lootPenalty = 0.2
-    }
-  }
-
-  const newHullDamage = (exp.hull_damage ?? 0) + (result.hullDamage ?? 0)
-  const crewDurabilityBonus = (exp.crew_loadout.durability ?? []).reduce((s: number, c: { power: number }) => s + c.power, 0)
-  const hullMax = (EXPEDITION_SHIP_STATS[exp.ship_tier]?.durability ?? 3) + crewDurabilityBonus
-
-  if (newHullDamage >= hullMax) {
-    result.expeditionFailed = true
-    result.failReason = 'Your ship could not take any more damage. You limp back to port.'
-    const newEvents = [...(exp.events ?? []), result]
-    await admin.from('expeditions').update({
-      status: 'failed',
-      events: newEvents,
-      hull_damage: newHullDamage,
-      completed_at: new Date().toISOString(),
-    }).eq('id', expeditionId)
-    return result
-  }
-
-  const updatedEvents = [...(exp.events ?? []), result]
-  const update: Record<string, unknown> = { events: updatedEvents }
-  if (result.hullDamage) update.hull_damage = newHullDamage
-  await admin.from('expeditions').update(update).eq('id', expeditionId)
-  return result
-}
-
-export async function resolveFinalLoot(
-  expeditionId: number
-): Promise<LootResult | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-  const date = today()
-
-  const { data: expedition } = await admin
-    .from('expeditions')
-    .select('*')
-    .eq('id', expeditionId)
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .eq('expedition_date', date)
-    .single()
-
-  if (!expedition) return { error: 'Expedition not found' }
-  const exp = expedition as Expedition
-
-  const zoneConfig = ZONES[exp.zone]
-  const crewLuck = exp.crew_loadout.luck ?? []
-  const rollResult = rollStat('luck', crewLuck, exp.ship_tier)
-
-  const completedEvents = exp.events ?? []
-  const successCount = completedEvents.filter((e: EventResult) => e.outcome === 'success').length
-  const totalNodes = zoneConfig.length - 1
-  const successBonus = Math.floor((successCount / Math.max(totalNodes, 1)) * 20)
-
-  const lootPenaltyMultiplier = completedEvents
-    .filter((e: EventResult) => e.lootPenalty)
-    .reduce((acc: number, e: EventResult) => acc * (1 - (e.lootPenalty ?? 0)), 1)
-
-  const lootBonusMultiplier = completedEvents
-    .filter((e: EventResult) => e.lootBonus)
-    .reduce((acc: number, e: EventResult) => acc * (1 + (e.lootBonus ?? 0)), 1)
-
-  const totalDoubloonBonus = completedEvents
-    .reduce((acc: number, e: EventResult) => acc + (e.doubloonBonus ?? 0), 0)
-
-  const totalCostPenalty = completedEvents
-    .reduce((acc: number, e: EventResult) => acc + (e.costPenalty ?? 0), 0)
-
-  const finalScore = rollResult.total + successBonus
-
-  const dropPool = zoneConfig.drops
-  let lootRarity: string
-  if (finalScore >= 25) lootRarity = dropPool[dropPool.length - 1]
-  else if (finalScore >= 15) lootRarity = dropPool[Math.floor(dropPool.length / 2)]
-  else lootRarity = dropPool[0]
-
-  const baseDoubloons = BASE_DOUBLOONS[exp.zone]
-  const doubloons = Math.max(10, Math.floor(baseDoubloons * (finalScore / 25) * lootPenaltyMultiplier * lootBonusMultiplier) + totalDoubloonBonus - totalCostPenalty)
-
-  // Award doubloons
-  const { data: profileData } = await admin
+  const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons')
+    .select('doubloons, ship_tier')
     .eq('id', user.id)
     .single()
-  const newDoubloons = (profileData?.doubloons ?? 0) + doubloons
 
-  const loot: LootResult = {
-    doubloons,
-    lootRarity,
-    roll: rollResult.roll,
-    crewRoll: rollResult.crewRoll,
-    total: rollResult.total,
-    base: rollResult.base,
-    crewBonus: rollResult.crewBonus,
-    finalScore,
-    successBonus,
+  if (!profile) return { error: 'Profile not found' }
+
+  const shipTier = profile.ship_tier ?? 0
+  if (shipTier < zoneConfig.requiredShipTier) {
+    return { error: `Requires ${EXPEDITION_SHIP_STATS[zoneConfig.requiredShipTier]?.name ?? 'a higher tier ship'}` }
   }
+
+  if ((profile.doubloons ?? 0) < zoneConfig.entryCost) {
+    return { error: `Need ${zoneConfig.entryCost} ⟡ to enter` }
+  }
+
+  // No active expedition check
+  const { data: active } = await admin
+    .from('expeditions')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  if (active) return { error: 'You already have an expedition in progress' }
+
+  // Validate equipped item ownership
+  if (equippedItem) {
+    const { data: ownedItem } = await admin
+      .from('expedition_items')
+      .select('item_id')
+      .eq('user_id', user.id)
+      .eq('item_id', equippedItem)
+      .maybeSingle()
+    if (!ownedItem) return { error: 'You do not own that item' }
+  }
+
+  // Deduct entry cost
+  const newDoubloons = profile.doubloons - zoneConfig.entryCost
+  await Promise.all([
+    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+    admin.from('doubloon_transactions').insert({
+      user_id: user.id,
+      amount: -zoneConfig.entryCost,
+      reason: `Expedition entry: ${zoneConfig.name}`,
+    }),
+  ])
+
+  // Apply patched_hull bonus
+  const ship = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
+  const startingDurability = ship.durability + (equippedItem === 'patched_hull' ? 10 : 0)
+  const hullDamage = ship.durability - startingDurability // 0 normally, -10 for patched hull (impossible — hull_damage is damage taken, starts at 0)
+  // hull_damage tracks damage taken, not current HP. So always start at 0.
+  // patched_hull gives +10 effective HP by adding a run buff instead:
+  const runBuffs: RunBuff[] = equippedItem === 'anchor_chain'
+    ? [{ source: 'anchor_chain', effect: 'armor', value: 2 }]
+    : equippedItem === 'patched_hull'
+    ? [{ source: 'patched_hull', effect: 'durability', value: 10 }]
+    : []
+
+  const { data: expedition, error } = await admin
+    .from('expeditions')
+    .insert({
+      user_id: user.id,
+      zone,
+      ship_tier: shipTier,
+      crew_loadout: crewLoadout,
+      expedition_date: today(),
+      status: 'active',
+      current_node: 0,
+      hull_damage: 0,
+      events: [],
+      equipped_item: equippedItem,
+      run_buffs: runBuffs,
+      combat_state: null,
+      loot: null,
+    })
+    .select('id')
+    .single()
+
+  if (error || !expedition) return { error: 'Failed to start expedition' }
+
+  revalidatePath('/expeditions')
+  return { expeditionId: expedition.id }
+}
+
+// ── Combat ────────────────────────────────────────────────────────────────────
+
+export interface CombatActionResult {
+  roundLog: CombatRoundLog
+  combatOver: boolean
+  playerWon: boolean
+  expeditionFailed: boolean
+  zoneComplete: boolean
+  newDurability: number
+  maxDurability: number
+  newCombatState: CombatState
+}
+
+export async function takeCombatAction(
+  expeditionId: number,
+  action: CombatAction,
+): Promise<CombatActionResult | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  if (!['reload', 'fire', 'defend'].includes(action)) return { error: 'Invalid action' }
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('expeditions')
+    .select('*')
+    .eq('id', expeditionId)
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .single()
+
+  if (!data) return { error: 'Expedition not found' }
+  const exp = data as Expedition
+
+  if (!exp.combat_state) return { error: 'No active combat' }
+
+  const ship = EXPEDITION_SHIP_STATS[exp.ship_tier] ?? EXPEDITION_SHIP_STATS[0]
+  const crew = computeTotalCrewStats(exp.crew_loadout ?? [])
+  const runBuffs = exp.run_buffs ?? []
+
+  const durabilityBuff = runBuffs.filter(b => b.effect === 'durability').reduce((s, b) => s + b.value, 0)
+  const maxDurability = ship.durability + durabilityBuff
+  const currentDurability = maxDurability - (exp.hull_damage ?? 0)
+
+  const resolution = resolveRound(exp.combat_state, action, crew, ship, currentDurability, runBuffs)
+
+  const newHullDamage = maxDurability - resolution.newDurability
+  const combatOver = resolution.combatOver
+  const playerWon = resolution.playerWon
+  const expeditionFailed = combatOver && !playerWon
+
+  let zoneComplete = false
+  let newCurrentNode = exp.current_node
+  let newStatus: string = exp.status
+  let newCombatState: CombatState | null = resolution.newState
+
+  const zone = ZONES[exp.zone]
+  const nodeResults: NodeResult[] = [...(exp.events ?? [])]
+
+  if (combatOver) {
+    const nodeType = zone.nodes[exp.current_node]?.type ?? 'fight'
+    nodeResults.push({
+      nodeIndex: exp.current_node,
+      type: nodeType,
+      outcome: playerWon ? 'win' : 'lose',
+    })
+
+    if (expeditionFailed) {
+      newStatus = 'failed'
+      newCombatState = null
+    } else {
+      newCurrentNode = exp.current_node + 1
+      newCombatState = null
+
+      // Check zone complete (advanced past last node)
+      if (newCurrentNode >= zone.nodes.length) {
+        zoneComplete = true
+        // Don't set completed yet — wait for claimZoneReward
+      } else {
+        // Auto-init combat for next fight/boss node
+        const nextNodeType = zone.nodes[newCurrentNode]?.type
+        if (nextNodeType === 'fight' || nextNodeType === 'boss') {
+          const enemyId = nextNodeType === 'boss'
+            ? zone.bossId
+            : pickFightEnemy(exp.zone, newCurrentNode, exp.id)
+          newCombatState = initCombatState(enemyId, exp.equipped_item)
+        }
+      }
+    }
+  }
+
+  const update: Record<string, unknown> = {
+    hull_damage: newHullDamage,
+    combat_state: newCombatState,
+    events: nodeResults,
+  }
+  if (combatOver) {
+    update.current_node = newCurrentNode
+    if (expeditionFailed) {
+      update.status = 'failed'
+      update.completed_at = new Date().toISOString()
+    }
+  }
+
+  await admin.from('expeditions').update(update).eq('id', expeditionId)
+
+  return {
+    roundLog: resolution.roundLog,
+    combatOver,
+    playerWon,
+    expeditionFailed,
+    zoneComplete,
+    newDurability: resolution.newDurability,
+    maxDurability,
+    newCombatState: resolution.newState,
+  }
+}
+
+// ── Events ────────────────────────────────────────────────────────────────────
+
+export interface EventChoiceResult {
+  effectType: string
+  value: number
+  newCurrentNode: number
+  zoneComplete: boolean
+  newDurability?: number
+  maxDurability?: number
+  doubloonBonus?: number
+  buff?: RunBuff
+}
+
+export async function makeEventChoice(
+  expeditionId: number,
+  choiceIndex: number,
+): Promise<EventChoiceResult | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('expeditions')
+    .select('*')
+    .eq('id', expeditionId)
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .single()
+
+  if (!data) return { error: 'Expedition not found' }
+  const exp = data as Expedition
+
+  const zone = ZONES[exp.zone]
+  const nodeType = zone.nodes[exp.current_node]?.type
+  if (nodeType !== 'event') return { error: 'Not on an event node' }
+
+  const event = pickEventForNode(exp.zone, exp.current_node, exp.id)
+  const choice = event.choices[choiceIndex]
+  if (!choice) return { error: 'Invalid choice' }
+
+  const ship = EXPEDITION_SHIP_STATS[exp.ship_tier] ?? EXPEDITION_SHIP_STATS[0]
+  const runBuffs = exp.run_buffs ?? []
+  const durabilityBuff = runBuffs.filter(b => b.effect === 'durability').reduce((s, b) => s + b.value, 0)
+  const maxDurability = ship.durability + durabilityBuff
+  const currentDurability = maxDurability - (exp.hull_damage ?? 0)
+
+  const effect = choice.effect
+  let newHullDamage = exp.hull_damage ?? 0
+  let newRunBuffs = [...runBuffs]
+  let doubloonBonus = 0
+
+  if (effect.type === 'heal') {
+    const healed = Math.min(effect.value ?? 0, exp.hull_damage ?? 0)
+    newHullDamage = Math.max(0, newHullDamage - healed)
+  } else if (effect.type === 'damage') {
+    newHullDamage = Math.min(maxDurability, newHullDamage + (effect.value ?? 0))
+  } else if (effect.type === 'buff' && effect.buff) {
+    newRunBuffs.push(effect.buff)
+  } else if (effect.type === 'doubloons') {
+    doubloonBonus = effect.value ?? 0
+  }
+
+  const nodeResults: NodeResult[] = [
+    ...(exp.events ?? []),
+    { nodeIndex: exp.current_node, type: 'event', outcome: 'event', details: { eventId: event.id, choiceIndex } },
+  ]
+
+  const newCurrentNode = exp.current_node + 1
+  const zoneComplete = newCurrentNode >= zone.nodes.length
+
+  let newCombatState: CombatState | null = null
+  if (!zoneComplete) {
+    const nextNodeType = zone.nodes[newCurrentNode]?.type
+    if (nextNodeType === 'fight' || nextNodeType === 'boss') {
+      const enemyId = nextNodeType === 'boss'
+        ? zone.bossId
+        : pickFightEnemy(exp.zone, newCurrentNode, exp.id)
+      newCombatState = initCombatState(enemyId, exp.equipped_item)
+    }
+  }
+
+  const update: Record<string, unknown> = {
+    hull_damage: newHullDamage,
+    run_buffs: newRunBuffs,
+    events: nodeResults,
+    current_node: newCurrentNode,
+    combat_state: newCombatState,
+  }
+
+  if (doubloonBonus > 0) {
+    const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
+    const newDoubloons = (profile?.doubloons ?? 0) + doubloonBonus
+    await Promise.all([
+      admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+      admin.from('doubloon_transactions').insert({ user_id: user.id, amount: doubloonBonus, reason: `Expedition event: ${event.id}` }),
+    ])
+  }
+
+  await admin.from('expeditions').update(update).eq('id', expeditionId)
+
+  return {
+    effectType: effect.type,
+    value: effect.value ?? 0,
+    newCurrentNode,
+    zoneComplete,
+    newDurability: maxDurability - newHullDamage,
+    maxDurability,
+    doubloonBonus,
+    buff: effect.buff,
+  }
+}
+
+// ── Shop ──────────────────────────────────────────────────────────────────────
+
+export async function buyShopItem(
+  expeditionId: number,
+  shopItemId: string,
+): Promise<{ ok: true; newDurability?: number; maxDurability?: number; buff?: RunBuff } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('expeditions')
+    .select('*')
+    .eq('id', expeditionId)
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .single()
+
+  if (!data) return { error: 'Expedition not found' }
+  const exp = data as Expedition
+
+  const zone = ZONES[exp.zone]
+  const nodeType = zone.nodes[exp.current_node]?.type
+  if (nodeType !== 'shop') return { error: 'Not at shop' }
+
+  const shopItems = shopForZone(exp.zone)
+  const item = shopItems.find(s => s.id === shopItemId)
+  if (!item) return { error: 'Item not found' }
+
+  const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
+  if ((profile?.doubloons ?? 0) < item.cost) return { error: 'Not enough doubloons' }
+
+  const newDoubloons = (profile?.doubloons ?? 0) - item.cost
+  await Promise.all([
+    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -item.cost, reason: `Expedition shop: ${item.label}` }),
+  ])
+
+  const ship = EXPEDITION_SHIP_STATS[exp.ship_tier] ?? EXPEDITION_SHIP_STATS[0]
+  const runBuffs = exp.run_buffs ?? []
+  const durabilityBuff = runBuffs.filter(b => b.effect === 'durability').reduce((s, b) => s + b.value, 0)
+  const maxDurability = ship.durability + durabilityBuff
+  let newHullDamage = exp.hull_damage ?? 0
+  let newRunBuffs = [...runBuffs]
+
+  const effect = item.effect
+  if (effect.type === 'heal') {
+    newHullDamage = Math.max(0, newHullDamage - (effect.value ?? 0))
+  } else if (effect.type === 'buff' && effect.buff) {
+    newRunBuffs.push(effect.buff)
+  }
+
+  // Buying from shop doesn't advance the node — use skipShop or another buy to advance
+  await admin.from('expeditions').update({
+    hull_damage: newHullDamage,
+    run_buffs: newRunBuffs,
+  }).eq('id', expeditionId)
+
+  return { ok: true, newDurability: maxDurability - newHullDamage, maxDurability, buff: effect.buff }
+}
+
+export async function leaveShop(
+  expeditionId: number,
+): Promise<{ newCurrentNode: number; zoneComplete: boolean } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('expeditions')
+    .select('*')
+    .eq('id', expeditionId)
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .single()
+
+  if (!data) return { error: 'Expedition not found' }
+  const exp = data as Expedition
+
+  const zone = ZONES[exp.zone]
+  if (zone.nodes[exp.current_node]?.type !== 'shop') return { error: 'Not at shop' }
+
+  const nodeResults: NodeResult[] = [
+    ...(exp.events ?? []),
+    { nodeIndex: exp.current_node, type: 'shop', outcome: 'shop' },
+  ]
+
+  const newCurrentNode = exp.current_node + 1
+  const zoneComplete = newCurrentNode >= zone.nodes.length
+
+  let newCombatState: CombatState | null = null
+  if (!zoneComplete) {
+    const nextNodeType = zone.nodes[newCurrentNode]?.type
+    if (nextNodeType === 'fight' || nextNodeType === 'boss') {
+      const enemyId = nextNodeType === 'boss'
+        ? zone.bossId
+        : pickFightEnemy(exp.zone, newCurrentNode, exp.id)
+      newCombatState = initCombatState(enemyId, exp.equipped_item)
+    }
+  }
+
+  await admin.from('expeditions').update({
+    current_node: newCurrentNode,
+    events: nodeResults,
+    combat_state: newCombatState,
+  }).eq('id', expeditionId)
+
+  return { newCurrentNode, zoneComplete }
+}
+
+// ── Zone reward ───────────────────────────────────────────────────────────────
+
+export async function claimZoneReward(
+  expeditionId: number,
+): Promise<ZoneLoot | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('expeditions')
+    .select('*')
+    .eq('id', expeditionId)
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .single()
+
+  if (!data) return { error: 'Expedition not found' }
+  const exp = data as Expedition
+
+  const zone = ZONES[exp.zone]
+  // Must be past all nodes
+  if (exp.current_node < zone.nodes.length) return { error: 'Zone not complete' }
+
+  const baseDoubloons = zone.baseDoubloons
+  // Small variance: ±20%
+  const variance = 0.8 + Math.random() * 0.4
+  const doubloons = Math.floor(baseDoubloons * variance)
+
+  // Item drop
+  let itemDropped: string | null = null
+  if (zone.itemDropPool.length > 0 && Math.random() < zone.itemDropChance) {
+    const pool = zone.itemDropPool
+    itemDropped = pool[Math.floor(Math.random() * pool.length)]
+
+    // Grant item to player (upsert — increment quantity if owned)
+    const { data: existingItem } = await admin
+      .from('expedition_items')
+      .select('id, quantity')
+      .eq('user_id', user.id)
+      .eq('item_id', itemDropped)
+      .maybeSingle()
+
+    if (existingItem) {
+      await admin.from('expedition_items')
+        .update({ quantity: existingItem.quantity + 1 })
+        .eq('id', existingItem.id)
+    } else {
+      await admin.from('expedition_items')
+        .insert({ user_id: user.id, item_id: itemDropped, quantity: 1 })
+    }
+  }
+
+  const loot: ZoneLoot = { doubloons, itemDropped }
+
+  const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
+  const newDoubloons = (profile?.doubloons ?? 0) + doubloons
 
   await Promise.all([
     admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: doubloons,
-      reason: `Expedition reward: ${ZONES[exp.zone].name}`,
+      reason: `Expedition reward: ${zone.name}`,
     }),
     admin.from('expeditions').update({
       status: 'completed',
@@ -498,140 +616,11 @@ export async function resolveFinalLoot(
     }).eq('id', expeditionId),
   ])
 
-  await checkAchievements(user.id, { type: 'expedition', zone: exp.zone, status: 'completed' })
-
   revalidatePath('/expeditions')
   return loot
 }
 
-export async function abandonExpedition(
-  expeditionId: number
-): Promise<{ roll: number; threshold: number; escaped: boolean; refunded: number } | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-
-  const { data: expeditionRow } = await admin
-    .from('expeditions')
-    .select('*')
-    .eq('id', expeditionId)
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .single()
-
-  if (!expeditionRow) return { error: 'Expedition not found' }
-  const exp = expeditionRow as Expedition
-
-  const zoneConfig = ZONES[exp.zone]
-  const crewSpeed = exp.crew_loadout.speed ?? []
-  const rollResult = rollStat('speed', crewSpeed, exp.ship_tier)
-  const [min, max] = zoneConfig.difficulty.standard
-  const threshold = Math.floor(Math.random() * (max - min + 1)) + min
-  const escaped = rollResult.total >= threshold
-  const refunded = escaped ? zoneConfig.entryCost : 0
-
-  await admin.from('expeditions')
-    .update({ status: 'failed', completed_at: new Date().toISOString() })
-    .eq('id', expeditionId)
-
-  if (escaped) {
-    const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
-    const newDoubloons = (profile?.doubloons ?? 0) + refunded
-    await Promise.all([
-      admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
-      admin.from('doubloon_transactions').insert({
-        user_id: user.id,
-        amount: refunded,
-        reason: `Abandoned (escaped): ${zoneConfig.name}`,
-      }),
-    ])
-  }
-
-  revalidatePath('/expeditions')
-  return { roll: rollResult.total, threshold, escaped, refunded }
-}
-
-export async function getActiveExpedition(): Promise<{
-  expedition: Expedition | null
-  dailyContent: DailyExpeditionRow | null
-}> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { expedition: null, dailyContent: null }
-
-  const admin = createAdminClient()
-  const date = today()
-
-  const { data } = await admin
-    .from('expeditions')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .eq('expedition_date', date)
-    .maybeSingle()
-
-  if (!data) return { expedition: null, dailyContent: null }
-  const exp = data as Expedition
-
-  const { data: dailyData } = await admin
-    .from('daily_expeditions')
-    .select('*')
-    .eq('expedition_date', date)
-    .eq('zone', exp.zone)
-    .maybeSingle()
-
-  return {
-    expedition: exp,
-    dailyContent: dailyData as DailyExpeditionRow | null,
-  }
-}
-
-export async function getTodayExpeditions(): Promise<Expedition[]> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
-
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('expeditions')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('expedition_date', today())
-
-  return (data ?? []) as Expedition[]
-}
-
-export async function getExpeditionById(id: number): Promise<{
-  expedition: Expedition | null
-  dailyContent: DailyExpeditionRow | null
-}> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { expedition: null, dailyContent: null }
-
-  const admin = createAdminClient()
-
-  const { data } = await admin
-    .from('expeditions')
-    .select('*')
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .single()
-
-  if (!data) return { expedition: null, dailyContent: null }
-  const exp = data as Expedition
-
-  const { data: dailyData } = await admin
-    .from('daily_expeditions')
-    .select('*')
-    .eq('expedition_date', exp.expedition_date)
-    .eq('zone', exp.zone)
-    .maybeSingle()
-
-  return { expedition: exp, dailyContent: dailyData as DailyExpeditionRow | null }
-}
+// ── Collection for crew picker ────────────────────────────────────────────────
 
 export async function getCollectionForCrew(): Promise<Array<{
   collectionId: number
@@ -640,9 +629,10 @@ export async function getCollectionForCrew(): Promise<Array<{
   name: string
   slug: string
   filename: string
-  fishTier: 1 | 2 | 3
   rarity: string
   power: number
+  dodge: number
+  fortune: number
 }>> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -657,28 +647,19 @@ export async function getCollectionForCrew(): Promise<Array<{
   if (!data) return []
 
   const seen = new Set<number>()
-  type CollEntry = { collectionId: number; cardId: number; variantId: number; name: string; slug: string; filename: string; fishTier: 1 | 2 | 3; rarity: string; power: number }
-  const result: CollEntry[] = []
-
-  type CollRow = {
-    id: number
-    card_variant_id: number
-    card_variants: {
-      id: number; variant_name: string; drop_weight: number
-      cards: { id: number; name: string; slug: string; filename: string; tier: number; zone: string }
-    }
+  type Row = {
+    id: number; card_variant_id: number
+    card_variants: { id: number; variant_name: string; drop_weight: number; cards: { id: number; name: string; slug: string; filename: string; tier: number; zone: string } }
   }
-  for (const row of (data as unknown as CollRow[])) {
+
+  const result = []
+  for (const row of (data as unknown as Row[])) {
     if (seen.has(row.card_variant_id)) continue
     seen.add(row.card_variant_id)
-
     const v = row.card_variants
     const card = v.cards
-    const rarity = RARITY_TIERS.find(t =>
-      t.variants.includes(v.variant_name)
-    )?.name ?? 'Common'
-    const power = getCrewPower(rarity, card.tier as 1 | 2 | 3)
-
+    const rarity = RARITY_TIERS.find(t => t.variants.includes(v.variant_name))?.name ?? 'Common'
+    const stats = getCrewStats(rarity)
     result.push({
       collectionId: row.id,
       cardId: card.id,
@@ -686,12 +667,43 @@ export async function getCollectionForCrew(): Promise<Array<{
       name: card.name,
       slug: card.slug,
       filename: card.filename,
-      fishTier: card.tier as 1 | 2 | 3,
       rarity,
-      power,
+      power: stats.power,
+      dodge: stats.dodge,
+      fortune: stats.fortune,
     })
   }
 
-  result.sort((a, b) => b.power - a.power)
+  result.sort((a, b) => (b.power + b.dodge + b.fortune) - (a.power + a.dodge + a.fortune))
   return result
+}
+
+export async function getUserItems(): Promise<Array<{ itemId: string; quantity: number }>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('expedition_items')
+    .select('item_id, quantity')
+    .eq('user_id', user.id)
+
+  return (data ?? []).map((r: { item_id: string; quantity: number }) => ({ itemId: r.item_id, quantity: r.quantity }))
+}
+
+export async function getTodayExpeditions(): Promise<Expedition[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('expeditions')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('started_at', { ascending: false })
+    .limit(10)
+
+  return (data ?? []) as Expedition[]
 }

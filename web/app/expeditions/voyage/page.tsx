@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
-import { ZONES, type Expedition, type DailyExpeditionRow } from '@/lib/expeditions'
+import { ZONES } from '@/lib/expeditions'
+import { getExpeditionState } from '../actions'
 import VoyagePage from './VoyagePage'
 
 export default async function ExpeditionsVoyagePage({
@@ -22,30 +23,18 @@ export default async function ExpeditionsVoyagePage({
 
   const admin = createAdminClient()
 
-  const [{ data: profile }, { data: expeditionRow }] = await Promise.all([
+  const [{ data: profile }, stateResult] = await Promise.all([
     admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
-    admin.from('expeditions').select('*').eq('id', expeditionId).eq('user_id', user.id).single(),
+    getExpeditionState(expeditionId),
   ])
 
-  if (!expeditionRow) redirect('/expeditions')
-  const expedition = expeditionRow as Expedition
+  if ('error' in stateResult) redirect('/expeditions')
 
-  // Allow viewing completed/failed expeditions (redirect to results)
+  const { expedition, nodeType, currentEvent, shopOptions } = stateResult
+
   if (expedition.status === 'completed' || expedition.status === 'failed') {
     redirect(`/expeditions/results?id=${expeditionId}`)
   }
-
-  const today = new Date().toISOString().split('T')[0]
-  if (expedition.expedition_date !== today) redirect('/expeditions')
-
-  const { data: dailyRow } = await admin
-    .from('daily_expeditions')
-    .select('*')
-    .eq('expedition_date', today)
-    .eq('zone', expedition.zone)
-    .single()
-
-  if (!dailyRow) redirect('/expeditions')
 
   const zoneConfig = ZONES[expedition.zone]
 
@@ -54,10 +43,11 @@ export default async function ExpeditionsVoyagePage({
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <VoyagePage
         expedition={expedition}
-        dailyContent={dailyRow as DailyExpeditionRow}
+        nodeType={nodeType}
+        currentEvent={currentEvent}
+        shopOptions={shopOptions}
         zoneName={zoneConfig.name}
         zoneIcon={zoneConfig.icon}
-        totalEvents={zoneConfig.length - 1}
       />
     </>
   )

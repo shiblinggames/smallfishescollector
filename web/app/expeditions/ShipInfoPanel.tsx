@@ -2,14 +2,17 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { STAT_ICONS, STAT_LABELS, type ExpeditionShipStats } from '@/lib/expeditions'
+import { type ShipStats } from '@/lib/expeditions'
 import { SHIPS } from '@/lib/ships'
 import ShipViewer3D from '@/app/marketplace/shipyard/ShipViewer3D'
 
-const STATS = ['combat', 'navigation', 'durability', 'speed', 'luck'] as const
-const STAT_MAX = 20
+const SHIP_STATS = [
+  { key: 'durability' as const, label: 'Durability', icon: '🛡', color: '#60a5fa', max: 80 },
+  { key: 'speed'      as const, label: 'Speed',      icon: '⚡', color: '#f0c040', max: 10 },
+  { key: 'armor'      as const, label: 'Armor',      icon: '⚓', color: '#4ade80', max: 6  },
+]
 
-export default function ShipInfoPanel({ ship, shipTier }: { ship: ExpeditionShipStats; shipTier: number }) {
+export default function ShipInfoPanel({ ship, shipTier }: { ship: ShipStats; shipTier: number }) {
   const shipDef = SHIPS[shipTier]
   const [expanded, setExpanded] = useState(false)
 
@@ -40,10 +43,10 @@ export default function ShipInfoPanel({ ship, shipTier }: { ship: ExpeditionShip
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             {/* Mini stat pips */}
             <div style={{ display: 'flex', gap: '0.6rem' }}>
-              {STATS.map(stat => (
-                <div key={stat} style={{ textAlign: 'center' }}>
-                  <p style={{ fontSize: '0.65rem', lineHeight: 1, marginBottom: 1 }}>{STAT_ICONS[stat]}</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.65rem', color: '#f0c040' }}>{ship[stat]}</p>
+              {SHIP_STATS.map(s => (
+                <div key={s.key} style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: '0.65rem', lineHeight: 1, marginBottom: 1 }}>{s.icon}</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.65rem', color: s.color }}>{ship[s.key]}</p>
                 </div>
               ))}
             </div>
@@ -62,20 +65,20 @@ export default function ShipInfoPanel({ ship, shipTier }: { ship: ExpeditionShip
       {expanded && (
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '0.875rem 1rem 0.75rem' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '0.875rem' }}>
-            {STATS.map(stat => {
-              const pct = Math.round((ship[stat] / STAT_MAX) * 100)
+            {SHIP_STATS.map(s => {
+              const pct = Math.round((ship[s.key] / s.max) * 100)
               return (
-                <div key={stat}>
+                <div key={s.key}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
                     <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#a0a09a' }}>
-                      {STAT_ICONS[stat]} {STAT_LABELS[stat]}
+                      {s.icon} {s.label}
                     </span>
-                    <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f0c040' }}>{ship[stat]}</span>
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.color }}>{ship[s.key]}</span>
                   </div>
                   <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)' }}>
                     <div style={{
                       height: '100%', borderRadius: 2, width: `${pct}%`,
-                      background: pct > 70 ? '#f0c040' : pct > 40 ? '#a0c080' : '#5a7a6a',
+                      background: s.color,
                       transition: 'width 0.3s',
                     }} />
                   </div>

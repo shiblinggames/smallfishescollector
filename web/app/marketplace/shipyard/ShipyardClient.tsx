@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { SHIPS } from '@/lib/ships'
 import { buyShip } from '@/app/shipyard/actions'
-import { EXPEDITION_SHIP_STATS, HULL_POINTS, STAT_ICONS, STAT_LABELS, STAT_DESCRIPTIONS } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 import ShipViewer3D from './ShipViewer3D'
 
 export default function ShipyardClient({ shipTier: initialTier, doubloons: initialDoubloons }: { shipTier: number; doubloons: number }) {
@@ -147,10 +147,13 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
 function ShipStatsModal({ tier, onClose }: { tier: number; onClose: () => void }) {
   const ship = SHIPS[tier]
   const stats = EXPEDITION_SHIP_STATS[tier]
-  const hull = HULL_POINTS[tier] ?? 3
-  const floor = tier + 1
-  const statKeys = ['combat', 'navigation', 'durability', 'speed', 'luck'] as const
   const c = ship.color
+
+  const statDefs = [
+    { key: 'durability' as const, label: 'Durability', icon: '🛡', color: '#60a5fa', description: 'Total HP your ship can absorb before sinking' },
+    { key: 'speed'      as const, label: 'Speed',      icon: '⚡', color: '#f0c040', description: 'Initiative bonus — higher speed fires first when both ships shoot' },
+    { key: 'armor'      as const, label: 'Armor',      icon: '⚓', color: '#4ade80', description: 'Flat damage reduction applied to every hit you take' },
+  ]
 
   return (
     <div
@@ -185,42 +188,35 @@ function ShipStatsModal({ tier, onClose }: { tier: number; onClose: () => void }
 
         <div className="overflow-y-auto flex-1 px-5 py-4 flex flex-col gap-4">
 
-          {/* Hull + crew summary */}
-          <div className="flex gap-3">
-            <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.75rem', textAlign: 'center' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: c }}>{hull}</p>
-              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#6a6764', marginTop: 2 }}>Hull Points</p>
-              <p className="font-karla" style={{ fontSize: '0.6rem', color: '#4a4845', marginTop: 4, lineHeight: 1.4 }}>How much damage your ship can take before sinking</p>
-            </div>
-            <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.75rem', textAlign: 'center' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: c }}>{stats.crewSlots}</p>
-              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#6a6764', marginTop: 2 }}>Crew Slots</p>
-              <p className="font-karla" style={{ fontSize: '0.6rem', color: '#4a4845', marginTop: 4, lineHeight: 1.4 }}>Cards you can assign before setting sail to boost your rolls</p>
-            </div>
+          {/* Crew summary */}
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.75rem', textAlign: 'center' }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: c }}>{stats?.crewSlots ?? 1}</p>
+            <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#6a6764', marginTop: 2 }}>Crew Slots</p>
+            <p className="font-karla" style={{ fontSize: '0.6rem', color: '#4a4845', marginTop: 4, lineHeight: 1.4 }}>Cards you can bring into battle to boost Power, Dodge, and Fortune</p>
           </div>
 
-          {/* How rolls work */}
+          {/* How combat works */}
           <div style={{ background: `${c}0a`, border: `1px solid ${c}25`, borderRadius: 10, padding: '0.75rem' }}>
-            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: c, marginBottom: 6 }}>How rolls work</p>
+            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: c, marginBottom: 6 }}>How combat works</p>
             <p className="font-karla" style={{ fontSize: '0.68rem', color: '#a0a09a', lineHeight: 1.55 }}>
-              Each expedition event tests one of your stats. You roll randomly within your stat's range — a better ship means a higher floor and ceiling. Assigned crew add a bonus roll on top.
+              Each round you choose Reload, Fire, or Defend. Stockpile charges for bigger shots — 3 charges deals 5× base damage. Speed determines who fires first when both sides shoot.
             </p>
           </div>
 
-          {/* Stats */}
+          {/* Ship stats */}
           <div className="flex flex-col gap-2">
-            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Stat Rolls</p>
-            {statKeys.map(stat => (
-              <div key={stat} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '0.7rem 0.875rem' }}>
+            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Ship Stats</p>
+            {statDefs.map(s => (
+              <div key={s.key} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '0.7rem 0.875rem' }}>
                 <div className="flex items-center justify-between mb-1">
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#f0ede8' }}>
-                    {STAT_ICONS[stat]} {STAT_LABELS[stat]}
+                    {s.icon} {s.label}
                   </p>
-                  <div style={{ background: `${c}15`, border: `1px solid ${c}30`, borderRadius: 6, padding: '0.15rem 0.5rem' }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: c }}>{floor}–{stats[stat]}</p>
+                  <div style={{ background: `${s.color}15`, border: `1px solid ${s.color}30`, borderRadius: 6, padding: '0.15rem 0.5rem' }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.color }}>{stats?.[s.key] ?? '—'}</p>
                   </div>
                 </div>
-                <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.4 }}>{STAT_DESCRIPTIONS[stat]}</p>
+                <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.4 }}>{s.description}</p>
               </div>
             ))}
           </div>

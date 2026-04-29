@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { BASE_DOUBLOONS, type ZoneKey, type ZoneConfig, type Expedition } from '@/lib/expeditions'
+import { type ZoneKey, type ZoneConfig, type Expedition } from '@/lib/expeditions'
 
 const ZONE_THEME: Record<ZoneKey, {
   label: string
@@ -50,25 +50,21 @@ interface Props {
   config: ZoneConfig
   expedition: Expedition | null
   shipTier: number
-  hasSpecialCrew: boolean
   doubloons: number
-  dailyUsed: boolean
 }
 
-export default function ZoneCard({ zoneKey, config, expedition, shipTier, hasSpecialCrew, doubloons, dailyUsed }: Props) {
+export default function ZoneCard({ zoneKey, config, expedition, shipTier, doubloons }: Props) {
   const router = useRouter()
   const theme = ZONE_THEME[zoneKey]
 
   const tierLocked = shipTier < config.requiredShipTier
-  const specialLocked = !!config.specialCrewRequired && !hasSpecialCrew
-  const fundsLocked = !tierLocked && !specialLocked && doubloons < config.entryCost
-  const dailyLocked = dailyUsed && !expedition
-  const isLocked = tierLocked || specialLocked || fundsLocked || dailyLocked
+  const fundsLocked = !tierLocked && doubloons < config.entryCost
+  const isLocked = tierLocked || fundsLocked
   const isActive = expedition?.status === 'active'
   const isCompleted = expedition?.status === 'completed'
   const isFailed = expedition?.status === 'failed'
   const isAttempted = isCompleted || isFailed
-  const interactive = !isLocked
+  const interactive = !isLocked || isActive || isAttempted
 
   function handleClick() {
     if (isActive) { router.push(`/expeditions/voyage?id=${expedition!.id}`); return }
@@ -77,14 +73,11 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, hasSpe
     router.push(`/expeditions/prepare?zone=${zoneKey}`)
   }
 
-  const baseDoubloons = BASE_DOUBLOONS[zoneKey]
   const earnedDoubloons = (expedition?.loot as { doubloons?: number })?.doubloons ?? 0
 
   let lockReason = ''
   if (tierLocked) lockReason = `Requires ${['Rowboat','Dinghy','Sloop','Schooner','Brigantine','Galleon','Man-o-War'][config.requiredShipTier]}`
-  else if (specialLocked) lockReason = 'Requires Catfish or Doby Mick'
   else if (fundsLocked) lockReason = `Need ${config.entryCost.toLocaleString()} ⟡ to enter`
-  else if (dailyLocked) lockReason = 'Daily voyage used — returns tomorrow'
 
   const dimCard = (isLocked && !fundsLocked) || isFailed
 
@@ -155,7 +148,7 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, hasSpe
                   {theme.label}
                 </span>
                 <span className="font-karla" style={{ fontSize: '0.62rem', color: '#4a4845' }}>
-                  {config.length} events
+                  {config.nodes.length} nodes
                 </span>
               </div>
             </div>
@@ -190,7 +183,7 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, hasSpe
               Failed
             </span>
           )}
-          {(tierLocked || specialLocked) && (
+          {tierLocked && (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3a3835" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 3 }}>
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -218,7 +211,7 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, hasSpe
           </div>
         ) : isFailed ? (
           <p className="font-karla" style={{ fontSize: '0.68rem', color: '#4a4845' }}>
-            Come back tomorrow
+            View results
           </p>
         ) : isLocked ? (
           <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#4a4845' }}>
@@ -231,7 +224,7 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, hasSpe
                 Base reward
               </p>
               <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: theme.color }}>
-                ~{baseDoubloons.toLocaleString()} ⟡
+                ~{config.baseDoubloons.toLocaleString()} ⟡
               </p>
             </div>
             <div style={{ textAlign: 'right' }}>
