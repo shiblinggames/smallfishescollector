@@ -3,8 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
-import { ZONES, ZONE_ORDER, EXPEDITION_SHIP_STATS, type Expedition } from '@/lib/expeditions'
-import ShipInfoPanel from './ShipInfoPanel'
+import { ZONES, ZONE_ORDER, type Expedition } from '@/lib/expeditions'
 import ZoneCard from './ZoneCard'
 
 export default async function ExpeditionsPage() {
@@ -119,9 +118,6 @@ export default async function ExpeditionsPage() {
               </div>
             </Link>
           )}
-
-          {/* Ship panel */}
-          <ShipInfoPanel ship={EXPEDITION_SHIP_STATS[shipTier]} shipTier={shipTier} />
 
           {/* Zone cards */}
           <div className="flex flex-col gap-3 pb-16">

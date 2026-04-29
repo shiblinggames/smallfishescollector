@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { startExpedition } from '../actions'
-import { EXPEDITION_SHIP_STATS, EXPEDITION_ITEMS, RARITY_COLORS, type ZoneKey, type ZoneConfig, type ShipStats, type CrewCard } from '@/lib/expeditions'
+import { EXPEDITION_ITEMS, RARITY_COLORS, type ZoneKey, type ZoneConfig, type ShipStats, type CrewCard } from '@/lib/expeditions'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 
@@ -23,7 +23,13 @@ interface Props {
   userItems: Array<{ itemId: string; quantity: number }>
 }
 
-export default function PreparePage({ zone, zoneConfig, shipStats, shipTier, doubloons, collection, userItems }: Props) {
+const STAT_COLS = [
+  { key: 'power'   as const, label: 'PWR', color: '#f87171' },
+  { key: 'dodge'   as const, label: 'DGE', color: '#60a5fa' },
+  { key: 'fortune' as const, label: 'FTN', color: '#f0c040' },
+]
+
+export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, collection, userItems }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [crew, setCrew] = useState<(CollectionCard | null)[]>(Array(shipStats.crewSlots).fill(null))
@@ -35,40 +41,26 @@ export default function PreparePage({ zone, zoneConfig, shipStats, shipTier, dou
 
   function assignCard(card: CollectionCard) {
     if (pickerSlot === null) return
-    setCrew(prev => {
-      const next = [...prev]
-      next[pickerSlot] = card
-      return next
-    })
+    setCrew(prev => { const next = [...prev]; next[pickerSlot] = card; return next })
     setPickerSlot(null)
   }
 
   function removeCard(slot: number) {
-    setCrew(prev => {
-      const next = [...prev]
-      next[slot] = null
-      return next
-    })
+    setCrew(prev => { const next = [...prev]; next[slot] = null; return next })
   }
 
   const totalPower   = crew.reduce((s, c) => s + (c?.power   ?? 0), 0)
   const totalDodge   = crew.reduce((s, c) => s + (c?.dodge   ?? 0), 0)
   const totalFortune = crew.reduce((s, c) => s + (c?.fortune ?? 0), 0)
+  const assignedCount = crew.filter(Boolean).length
 
   function depart() {
     setError(null)
     startTransition(async () => {
       const crewLoadout: CrewCard[] = crew.filter(Boolean).map(c => ({
-        collectionId: c!.collectionId,
-        cardId: c!.cardId,
-        variantId: c!.variantId,
-        name: c!.name,
-        slug: c!.slug,
-        filename: c!.filename,
-        rarity: c!.rarity,
-        power: c!.power,
-        dodge: c!.dodge,
-        fortune: c!.fortune,
+        collectionId: c!.collectionId, cardId: c!.cardId, variantId: c!.variantId,
+        name: c!.name, slug: c!.slug, filename: c!.filename,
+        rarity: c!.rarity, power: c!.power, dodge: c!.dodge, fortune: c!.fortune,
       }))
       const result = await startExpedition(zone, crewLoadout, equippedItem)
       if ('error' in result) { setError(result.error); return }
@@ -86,156 +78,185 @@ export default function PreparePage({ zone, zoneConfig, shipStats, shipTier, dou
       <div className="px-5 max-w-lg mx-auto">
 
         {/* Header */}
-        <div className="mb-5">
-          <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: '#4a6a8a', marginBottom: '0.25rem' }}>
-            {zoneConfig.name}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#4a6a8a', marginBottom: '0.3rem' }}>
+            {zoneConfig.icon} {zoneConfig.name}
           </p>
-          <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.3rem', marginBottom: '0.25rem' }}>
+          <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.4rem', lineHeight: 1.1 }}>
             Prepare Crew
           </h1>
-          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#6a6764' }}>
-            {shipStats.name} · {shipStats.crewSlots} crew slots · {zoneConfig.entryCost} ⟡ entry
-          </p>
         </div>
 
-        {/* Ship stats */}
+        {/* Ship */}
         <div style={{
           background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          border: '1px solid rgba(255,255,255,0.09)',
+          borderRadius: 14,
+          padding: '0.875rem 1rem',
+          marginBottom: '1.25rem',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '1rem' }}>⚓</span>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0ede8' }}>{shipStats.name}</p>
+            </div>
+            <p className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845' }}>
+              {shipStats.crewSlots} crew slot{shipStats.crewSlots !== 1 ? 's' : ''}
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '1.5rem' }}>
+            {[
+              { label: 'Durability', value: shipStats.durability, color: '#60a5fa' },
+              { label: 'Speed',      value: shipStats.speed,      color: '#f0c040' },
+              { label: 'Armor',      value: shipStats.armor,      color: '#4ade80' },
+            ].map(s => (
+              <div key={s.label}>
+                <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4a4845', marginBottom: 2 }}>{s.label}</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: s.color }}>{s.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Crew slots */}
+        <div style={{ marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+            <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Crew</p>
+            <p className="font-karla" style={{ fontSize: '0.52rem', color: assignedCount === shipStats.crewSlots ? '#4ade80' : '#4a4845' }}>
+              {assignedCount}/{shipStats.crewSlots} assigned
+            </p>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {crew.map((card, slot) =>
+              card ? (
+                <div key={slot} style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 12,
+                  padding: '0.75rem 0.875rem',
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                }}>
+                  <button
+                    onClick={() => setPickerSlot(slot)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={IMG_BASE + card.filename} alt={card.name}
+                      style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${(RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764')}50` }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.82rem', color: '#f0ede8', lineHeight: 1.2 }}>{card.name}</p>
+                      <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764', marginTop: 2 }}>{card.rarity}</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.875rem', flexShrink: 0 }}>
+                      {STAT_COLS.map(s => (
+                        <div key={s.label} style={{ textAlign: 'center' }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: s.color }}>{card[s.key]}</p>
+                          <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845', marginTop: 1 }}>{s.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => removeCard(slot)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', flexShrink: 0, color: '#3a3835', lineHeight: 1 }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  key={slot}
+                  onClick={() => setPickerSlot(slot)}
+                  style={{
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px dashed rgba(255,255,255,0.09)',
+                    borderRadius: 12,
+                    padding: '0.875rem 1rem',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '0.875rem',
+                    width: '100%',
+                  }}
+                >
+                  <div style={{
+                    width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+                    background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.08)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                  </div>
+                  <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#3a3835' }}>Add crew member</p>
+                </button>
+              )
+            )}
+          </div>
+        </div>
+
+        {/* Crew totals */}
+        <div style={{
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.06)',
           borderRadius: 12,
           padding: '0.75rem 1rem',
-          marginBottom: '1rem',
-          display: 'flex',
-          gap: '1.5rem',
+          marginBottom: '1.25rem',
+          display: 'flex', justifyContent: 'space-around',
         }}>
           {[
-            { label: 'Durability', value: shipStats.durability, color: '#60a5fa' },
-            { label: 'Speed',      value: shipStats.speed,      color: '#f0c040' },
-            { label: 'Armor',      value: shipStats.armor,      color: '#4ade80' },
+            { label: 'Total Power',   val: totalPower,   color: '#f87171' },
+            { label: 'Total Dodge',   val: totalDodge,   color: '#60a5fa' },
+            { label: 'Total Fortune', val: totalFortune, color: '#f0c040' },
           ].map(s => (
-            <div key={s.label}>
-              <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#6a6764', marginBottom: 2 }}>{s.label}</p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: s.color }}>{s.value}</p>
+            <div key={s.label} style={{ textAlign: 'center' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: s.val > 0 ? s.color : '#2a2825' }}>{s.val}</p>
+              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4a4845', marginTop: 2 }}>{s.label}</p>
             </div>
           ))}
         </div>
 
-        {/* Crew slots */}
-        <div style={{
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: 14,
-          overflow: 'hidden',
-          marginBottom: '1rem',
-        }}>
-          <div style={{ padding: '0.625rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-            <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#6a6764' }}>
-              Crew — {crew.filter(Boolean).length}/{shipStats.crewSlots} assigned
-            </p>
-          </div>
-
-          <div className="flex flex-col">
-            {crew.map((card, slot) => (
-              <div
-                key={slot}
-                style={{
-                  padding: '0.75rem 1rem',
-                  borderBottom: slot < crew.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-                  display: 'flex', alignItems: 'center', gap: '0.75rem',
-                }}
-              >
-                <p className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845', width: 16, flexShrink: 0 }}>{slot + 1}</p>
-                {card ? (
-                  <div
-                    className="flex items-center gap-2 flex-1"
-                    onClick={() => removeCard(slot)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-karla font-600 truncate" style={{ fontSize: '0.75rem', color: '#f0ede8' }}>{card.name}</p>
-                      <p className="font-karla" style={{ fontSize: '0.58rem', color: RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764' }}>{card.rarity}</p>
-                    </div>
-                    <div className="flex gap-3 flex-shrink-0">
-                      {[{ label: 'PWR', val: card.power, color: '#f87171' }, { label: 'DGE', val: card.dodge, color: '#60a5fa' }, { label: 'FTN', val: card.fortune, color: '#f0c040' }].map(s => (
-                        <div key={s.label} style={{ textAlign: 'center' }}>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: s.color }}>{s.val}</p>
-                          <p className="font-karla" style={{ fontSize: '0.44rem', color: '#4a4845' }}>{s.label}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <p style={{ fontSize: '0.55rem', color: '#4a4845', flexShrink: 0 }}>✕</p>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setPickerSlot(slot)}
-                    style={{
-                      flex: 1, height: 44,
-                      background: 'rgba(255,255,255,0.03)',
-                      border: '1px dashed rgba(255,255,255,0.1)',
-                      borderRadius: 8, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}
-                  >
-                    <span style={{ fontSize: '0.62rem', color: '#4a4845' }}>+ Assign crew</span>
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Totals */}
-          <div style={{ padding: '0.625rem 1rem', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: '1.5rem' }}>
-            {[{ label: 'Total Power', val: totalPower, color: '#f87171' }, { label: 'Total Dodge', val: totalDodge, color: '#60a5fa' }, { label: 'Total Fortune', val: totalFortune, color: '#f0c040' }].map(s => (
-              <div key={s.label}>
-                <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.48rem', color: '#6a6764', marginBottom: 1 }}>{s.label}</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: s.color }}>{s.val}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Item equip */}
+        {/* Item */}
         {userItems.length > 0 && (
-          <div style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 12,
-            overflow: 'hidden',
-            marginBottom: '1rem',
-          }}>
-            <div style={{ padding: '0.625rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-              <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Equipped Item</p>
-            </div>
-            <div className="flex flex-col">
+          <div style={{ marginBottom: '1.25rem' }}>
+            <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: '#6a6764', marginBottom: '0.625rem' }}>Item</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {userItems.map(({ itemId }) => {
                 const def = EXPEDITION_ITEMS[itemId]
                 if (!def) return null
-                const isEquipped = equippedItem === itemId
+                const active = equippedItem === itemId
                 return (
                   <button
                     key={itemId}
-                    onClick={() => setEquippedItem(isEquipped ? null : itemId)}
+                    onClick={() => setEquippedItem(active ? null : itemId)}
                     style={{
-                      padding: '0.75rem 1rem',
-                      background: isEquipped ? 'rgba(240,192,64,0.08)' : 'transparent',
-                      border: 'none',
-                      borderBottom: '1px solid rgba(255,255,255,0.06)',
-                      cursor: 'pointer',
+                      padding: '0.875rem 1rem',
+                      background: active ? 'rgba(240,192,64,0.08)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${active ? 'rgba(240,192,64,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                      borderRadius: 12, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem',
-                      textAlign: 'left',
+                      textAlign: 'left', transition: 'background 0.15s, border-color 0.15s',
                     }}
                   >
-                    <div>
-                      <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: isEquipped ? '#f0c040' : '#f0ede8' }}>{def.name}</p>
-                      <p className="font-karla" style={{ fontSize: '0.6rem', color: '#6a6764', marginTop: 1 }}>{def.effectDescription}</p>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: active ? '#f0c040' : '#f0ede8' }}>{def.name}</p>
+                      <p className="font-karla" style={{ fontSize: '0.6rem', color: '#6a6764', marginTop: 2 }}>{def.effectDescription}</p>
                     </div>
                     <div style={{
-                      width: 18, height: 18, borderRadius: '50%',
-                      border: `2px solid ${isEquipped ? '#f0c040' : 'rgba(255,255,255,0.15)'}`,
-                      background: isEquipped ? '#f0c040' : 'transparent',
-                      flexShrink: 0,
-                    }} />
+                      width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                      border: `2px solid ${active ? '#f0c040' : 'rgba(255,255,255,0.12)'}`,
+                      background: active ? '#f0c040' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'background 0.15s, border-color 0.15s',
+                    }}>
+                      {active && (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0a0a08" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 6L9 17l-5-5"/>
+                        </svg>
+                      )}
+                    </div>
                   </button>
                 )
               })}
@@ -251,69 +272,98 @@ export default function PreparePage({ zone, zoneConfig, shipStats, shipTier, dou
           onClick={depart}
           disabled={isPending || !canAfford}
           style={{
-            width: '100%',
-            padding: '0.875rem',
-            background: isPending ? 'rgba(240,192,64,0.1)' : 'rgba(240,192,64,0.15)',
-            border: '1px solid rgba(240,192,64,0.3)',
-            borderRadius: 12,
+            width: '100%', padding: '1rem',
+            background: canAfford ? 'rgba(240,192,64,0.15)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${canAfford ? 'rgba(240,192,64,0.35)' : 'rgba(255,255,255,0.08)'}`,
+            borderRadius: 14,
             cursor: isPending || !canAfford ? 'not-allowed' : 'pointer',
-            opacity: !canAfford ? 0.5 : 1,
+            opacity: isPending ? 0.7 : 1,
+            transition: 'opacity 0.2s',
           }}
         >
-          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem', color: '#f0c040' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.75rem', color: canAfford ? '#f0c040' : '#4a4845' }}>
             {isPending ? 'Setting sail...' : `Set Sail — ${zoneConfig.entryCost} ⟡`}
           </p>
           {!canAfford && (
-            <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: 2 }}>
-              Need {zoneConfig.entryCost - doubloons} more ⟡
+            <p className="font-karla" style={{ fontSize: '0.62rem', color: '#4a4845', marginTop: 3 }}>
+              Need {(zoneConfig.entryCost - doubloons).toLocaleString()} more ⟡
             </p>
           )}
         </button>
+
       </div>
 
       {/* Crew picker */}
       {pickerSlot !== null && (
         <div
           onClick={() => setPickerSlot(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 }}
         >
           <div
             onClick={e => e.stopPropagation()}
-            style={{ background: '#0f0f0e', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '18px 18px 0 0', width: '100%', maxWidth: 480, maxHeight: '70vh', display: 'flex', flexDirection: 'column' }}
+            style={{
+              background: '#0d0d0c',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '20px 20px 0 0',
+              width: '100%', maxWidth: 520, maxHeight: '75vh',
+              display: 'flex', flexDirection: 'column',
+            }}
           >
-            <div className="flex items-center justify-between px-5 pt-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.9rem' }}>Assign Crew — Slot {pickerSlot + 1}</p>
-              <button onClick={() => setPickerSlot(null)} style={{ color: '#6a6764', background: 'none', border: 'none', cursor: 'pointer' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            <div style={{ padding: '1rem 1.25rem 0.875rem', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#4a6a8a', marginBottom: 3 }}>Slot {pickerSlot + 1}</p>
+                <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.05rem' }}>Assign Crew</p>
+              </div>
+              <button
+                onClick={() => setPickerSlot(null)}
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6a6764" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
               </button>
             </div>
-            <div className="overflow-y-auto flex-1 px-4 py-3">
+            <div style={{ overflowY: 'auto', flex: 1, padding: '0.875rem 1.25rem' }}>
               {pickerCards.length === 0 ? (
-                <p className="font-karla text-center py-8" style={{ fontSize: '0.75rem', color: '#6a6764' }}>No cards available.</p>
+                <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                  <p className="font-karla" style={{ fontSize: '0.78rem', color: '#4a4845' }}>No cards available.</p>
+                </div>
               ) : (
-                <div className="flex flex-col gap-2">
-                  {pickerCards.map(card => (
-                    <button
-                      key={card.variantId}
-                      onClick={() => assignCard(card)}
-                      className="flex items-center gap-3 text-left w-full"
-                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.6rem 0.75rem', cursor: 'pointer' }}
-                    >
-                      <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>{card.name}</p>
-                        <p className="font-karla" style={{ fontSize: '0.6rem', color: RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764' }}>{card.rarity}</p>
-                      </div>
-                      <div className="flex gap-3 flex-shrink-0">
-                        {[{ label: 'PWR', val: card.power, color: '#f87171' }, { label: 'DGE', val: card.dodge, color: '#60a5fa' }, { label: 'FTN', val: card.fortune, color: '#f0c040' }].map(s => (
-                          <div key={s.label} style={{ textAlign: 'center' }}>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: s.color }}>{s.val}</p>
-                            <p className="font-karla" style={{ fontSize: '0.44rem', color: '#4a4845' }}>{s.label}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </button>
-                  ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {pickerCards.map(card => {
+                    const rarityColor = RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764'
+                    return (
+                      <button
+                        key={card.variantId}
+                        onClick={() => assignCard(card)}
+                        style={{
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: 12, padding: '0.75rem',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.875rem',
+                          textAlign: 'left', width: '100%',
+                        }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={IMG_BASE + card.filename} alt={card.name}
+                          style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${rarityColor}50` }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.85rem', color: '#f0ede8', lineHeight: 1.2 }}>{card.name}</p>
+                          <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: rarityColor, marginTop: 3 }}>{card.rarity}</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '1rem', flexShrink: 0 }}>
+                          {STAT_COLS.map(s => (
+                            <div key={s.label} style={{ textAlign: 'center' }}>
+                              <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: s.color }}>{card[s.key]}</p>
+                              <p className="font-karla" style={{ fontSize: '0.44rem', color: '#4a4845', marginTop: 1 }}>{s.label}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>
