@@ -580,17 +580,14 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
 
         {/* Player panel */}
         <div style={{ flex: 1, background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.16)', borderRadius: 14, padding: '0.75rem 0.625rem', display: 'flex', flexDirection: 'column', gap: '0.35rem', animation: playerPanelAnim }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
-            <button onClick={onCrewClick} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
-              <CircleAvatar
-                src={crewLoadout[0] ? IMG_BASE + crewLoadout[0].filename : null}
-                fallback="⚓"
-                size={36}
-                borderColor="rgba(96,165,250,0.35)"
-              />
-            </button>
-            <p className="font-karla" style={{ fontSize: '0.36rem', color: '#4a4845', lineHeight: 1 }}>tap for crew</p>
-          </div>
+          <button onClick={onCrewClick} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', alignSelf: 'flex-start' }}>
+            <CircleAvatar
+              src={crewLoadout[0] ? IMG_BASE + crewLoadout[0].filename : null}
+              fallback="⚓"
+              size={36}
+              borderColor="rgba(96,165,250,0.35)"
+            />
+          </button>
           <div key={`p-${cs.round}`} style={{ position: 'relative', animation: playerImgAnim }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={ship.image} alt={ship.name} style={{ width: '100%', height: 88, objectFit: 'contain', objectPosition: 'bottom', display: 'block' }} />
@@ -610,7 +607,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
               <Hitsplat text="DODGED!" color="#4ade80" animKey={log.round} />
             )}
           </div>
-          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.62rem', color: '#f0ede8', lineHeight: 1.2 }}>{ship.name}</p>
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.68rem', color: '#f0ede8', lineHeight: 1.2 }}>{ship.name}</p>
           {/* HP bar */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
@@ -1069,7 +1066,7 @@ function CrewSheet({ expedition, ship, crew, maxDurability, currentDurability, r
   const buffDodge = runBuffs.filter(b => b.effect === 'dodge').reduce((s, b) => s + b.value, 0)
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 60 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: '#0f0f0e', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '18px 18px 0 0', width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
         <div className="flex items-center justify-between px-5 pt-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.9rem' }}>{ship.name} — Run Stats</p>
@@ -1077,7 +1074,7 @@ function CrewSheet({ expedition, ship, crew, maxDurability, currentDurability, r
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </div>
-        <div className="overflow-y-auto flex-1 px-5 py-4 flex flex-col gap-4">
+        <div className="overflow-y-auto flex-1 px-5 py-4 pb-24 sm:pb-4 flex flex-col gap-4">
           <div>
             <p className="font-karla font-600 uppercase tracking-[0.1em] mb-2" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Ship</p>
             <div className="flex gap-5">
