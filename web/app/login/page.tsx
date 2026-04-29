@@ -15,9 +15,6 @@ export default function LoginPage() {
       <div className="w-full max-w-sm relative z-10">
         {/* Header */}
         <div className="text-center mb-10">
-          <p className="font-karla font-600 uppercase tracking-[0.22em] mb-4" style={{ fontSize: '0.58rem', color: '#5a9aaa' }}>
-            Collectible Card Game
-          </p>
           <h1
             className="font-cinzel font-900 text-[#f0ede8] leading-[0.9] tracking-[-0.01em] mb-3"
             style={{
