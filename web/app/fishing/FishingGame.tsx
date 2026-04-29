@@ -1245,7 +1245,10 @@ export default function FishingGame({
 
     // Catch/perfect: freeze needle, wait for server before showing result
     const wasPerfect = zone.type === 'perfect'
-    if (wasPerfect) setPerfectFlash(true)
+    if (wasPerfect) {
+      setPerfectFlash(true)
+      if ('vibrate' in navigator) navigator.vibrate([40, 60, 80])
+    }
 
     // Consecutive perfect streak
     const newStreak = wasPerfect ? perfectStreak + 1 : 0
