@@ -12,6 +12,7 @@ import {
   computeTotalCrewStats,
   type Expedition, type NodeType, type CombatAction, type CombatRoundLog,
   type EventNodeDef, type ShopOption, type ZoneLoot, type RunBuff, type ShipStats, type EnemyDef,
+  type CombatState,
 } from '@/lib/expeditions'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
@@ -29,6 +30,7 @@ type Phase =
   | { type: 'idle' }
   | { type: 'resolving' }
   | { type: 'round_result'; log: CombatRoundLog }
+  | { type: 'enemy_defeated'; goldEarned: number; enemyName: string; newCombatState: CombatState | null; nextNodeIndex: number; zoneComplete: boolean }
   | { type: 'zone_complete' }
   | { type: 'failed' }
   | { type: 'event' }
@@ -110,13 +112,18 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
       setPhase({ type: 'round_result', log: result.roundLog })
 
       if (result.combatOver) {
-        await new Promise(r => setTimeout(r, 1600))
+        await new Promise(r => setTimeout(r, 1200))
         if (result.expeditionFailed) {
           setPhase({ type: 'failed' })
         } else {
-          // Apply next node's combat state (new enemy, or null for event/shop)
-          setExp(prev => ({ ...prev, combat_state: result.newCombatState }))
-          advanceToNextNode(exp.current_node + 1, result.zoneComplete)
+          setPhase({
+            type: 'enemy_defeated',
+            goldEarned: result.goldEarned,
+            enemyName: ENEMIES[cs?.enemyId ?? '']?.name ?? 'Enemy',
+            newCombatState: result.newCombatState,
+            nextNodeIndex: exp.current_node + 1,
+            zoneComplete: result.zoneComplete,
+          })
         }
       }
     })
@@ -124,6 +131,13 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
 
   function handleNextRound() {
     setPhase({ type: 'idle' })
+  }
+
+  function handleEnemyDefeatedContinue() {
+    if (phase.type !== 'enemy_defeated') return
+    const p = phase
+    setExp(prev => ({ ...prev, combat_state: p.newCombatState }))
+    advanceToNextNode(p.nextNodeIndex, p.zoneComplete)
   }
 
   function handleEventChoice(choiceIndex: number) {
@@ -281,6 +295,15 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
         )}
 
       </div>
+
+      {/* Enemy defeated modal */}
+      {phase.type === 'enemy_defeated' && (
+        <EnemyDefeatedModal
+          enemyName={phase.enemyName}
+          goldEarned={phase.goldEarned}
+          onContinue={handleEnemyDefeatedContinue}
+        />
+      )}
 
       {showCrewSheet && (
         <CrewSheet
@@ -609,6 +632,68 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
             ))}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── Enemy defeated modal ──────────────────────────────────────────────────────
+
+function EnemyDefeatedModal({ enemyName, goldEarned, onContinue }: {
+  enemyName: string
+  goldEarned: number
+  onContinue: () => void
+}) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 40,
+      background: 'rgba(0,0,0,0.72)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '1.5rem',
+    }}>
+      <div style={{
+        background: '#0f0e0c',
+        border: '1px solid rgba(240,192,64,0.25)',
+        borderRadius: 18,
+        padding: '1.75rem 1.5rem',
+        width: '100%',
+        maxWidth: 320,
+        textAlign: 'center',
+        boxShadow: '0 0 40px rgba(240,192,64,0.08), 0 8px 32px rgba(0,0,0,0.6)',
+      }}>
+        <p style={{ fontSize: '2rem', marginBottom: '0.6rem' }}>⚔️</p>
+        <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.48rem', color: '#4ade80', marginBottom: '0.4rem' }}>
+          Enemy Defeated
+        </p>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', marginBottom: '1.25rem', lineHeight: 1.2 }}>
+          {enemyName}
+        </p>
+        <div style={{
+          background: 'rgba(240,192,64,0.07)',
+          border: '1px solid rgba(240,192,64,0.2)',
+          borderRadius: 12,
+          padding: '0.875rem',
+          marginBottom: '1.25rem',
+        }}>
+          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.44rem', color: '#6a6764', marginBottom: '0.35rem' }}>Gold Earned</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0c040', lineHeight: 1 }}>
+            +{goldEarned} ✦
+          </p>
+        </div>
+        <button
+          onClick={onContinue}
+          style={{
+            width: '100%',
+            padding: '0.875rem',
+            background: 'rgba(240,192,64,0.12)',
+            border: '1px solid rgba(240,192,64,0.3)',
+            borderRadius: 12,
+            cursor: 'pointer',
+          }}
+          className="font-karla font-700 uppercase tracking-[0.12em]"
+        >
+          <span style={{ fontSize: '0.72rem', color: '#f0c040' }}>Continue →</span>
+        </button>
       </div>
     </div>
   )
