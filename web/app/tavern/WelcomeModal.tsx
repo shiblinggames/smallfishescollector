@@ -5,18 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { claimWelcomePack } from './welcomeActions'
 
-const FEATURES = [
-  { color: '#f0c040', label: 'Daily Bonus' },
-  { color: '#4ade80', label: 'Fishing' },
-  { color: '#60a5fa', label: 'Fish of the Day' },
-  { color: '#f87171', label: 'Bounties' },
-  { color: '#c084fc', label: 'Crown & Anchor' },
-  { color: '#a78bfa', label: 'Fish Slots' },
-  { color: '#34d399', label: 'Expeditions' },
-  { color: '#fb923c', label: 'Fish Market' },
-  { color: '#e879f9', label: 'Collection' },
-  { color: '#60a5fa', label: 'Tackle Shop' },
-  { color: '#94a3b8', label: 'Shipyard' },
+const SECTIONS = [
+  { color: '#f0c040', label: 'Tavern',       desc: 'Daily bonuses, games, bounties, and the fish of the day.' },
+  { color: '#4ade80', label: 'Fishing',       desc: 'Cast your line and reel in fish across different habitats.' },
+  { color: '#fb923c', label: 'Fish Market',   desc: 'Sell your catch at live market prices that shift over time.' },
+  { color: '#60a5fa', label: 'Upgrades',      desc: 'Better rods, hooks, bait, and ships mean bigger hauls.' },
+  { color: '#34d399', label: 'Expeditions',   desc: 'Send your crew on voyages to fight enemies and earn loot.' },
+  { color: '#a78bfa', label: 'Packs & Crew',  desc: 'Open packs to discover fish cards and recruit new crew.' },
 ]
 
 export default function WelcomeModal() {
@@ -98,40 +93,21 @@ export default function WelcomeModal() {
                       Catch fish, earn doubloons, open packs, and build your collection. Here&apos;s everything waiting for you:
                     </p>
 
-                    {/* Feature grid */}
-                    <div style={{
-                      display: 'grid', gridTemplateColumns: '1fr 1fr',
-                      gap: '0.4rem',
-                      marginBottom: '1.5rem',
-                    }}>
-                      {FEATURES.map(f => (
-                        <div key={f.label} style={{
-                          display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    {/* Sections */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '1.5rem' }}>
+                      {SECTIONS.map(s => (
+                        <div key={s.label} style={{
+                          display: 'flex', alignItems: 'baseline', gap: '0.6rem',
                           background: 'rgba(8,8,6,0.82)',
                           border: '1px solid rgba(255,255,255,0.08)',
-                          borderRadius: '0.5rem',
-                          padding: '0.45rem 0.7rem',
+                          borderRadius: '0.6rem',
+                          padding: '0.55rem 0.85rem',
                         }}>
-                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: f.color, flexShrink: 0 }} />
-                          <span className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#b8b5b0' }}>{f.label}</span>
+                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: s.color, flexShrink: 0, marginTop: 4 }} />
+                          <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span>
+                          <span className="font-karla font-400" style={{ fontSize: '0.75rem', color: '#5a5856', lineHeight: 1.4 }}>{s.desc}</span>
                         </div>
                       ))}
-                    </div>
-
-                    {/* Welcome gift */}
-                    <div style={{
-                      background: 'rgba(240,192,64,0.07)',
-                      border: '1px solid rgba(240,192,64,0.22)',
-                      borderRadius: '0.75rem',
-                      padding: '0.85rem 1rem',
-                      marginBottom: '1.25rem',
-                    }}>
-                      <p className="font-karla font-700 text-[#f0c040]" style={{ fontSize: '0.82rem', marginBottom: '0.2rem' }}>
-                        🎁 Welcome gift — 1 free pack
-                      </p>
-                      <p className="font-karla font-400 text-[#6a5e40]" style={{ fontSize: '0.72rem' }}>
-                        Open it from the Packs page to see what you reel in.
-                      </p>
                     </div>
 
                     <button onClick={handleClaim} className="btn-ghost w-full">
