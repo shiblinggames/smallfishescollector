@@ -7,7 +7,7 @@ import type { LeaderboardEntry } from './LeaderboardClient'
 
 async function fetchBoard(admin: ReturnType<typeof createAdminClient>, view: string, userId: string) {
   const [{ data: top }, { data: me }] = await Promise.all([
-    admin.from(view).select('user_id, username, score').order('score', { ascending: false }).limit(50),
+    admin.from(view).select('user_id, username, score').order('score', { ascending: false }).order('created_at', { ascending: true }).limit(50),
     admin.from(view).select('score').eq('user_id', userId).single(),
   ])
   return {
