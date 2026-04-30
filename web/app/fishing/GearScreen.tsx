@@ -12,6 +12,20 @@ import { getShip } from '@/lib/ships'
 type BaitItem = { bait_type: string; quantity: number }
 type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'bait'
 
+function ShopLink({ href, label, color, onClick }: { href: string; label: string; color: string; onClick: () => void }) {
+  return (
+    <Link href={href} onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.9rem 1rem', borderRadius: 12, background: `${color}12`, border: `1px solid ${color}45`, textDecoration: 'none', marginTop: 6 }}>
+      <div style={{ flex: 1 }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color }}>{label}</p>
+        <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: `${color}80`, marginTop: 2 }}>Tackle Shop</p>
+      </div>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.75, flexShrink: 0 }}>
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    </Link>
+  )
+}
+
 function Pill({ label, color, muted }: { label: string; color?: string; muted?: boolean }) {
   if (muted) return (
     <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#4a4845', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
@@ -271,11 +285,7 @@ export default function GearScreen({
                 </div>
               )
             })}
-            <Link href="/marketplace/tackle-shop#rod" onClick={onClose}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', textDecoration: 'none', marginTop: 2 }}>
-              <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)' }}>Buy more rods</span>
-              <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845' }}>Tackle Shop ↗</span>
-            </Link>
+            <ShopLink href="/marketplace/tackle-shop#rod" label="Buy more rods" color={rod.color} onClick={onClose} />
           </div>
         )}
 
@@ -289,11 +299,7 @@ export default function GearScreen({
               {dragPct > 0 ? <Pill label={`−${dragPct}% needle speed`} color={reel.color} /> : <Pill label="Base needle speed" muted />}
             </div>
             <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.55 }}>{reel.description}</p>
-            <Link href="/marketplace/tackle-shop#reel" onClick={onClose}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', textDecoration: 'none' }}>
-              <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)' }}>Upgrade reel</span>
-              <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845' }}>Tackle Shop ↗</span>
-            </Link>
+            <ShopLink href="/marketplace/tackle-shop#reel" label="Upgrade reel" color={reel.color} onClick={onClose} />
           </div>
         )}
 
@@ -312,11 +318,7 @@ export default function GearScreen({
               </div>
             </div>
             <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.55 }}>{hook.description}</p>
-            <Link href="/marketplace/tackle-shop#hook" onClick={onClose}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', textDecoration: 'none' }}>
-              <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)' }}>Upgrade hook</span>
-              <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845' }}>Tackle Shop ↗</span>
-            </Link>
+            <ShopLink href="/marketplace/tackle-shop#hook" label="Upgrade hook" color={hook.color} onClick={onClose} />
           </div>
         )}
 
@@ -367,11 +369,7 @@ export default function GearScreen({
                 </button>
               )
             })}
-            <Link href="/marketplace/tackle-shop#bait" onClick={onClose}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', textDecoration: 'none', marginTop: 2 }}>
-              <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)' }}>Buy more bait</span>
-              <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845' }}>Tackle Shop ↗</span>
-            </Link>
+            <ShopLink href="/marketplace/tackle-shop#bait" label="Buy more bait" color={bait?.color ?? '#34d399'} onClick={onClose} />
           </div>
         )}
       </div>
