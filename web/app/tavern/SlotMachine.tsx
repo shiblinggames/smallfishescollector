@@ -470,8 +470,8 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                   disabled={disabled}
                   className="font-karla font-600 text-xs uppercase tracking-[0.10em] px-3 py-2 rounded-lg transition-all"
                   style={{
-                    background: wager === amt ? 'rgba(240,192,64,0.15)' : 'rgba(255,255,255,0.08)',
-                    border: `1px solid ${wager === amt ? '#f0c040' : 'rgba(255,255,255,0.15)'}`,
+                    background: wager === amt ? 'rgba(240,192,64,0.18)' : 'rgba(8,8,6,0.72)',
+                    border: `1px solid ${wager === amt ? '#f0c040' : 'rgba(255,255,255,0.18)'}`,
                     color: disabled ? '#3a3835' : wager === amt ? '#f0c040' : '#a0a09a',
                     cursor: disabled ? 'default' : 'pointer',
                   }}
@@ -496,16 +496,16 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
 
         {/* Stats */}
         {stats.spins > 0 && (
-          <div className="w-full rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="w-full rounded-xl overflow-hidden" style={{ background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)' }}>
             <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] px-4 pt-3 pb-2" style={{ fontSize: '0.6rem' }}>
               Your Stats
             </p>
-            <div className="grid grid-cols-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-              <div className="flex flex-col items-center py-3 px-2" style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="grid grid-cols-3" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+              <div className="flex flex-col items-center py-3 px-2" style={{ borderRight: '1px solid rgba(255,255,255,0.12)' }}>
                 <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>{stats.spins.toLocaleString()}</p>
                 <p className="font-karla text-[#6a6764] mt-0.5" style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Spins</p>
               </div>
-              <div className="flex flex-col items-center py-3 px-2" style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="flex flex-col items-center py-3 px-2" style={{ borderRight: '1px solid rgba(255,255,255,0.12)' }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: stats.net >= 0 ? '#4ade80' : '#f87171' }}>
                   {stats.net >= 0 ? '+' : ''}{stats.net.toLocaleString()}
                 </p>
@@ -522,12 +522,12 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
         )}
 
         {/* Payout table */}
-        <div className="w-full rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="w-full rounded-xl overflow-hidden" style={{ background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)' }}>
           <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] px-4 pt-3 pb-2" style={{ fontSize: '0.6rem' }}>
             Payouts
           </p>
           {SLOT_SYMBOLS_LIST.filter((s) => s.id !== 'anchor').map((sym) => (
-            <div key={sym.id} className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <div key={sym.id} className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
               <div style={{ width: 30, height: 30, flexShrink: 0 }}>
                 <SlotSymbolDisplay id={sym.id} size={30} />
               </div>
@@ -535,14 +535,14 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
               <span className="font-cinzel font-700 text-[#f0ede8] text-sm">{SLOT_PAYOUTS[sym.id]}×</span>
             </div>
           ))}
-          <div className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
             <div style={{ width: 30, height: 30, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
               <HookImage size={14} /><HookImage size={14} />
             </div>
             <span className="font-karla text-sm flex-1" style={{ color: '#34d399' }}>2 Hooks (anywhere)</span>
             <span className="font-cinzel font-700 text-sm" style={{ color: '#34d399' }}>Refund</span>
           </div>
-          <div className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
             <div style={{ width: 30, height: 30, flexShrink: 0 }}>
               <HookImage size={30} />
             </div>
