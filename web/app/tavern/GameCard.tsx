@@ -29,12 +29,13 @@ export default function GameCard({ href, eyebrow, title, statusText, info, icon,
         onClick={() => router.push(href)}
         onKeyDown={(e) => e.key === 'Enter' && router.push(href)}
         style={{
-          background: featured ? 'rgba(240,192,64,0.05)' : 'rgba(255,255,255,0.08)',
-          border: `1px solid ${done ? 'rgba(240,192,64,0.18)' : featured ? 'rgba(240,192,64,0.35)' : 'rgba(255,255,255,0.15)'}`,
+          background: featured ? 'rgba(8,8,6,0.88)' : 'rgba(8,8,6,0.82)',
+          border: `1px solid ${done ? 'rgba(255,255,255,0.10)' : featured ? 'rgba(240,192,64,0.40)' : 'rgba(255,255,255,0.16)'}`,
+          boxShadow: featured && !done ? '0 0 18px rgba(240,192,64,0.08)' : 'none',
           borderRadius: '14px',
           padding: featured ? '1.1rem' : '0.875rem',
           cursor: 'pointer',
-          opacity: done ? 0.82 : 1,
+          opacity: done ? 0.6 : 1,
           userSelect: 'none',
         }}
       >
