@@ -85,16 +85,17 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/cardfront2.png" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }} />
 
-        {/* Fish art — on top of cardfront */}
-        <Image
-          src={src}
-          alt={name}
-          fill
-          className={`object-contain object-top ${artImageClass[artEffect]}`}
-          sizes={fill ? '50vw' : `${W}px`}
-          unoptimized
-          style={{ zIndex: 2 }}
-        />
+        {/* Fish art — inset to stay within card border */}
+        <div className="absolute" style={{ inset: '4% 5% 0 5%', zIndex: 2 }}>
+          <Image
+            src={src}
+            alt={name}
+            fill
+            className={`object-contain object-top ${artImageClass[artEffect]}`}
+            sizes={fill ? '50vw' : `${W}px`}
+            unoptimized
+          />
+        </div>
         {artEffect === 'pearl'       && <div className="art-pearl-overlay" style={{ zIndex: 3 }} />}
         {artEffect === 'holographic' && <div className="art-holographic" style={{ zIndex: 3 }} />}
 
