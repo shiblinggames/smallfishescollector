@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 
 export interface CrewMember {
   username: string
-  fotdStreak: number
+  fishingXP: number
 }
 
 export async function getCrew(): Promise<CrewMember[]> {
@@ -27,14 +27,14 @@ export async function getCrew(): Promise<CrewMember[]> {
 
   const { data: profiles } = await admin
     .from('profiles')
-    .select('id, username, fotd_streak')
+    .select('id, username, fishing_xp')
     .in('id', ids)
 
   const byId = Object.fromEntries((profiles ?? []).map(p => [p.id, p]))
   return ids
     .map(id => byId[id])
     .filter(Boolean)
-    .map(p => ({ username: p.username, fotdStreak: p.fotd_streak ?? 0 }))
+    .map(p => ({ username: p.username, fishingXP: p.fishing_xp ?? 0 }))
 }
 
 export async function addCrewMember(targetUsername: string): Promise<{ error?: string }> {

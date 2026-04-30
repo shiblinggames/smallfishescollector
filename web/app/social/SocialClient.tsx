@@ -4,6 +4,7 @@ import { useState, useEffect, useTransition } from 'react'
 import Link from 'next/link'
 import { searchUsers } from '@/app/u/actions'
 import { addCrewMember, removeCrewMember, type CrewMember } from './actions'
+import { getLevelFromXP } from '@/lib/fishingLevel'
 
 interface SearchResult {
   username: string
@@ -71,7 +72,7 @@ export default function SocialClient({ initialCrew, username }: Props) {
     setLoadingUsername(u)
     startTransition(async () => {
       await addCrewMember(u)
-      setCrew(prev => [...prev, { username: u, fotdStreak: 0 }])
+      setCrew(prev => [...prev, { username: u, fishingXP: 0 }])
       setAddedSet(prev => new Set(prev).add(u.toLowerCase()))
       setLoadingUsername(null)
     })
@@ -191,7 +192,7 @@ export default function SocialClient({ initialCrew, username }: Props) {
       <div>
         <div className="flex items-center justify-between mb-4">
           <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: '#9a9488' }}>
-            Your Crew{crew.length > 0 && ` · ${crew.length}`}
+            Your Friends{crew.length > 0 && ` · ${crew.length}`}
           </p>
         </div>
 
@@ -204,7 +205,7 @@ export default function SocialClient({ initialCrew, username }: Props) {
               No crew yet
             </p>
             <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#3a3835', lineHeight: 1.5 }}>
-              Search for other players above to add them to your crew
+              Search for other players above to add them
             </p>
           </div>
         ) : (
@@ -229,11 +230,9 @@ export default function SocialClient({ initialCrew, username }: Props) {
                     >
                       {member.username}
                     </Link>
-                    {member.fotdStreak > 0 && (
-                      <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#f0c04088', marginTop: 2, display: 'block' }}>
-                        {member.fotdStreak}d fish streak
-                      </span>
-                    )}
+                    <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#f0c04077', marginTop: 2, display: 'block' }}>
+                      Lv {getLevelFromXP(member.fishingXP)}
+                    </span>
                   </div>
                   <Link
                     href={`/u/${member.username}`}
