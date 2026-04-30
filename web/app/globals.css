@@ -230,6 +230,13 @@ body {
   0%, 100% { opacity: 0.55; }
   50%       { opacity: 1.0; }
 }
+.art-mythic-bg {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 3, 8, 0.80);
+  pointer-events: none;
+}
+
 .art-kraken-overlay {
   position: absolute;
   inset: 0;

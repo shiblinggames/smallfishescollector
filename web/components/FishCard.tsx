@@ -133,12 +133,12 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
           {artEffect === 'rainbow'     && <div className="art-rainbow-overlay" />}
           {artEffect === 'ghost'       && <div className="art-ghost-overlay" />}
           {artEffect === 'shadow'      && <div className="art-shadow-overlay" />}
-          {artEffect === 'kraken'      && <div className="art-kraken-overlay" />}
-          {artEffect === 'davy-jones'  && <div className="art-davy-jones-overlay" />}
-          {artEffect === 'golden-age'  && <div className="art-golden-age-overlay" />}
+          {artEffect === 'kraken'      && <><div className="art-mythic-bg" /><div className="art-kraken-overlay" /></>}
+          {artEffect === 'davy-jones'  && <><div className="art-mythic-bg" /><div className="art-davy-jones-overlay" /></>}
+          {artEffect === 'golden-age'  && <><div className="art-mythic-bg" /><div className="art-golden-age-overlay" /></>}
           {artEffect === 'storm'       && <><div className="art-storm-bg" /><div className="art-storm-overlay" /></>}
           {artEffect === 'wanted'      && <div className="art-wanted-overlay" />}
-          {artEffect === 'divine'      && <><div className="art-divine-overlay" /><div className="art-divine-overlay-2" /></>}
+          {artEffect === 'divine'      && <><div className="art-mythic-bg" /><div className="art-divine-overlay" /><div className="art-divine-overlay-2" /></>}
         </div>
       </div>
     )
