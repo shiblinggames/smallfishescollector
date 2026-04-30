@@ -184,7 +184,7 @@ function DialSVG({
   return (
     <div style={{
       position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto',
-      filter: onFire ? 'drop-shadow(0 0 18px rgba(251,146,60,0.8)) drop-shadow(0 0 40px rgba(239,68,68,0.35))' : 'none',
+      filter: onFire ? 'drop-shadow(0 0 10px rgba(251,146,60,0.5)) drop-shadow(0 0 22px rgba(239,68,68,0.2))' : 'none',
       transition: 'filter 0.4s ease',
     }}>
       <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block', overflow: 'visible' }}>
@@ -262,12 +262,12 @@ function DialSVG({
             const cr = polar(base + h * 0.55, deg + w * 1.35 + lean * 0.75)
             return `M ${bl.x.toFixed(1)} ${bl.y.toFixed(1)} Q ${cl.x.toFixed(1)} ${cl.y.toFixed(1)} ${tip.x.toFixed(1)} ${tip.y.toFixed(1)} Q ${cr.x.toFixed(1)} ${cr.y.toFixed(1)} ${br.x.toFixed(1)} ${br.y.toFixed(1)} Z`
           }
-          const wobbles = [-3,2.5,-1.5,4,-2,3.5,-4,1,2,-1,3,-2,0.5,-3.5,2,-0.5,4,-2.5,1,-3,2.5,-1.5,3,-0.5]
-          const flames = Array.from({ length: 24 }, (_, i) => ({
-            deg: (360 / 24) * i + wobbles[i],
-            lean: (i % 2 === 0 ? -1 : 1) * (2 + (i % 4) * 1.8),
-            w: 4.5 + (i % 5) * 1.3,
-            h: 18 + (i % 7) * 4,
+          const wobbles = [-3,2.5,-1.5,4,-2,3.5,-4,1,2,-1,3,-2,0.5,-3.5,2,-0.5]
+          const flames = Array.from({ length: 16 }, (_, i) => ({
+            deg: (360 / 16) * i + wobbles[i],
+            lean: (i % 2 === 0 ? -1 : 1) * (1.5 + (i % 4) * 1.2),
+            w: 3.5 + (i % 5) * 1.0,
+            h: 14 + (i % 7) * 3,
           }))
           return (
             <>
@@ -279,28 +279,23 @@ function DialSVG({
                   <stop offset="100%" stopColor="#7f1d1d" stopOpacity="0"/>
                 </radialGradient>
               </defs>
-              {/* Wide ambient glow */}
-              <motion.circle cx={CX} cy={CY} r={OUTER_R + 22} fill="none" stroke="#b45309" strokeWidth="30"
-                animate={{ strokeOpacity: [0.02, 0.08, 0.02] }}
-                transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-              />
-              {/* Mid glow ring */}
-              <motion.circle cx={CX} cy={CY} r={OUTER_R + 10} fill="none" stroke="#f97316" strokeWidth="10"
-                animate={{ strokeOpacity: [0.07, 0.24, 0.07] }}
-                transition={{ duration: 0.65, repeat: Infinity, ease: 'easeInOut', delay: 0.12 }}
+              {/* Glow ring */}
+              <motion.circle cx={CX} cy={CY} r={OUTER_R + 8} fill="none" stroke="#f97316" strokeWidth="8"
+                animate={{ strokeOpacity: [0.06, 0.18, 0.06] }}
+                transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
               />
               {/* Bright base ring */}
-              <motion.circle cx={CX} cy={CY} r={OUTER_R + 5} fill="none" stroke="#fbbf24" strokeWidth="3"
-                animate={{ strokeOpacity: [0.35, 0.85, 0.35] }}
-                transition={{ duration: 0.38, repeat: Infinity, ease: 'easeInOut', delay: 0.05 }}
+              <motion.circle cx={CX} cy={CY} r={OUTER_R + 4} fill="none" stroke="#fbbf24" strokeWidth="2.5"
+                animate={{ strokeOpacity: [0.25, 0.55, 0.25] }}
+                transition={{ duration: 1.0, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
               />
-              {/* Flame tongues — curved bezier shapes with gradient fill */}
+              {/* Flame tongues */}
               {flames.map((f, i) => (
                 <motion.path key={i}
                   d={fp(f.deg, f.w, f.h, f.lean)}
                   fill="url(#fireGrad)"
-                  animate={{ opacity: [0.28, 0.9, 0.38, 0.85, 0.22] }}
-                  transition={{ duration: 0.3 + (i % 7) * 0.07, repeat: Infinity, delay: i * 0.042, ease: 'easeInOut' }}
+                  animate={{ opacity: [0.35, 0.65, 0.4, 0.6, 0.3] }}
+                  transition={{ duration: 0.6 + (i % 7) * 0.09, repeat: Infinity, delay: i * 0.06, ease: 'easeInOut' }}
                 />
               ))}
             </>
@@ -653,7 +648,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
       {/* Perfect catch banner */}
       {isPerfect && (() => {
         const s = Math.min(perfectStreak, 6)
-        const isCombo = perfectStreak >= 2
+        const isCombo = perfectStreak >= 3
         const titleSize = 0.72 + (s - 1) * 0.05
         const iconSize  = 0.70 + (s - 1) * 0.05
         const borderAlpha = Math.min(0.65 + (s - 1) * 0.06, 0.95)
@@ -1729,7 +1724,7 @@ export default function FishingGame({
                     </motion.p>
                   )}
 
-                  {perfectStreak >= 2 && (
+                  {perfectStreak >= 3 && (
                     <motion.div className="text-center mb-1"
                       initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
                     >
@@ -1743,7 +1738,7 @@ export default function FishingGame({
                     </motion.div>
                   )}
                   <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}
-                    needleColor={needleColor()} zoneOpacityFn={zoneOpacity} onFire={perfectStreak >= 2} />
+                    needleColor={needleColor()} zoneOpacityFn={zoneOpacity} onFire={perfectStreak >= 3} />
                 </motion.div>
               )}
 
@@ -2418,34 +2413,28 @@ export default function FishingGame({
         {newStreakRecord !== null && (
           <motion.div
             key={`streak-record-${newStreakRecord}`}
-            initial={{ opacity: 0, y: -48, scale: 0.92 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -24, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 460, damping: 24 }}
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
             style={{
-              position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)',
-              zIndex: 40, pointerEvents: 'none',
-              display: 'flex', alignItems: 'center', gap: 10,
-              background: 'rgba(12,8,4,0.92)',
-              border: '1px solid rgba(251,146,60,0.55)',
-              borderRadius: 14, padding: '10px 18px',
-              boxShadow: '0 0 24px rgba(251,146,60,0.3), 0 4px 20px rgba(0,0,0,0.6)',
+              position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 40, pointerEvents: 'none', whiteSpace: 'nowrap',
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: 'rgba(8,8,6,0.92)',
+              border: '1px solid rgba(255,255,255,0.14)',
+              borderRadius: 10, padding: '7px 14px',
             }}
           >
-            <motion.span
-              animate={{ scale: [1, 1.35, 1], rotate: [-8, 8, -8, 0] }}
-              transition={{ duration: 0.55, ease: 'easeOut' }}
-              style={{ fontSize: '1.4rem', lineHeight: 1 }}
-            >🔥</motion.span>
+            <img src="/models/hooks/gold-hook.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', opacity: 0.9 }} />
             <div>
-              <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
-                style={{ fontSize: '0.58rem', color: '#fb923c', marginBottom: 2 }}>
-                New Record!
+              <p className="font-karla font-600 uppercase tracking-[0.14em]"
+                style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.38)', marginBottom: 1 }}>
+                New personal best
               </p>
               <p className="font-cinzel font-700"
-                style={{ fontSize: '1.05rem', color: '#fed7aa', lineHeight: 1,
-                  textShadow: '0 0 16px rgba(251,146,60,0.8)' }}>
-                {newStreakRecord} Perfect Streak
+                style={{ fontSize: '0.82rem', color: '#f0ede8', lineHeight: 1 }}>
+                {newStreakRecord} perfect streak
               </p>
             </div>
           </motion.div>
