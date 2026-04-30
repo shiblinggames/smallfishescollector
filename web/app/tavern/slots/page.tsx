@@ -22,8 +22,8 @@ export default async function SlotsPage() {
         doubloons={profile?.doubloons ?? 0}
         gems={profile?.gems ?? 0}
       />
-      <main className="min-h-screen px-4 py-8">
-        <div className="max-w-sm mx-auto">
+      <main className="min-h-screen px-4 sm:px-8 py-8">
+        <div className="max-w-sm sm:max-w-3xl mx-auto">
           <div className="text-center mb-8">
             <p className="sg-eyebrow text-[#9a9488] mb-1">Tavern</p>
             <h1 className="font-cinzel font-700 text-[#f0ede8] text-2xl">Fish Slots</h1>
