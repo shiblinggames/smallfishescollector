@@ -22,65 +22,11 @@ export default async function MarketplacePage() {
     !!profile?.premium_expires_at &&
     new Date(profile.premium_expires_at) > new Date()
 
-  const shopkeepLines = [
-    "Take your time. Everything's priced fair. Mostly.",
-    "The Legendary hook? Only two sailors have bought one. Both still fishing.",
-    "Membership pays for itself in a week. Just saying.",
-    "Every hook I sell comes with a guarantee. Not in writing, but still.",
-    "The board game's been sitting in that corner since last season. Good game though.",
-    "You want the Abyss? You'll need a better hook than that.",
-    "I've seen sailors upgrade three tiers in a month. Dedication.",
-    "That Gold hook? Beautiful piece of work. I almost kept it.",
-    "Doubloons don't spend themselves. Might as well invest.",
-    "The Shipyard's next door. Tell them I sent you. They won't care, but still.",
-    "Steel hook'll do the job. Gold hook'll do it better.",
-    "Come back when you've got more doubloons. Or come back now — browsing's free.",
-    "No refunds. Not because I'm stingy — just the nature of upgrades.",
-    "The Iron hook's a solid choice. Underrated, if you ask me.",
-    "Membership's my best seller. People like their daily packs.",
-    "Better hook, better shot at the gold zones. Perfect catches are where the real savings are.",
-    "A good hook widens your catch window. A great hook lets you go for the edges.",
-    "Enchanted hook? I've seen what comes up on one of those. Worth every doubloon.",
-    "Rowboat holds twenty fish. That's fine until you start hitting the deep zones.",
-    "Man-o-War holds three hundred and fifty. Nobody who upgrades to one ever goes back.",
-    "The hold fills faster than you think once you're fishing the abyss.",
-  ]
-  const shopkeepLine = shopkeepLines[Math.floor(Math.random() * shopkeepLines.length)]
-
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main className="min-h-screen">
-        {/* Ambient glow */}
-        <div aria-hidden style={{
-          position: 'fixed', top: 0, left: 0, right: 0, height: '60%',
-          background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(120,80,180,0.10) 0%, transparent 100%)',
-          pointerEvents: 'none', zIndex: 0,
-        }} />
-
-        {/* Shopkeep banner */}
-        <div style={{
-          position: 'relative', zIndex: 1, marginBottom: '-1rem',
-          overflow: 'hidden', height: 320,
-          maskImage: 'linear-gradient(to bottom, black 45%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 45%, transparent 100%)',
-        }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/shopkeep.jpeg"
-            alt=""
-            aria-hidden
-            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
-          />
-        </div>
-
-        <div className="px-6 max-w-lg mx-auto mb-6 text-center" style={{ position: 'relative', zIndex: 1 }}>
-          <p className="font-karla font-600" style={{ fontSize: '0.95rem', color: '#c8a96e', lineHeight: 1.6 }}>
-            &ldquo;{shopkeepLine}&rdquo;
-          </p>
-        </div>
-
-        <div className="px-6 pb-12 max-w-4xl mx-auto flex flex-col gap-6" style={{ position: 'relative', zIndex: 1 }}>
+        <div className="px-6 pb-12 max-w-4xl mx-auto flex flex-col gap-6 pt-6" style={{ position: 'relative', zIndex: 1 }}>
 
           {/* Fish Market */}
           <div>
