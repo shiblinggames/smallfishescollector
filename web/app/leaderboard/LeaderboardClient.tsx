@@ -12,28 +12,19 @@ export interface LeaderboardEntry {
 
 interface MyScores {
   fishing: number
-  packs: number
-  collection: number
-  streak: number
-  achievements: number
+  perfectStreak: number
 }
 
 interface Props {
   fishing: LeaderboardEntry[]
-  packs: LeaderboardEntry[]
-  collection: LeaderboardEntry[]
-  streak: LeaderboardEntry[]
-  achievements: LeaderboardEntry[]
+  perfectStreak: LeaderboardEntry[]
   myScores: MyScores
   currentUserId: string
 }
 
 const TABS = [
-  { key: 'fishing',      label: 'Fishing',      unit: (n: number) => `Lv ${getLevelFromXP(n)} · ${n.toLocaleString()} XP` },
-  { key: 'collection',   label: 'Collection',   unit: (n: number) => `${n.toLocaleString()} cards` },
-  { key: 'achievements', label: 'Achievements', unit: (n: number) => `${n} / 25` },
-  { key: 'packs',        label: 'Packs',        unit: (n: number) => `${n.toLocaleString()} packs` },
-  { key: 'streak',       label: 'Streak',       unit: (n: number) => `${n} days` },
+  { key: 'fishing',       label: 'Fishing',    unit: (n: number) => `Lv ${getLevelFromXP(n)} · ${n.toLocaleString()} XP` },
+  { key: 'perfectStreak', label: 'Perfect Streak', unit: (n: number) => `${n}× perfect` },
 ] as const
 
 type TabKey = typeof TABS[number]['key']
@@ -44,16 +35,13 @@ const RANK_COLORS: Record<number, { color: string; label: string }> = {
   3: { color: '#cd7f32', label: '3rd' },
 }
 
-export default function LeaderboardClient({ fishing, packs, collection, streak, achievements, myScores, currentUserId }: Props) {
+export default function LeaderboardClient({ fishing, perfectStreak, myScores, currentUserId }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>('fishing')
 
-  const dataMap: Record<TabKey, LeaderboardEntry[]> = { fishing, packs, collection, streak, achievements }
+  const dataMap: Record<TabKey, LeaderboardEntry[]> = { fishing, perfectStreak }
   const myScoreMap: Record<TabKey, number> = {
     fishing: myScores.fishing,
-    packs: myScores.packs,
-    collection: myScores.collection,
-    streak: myScores.streak,
-    achievements: myScores.achievements,
+    perfectStreak: myScores.perfectStreak,
   }
 
   const data = dataMap[activeTab]

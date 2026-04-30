@@ -23,13 +23,10 @@ export default async function LeaderboardPage() {
 
   const admin = createAdminClient()
 
-  const [profile, fishingData, packsData, collectionData, streakData, achievementsData] = await Promise.all([
+  const [profile, fishingData, perfectStreakData] = await Promise.all([
     admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     fetchBoard(admin, 'leaderboard_fishing', user.id),
-    fetchBoard(admin, 'leaderboard_packs', user.id),
-    fetchBoard(admin, 'leaderboard_collection', user.id),
-    fetchBoard(admin, 'leaderboard_streak', user.id),
-    fetchBoard(admin, 'leaderboard_achievements', user.id),
+    fetchBoard(admin, 'leaderboard_perfect_streak', user.id),
   ])
 
   return (
@@ -41,16 +38,10 @@ export default async function LeaderboardPage() {
           <h1 className="font-cinzel font-700 text-[#f0ede8] mb-6" style={{ fontSize: '1.4rem' }}>Leaderboard</h1>
           <LeaderboardClient
             fishing={fishingData.top}
-            packs={packsData.top}
-            collection={collectionData.top}
-            streak={streakData.top}
-            achievements={achievementsData.top}
+            perfectStreak={perfectStreakData.top}
             myScores={{
               fishing: fishingData.myScore,
-              packs: packsData.myScore,
-              collection: collectionData.myScore,
-              streak: streakData.myScore,
-              achievements: achievementsData.myScore,
+              perfectStreak: perfectStreakData.myScore,
             }}
             currentUserId={user.id}
           />
