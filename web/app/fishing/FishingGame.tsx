@@ -1593,13 +1593,14 @@ export default function FishingGame({
             {highestPerfectStreak > 0 && (
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
                 <div style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  background: 'rgba(251,146,60,0.12)', border: '1px solid rgba(251,146,60,0.35)',
-                  borderRadius: 8, padding: '2px 8px',
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  background: 'rgba(20,12,4,0.88)', border: '1px solid rgba(251,146,60,0.6)',
+                  borderRadius: 8, padding: '3px 10px',
+                  boxShadow: '0 0 8px rgba(251,146,60,0.15)',
                 }}>
-                  <span style={{ fontSize: '0.68rem' }}>🔥</span>
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: '#fb923c' }}>
-                    Best streak: {highestPerfectStreak}
+                  <img src="/models/hooks/gold-hook.png" alt="" style={{ width: 14, height: 14, objectFit: 'contain' }} />
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.65rem', color: '#fed7aa' }}>
+                    Best streak: <span style={{ color: '#fb923c' }}>{highestPerfectStreak}</span>
                   </span>
                 </div>
               </div>
