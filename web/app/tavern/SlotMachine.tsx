@@ -459,7 +459,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
               <p className="font-cinzel font-700 mt-1" style={{ fontSize: isJackpot ? '1.5rem' : '1.25rem', color: '#f0ede8' }}>
                 +{lastResult.net.toLocaleString()} ⟡
               </p>
-              <p className="font-karla font-400 text-[#6a6764] text-xs mt-1">
+              <p className="font-karla font-400 text-[#9a9488] text-xs mt-1">
                 {SLOT_PAYOUTS[winSym]}× your bet
               </p>
             </div>
@@ -491,7 +491,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                 <p className="font-cinzel font-700 mt-1" style={{ fontSize: '1.25rem', color: lastResult!.net >= 0 ? '#f0ede8' : '#f87171' }}>
                   {lastResult!.net === 0 ? 'Break even' : lastResult!.net > 0 ? `+${lastResult!.net.toLocaleString()} ⟡` : `${lastResult!.net.toLocaleString()} ⟡`}
                 </p>
-                <p className="font-karla font-400 text-[#6a6764] text-xs mt-1">{mult}× your bet</p>
+                <p className="font-karla font-400 text-[#9a9488] text-xs mt-1">{mult}× your bet</p>
               </div>
             )
           })() : showResult && lastResult?.outcome === 'near_miss' ? (
@@ -579,54 +579,54 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
         {/* Payout table */}
         <div className="w-full rounded-xl overflow-hidden" style={{ background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)' }}>
           {/* 3-of-a-kind */}
-          <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] px-4 pt-3 pb-2" style={{ fontSize: '0.6rem' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.12em] px-4 pt-3 pb-2" style={{ fontSize: '0.68rem', color: '#b0ada8' }}>
             3 of a Kind
           </p>
           {SLOT_SYMBOLS_LIST.filter((s) => s.id !== 'anchor').map((sym) => (
-            <div key={sym.id} className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+            <div key={sym.id} className="flex items-center gap-3 px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
               <div style={{ width: 30, height: 30, flexShrink: 0 }}>
                 <SlotSymbolDisplay id={sym.id} size={30} />
               </div>
-              <span className="font-karla text-sm flex-1" style={{ color: sym.color }}>{sym.label}</span>
-              <span className="font-cinzel font-700 text-[#f0ede8] text-sm">{SLOT_PAYOUTS[sym.id]}×</span>
+              <span className="font-karla font-500 flex-1" style={{ fontSize: '0.88rem', color: '#d0cdc8' }}>{sym.label}</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: sym.color }}>{SLOT_PAYOUTS[sym.id]}×</span>
             </div>
           ))}
           {/* 2-of-a-kind */}
-          <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] px-4 pt-3 pb-2" style={{ fontSize: '0.6rem', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.12em] px-4 pt-3 pb-2" style={{ fontSize: '0.68rem', color: '#b0ada8', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
             2 of a Kind · Hook counts as Wild
           </p>
           {SLOT_SYMBOLS_LIST.filter((s) => s.id !== 'anchor').map((sym) => {
             const mult = SLOT_PARTIAL_PAYOUTS[sym.id]
             if (!mult) return null
             return (
-              <div key={sym.id} className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+              <div key={sym.id} className="flex items-center gap-3 px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
                 <div style={{ width: 30, height: 30, flexShrink: 0 }}>
                   <SlotSymbolDisplay id={sym.id} size={30} />
                 </div>
-                <span className="font-karla text-sm flex-1" style={{ color: sym.color }}>{sym.label}</span>
-                <span className="font-cinzel font-700 text-sm" style={{ color: mult >= 1 ? sym.color : '#6a6764' }}>
+                <span className="font-karla font-500 flex-1" style={{ fontSize: '0.88rem', color: '#d0cdc8' }}>{sym.label}</span>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: mult >= 1 ? sym.color : '#9a9488' }}>
                   {mult === 1 ? 'Even' : `${mult}×`}
                 </span>
               </div>
             )
           })}
           {/* Hooks */}
-          <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] px-4 pt-3 pb-2" style={{ fontSize: '0.6rem', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.12em] px-4 pt-3 pb-2" style={{ fontSize: '0.68rem', color: '#b0ada8', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
             Hooks
           </p>
-          <div className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+          <div className="flex items-center gap-3 px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
             <div style={{ width: 30, height: 30, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
               <HookImage size={14} /><HookImage size={14} />
             </div>
-            <span className="font-karla text-sm flex-1" style={{ color: '#34d399' }}>2 Hooks (anywhere)</span>
-            <span className="font-cinzel font-700 text-sm" style={{ color: '#34d399' }}>Refund</span>
+            <span className="font-karla font-500 flex-1" style={{ fontSize: '0.88rem', color: '#d0cdc8' }}>2 Hooks (anywhere)</span>
+            <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#34d399' }}>Refund</span>
           </div>
-          <div className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+          <div className="flex items-center gap-3 px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
             <div style={{ width: 30, height: 30, flexShrink: 0 }}>
               <HookImage size={30} />
             </div>
-            <span className="font-karla text-sm flex-1" style={{ color: '#34d399' }}>3 Hooks</span>
-            <span className="font-cinzel font-700 text-sm" style={{ color: '#34d399' }}>Free Spin</span>
+            <span className="font-karla font-500 flex-1" style={{ fontSize: '0.88rem', color: '#d0cdc8' }}>3 Hooks</span>
+            <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#34d399' }}>Free Spin</span>
           </div>
         </div>
       </div>
