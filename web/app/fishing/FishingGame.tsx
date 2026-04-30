@@ -1081,6 +1081,7 @@ export default function FishingGame({
   const [challengeActive, setChallengeActive] = useState(false)
   const [perfectStreak, setPerfectStreak] = useState(0)
   const [highestPerfectStreak, setHighestPerfectStreak] = useState(initialHighestPerfectStreak)
+  const [newStreakRecord, setNewStreakRecord] = useState<number | null>(null)
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
   const catchTourShownRef = useRef(false)
@@ -1114,6 +1115,11 @@ export default function FishingGame({
   useEffect(() => { phaseRef.current = phase }, [phase])
   useEffect(() => { selectedBaitRef.current = selectedBait }, [selectedBait])
   useEffect(() => { hookedFishRef.current = hookedFish }, [hookedFish])
+  useEffect(() => {
+    if (newStreakRecord === null) return
+    const id = setTimeout(() => setNewStreakRecord(null), 4000)
+    return () => clearTimeout(id)
+  }, [newStreakRecord])
 
   // Force-decode actual in-DOM img elements on mount so GPU has them compositor-ready
   useEffect(() => {
@@ -1351,6 +1357,7 @@ export default function FishingGame({
           setPerfectStreak(newStreak)
           if (newStreak > highestPerfectStreak) {
             setHighestPerfectStreak(newStreak)
+            setNewStreakRecord(newStreak)
             startTransition(() => { saveHighestPerfectStreak(newStreak) })
           }
         }
@@ -2401,6 +2408,45 @@ export default function FishingGame({
                 ✦ &nbsp; Flawless reel &nbsp; ✦
               </motion.p>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── New streak record toast ── */}
+      <AnimatePresence>
+        {newStreakRecord !== null && (
+          <motion.div
+            key={`streak-record-${newStreakRecord}`}
+            initial={{ opacity: 0, y: -48, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -24, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 460, damping: 24 }}
+            style={{
+              position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 40, pointerEvents: 'none',
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: 'rgba(12,8,4,0.92)',
+              border: '1px solid rgba(251,146,60,0.55)',
+              borderRadius: 14, padding: '10px 18px',
+              boxShadow: '0 0 24px rgba(251,146,60,0.3), 0 4px 20px rgba(0,0,0,0.6)',
+            }}
+          >
+            <motion.span
+              animate={{ scale: [1, 1.35, 1], rotate: [-8, 8, -8, 0] }}
+              transition={{ duration: 0.55, ease: 'easeOut' }}
+              style={{ fontSize: '1.4rem', lineHeight: 1 }}
+            >🔥</motion.span>
+            <div>
+              <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
+                style={{ fontSize: '0.58rem', color: '#fb923c', marginBottom: 2 }}>
+                New Record!
+              </p>
+              <p className="font-cinzel font-700"
+                style={{ fontSize: '1.05rem', color: '#fed7aa', lineHeight: 1,
+                  textShadow: '0 0 16px rgba(251,146,60,0.8)' }}>
+                {newStreakRecord} Perfect Streak
+              </p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
