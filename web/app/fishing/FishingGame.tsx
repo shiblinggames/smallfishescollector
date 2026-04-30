@@ -187,7 +187,7 @@ function DialSVG({
       filter: onFire ? 'drop-shadow(0 0 18px rgba(251,146,60,0.8)) drop-shadow(0 0 40px rgba(239,68,68,0.35))' : 'none',
       transition: 'filter 0.4s ease',
     }}>
-      <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block' }}>
+      <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block', overflow: 'visible' }}>
         <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke={onFire ? '#f97316' : 'rgba(255,255,255,0.12)'} strokeWidth="1" />
         <g transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
@@ -253,37 +253,59 @@ function DialSVG({
         <circle cx={CX} cy={CY} r="8" fill="rgba(10,10,10,0.9)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
 
         {/* Fire effects */}
-        {onFire && (
-          <>
-            <motion.circle cx={CX} cy={CY} r={OUTER_R + 10} fill="none" stroke="#f97316" strokeWidth="8"
-              animate={{ strokeOpacity: [0.07, 0.22, 0.07] }}
-              transition={{ duration: 0.7, repeat: Infinity, ease: 'easeInOut' }}
-            />
-            <motion.circle cx={CX} cy={CY} r={OUTER_R + 7.5} fill="none" stroke="#ff6b35" strokeWidth="3.5"
-              animate={{ strokeOpacity: [0.25, 0.7, 0.25] }}
-              transition={{ duration: 0.45, repeat: Infinity, ease: 'easeInOut', delay: 0.1 }}
-            />
-            <motion.circle cx={CX} cy={CY} r={OUTER_R + 6.5} fill="none" stroke="#fbbf24" strokeWidth="1"
-              animate={{ strokeOpacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 0.35, repeat: Infinity, ease: 'easeInOut', delay: 0.05 }}
-            />
-            {Array.from({ length: 12 }, (_, i) => {
-              const deg = i * 30
-              const tipLen = 10 + (i % 3) * 5
-              const b1 = polar(OUTER_R + 7, deg - 5)
-              const b2 = polar(OUTER_R + 7, deg + 5)
-              const tip = polar(OUTER_R + 7 + tipLen, deg)
-              const d = `M ${b1.x.toFixed(1)} ${b1.y.toFixed(1)} L ${tip.x.toFixed(1)} ${tip.y.toFixed(1)} L ${b2.x.toFixed(1)} ${b2.y.toFixed(1)} Z`
-              const colors = ['#f97316', '#ef4444', '#fb923c', '#f59e0b']
-              return (
-                <motion.path key={i} d={d} fill={colors[i % 4]}
-                  animate={{ opacity: [0.15, 0.85, 0.15] }}
-                  transition={{ duration: 0.25 + (i % 4) * 0.07, repeat: Infinity, delay: (i % 6) * 0.07, ease: 'easeInOut' }}
+        {onFire && (() => {
+          const fp = (deg: number, w: number, h: number, lean: number) => {
+            const base = OUTER_R + 7
+            const bl = polar(base, deg - w), br = polar(base, deg + w)
+            const tip = polar(base + h, deg + lean)
+            const cl = polar(base + h * 0.55, deg - w * 1.35 + lean * 0.25)
+            const cr = polar(base + h * 0.55, deg + w * 1.35 + lean * 0.75)
+            return `M ${bl.x.toFixed(1)} ${bl.y.toFixed(1)} Q ${cl.x.toFixed(1)} ${cl.y.toFixed(1)} ${tip.x.toFixed(1)} ${tip.y.toFixed(1)} Q ${cr.x.toFixed(1)} ${cr.y.toFixed(1)} ${br.x.toFixed(1)} ${br.y.toFixed(1)} Z`
+          }
+          const wobbles = [-3,2.5,-1.5,4,-2,3.5,-4,1,2,-1,3,-2,0.5,-3.5,2,-0.5,4,-2.5,1,-3,2.5,-1.5,3,-0.5]
+          const flames = Array.from({ length: 24 }, (_, i) => ({
+            deg: (360 / 24) * i + wobbles[i],
+            lean: (i % 2 === 0 ? -1 : 1) * (2 + (i % 4) * 1.8),
+            w: 4.5 + (i % 5) * 1.3,
+            h: 18 + (i % 7) * 4,
+          }))
+          return (
+            <>
+              <defs>
+                <radialGradient id="fireGrad" cx={CX} cy={CY} r={OUTER_R + 52} gradientUnits="userSpaceOnUse">
+                  <stop offset="70%" stopColor="#fde68a" stopOpacity="1"/>
+                  <stop offset="84%" stopColor="#f97316" stopOpacity="0.85"/>
+                  <stop offset="96%" stopColor="#dc2626" stopOpacity="0.5"/>
+                  <stop offset="100%" stopColor="#7f1d1d" stopOpacity="0"/>
+                </radialGradient>
+              </defs>
+              {/* Wide ambient glow */}
+              <motion.circle cx={CX} cy={CY} r={OUTER_R + 22} fill="none" stroke="#b45309" strokeWidth="30"
+                animate={{ strokeOpacity: [0.02, 0.08, 0.02] }}
+                transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+              />
+              {/* Mid glow ring */}
+              <motion.circle cx={CX} cy={CY} r={OUTER_R + 10} fill="none" stroke="#f97316" strokeWidth="10"
+                animate={{ strokeOpacity: [0.07, 0.24, 0.07] }}
+                transition={{ duration: 0.65, repeat: Infinity, ease: 'easeInOut', delay: 0.12 }}
+              />
+              {/* Bright base ring */}
+              <motion.circle cx={CX} cy={CY} r={OUTER_R + 5} fill="none" stroke="#fbbf24" strokeWidth="3"
+                animate={{ strokeOpacity: [0.35, 0.85, 0.35] }}
+                transition={{ duration: 0.38, repeat: Infinity, ease: 'easeInOut', delay: 0.05 }}
+              />
+              {/* Flame tongues — curved bezier shapes with gradient fill */}
+              {flames.map((f, i) => (
+                <motion.path key={i}
+                  d={fp(f.deg, f.w, f.h, f.lean)}
+                  fill="url(#fireGrad)"
+                  animate={{ opacity: [0.28, 0.9, 0.38, 0.85, 0.22] }}
+                  transition={{ duration: 0.3 + (i % 7) * 0.07, repeat: Infinity, delay: i * 0.042, ease: 'easeInOut' }}
                 />
-              )
-            })}
-          </>
-        )}
+              ))}
+            </>
+          )
+        })()}
       </svg>
     </div>
   )
