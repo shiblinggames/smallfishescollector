@@ -86,7 +86,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
         <img src="/cardfront2.png" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }} />
 
         {/* Fish art — inset to stay within card border */}
-        <div className="absolute" style={{ inset: '4% 5% 0 5%', zIndex: 2 }}>
+        <div className="absolute overflow-hidden" style={{ inset: '4% 5% 0 5%', zIndex: 2 }}>
           <Image
             src={src}
             alt={name}
@@ -95,9 +95,9 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
             sizes={fill ? '50vw' : `${W}px`}
             unoptimized
           />
+          {artEffect === 'pearl'       && <div className="art-pearl-overlay" />}
+          {artEffect === 'holographic' && <div className="art-holographic" />}
         </div>
-        {artEffect === 'pearl'       && <div className="art-pearl-overlay" style={{ zIndex: 3 }} />}
-        {artEffect === 'holographic' && <div className="art-holographic" style={{ zIndex: 3 }} />}
 
         {/* Wanted stamp */}
         {artEffect === 'wanted' && (
