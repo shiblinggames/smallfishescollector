@@ -123,19 +123,12 @@ body {
 }
 .art-ghost-overlay {
   position: absolute;
-  top: 0; bottom: 0;
-  left: 0;
-  width: 45%;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(200,220,255,0.45) 40%,
-    rgba(220,235,255,0.70) 50%,
-    rgba(200,220,255,0.45) 60%,
-    transparent
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 40%,
+    rgba(200,220,255,0.30) 0%,
+    rgba(160,190,240,0.18) 50%,
+    rgba(100,130,200,0.08) 100%
   );
-  mix-blend-mode: screen;
-  animation: ghostShimmer 4s ease-in-out infinite;
   pointer-events: none;
 }
 
@@ -146,21 +139,11 @@ body {
 }
 .art-shadow-overlay {
   position: absolute;
-  top: 0; bottom: 0;
-  left: 0;
-  width: 45%;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(0,0,0,0.35) 40%,
-    rgba(0,0,0,0.60) 50%,
-    rgba(0,0,0,0.35) 60%,
-    transparent
-  );
-  mix-blend-mode: multiply;
-  animation: shadowShimmer 6s ease-in-out infinite;
+  inset: 0;
+  background: rgba(4, 2, 8, 0.72);
   pointer-events: none;
 }
+
 
 /* Pearl: soft milky filter + slow nacreous shimmer */
 .art-pearl { filter: brightness(1.1) saturate(0.72) contrast(1.04); }
