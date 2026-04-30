@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Cinzel, Karla } from 'next/font/google'
 import './globals.css'
 import PageTransition from '@/components/PageTransition'
+import ClientBackground from '@/components/ClientBackground'
 import InstallPrompt from '@/components/InstallPrompt'
 
 const cinzel = Cinzel({
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="min-h-full bg-[#000000] text-[#f0ede8] font-karla">
+        <ClientBackground />
         <PageTransition>
           {children}
         </PageTransition>

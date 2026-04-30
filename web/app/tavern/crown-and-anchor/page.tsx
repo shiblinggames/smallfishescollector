@@ -17,23 +17,8 @@ export default async function CrownAndAnchorPage() {
 
   return (
     <>
-      {/* Background */}
-      <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/gamesbackground.jpg"
-          alt=""
-          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
-        />
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.72) 50%, rgba(0,0,0,0.88) 100%)',
-        }} />
-      </div>
-
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
-        <main className="min-h-screen pb-24 sm:pb-0">
+      <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
+      <main className="min-h-screen pb-24 sm:pb-0">
           <div className="px-6 pt-6 pb-2">
             <Link
               href="/tavern"
@@ -59,8 +44,7 @@ export default async function CrownAndAnchorPage() {
               dailyWagered={dailyWagered}
             />
           </div>
-        </main>
-      </div>
+      </main>
     </>
   )
 }
