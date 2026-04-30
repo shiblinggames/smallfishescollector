@@ -602,3 +602,8 @@ body {
   0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
   50%       { opacity: 0.65; transform: translateX(-50%) scale(0.97); }
 }
+
+@keyframes cardEntrance {
+  from { opacity: 0; transform: translateY(36px) scale(0.93); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}

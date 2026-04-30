@@ -197,15 +197,19 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     const top = priority.find((r) => rarities.includes(r))
     if (top) triggerFlash(top)
     setGlowClasses(rarities.map(glowClassFor))
-    setFlipped(new Array(cards.length).fill(true))
-    cards.forEach((card) => checkPrize(card))
+    cards.forEach((card, i) => {
+      setTimeout(() => {
+        checkPrize(card)
+        setFlipped(prev => { const n = [...prev]; n[i] = true; return n })
+      }, i * 480)
+    })
     setTimeout(() => {
       setPhase('done')
       if (pendingAchievements.current.length) {
         setAchievementKeys(pendingAchievements.current)
         pendingAchievements.current = []
       }
-    }, 700)
+    }, (cards.length - 1) * 480 + 700)
   }
 
   function reset() {
@@ -286,7 +290,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
                   animation: 'pack-pulse 2s ease-in-out infinite',
                 }}>
                   <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem', color: '#f0ede8', whiteSpace: 'nowrap' }}>
-                    Tap to open
+                    Recruit Crew
                   </p>
                 </div>
               )}
@@ -366,7 +370,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
 
   function renderCard(card: DrawnCard, i: number) {
     return (
-      <div key={i} className="relative">
+      <div key={i} className="relative" style={{ animation: 'cardEntrance 0.55s cubic-bezier(0.34,1.56,0.64,1) both', animationDelay: `${i * 130}ms` }}>
         <div
           ref={(el) => { cardRefs.current[i] = el }}
           className={`flip-card pack-card-size select-none ${flipped[i] ? 'flipped' : loading ? '' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
@@ -393,7 +397,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
         {/* Pack count */}
         <div className="flex flex-col gap-0.5">
           <span className="font-cinzel font-700 text-[#f0ede8] leading-none" style={{ fontSize: '2rem' }}>{packs}</span>
-          <span className="font-karla font-600 uppercase text-[#6a6764]" style={{ fontSize: '0.58rem', letterSpacing: '0.12em' }}>packs left</span>
+          <span className="font-karla font-600 uppercase text-[#6a6764]" style={{ fontSize: '0.58rem', letterSpacing: '0.12em' }}>recruits left</span>
         </div>
         {/* Action button — always rendered to prevent layout shift */}
         <button
@@ -414,7 +418,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
           onPointerLeave={(e) => { e.currentTarget.style.transform = '' }}
         >
           <span className="font-karla font-800 uppercase text-[#f0ede8] text-center leading-snug" style={{ fontSize: '0.65rem', letterSpacing: '0.10em' }}>
-            {outOfPacks ? <>Buy<br/>More</> : isDone ? <>Open<br/>Another</> : <>Open<br/>All</>}
+            {outOfPacks ? <>Get<br/>More</> : isDone ? <>Recruit<br/>Again</> : <>Reveal<br/>All</>}
           </span>
         </button>
       </div>
@@ -489,18 +493,18 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
 
       {/* Desktop: in flow */}
       {phase !== 'done' && flipped.some((f) => !f) ? (
-        <div className="hidden sm:block"><button onClick={flipAll} className="btn-ghost">Open All</button></div>
+        <div className="hidden sm:block"><button onClick={flipAll} className="btn-ghost">Reveal All</button></div>
       ) : phase === 'done' ? (
         <div className="hidden sm:flex flex-col items-center gap-4">
           <div className="flex gap-4 flex-wrap justify-center">
             {packs > 0 && (
               <button onClick={openPack} disabled={loading} className="btn-ghost">
-                {loading ? 'Fishing…' : `Open Another · ${packs} Left`}
+                {loading ? 'Recruiting…' : `Recruit Again · ${packs} Left`}
               </button>
             )}
           </div>
           {!loading && packs === 0 && (
-            <button onClick={reset} className="btn-ghost">Buy More Packs</button>
+            <button onClick={reset} className="btn-ghost">Find More Crew</button>
           )}
         </div>
       ) : (
