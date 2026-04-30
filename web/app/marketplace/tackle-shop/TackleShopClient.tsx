@@ -180,7 +180,7 @@ export default function TackleShopClient({
               key={key}
               onClick={() => { setSection(key); setError(null) }}
               className="flex items-start gap-4 px-5 py-4 rounded-xl text-left transition-opacity active:opacity-70"
-              style={{ background: `${color}0a`, border: `1px solid ${color}28` }}
+              style={{ background: 'rgba(8,8,6,0.82)', border: `1px solid ${color}40` }}
             >
               <div style={{ width: 4, alignSelf: 'stretch', background: color, borderRadius: 2, flexShrink: 0, marginTop: 2 }} />
               <div className="flex-1 min-w-0">
@@ -234,7 +234,7 @@ export default function TackleShopClient({
             return (
               <div key={bait.type}
                 className="flex items-center gap-4 px-4 py-4 rounded-xl"
-                style={{ background: `${bait.color}0a`, border: `1px solid ${bait.color}28` }}
+                style={{ background: 'rgba(8,8,6,0.82)', border: `1px solid ${bait.color}40` }}
               >
                 <div style={{
                   width: 44, height: 44, borderRadius: 11, flexShrink: 0,
@@ -285,8 +285,8 @@ export default function TackleShopClient({
                       fontSize: '0.75rem',
                       padding: '0.4rem 0.85rem',
                       borderRadius: 9,
-                      background: canAffordBait ? `${bait.color}16` : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${canAffordBait ? bait.color + '44' : 'rgba(255,255,255,0.08)'}`,
+                      background: canAffordBait ? `${bait.color}16` : 'rgba(255,255,255,0.06)',
+                      border: `1px solid ${canAffordBait ? bait.color + '44' : 'rgba(255,255,255,0.14)'}`,
                       color: canAffordBait ? bait.color : '#4a4845',
                       cursor: canAffordBait && !isPending ? 'pointer' : 'default',
                       opacity: isBuying ? 0.5 : 1,
@@ -339,8 +339,8 @@ export default function TackleShopClient({
                   onClick={() => { setPreviewTier(hook.tier); if (clickable) handleBuyHook() }}
                   className="p-3 sm:p-5"
                   style={{
-                    background: owned ? `${c}0d` : isNext && canAffordHook ? `${c}08` : 'rgba(255,255,255,0.05)',
-                    border: `1px solid ${owned ? `${c}55` : isPreviewing ? `${c}30` : isNext && canAffordHook ? `${c}40` : 'rgba(255,255,255,0.09)'}`,
+                    background: 'rgba(8,8,6,0.82)',
+                    border: `1px solid ${owned ? `${c}55` : isPreviewing ? `${c}30` : isNext && canAffordHook ? `${c}40` : 'rgba(255,255,255,0.14)'}`,
                     boxShadow: isActive ? `0 0 16px ${c}18` : isPreviewing ? `0 0 10px ${c}10` : isNext && canAffordHook ? `0 0 12px ${c}12` : 'none',
                     borderRadius: 12,
                     opacity: locked ? 0.3 : isPending && isNext ? 0.6 : 1,
@@ -412,8 +412,8 @@ export default function TackleShopClient({
             {/* Completionist Rod — featured card */}
             <div className="mb-4" style={{
               padding: '0.7rem 0.85rem',
-              background: compOwned ? `${c}10` : 'rgba(255,255,255,0.03)',
-              border: `1px solid ${compOwned ? `${c}55` : eligible ? `${c}40` : 'rgba(255,255,255,0.1)'}`,
+              background: 'rgba(8,8,6,0.82)',
+              border: `1px solid ${compOwned ? `${c}55` : eligible ? `${c}40` : 'rgba(255,255,255,0.16)'}`,
               boxShadow: compOwned ? `0 0 24px ${c}18` : eligible ? `0 0 16px ${c}14` : 'none',
               borderRadius: 12,
             }}>
@@ -487,8 +487,8 @@ export default function TackleShopClient({
                 key={rod.tier}
                 style={{
                   padding: '0.9rem 0.85rem',
-                  background: isActive ? `${c}0f` : owned ? `${c}08` : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${isActive ? `${c}55` : owned ? `${c}28` : 'rgba(255,255,255,0.09)'}`,
+                  background: 'rgba(8,8,6,0.82)',
+                  border: `1px solid ${isActive ? `${c}55` : owned ? `${c}40` : 'rgba(255,255,255,0.14)'}`,
                   borderRadius: 12,
                   display: 'flex', flexDirection: 'column', gap: 7,
                 }}
@@ -525,8 +525,8 @@ export default function TackleShopClient({
                       className="font-karla font-700 w-full"
                       style={{
                         fontSize: '0.7rem', padding: '0.38rem 0.5rem', borderRadius: 8,
-                        background: canAfford ? `${c}16` : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${canAfford ? c + '44' : 'rgba(255,255,255,0.08)'}`,
+                        background: canAfford ? `${c}16` : 'rgba(255,255,255,0.06)',
+                        border: `1px solid ${canAfford ? c + '44' : 'rgba(255,255,255,0.14)'}`,
                         color: canAfford ? c : '#4a4845',
                         cursor: canAfford && !isPending ? 'pointer' : 'default',
                         opacity: isBuying ? 0.5 : 1,
@@ -578,8 +578,8 @@ export default function TackleShopClient({
                 onClick={() => { if (isNext && canAffordReel && !isPending) handleBuyReel() }}
                 className="p-3 sm:p-5"
                 style={{
-                  background: owned ? `${c}0d` : isNext && canAffordReel ? `${c}08` : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${owned ? `${c}55` : isNext && canAffordReel ? `${c}40` : 'rgba(255,255,255,0.09)'}`,
+                  background: 'rgba(8,8,6,0.82)',
+                  border: `1px solid ${owned ? `${c}55` : isNext && canAffordReel ? `${c}40` : 'rgba(255,255,255,0.14)'}`,
                   boxShadow: isActive ? `0 0 16px ${c}18` : isNext && canAffordReel ? `0 0 12px ${c}12` : 'none',
                   borderRadius: 12,
                   opacity: locked ? 0.3 : isPending && isNext ? 0.6 : 1,
@@ -665,8 +665,8 @@ export default function TackleShopClient({
                 key={line.tier}
                 className="p-3 sm:p-5"
                 style={{
-                  background: owned ? `${c}0d` : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${owned ? `${c}55` : 'rgba(255,255,255,0.09)'}`,
+                  background: 'rgba(8,8,6,0.82)',
+                  border: `1px solid ${owned ? `${c}55` : 'rgba(255,255,255,0.14)'}`,
                   boxShadow: isActive ? `0 0 16px ${c}18` : 'none',
                   borderRadius: 12,
                   opacity: owned ? 1 : 0.45,

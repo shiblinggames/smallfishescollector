@@ -72,8 +72,8 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
               }}
               className="p-3 sm:p-5"
               style={{
-                background: owned ? `${c}0d` : isNext && canAfford ? `${c}08` : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${owned ? `${c}55` : isPreviewing ? `${c}30` : isNext && canAfford ? `${c}40` : 'rgba(255,255,255,0.09)'}`,
+                background: 'rgba(8,8,6,0.82)',
+                border: `1px solid ${owned ? `${c}55` : isPreviewing ? `${c}30` : isNext && canAfford ? `${c}40` : 'rgba(255,255,255,0.14)'}`,
                 boxShadow: isActive ? `0 0 16px ${c}18` : isPreviewing ? `0 0 10px ${c}10` : isNext && canAfford ? `0 0 12px ${c}12` : 'none',
                 borderRadius: 12,
                 opacity: locked ? 0.3 : isPending && isNext ? 0.6 : 1,
@@ -189,7 +189,7 @@ function ShipStatsModal({ tier, onClose }: { tier: number; onClose: () => void }
         <div className="overflow-y-auto flex-1 px-5 py-4 flex flex-col gap-4">
 
           {/* Crew summary */}
-          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.75rem', textAlign: 'center' }}>
+          <div style={{ background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 10, padding: '0.75rem', textAlign: 'center' }}>
             <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: c }}>{stats?.crewSlots ?? 1}</p>
             <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#6a6764', marginTop: 2 }}>Crew Slots</p>
             <p className="font-karla" style={{ fontSize: '0.6rem', color: '#4a4845', marginTop: 4, lineHeight: 1.4 }}>Cards you can bring into battle to boost Power, Dodge, and Fortune</p>
@@ -207,7 +207,7 @@ function ShipStatsModal({ tier, onClose }: { tier: number; onClose: () => void }
           <div className="flex flex-col gap-2">
             <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Ship Stats</p>
             {statDefs.map(s => (
-              <div key={s.key} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '0.7rem 0.875rem' }}>
+              <div key={s.key} style={{ background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 10, padding: '0.7rem 0.875rem' }}>
                 <div className="flex items-center justify-between mb-1">
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#f0ede8' }}>
                     {s.icon} {s.label}
