@@ -52,17 +52,17 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
                 border: `1px solid ${isActive ? `${c}55` : 'rgba(255,255,255,0.14)'}`,
                 boxShadow: isActive ? `0 0 18px ${c}30` : 'none',
                 borderRadius: 12,
-                padding: '0.85rem 0.75rem',
+                padding: '0.7rem 0.65rem',
                 opacity: locked ? 0.3 : 1,
                 cursor: locked ? 'default' : 'pointer',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 8,
+                gap: 6,
                 transition: 'box-shadow 0.2s ease',
               }}
             >
               {/* Ship image */}
-              <div style={{ width: '100%', aspectRatio: '1 / 1', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8%' }}>
+              <div style={{ width: '100%', height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4%' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={ship.imageUrl}
