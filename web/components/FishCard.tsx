@@ -95,8 +95,14 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
             sizes={fill ? '50vw' : `${W}px`}
             unoptimized
           />
-          {artEffect === 'pearl'       && <div className="art-pearl-overlay" />}
-          {artEffect === 'holographic' && <div className="art-holographic" />}
+          {artEffect === 'pearl' && <div className="art-pearl-overlay" style={{
+            maskImage: `url(${src})`, maskSize: 'contain', maskPosition: 'top center', maskRepeat: 'no-repeat',
+            WebkitMaskImage: `url(${src})`, WebkitMaskSize: 'contain', WebkitMaskPosition: 'top center', WebkitMaskRepeat: 'no-repeat',
+          }} />}
+          {artEffect === 'holographic' && <div className="art-holographic" style={{
+            maskImage: `url(${src})`, maskSize: 'contain', maskPosition: 'top center', maskRepeat: 'no-repeat',
+            WebkitMaskImage: `url(${src})`, WebkitMaskSize: 'contain', WebkitMaskPosition: 'top center', WebkitMaskRepeat: 'no-repeat',
+          }} />}
         </div>
 
         {/* Wanted stamp */}
