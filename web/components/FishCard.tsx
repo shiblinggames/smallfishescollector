@@ -64,20 +64,24 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
   const H: number | string = fill ? '100%' : Math.round(cardW * DEFAULT_H / DEFAULT_W)
   const src = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${filename}`
 
-  const innerContent = unowned ? (
-    <div style={{ width: '100%', height: '100%', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="11" width="18" height="11" rx="2"/>
-        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-      </svg>
-    </div>
-  ) : (
-    <>
-      {/* Clipped to the SVG card shape (x=10,y=10 in 380×540 = 2.63%/1.85%) so dark bg doesn't bleed into transparent SVG margin */}
-      <div className="absolute inset-0" style={{ background: artBg[artEffect] ?? '#c8a870', clipPath: 'inset(1.85% 2.63% round 4.74%)' }} />
-      {/* Clip art and text to the inner area defined by the golden border frame */}
-      {/* Insets: 44/380 = 11.58% horizontal, 44/540 = 8.15% vertical (cardfront.svg coords) */}
-      <div className="absolute overflow-hidden" style={{ left: '11.58%', top: '8.15%', right: '11.58%', bottom: '8.15%', borderRadius: 5 }}>
+  const rarity = (variantName && dropWeight != null) ? rarityFromVariant(variantName, dropWeight) : null
+  const rarityColor = rarity ? (RARITY_COLOR[rarity] ?? '#a0a09a') : null
+
+  let frame: React.ReactNode
+
+  if (unowned) {
+    frame = (
+      <div style={{ width: W, height: H, borderRadius: R, background: '#1a1410', border: '2px dashed rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+    )
+  } else {
+    frame = (
+      <div className="relative overflow-hidden" style={{ width: W, height: H, borderRadius: R, background: artBg[artEffect] ?? '#c8a870' }}>
+        {/* Fish art */}
         <Image
           src={src}
           alt={name}
@@ -86,7 +90,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
           sizes={fill ? '50vw' : `${W}px`}
           unoptimized
         />
-        {artEffect === 'pearl'        && <div className="art-pearl-overlay" />}
+        {artEffect === 'pearl'       && <div className="art-pearl-overlay" />}
         {artEffect === 'holographic' && <div className="art-holographic" />}
 
         {/* Wanted stamp */}
@@ -99,56 +103,30 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
           </div>
         )}
 
-        {/* Bottom gradient panel: name + rarity + stats */}
-        {(() => {
-          const rarity = (variantName && dropWeight != null) ? rarityFromVariant(variantName, dropWeight) : null
-          const rarityColor = rarity ? (RARITY_COLOR[rarity] ?? '#a0a09a') : null
-          return (
-            <div className="absolute left-0 right-0 pointer-events-none" style={{ zIndex: 3, bottom: 0,
-              background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.90) 55%, transparent 100%)',
-              padding: '40px 10px 10px',
-            }}>
-              <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.75rem', color: '#f0ede8', marginBottom: 4, letterSpacing: '0.04em' }}>
-                {name}
-              </p>
-              {rarity && (
-                <p className="font-karla font-700 text-center uppercase tracking-[0.12em]" style={{ fontSize: '0.45rem', color: rarityColor!, marginBottom: stats ? 8 : 0 }}>
-                  {rarity}
-                </p>
-              )}
-              {stats && (
-                <div style={{ display: 'flex' }}>
-                  <StatCell label="PWR" value={stats.power} />
-                  <StatCell label="DGE" value={stats.dodge} />
-                  <StatCell label="FTN" value={stats.fortune} />
-                </div>
-              )}
+        {/* Bottom gradient: name + rarity + stats */}
+        <div className="absolute left-0 right-0 pointer-events-none" style={{ zIndex: 3, bottom: 0,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 50%, transparent 100%)',
+          padding: '40px 10px 10px',
+        }}>
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.75rem', color: '#f0ede8', marginBottom: 4, letterSpacing: '0.04em' }}>
+            {name}
+          </p>
+          {rarity && (
+            <p className="font-karla font-700 text-center uppercase tracking-[0.12em]" style={{ fontSize: '0.45rem', color: rarityColor!, marginBottom: stats ? 8 : 0 }}>
+              {rarity}
+            </p>
+          )}
+          {stats && (
+            <div style={{ display: 'flex' }}>
+              <StatCell label="PWR" value={stats.power} />
+              <StatCell label="DGE" value={stats.dodge} />
+              <StatCell label="FTN" value={stats.fortune} />
             </div>
-          )
-        })()}
-      </div>
-    </>
-  )
+          )}
+        </div>
 
-  let frame: React.ReactNode
-
-  if (unowned) {
-    frame = (
-      <div style={{ width: W, height: H, borderRadius: R, background: '#080808', border: '2px dashed rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
-      </div>
-    )
-  } else {
-    frame = (
-      <div className="relative" style={{ width: W, height: H }}>
-        {innerContent}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/cardfrontnew.png" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }} />
-        {/* Full-card art effect overlays — above the border SVG, clipped to the card's outer visible edge */}
-        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 11, clipPath: 'inset(1.85% 2.63% round 4.74%)' }}>
+        {/* Full-card art effect overlays */}
+        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 4 }}>
           {artEffect === 'ghost'       && <div className="art-ghost-overlay" />}
           {artEffect === 'shadow'      && <div className="art-shadow-overlay" />}
           {artEffect === 'kraken'      && <div className="art-kraken-overlay" />}
