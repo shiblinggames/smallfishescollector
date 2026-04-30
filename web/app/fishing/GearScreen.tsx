@@ -362,7 +362,7 @@ export default function GearScreen({
                 </button>
               )
             })}
-            <Link href="/marketplace/tackle-shop" onClick={onClose}
+            <Link href="/marketplace/tackle-shop#bait" onClick={onClose}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', textDecoration: 'none', marginTop: 2 }}>
               <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)' }}>Buy more bait</span>
               <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845' }}>Tackle Shop ↗</span>

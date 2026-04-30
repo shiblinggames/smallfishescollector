@@ -344,7 +344,7 @@ function UnifiedGearDrawer({
                 {sec.key === 'bait' && (
                   <div className="flex flex-col gap-2">
                     <BaitSelector baitInventory={baitInventory} selectedBait={selectedBait} onSelect={onSelectBait} />
-                    <Link href="/marketplace/tackle-shop" onClick={onClose}
+                    <Link href="/marketplace/tackle-shop#bait" onClick={onClose}
                       className="flex items-center justify-between px-3 py-2.5 rounded-xl mt-0.5"
                       style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}>
                       <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Buy more bait</span>

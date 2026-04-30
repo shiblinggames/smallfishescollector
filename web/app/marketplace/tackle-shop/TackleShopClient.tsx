@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { HOOKS } from '@/lib/hooks'
 import { RODS } from '@/lib/rods'
@@ -41,6 +41,10 @@ export default function TackleShopClient({
   totalSpecies: number
 }) {
   const [section, setSection] = useState<Section>(null)
+
+  useEffect(() => {
+    if (window.location.hash === '#bait') setSection('bait')
+  }, [])
   const [hookTier, setHookTier] = useState(initialHookTier)
   const [equippedRod, setEquippedRod] = useState(initialEquippedRod)
   const [ownedRods, setOwnedRods] = useState<number[]>(initialOwnedRods)
@@ -224,7 +228,7 @@ export default function TackleShopClient({
 
       {/* ── Bait ── */}
       {section === 'bait' && (
-        <div className="flex flex-col gap-2.5 mb-4">
+        <div id="bait" className="flex flex-col gap-2.5 mb-4">
           {shopBaits.map(bait => {
             const qty = baitMap[bait.type] ?? 0
             const bundleCost = bait.shopCost * bait.bundleSize
