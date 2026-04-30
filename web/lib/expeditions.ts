@@ -187,7 +187,8 @@ export interface EnemyDef {
   image: string | null  // portrait filename in enemy-arts bucket (circular avatar)
   tier: number          // determines which boat image is shown in combat (enemytier{N}.png)
   maxHp: number
-  damage: number  // max damage per shot (min is always 1)
+  minDamage: number  // minimum damage per shot
+  damage: number     // maximum damage per shot
   dodge: number   // same scale as crew dodge: dodge*5 = dodge%
   armor: number   // flat damage reduction on incoming player shots
   fortune: number // fortune*4 = crit%
@@ -216,7 +217,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
     image: null,
     tier: 1,
     maxHp: 20,
-    damage: 6,
+    minDamage: 2,
+    damage: 4,
     dodge: 0,
     armor: 0,
     fortune: 0,
@@ -232,7 +234,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
     image: null,
     tier: 1,
     maxHp: 25,
-    damage: 14,
+    minDamage: 1,
+    damage: 12,
     dodge: 2,
     armor: 0,
     fortune: 3,
@@ -248,7 +251,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
     image: null,
     tier: 1,
     maxHp: 35,
-    damage: 10,
+    minDamage: 3,
+    damage: 9,
     dodge: 2,
     armor: 1,
     fortune: 2,
@@ -272,7 +276,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
     image: 'barnacle_pete.png',
     tier: 1,
     maxHp: 50,
-    damage: 10,
+    minDamage: 4,
+    damage: 12,
     dodge: 1,
     armor: 3,
     fortune: 2,
@@ -372,7 +377,7 @@ export function resolveRound(
   let enemyShotDamage = 0
   let enemyCrit = false
   if (enemyCanFire) {
-    const base = Math.floor(Math.random() * enemy.damage) + 1
+    const base = Math.floor(Math.random() * (enemy.damage - enemy.minDamage + 1)) + enemy.minDamage
     const enemyCritChance = Math.min(enemy.fortune * 4, 60)
     enemyCrit = Math.random() * 100 < enemyCritChance
     enemyShotDamage = enemyCrit ? Math.floor(base * 2) : base
