@@ -111,10 +111,8 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     router.refresh()
   }
 
-  const PRIZE_VARIANTS = new Set(['Davy Jones', 'Golden Age', 'Kraken', 'Wanted', 'Maelstrom', 'GOD'])
-
   function isPrizeCard(card: DrawnCard) {
-    return (card.name === 'Catfish' || card.name === 'Doby Mick') && PRIZE_VARIANTS.has(card.variantName)
+    return (card.name === 'Catfish' || card.name === 'Doby Mick') && card.variantName === 'GOD'
   }
 
   function generatePrizeCode() {
