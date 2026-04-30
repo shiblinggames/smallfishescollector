@@ -10,6 +10,7 @@ const ROUTE_BG: [string, BgConfig][] = [
   ['/tavern/crown-and-anchor', { src: '/gamesbackground.jpg',      overlay: 'rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.72) 50%, rgba(0,0,0,0.88) 100%' }],
   ['/tavern/slots',            { src: '/gamesbackground.jpg',      overlay: 'rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.72) 50%, rgba(0,0,0,0.88) 100%' }],
   ['/tavern/market',           { src: '/exchangebackground.jpeg',  overlay: 'rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
+  ['/tavern',                  { src: '/tavernbackground.jpg',     overlay: 'rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
   ['/marketplace/shipyard',    { src: `${SUPABASE_BG}/shipyardbackground.jpeg`,   overlay: 'rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
   ['/marketplace/tackle-shop', { src: `${SUPABASE_BG}/tackleshopbackground.jpg`, overlay: 'rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
 ]
