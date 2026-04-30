@@ -130,6 +130,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
 
         {/* Art effect overlays — above fish art */}
         <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 4 }}>
+          {artEffect === 'rainbow'     && <div className="art-rainbow-overlay" />}
           {artEffect === 'ghost'       && <div className="art-ghost-overlay" />}
           {artEffect === 'shadow'      && <div className="art-shadow-overlay" />}
           {artEffect === 'kraken'      && <div className="art-kraken-overlay" />}
