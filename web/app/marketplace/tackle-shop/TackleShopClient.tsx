@@ -246,7 +246,10 @@ export default function TackleShopClient({
                   background: `${bait.color}18`, border: `1px solid ${bait.color}40`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <div style={{ width: 13, height: 13, borderRadius: 4, background: bait.color }} />
+                  {bait.imageUrl
+                    ? <img src={bait.imageUrl} alt={bait.name} style={{ width: 30, height: 30, objectFit: 'contain' }} />
+                    : <div style={{ width: 13, height: 13, borderRadius: 4, background: bait.color }} />
+                  }
                 </div>
 
                 <div className="flex-1 min-w-0">

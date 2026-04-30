@@ -213,7 +213,9 @@ export default function GearScreen({
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <div style={{ width: '40%' }}>
           <GearSlot
-            label="Bait" icon={<BaitIcon color={bait?.color ?? '#94a3b8'} />}
+            label="Bait"
+            image={bait?.imageUrl ?? null}
+            icon={<BaitIcon color={bait?.color ?? '#94a3b8'} />}
             itemName={bait?.name ?? 'No Bait'}
             color={bait?.color ?? '#94a3b8'} isActive={activeSlot === 'bait'}
             onClick={() => toggle('bait')}
@@ -348,7 +350,10 @@ export default function GearScreen({
                     border: `1px solid ${isSel ? c + '50' : 'rgba(255,255,255,0.09)'}`,
                     cursor: 'pointer',
                   }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, opacity: qty > 0 ? 1 : 0.3, flexShrink: 0 }} />
+                  {b.imageUrl
+                    ? <img src={b.imageUrl} alt={b.name} style={{ width: 22, height: 22, objectFit: 'contain', opacity: qty > 0 ? 1 : 0.3, flexShrink: 0 }} />
+                    : <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, opacity: qty > 0 ? 1 : 0.3, flexShrink: 0 }} />
+                  }
                   <div style={{ flex: 1, textAlign: 'left' }}>
                     <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: qty > 0 ? '#f0ede8' : '#4a4845' }}>{b.name}</p>
                     <div style={{ display: 'flex', gap: 3, marginTop: 2, flexWrap: 'wrap' }}>

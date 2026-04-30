@@ -3,6 +3,7 @@ export interface BaitDef {
   name: string
   description: string
   color: string
+  imageUrl?: string
   waitMult: number        // multiplier on bite wait time (< 1.0 = faster)
   catchZoneBonus: number  // extra degrees added to the catch zone
   acquisition: string[]
@@ -16,6 +17,7 @@ export const BAITS: BaitDef[] = [
     name: 'Worm',
     description: 'Reliable and cheap. You get 20 free every day.',
     color: '#a07858',
+    imageUrl: '/worm.png',
     waitMult: 1.0,
     catchZoneBonus: 0,
     acquisition: ['shop', 'daily'],
