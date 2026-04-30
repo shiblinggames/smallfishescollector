@@ -34,8 +34,8 @@ export default async function MarketplacePage() {
             <Link href="/tavern/market" style={{ textDecoration: 'none', display: 'block' }}>
               <div style={{
                 position: 'relative', overflow: 'hidden',
-                background: 'linear-gradient(135deg, rgba(14,22,38,1) 0%, rgba(8,18,32,1) 100%)',
-                border: '1px solid rgba(56,189,248,0.25)',
+                background: 'rgba(8,8,6,0.82)',
+                border: '1px solid rgba(56,189,248,0.30)',
                 borderRadius: 16, padding: '1.25rem 1.25rem 1.1rem',
               }}>
                 {/* Decorative sparkline bg */}
@@ -60,7 +60,7 @@ export default async function MarketplacePage() {
                     <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#ffffff', lineHeight: 1.15, marginBottom: '0.4rem' }}>
                       Fish Market
                     </p>
-                    <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#6a8a9a', lineHeight: 1.5 }}>
+                    <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#a0a09a', lineHeight: 1.5 }}>
                       Trade your catch at hourly market prices.<br />Up to 2.5× base value.
                     </p>
                   </div>

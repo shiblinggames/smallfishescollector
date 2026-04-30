@@ -34,8 +34,8 @@ export default function ShopCard({ href, eyebrow, title, description, info, icon
         onClick={handleClick}
         onKeyDown={(e) => e.key === 'Enter' && handleClick()}
         style={{
-          background: 'rgba(255,255,255,0.08)',
-          border: '1px solid rgba(255,255,255,0.15)',
+          background: 'rgba(8,8,6,0.82)',
+          border: '1px solid rgba(255,255,255,0.16)',
           borderRadius: '14px',
           padding: '0.875rem',
           cursor: 'pointer',
