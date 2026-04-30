@@ -146,7 +146,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
       <div className="relative" style={{ width: W, height: H }}>
         {innerContent}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/cardfront.svg" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }} />
+        <img src="/cardfrontnew.png" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }} />
         {/* Full-card art effect overlays — above the border SVG, clipped to the card's outer visible edge */}
         <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 11, clipPath: 'inset(1.85% 2.63% round 4.74%)' }}>
           {artEffect === 'ghost'       && <div className="art-ghost-overlay" />}
