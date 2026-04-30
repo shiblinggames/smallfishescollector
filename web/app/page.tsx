@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 export default async function HomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (user) redirect('/packs')
+  if (user) redirect('/tavern')
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6 py-16 relative overflow-hidden">
