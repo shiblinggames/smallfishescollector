@@ -32,13 +32,31 @@ function HookImage({ size }: { size: number }) {
   )
 }
 
-function SlotSymbolDisplay({ id, size = 56 }: { id: SlotSymbolId; size?: number }) {
+function SlotSymbolDisplay({ id, size }: { id: SlotSymbolId; size?: number }) {
   const sym = SLOT_SYMBOLS_LIST.find((s) => s.id === id)!
   if (id === 'anchor') {
+    if (size !== undefined) {
+      return (
+        <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <HookImage size={Math.round(size * 0.9)} />
+        </div>
+      )
+    }
     return (
-      <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <HookImage size={Math.round(size * 0.9)} />
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/models/hooks/steel-hook.png" alt="Hook" style={{ width: '72%', height: '72%', objectFit: 'contain', display: 'block' }} />
       </div>
+    )
+  }
+  if (size !== undefined) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={`${SUPABASE_URL}/storage/v1/object/public/card-arts/${sym.filename}`}
+        alt={sym.label}
+        style={{ width: size, height: size, objectFit: 'contain', display: 'block' }}
+      />
     )
   }
   return (
@@ -46,7 +64,7 @@ function SlotSymbolDisplay({ id, size = 56 }: { id: SlotSymbolId; size?: number 
     <img
       src={`${SUPABASE_URL}/storage/v1/object/public/card-arts/${sym.filename}`}
       alt={sym.label}
-      style={{ width: size, height: size, objectFit: 'contain', display: 'block' }}
+      style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', padding: '8%' }}
     />
   )
 }
@@ -95,11 +113,11 @@ function Reel({ symbol, rolling, won, winColor, nearMiss, nearMissOdd, matchColo
     : nearMiss ? '#f97316'
     : nearMissOdd ? 'rgba(255,255,255,0.06)'
     : (rolling ? 'rgba(255,255,255,0.10)' : color)
-  const bg = won ? `${winColor ?? color}22`
-    : matchWild ? '#34d39918'
-    : matchColor ? `${matchColor}18`
-    : nearMiss ? '#f9731618'
-    : (rolling ? 'rgba(255,255,255,0.07)' : `${color}18`)
+  const bg = won ? `${winColor ?? color}40`
+    : matchWild ? 'rgba(52,211,153,0.25)'
+    : matchColor ? `${matchColor}25`
+    : nearMiss ? 'rgba(249,115,22,0.22)'
+    : 'rgba(10,9,8,0.88)'
   const shadow = won
     ? `0 0 28px ${winColor ?? color}70, 0 0 56px ${winColor ?? color}30`
     : matchWild ? '0 0 18px #34d39960'
@@ -114,19 +132,18 @@ function Reel({ symbol, rolling, won, winColor, nearMiss, nearMissOdd, matchColo
 
   return (
     <div
+      className="w-24 h-24 sm:w-[130px] sm:h-[130px]"
       style={{
-        width: 96, height: 96,
         background: bg,
         border: `2.5px solid ${borderColor}`,
         borderRadius: 18,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
         boxShadow: shadow,
         overflow: 'hidden',
         animation: anim,
         transition: 'border-color 0.15s, background 0.15s',
       }}
     >
-      <SlotSymbolDisplay id={display} size={68} />
+      <SlotSymbolDisplay id={display} />
     </div>
   )
 }
@@ -400,7 +417,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
           </div>
 
           {/* Main reels */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 sm:gap-4">
             {reels.map((sym, i) => (
               <Reel
                 key={i}
@@ -429,7 +446,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                   ⚓ Bonus Spin!
                 </p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-3 sm:gap-4">
                 {bonusReels.map((sym, i) => (
                   <Reel
                     key={i}
@@ -591,7 +608,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
             {SLOT_SYMBOLS_LIST.filter((s) => s.id !== 'anchor').map((sym) => (
               <div key={sym.id} className="flex items-center gap-3 px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
                 <div style={{ width: 30, height: 30, flexShrink: 0 }}>
-                  <SlotSymbolDisplay id={sym.id} size={30} />
+                  <SlotSymbolDisplay id={sym.id} />
                 </div>
                 <span className="font-karla font-500 flex-1" style={{ fontSize: '0.88rem', color: '#d0cdc8' }}>{sym.label}</span>
                 <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: sym.color }}>{SLOT_PAYOUTS[sym.id]}×</span>
@@ -607,7 +624,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
               return (
                 <div key={sym.id} className="flex items-center gap-3 px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
                   <div style={{ width: 30, height: 30, flexShrink: 0 }}>
-                    <SlotSymbolDisplay id={sym.id} size={30} />
+                    <SlotSymbolDisplay id={sym.id} />
                   </div>
                   <span className="font-karla font-500 flex-1" style={{ fontSize: '0.88rem', color: '#d0cdc8' }}>{sym.label}</span>
                   <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: mult >= 1 ? sym.color : '#9a9488' }}>
