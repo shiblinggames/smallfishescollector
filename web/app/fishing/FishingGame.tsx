@@ -1116,6 +1116,7 @@ export default function FishingGame({
   const [fishingXP, setFishingXP]   = useState(initialFishingXP)
   const [xpPopup, setXpPopup]       = useState<{ value: number; id: number } | null>(null)
   const [levelUpNotif, setLevelUpNotif] = useState<number | null>(null)
+  const [holdFullNotif, setHoldFullNotif] = useState(false)
   const [, startTransition]         = useTransition()
 
   const fishingLevel = getLevelFromXP(fishingXP)
@@ -1144,6 +1145,11 @@ export default function FishingGame({
     const id = setTimeout(() => setNewStreakRecord(null), 4000)
     return () => clearTimeout(id)
   }, [newStreakRecord])
+  useEffect(() => {
+    if (!holdFullNotif) return
+    const id = setTimeout(() => setHoldFullNotif(false), 6000)
+    return () => clearTimeout(id)
+  }, [holdFullNotif])
 
   // Force-decode actual in-DOM img elements on mount so GPU has them compositor-ready
   useEffect(() => {
@@ -1423,8 +1429,13 @@ export default function FishingGame({
         setInventory(prev => {
           const existing = prev.find(i => i.fish_id === fish.id)
           const addQty = doubleCatch ? 2 : jackpotMultiplier
-          if (existing) return prev.map(i => i.fish_id === fish.id ? { ...i, quantity: i.quantity + addQty } : i)
-          return [...prev, { fish_id: fish.id, quantity: addQty, fish_species: fish }]
+          const next = existing
+            ? prev.map(i => i.fish_id === fish.id ? { ...i, quantity: i.quantity + addQty } : i)
+            : [...prev, { fish_id: fish.id, quantity: addQty, fish_species: fish }]
+          const prevCount = prev.reduce((s, i) => s + i.quantity, 0)
+          const newCount  = next.reduce((s, i) => s + i.quantity, 0)
+          if (prevCount < holdCapacity && newCount >= holdCapacity) setHoldFullNotif(true)
+          return next
         })
         if (baitSaved) {
           setBaitInventory(prev => prev.map(b =>
@@ -2426,6 +2437,51 @@ export default function FishingGame({
                 ✦ &nbsp; Flawless reel &nbsp; ✦
               </motion.p>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Hold full toast ── */}
+      <AnimatePresence>
+        {holdFullNotif && (
+          <motion.div
+            key="hold-full"
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            style={{
+              position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 40, width: 'calc(100% - 2rem)', maxWidth: 300,
+            }}
+          >
+            <div style={{
+              background: 'rgba(8,8,6,0.95)', border: '1px solid rgba(255,255,255,0.14)',
+              borderRadius: 12, padding: '10px 14px',
+              display: 'flex', alignItems: 'flex-start', gap: 10,
+            }}>
+              <span style={{ fontSize: '1.4rem', lineHeight: 1, flexShrink: 0, marginTop: 2 }}>⚓</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#f0ede8', marginBottom: 3 }}>
+                  Hold is full!
+                </p>
+                <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.45 }}>
+                  Sell your catch or upgrade your ship for more storage.
+                </p>
+                <Link
+                  href="/marketplace/shipyard"
+                  onClick={() => setHoldFullNotif(false)}
+                  className="font-karla font-700 uppercase tracking-[0.1em]"
+                  style={{ fontSize: '0.52rem', color: '#60a5fa', textDecoration: 'none', marginTop: 5, display: 'inline-block' }}
+                >
+                  View shipyard →
+                </Link>
+              </div>
+              <button
+                onClick={() => setHoldFullNotif(false)}
+                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.25)', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: 0, flexShrink: 0 }}
+              >×</button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
