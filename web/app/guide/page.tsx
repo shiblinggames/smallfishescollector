@@ -14,6 +14,24 @@ export default function GuidePage() {
     <>
       <Nav />
       <main className="min-h-screen px-6 py-14 sm:pb-14 flex flex-col items-center">
+
+        {/* Under construction banner */}
+        <div className="w-full max-w-2xl mb-10">
+          <div style={{
+            background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)',
+            borderRadius: 12, padding: '0.75rem 1rem',
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <span style={{ fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}>🚧</span>
+            <div>
+              <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#fbbf24' }}>Under Construction</p>
+              <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: 'rgba(251,191,36,0.6)', lineHeight: 1.4, marginTop: 2 }}>
+                This guide is being updated to reflect the latest features. Some information may be out of date.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <p className="sg-eyebrow text-center mb-3">Small Fishes Collector</p>
         <h1
           className="font-cinzel font-700 text-[#f0ede8] text-center leading-[0.92] tracking-[-0.01em] mb-4"
