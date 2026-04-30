@@ -1842,9 +1842,9 @@ export default function FishingGame({
                   <Link
                     href="/marketplace/shipyard"
                     className="font-karla font-700"
-                    style={{ fontSize: '0.62rem', color: '#60a5fa', textDecoration: 'none', display: 'inline-block', borderBottom: '1px solid rgba(96,165,250,0.4)', paddingBottom: 1 }}
+                    style={{ fontSize: '0.68rem', color: '#60a5fa', textDecoration: 'none', display: 'inline-block', borderBottom: '1px solid rgba(96,165,250,0.4)', paddingBottom: 1 }}
                   >
-                    Need more storage? Upgrade your ship ↗
+                    Upgrade your boat for more storage ↗
                   </Link>
                 </motion.div>
               )}
@@ -2577,25 +2577,23 @@ export default function FishingGame({
             }}
           >
             {/* Header */}
-            <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between mb-5">
               <div>
                 <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                  style={{ fontSize: '0.6rem', color: '#6a6764', marginBottom: 2 }}>Fish Hold</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: holdTotalCount >= holdCapacity ? '#f87171' : '#f0ede8', lineHeight: 1.1 }}>
-                  {holdTotalCount} <span style={{ fontSize: '1rem', color: '#6a6764' }}>/ {holdCapacity}</span>
+                  style={{ fontSize: '0.72rem', color: '#9a9488', marginBottom: 3 }}>Fish Hold</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: holdTotalCount >= holdCapacity ? '#f87171' : '#f0ede8', lineHeight: 1.1 }}>
+                  {holdTotalCount} <span style={{ fontSize: '1.1rem', color: '#6a6764' }}>/ {holdCapacity}</span>
                 </p>
-                {inventory.length > 0 && (
-                  <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: 2 }}>
-                    {inventory.length} species · <Link href="/marketplace/shipyard" className="font-karla font-600" style={{ color: '#6a6764', textDecoration: 'none' }}>Need more storage? →</Link>
-                  </p>
-                )}
+                <Link href="/marketplace/shipyard" onClick={() => setHoldOpen(false)} className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#6a6764', textDecoration: 'none', marginTop: 4, display: 'inline-block' }}>
+                  Upgrade your boat for more storage →
+                </Link>
               </div>
               <button onClick={() => setHoldOpen(false)}
                 style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
             </div>
 
             {inventory.length === 0 ? (
-              <p className="font-karla font-300 text-center py-6" style={{ fontSize: '0.72rem', color: '#4a4845' }}>
+              <p className="font-karla font-300 text-center py-6" style={{ fontSize: '0.8rem', color: '#4a4845' }}>
                 No fish yet. Cast a line!
               </p>
             ) : (
@@ -2608,53 +2606,41 @@ export default function FishingGame({
                     borderRadius: 14, padding: '1rem 1.1rem',
                     boxShadow: '0 0 20px rgba(56,189,248,0.06)',
                   }}>
-                    <div className="flex items-start justify-between mb-1">
-                      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#38bdf8' }}>Fish Market</p>
-                      <span style={{ fontSize: '0.75rem', color: '#38bdf8' }}>→</span>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#38bdf8' }}>Fish Market</p>
+                      <span style={{ fontSize: '0.85rem', color: '#38bdf8' }}>→</span>
                     </div>
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1 }}>
-                          {Math.floor(holdBaseValue * 2.5).toLocaleString()} ⟡
-                        </p>
-                        <p className="font-karla font-400 mt-1" style={{ fontSize: '0.58rem', color: '#38bdf8aa' }}>
-                          potential at 2.5× · live prices update hourly
-                        </p>
-                      </div>
-                      <div style={{
-                        background: 'rgba(56,189,248,0.14)', border: '1px solid rgba(56,189,248,0.3)',
-                        borderRadius: 8, padding: '0.2rem 0.55rem',
-                      }}>
-                        <p className="font-karla font-700" style={{ fontSize: '0.52rem', color: '#38bdf8' }}>up to 2.5×</p>
-                      </div>
-                    </div>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', lineHeight: 1 }}>
+                      {holdBaseValue.toLocaleString()} ⟡
+                    </p>
+                    <p className="font-karla font-400 mt-1.5" style={{ fontSize: '0.68rem', color: '#38bdf8aa' }}>
+                      Est. market price · live prices update hourly
+                    </p>
                   </div>
                 </Link>
 
                 {/* Quick Sell — secondary, discounted */}
                 <div style={{
-                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: 14, padding: '0.85rem 1rem',
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 14, padding: '1rem 1.1rem',
                 }}>
-                  <div className="flex items-center justify-between mb-2.5">
-                    <div>
-                      <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Quick Sell</p>
-                      <p className="font-karla font-400 mt-0.5" style={{ fontSize: '0.58rem', color: '#4a4845' }}>
-                        Only 65% of base · you lose{' '}
-                        <span style={{ color: '#f87171' }}>{Math.floor(holdBaseValue * 0.35).toLocaleString()} ⟡</span>
-                      </p>
-                    </div>
-                    <p className="font-cinzel font-600" style={{ fontSize: '0.88rem', color: '#6a6764' }}>
-                      {holdTotalValue.toLocaleString()} ⟡
-                    </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>Quick Sell</p>
                   </div>
+                  <p className="font-cinzel font-600" style={{ fontSize: '1.4rem', color: '#f0ede8', lineHeight: 1 }}>
+                    {holdTotalValue.toLocaleString()} ⟡
+                  </p>
+                  <p className="font-karla font-400 mt-1.5" style={{ fontSize: '0.68rem', color: '#9a9488' }}>
+                    65% of base value · you lose{' '}
+                    <span style={{ color: '#f87171' }}>{Math.floor(holdBaseValue * 0.35).toLocaleString()} ⟡</span>
+                  </p>
                   <button
                     onClick={async () => { for (const item of inventory) await handleSell(item.fish_id, item.quantity) }}
                     disabled={!!sellPending}
                     className="font-karla font-600 uppercase tracking-[0.1em] w-full"
-                    style={{ fontSize: '0.58rem', padding: '0.55rem', borderRadius: 10,
-                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#6a6764', opacity: sellPending ? 0.5 : 1, cursor: sellPending ? 'default' : 'pointer' }}>
+                    style={{ fontSize: '0.65rem', padding: '0.65rem', borderRadius: 10, marginTop: 12,
+                      background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
+                      color: '#a0a09a', opacity: sellPending ? 0.5 : 1, cursor: sellPending ? 'default' : 'pointer' }}>
                     {sellPending ? 'Selling…' : 'Sell All at Discount'}
                   </button>
                 </div>
