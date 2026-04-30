@@ -90,36 +90,7 @@ export default async function TavernPage() {
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       {!profile?.has_seen_welcome && <WelcomeModal />}
       <main className="min-h-screen">
-        {/* Lantern light — warm amber glow from above */}
-        <div aria-hidden style={{
-          position: 'fixed', top: 0, left: 0, right: 0, height: '60%',
-          background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(180,120,30,0.15) 0%, transparent 100%)',
-          pointerEvents: 'none', zIndex: 0,
-        }} />
-
-        {/* Bartender banner */}
-        <div style={{
-          position: 'relative', zIndex: 1,
-          overflow: 'hidden', height: 320,
-          maskImage: 'linear-gradient(to bottom, black 45%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 45%, transparent 100%)',
-        }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/bartender.jpeg"
-            alt=""
-            aria-hidden
-            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
-          />
-        </div>
-
-        <div className="px-6 max-w-lg mx-auto mb-6 text-center" style={{ position: 'relative', zIndex: 1 }}>
-          <p className="font-karla font-600" style={{ fontSize: '0.95rem', color: '#c8a96e', lineHeight: 1.6 }}>
-            &ldquo;{bartenderLine}&rdquo;
-          </p>
-        </div>
-
-        <div className="px-6 max-w-4xl mx-auto mb-2" style={{ position: 'relative', zIndex: 1 }}>
+        <div className="px-6 max-w-4xl mx-auto mb-2 pt-8" style={{ position: 'relative', zIndex: 1 }}>
           <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>Today</p>
         </div>
         <div className="px-6 grid grid-cols-2 lg:grid-cols-3 gap-3 pb-6 max-w-4xl mx-auto" style={{ position: 'relative', zIndex: 1 }}>
