@@ -392,7 +392,7 @@ function UnifiedGearDrawer({
                         </div>
                       )
                     })}
-                    <Link href="/marketplace/tackle-shop" onClick={onClose}
+                    <Link href="/marketplace/tackle-shop#rod" onClick={onClose}
                       className="flex items-center justify-between px-3 py-2.5 rounded-xl mt-0.5"
                       style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}>
                       <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Buy more rods</span>
@@ -413,7 +413,7 @@ function UnifiedGearDrawer({
                     <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.5 }}>
                       {reel.description}
                     </p>
-                    <Link href="/marketplace/tackle-shop" onClick={onClose}
+                    <Link href="/marketplace/tackle-shop#reel" onClick={onClose}
                       className="flex items-center justify-between px-3 py-2.5 rounded-xl"
                       style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}>
                       <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Upgrade reel</span>
@@ -434,7 +434,7 @@ function UnifiedGearDrawer({
                     <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.5 }}>
                       {hook.description}
                     </p>
-                    <Link href="/marketplace/tackle-shop" onClick={onClose}
+                    <Link href="/marketplace/tackle-shop#hook" onClick={onClose}
                       className="flex items-center justify-between px-3 py-2.5 rounded-xl"
                       style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}>
                       <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Upgrade hook</span>

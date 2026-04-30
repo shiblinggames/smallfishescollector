@@ -43,7 +43,8 @@ export default function TackleShopClient({
   const [section, setSection] = useState<Section>(null)
 
   useEffect(() => {
-    if (window.location.hash === '#bait') setSection('bait')
+    const hash = window.location.hash.replace('#', '') as Section
+    if (hash && ['bait', 'hook', 'rod', 'reel', 'line'].includes(hash)) setSection(hash)
   }, [])
   const [hookTier, setHookTier] = useState(initialHookTier)
   const [equippedRod, setEquippedRod] = useState(initialEquippedRod)
