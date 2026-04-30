@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import Link from 'next/link'
 import { searchUsers } from '@/app/u/actions'
 import { addCrewMember, removeCrewMember, type CrewMember } from './actions'
-import ProfileSection, { type PickerCard } from './ProfileSection'
 
 interface SearchResult {
   username: string
@@ -13,13 +12,32 @@ interface SearchResult {
 interface Props {
   initialCrew: CrewMember[]
   username: string
-  usernameChanged: boolean
-  showcaseVariantIds: number[]
-  pickerCards: PickerCard[]
-  isPremium: boolean
 }
 
-export default function SocialClient({ initialCrew, username, usernameChanged, showcaseVariantIds, pickerCards, isPremium }: Props) {
+const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
+function avatarColor(str: string) {
+  let h = 0
+  for (const c of str) h = c.charCodeAt(0) + ((h << 5) - h)
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
+}
+
+function Avatar({ username, size = 40 }: { username: string; size?: number }) {
+  const color = avatarColor(username)
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%', flexShrink: 0,
+      background: `radial-gradient(circle at 38% 35%, ${color}ee 0%, ${color}77 100%)`,
+      border: `1.5px solid ${color}55`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <span className="font-cinzel font-700" style={{ fontSize: size * 0.38, color: '#f0ede8' }}>
+        {username.slice(0, 1).toUpperCase()}
+      </span>
+    </div>
+  )
+}
+
+export default function SocialClient({ initialCrew, username }: Props) {
   const [crew, setCrew] = useState<CrewMember[]>(initialCrew)
   const crewSet = new Set(crew.map(m => m.username.toLowerCase()))
 
@@ -29,142 +47,210 @@ export default function SocialClient({ initialCrew, username, usernameChanged, s
   const [searching, setSearching] = useState(false)
   const [pending, startTransition] = useTransition()
   const [loadingUsername, setLoadingUsername] = useState<string | null>(null)
+  const [addedSet, setAddedSet] = useState<Set<string>>(new Set())
 
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
-    if (!query.trim()) return
-    setSearching(true)
-    setSearched(true)
-    const data = await searchUsers(query.trim())
-    setResults(data)
-    setSearching(false)
-  }
+  // Debounced search as you type
+  useEffect(() => {
+    const trimmed = query.trim()
+    if (!trimmed) {
+      setResults([])
+      setSearched(false)
+      return
+    }
+    const id = setTimeout(async () => {
+      setSearching(true)
+      const data = await searchUsers(trimmed)
+      setResults(data)
+      setSearched(true)
+      setSearching(false)
+    }, 380)
+    return () => clearTimeout(id)
+  }, [query])
 
-  function handleAdd(username: string) {
-    setLoadingUsername(username)
+  function handleAdd(u: string) {
+    setLoadingUsername(u)
     startTransition(async () => {
-      await addCrewMember(username)
-      setCrew(prev => [...prev, { username, fotdStreak: 0 }])
+      await addCrewMember(u)
+      setCrew(prev => [...prev, { username: u, fotdStreak: 0 }])
+      setAddedSet(prev => new Set(prev).add(u.toLowerCase()))
       setLoadingUsername(null)
     })
   }
 
-  function handleRemove(username: string) {
-    setLoadingUsername(username)
+  function handleRemove(u: string) {
+    setLoadingUsername(u)
     startTransition(async () => {
-      await removeCrewMember(username)
-      setCrew(prev => prev.filter(m => m.username.toLowerCase() !== username.toLowerCase()))
+      await removeCrewMember(u)
+      setCrew(prev => prev.filter(m => m.username.toLowerCase() !== u.toLowerCase()))
       setLoadingUsername(null)
     })
   }
 
   return (
-    <div className="px-6 max-w-4xl mx-auto pb-12">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 items-start">
+    <div className="px-6 max-w-xl mx-auto pb-14 flex flex-col gap-10">
 
-        {/* Left: profile */}
-        <ProfileSection
-          username={username}
-          usernameChanged={usernameChanged}
-          showcaseVariantIds={showcaseVariantIds}
-          pickerCards={pickerCards}
-          isPremium={isPremium}
-        />
-
-        {/* Right: search + crew */}
-        <div className="flex flex-col gap-8">
-
-      {/* Search */}
+      {/* ── Find crew ── */}
       <div>
-        <p className="sg-eyebrow mb-3" style={{ color: '#9a9488' }}>Find a Crew Member</p>
-        <form onSubmit={handleSearch} className="flex gap-2 mb-3">
+        <p className="font-karla font-600 uppercase tracking-[0.14em] mb-3" style={{ fontSize: '0.55rem', color: '#9a9488' }}>
+          Find a Crew Member
+        </p>
+
+        {/* Search input */}
+        <div style={{ position: 'relative' }}>
+          <svg
+            width="15" height="15" viewBox="0 0 24 24" fill="none"
+            stroke="rgba(255,255,255,0.3)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+            style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+          >
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+          </svg>
           <input
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search by username…"
-            className="sg-input font-karla font-600 tracking-[0.08em] text-sm flex-1"
-            style={{ padding: '0.5rem 1rem' }}
+            className="sg-input font-karla font-600 w-full"
+            style={{ paddingLeft: '2.4rem', paddingRight: query ? '2.4rem' : '1rem', fontSize: '0.88rem' }}
             spellCheck={false}
             maxLength={30}
+            autoComplete="off"
           />
-          <button type="submit" disabled={searching} className="btn-ghost text-xs shrink-0" style={{ padding: '0 1rem' }}>
-            {searching ? '…' : 'Search'}
-          </button>
-        </form>
+          {query && (
+            <button
+              onClick={() => { setQuery(''); setResults([]); setSearched(false) }}
+              style={{
+                position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                color: 'rgba(255,255,255,0.3)', background: 'none', border: 'none',
+                cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: 2,
+              }}
+            >×</button>
+          )}
+        </div>
 
-        {searched && !searching && results.length === 0 && (
-          <p className="font-karla font-300 text-[#6a6764] text-sm">No crew found.</p>
-        )}
-
-        {results.length > 0 && (
-          <div className="flex flex-col gap-2">
-            {results.map(r => {
-              const inCrew = crewSet.has(r.username.toLowerCase())
-              const isLoading = loadingUsername === r.username
-              return (
-                <div
-                  key={r.username}
-                  className="flex items-center justify-between px-4 py-3 rounded-xl"
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.13)' }}
-                >
-                  <Link href={`/u/${r.username}`} className="font-cinzel font-700 text-[#f0ede8] hover:text-[#f0c040] transition-colors" style={{ fontSize: '0.85rem' }}>
-                    {r.username}
-                  </Link>
-                  <button
-                    onClick={() => inCrew ? handleRemove(r.username) : handleAdd(r.username)}
-                    disabled={isLoading || pending}
-                    className="font-karla font-600 uppercase tracking-[0.10em] transition-colors disabled:opacity-40"
-                    style={{ fontSize: '0.6rem', color: inCrew ? '#6a6764' : '#f0c040' }}
-                  >
-                    {isLoading ? '…' : inCrew ? 'Remove' : '+ Add'}
-                  </button>
-                </div>
-              )
-            })}
+        {/* Results */}
+        {query.trim() && (
+          <div style={{ marginTop: 8 }}>
+            {searching && (
+              <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#4a4845', padding: '0.5rem 0' }}>Searching…</p>
+            )}
+            {searched && !searching && results.length === 0 && (
+              <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#4a4845', padding: '0.5rem 0' }}>No players found.</p>
+            )}
+            {results.length > 0 && (
+              <div style={{ background: 'rgba(4,10,20,0.8)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, overflow: 'hidden' }}>
+                {results.map((r, i) => {
+                  const inCrew = crewSet.has(r.username.toLowerCase())
+                  const justAdded = addedSet.has(r.username.toLowerCase())
+                  const isLoading = loadingUsername === r.username
+                  const isMe = r.username.toLowerCase() === username.toLowerCase()
+                  return (
+                    <div
+                      key={r.username}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '0.75rem 1rem',
+                        borderBottom: i < results.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                      }}
+                    >
+                      <Avatar username={r.username} size={36} />
+                      <Link
+                        href={`/u/${r.username}`}
+                        className="flex-1 font-cinzel font-700"
+                        style={{ fontSize: '0.82rem', color: '#f0ede8', textDecoration: 'none' }}
+                      >
+                        {r.username}
+                      </Link>
+                      {isMe ? (
+                        <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#4a4845' }}>You</span>
+                      ) : inCrew || justAdded ? (
+                        <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#34d399' }}>In crew ✓</span>
+                      ) : (
+                        <button
+                          onClick={() => handleAdd(r.username)}
+                          disabled={isLoading || pending}
+                          className="font-karla font-700 uppercase tracking-[0.1em]"
+                          style={{
+                            fontSize: '0.55rem', padding: '0.3rem 0.75rem', borderRadius: 8,
+                            background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.35)',
+                            color: '#f0c040', cursor: 'pointer', opacity: isLoading ? 0.5 : 1,
+                          }}
+                        >
+                          {isLoading ? '…' : '+ Add'}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Crew list */}
+      {/* ── Your crew ── */}
       <div>
-        <p className="sg-eyebrow mb-3" style={{ color: '#9a9488' }}>
-          Your Crew {crew.length > 0 && `· ${crew.length}`}
-        </p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: '#9a9488' }}>
+            Your Crew{crew.length > 0 && ` · ${crew.length}`}
+          </p>
+        </div>
 
         {crew.length === 0 ? (
-          <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.82rem' }}>
-            No crew yet — search for players above to add them.
-          </p>
+          <div style={{
+            background: 'rgba(4,10,20,0.5)', border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 14, padding: '2rem 1.5rem', textAlign: 'center',
+          }}>
+            <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: '#4a4845', marginBottom: 6 }}>
+              No crew yet
+            </p>
+            <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#3a3835', lineHeight: 1.5 }}>
+              Search for other players above to add them to your crew
+            </p>
+          </div>
         ) : (
-          <div className="flex flex-col gap-2">
-            {crew.map(member => {
+          <div style={{ background: 'rgba(4,10,20,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
+            {crew.map((member, i) => {
               const isLoading = loadingUsername === member.username
               return (
                 <div
                   key={member.username}
-                  className="flex items-center justify-between px-4 py-3 rounded-xl"
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.13)' }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '0.8rem 1rem',
+                    borderBottom: i < crew.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                  }}
                 >
-                  <div className="flex items-center gap-3">
+                  <Avatar username={member.username} size={40} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <Link
                       href={`/u/${member.username}`}
-                      className="font-cinzel font-700 text-[#f0ede8] hover:text-[#f0c040] transition-colors"
-                      style={{ fontSize: '0.85rem' }}
+                      className="font-cinzel font-700"
+                      style={{ fontSize: '0.88rem', color: '#f0ede8', textDecoration: 'none', display: 'block' }}
                     >
                       {member.username}
                     </Link>
                     {member.fotdStreak > 0 && (
-                      <span className="font-karla text-[#f0c040]" style={{ fontSize: '0.65rem' }}>
-                        {member.fotdStreak}d streak
+                      <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#f0c04088', marginTop: 2, display: 'block' }}>
+                        {member.fotdStreak}d fish streak
                       </span>
                     )}
                   </div>
+                  <Link
+                    href={`/u/${member.username}`}
+                    className="font-karla font-600"
+                    style={{ fontSize: '0.6rem', color: '#4a4845', textDecoration: 'none', flexShrink: 0 }}
+                  >
+                    View →
+                  </Link>
                   <button
                     onClick={() => handleRemove(member.username)}
                     disabled={isLoading || pending}
-                    className="font-karla font-600 uppercase tracking-[0.10em] text-[#6a6764] hover:text-[#f87171] transition-colors disabled:opacity-40"
-                    style={{ fontSize: '0.6rem' }}
+                    className="font-karla font-600"
+                    style={{
+                      fontSize: '0.6rem', color: '#3a3835', background: 'none', border: 'none',
+                      cursor: 'pointer', opacity: isLoading ? 0.5 : 1, flexShrink: 0,
+                      padding: '0.25rem 0.4rem',
+                    }}
                   >
                     {isLoading ? '…' : 'Remove'}
                   </button>
@@ -175,8 +261,6 @@ export default function SocialClient({ initialCrew, username, usernameChanged, s
         )}
       </div>
 
-        </div>{/* end right column */}
-      </div>{/* end grid */}
     </div>
   )
 }
