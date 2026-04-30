@@ -49,8 +49,8 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
               onClick={() => !locked && setSelectedTier(ship.tier)}
               style={{
                 background: 'rgba(8,8,6,0.82)',
-                border: `1px solid ${isActive ? `${c}55` : owned ? `${c}35` : isNext && canAfford ? `${c}40` : 'rgba(255,255,255,0.14)'}`,
-                boxShadow: isActive ? `0 0 16px ${c}18` : 'none',
+                border: `1px solid ${isActive ? `${c}55` : 'rgba(255,255,255,0.14)'}`,
+                boxShadow: isActive ? `0 0 18px ${c}30` : 'none',
                 borderRadius: 12,
                 padding: '0.85rem 0.75rem',
                 opacity: locked ? 0.3 : 1,
