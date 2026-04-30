@@ -2576,98 +2576,63 @@ export default function FishingGame({
             ) : (
               <div className="flex flex-col gap-3">
 
-                {/* Quick Sell */}
-                <div style={{
-                  background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.2)',
-                  borderRadius: 14, padding: '1rem',
-                }}>
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#f0c040' }}>Quick Sell</p>
-                      <p className="font-karla font-400 mt-0.5" style={{ fontSize: '0.65rem', color: '#6a6764' }}>Instant · 65% of base value</p>
+                {/* Fish Market — primary action */}
+                <Link href="/tavern/market" onClick={() => setHoldOpen(false)} style={{ textDecoration: 'none' }}>
+                  <div style={{
+                    background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.3)',
+                    borderRadius: 14, padding: '1rem 1.1rem',
+                    boxShadow: '0 0 20px rgba(56,189,248,0.06)',
+                  }}>
+                    <div className="flex items-start justify-between mb-1">
+                      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#38bdf8' }}>Fish Market</p>
+                      <span style={{ fontSize: '0.75rem', color: '#38bdf8' }}>→</span>
                     </div>
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0c040' }}>
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1 }}>
+                          {Math.floor(totalValue * 2.5).toLocaleString()} ⟡
+                        </p>
+                        <p className="font-karla font-400 mt-1" style={{ fontSize: '0.58rem', color: '#38bdf8aa' }}>
+                          potential at 2.5× · live prices update hourly
+                        </p>
+                      </div>
+                      <div style={{
+                        background: 'rgba(56,189,248,0.14)', border: '1px solid rgba(56,189,248,0.3)',
+                        borderRadius: 8, padding: '0.2rem 0.55rem',
+                      }}>
+                        <p className="font-karla font-700" style={{ fontSize: '0.52rem', color: '#38bdf8' }}>up to 2.5×</p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Quick Sell — secondary, discounted */}
+                <div style={{
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 14, padding: '0.85rem 1rem',
+                }}>
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div>
+                      <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Quick Sell</p>
+                      <p className="font-karla font-400 mt-0.5" style={{ fontSize: '0.58rem', color: '#4a4845' }}>
+                        Only 65% of base · you lose{' '}
+                        <span style={{ color: '#f87171' }}>{Math.floor(totalValue * 0.35).toLocaleString()} ⟡</span>
+                      </p>
+                    </div>
+                    <p className="font-cinzel font-600" style={{ fontSize: '0.88rem', color: '#6a6764' }}>
                       {holdTotalValue.toLocaleString()} ⟡
                     </p>
                   </div>
                   <button
                     onClick={async () => { for (const item of inventory) await handleSell(item.fish_id, item.quantity) }}
                     disabled={!!sellPending}
-                    className="font-karla font-700 uppercase tracking-[0.1em] w-full"
-                    style={{ fontSize: '0.62rem', padding: '0.65rem', borderRadius: 10,
-                      background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.4)',
-                      color: '#f0c040', opacity: sellPending ? 0.5 : 1, cursor: sellPending ? 'default' : 'pointer' }}>
-                    {sellPending ? 'Selling…' : 'Sell All Fish'}
+                    className="font-karla font-600 uppercase tracking-[0.1em] w-full"
+                    style={{ fontSize: '0.58rem', padding: '0.55rem', borderRadius: 10,
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#6a6764', opacity: sellPending ? 0.5 : 1, cursor: sellPending ? 'default' : 'pointer' }}>
+                    {sellPending ? 'Selling…' : 'Sell All at Discount'}
                   </button>
                 </div>
-
-                {/* Fish Manifest */}
-                <div style={{
-                  background: 'rgba(4,10,20,0.6)',
-                  border: '1px solid rgba(255,255,255,0.07)',
-                  borderRadius: 14, padding: '0.75rem 0.75rem 0.6rem',
-                }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.16em] mb-2"
-                    style={{ fontSize: '0.5rem', color: '#3a3835' }}>Cargo Manifest</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    {[...inventory]
-                      .sort((a, b) => (b.fish_species.sell_value * b.quantity) - (a.fish_species.sell_value * a.quantity))
-                      .map(item => {
-                        const color = HABITAT_COLOR[item.fish_species.habitat] ?? '#94a3b8'
-                        const quickVal = Math.floor(item.fish_species.sell_value * 0.65) * item.quantity
-                        return (
-                          <div key={item.fish_id} style={{
-                            display: 'flex', alignItems: 'center', gap: 8,
-                            padding: '0.45rem 0.6rem',
-                            background: `${color}0c`,
-                            border: `1px solid ${color}22`,
-                            borderLeft: `3px solid ${color}88`,
-                            borderRadius: 8,
-                          }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <p className="font-cinzel font-700"
-                                style={{ fontSize: '0.65rem', color: '#d8d4ce', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {item.fish_species.name}
-                              </p>
-                              <p className="font-karla font-400"
-                                style={{ fontSize: '0.52rem', color: color + '99', fontStyle: 'italic', marginTop: 1 }}>
-                                {HABITAT_LABEL[item.fish_species.habitat] ?? item.fish_species.habitat}
-                              </p>
-                            </div>
-                            <span className="font-karla font-700"
-                              style={{ fontSize: '0.6rem', color: color + 'bb',
-                                background: color + '14', border: `1px solid ${color}28`,
-                                padding: '0.08rem 0.35rem', borderRadius: 5, flexShrink: 0 }}>
-                              ×{item.quantity}
-                            </span>
-                            <span className="font-cinzel font-600"
-                              style={{ fontSize: '0.6rem', color: '#f0c04088', minWidth: '3rem', textAlign: 'right', flexShrink: 0 }}>
-                              {quickVal.toLocaleString()} ⟡
-                            </span>
-                          </div>
-                        )
-                      })}
-                  </div>
-                </div>
-
-                {/* Go to Market */}
-                <Link
-                  href="/tavern/market"
-                  onClick={() => setHoldOpen(false)}
-                  style={{ textDecoration: 'none' }}
-                >
-                  <div style={{
-                    background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)',
-                    borderRadius: 14, padding: '1rem',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  }}>
-                    <div>
-                      <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#38bdf8' }}>Fish Market</p>
-                      <p className="font-karla font-400 mt-0.5" style={{ fontSize: '0.65rem', color: '#6a6764' }}>Live prices · up to 2.5× base value</p>
-                    </div>
-                    <span style={{ fontSize: '1.1rem', color: '#38bdf8' }}>→</span>
-                  </div>
-                </Link>
               </div>
             )}
           </motion.div>
