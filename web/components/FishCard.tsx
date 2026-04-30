@@ -81,7 +81,11 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
   } else {
     frame = (
       <div className="relative overflow-hidden" style={{ width: W, height: H, borderRadius: R, background: artBg[artEffect] ?? '#c8a870' }}>
-        {/* Fish art */}
+        {/* Cardfront base */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/cardfrontnew.png" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }} />
+
+        {/* Fish art — on top of cardfront */}
         <Image
           src={src}
           alt={name}
@@ -89,13 +93,14 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
           className={`object-contain object-top ${artImageClass[artEffect]}`}
           sizes={fill ? '50vw' : `${W}px`}
           unoptimized
+          style={{ zIndex: 2 }}
         />
-        {artEffect === 'pearl'       && <div className="art-pearl-overlay" />}
-        {artEffect === 'holographic' && <div className="art-holographic" />}
+        {artEffect === 'pearl'       && <div className="art-pearl-overlay" style={{ zIndex: 3 }} />}
+        {artEffect === 'holographic' && <div className="art-holographic" style={{ zIndex: 3 }} />}
 
         {/* Wanted stamp */}
         {artEffect === 'wanted' && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 2 }}>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 3 }}>
             <span className="font-cinzel font-900 uppercase rotate-[-18deg]"
               style={{ fontSize: '1rem', letterSpacing: '0.2em', color: 'rgba(190,15,15,1)', border: '2.5px solid rgba(175,15,15,0.95)', padding: '0.1em 0.55em', fontWeight: 900, background: 'rgba(0,0,0,0.18)', textShadow: '0 0 8px rgba(210,20,20,0.65)', boxShadow: '0 0 0 1px rgba(175,15,15,0.35), 0 0 12px rgba(190,15,15,0.3)' }}>
               WANTED
@@ -104,7 +109,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
         )}
 
         {/* Bottom gradient: name + rarity + stats */}
-        <div className="absolute left-0 right-0 pointer-events-none" style={{ zIndex: 3, bottom: 0,
+        <div className="absolute left-0 right-0 pointer-events-none" style={{ zIndex: 6, bottom: 0,
           background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 50%, transparent 100%)',
           padding: '40px 10px 10px',
         }}>
@@ -125,11 +130,8 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
           )}
         </div>
 
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/cardfrontnew.png" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 4 }} />
-
-        {/* Full-card art effect overlays */}
-        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 5 }}>
+        {/* Art effect overlays — above fish art */}
+        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 4 }}>
           {artEffect === 'ghost'       && <div className="art-ghost-overlay" />}
           {artEffect === 'shadow'      && <div className="art-shadow-overlay" />}
           {artEffect === 'kraken'      && <div className="art-kraken-overlay" />}
