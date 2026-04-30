@@ -159,9 +159,9 @@ export function computeTotalCrewStats(crew: CrewCard[]): TotalCrewStats {
       const mult = i === 0 ? 1.0 : 0.8
       return {
         count:   totals.count   + 1,
-        power:   totals.power   + Math.floor(card.power   * mult),
-        dodge:   totals.dodge   + Math.floor(card.dodge   * mult),
-        fortune: totals.fortune + Math.floor(card.fortune * mult),
+        power:   totals.power   + Math.round(card.power   * mult),
+        dodge:   totals.dodge   + Math.round(card.dodge   * mult),
+        fortune: totals.fortune + Math.round(card.fortune * mult),
       }
     },
     { count: 0, power: 0, dodge: 0, fortune: 0 },

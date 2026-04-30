@@ -98,14 +98,14 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
     ? collection.filter(c => !assignedVariantIds.has(c.variantId) || slots[pickerSlot]?.variantId === c.variantId)
     : collection
 
-  const totalPower   = slots.reduce((s, c, i) => s + (c ? Math.floor(c.power   * (i === 0 ? 1 : 0.8)) : 0), 0)
-  const totalDodge   = slots.reduce((s, c, i) => s + (c ? Math.floor(c.dodge   * (i === 0 ? 1 : 0.8)) : 0), 0)
-  const totalFortune = slots.reduce((s, c, i) => s + (c ? Math.floor(c.fortune * (i === 0 ? 1 : 0.8)) : 0), 0)
+  const totalPower   = slots.reduce((s, c, i) => s + (c ? Math.round(c.power   * (i === 0 ? 1 : 0.8)) : 0), 0)
+  const totalDodge   = slots.reduce((s, c, i) => s + (c ? Math.round(c.dodge   * (i === 0 ? 1 : 0.8)) : 0), 0)
+  const totalFortune = slots.reduce((s, c, i) => s + (c ? Math.round(c.fortune * (i === 0 ? 1 : 0.8)) : 0), 0)
   const assignedCount = slots.filter(Boolean).length
   const dmgMin    = Math.max(1, assignedCount)
   const dmgMax    = Math.max(1, totalPower)
-  const dodgePct  = Math.min(50 + Math.floor(totalDodge / 2), 100)
-  const critPct   = Math.min(Math.floor(totalFortune / 2), 50)
+  const dodgePct  = Math.min(50 + Math.round(totalDodge / 2), 100)
+  const critPct   = Math.min(Math.round(totalFortune / 2), 50)
 
   return (
     <div style={{ marginBottom: '1.75rem' }}>
@@ -272,7 +272,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
                       </div>
                       {STAT_COLS.map(s => (
                         <p key={s.key} className="font-cinzel font-700" style={{ fontSize: '0.5rem', color: s.color, width: 28, textAlign: 'right' }}>
-                          {Math.floor(card[s.key] * mult)}
+                          {Math.round(card[s.key] * mult)}
                         </p>
                       ))}
                     </div>
