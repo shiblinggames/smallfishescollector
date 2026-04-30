@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { spinSlots } from './actions'
 import type { SlotSpinResult, SlotStats } from './actions'
-import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOTS_DAILY_CAP, SLOTS_MIN_BET, SLOTS_MAX_BET } from './constants'
+import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PARTIAL_PAYOUTS, SLOTS_DAILY_CAP, SLOTS_MIN_BET, SLOTS_MAX_BET } from './constants'
 import type { SlotSymbolId } from './constants'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -52,13 +52,15 @@ function SlotSymbolDisplay({ id, size = 56 }: { id: SlotSymbolId; size?: number 
 }
 
 // Each reel stops independently — no delay prop needed
-function Reel({ symbol, rolling, won, winColor, nearMiss, nearMissOdd }: {
+function Reel({ symbol, rolling, won, winColor, nearMiss, nearMissOdd, matchColor, matchWild }: {
   symbol: SlotSymbolId
   rolling: boolean
   won: boolean
   winColor?: string
-  nearMiss?: boolean    // part of the 2-of-3 matching pair
-  nearMissOdd?: boolean // the reel that broke the combo
+  nearMiss?: boolean    // part of a near-miss (orange)
+  nearMissOdd?: boolean // the reel that broke the near-miss
+  matchColor?: string   // partial/wild win — matching pair, tinted in fish color
+  matchWild?: boolean   // hook acting as wild (teal)
 }) {
   const [display, setDisplay] = useState<SlotSymbolId>(symbol)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -87,16 +89,27 @@ function Reel({ symbol, rolling, won, winColor, nearMiss, nearMissOdd }: {
   const sym = SLOT_SYMBOLS_LIST.find((s) => s.id === display)!
   const color = won && winColor ? winColor : sym.color
 
-  const borderColor = won ? color : nearMiss ? '#f97316' : nearMissOdd ? 'rgba(255,255,255,0.06)' : (rolling ? 'rgba(255,255,255,0.10)' : color)
-  const bg = won ? `${color}22` : nearMiss ? '#f9731618' : (rolling ? 'rgba(255,255,255,0.07)' : `${color}18`)
+  const borderColor = won ? (winColor ?? color)
+    : matchWild ? '#34d399'
+    : matchColor ? matchColor
+    : nearMiss ? '#f97316'
+    : nearMissOdd ? 'rgba(255,255,255,0.06)'
+    : (rolling ? 'rgba(255,255,255,0.10)' : color)
+  const bg = won ? `${winColor ?? color}22`
+    : matchWild ? '#34d39918'
+    : matchColor ? `${matchColor}18`
+    : nearMiss ? '#f9731618'
+    : (rolling ? 'rgba(255,255,255,0.07)' : `${color}18`)
   const shadow = won
-    ? `0 0 28px ${color}70, 0 0 56px ${color}30`
+    ? `0 0 28px ${winColor ?? color}70, 0 0 56px ${winColor ?? color}30`
+    : matchWild ? '0 0 18px #34d39960'
+    : matchColor ? `0 0 18px ${matchColor}60`
     : nearMiss ? '0 0 18px #f9731660'
     : (rolling ? 'none' : `0 0 20px ${color}38`)
   const anim = won
     ? 'reel-pop 0.55s cubic-bezier(0.36,0.07,0.19,0.97) forwards'
     : nearMissOdd ? 'near-miss-wobble 0.55s ease-out'
-    : nearMiss ? 'near-miss-pulse 1.6s ease-in-out infinite'
+    : (nearMiss || matchColor || matchWild) ? 'match-glow 1.6s ease-in-out infinite'
     : 'none'
 
   return (
@@ -266,6 +279,20 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
         setSpinning(false)
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
       }, lastMainStop + 150)
+    } else if (result.outcome === 'partial_win' || result.outcome === 'wild_win') {
+      setTimeout(() => {
+        if (result.net > 0 && result.matchedSymbol) {
+          setFlashColor(result.outcome === 'wild_win' ? '#34d399' : symColor(result.matchedSymbol))
+          setFlashKey((k) => k + 1)
+        }
+        applyStats(result.net)
+        setDoubloons(result.newDoubloons)
+        setDailyWagered(result.dailyWagered)
+        setLastResult(result)
+        setShowResult(true)
+        setSpinning(false)
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
+      }, lastMainStop + 150)
     } else {
       // near_miss or lose
       setTimeout(() => {
@@ -288,8 +315,12 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
   const nearMissSymbol = isNearMiss
     ? (reels[0] === reels[1] ? reels[0] : reels[0] === reels[2] ? reels[0] : reels[1])
     : null
-  // Refund: 2 anchors lit up teal
+  // Refund: 2 hooks lit up teal
   const isRefund = showResult && lastResult?.outcome === 'refund'
+  // Partial / wild win: matched fish pair glows in fish color; hook glows teal for wild
+  const isPartialWin = showResult && (lastResult?.outcome === 'partial_win' || lastResult?.outcome === 'wild_win')
+  const partialMatchedSym = isPartialWin ? lastResult?.matchedSymbol : undefined
+  const partialMatchColor = partialMatchedSym ? symColor(partialMatchedSym) : undefined
 
   return (
     <>
@@ -324,9 +355,9 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
           0%, 100% { opacity: 1; }
           50%       { opacity: 0.65; }
         }
-        @keyframes near-miss-pulse {
-          0%, 100% { box-shadow: 0 0 12px #f9731640; }
-          50%       { box-shadow: 0 0 28px #f9731680; }
+        @keyframes match-glow {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.72; }
         }
         @keyframes near-miss-wobble {
           0%, 100%  { transform: translateX(0); }
@@ -375,6 +406,8 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
               winColor={wonMainReels ? winColor : isRefund ? '#34d399' : undefined}
               nearMiss={!!(isNearMiss && nearMissSymbol && sym === nearMissSymbol)}
               nearMissOdd={!!(isNearMiss && nearMissSymbol && sym !== nearMissSymbol)}
+              matchColor={isPartialWin && partialMatchedSym && sym === partialMatchedSym ? partialMatchColor : undefined}
+              matchWild={!!(isPartialWin && lastResult?.outcome === 'wild_win' && sym === 'anchor')}
             />
           ))}
         </div>
@@ -439,7 +472,29 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                 Wager returned
               </p>
             </div>
-          ) : showResult && lastResult?.outcome === 'near_miss' ? (
+          ) : showResult && (lastResult?.outcome === 'partial_win' || lastResult?.outcome === 'wild_win') ? (() => {
+            const sym = lastResult!.matchedSymbol
+            const label = sym ? SLOT_SYMBOLS_LIST.find(s => s.id === sym)?.label : ''
+            const color = sym ? symColor(sym) : '#f0c040'
+            const mult = sym ? SLOT_PARTIAL_PAYOUTS[sym] : 1
+            const isWild = lastResult!.outcome === 'wild_win'
+            return (
+              <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>
+                {isWild && (
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#34d399', marginBottom: 3 }}>
+                    Hook Wild!
+                  </p>
+                )}
+                <p className="font-cinzel font-700 tracking-wide" style={{ fontSize: '1.15rem', color, textShadow: `0 0 24px ${color}60`, letterSpacing: '0.04em', lineHeight: 1.1 }}>
+                  2× {label}
+                </p>
+                <p className="font-cinzel font-700 mt-1" style={{ fontSize: lastResult!.net === 0 ? '1rem' : '1.25rem', color: lastResult!.net === 0 ? '#6a6764' : '#f0ede8' }}>
+                  {lastResult!.net === 0 ? 'Break even' : `+${lastResult!.net.toLocaleString()} ⟡`}
+                </p>
+                <p className="font-karla font-400 text-[#6a6764] text-xs mt-1">{mult}× your bet</p>
+              </div>
+            )
+          })() : showResult && lastResult?.outcome === 'near_miss' ? (
             <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>
               <p className="font-cinzel font-700 tracking-wide" style={{ fontSize: '1.1rem', color: '#f97316', textShadow: '0 0 24px #f9731660', letterSpacing: '0.04em', lineHeight: 1.1 }}>
                 So Close!
@@ -523,8 +578,9 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
 
         {/* Payout table */}
         <div className="w-full rounded-xl overflow-hidden" style={{ background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)' }}>
+          {/* 3-of-a-kind */}
           <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] px-4 pt-3 pb-2" style={{ fontSize: '0.6rem' }}>
-            Payouts
+            3 of a Kind
           </p>
           {SLOT_SYMBOLS_LIST.filter((s) => s.id !== 'anchor').map((sym) => (
             <div key={sym.id} className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
@@ -535,6 +591,29 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
               <span className="font-cinzel font-700 text-[#f0ede8] text-sm">{SLOT_PAYOUTS[sym.id]}×</span>
             </div>
           ))}
+          {/* 2-of-a-kind */}
+          <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] px-4 pt-3 pb-2" style={{ fontSize: '0.6rem', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+            2 of a Kind · Hook counts as Wild
+          </p>
+          {SLOT_SYMBOLS_LIST.filter((s) => s.id !== 'anchor').map((sym) => {
+            const mult = SLOT_PARTIAL_PAYOUTS[sym.id]
+            if (!mult) return null
+            return (
+              <div key={sym.id} className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+                <div style={{ width: 30, height: 30, flexShrink: 0 }}>
+                  <SlotSymbolDisplay id={sym.id} size={30} />
+                </div>
+                <span className="font-karla text-sm flex-1" style={{ color: sym.color }}>{sym.label}</span>
+                <span className="font-cinzel font-700 text-sm" style={{ color: mult === 1 ? '#6a6764' : sym.color }}>
+                  {mult === 1 ? 'Even' : `${mult}×`}
+                </span>
+              </div>
+            )
+          })}
+          {/* Hooks */}
+          <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] px-4 pt-3 pb-2" style={{ fontSize: '0.6rem', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+            Hooks
+          </p>
           <div className="flex items-center gap-3 px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
             <div style={{ width: 30, height: 30, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
               <HookImage size={14} /><HookImage size={14} />

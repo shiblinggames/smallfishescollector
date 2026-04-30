@@ -31,6 +31,14 @@ export const SLOT_PAYOUTS: Record<SlotSymbolId, number> = {
   anchor:    0,
 }
 
+// 2-of-3 partial payouts (also used for hook wild)
+export const SLOT_PARTIAL_PAYOUTS: Partial<Record<SlotSymbolId, number>> = {
+  common:    1,    // break even
+  rare:      1.5,
+  legendary: 3,
+  catfish:   15,
+}
+
 export const SLOTS_MIN_BET   = 10
 export const SLOTS_MAX_BET   = 500
 export const SLOTS_DAILY_CAP = 5000

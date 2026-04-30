@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { SYMBOLS, DAILY_CAP, MAX_BET, MIN_BET, SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_DAILY_CAP } from './constants'
+import { SYMBOLS, DAILY_CAP, MAX_BET, MIN_BET, SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PARTIAL_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_DAILY_CAP } from './constants'
 import type { Symbol, SlotSymbolId } from './constants'
 import { checkAchievements } from '@/lib/checkAchievements'
 
@@ -87,11 +87,12 @@ export async function rollDice(symbol: Symbol, wager: number): Promise<RollResul
 
 export interface SlotSpinResult {
   reels: SlotSymbolId[]
-  outcome: 'win' | 'lose' | 'bonus' | 'refund' | 'near_miss'
+  outcome: 'win' | 'lose' | 'bonus' | 'refund' | 'near_miss' | 'partial_win' | 'wild_win'
   payout: number
   net: number
   newDoubloons: number
   dailyWagered: number
+  matchedSymbol?: SlotSymbolId
   bonus?: {
     reels: SlotSymbolId[]
     outcome: 'win' | 'lose'
@@ -176,14 +177,16 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   const reels = slotRollReels()
   const [a, b, c] = reels
   const allSame = a === b && b === c
-  const anchorCount = reels.filter(r => r === 'anchor').length
+  const hookCount = reels.filter(r => r === 'anchor').length
+  const fishReels = reels.filter(r => r !== 'anchor') as SlotSymbolId[]
 
-  let outcome: 'win' | 'lose' | 'bonus' | 'refund' | 'near_miss'
+  let outcome: SlotSpinResult['outcome']
   let payout = 0
+  let matchedSymbol: SlotSymbolId | undefined
   let bonus: SlotSpinResult['bonus'] | undefined
 
   if (allSame && a === 'anchor') {
-    // 3 anchors → bonus spin
+    // 3 hooks → bonus spin
     outcome = 'bonus'
     const bonusReels = slotRollReels()
     const [ba, bb, bc] = bonusReels
@@ -195,18 +198,26 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
       bonus = { reels: bonusReels, outcome: 'lose', payout: 0 }
     }
     payout = wager + bonus.payout
-  } else if (anchorCount === 2) {
-    // 2 anchors anywhere → refund
+  } else if (hookCount === 2) {
+    // 2 hooks anywhere → refund
     outcome = 'refund'
     payout = wager
   } else if (allSame) {
-    // 3 of same non-anchor → win
+    // 3 of same fish → full win
     outcome = 'win'
     payout = wager * SLOT_PAYOUTS[a]
+  } else if (hookCount === 1 && fishReels[0] === fishReels[1]) {
+    // 1 hook + 2 matching fish → hook wild partial win
+    outcome = 'wild_win'
+    matchedSymbol = fishReels[0]
+    payout = Math.floor(wager * (SLOT_PARTIAL_PAYOUTS[matchedSymbol] ?? 1))
+  } else if (hookCount === 0 && (a === b || a === c || b === c)) {
+    // 2 matching fish, no hooks → partial win
+    outcome = 'partial_win'
+    matchedSymbol = a === b ? a : a === c ? a : b
+    payout = Math.floor(wager * (SLOT_PARTIAL_PAYOUTS[matchedSymbol] ?? 1))
   } else {
-    // 2 of same non-anchor (no anchors) → near miss, otherwise plain loss
-    const twoMatch = anchorCount === 0 && (a === b || a === c || b === c)
-    outcome = twoMatch ? 'near_miss' : 'lose'
+    outcome = 'lose'
     payout = 0
   }
 
@@ -214,10 +225,11 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   const newDoubloons = profile.doubloons + net
 
   const outcomeLabel =
-    outcome === 'win'      ? `${SLOT_PAYOUTS[a]}× on ${a}` :
-    outcome === 'bonus'    ? `bonus spin (${bonus!.outcome})` :
-    outcome === 'refund'   ? '2 anchors — refund' :
-    outcome === 'near_miss' ? 'near miss' :
+    outcome === 'win'         ? `${SLOT_PAYOUTS[a]}× on ${a}` :
+    outcome === 'bonus'       ? `bonus spin (${bonus!.outcome})` :
+    outcome === 'refund'      ? '2 hooks — refund' :
+    outcome === 'wild_win'    ? `hook wild — 2× ${matchedSymbol}` :
+    outcome === 'partial_win' ? `2× ${matchedSymbol}` :
     'no match'
 
   await Promise.all([
@@ -231,6 +243,6 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   ])
 
   revalidatePath('/tavern/slots')
-  return { reels, outcome, payout, net, newDoubloons, dailyWagered: totalWagered + wager, bonus }
+  return { reels, outcome, payout, net, newDoubloons, dailyWagered: totalWagered + wager, matchedSymbol, bonus }
 }
 
