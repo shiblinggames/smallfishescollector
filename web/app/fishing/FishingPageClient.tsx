@@ -18,7 +18,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
-  holdCapacity, shipTier, ownedRods, allFishSpecies, caughtFishIds,
+  holdCapacity, shipTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
 }: {
   hookTier: number
   rodTier: number
@@ -34,6 +34,7 @@ export default function FishingPageClient({
   ownedRods: number[]
   allFishSpecies: FishSpeciesBasic[]
   caughtFishIds: number[]
+  initialHighestPerfectStreak: number
 }) {
   const [selectedZone, setSelectedZone] = useState<ZoneKey | null>(null)
 
@@ -57,6 +58,7 @@ export default function FishingPageClient({
       ownedRods={ownedRods}
       allFishSpecies={allFishSpecies}
       initialCaughtFishIds={caughtFishIds}
+      initialHighestPerfectStreak={initialHighestPerfectStreak}
       selectedZone={selectedZone}
       onBack={() => setSelectedZone(null)}
     />

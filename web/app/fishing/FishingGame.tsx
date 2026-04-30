@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, sellFish, awardPerfectChallengeGem, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, type FishSpecies, type FishingBountyCompletion } from './actions'
 import { equipRod } from '@/app/marketplace/tackle-shop/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
@@ -1024,6 +1024,7 @@ export default function FishingGame({
   holdCapacity, shipTier,
   ownedRods: initialOwnedRods,
   allFishSpecies, initialCaughtFishIds,
+  initialHighestPerfectStreak,
   selectedZone: initialZone, onBack,
 }: {
   hookTier: number
@@ -1040,6 +1041,7 @@ export default function FishingGame({
   ownedRods: number[]
   allFishSpecies: FishSpeciesBasic[]
   initialCaughtFishIds: number[]
+  initialHighestPerfectStreak: number
   selectedZone: ZoneKey
   onBack: () => void
 }) {
@@ -1078,6 +1080,7 @@ export default function FishingGame({
   const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean; gemEarned?: boolean; perfectStreak: number; streakBonusXP: number; jackpotMultiplier?: number } | null>(null)
   const [challengeActive, setChallengeActive] = useState(false)
   const [perfectStreak, setPerfectStreak] = useState(0)
+  const [highestPerfectStreak, setHighestPerfectStreak] = useState(initialHighestPerfectStreak)
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
   const catchTourShownRef = useRef(false)
@@ -1344,7 +1347,13 @@ export default function FishingGame({
         setMissResult('miss')
       } else {
         const { fish, baitSaved, isNewSpecies, bountyCompletion, xpGained, newXP } = res
-        if (wasPerfect) setPerfectStreak(newStreak)
+        if (wasPerfect) {
+          setPerfectStreak(newStreak)
+          if (newStreak > highestPerfectStreak) {
+            setHighestPerfectStreak(newStreak)
+            startTransition(() => { saveHighestPerfectStreak(newStreak) })
+          }
+        }
         setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge, perfectStreak: newStreak, streakBonusXP, jackpotMultiplier: jackpotMultiplier > 1 ? jackpotMultiplier : undefined })
         if (isNewSpecies) { setCaughtFishIds(prev => new Set([...prev, fish.id])); setUncheckedNewFishIds(prev => new Set([...prev, fish.id])) }
         const catchCount = doubleCatch ? 2 : jackpotMultiplier
@@ -1550,28 +1559,44 @@ export default function FishingGame({
           </div>
 
           {/* XP bar */}
-          <div style={{ position: 'relative', marginBottom: '0.6rem' }}>
-            <XPBarDisplay xp={fishingXP} />
-            <AnimatePresence>
-              {xpPopup && (
-                <motion.p
-                  key={xpPopup.id}
-                  initial={{ opacity: 0, y: 0 }}
-                  animate={{ opacity: [0, 1, 1, 0], y: -18 }}
-                  transition={{ duration: 2.0, times: [0, 0.1, 0.6, 1], ease: 'easeOut' }}
-                  onAnimationComplete={() => setXpPopup(null)}
-                  className="font-karla font-700"
-                  style={{
-                    position: 'absolute', right: 8, top: 0,
-                    fontSize: '0.8rem', color: '#4ade80',
-                    pointerEvents: 'none',
-                    textShadow: '0 0 10px rgba(74,222,128,0.7)',
-                  }}
-                >
-                  +{xpPopup.value} XP
-                </motion.p>
-              )}
-            </AnimatePresence>
+          <div style={{ marginBottom: '0.6rem' }}>
+            <div style={{ position: 'relative' }}>
+              <XPBarDisplay xp={fishingXP} />
+              <AnimatePresence>
+                {xpPopup && (
+                  <motion.p
+                    key={xpPopup.id}
+                    initial={{ opacity: 0, y: 0 }}
+                    animate={{ opacity: [0, 1, 1, 0], y: -18 }}
+                    transition={{ duration: 2.0, times: [0, 0.1, 0.6, 1], ease: 'easeOut' }}
+                    onAnimationComplete={() => setXpPopup(null)}
+                    className="font-karla font-700"
+                    style={{
+                      position: 'absolute', right: 8, top: 0,
+                      fontSize: '0.8rem', color: '#4ade80',
+                      pointerEvents: 'none',
+                      textShadow: '0 0 10px rgba(74,222,128,0.7)',
+                    }}
+                  >
+                    +{xpPopup.value} XP
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </div>
+            {highestPerfectStreak > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: 'rgba(251,146,60,0.12)', border: '1px solid rgba(251,146,60,0.35)',
+                  borderRadius: 8, padding: '2px 8px',
+                }}>
+                  <span style={{ fontSize: '0.68rem' }}>🔥</span>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: '#fb923c' }}>
+                    Best streak: {highestPerfectStreak}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Phase content — grows to fill available space */}

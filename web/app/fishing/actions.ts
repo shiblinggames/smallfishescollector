@@ -393,6 +393,18 @@ export async function awardPerfectChallengeGem(): Promise<{ success: true } | { 
   return { success: true }
 }
 
+// Persist a new highest perfect streak if it beats the stored value
+export async function saveHighestPerfectStreak(streak: number): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('highest_perfect_streak').eq('id', user.id).single()
+  if ((profile?.highest_perfect_streak ?? 0) < streak) {
+    await admin.from('profiles').update({ highest_perfect_streak: streak }).eq('id', user.id)
+  }
+}
+
 // Give daily free worm bait top-up (called server-side on page load)
 export async function claimDailyBait(userId: string): Promise<void> {
   const admin = createAdminClient()
