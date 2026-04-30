@@ -39,7 +39,15 @@ export default function FishingPageClient({
   const [selectedZone, setSelectedZone] = useState<ZoneKey | null>(null)
 
   if (!selectedZone) {
-    return <ZoneLanding fishingLevel={getLevelFromXP(initialFishingXP)} onSelect={setSelectedZone} />
+    return (
+      <ZoneLanding
+        fishingLevel={getLevelFromXP(initialFishingXP)}
+        fishingXP={initialFishingXP}
+        uniqueSpeciesCaught={uniqueSpeciesCaught}
+        highestPerfectStreak={initialHighestPerfectStreak}
+        onSelect={setSelectedZone}
+      />
+    )
   }
 
   return (
