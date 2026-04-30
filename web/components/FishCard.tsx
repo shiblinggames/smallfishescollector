@@ -66,6 +66,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
 
   const rarity = (variantName && dropWeight != null) ? rarityFromVariant(variantName, dropWeight) : null
   const rarityColor = rarity ? (RARITY_COLOR[rarity] ?? '#a0a09a') : null
+  const nameFontSize = name.length > 14 ? '0.9rem' : name.length > 10 ? '1.1rem' : '1.4rem'
 
   let frame: React.ReactNode
 
@@ -117,7 +118,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
 
         {/* Bottom text: name + rarity + stats */}
         <div className="absolute left-0 right-0 pointer-events-none" style={{ zIndex: 6, bottom: '8%', padding: '4px 10px 0' }}>
-          <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.4rem', color: '#1a1008', marginBottom: 2, letterSpacing: '0.04em' }}>
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: nameFontSize, color: '#1a1008', marginBottom: 2, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
             {name}
           </p>
           {rarity && (
