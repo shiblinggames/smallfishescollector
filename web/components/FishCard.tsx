@@ -83,7 +83,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
       <div className="relative overflow-hidden" style={{ width: W, height: H, borderRadius: R, background: artBg[artEffect] ?? '#c8a870' }}>
         {/* Cardfront base */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/cardfrontnew.png" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }} />
+        <img src="/cardfront2.png" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }} />
 
         {/* Fish art — on top of cardfront */}
         <Image
