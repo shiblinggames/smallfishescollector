@@ -355,31 +355,27 @@ export default function MarketClient({
 
   return (
     <main className="min-h-screen pb-24 sm:pb-0">
-      {/* Header */}
-      <div className="px-5 pt-5 pb-3 max-w-lg mx-auto flex items-center justify-end">
-        <div style={{ textAlign: 'right' }}>
-          <p className="font-karla font-500" style={{ fontSize: '0.65rem', color: '#7a7774' }}>Next update</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>{countdown}</p>
-        </div>
-      </div>
-
-      <div className="px-5 max-w-lg mx-auto flex flex-col gap-4 pb-10">
-        {/* Mood banner */}
+      <div className="px-5 pt-5 max-w-lg mx-auto flex flex-col gap-4 pb-10">
+        {/* Mood banner — includes countdown */}
         <div style={{
-          background: mood.bg, border: `1px solid ${mood.border}`,
-          borderRadius: 12, padding: '0.8rem 1rem',
+          background: 'rgba(8,8,6,0.82)', border: `1px solid ${mood.border}`,
+          borderRadius: 12, padding: '0.85rem 1rem',
           display: 'flex', alignItems: 'center', gap: '0.75rem',
         }}>
           <MoodIcon mood={marketState.mood} color={mood.color} />
-          <div>
+          <div style={{ flex: 1 }}>
             <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: mood.color }}>{mood.label}</p>
             <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#9a9488' }}>{mood.desc}</p>
+          </div>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <p className="font-karla font-500" style={{ fontSize: '0.58rem', color: '#6a6764' }}>Next update</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8' }}>{countdown}</p>
           </div>
         </div>
 
         {/* ── Portfolio ── */}
         <div>
-          <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.65rem', color: '#7a7774' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>
             My Portfolio
           </p>
 
@@ -500,10 +496,10 @@ export default function MarketClient({
         {/* ── All Market Prices ── */}
         {browseAll.length > 0 && (
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-1" style={{ fontSize: '0.65rem', color: '#7a7774' }}>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-1" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>
               Market Prices
             </p>
-            <p className="font-karla font-400 mb-3" style={{ fontSize: '0.7rem', color: '#5a5754' }}>
+            <p className="font-karla font-400 mb-3" style={{ fontSize: '0.7rem', color: '#7a7774' }}>
               Species you&apos;ve discovered but aren&apos;t holding
             </p>
             <div style={{
