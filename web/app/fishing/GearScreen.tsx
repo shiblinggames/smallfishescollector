@@ -59,6 +59,15 @@ function LineIcon({ color }: { color: string }) {
   )
 }
 
+function StatCell({ label, value, color, muted }: { label: string; value: string; color?: string; muted?: boolean }) {
+  return (
+    <div style={{ background: 'rgba(0,0,0,0.35)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
+      <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.42rem', color: 'rgba(255,255,255,0.28)', marginBottom: 5 }}>{label}</p>
+      <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: muted ? '#2e2c2a' : (color ?? '#f0ede8'), lineHeight: 1 }}>{value}</p>
+    </div>
+  )
+}
+
 function BaitIcon({ color }: { color: string }) {
   return (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -144,26 +153,17 @@ export default function GearScreen({
   const snagRedPct = Math.round((1 - line.penaltyMultiplier) * 100)
 
   // ── Compute all active bonuses ──
-  type BonusRow = { label: string; color: string; source: string }
-  const bonuses: BonusRow[] = []
-
   const catchZoneBonus = (hookTier * 3) + rod.catchZoneBonus + (bait?.catchZoneBonus ?? 0)
-  if (catchZoneBonus > 0) bonuses.push({ label: `+${catchZoneBonus}° catch zone`, source: 'hook · rod · bait', color: '#60a5fa' })
 
-  const perfectBonus = rod.perfectZoneBonus + 1
-  bonuses.push({ label: `${perfectBonus}° perfect zone`, source: 'rod · base', color: '#fbbf24' })
-
-  if (dragPct > 0) bonuses.push({ label: `−${dragPct}% needle speed`, source: 'reel', color: reel.color })
-
-  if (snagRedPct > 0) bonuses.push({ label: `−${snagRedPct}% snag zone`, source: 'line', color: line.color })
-
-  if (rod.doubleCatchChance > 0) bonuses.push({ label: rod.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(rod.doubleCatchChance * 100)}% double catch`, source: 'rod', color: rod.color })
-  if (rod.retryOnMissChance > 0) bonuses.push({ label: `${Math.round(rod.retryOnMissChance * 100)}% retry on miss`, source: 'rod', color: rod.color })
-  if (rod.snagImmune) bonuses.push({ label: 'Snag immune', source: 'rod', color: rod.color })
-  if ((rod.jackpotChance ?? 0) > 0) bonuses.push({ label: `${Math.round(rod.jackpotChance! * 100)}% jackpot ×${rod.jackpotMultiplier}`, source: 'rod', color: rod.color })
-  if (rod.rarityBonus > 0) bonuses.push({ label: `+${Math.round(rod.rarityBonus * 100)}% rare fish`, source: 'rod', color: rod.color })
-  if (bait && bait.waitMult < 1) bonuses.push({ label: `${Math.round((1 - bait.waitMult) * 100)}% faster bite`, source: 'bait', color: bait.color })
-  if (bait && bait.waitMult > 1) bonuses.push({ label: `${Math.round((bait.waitMult - 1) * 100)}% slower bite`, source: 'bait', color: '#f87171' })
+  type SpecialBonus = { label: string; color: string }
+  const specialBonuses: SpecialBonus[] = []
+  if (rod.doubleCatchChance > 0) specialBonuses.push({ label: rod.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(rod.doubleCatchChance * 100)}% double catch`, color: rod.color })
+  if (rod.retryOnMissChance > 0) specialBonuses.push({ label: `${Math.round(rod.retryOnMissChance * 100)}% retry on miss`, color: rod.color })
+  if (rod.snagImmune) specialBonuses.push({ label: 'Snag immune', color: rod.color })
+  if ((rod.jackpotChance ?? 0) > 0) specialBonuses.push({ label: `${Math.round(rod.jackpotChance! * 100)}% jackpot ×${rod.jackpotMultiplier}`, color: rod.color })
+  if (rod.rarityBonus > 0) specialBonuses.push({ label: `+${Math.round(rod.rarityBonus * 100)}% rare fish`, color: rod.color })
+  if (bait && bait.waitMult < 1) specialBonuses.push({ label: `${Math.round((1 - bait.waitMult) * 100)}% faster bite`, color: bait.color })
+  if (bait && bait.waitMult > 1) specialBonuses.push({ label: `${Math.round((bait.waitMult - 1) * 100)}% slower bite`, color: '#f87171' })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative' }}>
@@ -222,19 +222,43 @@ export default function GearScreen({
         </div>
       </div>
 
-      {/* ── Loadout bonus summary ── */}
-      <div style={{ background: 'rgba(4,10,20,0.75)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '0.8rem 0.9rem' }}>
-        <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>
-          Active Bonuses
+      {/* ── Loadout stats ── */}
+      <div style={{ background: 'rgba(4,10,20,0.75)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '0.9rem' }}>
+        <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.46rem', color: 'rgba(255,255,255,0.28)', marginBottom: 8 }}>
+          Loadout Stats
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {bonuses.map((b, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: b.color }}>{b.label}</span>
-              <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.44rem', color: 'rgba(255,255,255,0.22)', whiteSpace: 'nowrap' }}>{b.source}</span>
-            </div>
-          ))}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+          <StatCell
+            label="Catch Zone"
+            value={catchZoneBonus > 0 ? `+${catchZoneBonus}°` : '—'}
+            color="#60a5fa"
+            muted={catchZoneBonus === 0}
+          />
+          <StatCell
+            label="Perfect Zone"
+            value={`${rod.perfectZoneBonus + 1}°`}
+            color="#fbbf24"
+          />
+          <StatCell
+            label="Reel Drag"
+            value={dragPct > 0 ? `${dragPct}%` : 'None'}
+            color={reel.color}
+            muted={dragPct === 0}
+          />
+          <StatCell
+            label="Snag Zone"
+            value={snagRedPct > 0 ? `−${snagRedPct}%` : 'Normal'}
+            color={line.color}
+            muted={snagRedPct === 0}
+          />
         </div>
+        {specialBonuses.length > 0 && (
+          <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {specialBonuses.map((b, i) => (
+              <Pill key={i} label={b.label} color={b.color} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Item detail modal ── */}

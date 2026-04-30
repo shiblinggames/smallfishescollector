@@ -1116,7 +1116,6 @@ export default function FishingGame({
   const [fishingXP, setFishingXP]   = useState(initialFishingXP)
   const [xpPopup, setXpPopup]       = useState<{ value: number; id: number } | null>(null)
   const [levelUpNotif, setLevelUpNotif] = useState<number | null>(null)
-  const [holdFullNotif, setHoldFullNotif] = useState(false)
   const [, startTransition]         = useTransition()
 
   const fishingLevel = getLevelFromXP(fishingXP)
@@ -1145,11 +1144,6 @@ export default function FishingGame({
     const id = setTimeout(() => setNewStreakRecord(null), 4000)
     return () => clearTimeout(id)
   }, [newStreakRecord])
-  useEffect(() => {
-    if (!holdFullNotif) return
-    const id = setTimeout(() => setHoldFullNotif(false), 6000)
-    return () => clearTimeout(id)
-  }, [holdFullNotif])
 
   // Force-decode actual in-DOM img elements on mount so GPU has them compositor-ready
   useEffect(() => {
@@ -1434,7 +1428,6 @@ export default function FishingGame({
             : [...prev, { fish_id: fish.id, quantity: addQty, fish_species: fish }]
           const prevCount = prev.reduce((s, i) => s + i.quantity, 0)
           const newCount  = next.reduce((s, i) => s + i.quantity, 0)
-          if (prevCount < holdCapacity && newCount >= holdCapacity) setHoldFullNotif(true)
           return next
         })
         if (baitSaved) {
@@ -1836,7 +1829,26 @@ export default function FishingGame({
             <AnimatePresence>
             </AnimatePresence>
             <AnimatePresence mode="wait">
-              {phase === 'idle' && hasBait && selectedBaitQty > 0 && (
+              {(phase === 'idle' || phase === 'result') && holdTotalCount >= holdCapacity && (
+                <motion.div key="holdfull"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="text-center">
+                  <p className="font-karla font-700 mb-1" style={{ fontSize: '0.78rem', color: '#f87171' }}>
+                    Hold is full
+                  </p>
+                  <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5, marginBottom: 8 }}>
+                    Sell your catch below<br />to keep fishing
+                  </p>
+                  <Link
+                    href="/marketplace/shipyard"
+                    className="font-karla font-700"
+                    style={{ fontSize: '0.62rem', color: '#60a5fa', textDecoration: 'none', display: 'inline-block', borderBottom: '1px solid rgba(96,165,250,0.4)', paddingBottom: 1 }}
+                  >
+                    Need more storage? Upgrade your ship ↗
+                  </Link>
+                </motion.div>
+              )}
+              {phase === 'idle' && holdTotalCount < holdCapacity && hasBait && selectedBaitQty > 0 && (
                 <motion.button key="cast" onClick={handleCast}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
@@ -1852,7 +1864,7 @@ export default function FishingGame({
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                 >Cast</motion.button>
               )}
-              {phase === 'idle' && (!hasBait || selectedBaitQty <= 0) && (
+              {phase === 'idle' && holdTotalCount < holdCapacity && (!hasBait || selectedBaitQty <= 0) && (
                 <motion.div key="nobait"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="text-center">
@@ -1890,7 +1902,7 @@ export default function FishingGame({
                   <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#4a4845' }}>…</p>
                 </motion.div>
               )}
-              {phase === 'result' && (
+              {phase === 'result' && holdTotalCount < holdCapacity && (
                 <motion.button key="again" onClick={handleCastAgain}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
@@ -2442,50 +2454,6 @@ export default function FishingGame({
         )}
       </AnimatePresence>
 
-      {/* ── Hold full toast ── */}
-      <AnimatePresence>
-        {holdFullNotif && (
-          <motion.div
-            key="hold-full"
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-            style={{
-              position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
-              zIndex: 40, width: 'calc(100% - 2rem)', maxWidth: 300,
-            }}
-          >
-            <div style={{
-              background: 'rgba(8,8,6,0.95)', border: '1px solid rgba(255,255,255,0.14)',
-              borderRadius: 12, padding: '10px 14px',
-              display: 'flex', alignItems: 'flex-start', gap: 10,
-            }}>
-              <span style={{ fontSize: '1.4rem', lineHeight: 1, flexShrink: 0, marginTop: 2 }}>⚓</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#f0ede8', marginBottom: 3 }}>
-                  Hold is full!
-                </p>
-                <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.45 }}>
-                  Sell your catch or upgrade your ship for more storage.
-                </p>
-                <Link
-                  href="/marketplace/shipyard"
-                  onClick={() => setHoldFullNotif(false)}
-                  className="font-karla font-700 uppercase tracking-[0.1em]"
-                  style={{ fontSize: '0.52rem', color: '#60a5fa', textDecoration: 'none', marginTop: 5, display: 'inline-block' }}
-                >
-                  View shipyard →
-                </Link>
-              </div>
-              <button
-                onClick={() => setHoldFullNotif(false)}
-                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.25)', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: 0, flexShrink: 0 }}
-              >×</button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ── New streak record toast ── */}
       <AnimatePresence>
