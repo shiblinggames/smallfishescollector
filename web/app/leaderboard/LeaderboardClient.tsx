@@ -78,11 +78,6 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
 
   return (
     <div>
-      {/* Section eyebrow */}
-      <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: accent + 'aa', marginBottom: 14 }}>
-        {label}
-      </p>
-
       {data.length === 0 && (
         <p className="font-karla font-300 text-center py-10" style={{ color: '#4a4845', fontSize: '0.8rem' }}>No entries yet.</p>
       )}
@@ -213,14 +208,22 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
   )
 }
 
+type FishingSubKey = 'fishingLevel' | 'perfectStreak'
+
+const FISHING_SUBS: { key: FishingSubKey; label: string; accent: string }[] = [
+  { key: 'fishingLevel',   label: 'Fishing Level',  accent: '#f0c040' },
+  { key: 'perfectStreak',  label: 'Perfect Streak', accent: '#fb923c' },
+]
+
 export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, myScores, currentUserId }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>('fishing')
+  const [fishingSub, setFishingSub] = useState<FishingSubKey>('fishingLevel')
 
   return (
     <div style={{ paddingBottom: '2rem' }}>
 
-      {/* ── Tabs ── */}
-      <div className="flex gap-2 mb-8">
+      {/* ── Top tabs ── */}
+      <div className="flex gap-2 mb-4">
         {TABS.map(t => {
           const isActive = activeTab === t.key
           return (
@@ -244,32 +247,56 @@ export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, m
         })}
       </div>
 
-      {/* ── Fishing tab ── */}
+      {/* ── Fishing sub-tabs ── */}
       {activeTab === 'fishing' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
-          <LeaderboardSection
-            label="Fishing Level"
-            accent="#f0c040"
-            unit={n => `Lv ${getLevelFromXP(n)}`}
-            subUnit={n => `${n.toLocaleString()} XP`}
-            data={fishing}
-            myScore={myScores.fishing}
-            currentUserId={currentUserId}
-          />
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
-          <LeaderboardSection
-            label="Perfect Streak"
-            accent="#fb923c"
-            unit={n => `${n}×`}
-            subUnit={() => 'perfect'}
-            data={perfectStreak}
-            myScore={myScores.perfectStreak}
-            currentUserId={currentUserId}
-          />
+        <div className="flex gap-2 mb-8">
+          {FISHING_SUBS.map(s => {
+            const isActive = fishingSub === s.key
+            return (
+              <button
+                key={s.key}
+                onClick={() => setFishingSub(s.key)}
+                className="flex-1 font-karla font-600 uppercase tracking-[0.1em] transition-all"
+                style={{
+                  padding: '0.5rem 0.5rem',
+                  borderRadius: 8,
+                  fontSize: '0.55rem',
+                  background: isActive ? `${s.accent}14` : 'transparent',
+                  border: `1px solid ${isActive ? s.accent + '44' : 'rgba(255,255,255,0.07)'}`,
+                  color: isActive ? s.accent : '#4a4845',
+                  cursor: 'pointer',
+                }}
+              >
+                {s.label}
+              </button>
+            )
+          })}
         </div>
       )}
 
-      {/* ── Tavern tab ── */}
+      {/* ── Active leaderboard ── */}
+      {activeTab === 'fishing' && fishingSub === 'fishingLevel' && (
+        <LeaderboardSection
+          label="Fishing Level"
+          accent="#f0c040"
+          unit={n => `Lv ${getLevelFromXP(n)}`}
+          subUnit={n => `${n.toLocaleString()} XP`}
+          data={fishing}
+          myScore={myScores.fishing}
+          currentUserId={currentUserId}
+        />
+      )}
+      {activeTab === 'fishing' && fishingSub === 'perfectStreak' && (
+        <LeaderboardSection
+          label="Perfect Streak"
+          accent="#fb923c"
+          unit={n => `${n}×`}
+          subUnit={() => 'perfect'}
+          data={perfectStreak}
+          myScore={myScores.perfectStreak}
+          currentUserId={currentUserId}
+        />
+      )}
       {activeTab === 'tavern' && (
         <LeaderboardSection
           label="Fish Slots — Biggest Win"
