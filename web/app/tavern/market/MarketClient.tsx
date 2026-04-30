@@ -123,8 +123,8 @@ function PortfolioCard({
 
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.04)',
-      border: '1px solid rgba(255,255,255,0.1)',
+      background: 'rgba(8,8,6,0.82)',
+      border: '1px solid rgba(255,255,255,0.16)',
       borderRadius: 14,
       padding: '1.1rem',
       display: 'flex',
@@ -197,7 +197,7 @@ function PortfolioCard({
           className="font-karla font-600"
           style={{
             width: 64, padding: '0.55rem 0.5rem', borderRadius: 8, textAlign: 'center',
-            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)',
+            background: 'rgba(20,18,15,0.9)', border: '1px solid rgba(255,255,255,0.2)',
             color: '#f0ede8', fontSize: '0.75rem', outline: 'none',
           }}
         />
@@ -385,7 +385,7 @@ export default function MarketClient({
 
           {portfolio.length > 0 && (
             <div style={{
-              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)',
               borderRadius: 12, padding: '0.85rem 1rem', marginBottom: '0.75rem',
             }}>
               {/* Summary row */}
@@ -437,7 +437,7 @@ export default function MarketClient({
                         className="font-karla font-600 flex-1"
                         style={{
                           fontSize: '0.62rem', padding: '0.55rem', borderRadius: 8,
-                          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+                          background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)',
                           color: '#6a6764', cursor: 'pointer',
                         }}>
                         Cancel
@@ -462,7 +462,7 @@ export default function MarketClient({
 
           {portfolio.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2.5rem 1rem',
-              background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12 }}>
+              background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 12 }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#6a6764', marginBottom: '0.5rem' }}>
                 No fish in hold
               </p>
@@ -507,7 +507,7 @@ export default function MarketClient({
               Species you&apos;ve discovered but aren&apos;t holding
             </p>
             <div style={{
-              background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)',
+              background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)',
               borderRadius: 12, padding: '0 0.75rem',
             }}>
               {browseList.map(entry => (
@@ -520,7 +520,7 @@ export default function MarketClient({
                 className="font-karla font-600 w-full mt-2"
                 style={{
                   fontSize: '0.7rem', padding: '0.6rem', borderRadius: 10,
-                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)',
                   color: '#7a7774', cursor: 'pointer',
                 }}>
                 {browseExpanded ? '↑ Show less' : `↓ Show all ${browseAll.length} species`}
