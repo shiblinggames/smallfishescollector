@@ -79,7 +79,7 @@ export function drawPack(variants: CardVariant[], forceLegendary = false): Drawn
 }
 
 export function drawGodPack(variants: CardVariant[]): DrawnCard[] {
-  return [drawCard4(variants), drawCard4(variants), drawCard4(variants), drawCard4(variants)]
+  return [drawCard4(variants, true), drawCard4(variants, true), drawCard4(variants, true), drawCard4(variants, true)]
 }
 
 function toDrawn(v: CardVariant): DrawnCard {
