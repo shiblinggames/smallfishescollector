@@ -49,10 +49,10 @@ const artImageClass: Record<ArtEffect, string> = {
 function StatCell({ label, value }: { label: string; value: number }) {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-      <span className="font-karla font-600 uppercase" style={{ fontSize: '0.65rem', color: '#7a6a50', letterSpacing: '0.06em' }}>
+      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.72rem', color: '#5a4a30', letterSpacing: '0.06em' }}>
         {label}
       </span>
-      <span className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#2a1f0e', lineHeight: 1 }}>
+      <span className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#1a1008', lineHeight: 1 }}>
         {value}
       </span>
     </div>
@@ -111,11 +111,11 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
 
         {/* Bottom text: name + rarity + stats */}
         <div className="absolute left-0 right-0 pointer-events-none" style={{ zIndex: 6, bottom: 0, padding: '8px 10px 12px' }}>
-          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.95rem', color: '#2a1f0e', marginBottom: 5, letterSpacing: '0.04em' }}>
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.15rem', color: '#1a1008', marginBottom: 5, letterSpacing: '0.04em' }}>
             {name}
           </p>
           {rarity && (
-            <p className="font-karla font-700 text-center uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: rarityColor!, marginBottom: stats ? 10 : 0 }}>
+            <p className="font-karla font-700 text-center uppercase tracking-[0.12em]" style={{ fontSize: '0.68rem', color: rarityColor!, marginBottom: stats ? 10 : 0 }}>
               {rarity}
             </p>
           )}
