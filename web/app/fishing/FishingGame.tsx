@@ -649,57 +649,86 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
       {isPerfect && (() => {
         const s = Math.min(perfectStreak, 6)
         const isCombo = perfectStreak >= 3
+        const isOnFire = perfectStreak >= 3
+        const isIgnition = perfectStreak === 3
         const titleSize = 0.72 + (s - 1) * 0.05
         const iconSize  = 0.70 + (s - 1) * 0.05
+        const accent = isOnFire ? '#fb923c' : '#fbbf24'
+        const accentRgb = isOnFire ? '251,146,60' : '251,191,36'
         const borderAlpha = Math.min(0.65 + (s - 1) * 0.06, 0.95)
-        const glow = `0 0 ${10 + (s - 1) * 5}px rgba(251,191,36,${0.4 + (s - 1) * 0.08})`
+        const glow = `0 0 ${10 + (s - 1) * 5}px rgba(${accentRgb},${0.4 + (s - 1) * 0.08})`
         const basePerfectBonus = Math.round((xpGained - streakBonusXP) * 0.2 / 1.2)
         return (
-          <motion.div
-            key={perfectStreak}
-            initial={{ opacity: 0, y: -10, scale: isCombo ? 0.88 : 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: 'spring', stiffness: 400, damping: isCombo ? 18 : 22 }}
-            className="flex items-center justify-center gap-2 mb-2 py-2 px-3 rounded-xl"
-            style={{ background: 'rgba(8,4,0,0.88)', border: `1px solid rgba(245,158,11,${borderAlpha})`, boxShadow: glow }}
-          >
-            <span style={{ fontSize: `${iconSize}rem`, color: '#fbbf24' }}>✦</span>
-            <div style={{ textAlign: 'center' }}>
-              <div className="flex items-center justify-center gap-1.5">
-                <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
-                  style={{ fontSize: `${titleSize}rem`, color: '#fbbf24', textShadow: glow }}>
-                  Perfect Catch
-                </p>
-                {isCombo && (
-                  <p className="font-cinzel font-700"
-                    style={{ fontSize: `${titleSize + 0.06}rem`, color: '#fbbf24', textShadow: glow }}>
-                    ×{perfectStreak}
+          <div style={{ position: 'relative' }} className="mb-2">
+            {/* Ignition burst rings */}
+            {isIgnition && [0, 0.1, 0.2].map((delay, i) => (
+              <motion.div key={i}
+                initial={{ scale: 0.85, opacity: 0.7 - i * 0.2 }}
+                animate={{ scale: 2.2 - i * 0.25, opacity: 0 }}
+                transition={{ duration: 0.55, ease: 'easeOut', delay }}
+                style={{
+                  position: 'absolute', inset: 0, borderRadius: 12,
+                  border: `${1.5 - i * 0.3}px solid rgba(251,146,60,${0.7 - i * 0.2})`,
+                  pointerEvents: 'none',
+                }}
+              />
+            ))}
+            <motion.div
+              key={perfectStreak}
+              initial={{ opacity: 0, y: -10, scale: isCombo ? 0.88 : 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: isCombo ? 18 : 22 }}
+              className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl"
+              style={{
+                background: isOnFire ? 'rgba(20,8,2,0.92)' : 'rgba(8,4,0,0.88)',
+                border: `1px solid rgba(${accentRgb},${borderAlpha})`,
+                boxShadow: glow,
+              }}
+            >
+              {isOnFire
+                ? <img src="/models/hooks/gold-hook.png" alt="" style={{ width: `${iconSize * 14}px`, height: `${iconSize * 14}px`, objectFit: 'contain', filter: 'sepia(1) saturate(3) hue-rotate(-20deg)' }} />
+                : <span style={{ fontSize: `${iconSize}rem`, color: accent }}>✦</span>
+              }
+              <div style={{ textAlign: 'center' }}>
+                <div className="flex items-center justify-center gap-1.5">
+                  <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
+                    style={{ fontSize: `${titleSize}rem`, color: accent, textShadow: glow }}>
+                    {isIgnition ? 'On Fire!' : isOnFire ? 'On Fire' : 'Perfect Catch'}
                   </p>
-                )}
-              </div>
-              <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
-                {basePerfectBonus > 0 && (
-                  <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#86efac' }}>
-                    +{basePerfectBonus} bonus XP
-                  </p>
-                )}
-                {streakBonusXP > 0 && (
-                  <>
-                    <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)' }}>·</span>
-                    <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#fbbf24' }}>
-                      +{streakBonusXP} streak XP
+                  {isCombo && (
+                    <p className="font-cinzel font-700"
+                      style={{ fontSize: `${titleSize + 0.06}rem`, color: accent, textShadow: glow }}>
+                      ×{perfectStreak}
                     </p>
-                  </>
-                )}
-                <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)' }}>·</span>
-                <p className="font-karla font-700"
-                  style={{ fontSize: '0.62rem', color: baitSaved ? '#86efac' : 'rgba(255,255,255,0.3)' }}>
-                  {baitSaved ? 'Bait returned' : 'Bait used'}
-                </p>
+                  )}
+                </div>
+                <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
+                  {basePerfectBonus > 0 && (
+                    <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#86efac' }}>
+                      +{basePerfectBonus} bonus XP
+                    </p>
+                  )}
+                  {streakBonusXP > 0 && (
+                    <>
+                      <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)' }}>·</span>
+                      <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: accent }}>
+                        +{streakBonusXP} streak XP
+                      </p>
+                    </>
+                  )}
+                  <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)' }}>·</span>
+                  <p className="font-karla font-700"
+                    style={{ fontSize: '0.62rem', color: baitSaved ? '#86efac' : 'rgba(255,255,255,0.3)' }}>
+                    {baitSaved ? 'Bait returned' : 'Bait used'}
+                  </p>
+                </div>
               </div>
-            </div>
-            <span style={{ fontSize: `${iconSize}rem`, color: '#fbbf24' }}>✦</span>
-          </motion.div>
+              {isOnFire
+                ? <img src="/models/hooks/gold-hook.png" alt="" style={{ width: `${iconSize * 14}px`, height: `${iconSize * 14}px`, objectFit: 'contain', filter: 'sepia(1) saturate(3) hue-rotate(-20deg)', transform: 'scaleX(-1)' }} />
+                : <span style={{ fontSize: `${iconSize}rem`, color: accent }}>✦</span>
+              }
+            </motion.div>
+          </div>
         )
       })()}
 
