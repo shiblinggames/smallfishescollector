@@ -1721,12 +1721,12 @@ export default function FishingGame({
                 <motion.div key="nobait"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="text-center">
-                  <p className="font-karla font-600 mb-2" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)' }}>
-                    No bait
+                  <p className="font-karla font-600 mb-3" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)' }}>
+                    You&apos;re out of bait
                   </p>
-                  <Link href="/marketplace/tackle-shop"
-                    className="font-karla font-700 uppercase tracking-[0.12em]"
-                    style={{ fontSize: '0.65rem', color: '#f0c040', padding: '0.45rem 1rem', borderRadius: '2rem', border: '1px solid rgba(240,192,64,0.35)', background: 'rgba(240,192,64,0.08)' }}>
+                  <Link href="/marketplace/tackle-shop#bait"
+                    className="btn-ghost"
+                    style={{ display: 'inline-block' }}>
                     Buy Bait
                   </Link>
                 </motion.div>
