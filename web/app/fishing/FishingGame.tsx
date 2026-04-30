@@ -1503,6 +1503,7 @@ export default function FishingGame({
   const selectedBaitDef  = BAITS.find(b => b.type === selectedBait)
   const holdTotalCount   = inventory.reduce((s, i) => s + i.quantity, 0)
   const holdTotalValue   = inventory.reduce((s, i) => s + Math.floor(i.fish_species.sell_value * 0.65) * i.quantity, 0)
+  const holdBaseValue    = inventory.reduce((s, i) => s + i.fish_species.sell_value * i.quantity, 0)
 
   const isBobbing = sceneFrame === 'fishing' && (phase === 'casting' || phase === 'hooked')
 
@@ -2646,7 +2647,7 @@ export default function FishingGame({
                     <div className="flex items-end justify-between">
                       <div>
                         <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1 }}>
-                          {Math.floor(totalValue * 2.5).toLocaleString()} ⟡
+                          {Math.floor(holdBaseValue * 2.5).toLocaleString()} ⟡
                         </p>
                         <p className="font-karla font-400 mt-1" style={{ fontSize: '0.58rem', color: '#38bdf8aa' }}>
                           potential at 2.5× · live prices update hourly
@@ -2672,7 +2673,7 @@ export default function FishingGame({
                       <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Quick Sell</p>
                       <p className="font-karla font-400 mt-0.5" style={{ fontSize: '0.58rem', color: '#4a4845' }}>
                         Only 65% of base · you lose{' '}
-                        <span style={{ color: '#f87171' }}>{Math.floor(totalValue * 0.35).toLocaleString()} ⟡</span>
+                        <span style={{ color: '#f87171' }}>{Math.floor(holdBaseValue * 0.35).toLocaleString()} ⟡</span>
                       </p>
                     </div>
                     <p className="font-cinzel font-600" style={{ fontSize: '0.88rem', color: '#6a6764' }}>
