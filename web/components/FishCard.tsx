@@ -122,7 +122,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
             {name}
           </p>
           {rarity && (
-            <p className="font-karla font-700 text-center uppercase tracking-[0.12em]" style={{ fontSize: '0.8rem', color: rarityColor!, marginBottom: stats ? 6 : 0 }}>
+            <p className="font-karla font-700 text-center uppercase tracking-[0.12em]" style={{ fontSize: '0.8rem', color: rarityColor!, marginBottom: stats ? 6 : 0, textShadow: '0 1px 3px rgba(0,0,0,0.35)' }}>
               {rarity}
             </p>
           )}
