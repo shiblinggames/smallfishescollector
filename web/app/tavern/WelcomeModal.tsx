@@ -5,42 +5,18 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { claimWelcomePack } from './welcomeActions'
 
-const SECTIONS = [
-  {
-    label: 'Earn',
-    color: '#f0c040',
-    items: [
-      { label: 'Daily Bonus', desc: '50–100 ⟡ free every day' },
-      { label: 'Fishing', desc: 'Cast your line and catch rare fish' },
-      { label: 'Fish of the Day', desc: 'Guess the mystery fish for up to 100 ⟡' },
-      { label: 'Bounties', desc: 'Weekly catch targets — earn packs' },
-    ],
-  },
-  {
-    label: 'Games',
-    color: '#a78bfa',
-    items: [
-      { label: 'Crown & Anchor', desc: 'Bet on a symbol — win up to 3×' },
-      { label: 'Fish Slots', desc: 'Match three fish to win big' },
-    ],
-  },
-  {
-    label: 'Explore',
-    color: '#34d399',
-    items: [
-      { label: 'Expeditions', desc: 'Send your crew on voyages for loot' },
-      { label: 'Fish Market', desc: 'Sell your catch at live market prices' },
-      { label: 'Collection', desc: 'Track every species you discover' },
-    ],
-  },
-  {
-    label: 'Upgrade',
-    color: '#60a5fa',
-    items: [
-      { label: 'Tackle Shop', desc: 'Better hooks, rods, and bait' },
-      { label: 'Shipyard', desc: 'Upgrade your ship for bigger hauls' },
-    ],
-  },
+const FEATURES = [
+  { color: '#f0c040', label: 'Daily Bonus' },
+  { color: '#4ade80', label: 'Fishing' },
+  { color: '#60a5fa', label: 'Fish of the Day' },
+  { color: '#f87171', label: 'Bounties' },
+  { color: '#c084fc', label: 'Crown & Anchor' },
+  { color: '#a78bfa', label: 'Fish Slots' },
+  { color: '#34d399', label: 'Expeditions' },
+  { color: '#fb923c', label: 'Fish Market' },
+  { color: '#e879f9', label: 'Collection' },
+  { color: '#60a5fa', label: 'Tackle Shop' },
+  { color: '#94a3b8', label: 'Shipyard' },
 ]
 
 export default function WelcomeModal() {
@@ -83,11 +59,11 @@ export default function WelcomeModal() {
               background: '#100e0c',
               border: '1px solid rgba(255,255,255,0.14)',
               borderRadius: '1.25rem',
-              padding: '2rem 1.75rem',
-              maxWidth: 440,
+              maxWidth: 420,
               width: '100%',
               boxShadow: '0 32px 80px rgba(0,0,0,0.8)',
               margin: 'auto',
+              overflow: 'hidden',
             }}
             onClick={e => e.stopPropagation()}
           >
@@ -95,70 +71,77 @@ export default function WelcomeModal() {
               {!claimed ? (
                 <motion.div key="intro" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
 
-                  {/* Header */}
-                  <p className="sg-eyebrow text-[#9a9488] mb-2">Welcome aboard</p>
-                  <h2 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.6rem', lineHeight: 1.15, marginBottom: '0.5rem' }}>
-                    Seas the Booty
-                  </h2>
-                  <p className="font-karla font-400 text-[#6a6764]" style={{ fontSize: '0.85rem', lineHeight: 1.65, marginBottom: '1.75rem' }}>
-                    Catch fish, earn doubloons, open packs, and build your collection. Here&apos;s everything you can do:
-                  </p>
+                  {/* Hero image */}
+                  <div style={{ position: 'relative', height: 180, overflow: 'hidden' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/bartender.jpeg"
+                      alt=""
+                      aria-hidden
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
+                    />
+                    <div style={{
+                      position: 'absolute', inset: 0,
+                      background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(16,14,12,0.95) 100%)',
+                    }} />
+                    <div style={{ position: 'absolute', bottom: '1rem', left: '1.75rem' }}>
+                      <p className="sg-eyebrow text-[#9a9488] mb-1">Welcome aboard</p>
+                      <h2 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem', lineHeight: 1.15 }}>
+                        Seas the Booty
+                      </h2>
+                    </div>
+                  </div>
 
-                  {/* Feature sections */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.75rem' }}>
-                    {SECTIONS.map(section => (
-                      <div key={section.label}
-                        style={{
+                  {/* Body */}
+                  <div style={{ padding: '1.25rem 1.75rem 1.75rem' }}>
+                    <p className="font-karla font-400 text-[#6a6764]" style={{ fontSize: '0.83rem', lineHeight: 1.65, marginBottom: '1.25rem' }}>
+                      Catch fish, earn doubloons, open packs, and build your collection. Here&apos;s everything waiting for you:
+                    </p>
+
+                    {/* Feature grid */}
+                    <div style={{
+                      display: 'grid', gridTemplateColumns: '1fr 1fr',
+                      gap: '0.4rem',
+                      marginBottom: '1.5rem',
+                    }}>
+                      {FEATURES.map(f => (
+                        <div key={f.label} style={{
+                          display: 'flex', alignItems: 'center', gap: '0.5rem',
                           background: 'rgba(8,8,6,0.82)',
-                          border: '1px solid rgba(255,255,255,0.10)',
-                          borderRadius: '0.75rem',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                          style={{ fontSize: '0.6rem', color: section.color, padding: '0.6rem 0.9rem 0.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                          {section.label}
-                        </p>
-                        {section.items.map((item, i) => (
-                          <div key={item.label}
-                            style={{
-                              display: 'flex', alignItems: 'baseline', gap: '0.6rem',
-                              padding: '0.5rem 0.9rem',
-                              borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : undefined,
-                            }}
-                          >
-                            <div style={{ width: 5, height: 5, borderRadius: '50%', background: section.color, flexShrink: 0, marginTop: 5 }} />
-                            <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#c8c5c0', whiteSpace: 'nowrap' }}>{item.label}</span>
-                            <span className="font-karla font-400" style={{ fontSize: '0.75rem', color: '#4a4845' }}>— {item.desc}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: '0.5rem',
+                          padding: '0.45rem 0.7rem',
+                        }}>
+                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: f.color, flexShrink: 0 }} />
+                          <span className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#b8b5b0' }}>{f.label}</span>
+                        </div>
+                      ))}
+                    </div>
 
-                  {/* Welcome gift */}
-                  <div style={{
-                    background: 'rgba(240,192,64,0.07)',
-                    border: '1px solid rgba(240,192,64,0.22)',
-                    borderRadius: '0.75rem',
-                    padding: '0.85rem 1rem',
-                    marginBottom: '1.25rem',
-                  }}>
-                    <p className="font-karla font-700 text-[#f0c040]" style={{ fontSize: '0.82rem', marginBottom: '0.2rem' }}>
-                      🎁 Welcome gift — 1 free pack
-                    </p>
-                    <p className="font-karla font-400 text-[#6a5e40]" style={{ fontSize: '0.72rem' }}>
-                      Open it from the Packs page to see what you reel in.
-                    </p>
-                  </div>
+                    {/* Welcome gift */}
+                    <div style={{
+                      background: 'rgba(240,192,64,0.07)',
+                      border: '1px solid rgba(240,192,64,0.22)',
+                      borderRadius: '0.75rem',
+                      padding: '0.85rem 1rem',
+                      marginBottom: '1.25rem',
+                    }}>
+                      <p className="font-karla font-700 text-[#f0c040]" style={{ fontSize: '0.82rem', marginBottom: '0.2rem' }}>
+                        🎁 Welcome gift — 1 free pack
+                      </p>
+                      <p className="font-karla font-400 text-[#6a5e40]" style={{ fontSize: '0.72rem' }}>
+                        Open it from the Packs page to see what you reel in.
+                      </p>
+                    </div>
 
-                  <button onClick={handleClaim} className="btn-ghost w-full">
-                    Claim Free Pack &amp; Start Playing
-                  </button>
+                    <button onClick={handleClaim} className="btn-ghost w-full">
+                      Claim Free Pack &amp; Start Playing
+                    </button>
+                  </div>
                 </motion.div>
               ) : (
                 <motion.div key="claimed" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
-                  style={{ textAlign: 'center', padding: '1rem 0' }}>
+                  style={{ textAlign: 'center', padding: '2.5rem 1.75rem' }}>
                   <p style={{ fontSize: '2.25rem', marginBottom: '0.75rem' }}>🎣</p>
                   <h2 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.3rem', marginBottom: '0.5rem' }}>
                     Pack claimed!
