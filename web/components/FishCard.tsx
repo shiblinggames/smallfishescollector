@@ -125,8 +125,11 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
           )}
         </div>
 
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/cardfrontnew.png" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 4 }} />
+
         {/* Full-card art effect overlays */}
-        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 4 }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 5 }}>
           {artEffect === 'ghost'       && <div className="art-ghost-overlay" />}
           {artEffect === 'shadow'      && <div className="art-shadow-overlay" />}
           {artEffect === 'kraken'      && <div className="art-kraken-overlay" />}
