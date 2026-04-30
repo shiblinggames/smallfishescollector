@@ -1615,18 +1615,11 @@ export default function FishingGame({
               </AnimatePresence>
             </div>
             {highestPerfectStreak > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
-                <div style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                  background: 'rgba(20,12,4,0.88)', border: '1px solid rgba(251,146,60,0.6)',
-                  borderRadius: 8, padding: '3px 10px',
-                  boxShadow: '0 0 8px rgba(251,146,60,0.15)',
-                }}>
-                  <img src="/models/hooks/gold-hook.png" alt="" style={{ width: 14, height: 14, objectFit: 'contain' }} />
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.65rem', color: '#fed7aa' }}>
-                    Best streak: <span style={{ color: '#fb923c' }}>{highestPerfectStreak}</span>
-                  </span>
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 4, marginTop: 4, paddingRight: 2 }}>
+                <img src="/models/hooks/gold-hook.png" alt="" style={{ width: 11, height: 11, objectFit: 'contain', opacity: 0.55 }} />
+                <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)' }}>
+                  Best streak: <span style={{ color: '#fb923c' }}>{highestPerfectStreak}</span>
+                </span>
               </div>
             )}
           </div>
