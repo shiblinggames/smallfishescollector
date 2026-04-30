@@ -17,10 +17,10 @@ export const SLOT_SYMBOLS_LIST: {
   label: string
 }[] = [
   { id: 'common',    filename: 'Sardine.png',     color: '#8a8880', weight: 50, label: 'Sardine' },
-  { id: 'rare',      filename: 'Blue_Marlin.png', color: '#60a5fa', weight: 22, label: 'Blue Marlin' },
+  { id: 'rare',      filename: 'Blue_Marlin.png', color: '#60a5fa', weight: 25, label: 'Blue Marlin' },
   { id: 'legendary', filename: 'Blue_Whale.png',  color: '#a78bfa', weight: 10, label: 'Blue Whale' },
   { id: 'catfish',   filename: 'Catfish.png',      color: '#f0c040', weight: 3,  label: 'Catfish' },
-  { id: 'anchor',                                   color: '#34d399', weight: 15, label: 'Hook' },
+  { id: 'anchor',                                   color: '#34d399', weight: 12, label: 'Hook' },
 ]
 
 export const SLOT_PAYOUTS: Record<SlotSymbolId, number> = {
@@ -33,7 +33,7 @@ export const SLOT_PAYOUTS: Record<SlotSymbolId, number> = {
 
 // 2-of-3 partial payouts (also used for hook wild)
 export const SLOT_PARTIAL_PAYOUTS: Partial<Record<SlotSymbolId, number>> = {
-  common:    1,    // break even
+  common:    0.5,  // lose half — still feels like something
   rare:      1.5,
   legendary: 3,
   catfish:   15,

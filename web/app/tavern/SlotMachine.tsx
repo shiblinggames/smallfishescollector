@@ -488,8 +488,8 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                 <p className="font-cinzel font-700 tracking-wide" style={{ fontSize: '1.15rem', color, textShadow: `0 0 24px ${color}60`, letterSpacing: '0.04em', lineHeight: 1.1 }}>
                   2× {label}
                 </p>
-                <p className="font-cinzel font-700 mt-1" style={{ fontSize: lastResult!.net === 0 ? '1rem' : '1.25rem', color: lastResult!.net === 0 ? '#6a6764' : '#f0ede8' }}>
-                  {lastResult!.net === 0 ? 'Break even' : `+${lastResult!.net.toLocaleString()} ⟡`}
+                <p className="font-cinzel font-700 mt-1" style={{ fontSize: '1.25rem', color: lastResult!.net >= 0 ? '#f0ede8' : '#f87171' }}>
+                  {lastResult!.net === 0 ? 'Break even' : lastResult!.net > 0 ? `+${lastResult!.net.toLocaleString()} ⟡` : `${lastResult!.net.toLocaleString()} ⟡`}
                 </p>
                 <p className="font-karla font-400 text-[#6a6764] text-xs mt-1">{mult}× your bet</p>
               </div>
@@ -604,7 +604,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                   <SlotSymbolDisplay id={sym.id} size={30} />
                 </div>
                 <span className="font-karla text-sm flex-1" style={{ color: sym.color }}>{sym.label}</span>
-                <span className="font-cinzel font-700 text-sm" style={{ color: mult === 1 ? '#6a6764' : sym.color }}>
+                <span className="font-cinzel font-700 text-sm" style={{ color: mult >= 1 ? sym.color : '#6a6764' }}>
                   {mult === 1 ? 'Even' : `${mult}×`}
                 </span>
               </div>
