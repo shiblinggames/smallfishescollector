@@ -168,22 +168,27 @@ function getZone(zones: ZoneDef[], deg: number, rotation = 0): ZoneDef {
 // ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 function DialSVG({
-  zones, angle, rotation = 0, needleColor, zoneOpacityFn,
+  zones, angle, rotation = 0, needleColor, zoneOpacityFn, onFire = false,
 }: {
   zones: ZoneDef[]
   angle: number
   rotation?: number
   needleColor: string
   zoneOpacityFn: (z: ZoneDef) => number
+  onFire?: boolean
 }) {
   const needleTipY  = CY - (INNER_R - 8)
   const perfectZone = zones.find(z => z.type === 'perfect')
   const penaltyZones = zones.filter(z => z.type === 'penalty')
 
   return (
-    <div style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto' }}>
+    <div style={{
+      position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto',
+      filter: onFire ? 'drop-shadow(0 0 18px rgba(251,146,60,0.8)) drop-shadow(0 0 40px rgba(239,68,68,0.35))' : 'none',
+      transition: 'filter 0.4s ease',
+    }}>
       <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block' }}>
-        <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
+        <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke={onFire ? '#f97316' : 'rgba(255,255,255,0.12)'} strokeWidth="1" />
         <g transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
             <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
@@ -246,6 +251,39 @@ function DialSVG({
           <circle cx={CX} cy={needleTipY} r="5" fill={needleColor} />
         </g>
         <circle cx={CX} cy={CY} r="8" fill="rgba(10,10,10,0.9)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
+
+        {/* Fire effects */}
+        {onFire && (
+          <>
+            <motion.circle cx={CX} cy={CY} r={OUTER_R + 10} fill="none" stroke="#f97316" strokeWidth="8"
+              animate={{ strokeOpacity: [0.07, 0.22, 0.07] }}
+              transition={{ duration: 0.7, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <motion.circle cx={CX} cy={CY} r={OUTER_R + 7.5} fill="none" stroke="#ff6b35" strokeWidth="3.5"
+              animate={{ strokeOpacity: [0.25, 0.7, 0.25] }}
+              transition={{ duration: 0.45, repeat: Infinity, ease: 'easeInOut', delay: 0.1 }}
+            />
+            <motion.circle cx={CX} cy={CY} r={OUTER_R + 6.5} fill="none" stroke="#fbbf24" strokeWidth="1"
+              animate={{ strokeOpacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 0.35, repeat: Infinity, ease: 'easeInOut', delay: 0.05 }}
+            />
+            {Array.from({ length: 12 }, (_, i) => {
+              const deg = i * 30
+              const tipLen = 10 + (i % 3) * 5
+              const b1 = polar(OUTER_R + 7, deg - 5)
+              const b2 = polar(OUTER_R + 7, deg + 5)
+              const tip = polar(OUTER_R + 7 + tipLen, deg)
+              const d = `M ${b1.x.toFixed(1)} ${b1.y.toFixed(1)} L ${tip.x.toFixed(1)} ${tip.y.toFixed(1)} L ${b2.x.toFixed(1)} ${b2.y.toFixed(1)} Z`
+              const colors = ['#f97316', '#ef4444', '#fb923c', '#f59e0b']
+              return (
+                <motion.path key={i} d={d} fill={colors[i % 4]}
+                  animate={{ opacity: [0.15, 0.85, 0.15] }}
+                  transition={{ duration: 0.25 + (i % 4) * 0.07, repeat: Infinity, delay: (i % 6) * 0.07, ease: 'easeInOut' }}
+                />
+              )
+            })}
+          </>
+        )}
       </svg>
     </div>
   )
@@ -1202,7 +1240,7 @@ export default function FishingGame({
 
     const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
     const baitBonus = getBait(selectedBaitRef.current).catchZoneBonus
-    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus + baitBonus + rod.catchZoneBonus, rod.perfectZoneBonus)
+    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus + baitBonus + rod.catchZoneBonus, rod.perfectZoneBonus + 1)
     const zone  = getZone(zones, angleRef.current, zoneRotation)
 
     // Snag immune: treat penalty as miss — no extra bait lost
@@ -1372,7 +1410,7 @@ export default function FishingGame({
   }
 
   // Zone display helpers
-  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus, rod.perfectZoneBonus) : []
+  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus, rod.perfectZoneBonus + 1) : []
   const currentZone   = (phase === 'catching' || phase === 'reeling') ? getZone(catchingZones, angle, zoneRotation) : null
 
   function needleColor(): string {
@@ -1636,8 +1674,21 @@ export default function FishingGame({
                     </motion.p>
                   )}
 
+                  {perfectStreak >= 2 && (
+                    <motion.div className="text-center mb-1"
+                      initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                    >
+                      <motion.span className="font-cinzel font-700"
+                        style={{ fontSize: '0.95rem', color: '#f97316', textShadow: '0 0 16px rgba(249,115,22,0.8)', letterSpacing: '0.04em' }}
+                        animate={{ opacity: [0.75, 1, 0.75] }}
+                        transition={{ duration: 0.6, repeat: Infinity }}
+                      >
+                        🔥 {perfectStreak} perfect streak
+                      </motion.span>
+                    </motion.div>
+                  )}
                   <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}
-                    needleColor={needleColor()} zoneOpacityFn={zoneOpacity} />
+                    needleColor={needleColor()} zoneOpacityFn={zoneOpacity} onFire={perfectStreak >= 2} />
                 </motion.div>
               )}
 
