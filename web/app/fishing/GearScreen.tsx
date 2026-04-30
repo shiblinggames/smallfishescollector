@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 import { getHook } from '@/lib/hooks'
 import { getRod, RODS } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
@@ -70,14 +71,13 @@ function BaitIcon({ color }: { color: string }) {
 }
 
 function GearSlot({
-  label, image, icon, itemName, color, isActive, onClick, small,
+  label, image, icon, itemName, color, onClick, small,
 }: {
   label: string
   image?: string | null
   icon?: React.ReactNode
   itemName: string
   color: string
-  isActive: boolean
   onClick: () => void
   small?: boolean
 }) {
@@ -86,8 +86,8 @@ function GearSlot({
       onClick={onClick}
       style={{
         width: '100%',
-        border: `1px solid ${isActive ? color + 'cc' : color + '40'}`,
-        background: isActive ? `${color}1a` : 'rgba(4,10,20,0.75)',
+        border: `1px solid ${color}40`,
+        background: 'rgba(4,10,20,0.75)',
         borderRadius: 12,
         padding: small ? '0.55rem 0.4rem' : '0.65rem 0.5rem',
         cursor: 'pointer',
@@ -103,8 +103,8 @@ function GearSlot({
         }
       </div>
       <div style={{ textAlign: 'center' }}>
-        <p className="font-karla font-600 uppercase" style={{ fontSize: '0.46rem', color: isActive ? color : color + '88', letterSpacing: '0.14em', marginBottom: 1 }}>{label}</p>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.58rem', color: isActive ? '#f0ede8' : '#a0a09a', lineHeight: 1.2 }}>{itemName}</p>
+        <p className="font-karla font-600 uppercase" style={{ fontSize: '0.46rem', color: color + '88', letterSpacing: '0.14em', marginBottom: 1 }}>{label}</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.58rem', color: '#a0a09a', lineHeight: 1.2 }}>{itemName}</p>
       </div>
     </button>
   )
@@ -128,7 +128,7 @@ export default function GearScreen({
   shipTier: number
   onClose: () => void
 }) {
-  const [activeSlot, setActiveSlot] = useState<SlotKey>('rod')
+  const [openSlot, setOpenSlot] = useState<SlotKey | null>(null)
 
   const rod  = getRod(equippedRodTier)
   const reel = getReel(reelTier)
@@ -143,40 +143,42 @@ export default function GearScreen({
   const dragPct    = Math.round((1 - reel.needleSpeedMultiplier) * 100)
   const snagRedPct = Math.round((1 - line.penaltyMultiplier) * 100)
 
-  function toggle(slot: SlotKey) {
-    setActiveSlot(prev => prev === slot ? slot : slot)
-  }
+  // ── Compute all active bonuses ──
+  type BonusRow = { label: string; color: string; source: string }
+  const bonuses: BonusRow[] = []
 
-  const activeColor =
-    activeSlot === 'rod'  ? rod.color  :
-    activeSlot === 'reel' ? reel.color :
-    activeSlot === 'hook' ? hook.color :
-    activeSlot === 'line' ? line.color :
-    bait?.color ?? '#94a3b8'
+  const catchZoneBonus = (hookTier * 3) + rod.catchZoneBonus + (bait?.catchZoneBonus ?? 0)
+  if (catchZoneBonus > 0) bonuses.push({ label: `+${catchZoneBonus}° catch zone`, source: 'hook · rod · bait', color: '#60a5fa' })
+
+  const perfectBonus = rod.perfectZoneBonus + 1
+  bonuses.push({ label: `${perfectBonus}° perfect zone`, source: 'rod · base', color: '#fbbf24' })
+
+  if (dragPct > 0) bonuses.push({ label: `−${dragPct}% needle speed`, source: 'reel', color: reel.color })
+
+  if (snagRedPct > 0) bonuses.push({ label: `−${snagRedPct}% snag zone`, source: 'line', color: line.color })
+
+  if (rod.doubleCatchChance > 0) bonuses.push({ label: rod.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(rod.doubleCatchChance * 100)}% double catch`, source: 'rod', color: rod.color })
+  if (rod.retryOnMissChance > 0) bonuses.push({ label: `${Math.round(rod.retryOnMissChance * 100)}% retry on miss`, source: 'rod', color: rod.color })
+  if (rod.snagImmune) bonuses.push({ label: 'Snag immune', source: 'rod', color: rod.color })
+  if ((rod.jackpotChance ?? 0) > 0) bonuses.push({ label: `${Math.round(rod.jackpotChance! * 100)}% jackpot ×${rod.jackpotMultiplier}`, source: 'rod', color: rod.color })
+  if (rod.rarityBonus > 0) bonuses.push({ label: `+${Math.round(rod.rarityBonus * 100)}% rare fish`, source: 'rod', color: rod.color })
+  if (bait && bait.waitMult < 1) bonuses.push({ label: `${Math.round((1 - bait.waitMult) * 100)}% faster bite`, source: 'bait', color: bait.color })
+  if (bait && bait.waitMult > 1) bonuses.push({ label: `${Math.round((bait.waitMult - 1) * 100)}% slower bite`, source: 'bait', color: '#f87171' })
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative' }}>
 
       {/* ── Visual gear grid ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gridTemplateRows: 'auto auto', gap: 6 }}>
 
-        {/* Left col: Rod (top) + Hook (bottom) */}
-        <div style={{ gridColumn: '1', gridRow: '1', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <GearSlot
-            label="Rod" image="/rod.png" itemName={rod.name}
-            color={rod.color} isActive={activeSlot === 'rod'}
-            onClick={() => toggle('rod')}
-          />
+        <div style={{ gridColumn: '1', gridRow: '1' }}>
+          <GearSlot label="Rod" image="/rod.png" itemName={rod.name} color={rod.color} onClick={() => setOpenSlot('rod')} />
         </div>
-        <div style={{ gridColumn: '1', gridRow: '2', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <GearSlot
-            label="Hook" image={hook.imageUrl ?? null} itemName={hook.name}
-            color={hook.color} isActive={activeSlot === 'hook'}
-            onClick={() => toggle('hook')}
-          />
+        <div style={{ gridColumn: '1', gridRow: '2' }}>
+          <GearSlot label="Hook" image={hook.imageUrl ?? null} itemName={hook.name} color={hook.color} onClick={() => setOpenSlot('hook')} />
         </div>
 
-        {/* Center: Ship (spans both rows) */}
+        {/* Center: Ship */}
         <div style={{
           gridColumn: '2', gridRow: '1 / 3',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
@@ -185,45 +187,28 @@ export default function GearScreen({
           borderRadius: 14,
           padding: '0.75rem 0.5rem 0.6rem',
         }}>
-          <img
-            src={ship.imageUrl}
-            alt={ship.name}
-            style={{ width: '90%', maxHeight: 100, objectFit: 'contain', filter: `drop-shadow(0 4px 16px ${ship.color}44)` }}
-          />
+          <img src={ship.imageUrl} alt={ship.name} style={{ width: '90%', maxHeight: 100, objectFit: 'contain', filter: `drop-shadow(0 4px 16px ${ship.color}44)` }} />
           <div style={{ textAlign: 'center', marginTop: 6 }}>
             <p className="font-cinzel font-700" style={{ fontSize: '0.65rem', color: ship.color, lineHeight: 1.2 }}>{ship.name}</p>
             <p className="font-karla font-600" style={{ fontSize: '0.54rem', color: ship.color + 'aa', marginTop: 3 }}>
               {ship.holdCapacity} inventory slots
             </p>
-            <Link
-              href="/marketplace/shipyard"
-              onClick={onClose}
-              className="font-karla font-600"
-              style={{ fontSize: '0.48rem', color: '#4a4845', textDecoration: 'none', letterSpacing: '0.1em', marginTop: 2, display: 'inline-block' }}
-            >
+            <Link href="/marketplace/shipyard" onClick={onClose} className="font-karla font-600"
+              style={{ fontSize: '0.48rem', color: '#4a4845', textDecoration: 'none', letterSpacing: '0.1em', marginTop: 2, display: 'inline-block' }}>
               upgrade ↗
             </Link>
           </div>
         </div>
 
-        {/* Right col: Reel (top) + Line (bottom) */}
         <div style={{ gridColumn: '3', gridRow: '1' }}>
-          <GearSlot
-            label="Reel" icon={<ReelIcon color={reel.color} />} itemName={reel.name}
-            color={reel.color} isActive={activeSlot === 'reel'}
-            onClick={() => toggle('reel')}
-          />
+          <GearSlot label="Reel" icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} onClick={() => setOpenSlot('reel')} />
         </div>
         <div style={{ gridColumn: '3', gridRow: '2' }}>
-          <GearSlot
-            label="Line" icon={<LineIcon color={line.color} />} itemName={line.name}
-            color={line.color} isActive={activeSlot === 'line'}
-            onClick={() => toggle('line')}
-          />
+          <GearSlot label="Line" icon={<LineIcon color={line.color} />} itemName={line.name} color={line.color} onClick={() => setOpenSlot('line')} />
         </div>
       </div>
 
-      {/* Bait slot — centered below */}
+      {/* Bait slot */}
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <div style={{ width: '40%' }}>
           <GearSlot
@@ -231,148 +216,194 @@ export default function GearScreen({
             image={bait?.imageUrl ?? null}
             icon={<BaitIcon color={bait?.color ?? '#94a3b8'} />}
             itemName={bait?.name ?? 'No Bait'}
-            color={bait?.color ?? '#94a3b8'} isActive={activeSlot === 'bait'}
-            onClick={() => toggle('bait')}
+            color={bait?.color ?? '#94a3b8'}
+            onClick={() => setOpenSlot('bait')}
           />
         </div>
       </div>
 
-      {/* ── Detail panel ── */}
-      <div style={{
-        background: 'rgba(4,10,20,0.9)',
-        border: `1px solid ${activeColor}28`,
-        borderRadius: 14,
-        padding: '0.9rem 0.85rem',
-        minHeight: 80,
-      }}>
-
-        {/* ── Rod ── */}
-        {activeSlot === 'rod' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {ownedRodDefs.map(r => {
-              const isEquipped = r.tier === equippedRodTier
-              const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
-              const hasSpecial = r.doubleCatchChance > 0 || r.retryOnMissChance > 0 || r.snagImmune || r.perfectZoneBonus > 0 || r.rarityBonus > 0 || (r.jackpotChance ?? 0) > 0
-              return (
-                <div key={r.tier} style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '0.55rem 0.65rem', borderRadius: 10,
-                  background: isEquipped ? `${r.color}12` : 'rgba(4,10,18,0.72)',
-                  border: `1px solid ${isEquipped ? r.color + '50' : 'rgba(255,255,255,0.09)'}`,
-                }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f0ede8', marginBottom: 3 }}>{r.name}</p>
-                    <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                      {r.doubleCatchChance > 0 && <Pill label={r.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(r.doubleCatchChance*100)}% double`} color={r.color} />}
-                      {r.retryOnMissChance > 0 && <Pill label={`${Math.round(r.retryOnMissChance*100)}% retry`} color={r.color} />}
-                      {r.snagImmune && <Pill label="Snag immune" color={r.color} />}
-                      {r.perfectZoneBonus > 0 && <Pill label={`Perfect +${r.perfectZoneBonus}°`} color={r.color} />}
-                      {r.rarityBonus > 0 && <Pill label={`+${Math.round(r.rarityBonus*100)}% rare`} color={r.color} />}
-                      {(r.jackpotChance ?? 0) > 0 && <Pill label={`${Math.round(r.jackpotChance!*100)}% jackpot ×${r.jackpotMultiplier}`} color={r.color} />}
-                      {!hasSpecial && speedPct > 0 && <Pill label={`${speedPct}% faster`} color={r.color} />}
-                      {!hasSpecial && speedPct <= 0 && r.catchZoneBonus > 0 && <Pill label={`+${r.catchZoneBonus}° zone`} color={r.color} />}
-                      {!hasSpecial && speedPct <= 0 && r.catchZoneBonus === 0 && <Pill label="Base rod" muted />}
-                    </div>
-                  </div>
-                  {isEquipped
-                    ? <span className="font-karla font-700" style={{ fontSize: '0.52rem', color: r.color, whiteSpace: 'nowrap' }}>✓ On</span>
-                    : <button onClick={() => onEquipRod(r.tier)} className="font-karla font-700"
-                        style={{ fontSize: '0.55rem', padding: '0.28rem 0.6rem', borderRadius: 7, whiteSpace: 'nowrap',
-                          background: `${r.color}16`, border: `1px solid ${r.color}44`, color: r.color, cursor: 'pointer' }}>
-                        Equip
-                      </button>
-                  }
-                </div>
-              )
-            })}
-            <ShopLink href="/marketplace/tackle-shop#rod" label="Buy more rods" color={rod.color} onClick={onClose} />
-          </div>
-        )}
-
-        {/* ── Reel ── */}
-        {activeSlot === 'reel' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: reel.color }}>{reel.name}</p>
+      {/* ── Loadout bonus summary ── */}
+      <div style={{ background: 'rgba(4,10,20,0.75)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '0.8rem 0.9rem' }}>
+        <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>
+          Active Bonuses
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {bonuses.map((b, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: b.color }}>{b.label}</span>
+              <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.44rem', color: 'rgba(255,255,255,0.22)', whiteSpace: 'nowrap' }}>{b.source}</span>
             </div>
-            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              {dragPct > 0 ? <Pill label={`−${dragPct}% needle speed`} color={reel.color} /> : <Pill label="Base needle speed" muted />}
-            </div>
-            <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.55 }}>{reel.description}</p>
-            <ShopLink href="/marketplace/tackle-shop#reel" label="Upgrade reel" color={reel.color} onClick={onClose} />
-          </div>
-        )}
-
-        {/* ── Hook ── */}
-        {activeSlot === 'hook' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {hook.imageUrl && (
-                <img src={hook.imageUrl} alt={hook.name} style={{ width: 44, height: 44, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${hook.color}66)` }} />
-              )}
-              <div>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: hook.color }}>{hook.name}</p>
-                <div style={{ display: 'flex', gap: 4, marginTop: 3 }}>
-                  {hookTier > 0 ? <Pill label={`+${hookTier * 3}° catch zone`} color={hook.color} /> : <Pill label="No catch zone bonus" muted />}
-                </div>
-              </div>
-            </div>
-            <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.55 }}>{hook.description}</p>
-            <ShopLink href="/marketplace/tackle-shop#hook" label="Upgrade hook" color={hook.color} onClick={onClose} />
-          </div>
-        )}
-
-        {/* ── Line ── */}
-        {activeSlot === 'line' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: line.color }}>{line.name}</p>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {snagRedPct > 0 ? <Pill label={`−${snagRedPct}% snag zone`} color={line.color} /> : <Pill label="Standard snag zones" muted />}
-            </div>
-            <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.55 }}>{line.description}</p>
-            <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#4a4845', lineHeight: 1.5 }}>
-              Lines are earned by catching unique species — no purchase needed.
-            </p>
-          </div>
-        )}
-
-        {/* ── Bait ── */}
-        {activeSlot === 'bait' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {BAITS.filter(b => (inventoryMap[b.type] ?? 0) > 0 || b.type === selectedBait).map(b => {
-              const qty = inventoryMap[b.type] ?? 0
-              const isSel = b.type === selectedBait
-              const c = b.color
-              return (
-                <button key={b.type} onClick={() => onSelectBait(b.type)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '0.55rem 0.7rem', borderRadius: 10, width: '100%',
-                    background: isSel ? `${c}12` : 'rgba(4,10,18,0.72)',
-                    border: `1px solid ${isSel ? c + '50' : 'rgba(255,255,255,0.09)'}`,
-                    cursor: 'pointer',
-                  }}>
-                  {b.imageUrl
-                    ? <img src={b.imageUrl} alt={b.name} style={{ width: 22, height: 22, objectFit: 'contain', opacity: qty > 0 ? 1 : 0.3, flexShrink: 0 }} />
-                    : <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, opacity: qty > 0 ? 1 : 0.3, flexShrink: 0 }} />
-                  }
-                  <div style={{ flex: 1, textAlign: 'left' }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: qty > 0 ? '#f0ede8' : '#4a4845' }}>{b.name}</p>
-                    <div style={{ display: 'flex', gap: 3, marginTop: 2, flexWrap: 'wrap' }}>
-                      {b.catchZoneBonus > 0 && <Pill label={`+${b.catchZoneBonus}° zone`} color={c} />}
-                      {b.waitMult < 1 && <Pill label={`${Math.round((1-b.waitMult)*100)}% faster`} color={c} />}
-                      {b.waitMult > 1 && <Pill label={`${Math.round((b.waitMult-1)*100)}% slower`} color="#f87171" />}
-                      {!b.catchZoneBonus && b.waitMult === 1 && <Pill label="No bonus" muted />}
-                    </div>
-                  </div>
-                  <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: qty > 0 ? '#f0ede8' : '#4a4845' }}>×{qty}</span>
-                </button>
-              )
-            })}
-            <ShopLink href="/marketplace/tackle-shop#bait" label="Buy more bait" color={bait?.color ?? '#34d399'} onClick={onClose} />
-          </div>
-        )}
+          ))}
+        </div>
       </div>
+
+      {/* ── Item detail modal ── */}
+      <AnimatePresence>
+        {openSlot && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              onClick={() => setOpenSlot(null)}
+              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', borderRadius: 14, zIndex: 10 }}
+            />
+            {/* Sheet */}
+            <motion.div
+              key="sheet"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+              style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 11,
+                background: 'rgba(6,12,22,0.98)', border: '1px solid rgba(255,255,255,0.11)',
+                borderRadius: 14, padding: '1rem 0.9rem 1.1rem',
+                maxHeight: '80%', overflowY: 'auto',
+              }}
+            >
+              {/* Close row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)' }}>
+                  {openSlot.charAt(0).toUpperCase() + openSlot.slice(1)}
+                </p>
+                <button onClick={() => setOpenSlot(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: '0 2px', touchAction: 'manipulation' }}>×</button>
+              </div>
+
+              {/* ── Rod ── */}
+              {openSlot === 'rod' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {ownedRodDefs.map(r => {
+                    const isEquipped = r.tier === equippedRodTier
+                    const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
+                    const hasSpecial = r.doubleCatchChance > 0 || r.retryOnMissChance > 0 || r.snagImmune || r.perfectZoneBonus > 0 || r.rarityBonus > 0 || (r.jackpotChance ?? 0) > 0
+                    return (
+                      <div key={r.tier} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '0.55rem 0.65rem', borderRadius: 10,
+                        background: isEquipped ? `${r.color}12` : 'rgba(4,10,18,0.72)',
+                        border: `1px solid ${isEquipped ? r.color + '50' : 'rgba(255,255,255,0.09)'}`,
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f0ede8', marginBottom: 3 }}>{r.name}</p>
+                          <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                            {r.doubleCatchChance > 0 && <Pill label={r.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(r.doubleCatchChance*100)}% double`} color={r.color} />}
+                            {r.retryOnMissChance > 0 && <Pill label={`${Math.round(r.retryOnMissChance*100)}% retry`} color={r.color} />}
+                            {r.snagImmune && <Pill label="Snag immune" color={r.color} />}
+                            {r.perfectZoneBonus > 0 && <Pill label={`Perfect +${r.perfectZoneBonus}°`} color={r.color} />}
+                            {r.rarityBonus > 0 && <Pill label={`+${Math.round(r.rarityBonus*100)}% rare`} color={r.color} />}
+                            {(r.jackpotChance ?? 0) > 0 && <Pill label={`${Math.round(r.jackpotChance!*100)}% jackpot ×${r.jackpotMultiplier}`} color={r.color} />}
+                            {!hasSpecial && speedPct > 0 && <Pill label={`${speedPct}% faster`} color={r.color} />}
+                            {!hasSpecial && speedPct <= 0 && r.catchZoneBonus > 0 && <Pill label={`+${r.catchZoneBonus}° zone`} color={r.color} />}
+                            {!hasSpecial && speedPct <= 0 && r.catchZoneBonus === 0 && <Pill label="Base rod" muted />}
+                          </div>
+                        </div>
+                        {isEquipped
+                          ? <span className="font-karla font-700" style={{ fontSize: '0.52rem', color: r.color, whiteSpace: 'nowrap' }}>✓ On</span>
+                          : <button onClick={() => { onEquipRod(r.tier); setOpenSlot(null) }} className="font-karla font-700"
+                              style={{ fontSize: '0.55rem', padding: '0.28rem 0.6rem', borderRadius: 7, whiteSpace: 'nowrap',
+                                background: `${r.color}16`, border: `1px solid ${r.color}44`, color: r.color, cursor: 'pointer' }}>
+                              Equip
+                            </button>
+                        }
+                      </div>
+                    )
+                  })}
+                  <ShopLink href="/marketplace/tackle-shop#rod" label="Buy more rods" color={rod.color} onClick={onClose} />
+                </div>
+              )}
+
+              {/* ── Reel ── */}
+              {openSlot === 'reel' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: reel.color }}>{reel.name}</p>
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {dragPct > 0 ? <Pill label={`−${dragPct}% needle speed`} color={reel.color} /> : <Pill label="Base needle speed" muted />}
+                  </div>
+                  <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.55 }}>{reel.description}</p>
+                  <ShopLink href="/marketplace/tackle-shop#reel" label="Upgrade reel" color={reel.color} onClick={onClose} />
+                </div>
+              )}
+
+              {/* ── Hook ── */}
+              {openSlot === 'hook' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {hook.imageUrl && (
+                      <img src={hook.imageUrl} alt={hook.name} style={{ width: 44, height: 44, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${hook.color}66)` }} />
+                    )}
+                    <div>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: hook.color }}>{hook.name}</p>
+                      <div style={{ display: 'flex', gap: 4, marginTop: 3 }}>
+                        {hookTier > 0 ? <Pill label={`+${hookTier * 3}° catch zone`} color={hook.color} /> : <Pill label="No catch zone bonus" muted />}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.55 }}>{hook.description}</p>
+                  <ShopLink href="/marketplace/tackle-shop#hook" label="Upgrade hook" color={hook.color} onClick={onClose} />
+                </div>
+              )}
+
+              {/* ── Line ── */}
+              {openSlot === 'line' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: line.color }}>{line.name}</p>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {snagRedPct > 0 ? <Pill label={`−${snagRedPct}% snag zone`} color={line.color} /> : <Pill label="Standard snag zones" muted />}
+                  </div>
+                  <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.55 }}>{line.description}</p>
+                  <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#4a4845', lineHeight: 1.5 }}>
+                    Lines are earned by catching unique species — no purchase needed.
+                  </p>
+                </div>
+              )}
+
+              {/* ── Bait ── */}
+              {openSlot === 'bait' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {BAITS.filter(b => (inventoryMap[b.type] ?? 0) > 0 || b.type === selectedBait).map(b => {
+                    const qty = inventoryMap[b.type] ?? 0
+                    const isSel = b.type === selectedBait
+                    const c = b.color
+                    return (
+                      <button key={b.type} onClick={() => { onSelectBait(b.type); setOpenSlot(null) }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '0.55rem 0.7rem', borderRadius: 10, width: '100%',
+                          background: isSel ? `${c}12` : 'rgba(4,10,18,0.72)',
+                          border: `1px solid ${isSel ? c + '50' : 'rgba(255,255,255,0.09)'}`,
+                          cursor: 'pointer',
+                        }}>
+                        {b.imageUrl
+                          ? <img src={b.imageUrl} alt={b.name} style={{ width: 22, height: 22, objectFit: 'contain', opacity: qty > 0 ? 1 : 0.3, flexShrink: 0 }} />
+                          : <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, opacity: qty > 0 ? 1 : 0.3, flexShrink: 0 }} />
+                        }
+                        <div style={{ flex: 1, textAlign: 'left' }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: qty > 0 ? '#f0ede8' : '#4a4845' }}>{b.name}</p>
+                          <div style={{ display: 'flex', gap: 3, marginTop: 2, flexWrap: 'wrap' }}>
+                            {b.catchZoneBonus > 0 && <Pill label={`+${b.catchZoneBonus}° zone`} color={c} />}
+                            {b.waitMult < 1 && <Pill label={`${Math.round((1-b.waitMult)*100)}% faster`} color={c} />}
+                            {b.waitMult > 1 && <Pill label={`${Math.round((b.waitMult-1)*100)}% slower`} color="#f87171" />}
+                            {!b.catchZoneBonus && b.waitMult === 1 && <Pill label="No bonus" muted />}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                          <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: qty > 0 ? '#f0ede8' : '#4a4845' }}>×{qty}</span>
+                          {isSel && <span className="font-karla font-700" style={{ fontSize: '0.44rem', color: c }}>equipped</span>}
+                        </div>
+                      </button>
+                    )
+                  })}
+                  <ShopLink href="/marketplace/tackle-shop#bait" label="Buy more bait" color={bait?.color ?? '#34d399'} onClick={onClose} />
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
