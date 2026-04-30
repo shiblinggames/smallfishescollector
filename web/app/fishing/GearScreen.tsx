@@ -236,8 +236,9 @@ export default function GearScreen({
           />
           <StatCell
             label="Perfect Zone"
-            value={`${rod.perfectZoneBonus + 1}°`}
+            value={rod.perfectZoneBonus > 0 ? `+${rod.perfectZoneBonus}°` : '—'}
             color="#fbbf24"
+            muted={rod.perfectZoneBonus === 0}
           />
           <StatCell
             label="Reel Drag"
