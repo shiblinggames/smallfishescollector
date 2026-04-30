@@ -290,17 +290,17 @@ body {
 /* ── Maelstrom ── */
 .art-storm { filter: saturate(0.25) brightness(0.90) hue-rotate(205deg) contrast(1.15); }
 @keyframes stormBreath {
-  0%, 100% { opacity: 0.6; }
+  0%, 100% { opacity: 0.7; }
   50%       { opacity: 1.0; }
 }
 .art-storm-bg {
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse at 50% 30%,
-    rgba(140, 125, 170, 0.10) 0%,
-    rgba(70,   58,  90, 0.22) 35%,
-    rgba(25,   20,  35, 0.44) 65%,
-    rgba(8,     6,  12, 0.66) 100%
+    rgba(80,  70, 110, 0.30) 0%,
+    rgba(50,  42,  75, 0.52) 35%,
+    rgba(18,  14,  28, 0.72) 65%,
+    rgba(6,    4,  10, 0.88) 100%
   );
   animation: stormBreath 5s ease-in-out infinite;
   pointer-events: none;
@@ -314,11 +314,11 @@ body {
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse at 45% 20%,
-    rgba(240,248,255,1.0) 0%,
-    rgba(160,190,255,0.65) 30%,
+    rgba(220,235,255,0.95) 0%,
+    rgba(140,175,255,0.60) 30%,
     transparent 65%
   );
-  mix-blend-mode: screen;
+  mix-blend-mode: hard-light;
   opacity: 0;
   animation: lightning 7s linear infinite;
   pointer-events: none;
