@@ -189,11 +189,17 @@ export default async function TavernPage() {
           />
         </div>
 
-        <div className="px-6 pb-16 text-center">
+        <div className="px-6 pb-16 text-center" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.75rem' }}>
             Enjoying the game?{' '}
             <Link href="/marketplace" className="text-[#f0c040] hover:text-[#f5d060] transition-colors">
               Support our indie studio with a membership →
+            </Link>
+          </p>
+          <p className="font-karla text-[#4a4845]" style={{ fontSize: '0.72rem' }}>
+            Questions or feedback?{' '}
+            <Link href="/contact" className="text-[#6a6764] hover:text-[#9a9488] transition-colors" style={{ textDecoration: 'underline', textUnderlineOffset: 3 }}>
+              Contact us
             </Link>
           </p>
         </div>
