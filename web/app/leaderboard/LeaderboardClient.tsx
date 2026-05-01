@@ -24,11 +24,12 @@ interface Props {
   currentUserId: string
 }
 
-type TabKey = 'fishing' | 'tavern'
+type TabKey = 'fishingLevel' | 'perfectStreak' | 'fishSlots'
 
 const TABS: { key: TabKey; label: string; accent: string }[] = [
-  { key: 'fishing', label: 'Fishing', accent: '#f0c040' },
-  { key: 'tavern',  label: 'Tavern',  accent: '#34d399' },
+  { key: 'fishingLevel',  label: 'Fishing Level',  accent: '#f0c040' },
+  { key: 'perfectStreak', label: 'Perfect Streak', accent: '#fb923c' },
+  { key: 'fishSlots',     label: 'Fish Slots',     accent: '#34d399' },
 ]
 
 const PODIUM = [
@@ -208,35 +209,27 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
   )
 }
 
-type FishingSubKey = 'fishingLevel' | 'perfectStreak'
-
-const FISHING_SUBS: { key: FishingSubKey; label: string; accent: string }[] = [
-  { key: 'fishingLevel',   label: 'Fishing Level',  accent: '#f0c040' },
-  { key: 'perfectStreak',  label: 'Perfect Streak', accent: '#fb923c' },
-]
-
 export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, myScores, currentUserId }: Props) {
-  const [activeTab, setActiveTab] = useState<TabKey>('fishing')
-  const [fishingSub, setFishingSub] = useState<FishingSubKey>('fishingLevel')
+  const [activeTab, setActiveTab] = useState<TabKey>('fishingLevel')
 
   return (
     <div style={{ paddingBottom: '2rem' }}>
 
-      {/* ── Top tabs ── */}
-      <div className="flex gap-2 mb-4">
+      {/* ── Filter pills ── */}
+      <div className="flex gap-2 mb-8">
         {TABS.map(t => {
           const isActive = activeTab === t.key
           return (
             <button
               key={t.key}
               onClick={() => setActiveTab(t.key)}
-              className="flex-1 font-cinzel font-700 uppercase tracking-[0.12em] transition-all"
+              className="flex-1 font-karla font-700 transition-all"
               style={{
-                padding: '0.7rem 0.5rem',
-                borderRadius: 12,
+                padding: '0.55rem 0.25rem',
+                borderRadius: 10,
                 fontSize: '0.62rem',
-                background: isActive ? `${t.accent}18` : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${isActive ? t.accent + '55' : 'rgba(255,255,255,0.09)'}`,
+                background: isActive ? `${t.accent}1a` : 'transparent',
+                border: `1px solid ${isActive ? t.accent + '60' : 'rgba(255,255,255,0.08)'}`,
                 color: isActive ? t.accent : '#4a4845',
                 cursor: 'pointer',
               }}
@@ -247,35 +240,8 @@ export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, m
         })}
       </div>
 
-      {/* ── Fishing sub-tabs ── */}
-      {activeTab === 'fishing' && (
-        <div className="flex gap-2 mb-8">
-          {FISHING_SUBS.map(s => {
-            const isActive = fishingSub === s.key
-            return (
-              <button
-                key={s.key}
-                onClick={() => setFishingSub(s.key)}
-                className="flex-1 font-karla font-600 uppercase tracking-[0.1em] transition-all"
-                style={{
-                  padding: '0.5rem 0.5rem',
-                  borderRadius: 8,
-                  fontSize: '0.55rem',
-                  background: isActive ? `${s.accent}14` : 'transparent',
-                  border: `1px solid ${isActive ? s.accent + '44' : 'rgba(255,255,255,0.07)'}`,
-                  color: isActive ? s.accent : '#4a4845',
-                  cursor: 'pointer',
-                }}
-              >
-                {s.label}
-              </button>
-            )
-          })}
-        </div>
-      )}
-
       {/* ── Active leaderboard ── */}
-      {activeTab === 'fishing' && fishingSub === 'fishingLevel' && (
+      {activeTab === 'fishingLevel' && (
         <LeaderboardSection
           label="Fishing Level"
           accent="#f0c040"
@@ -286,7 +252,7 @@ export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, m
           currentUserId={currentUserId}
         />
       )}
-      {activeTab === 'fishing' && fishingSub === 'perfectStreak' && (
+      {activeTab === 'perfectStreak' && (
         <LeaderboardSection
           label="Perfect Streak"
           accent="#fb923c"
@@ -297,7 +263,7 @@ export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, m
           currentUserId={currentUserId}
         />
       )}
-      {activeTab === 'tavern' && (
+      {activeTab === 'fishSlots' && (
         <LeaderboardSection
           label="Fish Slots — Biggest Win"
           accent="#34d399"

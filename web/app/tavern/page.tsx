@@ -7,6 +7,7 @@ import { getDailyWagered, getSlotsDailyWagered } from './actions'
 import { DAILY_CAP, SLOTS_DAILY_CAP } from './constants'
 import { getWeeklyBounties } from '@/app/packs/bountyActions'
 import GameCard from './GameCard'
+import RecruitCard from './RecruitCard'
 import WelcomeModal from './WelcomeModal'
 
 export default async function TavernPage() {
@@ -93,23 +94,7 @@ export default async function TavernPage() {
 
         {/* Recruit Crew — top feature card */}
         <div className="px-6 max-w-4xl mx-auto pt-8 pb-4" style={{ position: 'relative', zIndex: 1 }}>
-          <GameCard
-            href="/packs"
-            eyebrow="Crew"
-            title="Recruit Crew"
-            statusText={
-              (profile?.packs_available ?? 0) > 0
-                ? `${profile?.packs_available} Crew Notice${(profile?.packs_available ?? 0) !== 1 ? 's' : ''} available`
-                : 'No Crew Notices — visit the shop'
-            }
-            info={[
-              'Use Crew Notices to recruit new crew members',
-              'Each notice draws 4 cards — Common through Mythic',
-              'Earn notices through bounties, daily bonuses, and the shop',
-            ]}
-            icon={<RecruitIcon />}
-            variant="featured"
-          />
+          <RecruitCard packsAvailable={profile?.packs_available ?? 0} />
         </div>
 
         <div className="px-6 max-w-4xl mx-auto mb-2" style={{ position: 'relative', zIndex: 1 }}>
@@ -217,16 +202,6 @@ export default async function TavernPage() {
   )
 }
 
-function RecruitIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="9" cy="7" r="3"/>
-      <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
-      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-      <path d="M21 21v-2a4 4 0 0 0-3-3.85"/>
-    </svg>
-  )
-}
 
 function CoinIcon() {
   return (
