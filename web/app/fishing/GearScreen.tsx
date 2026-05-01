@@ -172,7 +172,7 @@ export default function GearScreen({
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gridTemplateRows: 'auto auto', gap: 6 }}>
 
         <div style={{ gridColumn: '1', gridRow: '1' }}>
-          <GearSlot label="Rod" image="/rod.png" itemName={rod.name} color={rod.color} onClick={() => setOpenSlot('rod')} />
+          <GearSlot label="Rod" image={rod.imageUrl ?? '/rod.png'} itemName={rod.name} color={rod.color} onClick={() => setOpenSlot('rod')} />
         </div>
         <div style={{ gridColumn: '1', gridRow: '2' }}>
           <GearSlot label="Hook" image={hook.imageUrl ?? null} itemName={hook.name} color={hook.color} onClick={() => setOpenSlot('hook')} />
