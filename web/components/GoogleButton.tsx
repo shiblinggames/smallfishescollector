@@ -7,7 +7,10 @@ export default function GoogleButton({ next }: { next?: string }) {
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://seasthebooty.com'}/auth/callback?next=%2Fpacks` },
+      options: {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://seasthebooty.com'}/auth/callback?next=%2Fpacks`,
+        queryParams: { prompt: 'select_account' },
+      },
     })
   }
 
