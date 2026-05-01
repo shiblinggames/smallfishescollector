@@ -154,8 +154,8 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
     // Left (0) and right (2) stop first in random order; middle (1) always last
     const stopTimes = [
       800  + Math.floor(Math.random() * 200),  // first outer die
-      1050 + Math.floor(Math.random() * 200),  // second outer die
-      1350 + Math.floor(Math.random() * 200),  // middle, always last
+      1300 + Math.floor(Math.random() * 200),  // second outer die
+      1900 + Math.floor(Math.random() * 200),  // middle, always last
     ]
     const outerFirst = Math.random() < 0.5 ? 0 : 2
     const outerSecond = outerFirst === 0 ? 2 : 0
