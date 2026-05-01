@@ -180,7 +180,7 @@ function getZone(zones: ZoneDef[], deg: number, rotation = 0): ZoneDef {
 // ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 function DialSVG({
-  zones, angle, rotation = 0, needleColor, zoneOpacityFn, onFire = false,
+  zones, angle, rotation = 0, needleColor, zoneOpacityFn, onFire = false, snapKey = 0,
 }: {
   zones: ZoneDef[]
   angle: number
@@ -188,10 +188,34 @@ function DialSVG({
   needleColor: string
   zoneOpacityFn: (z: ZoneDef) => number
   onFire?: boolean
+  snapKey?: number
 }) {
   const needleTipY  = CY - (INNER_R - 8)
   const perfectZone = zones.find(z => z.type === 'perfect')
   const penaltyZones = zones.filter(z => z.type === 'penalty')
+
+  // Snap/bounce on reel-in tap
+  const [snapAnim, setSnapAnim] = useState(false)
+  const prevSnapRef = useRef(snapKey)
+  useEffect(() => {
+    if (snapKey > 0 && snapKey !== prevSnapRef.current) {
+      prevSnapRef.current = snapKey
+      setSnapAnim(true)
+      setTimeout(() => setSnapAnim(false), 350)
+    }
+  }, [snapKey])
+
+  // Zone transition flash
+  const prevNeedleColorRef = useRef(needleColor)
+  const [flashKey, setFlashKey] = useState(0)
+  const [flashColor, setFlashColor] = useState(needleColor)
+  useEffect(() => {
+    if (needleColor !== prevNeedleColorRef.current && needleColor !== 'rgba(255,255,255,0.3)') {
+      setFlashColor(needleColor)
+      setFlashKey(k => k + 1)
+    }
+    prevNeedleColorRef.current = needleColor
+  }, [needleColor])
 
   return (
     <div style={{
@@ -200,6 +224,13 @@ function DialSVG({
       transition: 'filter 0.4s ease',
     }}>
       <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block', overflow: 'visible' }}>
+        <defs>
+          <radialGradient id="innerGrad" cx="50%" cy="45%" r="50%">
+            <stop offset="0%"   stopColor="#1e2d3e" stopOpacity="1" />
+            <stop offset="55%"  stopColor="#0d1a26" stopOpacity="1" />
+            <stop offset="100%" stopColor="#050c14" stopOpacity="1" />
+          </radialGradient>
+        </defs>
         <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke={onFire ? '#f97316' : 'rgba(255,255,255,0.12)'} strokeWidth="1" />
         <g transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
@@ -230,13 +261,26 @@ function DialSVG({
             return <text key={i} x={mid.x.toFixed(2)} y={mid.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill={pz.color} fontSize="9" opacity="0.85">✕</text>
           })}
         </g>
-        <circle cx={CX} cy={CY} r={INNER_R - 2} fill="rgba(6,14,22,0.97)" />
+        {/* Zone transition flash */}
+        {flashKey > 0 && (
+          <motion.circle key={flashKey} cx={CX} cy={CY} r={OUTER_R - 4}
+            fill={flashColor}
+            initial={{ fillOpacity: 0.28 }} animate={{ fillOpacity: 0 }}
+            transition={{ duration: 0.28, ease: 'easeOut' }}
+          />
+        )}
+        <circle cx={CX} cy={CY} r={INNER_R - 2} fill="url(#innerGrad)" />
         <g transform={`rotate(${angle}, ${CX}, ${CY})`}>
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={needleColor} strokeWidth="10" strokeOpacity="0.12" strokeLinecap="round" />
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={needleColor} strokeWidth="2.5" strokeLinecap="round" />
           <circle cx={CX} cy={needleTipY} r="5" fill={needleColor} />
         </g>
-        <circle cx={CX} cy={CY} r="8" fill="rgba(10,10,10,0.9)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
+        <motion.circle cx={CX} cy={CY} r="8"
+          fill="rgba(10,10,10,0.9)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"
+          animate={snapAnim ? { scale: [1, 1.8, 0.7, 1.15, 1] } : { scale: 1 }}
+          transition={{ duration: 0.32, ease: 'easeOut' }}
+          style={{ transformOrigin: `${CX}px ${CY}px` }}
+        />
 
         {/* Fire effects */}
         {onFire && (() => {
@@ -1097,6 +1141,7 @@ export default function FishingGame({
   const [perfectStreak, setPerfectStreak] = useState(0)
   const [highestPerfectStreak, setHighestPerfectStreak] = useState(initialHighestPerfectStreak)
   const [showStreak, setShowStreak] = useState(true)
+  const [snapKey, setSnapKey] = useState(0)
   const [newStreakRecord, setNewStreakRecord] = useState<number | null>(null)
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
@@ -1324,6 +1369,7 @@ export default function FishingGame({
   // Phase 2 — reel in
   function handleReelIn() {
     if (phase !== 'catching' || !hookedFishRef.current) return
+    setSnapKey(k => k + 1)
     if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
 
     const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
@@ -1857,7 +1903,8 @@ export default function FishingGame({
                     </motion.div>
                   )}
                   <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}
-                    needleColor={needleColor()} zoneOpacityFn={zoneOpacity} onFire={perfectStreak >= 3} />
+                    needleColor={needleColor()} zoneOpacityFn={zoneOpacity} onFire={perfectStreak >= 3}
+                    snapKey={snapKey} />
                 </motion.div>
               )}
 
