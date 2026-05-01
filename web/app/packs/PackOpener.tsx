@@ -243,19 +243,20 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
 
   if (phase === 'idle') {
     return (
-      <div
-        className="flex flex-col gap-8 w-full max-w-sm"
-        style={{
-          background: 'rgba(8,8,6,0.82)',
-          border: '1px solid rgba(255,255,255,0.16)',
-          borderRadius: 20,
-          padding: '2rem 1.75rem',
-        }}
-      >
+      <div style={{
+        background: 'rgba(8,8,6,0.82)',
+        border: '1px solid rgba(255,255,255,0.16)',
+        borderRadius: 20,
+        padding: '2.5rem 2rem',
+        width: '100%',
+        maxWidth: 360,
+        display: 'grid',
+        gap: '1.5rem',
+      }}>
         {/* Crew Notices count */}
-        <div className="flex flex-col items-center gap-1 text-center">
-          <p className="font-cinzel font-700" style={{ fontSize: '3.5rem', lineHeight: 1, color: '#f0ede8' }}>{packs}</p>
-          <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
+        <div style={{ textAlign: 'center' }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '4rem', lineHeight: 1, color: '#f0ede8' }}>{packs}</p>
+          <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: 4 }}>
             Crew Notice{packs !== 1 ? 's' : ''}
           </p>
         </div>
@@ -266,28 +267,29 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
             ref={packButtonRef}
             onClick={openPack}
             disabled={loading}
-            className="select-none w-full"
             style={{
+              display: 'block',
+              width: '100%',
               background: 'rgba(240,192,64,0.12)',
               border: '1px solid rgba(240,192,64,0.45)',
-              borderRadius: '1rem',
-              padding: '1.25rem 2rem',
+              borderRadius: 14,
+              padding: '1.1rem',
               cursor: loading ? 'default' : 'pointer',
               opacity: loading ? 0.6 : 1,
-              transition: 'transform 0.15s ease, background 0.15s ease',
-              animation: 'pack-pulse 2s ease-in-out infinite',
               textAlign: 'center',
+              transition: 'transform 0.15s ease',
+              animation: 'pack-pulse 2s ease-in-out infinite',
             }}
             onPointerEnter={e => { if (e.pointerType !== 'touch' && !loading) e.currentTarget.style.transform = 'translateY(-3px)' }}
             onPointerLeave={e => { e.currentTarget.style.transform = '' }}
           >
-            <p className="font-cinzel font-700 uppercase tracking-[0.14em] text-center" style={{ fontSize: '1rem', color: '#f0c040' }}>
+            <span className="font-cinzel font-700 uppercase tracking-[0.14em]" style={{ fontSize: '1rem', color: '#f0c040' }}>
               {loading ? 'Recruiting…' : 'Recruit Crew'}
-            </p>
+            </span>
           </button>
         ) : (
-          <div className="flex flex-col items-center gap-3 text-center">
-            <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.8rem' }}>No Crew Notices remaining.</p>
+          <div style={{ textAlign: 'center', display: 'grid', gap: '0.75rem' }}>
+            <p className="font-karla" style={{ fontSize: '0.8rem', color: '#6a6764' }}>No Crew Notices remaining.</p>
             <a href="/tavern" className="btn-ghost" style={{ fontSize: '0.75rem' }}>Back to Tavern</a>
             <a href="/redeem" className="font-karla font-600 uppercase tracking-[0.12em] transition-colors" style={{ fontSize: '0.65rem', color: '#f0c040' }}>
               Redeem a Code
@@ -296,22 +298,22 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
         )}
 
         {/* Gem balance + buy buttons */}
-        <div className="flex flex-col items-center gap-2">
-          <p className="font-cinzel font-700 text-sm tracking-wide" style={{ color: '#a78bfa' }}>{gems.toLocaleString()} ◆</p>
-          <div className="flex gap-2">
+        <div style={{ textAlign: 'center', display: 'grid', gap: '0.5rem' }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.875rem', color: '#a78bfa' }}>{gems.toLocaleString()} ◆</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
             <button
               onClick={() => gems >= 100 && handleBuyWithGems(1)}
               disabled={buyingWithGems}
-              className="btn-ghost text-xs transition-opacity"
-              style={{ opacity: gems >= 100 ? 1 : 0.35, cursor: gems >= 100 ? 'pointer' : 'default' }}
+              className="btn-ghost"
+              style={{ fontSize: '0.72rem', opacity: gems >= 100 ? 1 : 0.35, cursor: gems >= 100 ? 'pointer' : 'default' }}
             >
               {buyingWithGems ? '…' : 'Buy 1 · 100 ◆'}
             </button>
             <button
               onClick={() => gems >= 900 && handleBuyWithGems(10)}
               disabled={buyingWithGems}
-              className="btn-ghost text-xs transition-opacity"
-              style={{ opacity: gems >= 900 ? 1 : 0.35, cursor: gems >= 900 ? 'pointer' : 'default' }}
+              className="btn-ghost"
+              style={{ fontSize: '0.72rem', opacity: gems >= 900 ? 1 : 0.35, cursor: gems >= 900 ? 'pointer' : 'default' }}
             >
               Buy 10 · 900 ◆
             </button>
