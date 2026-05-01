@@ -1143,9 +1143,10 @@ export default function FishingGame({
   const speedRef        = useRef(0)
   const dirRef          = useRef(1)
   const phaseRef        = useRef<Phase>('idle')
-  const animRef         = useRef<ReturnType<typeof setInterval> | null>(null)
-  const tickRef         = useRef(0)
-  const nextChgRef      = useRef(40)
+  const animRef         = useRef<number | null>(null)
+  const lastTimeRef     = useRef(0)
+  const elapsedMsRef    = useRef(0)
+  const nextChgMsRef    = useRef(0)
   const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number } | null>(null)
   const selectedBaitRef = useRef(selectedBait)
   const frameRefs       = useRef<Partial<Record<SceneFrame, HTMLImageElement>>>({})
@@ -1194,7 +1195,7 @@ export default function FishingGame({
   // Needle animation during catching phase
   useEffect(() => {
     if (phase !== 'catching' || !hookedFish) {
-      if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
+      if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
       return
     }
     const diffSpeed = FISH_DIFFICULTY_SPEED[Math.max(0, Math.min(4, hookedFish.catchDifficulty - 1))]
@@ -1203,15 +1204,21 @@ export default function FishingGame({
     const baseMax = diffSpeed.speedMax * reel.needleSpeedMultiplier
     const capturedZoneRotation = zoneRotation
 
-    speedRef.current = baseMin + Math.random() * (baseMax - baseMin)
-    tickRef.current = 0
-    nextChgRef.current = zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))
+    speedRef.current   = baseMin + Math.random() * (baseMax - baseMin)
+    lastTimeRef.current  = 0
+    elapsedMsRef.current = 0
+    nextChgMsRef.current = (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
 
-    animRef.current = setInterval(() => {
+    const tick = (timestamp: number) => {
       if (phaseRef.current !== 'catching') return
-      angleRef.current = ((angleRef.current + dirRef.current * speedRef.current / 20) % 360 + 360) % 360
-      tickRef.current++
-      if (tickRef.current >= nextChgRef.current) {
+      if (lastTimeRef.current === 0) lastTimeRef.current = timestamp
+      const delta = Math.min(timestamp - lastTimeRef.current, 50) // cap to avoid jump on tab-refocus
+      lastTimeRef.current = timestamp
+      elapsedMsRef.current += delta
+
+      angleRef.current = ((angleRef.current + dirRef.current * speedRef.current * delta / 1000) % 360 + 360) % 360
+
+      if (elapsedMsRef.current >= nextChgMsRef.current) {
         speedRef.current = baseMin + Math.random() * (baseMax - baseMin)
         if (Math.random() < zoneDiff.reverseChance) {
           // Only reverse near the catch zone — not while drifting through dead space
@@ -1220,11 +1227,13 @@ export default function FishingGame({
           const dist = Math.min(Math.abs(catchCenter - needle), 360 - Math.abs(catchCenter - needle))
           if (dist <= 55) dirRef.current *= -1
         }
-        nextChgRef.current = tickRef.current + zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))
+        nextChgMsRef.current = elapsedMsRef.current + (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
       }
       setAngle(angleRef.current)
-    }, 50)
-    return () => { if (animRef.current) { clearInterval(animRef.current); animRef.current = null } }
+      animRef.current = requestAnimationFrame(tick)
+    }
+    animRef.current = requestAnimationFrame(tick)
+    return () => { if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null } }
   // retryKey increments on Second Wind retry to restart animation with fresh randomization
   }, [phase, hookedFish, reel.needleSpeedMultiplier, retryKey])
 
@@ -1307,7 +1316,7 @@ export default function FishingGame({
   // Phase 2 — reel in
   function handleReelIn() {
     if (phase !== 'catching' || !hookedFishRef.current) return
-    if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
+    if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
 
     const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
     const baitBonus = getBait(selectedBaitRef.current).catchZoneBonus
