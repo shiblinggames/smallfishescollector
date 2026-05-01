@@ -1053,7 +1053,7 @@ function FishInventory({ inventory, onSell }: {
 
 // ─── XPBar ───────────────────────────────────────────────────────────────────
 
-function XPBarDisplay({ xp }: { xp: number }) {
+function XPBarDisplay({ xp, bestStreak }: { xp: number; bestStreak?: number }) {
   const { level, progress, xpInLevel, xpForLevel } = getXPProgress(xp)
   const isMax = level >= MAX_LEVEL
   const fillPct = isMax ? 100 : progress * 100
@@ -1080,10 +1080,17 @@ function XPBarDisplay({ xp }: { xp: number }) {
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         />
       </div>
-      <p className="font-karla font-600 shrink-0"
-        style={{ fontSize: '0.6rem', color: isMax ? c : 'rgba(255,255,255,0.28)', textAlign: 'right', lineHeight: 1 }}>
-        {isMax ? 'MAX' : `${toGo.toLocaleString()} xp`}
-      </p>
+      <div className="shrink-0 flex items-center gap-2">
+        <p className="font-karla font-600"
+          style={{ fontSize: '0.6rem', color: isMax ? c : 'rgba(255,255,255,0.28)', textAlign: 'right', lineHeight: 1 }}>
+          {isMax ? 'MAX' : `${toGo.toLocaleString()} xp`}
+        </p>
+        {(bestStreak ?? 0) > 0 && (
+          <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: 'rgba(251,146,60,0.55)', lineHeight: 1 }}>
+            🔥{bestStreak}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
@@ -1159,7 +1166,6 @@ export default function FishingGame({
   const [challengeActive, setChallengeActive] = useState(false)
   const [perfectStreak, setPerfectStreak] = useState(0)
   const [highestPerfectStreak, setHighestPerfectStreak] = useState(initialHighestPerfectStreak)
-  const [showStreak, setShowStreak] = useState(true)
   const [snapKey, setSnapKey] = useState(0)
   const [castRippleKey, setCastRippleKey] = useState(0)
   const [reelRippleKey, setReelRippleKey] = useState(0)
@@ -1735,9 +1741,9 @@ export default function FishingGame({
           </div>
 
           {/* XP bar */}
-          <div style={{ marginBottom: highestPerfectStreak > 0 ? '0.25rem' : '0.6rem' }}>
+          <div style={{ marginBottom: '0.6rem' }}>
             <div style={{ position: 'relative' }}>
-              <XPBarDisplay xp={fishingXP} />
+              <XPBarDisplay xp={fishingXP} bestStreak={highestPerfectStreak} />
               <AnimatePresence>
                 {xpPopup && (
                   <motion.p
@@ -1760,29 +1766,6 @@ export default function FishingGame({
               </AnimatePresence>
             </div>
           </div>
-
-          {/* Best perfect streak — toggleable */}
-          {highestPerfectStreak > 0 && (
-            <button
-              onClick={() => setShowStreak(v => !v)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: '0.5rem', touchAction: 'manipulation' }}
-            >
-              {showStreak ? (
-                <div style={{ textAlign: 'center' }}>
-                  <p className="font-pirata" style={{ fontSize: '1.7rem', color: '#fb923c', textShadow: 'none', lineHeight: 1 }}>
-                    {highestPerfectStreak}
-                  </p>
-                  <p className="font-karla font-600 uppercase tracking-[0.18em]" style={{ fontSize: '0.42rem', color: 'rgba(255,255,255,0.9)', marginTop: 2 }}>
-                    best streak
-                  </p>
-                </div>
-              ) : (
-                <p className="font-karla font-600 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.75)' }}>
-                  streak
-                </p>
-              )}
-            </button>
-          )}
 
           {/* Challenge session strip */}
           {activeSession && !sessionDone && sessionSecondsLeft !== null && (
