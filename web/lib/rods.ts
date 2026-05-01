@@ -27,8 +27,8 @@ export const RODS: RodDef[] = [
   },
   {
     tier: 1, name: 'Driftwood Staff', cost: 1500,
-    description: 'Heavy and slow, but the wide tip gives you a much more forgiving catch window.',
-    color: '#b8956a', rarityBonus: 0, biteIntervalMs: 4500, catchZoneBonus: 10,
+    description: 'Heavy and slow, but the wide tip gives you a more forgiving catch window.',
+    color: '#b8956a', rarityBonus: 0, biteIntervalMs: 4500, catchZoneBonus: 8,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     imageUrl: '/driftwoodrod.png',
   },
@@ -54,9 +54,9 @@ export const RODS: RodDef[] = [
   },
   {
     tier: 5, name: 'Moonwood Staff', cost: 14000,
-    description: 'Carved from driftwood blessed by a full moon. The perfect zone is a little more forgiving.',
-    color: '#a78bfa', rarityBonus: 0, biteIntervalMs: 3800, catchZoneBonus: 0,
-    doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 2,
+    description: 'Carved from driftwood blessed by a full moon. Casts wide and true.',
+    color: '#a78bfa', rarityBonus: 0, biteIntervalMs: 3800, catchZoneBonus: 12,
+    doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
   },
   {
     tier: 6, name: 'Graphite Rod', cost: 22000,
