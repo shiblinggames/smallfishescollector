@@ -208,20 +208,6 @@ function DialSVG({
           ))}
           {perfectZone && (() => {
             const midDeg = (perfectZone.from + perfectZone.to) / 2
-            const haloSpan = 14
-            const haloFrom = midDeg - haloSpan / 2
-            const haloTo   = midDeg + haloSpan / 2
-
-            // Halo arc: wide soft gold glow behind the zone
-            const hRad = OUTER_R + 1
-            const hLa = 0
-            const hS = polar(hRad, haloFrom), hE = polar(hRad, haloTo)
-            const haloArcD = `M ${hS.x.toFixed(2)} ${hS.y.toFixed(2)} A ${hRad} ${hRad} 0 ${hLa} 1 ${hE.x.toFixed(2)} ${hE.y.toFixed(2)}`
-
-            // Outer glow stroke arc along top edge of zone
-            const gRad = OUTER_R + 3
-            const gS = polar(gRad, perfectZone.from + GAP), gE = polar(gRad, perfectZone.to - GAP)
-            const glowArcD = `M ${gS.x.toFixed(2)} ${gS.y.toFixed(2)} A ${gRad} ${gRad} 0 0 1 ${gE.x.toFixed(2)} ${gE.y.toFixed(2)}`
 
             // Bracket tick marks at edges, pointing inward toward the needle
             const tickOuter = INNER_R - 2, tickInner = INNER_R - 10
@@ -233,10 +219,6 @@ function DialSVG({
 
             return (
               <>
-                {/* Wide soft halo */}
-                <path d={haloArcD} fill="none" stroke="#fde68a" strokeWidth="12" strokeOpacity="0.12" strokeLinecap="round" />
-                {/* Bright outer glow arc */}
-                <path d={glowArcD} fill="none" stroke="#fde68a" strokeWidth="2.5" strokeOpacity="0.9" strokeLinecap="round" />
                 {/* Bracket ticks */}
                 <line x1={tL0.x.toFixed(2)} y1={tL0.y.toFixed(2)} x2={tL1.x.toFixed(2)} y2={tL1.y.toFixed(2)} stroke="#fde68a" strokeWidth="1.5" strokeOpacity="0.9" />
                 <line x1={tR0.x.toFixed(2)} y1={tR0.y.toFixed(2)} x2={tR1.x.toFixed(2)} y2={tR1.y.toFixed(2)} stroke="#fde68a" strokeWidth="1.5" strokeOpacity="0.9" />
