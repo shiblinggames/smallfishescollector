@@ -43,12 +43,13 @@ const ZONE_WAIT_BASE: Record<string, [number, number]> = {
   deep:        [8000,  35000],
   abyss:       [12000, 45000],
 }
-function fishWaitMs(catchScore: number, habitat: string, baitType: string): number {
+function fishWaitMs(catchScore: number, habitat: string, baitType: string, fishingLevel: number): number {
   const [zMin, zMax] = ZONE_WAIT_BASE[habitat] ?? [5000, 20000]
   const frac = Math.max(0, Math.min(1, (catchScore - 8) / 90))
   const base = zMin + frac * (zMax - zMin)
   const baitMult = getBait(baitType).waitMult
-  return Math.max(3000, Math.min(60000, base * baitMult))
+  const levelMult = 1 - ((fishingLevel - 1) / 99) * 0.25
+  return Math.max(3000, Math.min(60000, base * baitMult * levelMult))
 }
 
 // Two-stage fish selection:
@@ -153,7 +154,8 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const rod = getRod(profile.rod_tier ?? 0)
   const fish = tierWeightedPick(candidates, habitat, rod.rarityBonus)
-  const waitMs = fishWaitMs(fish.catch_score, habitat, baitType)
+  const fishingLevel = getLevelFromXP(profile.fishing_xp ?? 0)
+  const waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel)
 
   return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs }
 }
