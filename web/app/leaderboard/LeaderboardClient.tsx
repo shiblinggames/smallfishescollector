@@ -32,11 +32,6 @@ const TABS: { key: TabKey; label: string; accent: string }[] = [
   { key: 'fishSlots',     label: 'Fish Slots',     accent: '#34d399' },
 ]
 
-const PODIUM = [
-  { rank: 1, medal: '🥇', color: '#f0c040', size: 64, order: 1 },
-  { rank: 2, medal: '🥈', color: '#9ca3af', size: 52, order: 0 },
-  { rank: 3, medal: '🥉', color: '#cd7f32', size: 52, order: 2 },
-]
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
 function avatarColor(str: string) {
@@ -83,59 +78,43 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
         <p className="font-karla font-300 text-center py-10" style={{ color: '#4a4845', fontSize: '0.8rem' }}>No entries yet.</p>
       )}
 
-      {/* Top 3 podium */}
+      {/* Top 3 */}
       {top3.length > 0 && (
-        <div className="flex items-end justify-center gap-3 mb-6" style={{ minHeight: 160 }}>
-          {PODIUM.filter(p => top3[p.rank - 1]).map(p => {
-            const entry = top3[p.rank - 1]
+        <div style={{
+          background: 'rgba(4,10,20,0.6)', border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 14, overflow: 'hidden', marginBottom: 6,
+        }}>
+          {top3.map((entry, i) => {
+            const rank = i + 1
             const isMe = entry.user_id === currentUserId
-            const podiumHeight = p.rank === 1 ? 110 : 88
+            const medal = ['🥇','🥈','🥉'][i]
+            const rankColor = [accent, '#9ca3af', '#cd7f32'][i]
             return (
               <Link
-                key={p.rank}
+                key={entry.user_id}
                 href={`/u/${entry.username}`}
                 style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  gap: 8, textDecoration: 'none', flex: 1,
-                  order: p.order,
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '0.8rem 1rem',
+                  borderBottom: i < top3.length - 1 ? `1px solid rgba(255,255,255,0.05)` : 'none',
+                  borderLeft: `3px solid ${rankColor}`,
+                  background: isMe ? `${accent}0d` : 'transparent',
+                  textDecoration: 'none',
                 }}
               >
-                <div style={{ position: 'relative' }}>
-                  <Avatar username={entry.username} size={p.size} />
-                  <span style={{
-                    position: 'absolute', bottom: -4, right: -4,
-                    fontSize: p.rank === 1 ? '1.1rem' : '0.9rem', lineHeight: 1,
-                  }}>{p.medal}</span>
-                </div>
-
-                <div style={{ textAlign: 'center' }}>
-                  <p className="font-karla font-700 truncate" style={{
-                    fontSize: p.rank === 1 ? '0.82rem' : '0.72rem',
-                    color: isMe ? accent : '#f0ede8',
-                    maxWidth: 80,
-                  }}>
-                    {entry.username}
-                    {isMe && <span style={{ color: accent, fontSize: '0.55rem', marginLeft: 3 }}>you</span>}
-                  </p>
-                  <p className="font-cinzel font-700" style={{ fontSize: p.rank === 1 ? '1.0rem' : '0.82rem', color: p.color, lineHeight: 1.1, marginTop: 2 }}>
+                <span style={{ fontSize: rank === 1 ? '1.3rem' : '1.1rem', lineHeight: 1, flexShrink: 0 }}>{medal}</span>
+                <Avatar username={entry.username} size={rank === 1 ? 36 : 28} />
+                <p className="flex-1 font-karla font-700 truncate" style={{ fontSize: rank === 1 ? '0.88rem' : '0.8rem', color: isMe ? '#f0ede8' : '#c8c8c2' }}>
+                  {entry.username}
+                  {isMe && <span style={{ color: accent, fontSize: '0.55rem', marginLeft: 6 }}>you</span>}
+                </p>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: rank === 1 ? '0.95rem' : '0.78rem', color: rankColor }}>
                     {unit(entry.score)}
                   </p>
-                  <p className="font-karla font-400" style={{ fontSize: '0.5rem', color: p.color + '88', marginTop: 1 }}>
+                  <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: rankColor + '77' }}>
                     {subUnit(entry.score)}
                   </p>
-                </div>
-
-                <div style={{
-                  width: '100%', height: podiumHeight, borderRadius: '8px 8px 0 0',
-                  background: `linear-gradient(180deg, ${p.color}40 0%, ${p.color}18 100%)`,
-                  border: `1px solid ${p.color}60`,
-                  borderBottom: 'none',
-                  display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-                  paddingTop: 8,
-                }}>
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: p.color + '99' }}>
-                    #{p.rank}
-                  </span>
                 </div>
               </Link>
             )
