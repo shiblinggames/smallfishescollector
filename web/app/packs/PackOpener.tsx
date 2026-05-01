@@ -192,14 +192,16 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
 
   function flipAll() {
     cards.forEach((_, i) => resetTilt(i))
+    const lastIdx = cards.length - 1
     cards.forEach((card, i) => {
+      const delay = i * 480 + (i === lastIdx ? 500 : 0)
       setTimeout(() => {
         const rarity = rarityFromVariant(card.variantName, card.dropWeight)
         triggerFlash(rarity)
         setGlowClasses(prev => { const n = [...prev]; n[i] = glowClassFor(rarity); return n })
         checkPrize(card)
         setFlipped(prev => { const n = [...prev]; n[i] = true; return n })
-      }, i * 480)
+      }, delay)
     })
     setTimeout(() => {
       setPhase('done')
@@ -207,7 +209,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
         setAchievementKeys(pendingAchievements.current)
         pendingAchievements.current = []
       }
-    }, (cards.length - 1) * 480 + 700)
+    }, lastIdx * 480 + 500 + 700)
   }
 
   function reset() {
