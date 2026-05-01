@@ -1810,6 +1810,7 @@ export default function FishingGame({
                           initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.15 }}
                           style={{
+                            position: 'relative',
                             background: 'rgba(4,10,18,0.52)',
                             border: '1px solid rgba(255,255,255,0.08)',
                             borderRadius: 20,
@@ -1822,6 +1823,14 @@ export default function FishingGame({
                              selectedZone === 'open_waters' ? 'Drifting on the open sea…' :
                                                               'Waiting for a bite…'}
                           </p>
+                          <div style={{
+                            position: 'absolute', bottom: -7, left: '50%',
+                            transform: 'translateX(-50%) rotate(45deg)',
+                            width: 12, height: 12,
+                            background: 'rgba(4,10,18,0.52)',
+                            borderRight: '1px solid rgba(255,255,255,0.08)',
+                            borderBottom: '1px solid rgba(255,255,255,0.08)',
+                          }} />
                         </motion.div>
                       )}
 
@@ -1835,6 +1844,7 @@ export default function FishingGame({
                             exit={{ opacity: 0, scale: 0.95 }}
                             transition={{ type: 'spring', stiffness: 380, damping: 22 }}
                             style={{
+                              position: 'relative',
                               background: 'rgba(4,10,18,0.52)',
                               border: `1px solid ${r.color}40`,
                               borderRadius: 20,
@@ -1862,6 +1872,14 @@ export default function FishingGame({
                             >
                               {r.hookedText}
                             </motion.p>
+                            <div style={{
+                              position: 'absolute', bottom: -7, left: '50%',
+                              transform: 'translateX(-50%) rotate(45deg)',
+                              width: 12, height: 12,
+                              background: 'rgba(4,10,18,0.52)',
+                              borderRight: `1px solid ${r.color}40`,
+                              borderBottom: `1px solid ${r.color}40`,
+                            }} />
                           </motion.div>
                         )
                       })()}
