@@ -7,6 +7,7 @@ const SUPABASE_BG = 'https://pwvndjczpdcttmyvnsyq.supabase.co/storage/v1/object/
 type BgConfig = { src: string; overlay: string }
 
 const ROUTE_BG: [string, BgConfig][] = [
+  ['/leaderboard',             { src: '/leaderboardbackground.jpeg', overlay: 'rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
   ['/packs',                   { src: '/crewopeningbackground.jpg', overlay: 'rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0.88) 100%' }],
   ['/tavern/crown-and-anchor', { src: '/gamesbackground.jpg',      overlay: 'rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.72) 50%, rgba(0,0,0,0.88) 100%' }],
   ['/tavern/slots',            { src: '/gamesbackground.jpg',      overlay: 'rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.72) 50%, rgba(0,0,0,0.88) 100%' }],
