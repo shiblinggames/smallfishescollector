@@ -81,14 +81,14 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
       {/* Top 3 */}
       {top3.length > 0 && (
         <div style={{
-          background: 'rgba(4,10,20,0.6)', border: '1px solid rgba(255,255,255,0.08)',
+          background: 'rgba(4,10,20,0.82)', border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: 14, overflow: 'hidden', marginBottom: 6,
         }}>
           {top3.map((entry, i) => {
             const rank = i + 1
             const isMe = entry.user_id === currentUserId
             const medal = ['🥇','🥈','🥉'][i]
-            const rankColor = [accent, '#9ca3af', '#cd7f32'][i]
+            const rankColor = ['#f0c040', '#9ca3af', '#cd7f32'][i]
             return (
               <Link
                 key={entry.user_id}
@@ -125,7 +125,7 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
       {/* Ranks 4+ */}
       {rest.length > 0 && (
         <div style={{
-          background: 'rgba(4,10,20,0.6)', border: '1px solid rgba(255,255,255,0.08)',
+          background: 'rgba(4,10,20,0.82)', border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: 14, overflow: 'hidden',
         }}>
           {rest.map((entry, i) => {
