@@ -1137,6 +1137,7 @@ export default function FishingGame({
   const [showStreak, setShowStreak] = useState(true)
   const [snapKey, setSnapKey] = useState(0)
   const [castRippleKey, setCastRippleKey] = useState(0)
+  const [reelRippleKey, setReelRippleKey] = useState(0)
   const [newStreakRecord, setNewStreakRecord] = useState<number | null>(null)
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
@@ -1360,6 +1361,7 @@ export default function FishingGame({
   async function handleCast() {
     if (phase !== 'idle') return
     setCastRippleKey(k => k + 1)
+    setTimeout(() => setCastRippleKey(0), 1000)
     await doCast()
   }
 
@@ -1367,6 +1369,8 @@ export default function FishingGame({
   async function handleReelIn() {
     if (phase !== 'catching' || !hookedFishRef.current) return
     setSnapKey(k => k + 1)
+    setReelRippleKey(k => k + 1)
+    setTimeout(() => setReelRippleKey(0), 1000)
     if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
 
     const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
@@ -1547,6 +1551,7 @@ export default function FishingGame({
 
   async function handleCastAgain() {
     setCastRippleKey(k => k + 1)
+    setTimeout(() => setCastRippleKey(0), 1000)
     setCatchResult(null)
     setMissResult(null)
     setHookedFish(null)
@@ -2044,8 +2049,8 @@ export default function FishingGame({
                   whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                 >
-                  {snapKey > 0 && [0, 150].map((delay, i) => (
-                    <motion.span key={`${snapKey}-${i}`} style={{ position: 'absolute', borderRadius: '50%', width: '100%', height: '100%', border: '1.5px solid rgba(240,192,64,0.7)', background: 'transparent', pointerEvents: 'none' }}
+                  {reelRippleKey > 0 && [0, 150].map((delay, i) => (
+                    <motion.span key={`${reelRippleKey}-${i}`} style={{ position: 'absolute', borderRadius: '50%', width: '100%', height: '100%', border: '1.5px solid rgba(240,192,64,0.7)', background: 'transparent', pointerEvents: 'none' }}
                       initial={{ scale: 1, opacity: 0.7 }} animate={{ scale: 2.4, opacity: 0 }}
                       transition={{ duration: 0.7, ease: 'easeOut', delay: delay / 1000 }}
                     />
