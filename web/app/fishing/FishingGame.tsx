@@ -194,13 +194,15 @@ function DialSVG({
   const perfectZone = zones.find(z => z.type === 'perfect')
   const penaltyZones = zones.filter(z => z.type === 'penalty')
 
-  // Snap/bounce on reel-in tap
+  // Snap/bounce + ripple on reel-in tap
   const [snapAnim, setSnapAnim] = useState(false)
+  const [rippleKey, setRippleKey] = useState(0)
   const prevSnapRef = useRef(snapKey)
   useEffect(() => {
     if (snapKey > 0 && snapKey !== prevSnapRef.current) {
       prevSnapRef.current = snapKey
       setSnapAnim(true)
+      setRippleKey(k => k + 1)
       setTimeout(() => setSnapAnim(false), 350)
     }
   }, [snapKey])
@@ -222,6 +224,22 @@ function DialSVG({
           </radialGradient>
         </defs>
         <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke={onFire ? '#f97316' : 'rgba(255,255,255,0.12)'} strokeWidth="1" />
+        {/* Outer ring tick marks — fixed, not rotating */}
+        {Array.from({ length: 36 }, (_, i) => {
+          const deg = i * 10
+          const outer = polar(OUTER_R + 4, deg)
+          const inner = polar(OUTER_R - 2, deg)
+          const isMajor = i % 3 === 0
+          return (
+            <line key={i}
+              x1={outer.x.toFixed(2)} y1={outer.y.toFixed(2)}
+              x2={inner.x.toFixed(2)} y2={inner.y.toFixed(2)}
+              stroke="rgba(255,255,255,0.22)"
+              strokeWidth={isMajor ? 1.2 : 0.7}
+              strokeLinecap="round"
+            />
+          )
+        })}
         <g transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
             <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
@@ -253,6 +271,15 @@ function DialSVG({
         </g>
 
         <circle cx={CX} cy={CY} r={INNER_R - 2} fill="url(#innerGrad)" />
+        {/* Reel-in ripple */}
+        {rippleKey > 0 && [0, 120].map((delay, i) => (
+          <motion.circle key={`${rippleKey}-${i}`} cx={CX} cy={CY}
+            fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5"
+            initial={{ r: 8, strokeOpacity: 0.55 }}
+            animate={{ r: INNER_R - 4, strokeOpacity: 0 }}
+            transition={{ duration: 0.55, ease: 'easeOut', delay: delay / 1000 }}
+          />
+        ))}
         <g transform={`rotate(${angle}, ${CX}, ${CY})`}>
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={needleColor} strokeWidth="10" strokeOpacity="0.12" strokeLinecap="round" />
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={needleColor} strokeWidth="2.5" strokeLinecap="round" />
