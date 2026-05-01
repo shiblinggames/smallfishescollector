@@ -78,21 +78,27 @@ export default function RecruitCard({ packsAvailable }: Props) {
       </p>
 
       {/* Divider */}
-      <div style={{ height: 1, background: 'rgba(200,168,112,0.1)', marginBottom: '0.85rem' }} />
+      <div style={{ height: 1, background: 'rgba(200,168,112,0.1)', marginBottom: '1rem' }} />
 
-      {/* Info bullets */}
-      <ul className="flex flex-col gap-1.5">
-        {[
-          'Use Crew Notices to recruit new crew members',
-          'Each notice draws 4 cards — Common through Mythic',
-          'Earn notices through bounties, daily bonuses, and the shop',
-        ].map((item, i) => (
-          <li key={i} className="flex items-start gap-2">
-            <span style={{ color: 'rgba(200,168,112,0.5)', fontSize: '0.4rem', lineHeight: '1.9rem', flexShrink: 0 }}>✦</span>
-            <span className="font-karla" style={{ fontSize: '0.72rem', color: '#6a6258', lineHeight: 1.55 }}>{item}</span>
-          </li>
+      {/* 4 mini card backs */}
+      <div className="flex justify-center items-end gap-2">
+        {[-9, -3, 3, 9].map((deg, i) => (
+          <div
+            key={i}
+            style={{
+              width: 48, height: 68,
+              borderRadius: 6,
+              overflow: 'hidden',
+              border: '1px solid rgba(200,168,112,0.25)',
+              transform: `rotate(${deg}deg)`,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+              flexShrink: 0,
+            }}
+          >
+            <img src="/cardbacknew.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   )
 }
