@@ -1704,7 +1704,7 @@ export default function FishingGame({
           {/* Best perfect streak */}
           {highestPerfectStreak > 0 && (
             <div style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
-              <p className="font-karla font-800" style={{ fontSize: '1.75rem', fontStyle: 'italic', color: '#fb923c', textShadow: '0 0 18px rgba(251,146,60,0.65)', lineHeight: 1 }}>
+              <p className="font-pirata" style={{ fontSize: '2.2rem', color: '#fb923c', textShadow: '0 0 18px rgba(251,146,60,0.65)', lineHeight: 1 }}>
                 {highestPerfectStreak}
               </p>
               <p className="font-karla font-600 uppercase tracking-[0.18em]" style={{ fontSize: '0.42rem', color: 'rgba(255,255,255,0.9)', marginTop: 2 }}>
