@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import type { ShipStats } from '@/lib/expeditions'
+import { RARITY_COLORS } from '@/lib/expeditions'
 import { saveCrew } from './actions'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
