@@ -1058,26 +1058,31 @@ function XPBarDisplay({ xp }: { xp: number }) {
   const isMax = level >= MAX_LEVEL
   const fillPct = isMax ? 100 : progress * 100
   const toGo = xpForLevel - xpInLevel
+  const c = isMax ? '#f0c040' : '#60a5fa'
 
   return (
-    <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl"
-      style={{ background: 'rgba(4,10,18,0.72)', border: '1px solid rgba(255,255,255,0.09)' }}>
-      <p className="font-karla font-700 shrink-0"
-        style={{ fontSize: '0.72rem', color: '#60a5fa' }}>
-        Lvl {level}
-      </p>
-      <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
+    <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
+      style={{ background: 'rgba(4,10,18,0.72)', border: `1px solid ${c}28` }}>
+      <div className="shrink-0 flex items-baseline gap-0.5">
+        <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: c + '77', letterSpacing: '0.08em' }}>LV</span>
+        <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: c, lineHeight: 1 }}>{level}</span>
+      </div>
+      <div style={{ flex: 1, height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
         <motion.div
           key={level}
-          style={{ height: '100%', borderRadius: 3, background: isMax ? '#f0c040' : '#60a5fa' }}
+          style={{
+            height: '100%', borderRadius: 4,
+            background: `linear-gradient(90deg, ${c}88 0%, ${c} 100%)`,
+            boxShadow: `0 0 10px ${c}70`,
+          }}
           initial={{ width: '0%' }}
           animate={{ width: `${fillPct}%` }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         />
       </div>
       <p className="font-karla font-600 shrink-0"
-        style={{ fontSize: '0.62rem', color: isMax ? '#f0c040' : 'rgba(255,255,255,0.4)', minWidth: '5rem', textAlign: 'right' }}>
-        {isMax ? 'Max level' : `${toGo} xp to go`}
+        style={{ fontSize: '0.6rem', color: isMax ? c : 'rgba(255,255,255,0.28)', textAlign: 'right', lineHeight: 1 }}>
+        {isMax ? 'MAX' : `${toGo.toLocaleString()} xp`}
       </p>
     </div>
   )
