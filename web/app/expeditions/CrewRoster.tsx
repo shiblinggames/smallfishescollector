@@ -54,13 +54,12 @@ function CardThumb({ card, onClick, dim, active, pickerMode }: {
       />
       {/* Bottom label */}
       <div style={{ padding: '0.3rem 0.4rem 0.35rem', background: 'rgba(4,5,8,0.92)' }}>
-        <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.52rem', color: '#f0ede8', lineHeight: 1.2, marginBottom: 2 }}>{card.name}</p>
-        <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.42rem', color: rarityColor, lineHeight: 1 }}>{card.rarity}</p>
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: 3 }}>
+        <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.52rem', color: '#f0ede8', lineHeight: 1.2, marginBottom: 4 }}>{card.name}</p>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
           {STAT_COLS.map(s => (
             <div key={s.key} style={{ textAlign: 'center', flex: 1 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.58rem', color: s.color, lineHeight: 1 }}>{card[s.key]}</p>
-              <p style={{ fontSize: '0.36rem', color: '#4a4845', lineHeight: 1, marginTop: 1 }}>{s.symbol}</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: s.color, lineHeight: 1 }}>{card[s.key]}</p>
+              <p style={{ fontSize: '0.38rem', color: '#5a5856', lineHeight: 1, marginTop: 2 }}>{s.symbol}</p>
             </div>
           ))}
         </div>
@@ -368,6 +367,9 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
                     <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>
                       {pickerSlot === 0 ? 'Assign Captain' : 'Assign Crew Member'}
                     </p>
+                    {pickerSlot === 0 && (
+                      <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: '#6a6764', marginTop: 4 }}>Captain gets full stats · others get ×0.8</p>
+                    )}
                   </>
                 ) : (
                   <>
