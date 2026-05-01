@@ -49,10 +49,10 @@ const artImageClass: Record<ArtEffect, string> = {
 function StatCell({ label, value }: { label: string; value: number }) {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5cqw' }}>
-      <span className="font-karla font-700 uppercase" style={{ fontSize: '7cqw', color: '#5a4a30', letterSpacing: '0.06em' }}>
+      <span className="font-karla font-700 uppercase" style={{ fontSize: '6cqw', color: '#5a4a30', letterSpacing: '0.06em' }}>
         {label}
       </span>
-      <span className="font-cinzel font-700" style={{ fontSize: '14cqw', color: '#1a1008', lineHeight: 1 }}>
+      <span className="font-cinzel font-700" style={{ fontSize: '12cqw', color: '#1a1008', lineHeight: 1 }}>
         {value}
       </span>
     </div>
@@ -66,7 +66,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
 
   const rarity = (variantName && dropWeight != null) ? rarityFromVariant(variantName, dropWeight) : null
   const rarityColor = rarity ? (RARITY_COLOR[rarity] ?? '#a0a09a') : null
-  const nameFontSize = name.length > 15 ? '9.5cqw' : '12cqw'
+  const nameFontSize = name.length > 15 ? '7cqw' : name.length > 10 ? '8.5cqw' : '10cqw'
 
   let frame: React.ReactNode
 
@@ -117,12 +117,12 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
         )}
 
         {/* Bottom text: name + rarity + stats — strictly bottom 40% */}
-        <div className="absolute left-0 right-0 bottom-0 pointer-events-none overflow-hidden" style={{ height: '40%', zIndex: 6, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '0 8%', gap: '1.5cqw' }}>
+        <div className="absolute left-0 right-0 bottom-0 pointer-events-none overflow-hidden" style={{ height: '40%', zIndex: 6, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '0 8% 4%', gap: '1cqw' }}>
           <p className="font-cinzel font-700 text-center w-full" style={{ fontSize: nameFontSize, color: '#1a1008', letterSpacing: '0.04em', lineHeight: 1.1 }}>
             {name}
           </p>
           {rarity && (
-            <p className="font-karla font-700 text-center uppercase tracking-[0.12em]" style={{ fontSize: '7.5cqw', color: rarityColor!, textShadow: '0 1px 3px rgba(0,0,0,0.35)' }}>
+            <p className="font-karla font-700 text-center uppercase tracking-[0.12em]" style={{ fontSize: '6.5cqw', color: rarityColor!, textShadow: '0 1px 3px rgba(0,0,0,0.35)' }}>
               {rarity}
             </p>
           )}
