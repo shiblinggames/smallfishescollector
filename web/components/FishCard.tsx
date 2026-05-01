@@ -48,11 +48,11 @@ const artImageClass: Record<ArtEffect, string> = {
 
 function StatCell({ label, value }: { label: string; value: number }) {
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1cqw' }}>
-      <span className="font-karla font-700 uppercase" style={{ fontSize: '8.5cqw', color: '#5a4a30', letterSpacing: '0.06em' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5cqw' }}>
+      <span className="font-karla font-700 uppercase" style={{ fontSize: '7cqw', color: '#5a4a30', letterSpacing: '0.06em' }}>
         {label}
       </span>
-      <span className="font-cinzel font-700" style={{ fontSize: '19cqw', color: '#1a1008', lineHeight: 1 }}>
+      <span className="font-cinzel font-700" style={{ fontSize: '14cqw', color: '#1a1008', lineHeight: 1 }}>
         {value}
       </span>
     </div>
@@ -66,7 +66,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
 
   const rarity = (variantName && dropWeight != null) ? rarityFromVariant(variantName, dropWeight) : null
   const rarityColor = rarity ? (RARITY_COLOR[rarity] ?? '#a0a09a') : null
-  const nameFontSize = name.length > 15 ? '11cqw' : '16cqw'
+  const nameFontSize = name.length > 15 ? '9.5cqw' : '12cqw'
 
   let frame: React.ReactNode
 
@@ -86,8 +86,8 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/cardfront2.png" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }} />
 
-        {/* Fish art — inset to stay within card border */}
-        <div className="absolute overflow-hidden" style={{ inset: '4% 5% 0 5%', zIndex: 2 }}>
+        {/* Fish art — top 60% only */}
+        <div className="absolute overflow-hidden" style={{ inset: '4% 5% 40% 5%', zIndex: 2 }}>
           <Image
             src={src}
             alt={name}
@@ -116,18 +116,18 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
           </div>
         )}
 
-        {/* Bottom text: name + rarity + stats */}
-        <div className="absolute left-0 right-0 pointer-events-none" style={{ zIndex: 6, bottom: '8%', padding: '4px 10px 0' }}>
-          <p className="font-cinzel font-700 text-center" style={{ fontSize: nameFontSize, color: '#1a1008', marginBottom: '1cqw', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
+        {/* Bottom text: name + rarity + stats — strictly bottom 40% */}
+        <div className="absolute left-0 right-0 bottom-0 pointer-events-none overflow-hidden" style={{ height: '40%', zIndex: 6, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '0 8%', gap: '1.5cqw' }}>
+          <p className="font-cinzel font-700 text-center w-full" style={{ fontSize: nameFontSize, color: '#1a1008', letterSpacing: '0.04em', lineHeight: 1.1 }}>
             {name}
           </p>
           {rarity && (
-            <p className="font-karla font-700 text-center uppercase tracking-[0.12em]" style={{ fontSize: '9cqw', color: rarityColor!, marginBottom: stats ? '1.5cqw' : 0, textShadow: '0 1px 3px rgba(0,0,0,0.35)' }}>
+            <p className="font-karla font-700 text-center uppercase tracking-[0.12em]" style={{ fontSize: '7.5cqw', color: rarityColor!, textShadow: '0 1px 3px rgba(0,0,0,0.35)' }}>
               {rarity}
             </p>
           )}
           {stats && (
-            <div style={{ display: 'flex' }}>
+            <div style={{ display: 'flex', width: '100%' }}>
               <StatCell label="PWR" value={stats.power} />
               <StatCell label="DGE" value={stats.dodge} />
               <StatCell label="FTN" value={stats.fortune} />
