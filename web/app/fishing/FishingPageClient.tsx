@@ -5,6 +5,9 @@ import ZoneLanding, { type ZoneKey } from './ZoneLanding'
 import FishingGame from './FishingGame'
 import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import { ZONE_MIN_LEVEL } from './zoneData'
+
+const LAST_ZONE_KEY = 'fishing_last_zone'
 
 type BaitItem = { bait_type: string; quantity: number }
 type InventoryItem = {
@@ -39,16 +42,34 @@ export default function FishingPageClient({
   hasSeenFishingTour: boolean
   hasSeenFishingCatchTour: boolean
 }) {
-  const [selectedZone, setSelectedZone] = useState<ZoneKey | null>(null)
+  const fishingLevel = getLevelFromXP(initialFishingXP)
+
+  const [selectedZone, setSelectedZone] = useState<ZoneKey | null>(() => {
+    if (typeof window === 'undefined') return null
+    const saved = localStorage.getItem(LAST_ZONE_KEY) as ZoneKey | null
+    if (!saved) return null
+    const minLevel = ZONE_MIN_LEVEL[saved] ?? 1
+    return fishingLevel >= minLevel ? saved : null
+  })
+
+  function selectZone(zone: ZoneKey) {
+    localStorage.setItem(LAST_ZONE_KEY, zone)
+    setSelectedZone(zone)
+  }
+
+  function goBack() {
+    localStorage.removeItem(LAST_ZONE_KEY)
+    setSelectedZone(null)
+  }
 
   if (!selectedZone) {
     return (
       <ZoneLanding
-        fishingLevel={getLevelFromXP(initialFishingXP)}
+        fishingLevel={fishingLevel}
         fishingXP={initialFishingXP}
         uniqueSpeciesCaught={uniqueSpeciesCaught}
         highestPerfectStreak={initialHighestPerfectStreak}
-        onSelect={setSelectedZone}
+        onSelect={selectZone}
       />
     )
   }
@@ -73,7 +94,7 @@ export default function FishingPageClient({
       hasSeenFishingTour={hasSeenFishingTour}
       hasSeenFishingCatchTour={hasSeenFishingCatchTour}
       selectedZone={selectedZone}
-      onBack={() => setSelectedZone(null)}
+      onBack={goBack}
     />
   )
 }
