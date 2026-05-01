@@ -2,6 +2,9 @@
 
 import { useRouter } from 'next/navigation'
 
+const SUPABASE_URL = 'https://pwvndjczpdcttmyvnsyq.supabase.co'
+const FACE_UP = ['Catfish.png', 'Beluga_Whale.png']
+
 interface Props {
   packsAvailable: number
 }
@@ -41,63 +44,68 @@ export default function RecruitCard({ packsAvailable }: Props) {
       <Corner pos="bl" />
       <Corner pos="br" />
 
-      {/* Header: rule — CREW NOTICE — rule  +  wax seal */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2.5">
-          <div style={{ flex: 1, height: 1, width: 20, background: 'rgba(200,168,112,0.25)' }} />
-          <p className="font-cinzel font-700 tracking-[0.22em] uppercase" style={{ fontSize: '0.48rem', color: '#c8a870' }}>
-            Crew Notice
-          </p>
-          <div style={{ flex: 1, height: 1, width: 20, background: 'rgba(200,168,112,0.25)' }} />
-        </div>
-
-        <div style={{
-          width: 38, height: 38, borderRadius: '50%', flexShrink: 0, marginLeft: '0.75rem',
-          background: hasNotices
-            ? 'radial-gradient(circle at 38% 32%, #d4b07a 0%, #9a6e30 100%)'
-            : 'rgba(255,255,255,0.05)',
-          border: `1.5px solid ${hasNotices ? 'rgba(200,168,112,0.55)' : 'rgba(255,255,255,0.08)'}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: hasNotices ? '#1a0e04' : '#3a3835' }}>
-            {packsAvailable}
-          </span>
-        </div>
+      {/* Header: rule — CREW NOTICE — rule */}
+      <div className="flex items-center gap-2.5 mb-3">
+        <div style={{ height: 1, width: 20, background: 'rgba(200,168,112,0.25)', flexShrink: 0 }} />
+        <p className="font-cinzel font-700 tracking-[0.22em] uppercase" style={{ fontSize: '0.48rem', color: '#c8a870', flexShrink: 0 }}>
+          Crew Notice
+        </p>
+        <div style={{ flex: 1, height: 1, background: 'rgba(200,168,112,0.25)' }} />
       </div>
 
-      {/* Title */}
-      <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', letterSpacing: '0.04em', marginBottom: '0.3rem' }}>
-        Recruit Crew
-      </p>
+      {/* Body: text left, cards right */}
+      <div className="flex items-center justify-between gap-4">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', letterSpacing: '0.04em', marginBottom: '0.3rem' }}>
+            Recruit Crew
+          </p>
+          <p className="font-karla" style={{ fontSize: '0.72rem', color: hasNotices ? '#b09060' : '#4a4540' }}>
+            {hasNotices
+              ? `${packsAvailable} notice${packsAvailable !== 1 ? 's' : ''} available`
+              : 'No notices — visit the shop'}
+          </p>
+        </div>
 
-      {/* Status */}
-      <p className="font-karla" style={{ fontSize: '0.72rem', color: hasNotices ? '#b09060' : '#4a4540', marginBottom: '1rem' }}>
-        {hasNotices
-          ? `${packsAvailable} notice${packsAvailable !== 1 ? 's' : ''} available`
-          : 'No notices — visit the shop'}
-      </p>
-
-      {/* Divider */}
-      <div style={{ height: 1, background: 'rgba(200,168,112,0.1)', marginBottom: '1rem' }} />
-
-      {/* 4 mini card backs */}
-      <div className="flex justify-center items-end gap-2">
-        {[-9, -3, 3, 9].map((deg, i) => (
-          <div
-            key={i}
-            style={{
-              width: 48, height: 68,
-              borderRadius: 6,
-              overflow: 'hidden',
-              border: '1px solid rgba(200,168,112,0.25)',
-              transform: `rotate(${deg}deg)`,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-              flexShrink: 0,
-            }}
-          >
-            <img src="/cardbacknew.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          </div>
-        ))}
+        {/* 4 fanned cards — outer 2 face-down, inner 2 face-up */}
+        <div style={{ position: 'relative', width: 88, height: 72, flexShrink: 0 }}>
+          {[-9, -3, 3, 9].map((deg, i) => {
+            const faceUpIndex = i === 1 ? 0 : i === 2 ? 1 : null
+            const isFaceUp = faceUpIndex !== null
+            return (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  width: 44, height: 62,
+                  borderRadius: 5,
+                  overflow: 'hidden',
+                  border: '1px solid rgba(200,168,112,0.25)',
+                  transform: `rotate(${deg}deg)`,
+                  transformOrigin: 'bottom center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                  left: i * 14,
+                  bottom: 0,
+                  background: isFaceUp ? '#c8a870' : undefined,
+                }}
+              >
+                {isFaceUp ? (
+                  <>
+                    <img src="/cardfront2.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 1 }} />
+                    <div style={{ position: 'absolute', top: '4%', left: '5%', right: '5%', bottom: '40%', overflow: 'hidden', zIndex: 2 }}>
+                      <img
+                        src={`${SUPABASE_URL}/storage/v1/object/public/card-arts/${FACE_UP[faceUpIndex]}`}
+                        alt=""
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'top' }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <img src="/cardbacknew.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
