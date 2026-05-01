@@ -30,7 +30,8 @@ body {
 }
 
 @media (max-width: 639px) {
-  main { padding-bottom: 5rem; }
+  main   { padding-bottom: 5rem; }
+  footer { padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
 }
 
 .font-cinzel { font-family: var(--font-cinzel), serif; }
