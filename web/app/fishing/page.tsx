@@ -3,7 +3,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import FishingPageClient from './FishingPageClient'
-import { claimDailyBait } from './actions'
 import { getActiveChallengeSession } from '@/app/social/challengeActions'
 import ChallengeSessionBanner from './ChallengeSessionBanner'
 import { getShip } from '@/lib/ships'
@@ -14,8 +13,6 @@ export default async function FishingPage() {
   if (!user) redirect('/login')
 
   const admin = createAdminClient()
-
-  await claimDailyBait(user.id)
 
   const [
     activeSession,

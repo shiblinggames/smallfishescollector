@@ -410,37 +410,6 @@ export async function saveHighestPerfectStreak(streak: number): Promise<void> {
   }
 }
 
-// Give daily free worm bait top-up (called server-side on page load)
-export async function claimDailyBait(userId: string): Promise<void> {
-  const admin = createAdminClient()
-  const todayStr = today()
-
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('bait_last_topup')
-    .eq('id', userId)
-    .single()
-
-  if (profile?.bait_last_topup === todayStr) return
-
-  const DAILY_WORMS = 20
-
-  const { data: existing } = await admin
-    .from('bait_inventory')
-    .select('quantity')
-    .eq('user_id', userId)
-    .eq('bait_type', 'worm')
-    .single()
-
-  await Promise.all([
-    existing
-      ? admin.from('bait_inventory')
-          .update({ quantity: existing.quantity + DAILY_WORMS })
-          .eq('user_id', userId).eq('bait_type', 'worm')
-      : admin.from('bait_inventory').insert({ user_id: userId, bait_type: 'worm', quantity: DAILY_WORMS }),
-    admin.from('profiles').update({ bait_last_topup: todayStr }).eq('id', userId),
-  ])
-}
 
 export async function markFishingTourSeen(): Promise<void> {
   const supabase = await createClient()
