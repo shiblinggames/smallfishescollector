@@ -51,18 +51,21 @@ export const RODS: RodDef[] = [
     description: 'Precision-balanced for speed. Fish bite quickly.',
     color: '#60a5fa', rarityBonus: 0, biteIntervalMs: 2400, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    imageUrl: '/telescopingrod.png',
   },
   {
     tier: 5, name: 'Moonwood Staff', cost: 14000,
     description: 'Carved from driftwood blessed by a full moon. Casts wide and true.',
     color: '#a78bfa', rarityBonus: 0, biteIntervalMs: 3800, catchZoneBonus: 12,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    imageUrl: '/moonwoodrod.png',
   },
   {
     tier: 6, name: 'Graphite Rod', cost: 22000,
     description: 'Lightweight and stiff. Bites come very fast.',
     color: '#64748b', rarityBonus: 0, biteIntervalMs: 2000, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    imageUrl: '/graphiterod.png',
   },
   {
     tier: 7, name: "Navigator's Rod", cost: 35000,
