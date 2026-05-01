@@ -53,7 +53,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
                 boxShadow: isActive ? `0 0 18px ${c}30` : 'none',
                 borderRadius: 12,
                 padding: '0.7rem 0.65rem',
-                opacity: locked ? 0.3 : 1,
+                opacity: locked ? 0.5 : 1,
                 cursor: locked ? 'default' : 'pointer',
                 display: 'flex',
                 flexDirection: 'column',
