@@ -53,7 +53,7 @@ export default function DailyBonusClient({
         <ClaimCard
           eyebrow="Daily Bonus"
           title={`+${baseAmount} ◆`}
-          description={isPremium ? 'Your daily gem bonus as a Member.' : 'Your daily gem bonus.'}
+          description={isPremium ? 'Your daily gem bonus and 10 worms as a Member.' : 'Your daily gem bonus and 10 worms.'}
           claimed={dailyClaimed}
           loading={loadingDaily}
           onClaim={handleClaimDaily}

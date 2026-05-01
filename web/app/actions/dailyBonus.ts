@@ -15,11 +15,10 @@ export async function claimDailyBonus(): Promise<{ claimed: boolean; gems?: numb
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('gems, last_daily_claim, is_premium, premium_expires_at')
-    .eq('id', user.id)
-    .single()
+  const [{ data: profile }, { data: existingBait }] = await Promise.all([
+    admin.from('profiles').select('gems, last_daily_claim, is_premium, premium_expires_at').eq('id', user.id).single(),
+    admin.from('bait_inventory').select('quantity').eq('user_id', user.id).eq('bait_type', 'worm').maybeSingle(),
+  ])
 
   if (!profile || profile.last_daily_claim === today) return { claimed: false }
 
@@ -29,6 +28,7 @@ export async function claimDailyBonus(): Promise<{ claimed: boolean; gems?: numb
 
   const bonus = isPremium ? PREMIUM_DAILY_BONUS : DAILY_BONUS
   const newGems = (profile.gems ?? 0) + bonus
+  const newWorms = (existingBait?.quantity ?? 0) + 10
 
   await Promise.all([
     admin.from('profiles').update({ gems: newGems, last_daily_claim: today }).eq('id', user.id),
@@ -37,6 +37,9 @@ export async function claimDailyBonus(): Promise<{ claimed: boolean; gems?: numb
       amount: bonus,
       reason: isPremium ? 'Daily login bonus (Premium)' : 'Daily login bonus',
     }),
+    existingBait
+      ? admin.from('bait_inventory').update({ quantity: newWorms }).eq('user_id', user.id).eq('bait_type', 'worm')
+      : admin.from('bait_inventory').insert({ user_id: user.id, bait_type: 'worm', quantity: newWorms }),
   ])
 
   const newAchievements = await checkAchievements(user.id, { type: 'bonus' })
