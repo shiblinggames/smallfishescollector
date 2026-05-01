@@ -82,7 +82,12 @@ const CATCH_TOUR_STEPS = [
   {
     color: '#f59e0b',
     title: 'Perfect Zones',
-    body: 'The gold strips at the edges of the green are Perfect zones. Land here and you get a chance to save your bait for a free recast.',
+    body: 'The gold strips at the very edges of the green are Perfect zones. Land here for an XP bonus and a chance to save your bait for a free recast.',
+  },
+  {
+    color: '#fb923c',
+    title: 'On Fire 🔥',
+    body: 'Chain two or more Perfect catches in a row and the dial lights on fire. Keep the streak alive for bonus XP on every perfect — one miss resets it.',
   },
   {
     color: '#f87171',
@@ -92,7 +97,7 @@ const CATCH_TOUR_STEPS = [
   {
     color: '#94a3b8',
     title: 'Dial Speed',
-    body: "Harder fish spin the dial faster. Deeper zones add random speed bursts and direction reversals. Upgrading your gear can make all of this easier.",
+    body: 'Harder fish spin the dial faster. The Abyss adds random speed bursts and direction reversals. A better Reel slows the needle down.',
   },
 ]
 
@@ -109,8 +114,14 @@ type TourStep = {
 
 const TOUR_STEPS: TourStep[] = [
   {
+    title: 'Fishing Zones',
+    body: 'There are four zones: Shallows, Open Waters, Deep, and Abyss. Deeper zones have rarer fish but a tighter catch window and faster dial. Earn XP to unlock them.',
+    cardStyle: { top: 96, left: 16, right: 16 },
+    arrowDir: 'up', arrowAlign: 'center',
+  },
+  {
     title: 'Fishing XP',
-    body: 'Every catch earns XP. Leveling up unlocks deeper zones with rarer fish, and also widens your catch window — so higher level players find reeling in a little easier.',
+    body: 'Every catch earns XP. Leveling up unlocks the next zone and widens your catch window slightly — so veteran players find reeling in a bit easier.',
     cardStyle: { top: 96, left: 16, right: 16 },
     arrowDir: 'up', arrowAlign: 'center',
   },
@@ -122,10 +133,10 @@ const TOUR_STEPS: TourStep[] = [
     arrowDir: 'up', arrowAlign: 'right',
   },
   {
-    title: 'Gear',
-    body: 'Switch bait and upgrade your rod, reel, hook, and line. Better gear means faster bites and an easier catch.',
+    title: 'Gear & Bait',
+    body: 'Upgrade your rod, reel, hook, and line. Bait matters too — some baits speed up bites, others widen your catch zone. You get 10 free worms every day.',
     cardStyle: { bottom: 112, left: 16 },
-    maxWidth: 210,
+    maxWidth: 220,
     arrowDir: 'down', arrowAlign: 'left',
   },
   {
