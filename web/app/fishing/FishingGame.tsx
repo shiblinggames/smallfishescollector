@@ -1571,8 +1571,7 @@ export default function FishingGame({
                 width: '100%', height: '100%',
                 objectFit: 'cover',
                 objectPosition: 'top center',
-                opacity: sceneFrame === frame ? 1 : 0,
-                transition: 'opacity 80ms ease-out',
+                zIndex: sceneFrame === frame ? 1 : 0,
               }}
             />
           ))}
