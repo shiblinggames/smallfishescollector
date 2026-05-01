@@ -43,6 +43,7 @@ export const RODS: RodDef[] = [
     description: "The red zones don't scare this rod. Snags cost no extra bait — just a miss.",
     color: '#34d399', rarityBonus: 0, biteIntervalMs: 3200, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: true, perfectZoneBonus: 0,
+    imageUrl: '/reefguardrod.png',
   },
   {
     tier: 4, name: 'Telescoping Rod', cost: 8000,
