@@ -144,30 +144,33 @@ export default function TackleShopClient({
     })
   }
 
-  const CATEGORIES: { key: Exclude<Section, null>; label: string; desc: string; color: string; active: string }[] = [
+  const CATEGORIES: { key: Exclude<Section, null>; label: string; desc: string; color: string; active: string; imageUrl?: string }[] = [
     {
       key: 'bait', label: 'Bait', color: '#34d399',
-      desc: 'Consumables used per cast. Better bait attracts fish faster and increases your chances of rare catches.',
+      desc: 'Consumables used per cast.',
       active: `${totalBait} owned`,
+      imageUrl: '/worm.png',
     },
     {
       key: 'hook', label: 'Hooks', color: HOOKS[hookTier]?.color ?? '#f0c040',
-      desc: 'Widens the catch zone on the reel dial. Higher tiers also add a bonus to your catch roll.',
+      desc: 'Widens the catch zone on the dial.',
       active: HOOKS[hookTier]?.name ?? '',
+      imageUrl: HOOKS[hookTier]?.imageUrl,
     },
     {
       key: 'rod', label: 'Rods', color: RODS.find(r => r.tier === equippedRod)?.color ?? '#a07858',
-      desc: 'Every rod has a unique ability. Buy any, equip any.',
+      desc: 'Every rod has a unique ability.',
       active: RODS.find(r => r.tier === equippedRod)?.name ?? '',
+      imageUrl: '/rod.png',
     },
     {
       key: 'reel', label: 'Reels', color: REELS[reelTier]?.color ?? '#60a5fa',
-      desc: 'Slows the needle on the catch dial, giving you more time to land a perfect hit.',
+      desc: 'Slows the needle for easier timing.',
       active: REELS[reelTier]?.name ?? '',
     },
     {
       key: 'line', label: 'Line', color: LINES[lineTier]?.color ?? '#4ade80',
-      desc: 'Shrinks snag zones on the catch dial. Earned by catching unique species — no purchase needed.',
+      desc: 'Shrinks snag zones. Earned by species.',
       active: LINES[lineTier]?.name ?? '',
     },
   ]
@@ -175,32 +178,58 @@ export default function TackleShopClient({
   // ── Landing ────────────────────────────────────────────────────────────
   if (section === null) {
     return (
-      <div className="px-6 max-w-4xl mx-auto">
-        <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-5" style={{ fontSize: '0.75rem' }}>
+      <div className="px-4 sm:px-6 max-w-sm sm:max-w-2xl mx-auto pb-16">
+        <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-4" style={{ fontSize: '0.65rem' }}>
           Tackle Shop
         </p>
-        <div className="flex flex-col gap-3">
-          {CATEGORIES.map(({ key, label, desc, color, active }) => (
-            <button
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {CATEGORIES.map(({ key, label, desc, color, active, imageUrl }) => (
+            <div
               key={key}
               onClick={() => { setSection(key); setError(null) }}
-              className="flex items-start gap-4 px-5 py-4 rounded-xl text-left transition-opacity active:opacity-70"
-              style={{ background: 'rgba(8,8,6,0.82)', border: `1px solid ${color}40` }}
+              style={{
+                background: 'rgba(8,8,6,0.82)',
+                border: `1px solid ${color}40`,
+                borderRadius: 12,
+                padding: '0.7rem 0.65rem',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+                transition: 'box-shadow 0.2s ease',
+              }}
             >
-              <div style={{ width: 4, alignSelf: 'stretch', background: color, borderRadius: 2, flexShrink: 0, marginTop: 2 }} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2.5 mb-1.5">
-                  <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8' }}>{label}</p>
-                  <span className="font-karla font-600" style={{ fontSize: '0.72rem', color, background: `${color}18`, border: `1px solid ${color}30`, padding: '0.15rem 0.55rem', borderRadius: '2rem' }}>
-                    {active}
-                  </span>
-                </div>
-                <p className="font-karla font-300" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{desc}</p>
+              {/* Image */}
+              <div style={{ width: '100%', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6%' }}>
+                {imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={imageUrl}
+                    alt={label}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                ) : (
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${color}22`, border: `1px solid ${color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 14, height: 14, borderRadius: '50%', background: color, opacity: 0.7 }} />
+                  </div>
+                )}
               </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 4 }}>
-                <path d="M9 18l6-6-6-6"/>
-              </svg>
-            </button>
+
+              {/* Name + active */}
+              <div>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8', lineHeight: 1.2 }}>
+                  {label}
+                </p>
+                <p className="font-karla font-600" style={{ fontSize: '0.58rem', color, marginTop: 2 }}>
+                  {active}
+                </p>
+              </div>
+
+              {/* Description */}
+              <p className="font-karla font-300" style={{ fontSize: '0.65rem', color: '#6a6764', lineHeight: 1.4 }}>
+                {desc}
+              </p>
+            </div>
           ))}
         </div>
       </div>
