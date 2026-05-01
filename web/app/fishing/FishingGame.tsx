@@ -1061,17 +1061,17 @@ function XPBarDisplay({ xp, bestStreak }: { xp: number; bestStreak?: number }) {
   const c = isMax ? '#f0c040' : '#60a5fa'
 
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
-      style={{ background: 'rgba(4,10,18,0.72)', border: `1px solid ${c}28` }}>
+    <div className="flex items-center gap-2.5 px-3 py-2"
+      style={{ background: 'rgba(4,10,18,0.72)', border: `1px solid ${c}28`, borderRadius: 20 }}>
       <div className="shrink-0 flex items-baseline gap-0.5">
         <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: c + 'bb', letterSpacing: '0.08em' }}>LV</span>
         <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: c, lineHeight: 1 }}>{level}</span>
       </div>
-      <div style={{ flex: 1, height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+      <div style={{ flex: 1, height: 7, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
         <motion.div
           key={level}
           style={{
-            height: '100%', borderRadius: 4,
+            height: '100%', borderRadius: 999,
             background: `linear-gradient(90deg, ${c}88 0%, ${c} 100%)`,
             boxShadow: `0 0 10px ${c}70`,
           }}
@@ -1694,7 +1694,7 @@ export default function FishingGame({
               style={{
                 fontSize: '0.6rem', color: HABITAT_COLOR[selectedZone],
                 background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
-                borderRadius: 8, padding: '0.3rem 0.65rem',
+                borderRadius: 20, padding: '0.3rem 0.65rem',
                 cursor: 'pointer', touchAction: 'manipulation',
               }}
             >
@@ -1705,7 +1705,7 @@ export default function FishingGame({
               onClick={() => { setCollectionOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
               style={{
                 background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
-                borderRadius: 8, padding: '0.28rem 0.7rem',
+                borderRadius: 20, padding: '0.28rem 0.7rem',
                 cursor: 'pointer', touchAction: 'manipulation',
                 position: 'relative',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
@@ -1772,7 +1772,7 @@ export default function FishingGame({
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               background: 'rgba(4,10,18,0.82)', border: '1px solid rgba(251,146,60,0.35)',
-              borderRadius: 9, padding: '0.3rem 0.65rem', marginBottom: '0.5rem', gap: 8,
+              borderRadius: 20, padding: '0.3rem 0.65rem', marginBottom: '0.5rem', gap: 8,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fb923c', animation: 'pulse 2s infinite', flexShrink: 0 }} />
@@ -1812,7 +1812,7 @@ export default function FishingGame({
                           style={{
                             background: 'rgba(4,10,18,0.52)',
                             border: '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: 16,
+                            borderRadius: 20,
                             padding: '1.1rem 1.75rem',
                             textAlign: 'center',
                           }}>
@@ -1837,7 +1837,7 @@ export default function FishingGame({
                             style={{
                               background: 'rgba(4,10,18,0.52)',
                               border: `1px solid ${r.color}40`,
-                              borderRadius: 16,
+                              borderRadius: 20,
                               padding: '1.1rem 1.75rem',
                               textAlign: 'center',
                               boxShadow: `0 0 32px ${r.color}28`,
@@ -1885,7 +1885,7 @@ export default function FishingGame({
                         display: 'inline-block',
                         background: 'rgba(4,10,18,0.52)',
                         border: `1px solid ${currentZone?.color ?? 'rgba(255,255,255,0.08)'}35`,
-                        borderRadius: 10,
+                        borderRadius: 20,
                         padding: '0.3rem 0.85rem',
                       }}>
                         <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
