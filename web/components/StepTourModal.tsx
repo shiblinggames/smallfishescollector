@@ -16,13 +16,20 @@ interface Props {
 
 export default function StepTourModal({ steps, onDone }: Props) {
   const [step, setStep] = useState(0)
+  const [visible, setVisible] = useState(true)
   const current = steps[step]
   const isLast = step === steps.length - 1
 
   function advance() {
-    if (isLast) onDone()
-    else setStep(s => s + 1)
+    if (isLast) {
+      setVisible(false)
+      onDone()
+    } else {
+      setStep(s => s + 1)
+    }
   }
+
+  if (!visible) return null
 
   return (
     <div
