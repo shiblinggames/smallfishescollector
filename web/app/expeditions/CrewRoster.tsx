@@ -149,7 +149,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
   const totalDodge   = slots.reduce((s, c, i) => s + (c ? Math.round(c.dodge   * (i === 0 ? 1 : 0.8)) : 0), 0)
   const totalFortune = slots.reduce((s, c, i) => s + (c ? Math.round(c.fortune * (i === 0 ? 1 : 0.8)) : 0), 0)
   const assignedCount = slots.filter(Boolean).length
-  const dmgMin    = Math.max(1, assignedCount)
+  const dmgMin    = shipStats.minDamage
   const dmgMax    = Math.max(1, totalPower)
   const dodgePct  = Math.min(50 + Math.round(totalDodge / 2), 100)
   const critPct   = Math.min(Math.round(totalFortune / 2), 50)

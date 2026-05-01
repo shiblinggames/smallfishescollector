@@ -12,6 +12,7 @@ export interface ShipStats {
   speed: number
   armor: number
   crewSlots: number
+  minDamage: number
 }
 
 export interface CrewCard {
@@ -102,13 +103,13 @@ export interface Expedition {
 // ── Ship stats ────────────────────────────────────────────────────────────────
 
 export const EXPEDITION_SHIP_STATS: Record<number, ShipStats> = {
-  0: { name: 'Rowboat',    image: '/models/rowboat.png',    durability: 20, speed: 2,  armor: 1, crewSlots: 1 },
-  1: { name: 'Dinghy',     image: '/models/dinghy.png',     durability: 27, speed: 3,  armor: 1, crewSlots: 1 },
-  2: { name: 'Sloop',      image: '/models/sloop.png',      durability: 35, speed: 4,  armor: 2, crewSlots: 2 },
-  3: { name: 'Schooner',   image: '/models/schooner.png',   durability: 45, speed: 5,  armor: 3, crewSlots: 2 },
-  4: { name: 'Brigantine', image: '/models/brigantine.png', durability: 55, speed: 6,  armor: 4, crewSlots: 3 },
-  5: { name: 'Galleon',    image: '/models/galleon.png',    durability: 70, speed: 8,  armor: 5, crewSlots: 4 },
-  6: { name: 'Man-o-War',  image: '/models/man-o-war.png',  durability: 90, speed: 11, armor: 8, crewSlots: 5 },
+  0: { name: 'Rowboat',    image: '/models/rowboat.png',    durability: 20, speed: 2,  armor: 1, crewSlots: 1, minDamage: 1 },
+  1: { name: 'Dinghy',     image: '/models/dinghy.png',     durability: 27, speed: 3,  armor: 1, crewSlots: 1, minDamage: 2 },
+  2: { name: 'Sloop',      image: '/models/sloop.png',      durability: 35, speed: 4,  armor: 2, crewSlots: 2, minDamage: 3 },
+  3: { name: 'Schooner',   image: '/models/schooner.png',   durability: 45, speed: 5,  armor: 3, crewSlots: 2, minDamage: 4 },
+  4: { name: 'Brigantine', image: '/models/brigantine.png', durability: 55, speed: 6,  armor: 4, crewSlots: 3, minDamage: 6 },
+  5: { name: 'Galleon',    image: '/models/galleon.png',    durability: 70, speed: 8,  armor: 5, crewSlots: 4, minDamage: 8 },
+  6: { name: 'Man-o-War',  image: '/models/man-o-war.png',  durability: 90, speed: 11, armor: 8, crewSlots: 5, minDamage: 11 },
 }
 
 // ── Crew stats ────────────────────────────────────────────────────────────────
@@ -361,7 +362,7 @@ export function resolveRound(
   if (playerCanFire) {
     const mult = playerIsHeavyFire ? FIRE_MULTIPLIERS.heavy : FIRE_MULTIPLIERS.light
     const maxDmg = Math.max(1, Math.floor(effectivePower * mult))
-    const minDmg = Math.max(1, crew.count)
+    const minDmg = ship.minDamage
     const base = minDmg >= maxDmg ? maxDmg : Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg
     const critChance = Math.min(crew.fortune / 2, 50)
     critHit = Math.random() * 100 < critChance
