@@ -48,11 +48,11 @@ const artImageClass: Record<ArtEffect, string> = {
 
 function StatCell({ label, value }: { label: string; value: number }) {
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.78rem', color: '#5a4a30', letterSpacing: '0.06em' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1cqw' }}>
+      <span className="font-karla font-700 uppercase" style={{ fontSize: '8.5cqw', color: '#5a4a30', letterSpacing: '0.06em' }}>
         {label}
       </span>
-      <span className="font-cinzel font-700" style={{ fontSize: '1.65rem', color: '#1a1008', lineHeight: 1 }}>
+      <span className="font-cinzel font-700" style={{ fontSize: '19cqw', color: '#1a1008', lineHeight: 1 }}>
         {value}
       </span>
     </div>
@@ -66,7 +66,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
 
   const rarity = (variantName && dropWeight != null) ? rarityFromVariant(variantName, dropWeight) : null
   const rarityColor = rarity ? (RARITY_COLOR[rarity] ?? '#a0a09a') : null
-  const nameFontSize = name.length > 15 ? '1.0rem' : '1.4rem'
+  const nameFontSize = name.length > 15 ? '11cqw' : '16cqw'
 
   let frame: React.ReactNode
 
@@ -81,7 +81,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
     )
   } else {
     frame = (
-      <div className="relative overflow-hidden" style={{ width: W, height: H, borderRadius: R, background: artBg[artEffect] ?? '#c8a870' }}>
+      <div className="relative overflow-hidden" style={{ width: W, height: H, borderRadius: R, background: artBg[artEffect] ?? '#c8a870', containerType: 'inline-size' }}>
         {/* Cardfront base */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/cardfront2.png" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }} />
@@ -118,11 +118,11 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
 
         {/* Bottom text: name + rarity + stats */}
         <div className="absolute left-0 right-0 pointer-events-none" style={{ zIndex: 6, bottom: '8%', padding: '4px 10px 0' }}>
-          <p className="font-cinzel font-700 text-center" style={{ fontSize: nameFontSize, color: '#1a1008', marginBottom: 2, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: nameFontSize, color: '#1a1008', marginBottom: '1cqw', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
             {name}
           </p>
           {rarity && (
-            <p className="font-karla font-700 text-center uppercase tracking-[0.12em]" style={{ fontSize: '0.8rem', color: rarityColor!, marginBottom: stats ? 6 : 0, textShadow: '0 1px 3px rgba(0,0,0,0.35)' }}>
+            <p className="font-karla font-700 text-center uppercase tracking-[0.12em]" style={{ fontSize: '9cqw', color: rarityColor!, marginBottom: stats ? '1.5cqw' : 0, textShadow: '0 1px 3px rgba(0,0,0,0.35)' }}>
               {rarity}
             </p>
           )}
