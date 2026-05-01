@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
+import AnnouncementBanner from './AnnouncementBanner'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { motion } from 'framer-motion'
@@ -391,6 +392,8 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
           </div>
         )}
       </div>
+
+      <AnnouncementBanner />
 
       {/* Mobile bottom tab bar */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[rgba(255,255,255,0.15)] flex" style={{ background: navBg(tint) }}>
