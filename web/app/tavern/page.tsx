@@ -90,7 +90,29 @@ export default async function TavernPage() {
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       {!profile?.has_seen_welcome && <WelcomeModal />}
       <main className="min-h-screen">
-        <div className="px-6 max-w-4xl mx-auto mb-2 pt-8" style={{ position: 'relative', zIndex: 1 }}>
+
+        {/* Recruit Crew — top feature card */}
+        <div className="px-6 max-w-4xl mx-auto pt-8 pb-4" style={{ position: 'relative', zIndex: 1 }}>
+          <GameCard
+            href="/packs"
+            eyebrow="Crew"
+            title="Recruit Crew"
+            statusText={
+              (profile?.packs_available ?? 0) > 0
+                ? `${profile?.packs_available} Crew Notice${(profile?.packs_available ?? 0) !== 1 ? 's' : ''} available`
+                : 'No Crew Notices — visit the shop'
+            }
+            info={[
+              'Use Crew Notices to recruit new crew members',
+              'Each notice draws 4 cards — Common through Mythic',
+              'Earn notices through bounties, daily bonuses, and the shop',
+            ]}
+            icon={<RecruitIcon />}
+            variant="featured"
+          />
+        </div>
+
+        <div className="px-6 max-w-4xl mx-auto mb-2" style={{ position: 'relative', zIndex: 1 }}>
           <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>Today</p>
         </div>
         <div className="px-6 grid grid-cols-2 lg:grid-cols-3 gap-3 pb-6 max-w-4xl mx-auto" style={{ position: 'relative', zIndex: 1 }}>
@@ -192,6 +214,17 @@ export default async function TavernPage() {
         </div>
       </main>
     </>
+  )
+}
+
+function RecruitIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="7" r="3"/>
+      <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      <path d="M21 21v-2a4 4 0 0 0-3-3.85"/>
+    </svg>
   )
 }
 

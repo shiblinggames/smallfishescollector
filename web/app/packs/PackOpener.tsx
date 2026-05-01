@@ -243,74 +243,49 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
 
   if (phase === 'idle') {
     return (
-      <div className="flex flex-col items-center gap-8">
-        <div className="flex flex-col items-center gap-4">
-          {/* Booster pack */}
-          <div className="relative" style={{ marginTop: packs > 1 ? 16 : 0 }}>
-            {packs > 2 && !loading && (
-              <img src="/booster.png" alt="" aria-hidden className="absolute inset-0 w-full h-auto" style={{ transform: 'translateY(14px) translateX(8px) rotate(2.5deg)', opacity: 0.5, pointerEvents: 'none' }} />
-            )}
-            {packs > 1 && !loading && (
-              <img src="/booster.png" alt="" aria-hidden className="absolute inset-0 w-full h-auto" style={{ transform: 'translateY(7px) translateX(4px) rotate(1.2deg)', opacity: 0.7, pointerEvents: 'none' }} />
-            )}
-            <button
-              ref={packButtonRef}
-              onClick={packs > 0 ? openPack : undefined}
-              disabled={loading || packs === 0}
-              className="relative block select-none"
-              style={{
-                width: 'min(80vw, 480px)',
-                cursor: packs > 0 && !loading ? 'pointer' : 'default',
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                transition: 'transform 0.15s ease, filter 0.15s ease',
-                filter: packs === 0 ? 'grayscale(0.5) opacity(0.5)' : undefined,
-              }}
-              onPointerEnter={e => {
-                if (e.pointerType === 'touch' || packs === 0 || loading) return
-                e.currentTarget.style.transform = 'translateY(-6px) scale(1.03)'
-                e.currentTarget.style.filter = 'drop-shadow(0 20px 40px rgba(0,0,0,0.6)) drop-shadow(0 0 20px rgba(30,100,220,0.25))'
-              }}
-              onPointerLeave={e => {
-                if (e.pointerType === 'touch') return
-                e.currentTarget.style.transform = ''
-                e.currentTarget.style.filter = packs === 0 ? 'grayscale(0.5) opacity(0.5)' : ''
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/booster.png" alt="Booster Pack" style={{ width: '100%', height: 'auto', display: 'block', opacity: loading ? 0.5 : 1, transition: 'opacity 0.2s ease' }} />
-              {packs > 0 && !loading && (
-                <div style={{
-                  position: 'absolute', bottom: '12%', left: '50%', transform: 'translateX(-50%)',
-                  background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)',
-                  border: '1px solid rgba(255,255,255,0.18)',
-                  borderRadius: '2rem', padding: '0.4rem 1rem',
-                  pointerEvents: 'none',
-                  animation: 'pack-pulse 2s ease-in-out infinite',
-                }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem', color: '#f0ede8', whiteSpace: 'nowrap' }}>
-                    Recruit Crew
-                  </p>
-                </div>
-              )}
-            </button>
-          </div>
+      <div className="flex flex-col items-center gap-10 w-full max-w-sm">
 
-          {packs > 0 ? (
-            <p className="font-karla font-600 text-[#a0a09a]" style={{ fontSize: '0.78rem' }}>
-              {packs} pack{packs !== 1 ? 's' : ''} available
-            </p>
-          ) : (
-            <div className="flex flex-col items-center gap-2">
-              <p className="font-karla font-300 text-[#a0a09a] text-sm">No packs available.</p>
-              <a href="/tavern" className="btn-ghost">Go to the Tavern</a>
-              <a href="/redeem" className="text-[#f0c040] hover:text-[#ffd966] text-xs font-karla font-600 uppercase tracking-[0.12em] transition-colors">
-                Redeem a Code
-              </a>
-            </div>
-          )}
+        {/* Crew Notices count */}
+        <div className="flex flex-col items-center gap-1 text-center">
+          <p className="font-cinzel font-700" style={{ fontSize: '3.5rem', lineHeight: 1, color: '#f0ede8' }}>{packs}</p>
+          <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
+            Crew Notice{packs !== 1 ? 's' : ''}
+          </p>
         </div>
+
+        {/* Recruit button or empty state */}
+        {packs > 0 ? (
+          <button
+            ref={packButtonRef}
+            onClick={openPack}
+            disabled={loading}
+            className="select-none w-full"
+            style={{
+              background: 'rgba(240,192,64,0.12)',
+              border: '1px solid rgba(240,192,64,0.45)',
+              borderRadius: '1rem',
+              padding: '1.25rem 2rem',
+              cursor: loading ? 'default' : 'pointer',
+              opacity: loading ? 0.6 : 1,
+              transition: 'transform 0.15s ease, background 0.15s ease',
+              animation: 'pack-pulse 2s ease-in-out infinite',
+            }}
+            onPointerEnter={e => { if (e.pointerType !== 'touch' && !loading) e.currentTarget.style.transform = 'translateY(-3px)' }}
+            onPointerLeave={e => { e.currentTarget.style.transform = '' }}
+          >
+            <p className="font-cinzel font-700 uppercase tracking-[0.14em]" style={{ fontSize: '1rem', color: '#f0c040' }}>
+              {loading ? 'Recruiting…' : 'Recruit Crew'}
+            </p>
+          </button>
+        ) : (
+          <div className="flex flex-col items-center gap-3 text-center">
+            <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.8rem' }}>No Crew Notices remaining.</p>
+            <a href="/tavern" className="btn-ghost" style={{ fontSize: '0.75rem' }}>Back to Tavern</a>
+            <a href="/redeem" className="font-karla font-600 uppercase tracking-[0.12em] transition-colors" style={{ fontSize: '0.65rem', color: '#f0c040' }}>
+              Redeem a Code
+            </a>
+          </div>
+        )}
 
         {/* Gem balance + buy buttons */}
         <div className="flex flex-col items-center gap-2">
@@ -334,7 +309,6 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
             </button>
           </div>
         </div>
-
 
       </div>
     )
@@ -397,7 +371,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
         {/* Pack count */}
         <div className="flex flex-col gap-0.5">
           <span className="font-cinzel font-700 text-[#f0ede8] leading-none" style={{ fontSize: '2rem' }}>{packs}</span>
-          <span className="font-karla font-600 uppercase text-[#6a6764]" style={{ fontSize: '0.58rem', letterSpacing: '0.12em' }}>recruits left</span>
+          <span className="font-karla font-600 uppercase text-[#6a6764]" style={{ fontSize: '0.58rem', letterSpacing: '0.12em' }}>Crew Notices</span>
         </div>
         {/* Action button — always rendered to prevent layout shift */}
         <button

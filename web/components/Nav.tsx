@@ -30,7 +30,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   const [achievementsBadge, setAchievementsBadge] = useState(false)
   const [displayDoubloons, setDisplayDoubloons] = useState(doubloons)
   const [displayGems, setDisplayGems] = useState(gems)
-  const [displayPacks, setDisplayPacks] = useState(packsAvailable)
 
   const fetchBadge = useCallback(() => {
     const supabase = createClient()
@@ -77,14 +76,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
     }
     window.addEventListener('gems-changed', handleGemsChanged)
     return () => window.removeEventListener('gems-changed', handleGemsChanged)
-  }, [])
-
-  useEffect(() => {
-    function handlePacksChanged(e: Event) {
-      setDisplayPacks((e as CustomEvent<number>).detail)
-    }
-    window.addEventListener('packs-changed', handlePacksChanged)
-    return () => window.removeEventListener('packs-changed', handlePacksChanged)
   }, [])
 
   // Close on outside tap
@@ -156,14 +147,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="8" r="4"/>
           <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-        </svg>
-      )
-    },
-    { href: '/packs', label: 'Packs', badge: false,
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="8" y="3" width="12" height="16" rx="1.5"/>
-          <rect x="4" y="6" width="12" height="16" rx="1.5"/>
         </svg>
       )
     },
@@ -247,14 +230,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
           <path d="M12 2v10"/>
           <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
           <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
-        </svg>
-      )
-    },
-    { href: '/packs', label: 'Packs', badge: displayPacks && displayPacks > 0 ? displayPacks : null,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="8" y="3" width="12" height="16" rx="1.5"/>
-          <rect x="4" y="6" width="12" height="16" rx="1.5"/>
         </svg>
       )
     },
