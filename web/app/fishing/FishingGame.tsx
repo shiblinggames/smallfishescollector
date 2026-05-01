@@ -1681,7 +1681,7 @@ export default function FishingGame({
             >
               {showStreak ? (
                 <div style={{ textAlign: 'center' }}>
-                  <p className="font-pirata" style={{ fontSize: '1.7rem', color: '#a86030', textShadow: 'none', lineHeight: 1 }}>
+                  <p className="font-pirata" style={{ fontSize: '1.7rem', color: '#fb923c', textShadow: 'none', lineHeight: 1 }}>
                     {highestPerfectStreak}
                   </p>
                   <p className="font-karla font-600 uppercase tracking-[0.18em]" style={{ fontSize: '0.42rem', color: 'rgba(255,255,255,0.9)', marginTop: 2 }}>
