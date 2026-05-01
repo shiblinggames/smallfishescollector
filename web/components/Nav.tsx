@@ -6,6 +6,7 @@ import AnnouncementBanner from './AnnouncementBanner'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { motion } from 'framer-motion'
+import { createPortal } from 'react-dom'
 
 const PAGE_TINTS: [string, string][] = [
   ['/tavern',      'rgba(180,120,30,0.10)'],
@@ -23,6 +24,8 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   const pathname = usePathname()
   const tint = PAGE_TINTS.find(([p]) => pathname === p || pathname.startsWith(p + '/'))?.[1]
   const [menuOpen, setMenuOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
   const menuRef = useRef<HTMLDivElement>(null)
   const [tavernBadge, setTavernBadge] = useState(() => {
     if (typeof window === 'undefined') return 0
@@ -395,34 +398,37 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
 
       <AnnouncementBanner />
 
-      {/* Mobile bottom tab bar */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[rgba(255,255,255,0.15)] flex" style={{ background: navBg(tint) }}>
-        {mobileLinks.map(({ href, label, badge, icon }) => {
-          const active = pathname === href || pathname.startsWith(href + '/')
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 relative select-none ${active ? 'text-[#f0ede8]' : 'text-[#a0a09a]'}`}
-              style={{ transition: 'color 0.2s' }}
-            >
-              <motion.div
-                animate={active ? { scale: 1.18, y: -2 } : { scale: 1, y: 0 }}
-                transition={{ type: 'spring', stiffness: 380, damping: 18 }}
-                whileTap={{ scale: 0.82, opacity: 0.7 }}
+      {/* Mobile bottom tab bar — portalled to body so no ancestor CSS context can break position:fixed */}
+      {mounted && createPortal(
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[rgba(255,255,255,0.15)] flex" style={{ background: navBg(tint) }}>
+          {mobileLinks.map(({ href, label, badge, icon }) => {
+            const active = pathname === href || pathname.startsWith(href + '/')
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 relative select-none ${active ? 'text-[#f0ede8]' : 'text-[#a0a09a]'}`}
+                style={{ transition: 'color 0.2s' }}
               >
-                {icon}
-              </motion.div>
-              <span className="text-[0.58rem] font-karla font-600 uppercase tracking-[0.10em]">{label}</span>
-              {badge && (
-                <span className="absolute top-2 right-[calc(50%-18px)] bg-[#f0c040] text-black text-[0.5rem] font-karla font-700 rounded-full w-4 h-4 flex items-center justify-center leading-none">
-                  {badge > 99 ? '99+' : badge}
-                </span>
-              )}
-            </Link>
-          )
-        })}
-      </div>
+                <motion.div
+                  animate={active ? { scale: 1.18, y: -2 } : { scale: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 18 }}
+                  whileTap={{ scale: 0.82, opacity: 0.7 }}
+                >
+                  {icon}
+                </motion.div>
+                <span className="text-[0.58rem] font-karla font-600 uppercase tracking-[0.10em]">{label}</span>
+                {badge && (
+                  <span className="absolute top-2 right-[calc(50%-18px)] bg-[#f0c040] text-black text-[0.5rem] font-karla font-700 rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
+              </Link>
+            )
+          })}
+        </div>,
+        document.body
+      )}
     </>
   )
 }
