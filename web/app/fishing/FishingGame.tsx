@@ -208,6 +208,7 @@ function DialSVG({
           ))}
           {perfectZone && (() => {
             const midDeg = (perfectZone.from + perfectZone.to) / 2
+            const label = polar(OUTER_R + 14, midDeg)
 
             // Bracket tick marks at edges, pointing inward toward the needle
             const tickOuter = INNER_R - 2, tickInner = INNER_R - 10
@@ -219,6 +220,8 @@ function DialSVG({
                 {/* Bracket ticks */}
                 <line x1={tL0.x.toFixed(2)} y1={tL0.y.toFixed(2)} x2={tL1.x.toFixed(2)} y2={tL1.y.toFixed(2)} stroke="#fde68a" strokeWidth="1.5" strokeOpacity="0.9" />
                 <line x1={tR0.x.toFixed(2)} y1={tR0.y.toFixed(2)} x2={tR1.x.toFixed(2)} y2={tR1.y.toFixed(2)} stroke="#fde68a" strokeWidth="1.5" strokeOpacity="0.9" />
+                {/* Outer label — matches style of penalty ✕ */}
+                <text x={label.x.toFixed(2)} y={label.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill="#fde68a" fontSize="9" opacity="0.85">✦</text>
               </>
             )
           })()}
@@ -1528,7 +1531,7 @@ export default function FishingGame({
 
   function zoneOpacity(zone: ZoneDef): number {
     if (phase === 'catching' && currentZone) {
-      return currentZone === zone ? 0.95 : zone.type === 'perfect' ? 0.88 : zone.type === 'penalty' ? 0.48 : 0.30
+      return currentZone === zone ? 1.0 : zone.type === 'perfect' ? 0.50 : zone.type === 'penalty' ? 0.45 : 0.28
     }
     return 0.35
   }
