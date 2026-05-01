@@ -119,22 +119,22 @@ function ClaimCard({
 
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.08)',
-      border: `1px solid ${claimed ? 'rgba(255,255,255,0.11)' : locked ? 'rgba(255,255,255,0.11)' : 'rgba(240,192,64,0.22)'}`,
+      background: 'rgba(8,8,6,0.82)',
+      border: `1px solid ${claimed ? 'rgba(255,255,255,0.12)' : locked ? 'rgba(255,255,255,0.12)' : 'rgba(240,192,64,0.35)'}`,
       borderRadius: '16px',
       padding: '1.25rem',
-      opacity: dim ? 0.6 : 1,
+      opacity: dim ? 0.55 : 1,
       transition: 'opacity 0.2s ease',
     }}>
       <div className="flex items-start gap-4">
         <div style={{
           width: 48, height: 48,
-          background: dim ? 'rgba(255,255,255,0.06)' : 'rgba(240,192,64,0.08)',
-          border: `1px solid ${dim ? 'rgba(255,255,255,0.13)' : 'rgba(240,192,64,0.18)'}`,
+          background: dim ? 'rgba(255,255,255,0.07)' : 'rgba(240,192,64,0.14)',
+          border: `1px solid ${dim ? 'rgba(255,255,255,0.15)' : 'rgba(240,192,64,0.35)'}`,
           borderRadius: '12px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
-          color: dim ? '#4a4845' : '#f0c040',
+          color: dim ? '#5a5855' : '#f0c040',
         }}>
           {claimed ? <CheckIcon /> : icon}
         </div>
@@ -150,13 +150,13 @@ function ClaimCard({
               </div>
             )}
             {locked && (
-              <span className="font-karla font-600 uppercase tracking-[0.10em] text-[#4a4845]" style={{ fontSize: '0.5rem' }}>Members Only</span>
+              <span className="font-karla font-600 uppercase tracking-[0.10em]" style={{ fontSize: '0.5rem', color: '#6a6764' }}>Members Only</span>
             )}
           </div>
-          <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: dim ? '#8a8884' : '#f0ede8' }}>
             {claimed ? `${title} Claimed` : title}
           </p>
-          <p className="font-karla text-[#a0a09a] mt-1" style={{ fontSize: '0.8rem', lineHeight: 1.5 }}>
+          <p className="font-karla mt-1" style={{ fontSize: '0.8rem', lineHeight: 1.5, color: dim ? '#6a6764' : '#b8b4ae' }}>
             {claimed ? 'Come back tomorrow.' : description}
           </p>
         </div>
