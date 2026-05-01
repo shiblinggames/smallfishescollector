@@ -154,7 +154,6 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const rod = getRod(profile.rod_tier ?? 0)
   const fish = tierWeightedPick(candidates, habitat, rod.rarityBonus)
-  const fishingLevel = getLevelFromXP(profile.fishing_xp ?? 0)
   const waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel)
 
   return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs }
