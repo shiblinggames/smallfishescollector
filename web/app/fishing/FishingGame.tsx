@@ -1246,20 +1246,28 @@ export default function FishingGame({
     deductBait(selectedBait)
     setPhase('casting')
 
-    const res = await castLine(selectedBait, selectedZone)
+    try {
+      const res = await castLine(selectedBait, selectedZone)
 
-    if ('error' in res) {
+      if ('error' in res) {
+        setBaitInventory(prev => prev.map(b =>
+          b.bait_type === selectedBait ? { ...b, quantity: b.quantity + 1 } : b
+        ))
+        setPhase('idle')
+        return
+      }
+
+      await new Promise(r => setTimeout(r, res.waitMs))
+
+      setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity })
+      setPhase('hooked')
+    } catch {
       setBaitInventory(prev => prev.map(b =>
         b.bait_type === selectedBait ? { ...b, quantity: b.quantity + 1 } : b
       ))
       setPhase('idle')
       return
     }
-
-    await new Promise(r => setTimeout(r, res.waitMs))
-
-    setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity })
-    setPhase('hooked')
     setTimeout(() => {
       const rot = Math.floor(Math.random() * 360)
       setZoneRotation(rot)
@@ -1372,6 +1380,7 @@ export default function FishingGame({
     const jackpotMultiplier = jackpotHit ? (rod.jackpotMultiplier ?? 1) : 1
 
     startTransition(async () => {
+      try {
       const res = await reelIn(hookedFishRef.current!.fishId, zone.type as 'perfect' | 'catch', selectedBaitRef.current, doubleCatch, streakBonusXP, jackpotMultiplier)
 
       if (wonChallenge) {
@@ -1447,6 +1456,11 @@ export default function FishingGame({
 
       phaseRef.current = 'result'
       setPhase('result')
+      } catch {
+        setMissResult('miss')
+        phaseRef.current = 'result'
+        setPhase('result')
+      }
     })
   }
 
