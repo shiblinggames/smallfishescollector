@@ -215,8 +215,8 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
               )}
             </div>
             <div className="flex items-center gap-3">
-              <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#f0c040' }}>
-                ✦ {exp.run_gold ?? 0}
+              <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#fb923c' }}>
+                ◈ {exp.run_gold ?? 0}
               </p>
               <button
                 onClick={() => setShowCrewSheet(true)}
@@ -268,6 +268,7 @@ export default function VoyagePage({ expedition: initExp, nodeType: initNodeType
               isPending={isPending}
               currentDurability={currentDurability}
               maxDurability={maxDurability}
+              username={username}
               onCrewClick={() => setShowCrewSheet(true)}
               onAction={handleCombatAction}
             />
@@ -508,7 +509,7 @@ function CircleAvatar({ src, fallback, size, borderColor }: { src: string | null
   )
 }
 
-function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBoss, isPending, currentDurability, maxDurability, onCrewClick, onAction }: {
+function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBoss, isPending, currentDurability, maxDurability, username, onCrewClick, onAction }: {
   enemy: EnemyDef
   cs: NonNullable<Expedition['combat_state']>
   phase: Phase
@@ -520,6 +521,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
   isPending: boolean
   currentDurability: number
   maxDurability: number
+  username: string
   onCrewClick: () => void
   onAction: (a: CombatAction) => void
 }) {
@@ -806,8 +808,8 @@ function EnemyDefeatedModal({ enemyName, goldEarned, runItemDropped, permItemDro
           marginBottom: hasLoot ? '0.75rem' : '1.25rem',
         }}>
           <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.44rem', color: '#6a6764', marginBottom: '0.35rem' }}>Gold Earned</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0c040', lineHeight: 1 }}>
-            +{goldEarned} ✦
+          <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#fb923c', lineHeight: 1 }}>
+            +{goldEarned} ◈
           </p>
         </div>
 
@@ -886,7 +888,7 @@ function EventView({ event, phase, isPending, onChoice, onContinue }: {
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '0.875rem 1rem', marginBottom: '1rem' }}>
             {result.effectType === 'heal'      && result.value > 0      && <p className="font-karla" style={{ fontSize: '0.78rem', color: '#4ade80' }}>✦ Hull repaired (+{result.value} Durability)</p>}
             {result.effectType === 'damage'    && result.value > 0      && <p className="font-karla" style={{ fontSize: '0.78rem', color: '#f87171' }}>⚠ Hull damaged (−{result.value} Durability)</p>}
-            {result.effectType === 'gold' && (result.goldBonus ?? 0) > 0 && <p className="font-karla" style={{ fontSize: '0.78rem', color: '#f0c040' }}>✦ +{result.goldBonus} Gold found</p>}
+            {result.effectType === 'gold' && (result.goldBonus ?? 0) > 0 && <p className="font-karla" style={{ fontSize: '0.78rem', color: '#fb923c' }}>◈ +{result.goldBonus} Gold found</p>}
             {result.effectType === 'buff'      && result.buff           && <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a78bfa' }}>✦ +{result.buff.value} {result.buff.effect} for this run</p>}
             {result.effectType === 'nothing'   && <p className="font-karla" style={{ fontSize: '0.78rem', color: '#6a6764' }}>You press on.</p>}
           </div>
