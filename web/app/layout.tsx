@@ -4,6 +4,7 @@ import './globals.css'
 import PageTransition from '@/components/PageTransition'
 import ClientBackground from '@/components/ClientBackground'
 import InstallPrompt from '@/components/InstallPrompt'
+import AnnouncementBanner from '@/components/AnnouncementBanner'
 
 const cinzel = Cinzel({
   subsets: ['latin'],
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-full bg-[#000000] text-[#f0ede8] font-karla">
         <ClientBackground />
+        <AnnouncementBanner />
         <PageTransition>
           {children}
         </PageTransition>
