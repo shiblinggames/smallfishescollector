@@ -1301,6 +1301,7 @@ export default function FishingGame({
     if (currentQty <= 0) { setPhase('idle'); return }
 
     deductBait(selectedBait)
+    await new Promise(r => setTimeout(r, 200))
     setPhase('casting')
 
     try {
@@ -1363,7 +1364,7 @@ export default function FishingGame({
   }
 
   // Phase 2 — reel in
-  function handleReelIn() {
+  async function handleReelIn() {
     if (phase !== 'catching' || !hookedFishRef.current) return
     setSnapKey(k => k + 1)
     if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
@@ -1405,6 +1406,7 @@ export default function FishingGame({
       setPerfectStreak(0)
       setMissResult(effectiveZoneType)
       setCatchResult(null)
+      await new Promise(r => setTimeout(r, 200))
       phaseRef.current = 'result'
       setPhase('result')
       startTransition(async () => {
@@ -1429,6 +1431,7 @@ export default function FishingGame({
     const triggerChallenge = wasPerfect && !challengeActive && Math.random() < 0.10
     if (!wasPerfect) { setChallengeActive(false); setPerfectStreak(0) }
 
+    await new Promise(r => setTimeout(r, 200))
     phaseRef.current = 'reeling'
     setPhase('reeling')
 
@@ -1994,19 +1997,19 @@ export default function FishingGame({
                     border: '1px solid rgba(34,170,200,0.5)', cursor: 'pointer',
                     fontSize: '0.72rem', color: '#67d4e8', touchAction: 'manipulation',
                     boxShadow: '0 6px 0 rgba(0,0,0,0.6), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
-                    position: 'relative', overflow: 'hidden',
+                    position: 'relative',
                   }}
                   initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.92 }}
                   whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' }}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                 >
-                  {castRippleKey > 0 && (
-                    <motion.span key={castRippleKey} style={{ position: 'absolute', borderRadius: '50%', width: '100%', height: '100%', background: 'rgba(255,255,255,0.28)', pointerEvents: 'none' }}
-                      initial={{ scale: 0, opacity: 0.6 }} animate={{ scale: 2.4, opacity: 0 }}
-                      transition={{ duration: 0.65, ease: 'easeOut' }}
+                  {castRippleKey > 0 && [0, 150].map((delay, i) => (
+                    <motion.span key={`${castRippleKey}-${i}`} style={{ position: 'absolute', borderRadius: '50%', width: '100%', height: '100%', border: '1.5px solid rgba(103,212,232,0.7)', background: 'transparent', pointerEvents: 'none' }}
+                      initial={{ scale: 1, opacity: 0.7 }} animate={{ scale: 2.4, opacity: 0 }}
+                      transition={{ duration: 0.7, ease: 'easeOut', delay: delay / 1000 }}
                     />
-                  )}
+                  ))}
                   Cast
                 </motion.button>
               )}
@@ -2034,19 +2037,19 @@ export default function FishingGame({
                     border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
                     fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
                     boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
-                    position: 'relative', overflow: 'hidden',
+                    position: 'relative',
                   }}
                   initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.92 }}
                   whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                 >
-                  {snapKey > 0 && (
-                    <motion.span key={snapKey} style={{ position: 'absolute', borderRadius: '50%', width: '100%', height: '100%', background: 'rgba(255,255,255,0.28)', pointerEvents: 'none' }}
-                      initial={{ scale: 0, opacity: 0.6 }} animate={{ scale: 2.4, opacity: 0 }}
-                      transition={{ duration: 0.65, ease: 'easeOut' }}
+                  {snapKey > 0 && [0, 150].map((delay, i) => (
+                    <motion.span key={`${snapKey}-${i}`} style={{ position: 'absolute', borderRadius: '50%', width: '100%', height: '100%', border: '1.5px solid rgba(240,192,64,0.7)', background: 'transparent', pointerEvents: 'none' }}
+                      initial={{ scale: 1, opacity: 0.7 }} animate={{ scale: 2.4, opacity: 0 }}
+                      transition={{ duration: 0.7, ease: 'easeOut', delay: delay / 1000 }}
                     />
-                  )}
+                  ))}
                   Reel In
                 </motion.button>
               )}
@@ -2066,19 +2069,19 @@ export default function FishingGame({
                     border: '1px solid rgba(34,170,200,0.4)', cursor: 'pointer',
                     fontSize: '0.65rem', color: '#67d4e8', touchAction: 'manipulation',
                     boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
-                    position: 'relative', overflow: 'hidden',
+                    position: 'relative',
                   }}
                   initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.92 }}
                   whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                 >
-                  {castRippleKey > 0 && (
-                    <motion.span key={castRippleKey} style={{ position: 'absolute', borderRadius: '50%', width: '100%', height: '100%', background: 'rgba(255,255,255,0.28)', pointerEvents: 'none' }}
-                      initial={{ scale: 0, opacity: 0.6 }} animate={{ scale: 2.4, opacity: 0 }}
-                      transition={{ duration: 0.65, ease: 'easeOut' }}
+                  {castRippleKey > 0 && [0, 150].map((delay, i) => (
+                    <motion.span key={`${castRippleKey}-${i}`} style={{ position: 'absolute', borderRadius: '50%', width: '100%', height: '100%', border: '1.5px solid rgba(103,212,232,0.7)', background: 'transparent', pointerEvents: 'none' }}
+                      initial={{ scale: 1, opacity: 0.7 }} animate={{ scale: 2.4, opacity: 0 }}
+                      transition={{ duration: 0.7, ease: 'easeOut', delay: delay / 1000 }}
                     />
-                  )}
+                  ))}
                   Cast Again
                 </motion.button>
               )}
