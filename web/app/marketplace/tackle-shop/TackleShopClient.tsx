@@ -585,10 +585,10 @@ export default function TackleShopClient({
                   border: `1px solid ${isActive ? `${c}55` : owned ? `${c}40` : 'rgba(255,255,255,0.14)'}`,
                   boxShadow: isActive ? `0 0 18px ${c}30` : 'none',
                   borderRadius: 12,
-                  display: 'flex', flexDirection: 'column', gap: 7,
+                  display: 'flex', flexDirection: 'column',
                 }}
               >
-                <div className="flex flex-col sm:flex-row sm:items-start sm:gap-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:gap-2.5 flex-1">
                   {/* Image — full-width on mobile, 80px fixed on desktop */}
                   {rod.imageUrl && (
                     <div className="w-full sm:w-20 sm:flex-shrink-0 mb-2 sm:mb-0"
@@ -598,7 +598,7 @@ export default function TackleShopClient({
                     </div>
                   )}
                   {/* Content */}
-                  <div className="flex-1 flex flex-col" style={{ gap: 7 }}>
+                  <div className="flex-1 flex flex-col" style={{ gap: 7, minWidth: 0 }}>
                     {/* Name */}
                     <div>
                       <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: owned ? '#f0ede8' : '#6a6764', lineHeight: 1.25 }}>{rod.name}</p>
@@ -621,13 +621,12 @@ export default function TackleShopClient({
                     {/* Description */}
                     <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#6a6764', lineHeight: 1.45 }}>{rod.description}</p>
 
-                    {/* Price + action */}
+                    {/* Action */}
                     <div className="mt-auto pt-1">
-                      {!owned && <p className="font-cinzel font-700 text-[#f0c040] mb-1.5" style={{ fontSize: '0.88rem' }}>{rod.cost.toLocaleString()} ⟡</p>}
                       {!owned && (
                         <button
-                          onClick={() => handlePurchaseRod(rod.tier)}
-                          disabled={!canAfford || isPending}
+                          onClick={() => { if (canAfford) handlePurchaseRod(rod.tier) }}
+                          disabled={isPending}
                           className="font-karla font-700 w-full"
                           style={{
                             fontSize: '0.7rem', padding: '0.38rem 0.5rem', borderRadius: 8,
@@ -638,7 +637,7 @@ export default function TackleShopClient({
                             opacity: isBuying ? 0.5 : 1,
                           }}
                         >
-                          {isBuying ? '…' : canAfford ? 'Buy & Equip' : `${(rod.cost - doubloons).toLocaleString()} ⟡ short`}
+                          {isBuying ? '…' : `Buy · ${rod.cost.toLocaleString()} ⟡`}
                         </button>
                       )}
                       {owned && !isActive && (
