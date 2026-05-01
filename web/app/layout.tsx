@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`h-full ${cinzel.variable} ${karla.variable} ${pirata.variable}`}>
+    <html lang="en" className={`${cinzel.variable} ${karla.variable} ${pirata.variable}`}>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#000000" />
@@ -41,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-title" content="Small Fishes" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
-      <body className="min-h-full bg-[#000000] text-[#f0ede8] font-karla">
+      <body className="min-h-screen bg-[#000000] text-[#f0ede8] font-karla">
         <ClientBackground />
         <PageTransition>
           {children}
