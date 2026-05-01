@@ -68,6 +68,108 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
+const CARD_W = 140
+
+function getOff(idx: number, active: number, total: number) {
+  let d = idx - active
+  if (d > total / 2) d -= total
+  if (d < -total / 2) d += total
+  return d
+}
+
+function cardTransform(off: number): { tx: number; tz: number; ry: number; scale: number; brightness: number; zIdx: number } {
+  const abs = Math.abs(off)
+  const sign = Math.sign(off)
+  if (off === 0)  return { tx: 0,          tz: 50,  ry: 0,           scale: 1.00, brightness: 1.0,  zIdx: 10 }
+  if (abs === 1)  return { tx: sign * 90,  tz: -15, ry: -sign * 22,  scale: 0.80, brightness: 0.55, zIdx: 5  }
+  return            { tx: sign * 148, tz: -45, ry: -sign * 36,  scale: 0.60, brightness: 0.35, zIdx: 2  }
+}
+
+function CrewCarousel({ variants }: { variants: CardVariant[] }) {
+  const [active, setActive] = useState(0)
+  const total = variants.length
+
+  function prev() { setActive(i => (i - 1 + total) % total) }
+  function next() { setActive(i => (i + 1) % total) }
+
+  const activeCard = variants[active]
+  const isActiveCaptain = active === 0
+
+  return (
+    <div>
+      {/* Section header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Crew</p>
+        {isActiveCaptain && (
+          <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#f0c04077' }}>⚓ Captain</span>
+        )}
+      </div>
+
+      {/* 3D stage */}
+      <div style={{ position: 'relative', height: 210, perspective: '800px', overflow: 'visible' }}>
+        {variants.map((cv, idx) => {
+          const off = getOff(idx, active, total)
+          if (Math.abs(off) > 2) return null
+          const { tx, tz, ry, scale, brightness, zIdx } = cardTransform(off)
+          return (
+            <div
+              key={cv.id}
+              onClick={() => off !== 0 && setActive(idx)}
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: 0,
+                marginLeft: -CARD_W / 2,
+                transform: `translateX(${tx}px) translateZ(${tz}px) rotateY(${ry}deg) scale(${scale})`,
+                transition: 'transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94), filter 0.38s',
+                filter: `brightness(${brightness})`,
+                zIndex: zIdx,
+                cursor: off !== 0 ? 'pointer' : 'default',
+              }}
+            >
+              <FishCard
+                name={cv.cards.name}
+                filename={cv.cards.filename}
+                borderStyle={cv.border_style}
+                artEffect={cv.art_effect}
+                variantName={cv.variant_name}
+                dropWeight={cv.drop_weight}
+              />
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Card name + nav */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginTop: 10 }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0ede8', minHeight: '1.2em' }}>
+          {activeCard?.cards.name}
+        </p>
+        {total > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={prev} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5a5755', fontSize: '1.1rem', lineHeight: 1, padding: '0 2px' }}>‹</button>
+            <div style={{ display: 'flex', gap: 5 }}>
+              {variants.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActive(i)}
+                  style={{
+                    width: i === active ? 18 : 6, height: 6, borderRadius: 3,
+                    background: i === active ? '#f0c040' : 'rgba(255,255,255,0.14)',
+                    border: 'none', cursor: 'pointer', padding: 0,
+                    transition: 'width 0.22s, background 0.22s',
+                  }}
+                />
+              ))}
+            </div>
+            <button onClick={next} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5a5755', fontSize: '1.1rem', lineHeight: 1, padding: '0 2px' }}>›</button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function ProfileClient({ username, showcaseVariants, stats, gear, rarestFish, isPremium, isOwnProfile, isInCrew: initialIsInCrew }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
@@ -154,40 +256,8 @@ export default function ProfileClient({ username, showcaseVariants, stats, gear,
         ))}
       </div>
 
-      {/* ── Showcase ── */}
-      {variants.length > 0 && (
-        <div>
-          <SectionLabel>Top Catches</SectionLabel>
-          <div className="flex flex-col items-center gap-5">
-            <FishCard
-              name={variants[0].cards.name}
-              filename={variants[0].cards.filename}
-              borderStyle={variants[0].border_style}
-              artEffect={variants[0].art_effect}
-              variantName={variants[0].variant_name}
-              dropWeight={variants[0].drop_weight}
-            />
-            {variants.length > 1 && (
-              <div className="flex gap-5 justify-center">
-                {variants.slice(1, 3).map(cv => (
-                  <FishCard key={cv.id} name={cv.cards.name} filename={cv.cards.filename}
-                    borderStyle={cv.border_style} artEffect={cv.art_effect}
-                    variantName={cv.variant_name} dropWeight={cv.drop_weight} />
-                ))}
-              </div>
-            )}
-            {variants.length > 3 && (
-              <div className="flex gap-5 justify-center">
-                {variants.slice(3, 5).map(cv => (
-                  <FishCard key={cv.id} name={cv.cards.name} filename={cv.cards.filename}
-                    borderStyle={cv.border_style} artEffect={cv.art_effect}
-                    variantName={cv.variant_name} dropWeight={cv.drop_weight} />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* ── Crew carousel ── */}
+      {variants.length > 0 && <CrewCarousel variants={variants} />}
 
       {/* ── Fishing ── */}
       {(stats.highestPerfectStreak > 0 || rarestFish.length > 0) && (
