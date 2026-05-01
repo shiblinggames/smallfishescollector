@@ -1271,25 +1271,23 @@ export default function FishingGame({
   }
 
   function advanceTour() {
-    setTourStep(prev => {
-      if (prev === null) return null
-      if (prev >= TOUR_STEPS.length - 1) {
-        startTransition(async () => { await markFishingTourSeen() })
-        return null
-      }
-      return prev + 1
-    })
+    if (tourStep === null) return
+    if (tourStep >= TOUR_STEPS.length - 1) {
+      setTourStep(null)
+      startTransition(async () => { await markFishingTourSeen() })
+    } else {
+      setTourStep(tourStep + 1)
+    }
   }
 
   function advanceCatchTour() {
-    setCatchTourStep(prev => {
-      if (prev === null) return null
-      if (prev >= CATCH_TOUR_STEPS.length - 1) {
-        startTransition(async () => { await markFishingCatchTourSeen() })
-        return null
-      }
-      return prev + 1
-    })
+    if (catchTourStep === null) return
+    if (catchTourStep >= CATCH_TOUR_STEPS.length - 1) {
+      setCatchTourStep(null)
+      startTransition(async () => { await markFishingCatchTourSeen() })
+    } else {
+      setCatchTourStep(catchTourStep + 1)
+    }
   }
 
   // Phase 1 — cast (from idle)
