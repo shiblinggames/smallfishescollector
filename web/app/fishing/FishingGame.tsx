@@ -1616,14 +1616,14 @@ export default function FishingGame({
           ))}
         </motion.div>
 
-        {/* Zone darkness overlay */}
+        {/* Zone darkness overlay — gradient from transparent (top 20%) to dark (bottom) */}
         <div style={{
           position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
-          background: 'rgba(0,0,0,' + (
-            selectedZone === 'abyss'       ? '0.62' :
-            selectedZone === 'deep'        ? '0.38' :
-            selectedZone === 'open_waters' ? '0.18' : '0'
-          ) + ')',
+          background: `linear-gradient(to bottom, transparent 20%, rgba(0,0,0,${
+            selectedZone === 'abyss'       ? '0.72' :
+            selectedZone === 'deep'        ? '0.45' :
+            selectedZone === 'open_waters' ? '0.22' : '0'
+          }) 100%)`,
         }} />
 
         {/* UI content — fills full height as flex column */}
