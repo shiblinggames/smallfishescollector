@@ -192,13 +192,11 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
 
   function flipAll() {
     cards.forEach((_, i) => resetTilt(i))
-    const rarities = cards.map((c) => rarityFromVariant(c.variantName, c.dropWeight))
-    const priority = ['Mythic', 'Legendary', 'Epic']
-    const top = priority.find((r) => rarities.includes(r))
-    if (top) triggerFlash(top)
-    setGlowClasses(rarities.map(glowClassFor))
     cards.forEach((card, i) => {
       setTimeout(() => {
+        const rarity = rarityFromVariant(card.variantName, card.dropWeight)
+        triggerFlash(rarity)
+        setGlowClasses(prev => { const n = [...prev]; n[i] = glowClassFor(rarity); return n })
         checkPrize(card)
         setFlipped(prev => { const n = [...prev]; n[i] = true; return n })
       }, i * 480)
