@@ -151,15 +151,21 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
 
     setDiceResult(result.result)
     if (result.newAchievements?.length) setAchievementKeys(result.newAchievements)
-    // Random stop times between 800–1300ms, in a random order (any die can land first)
-    const stopTimes = [800, 950, 1100].map(base => base + Math.floor(Math.random() * 250))
-    const order = [0, 1, 2].sort(() => Math.random() - 0.5)
+    // Left (0) and right (2) stop first in random order; middle (1) always last
+    const stopTimes = [
+      800  + Math.floor(Math.random() * 200),  // first outer die
+      1050 + Math.floor(Math.random() * 200),  // second outer die
+      1350 + Math.floor(Math.random() * 200),  // middle, always last
+    ]
+    const outerFirst = Math.random() < 0.5 ? 0 : 2
+    const outerSecond = outerFirst === 0 ? 2 : 0
+    const order = [outerFirst, outerSecond, 1]
     order.forEach((dieIdx, i) => {
       setTimeout(() => {
         setDiceRolling(prev => { const next = [...prev]; next[dieIdx] = false; return next })
       }, stopTimes[i])
     })
-    const lastStop = Math.max(...stopTimes)
+    const lastStop = stopTimes[2]
     setTimeout(() => {
       setDoubloons(result.newDoubloons)
       setDailyWagered(result.dailyWagered)
