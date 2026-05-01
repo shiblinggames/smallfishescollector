@@ -1692,16 +1692,25 @@ export default function FishingGame({
 
             <button
               onClick={() => { setCollectionOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
-              className="font-karla font-600 uppercase tracking-[0.1em]"
               style={{
-                fontSize: '0.6rem', color: HABITAT_COLOR[selectedZone],
                 background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
-                borderRadius: 8, padding: '0.3rem 0.65rem',
+                borderRadius: 8, padding: '0.28rem 0.7rem',
                 cursor: 'pointer', touchAction: 'manipulation',
                 position: 'relative',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
               }}
             >
-              Collection
+              <span className="font-karla font-600 uppercase tracking-[0.1em]"
+                style={{ fontSize: '0.48rem', color: HABITAT_COLOR[selectedZone] + 'aa', lineHeight: 1 }}>
+                Collection
+              </span>
+              <span className="font-cinzel font-700"
+                style={{ fontSize: '0.88rem', color: HABITAT_COLOR[selectedZone], lineHeight: 1 }}>
+                {caughtFishIds.size}
+                <span className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#6a6764' }}>
+                  /{allFishSpecies.length}
+                </span>
+              </span>
               {uncheckedNewFishIds.size > 0 && (
                 <span style={{
                   position: 'absolute', top: -4, right: -4,
