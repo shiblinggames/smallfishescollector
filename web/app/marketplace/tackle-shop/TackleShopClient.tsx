@@ -554,8 +554,8 @@ export default function TackleShopClient({
                 style={{
                   padding: '0.9rem 0.85rem',
                   background: 'rgba(8,8,6,0.82)',
-                  border: `1px solid ${isActive ? `${c}55` : owned ? `${c}40` : 'rgba(255,255,255,0.14)'}`,
-                  boxShadow: isActive ? `0 0 18px ${c}30` : 'none',
+                  border: `1px solid ${isActive ? `${c}70` : owned ? `${c}55` : 'rgba(255,255,255,0.14)'}`,
+                  boxShadow: isActive ? `0 0 18px ${c}35` : owned ? `0 0 10px ${c}18` : 'none',
                   borderRadius: 12,
                   display: 'flex', flexDirection: 'column',
                 }}
