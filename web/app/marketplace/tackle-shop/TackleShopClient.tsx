@@ -483,8 +483,8 @@ export default function TackleShopClient({
                 /* ── Locked: mysterious ── */
                 <>
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: eligible ? '#f0ede8' : '#4a4845', letterSpacing: '0.08em' }}>
-                      {eligible ? '✦ Ready to Claim' : '— ? —'}
+                    <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: eligible ? '#f0ede8' : '#6a6764', letterSpacing: '0.08em' }}>
+                      {eligible ? '✦ Ready to Claim' : '🔒 Completionist Rod'}
                     </p>
                     <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.48rem', color: eligible ? c : '#4a4845', background: eligible ? `${c}18` : 'rgba(255,255,255,0.05)', border: `1px solid ${eligible ? `${c}35` : 'rgba(255,255,255,0.1)'}`, padding: '0.1rem 0.5rem', borderRadius: '2rem' }}>Mastery</span>
                   </div>
@@ -497,8 +497,8 @@ export default function TackleShopClient({
                   {/* Progress */}
                   <div className="flex flex-col gap-2.5 mb-4">
                     {[
-                      { label: 'Level', current: Math.min(playerLevel, 100), max: 100, done: isLevelOk },
-                      { label: 'Species', current: uniqueSpeciesCaught, max: totalSpecies, done: isSpeciesOk },
+                      { label: 'Fishing Level', current: Math.min(playerLevel, 100), max: 100, done: isLevelOk },
+                      { label: 'Species Discovered', current: uniqueSpeciesCaught, max: totalSpecies, done: isSpeciesOk },
                     ].map(({ label, current, max, done }) => (
                       <div key={label}>
                         <div className="flex justify-between mb-1">
@@ -588,71 +588,77 @@ export default function TackleShopClient({
                   display: 'flex', flexDirection: 'column', gap: 7,
                 }}
               >
-                {/* Image */}
-                {rod.imageUrl && (
-                  <div style={{ width: '100%', height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${c}14`, border: `1px solid ${c}30`, borderRadius: 8, padding: 6, marginBottom: 8 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={rod.imageUrl} alt={rod.name} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: owned ? 'none' : 'grayscale(1) brightness(0.4)' }} />
+                <div className="flex flex-col sm:flex-row sm:items-start sm:gap-2.5">
+                  {/* Image — full-width on mobile, 80px fixed on desktop */}
+                  {rod.imageUrl && (
+                    <div className="w-full sm:w-20 sm:flex-shrink-0 mb-2 sm:mb-0"
+                      style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${c}14`, border: `1px solid ${c}30`, borderRadius: 8, padding: 6 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={rod.imageUrl} alt={rod.name} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: owned ? 'none' : 'grayscale(1) brightness(0.4)' }} />
+                    </div>
+                  )}
+                  {/* Content */}
+                  <div className="flex-1 flex flex-col" style={{ gap: 7 }}>
+                    {/* Name */}
+                    <div>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: owned ? '#f0ede8' : '#6a6764', lineHeight: 1.25 }}>{rod.name}</p>
+                      {isActive && <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: c }}>Equipped</span>}
+                      {owned && !isActive && <span className="font-karla font-300 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#4ade80' }}>Owned</span>}
+                    </div>
+
+                    {/* Stat pills */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {rod.doubleCatchChance > 0 && pill(rod.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(rod.doubleCatchChance * 100)}% double catch`)}
+                      {rod.retryOnMissChance > 0 && pill(`${Math.round(rod.retryOnMissChance * 100)}% miss retry`)}
+                      {rod.snagImmune && pill('Snag immune')}
+                      {rod.perfectZoneBonus > 0 && pill(`Perfect zone +${rod.perfectZoneBonus}°`)}
+                      {rod.rarityBonus > 0 && pill(`+${Math.round(rod.rarityBonus * 100)}% rare bias`)}
+                      {(rod.jackpotChance ?? 0) > 0 && pill(`${Math.round(rod.jackpotChance! * 100)}% jackpot ×${rod.jackpotMultiplier}`)}
+                      {!hasSpecial && speedPct > 0 && pill(`${speedPct}% faster bites`)}
+                      {!hasSpecial && rod.catchZoneBonus > 0 && pill(`+${rod.catchZoneBonus}° catch zone`)}
+                    </div>
+
+                    {/* Description */}
+                    <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#6a6764', lineHeight: 1.45 }}>{rod.description}</p>
+
+                    {/* Price + action */}
+                    <div className="mt-auto pt-1">
+                      {!owned && <p className="font-cinzel font-700 text-[#f0c040] mb-1.5" style={{ fontSize: '0.88rem' }}>{rod.cost.toLocaleString()} ⟡</p>}
+                      {!owned && (
+                        <button
+                          onClick={() => handlePurchaseRod(rod.tier)}
+                          disabled={!canAfford || isPending}
+                          className="font-karla font-700 w-full"
+                          style={{
+                            fontSize: '0.7rem', padding: '0.38rem 0.5rem', borderRadius: 8,
+                            background: canAfford ? `${c}16` : 'rgba(255,255,255,0.06)',
+                            border: `1px solid ${canAfford ? c + '44' : 'rgba(255,255,255,0.14)'}`,
+                            color: canAfford ? c : '#4a4845',
+                            cursor: canAfford && !isPending ? 'pointer' : 'default',
+                            opacity: isBuying ? 0.5 : 1,
+                          }}
+                        >
+                          {isBuying ? '…' : canAfford ? 'Buy & Equip' : `${(rod.cost - doubloons).toLocaleString()} ⟡ short`}
+                        </button>
+                      )}
+                      {owned && !isActive && (
+                        <button
+                          onClick={() => handleEquipRod(rod.tier)}
+                          disabled={isPending}
+                          className="font-karla font-700 w-full"
+                          style={{
+                            fontSize: '0.7rem', padding: '0.38rem 0.5rem', borderRadius: 8,
+                            background: `${c}16`, border: `1px solid ${c}44`,
+                            color: c, cursor: isPending ? 'default' : 'pointer',
+                            opacity: isEquipping ? 0.5 : 1,
+                          }}
+                        >
+                          {isEquipping ? '…' : 'Equip'}
+                        </button>
+                      )}
+                      {isActive && <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: `${c}88` }}>✓ In use</span>}
+                    </div>
                   </div>
-                )}
-                {/* Name */}
-                <div style={{ marginBottom: 6 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: owned ? '#f0ede8' : '#6a6764', lineHeight: 1.25 }}>{rod.name}</p>
-                  {isActive && <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: c }}>Equipped</span>}
-                  {owned && !isActive && <span className="font-karla font-300 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#4ade80' }}>Owned</span>}
-                </div>
-
-                {/* Stat pills */}
-                <div className="flex flex-wrap gap-1.5">
-                  {rod.doubleCatchChance > 0 && pill(rod.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(rod.doubleCatchChance * 100)}% double catch`)}
-                  {rod.retryOnMissChance > 0 && pill(`${Math.round(rod.retryOnMissChance * 100)}% miss retry`)}
-                  {rod.snagImmune && pill('Snag immune')}
-                  {rod.perfectZoneBonus > 0 && pill(`Perfect zone +${rod.perfectZoneBonus}°`)}
-                  {rod.rarityBonus > 0 && pill(`+${Math.round(rod.rarityBonus * 100)}% rare bias`)}
-                  {(rod.jackpotChance ?? 0) > 0 && pill(`${Math.round(rod.jackpotChance! * 100)}% jackpot ×${rod.jackpotMultiplier}`)}
-                  {!hasSpecial && speedPct > 0 && pill(`${speedPct}% faster bites`)}
-                  {!hasSpecial && rod.catchZoneBonus > 0 && pill(`+${rod.catchZoneBonus}° catch zone`)}
-                </div>
-
-                {/* Description */}
-                <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#6a6764', lineHeight: 1.45, flex: 1 }}>{rod.description}</p>
-
-                {/* Price + action */}
-                <div className="mt-auto pt-1">
-                  {!owned && <p className="font-cinzel font-700 text-[#f0c040] mb-1.5" style={{ fontSize: '0.88rem' }}>{rod.cost.toLocaleString()} ⟡</p>}
-                  {!owned && (
-                    <button
-                      onClick={() => handlePurchaseRod(rod.tier)}
-                      disabled={!canAfford || isPending}
-                      className="font-karla font-700 w-full"
-                      style={{
-                        fontSize: '0.7rem', padding: '0.38rem 0.5rem', borderRadius: 8,
-                        background: canAfford ? `${c}16` : 'rgba(255,255,255,0.06)',
-                        border: `1px solid ${canAfford ? c + '44' : 'rgba(255,255,255,0.14)'}`,
-                        color: canAfford ? c : '#4a4845',
-                        cursor: canAfford && !isPending ? 'pointer' : 'default',
-                        opacity: isBuying ? 0.5 : 1,
-                      }}
-                    >
-                      {isBuying ? '…' : canAfford ? 'Buy & Equip' : `${(rod.cost - doubloons).toLocaleString()} ⟡ short`}
-                    </button>
-                  )}
-                  {owned && !isActive && (
-                    <button
-                      onClick={() => handleEquipRod(rod.tier)}
-                      disabled={isPending}
-                      className="font-karla font-700 w-full"
-                      style={{
-                        fontSize: '0.7rem', padding: '0.38rem 0.5rem', borderRadius: 8,
-                        background: `${c}16`, border: `1px solid ${c}44`,
-                        color: c, cursor: isPending ? 'default' : 'pointer',
-                        opacity: isEquipping ? 0.5 : 1,
-                      }}
-                    >
-                      {isEquipping ? '…' : 'Equip'}
-                    </button>
-                  )}
-                  {isActive && <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: `${c}88` }}>✓ In use</span>}
                 </div>
               </div>
             )
