@@ -140,12 +140,6 @@ function ShipDetailModal({
   const isNext = tier === shipTier + 1
   const canAfford = doubloons >= ship.cost
 
-  const statDefs = [
-    { key: 'durability' as const, label: 'Durability', icon: '🛡', color: '#60a5fa', description: 'Total HP your ship can absorb before sinking' },
-    { key: 'speed'      as const, label: 'Speed',      icon: '⚡', color: '#f0c040', description: 'Initiative bonus — higher speed fires first' },
-    { key: 'armor'      as const, label: 'Armor',      icon: '⚓', color: '#4ade80', description: 'Flat damage reduction on every hit you take' },
-  ]
-
   return (
     <div
       onClick={onClose}
@@ -157,19 +151,15 @@ function ShipDetailModal({
           background: '#0f0f0e',
           border: '1px solid rgba(255,255,255,0.12)',
           borderRadius: '18px 18px 0 0',
-          width: '100%',
-          maxWidth: 480,
-          maxHeight: '88vh',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
+          width: '100%', maxWidth: 480, maxHeight: '88vh',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div>
-            <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>{ship.name}</p>
-            <p className="font-karla" style={{ fontSize: '0.6rem', color: '#6a6764', marginTop: 1 }}>{ship.description}</p>
+            <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.05rem' }}>{ship.name}</p>
+            <p className="font-karla" style={{ fontSize: '0.65rem', color: '#6a6764', marginTop: 2 }}>{ship.description}</p>
           </div>
           <button onClick={onClose} style={{ color: '#6a6764', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -178,77 +168,68 @@ function ShipDetailModal({
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1 px-5 py-4 flex flex-col gap-4">
+        <div className="overflow-y-auto flex-1 px-5 py-4 flex flex-col gap-5">
 
-          {/* Large ship image */}
+          {/* Ship image */}
           <div style={{
-            background: 'rgba(8,8,6,0.82)',
-            border: `1px solid ${c}30`,
-            borderRadius: 12,
-            padding: '1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            background: 'rgba(8,8,6,0.82)', border: `1px solid ${c}30`,
+            borderRadius: 12, padding: '1.25rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: `0 0 40px ${c}15`,
           }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={ship.imageUrl}
-              alt={ship.name}
-              style={{ width: 180, height: 180, objectFit: 'contain', filter: owned ? 'none' : 'grayscale(1) brightness(0.45)' }}
+            <img src={ship.imageUrl} alt={ship.name}
+              style={{ width: 160, height: 160, objectFit: 'contain', filter: owned ? 'none' : 'grayscale(1) brightness(0.45)' }}
             />
           </div>
 
-          {/* Crew slots */}
-          <div style={{ background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 10, padding: '0.75rem', textAlign: 'center' }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: c }}>{stats?.crewSlots ?? 1}</p>
-            <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#6a6764', marginTop: 2 }}>Crew Slots</p>
-            <p className="font-karla" style={{ fontSize: '0.6rem', color: '#4a4845', marginTop: 4, lineHeight: 1.4 }}>Cards you can bring into battle to boost Power, Dodge, and Fortune</p>
+          {/* Fishing + crew quick stats */}
+          <div>
+            <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#4a6a8a', marginBottom: 8 }}>Fishing</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {[
+                { label: 'Fish Hold', value: ship.holdCapacity, unit: 'fish', color: c },
+                { label: 'Crew Slots', value: stats?.crewSlots ?? 1, unit: 'cards', color: c },
+              ].map(s => (
+                <div key={s.label} style={{ background: 'rgba(8,8,6,0.82)', border: `1px solid ${c}25`, borderRadius: 10, padding: '0.7rem', textAlign: 'center' }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: s.color, lineHeight: 1 }}>{s.value}</p>
+                  <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#6a6764', marginTop: 4 }}>{s.label}</p>
+                  <p className="font-karla" style={{ fontSize: '0.5rem', color: '#4a4845', marginTop: 2 }}>{s.unit}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Combat stats */}
-          <div className="flex flex-col gap-2">
-            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#6a6764' }}>Combat Stats</p>
-            {statDefs.map(s => (
-              <div key={s.key} style={{ background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 10, padding: '0.7rem 0.875rem' }}>
-                <div className="flex items-center justify-between mb-1">
-                  <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#f0ede8' }}>
-                    {s.icon} {s.label}
-                  </p>
-                  <div style={{ background: `${s.color}15`, border: `1px solid ${s.color}30`, borderRadius: 6, padding: '0.15rem 0.5rem' }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.color }}>{stats?.[s.key] ?? '—'}</p>
-                  </div>
+          <div>
+            <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#4a6a8a', marginBottom: 8 }}>Combat</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+              {[
+                { label: 'HP',       value: stats?.durability ?? '—', color: '#60a5fa' },
+                { label: 'Armor',    value: stats?.armor      ?? '—', color: '#4ade80' },
+                { label: 'Speed',    value: stats?.speed      ?? '—', color: '#f0c040' },
+                { label: 'Min Shot', value: stats?.minDamage  ?? '—', color: '#fb923c' },
+              ].map(s => (
+                <div key={s.label} style={{ background: 'rgba(8,8,6,0.82)', border: `1px solid ${s.color}22`, borderRadius: 10, padding: '0.6rem 0.4rem', textAlign: 'center' }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: s.color, lineHeight: 1 }}>{s.value}</p>
+                  <p className="font-karla font-600 uppercase tracking-[0.06em]" style={{ fontSize: '0.45rem', color: '#6a6764', marginTop: 4 }}>{s.label}</p>
                 </div>
-                <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.4 }}>{s.description}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* How combat works */}
-          <div style={{ background: `${c}0a`, border: `1px solid ${c}25`, borderRadius: 10, padding: '0.75rem' }}>
-            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: c, marginBottom: 6 }}>How combat works</p>
-            <p className="font-karla" style={{ fontSize: '0.68rem', color: '#a0a09a', lineHeight: 1.55 }}>
-              Each round you choose Reload, Fire, or Defend. Stockpile charges for bigger shots — 3 charges deals 5× base damage. Speed determines who fires first when both sides shoot.
+              ))}
+            </div>
+            <p className="font-karla" style={{ fontSize: '0.6rem', color: '#4a4845', marginTop: 8, lineHeight: 1.5 }}>
+              Reload to stockpile charges (max 3). Fire spends 1 charge (×1 dmg) — Volley spends all 3 (×2 dmg). Defend reduces incoming damage and enables dodging. Speed determines who fires first.
             </p>
           </div>
 
-          {/* Buy / status */}
+          {/* Status / buy */}
           {isActive && (
-            <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
-              <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.7rem', color: c }}>✓ Active Ship</span>
-            </div>
+            <p className="font-karla font-600 uppercase tracking-[0.1em] text-center" style={{ fontSize: '0.7rem', color: c }}>✓ Active Ship</p>
           )}
           {owned && !isActive && (
-            <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
-              <span className="font-karla font-300 uppercase tracking-[0.1em]" style={{ fontSize: '0.7rem', color: '#4ade80' }}>✓ Owned</span>
-            </div>
+            <p className="font-karla font-300 uppercase tracking-[0.1em] text-center" style={{ fontSize: '0.7rem', color: '#4ade80' }}>✓ Owned</p>
           )}
           {isNext && (
-            <button
-              onClick={onBuy}
-              disabled={!canAfford || isPending}
-              className="btn-ghost w-full disabled:opacity-30"
-            >
+            <button onClick={onBuy} disabled={!canAfford || isPending} className="btn-ghost w-full disabled:opacity-30">
               {isPending ? 'Upgrading…' : canAfford ? `Upgrade · ${ship.cost.toLocaleString()} ⟡` : `${(ship.cost - doubloons).toLocaleString()} ⟡ short`}
             </button>
           )}
