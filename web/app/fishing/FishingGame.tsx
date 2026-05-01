@@ -82,7 +82,7 @@ const CATCH_TOUR_STEPS = [
   {
     color: '#f59e0b',
     title: 'Perfect Zones',
-    body: 'The gold strips at the very edges of the green are Perfect zones. Land here for an XP bonus and a chance to save your bait for a free recast.',
+    body: 'The gold strips in the middle of the green are Perfect zones. Land here for an XP bonus and a chance to save your bait for a free recast.',
   },
   {
     color: '#fb923c',
