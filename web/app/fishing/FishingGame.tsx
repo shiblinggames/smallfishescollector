@@ -1692,7 +1692,7 @@ export default function FishingGame({
             >
               {showStreak ? (
                 <div style={{ textAlign: 'center' }}>
-                  <p className="font-pirata" style={{ fontSize: '2.2rem', color: '#fb923c', textShadow: '0 0 18px rgba(251,146,60,0.65)', lineHeight: 1 }}>
+                  <p className="font-pirata" style={{ fontSize: '1.7rem', color: '#a86030', textShadow: 'none', lineHeight: 1 }}>
                     {highestPerfectStreak}
                   </p>
                   <p className="font-karla font-600 uppercase tracking-[0.18em]" style={{ fontSize: '0.42rem', color: 'rgba(255,255,255,0.9)', marginTop: 2 }}>
@@ -1700,7 +1700,7 @@ export default function FishingGame({
                   </p>
                 </div>
               ) : (
-                <p className="font-karla font-600 uppercase tracking-[0.18em]" style={{ fontSize: '0.42rem', color: 'rgba(255,255,255,0.35)' }}>
+                <p className="font-karla font-600 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.75)' }}>
                   streak
                 </p>
               )}
