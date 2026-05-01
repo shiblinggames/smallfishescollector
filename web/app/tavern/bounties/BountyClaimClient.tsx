@@ -87,16 +87,17 @@ export default function BountyClaimClient({
         const state = states[tier]
         const fish = fishByTier[tier]
         const isClaiming = claiming === tier
+        const readyToClaim = state.completed && !state.claimed
 
         return (
           <div
             key={tier}
             style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: `1px solid ${state.completed && !state.claimed ? `${meta.color}40` : 'rgba(255,255,255,0.1)'}`,
+              background: readyToClaim ? `${meta.color}12` : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${readyToClaim ? `${meta.color}55` : state.claimed ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.14)'}`,
               borderRadius: 16,
               padding: '1.25rem',
-              opacity: state.claimed ? 0.55 : 1,
+              opacity: state.claimed ? 0.5 : 1,
               transition: 'opacity 0.2s ease',
             }}
           >
@@ -104,10 +105,10 @@ export default function BountyClaimClient({
               {/* Icon */}
               <div style={{
                 width: 44, height: 44, borderRadius: 10, flexShrink: 0,
-                background: `${meta.color}12`,
-                border: `1px solid ${meta.color}${state.completed ? '35' : '18'}`,
+                background: state.completed ? `${meta.color}22` : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${state.completed ? `${meta.color}55` : 'rgba(255,255,255,0.12)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: state.completed ? meta.color : '#3a3835',
+                color: state.completed ? meta.color : '#5a5855',
               }}>
                 {state.claimed ? <CheckIcon /> : state.completed ? <FishIcon /> : <LockIcon />}
               </div>
@@ -116,17 +117,17 @@ export default function BountyClaimClient({
               <div className="flex-1 min-w-0">
                 <p
                   className="font-karla font-700 uppercase tracking-[0.12em] mb-0.5"
-                  style={{ fontSize: '0.52rem', color: meta.color }}
+                  style={{ fontSize: '0.52rem', color: state.completed ? meta.color : '#6a6764' }}
                 >
                   {meta.label}
                 </p>
                 <p
                   className="font-cinzel font-700"
-                  style={{ fontSize: '1rem', color: state.completed ? '#f0ede8' : '#4a4845' }}
+                  style={{ fontSize: '1rem', color: state.completed ? '#f0ede8' : '#8a8884' }}
                 >
                   {fish.name}
                 </p>
-                <p className="font-karla font-600 mt-0.5" style={{ fontSize: '0.72rem', color: '#6a6764' }}>
+                <p className="font-karla font-600 mt-0.5" style={{ fontSize: '0.72rem', color: state.completed ? '#c8c4be' : '#6a6764' }}>
                   {meta.rewardLabel}
                 </p>
               </div>
@@ -143,16 +144,16 @@ export default function BountyClaimClient({
             )}
 
             {/* Claim button */}
-            {!state.claimed && state.completed && (
+            {readyToClaim && (
               <>
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '1rem 0 0.75rem' }} />
+                <div style={{ borderTop: `1px solid ${meta.color}30`, margin: '1rem 0 0.75rem' }} />
                 <button
                   onClick={() => handleClaim(tier)}
                   disabled={!!claiming}
                   className="w-full py-2.5 rounded-xl font-karla font-700 uppercase tracking-[0.12em]"
                   style={{
-                    background: `${meta.color}1a`,
-                    border: `1px solid ${meta.color}45`,
+                    background: `${meta.color}28`,
+                    border: `1px solid ${meta.color}70`,
                     color: meta.color,
                     fontSize: '0.65rem',
                     opacity: claiming ? 0.6 : 1,
@@ -168,7 +169,7 @@ export default function BountyClaimClient({
             {/* Not caught yet */}
             {!state.completed && (
               <p className="font-karla font-600 mt-3 pt-3"
-                style={{ fontSize: '0.65rem', color: '#3a3835', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                style={{ fontSize: '0.65rem', color: '#6a6764', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                 Catch this fish while fishing to unlock
               </p>
             )}

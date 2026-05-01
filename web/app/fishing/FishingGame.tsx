@@ -1805,21 +1805,21 @@ export default function FishingGame({
                       transition={{ type: 'spring', stiffness: 380, damping: 22, delay: 0.3 }}
                       className="flex items-center gap-3 px-4 py-3 rounded-xl mb-3"
                       style={{
-                        background: `${HABITAT_COLOR[bountyNotif.tier] ?? '#888'}14`,
-                        border: `1px solid ${HABITAT_COLOR[bountyNotif.tier] ?? '#888'}45`,
+                        background: `${HABITAT_COLOR[bountyNotif.tier] ?? '#888'}28`,
+                        border: `1px solid ${HABITAT_COLOR[bountyNotif.tier] ?? '#888'}80`,
                       }}
                     >
-                      <div style={{ width: 32, height: 32, borderRadius: 8, background: `${HABITAT_COLOR[bountyNotif.tier] ?? '#888'}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span style={{ fontSize: '1rem' }}>🎯</span>
+                      <div style={{ width: 36, height: 36, borderRadius: 8, background: `${HABITAT_COLOR[bountyNotif.tier] ?? '#888'}30`, border: `1px solid ${HABITAT_COLOR[bountyNotif.tier] ?? '#888'}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span style={{ fontSize: '1.1rem' }}>🎯</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.48rem', color: HABITAT_COLOR[bountyNotif.tier] ?? '#888', marginBottom: 1 }}>
-                          Weekly Bounty
+                        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: HABITAT_COLOR[bountyNotif.tier] ?? '#888', marginBottom: 2 }}>
+                          Weekly Bounty Complete
                         </p>
-                        <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>
+                        <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>
                           {bountyNotif.fishName} caught!
                         </p>
-                        <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#a0a09a' }}>
+                        <p className="font-karla font-600" style={{ fontSize: '0.65rem', color: '#c8c4be' }}>
                           +{bountyNotif.reward} ⟡{bountyNotif.packAwarded ? ' + 1 Pack' : ''} · visit Bounties to claim
                         </p>
                       </div>
