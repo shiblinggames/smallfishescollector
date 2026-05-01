@@ -30,7 +30,7 @@ export default async function MarketplacePage() {
 
           {/* Fish Market */}
           <div>
-            <p className="font-karla font-600 uppercase tracking-[0.14em] text-[#6a6764] mb-3" style={{ fontSize: '0.65rem' }}>Market</p>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#d0cdc8] mb-3" style={{ fontSize: '0.72rem' }}>Market</p>
             <Link href="/tavern/market" style={{ textDecoration: 'none', display: 'block' }}>
               <div style={{
                 position: 'relative', overflow: 'hidden',
@@ -83,7 +83,7 @@ export default async function MarketplacePage() {
 
           {/* Upgrades */}
           <div>
-            <p className="font-karla font-600 uppercase tracking-[0.14em] text-[#6a6764] mb-3" style={{ fontSize: '0.65rem' }}>Upgrades</p>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#d0cdc8] mb-3" style={{ fontSize: '0.72rem' }}>Upgrades</p>
             <div className="grid grid-cols-2 gap-3">
               <ShopCard
                 href="/marketplace/tackle-shop"
@@ -116,7 +116,7 @@ export default async function MarketplacePage() {
 
           {/* Shop */}
           <div>
-            <p className="font-karla font-600 uppercase tracking-[0.14em] text-[#6a6764] mb-3" style={{ fontSize: '0.65rem' }}>Shop</p>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#d0cdc8] mb-3" style={{ fontSize: '0.72rem' }}>Shop</p>
             <div className="grid grid-cols-2 gap-3">
               <ShopCard
                 href="https://shiblingshop.com/products/small-fishes-premium-membership"
