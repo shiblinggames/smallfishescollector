@@ -8,7 +8,7 @@ export default function GoogleButton({ next }: { next?: string }) {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://seasthebooty.com'}/auth/callback?next=%2Fpacks`,
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://seasthebooty.com'}/auth/callback?next=%2Ftavern`,
         queryParams: { prompt: 'select_account' },
       },
     })
