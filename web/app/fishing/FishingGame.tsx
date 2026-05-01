@@ -224,23 +224,7 @@ function DialSVG({
           </radialGradient>
         </defs>
         <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke={onFire ? '#f97316' : 'rgba(255,255,255,0.12)'} strokeWidth="1" />
-        {/* Outer ring tick marks — fixed, not rotating */}
-        {Array.from({ length: 36 }, (_, i) => {
-          const deg = i * 10
-          const outer = polar(OUTER_R + 4, deg)
-          const inner = polar(OUTER_R - 2, deg)
-          const isMajor = i % 3 === 0
-          return (
-            <line key={i}
-              x1={outer.x.toFixed(2)} y1={outer.y.toFixed(2)}
-              x2={inner.x.toFixed(2)} y2={inner.y.toFixed(2)}
-              stroke="rgba(255,255,255,0.22)"
-              strokeWidth={isMajor ? 1.2 : 0.7}
-              strokeLinecap="round"
-            />
-          )
-        })}
-        <g transform={`rotate(${rotation}, ${CX}, ${CY})`}>
+<g transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
             <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
               fillOpacity={zoneOpacityFn(zone)} style={{ transition: 'fill-opacity 0.08s' }} />
@@ -277,7 +261,7 @@ function DialSVG({
             fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5"
             initial={{ r: 8, strokeOpacity: 0.55 }}
             animate={{ r: INNER_R - 4, strokeOpacity: 0 }}
-            transition={{ duration: 0.55, ease: 'easeOut', delay: delay / 1000 }}
+            transition={{ duration: 0.9, ease: 'easeOut', delay: delay / 1000 }}
           />
         ))}
         <g transform={`rotate(${angle}, ${CX}, ${CY})`}>
@@ -1152,6 +1136,7 @@ export default function FishingGame({
   const [highestPerfectStreak, setHighestPerfectStreak] = useState(initialHighestPerfectStreak)
   const [showStreak, setShowStreak] = useState(true)
   const [snapKey, setSnapKey] = useState(0)
+  const [castRippleKey, setCastRippleKey] = useState(0)
   const [newStreakRecord, setNewStreakRecord] = useState<number | null>(null)
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
@@ -1373,6 +1358,7 @@ export default function FishingGame({
   // Phase 1 — cast (from idle)
   async function handleCast() {
     if (phase !== 'idle') return
+    setCastRippleKey(k => k + 1)
     await doCast()
   }
 
@@ -1557,6 +1543,7 @@ export default function FishingGame({
   }
 
   async function handleCastAgain() {
+    setCastRippleKey(k => k + 1)
     setCatchResult(null)
     setMissResult(null)
     setHookedFish(null)
@@ -2007,12 +1994,21 @@ export default function FishingGame({
                     border: '1px solid rgba(34,170,200,0.5)', cursor: 'pointer',
                     fontSize: '0.72rem', color: '#67d4e8', touchAction: 'manipulation',
                     boxShadow: '0 6px 0 rgba(0,0,0,0.6), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+                    position: 'relative', overflow: 'hidden',
                   }}
                   initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.92 }}
                   whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' }}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                >Cast</motion.button>
+                >
+                  {castRippleKey > 0 && (
+                    <motion.span key={castRippleKey} style={{ position: 'absolute', borderRadius: '50%', width: '100%', height: '100%', background: 'rgba(255,255,255,0.28)', pointerEvents: 'none' }}
+                      initial={{ scale: 0, opacity: 0.6 }} animate={{ scale: 2.4, opacity: 0 }}
+                      transition={{ duration: 0.65, ease: 'easeOut' }}
+                    />
+                  )}
+                  Cast
+                </motion.button>
               )}
               {phase === 'idle' && holdTotalCount < holdCapacity && (!hasBait || selectedBaitQty <= 0) && (
                 <motion.div key="nobait"
@@ -2038,12 +2034,21 @@ export default function FishingGame({
                     border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
                     fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
                     boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
+                    position: 'relative', overflow: 'hidden',
                   }}
                   initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.92 }}
                   whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                >Reel In</motion.button>
+                >
+                  {snapKey > 0 && (
+                    <motion.span key={snapKey} style={{ position: 'absolute', borderRadius: '50%', width: '100%', height: '100%', background: 'rgba(255,255,255,0.28)', pointerEvents: 'none' }}
+                      initial={{ scale: 0, opacity: 0.6 }} animate={{ scale: 2.4, opacity: 0 }}
+                      transition={{ duration: 0.65, ease: 'easeOut' }}
+                    />
+                  )}
+                  Reel In
+                </motion.button>
               )}
               {phase === 'reeling' && (
                 <motion.div key="reeling"
@@ -2061,12 +2066,21 @@ export default function FishingGame({
                     border: '1px solid rgba(34,170,200,0.4)', cursor: 'pointer',
                     fontSize: '0.65rem', color: '#67d4e8', touchAction: 'manipulation',
                     boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+                    position: 'relative', overflow: 'hidden',
                   }}
                   initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.92 }}
                   whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                >Cast Again</motion.button>
+                >
+                  {castRippleKey > 0 && (
+                    <motion.span key={castRippleKey} style={{ position: 'absolute', borderRadius: '50%', width: '100%', height: '100%', background: 'rgba(255,255,255,0.28)', pointerEvents: 'none' }}
+                      initial={{ scale: 0, opacity: 0.6 }} animate={{ scale: 2.4, opacity: 0 }}
+                      transition={{ duration: 0.65, ease: 'easeOut' }}
+                    />
+                  )}
+                  Cast Again
+                </motion.button>
               )}
             </AnimatePresence>
           </div>
