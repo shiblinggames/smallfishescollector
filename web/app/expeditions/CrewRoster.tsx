@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import FishCard from '@/components/FishCard'
-import type { BorderStyle, ArtEffect } from '@/lib/types'
 import type { ShipStats } from '@/lib/expeditions'
 import { saveCrew } from './actions'
 
@@ -23,15 +21,64 @@ type CollectionCard = {
   fortune: number
 }
 
+function CardThumb({ card, onClick, dim, active, pickerMode }: {
+  card: CollectionCard
+  onClick?: () => void
+  dim?: boolean
+  active?: boolean
+  pickerMode?: boolean
+}) {
+  const rarityColor = RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764'
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        position: 'relative',
+        width: 90,
+        borderRadius: 10,
+        overflow: 'hidden',
+        background: '#080a0e',
+        border: `1.5px solid ${rarityColor}55`,
+        cursor: onClick ? 'pointer' : 'default',
+        opacity: dim ? 0.28 : 1,
+        flexShrink: 0,
+      }}
+    >
+      {/* Fish art */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={IMG_BASE + card.filename}
+        alt={card.name}
+        style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
+      />
+      {/* Bottom label */}
+      <div style={{ padding: '0.3rem 0.4rem 0.35rem', background: 'rgba(4,5,8,0.92)' }}>
+        <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.52rem', color: '#f0ede8', lineHeight: 1.2, marginBottom: 2 }}>{card.name}</p>
+        <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.42rem', color: rarityColor, lineHeight: 1 }}>{card.rarity}</p>
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: 3 }}>
+          {STAT_COLS.map(s => (
+            <div key={s.key} style={{ textAlign: 'center', flex: 1 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.58rem', color: s.color, lineHeight: 1 }}>{card[s.key]}</p>
+              <p style={{ fontSize: '0.36rem', color: '#4a4845', lineHeight: 1, marginTop: 1 }}>{s.symbol}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      {active && !pickerMode && (
+        <div style={{ position: 'absolute', top: 4, right: 4 }}>
+          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.35rem', letterSpacing: '0.08em', background: 'rgba(240,192,64,0.9)', color: '#0a0a08', padding: '0.1rem 0.3rem', borderRadius: 2 }}>Crew</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface Props {
   shipStats: ShipStats
   shipTier: number
   collection: CollectionCard[]
   savedCrewVariantIds: number[]
 }
-
-const CARD_W = 80
-const CARD_H = Math.round(CARD_W * 196 / 140)
 
 const STAT_COLS = [
   { key: 'power'   as const, label: 'PWR', symbol: '⚔', color: '#f87171' },
@@ -354,29 +401,14 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
                     const isActive = slots.some(s => s?.variantId === card.variantId)
                     const canPick = pickerSlot !== null && !inCrew
                     return (
-                      <div
+                      <CardThumb
                         key={card.variantId}
-                        style={{ position: 'relative', opacity: inCrew ? 0.28 : 1, cursor: canPick ? 'pointer' : 'default' }}
-                        onClick={() => canPick ? assignCard(card) : undefined}
-                      >
-                        <FishCard
-                          name={card.name}
-                          filename={card.filename}
-                          borderStyle={card.borderStyle as BorderStyle}
-                          artEffect={card.artEffect as ArtEffect}
-                          variantName={card.variantName}
-                          dropWeight={card.dropWeight}
-                          stats={{ power: card.power, dodge: card.dodge, fortune: card.fortune }}
-                          cardW={100}
-                        />
-                        {isActive && pickerSlot === null && (
-                          <div style={{ position: 'absolute', bottom: 32, left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
-                            <span className="font-karla font-700 uppercase" style={{ fontSize: '0.4rem', letterSpacing: '0.1em', background: 'rgba(240,192,64,0.9)', color: '#0a0a08', padding: '0.12rem 0.45rem', borderRadius: 2 }}>
-                              In Crew
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                        card={card}
+                        onClick={canPick ? () => assignCard(card) : undefined}
+                        dim={inCrew}
+                        active={isActive}
+                        pickerMode={pickerSlot !== null}
+                      />
                     )
                   })}
                 </div>
