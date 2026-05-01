@@ -45,6 +45,13 @@ export default async function AchievementsPage() {
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
+      <div style={{ background: 'rgba(251,191,36,0.08)', borderBottom: '1px solid rgba(251,191,36,0.2)', padding: '0.55rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <span style={{ fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}>🚧</span>
+        <div>
+          <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#fbbf24' }}>Under Construction</p>
+          <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: 'rgba(251,191,36,0.6)', lineHeight: 1.4, marginTop: 2 }}>Achievements are coming soon. Some may not unlock correctly yet.</p>
+        </div>
+      </div>
       <main className="min-h-screen pt-8">
         <div className="px-6 max-w-2xl mx-auto">
 

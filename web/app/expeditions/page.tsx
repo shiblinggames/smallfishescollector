@@ -56,6 +56,13 @@ export default async function ExpeditionsPage() {
       {/* All content — stacking context above the background */}
       <div style={{ position: 'relative', zIndex: 1 }}>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={doubloons} gems={profile?.gems ?? 0} />
+      <div style={{ background: 'rgba(251,191,36,0.08)', borderBottom: '1px solid rgba(251,191,36,0.2)', padding: '0.55rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <span style={{ fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}>🚧</span>
+        <div>
+          <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#fbbf24' }}>Under Construction</p>
+          <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: 'rgba(251,191,36,0.6)', lineHeight: 1.4, marginTop: 2 }}>Expeditions are coming soon. You can explore the page but progress may reset.</p>
+        </div>
+      </div>
       <main className="min-h-screen pb-24 sm:pb-0">
 
         <div className="px-5 max-w-lg mx-auto sm:[zoom:1.4]" style={{ paddingTop: '1rem' }}>
