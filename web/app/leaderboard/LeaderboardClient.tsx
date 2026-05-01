@@ -127,13 +127,13 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
 
                 <div style={{
                   width: '100%', height: podiumHeight, borderRadius: '8px 8px 0 0',
-                  background: `linear-gradient(180deg, ${p.color}22 0%, ${p.color}0a 100%)`,
-                  border: `1px solid ${p.color}30`,
+                  background: `linear-gradient(180deg, ${p.color}40 0%, ${p.color}18 100%)`,
+                  border: `1px solid ${p.color}60`,
                   borderBottom: 'none',
                   display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
                   paddingTop: 8,
                 }}>
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: p.color + '60' }}>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: p.color + '99' }}>
                     #{p.rank}
                   </span>
                 </div>
@@ -228,9 +228,9 @@ export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, m
                 padding: '0.55rem 0.25rem',
                 borderRadius: 10,
                 fontSize: '0.62rem',
-                background: isActive ? `${t.accent}1a` : 'transparent',
-                border: `1px solid ${isActive ? t.accent + '60' : 'rgba(255,255,255,0.08)'}`,
-                color: isActive ? t.accent : '#4a4845',
+                background: isActive ? `${t.accent}28` : 'rgba(4,10,20,0.55)',
+                border: `1px solid ${isActive ? t.accent + '80' : 'rgba(255,255,255,0.14)'}`,
+                color: isActive ? t.accent : '#7a7875',
                 cursor: 'pointer',
               }}
             >
