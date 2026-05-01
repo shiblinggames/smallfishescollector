@@ -903,7 +903,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
             <FishImg name={fish.name} style={{ width: 72, height: 56, objectFit: 'contain', flexShrink: 0 }} />
             <div>
-              <p className="font-cinzel font-700 mb-0.5" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>
+              <p className="font-cinzel font-700 mb-0.5" style={{ fontSize: '1.1rem', color: r.color }}>
                 {fish.name}
               </p>
               <p className="font-karla font-300 italic" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
@@ -2401,7 +2401,7 @@ export default function FishingGame({
                             >
                               <FishImg name={f.name} style={{ width: 44, height: 34, objectFit: 'contain', flexShrink: 0 }} />
                               <p className="font-cinzel font-700 flex-1 truncate"
-                                style={{ fontSize: '0.78rem', color: '#f0ede8' }}>{f.name}</p>
+                                style={{ fontSize: '0.78rem', color: rarityColor }}>{f.name}</p>
                               {uncheckedNewFishIds.has(f.id) && (
                                 <span style={{ fontSize: '0.5rem', fontWeight: 700, color: '#f87171', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.3)', padding: '0.1rem 0.4rem', borderRadius: '2rem', flexShrink: 0, fontFamily: 'var(--font-karla)' }}>NEW</span>
                               )}
