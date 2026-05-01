@@ -1111,7 +1111,7 @@ export default function FishingGame({
   const [uncheckedNewFishIds, setUncheckedNewFishIds] = useState<Set<number>>(new Set())
   const [expandedZone, setExpandedZone] = useState<string | null>(null)
   const [tappedFishId, setTappedFishId] = useState<number | null>(null)
-  const [showingSummary, setShowingSummary] = useState(false)
+
   const [sessionCatches, setSessionCatches] = useState<FishSpecies[]>([])
   const [sessionPerfects, setSessionPerfects] = useState(0)
   const [sessionNewSpecies, setSessionNewSpecies] = useState(0)
@@ -1632,7 +1632,7 @@ export default function FishingGame({
           {/* Header row — back button left, gear button right */}
           <div className="flex items-center justify-between mb-2">
             <button
-              onClick={() => sessionCatches.length > 0 ? setShowingSummary(true) : onBack()}
+              onClick={onBack}
               className="font-karla font-600 uppercase tracking-[0.1em]"
               style={{
                 fontSize: '0.6rem', color: HABITAT_COLOR[selectedZone],
@@ -2352,88 +2352,6 @@ export default function FishingGame({
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
-
-      {/* ── Session summary overlay ── */}
-      <AnimatePresence>
-        {showingSummary && (() => {
-          const xpGained = fishingXP - initialFishingXP
-          const rarityCounts = [1,2,3,4,5].map(r => ({ rarity: r, count: sessionCatches.filter(f => f.bite_rarity === r).length })).filter(r => r.count > 0)
-          const bestCatch = sessionCatches.reduce<FishSpecies | null>((best, f) => (!best || f.bite_rarity > best.bite_rarity) ? f : best, null)
-          const zoneColor = HABITAT_COLOR[selectedZone]
-
-          return (
-            <motion.div key="summary"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ position: 'absolute', inset: 0, zIndex: 30, background: 'rgba(4,8,16,0.96)', display: 'flex', flexDirection: 'column', padding: '1.5rem 1.25rem 2rem' }}
-            >
-              <p className="font-karla font-700 uppercase tracking-[0.16em] mb-1"
-                style={{ fontSize: '0.65rem', color: '#6a6764' }}>Session</p>
-              <p className="font-cinzel font-700 mb-6"
-                style={{ fontSize: '1.3rem', color: zoneColor }}>{HABITAT_LABEL[selectedZone]}</p>
-
-              <div className="flex flex-col gap-3 flex-1">
-                {/* Fish caught */}
-                <div className="px-4 py-3.5 rounded-2xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <p className="font-karla font-600 uppercase tracking-[0.12em] mb-2" style={{ fontSize: '0.6rem', color: '#6a6764' }}>Caught</p>
-                  <p className="font-cinzel font-700 mb-2" style={{ fontSize: '1.6rem', color: '#f0ede8' }}>{sessionCatches.length}</p>
-                  <div className="flex gap-3 flex-wrap">
-                    {rarityCounts.map(({ rarity, count }) => (
-                      <div key={rarity} className="flex items-center gap-1.5">
-                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: RARITY[rarity]?.color ?? '#888' }} />
-                        <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: RARITY[rarity]?.color ?? '#888' }}>×{count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Best catch */}
-                {bestCatch && (
-                  <div className="px-4 py-3.5 rounded-2xl" style={{ background: `${RARITY[bestCatch.bite_rarity]?.color ?? '#888'}0d`, border: `1px solid ${RARITY[bestCatch.bite_rarity]?.color ?? '#888'}30` }}>
-                    <p className="font-karla font-600 uppercase tracking-[0.12em] mb-1" style={{ fontSize: '0.6rem', color: '#6a6764' }}>Best Catch</p>
-                    <div className="flex items-center gap-2">
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: RARITY[bestCatch.bite_rarity]?.color ?? '#888', flexShrink: 0 }} />
-                      <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8' }}>{bestCatch.name}</p>
-                    </div>
-                    <p className="font-karla font-300 italic mt-0.5" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)' }}>{bestCatch.scientific_name}</p>
-                  </div>
-                )}
-
-                {/* Stats row */}
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: 'XP Gained', value: `+${xpGained}` , color: '#86efac' },
-                    { label: 'Perfects', value: String(sessionPerfects), color: '#fbbf24' },
-                    { label: 'New Species', value: String(sessionNewSpecies), color: zoneColor },
-                  ].map(({ label, value, color }) => (
-                    <div key={label} className="px-3 py-3 rounded-xl text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                      <p className="font-cinzel font-700 mb-0.5" style={{ fontSize: '1.1rem', color }}>{value}</p>
-                      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#6a6764' }}>{label}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {sessionGems > 0 && (
-                  <div className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl"
-                    style={{ background: 'rgba(99,226,183,0.06)', border: '1px solid rgba(99,226,183,0.25)' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#63e2b7' }}>◆</span>
-                    <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#63e2b7' }}>
-                      +{sessionGems} Gem{sessionGems > 1 ? 's' : ''} from challenge{sessionGems > 1 ? 's' : ''}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={onBack}
-                className="font-karla font-700 uppercase tracking-[0.14em] w-full mt-5"
-                style={{ padding: '0.9rem', borderRadius: 14, background: `${zoneColor}20`, border: `1px solid ${zoneColor}60`, color: zoneColor, fontSize: '0.82rem', cursor: 'pointer' }}
-              >
-                Done
-              </button>
-            </motion.div>
-          )
-        })()}
       </AnimatePresence>
 
       {/* ── Gear drawer ── */}
