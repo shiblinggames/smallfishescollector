@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import FishingPageClient from './FishingPageClient'
 import { claimDailyBait } from './actions'
+import { getActiveChallengeSession } from '@/app/social/challengeActions'
+import ChallengeSessionBanner from './ChallengeSessionBanner'
 import { getShip } from '@/lib/ships'
 
 export default async function FishingPage() {
@@ -13,10 +15,10 @@ export default async function FishingPage() {
 
   const admin = createAdminClient()
 
-  // Give daily free worms if not yet claimed today
   await claimDailyBait(user.id)
 
   const [
+    activeSession,
     { data: profile },
     { data: baitInventory },
     { data: fishInventory },
@@ -25,6 +27,7 @@ export default async function FishingPage() {
     { data: allSpecies },
     { data: collectionRows },
   ] = await Promise.all([
+    getActiveChallengeSession(),
     admin.from('profiles')
       .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, ship_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour')
       .eq('id', user.id)
@@ -58,6 +61,11 @@ export default async function FishingPage() {
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main>
+        {activeSession && (
+          <div className="px-4 pt-4 max-w-xl mx-auto">
+            <ChallengeSessionBanner session={activeSession} />
+          </div>
+        )}
         <FishingPageClient
           hookTier={profile?.hook_tier ?? 0}
           rodTier={profile?.rod_tier ?? 0}
@@ -85,7 +93,6 @@ export default async function FishingPage() {
           hasSeenFishingTour={profile?.has_seen_fishing_tour ?? false}
           hasSeenFishingCatchTour={profile?.has_seen_fishing_catch_tour ?? false}
         />
-
       </main>
     </>
   )

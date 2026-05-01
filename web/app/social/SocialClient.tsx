@@ -1,10 +1,13 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { searchUsers } from '@/app/u/actions'
 import { addCrewMember, removeCrewMember, type CrewMember } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import ChallengeSection, { ChallengeButton } from './ChallengeSection'
+import type { PendingChallenge } from './challengeActions'
 
 interface SearchResult {
   username: string
@@ -13,6 +16,9 @@ interface SearchResult {
 interface Props {
   initialCrew: CrewMember[]
   username: string
+  initialChallenges: PendingChallenge[]
+  wlRecord: { wins: number; losses: number; ties: number }
+  myDoubloons: number
 }
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
@@ -38,7 +44,8 @@ function Avatar({ username, size = 40 }: { username: string; size?: number }) {
   )
 }
 
-export default function SocialClient({ initialCrew, username }: Props) {
+export default function SocialClient({ initialCrew, username, initialChallenges, wlRecord, myDoubloons }: Props) {
+  const router = useRouter()
   const [crew, setCrew] = useState<CrewMember[]>(initialCrew)
   const crewSet = new Set(crew.map(m => m.username.toLowerCase()))
 
@@ -89,6 +96,14 @@ export default function SocialClient({ initialCrew, username }: Props) {
 
   return (
     <div className="px-6 max-w-xl mx-auto pb-14 flex flex-col gap-10">
+
+      {/* ── Challenges ── */}
+      {(initialChallenges.length > 0 || wlRecord.wins + wlRecord.losses + wlRecord.ties > 0) && (
+        <div>
+          <p className="font-karla font-600 uppercase tracking-[0.14em] mb-3" style={{ fontSize: '0.55rem', color: '#9a9488' }}>Challenges</p>
+          <ChallengeSection challenges={initialChallenges} wlRecord={wlRecord} myDoubloons={myDoubloons} />
+        </div>
+      )}
 
       {/* ── Find crew ── */}
       <div>
@@ -234,6 +249,7 @@ export default function SocialClient({ initialCrew, username }: Props) {
                       Lv {getLevelFromXP(member.fishingXP)}
                     </span>
                   </div>
+                  <ChallengeButton username={member.username} myDoubloons={myDoubloons} onCreated={() => router.refresh()} />
                   <Link
                     href={`/u/${member.username}`}
                     className="font-karla font-600"

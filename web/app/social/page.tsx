@@ -1,21 +1,21 @@
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Nav from '@/components/Nav'
 import SocialClient from './SocialClient'
 import { getCrew } from './actions'
+import { getChallenges, getWLRecord } from './challengeActions'
 
 export default async function SocialPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const admin = createAdminClient()
-
-  const [{ data: profile }, crew] = await Promise.all([
+  const [{ data: profile }, crew, challenges, wlRecord] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons, gems, username').eq('id', user.id).single(),
     getCrew(),
+    getChallenges(),
+    getWLRecord(),
   ])
 
   return (
@@ -40,6 +40,9 @@ export default async function SocialPage() {
         <SocialClient
           initialCrew={crew}
           username={profile?.username ?? ''}
+          initialChallenges={challenges}
+          wlRecord={wlRecord}
+          myDoubloons={profile?.doubloons ?? 0}
         />
       </main>
     </>

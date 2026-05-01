@@ -6,6 +6,7 @@ import { getBait } from '@/lib/bait'
 import { getRod } from '@/lib/rods'
 import { getShip } from '@/lib/ships'
 import { checkAchievements } from '@/lib/checkAchievements'
+import { recordChallengeScore } from '@/app/social/challengeActions'
 import { getWeekStart } from '@/lib/weekStart'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
 
@@ -284,6 +285,9 @@ export async function reelIn(
         .eq('bait_type', baitType)
     }
   }
+
+  // Record challenge score (fire and forget)
+  recordChallengeScore(user.id, fish.sell_value * catchQty, result === 'perfect').catch(() => {})
 
   // Check weekly bounty and achievements in parallel
   const weekStart = getWeekStart()

@@ -1,0 +1,440 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import {
+  createChallenge, acceptChallenge, declineChallenge, startSession,
+  type PendingChallenge, type ChallengeType,
+} from './challengeActions'
+
+const DURATIONS = [
+  { label: '1 min', seconds: 60 },
+  { label: '5 min', seconds: 300 },
+  { label: '15 min', seconds: 900 },
+]
+
+const TYPES: { key: ChallengeType; label: string; desc: string }[] = [
+  { key: 'most_fish',     label: 'Most Fish',     desc: 'Catch the most fish' },
+  { key: 'most_doubloons', label: 'Most Doubloons', desc: 'Earn the most ⟡ from fish value' },
+  { key: 'most_perfects', label: 'Most Perfects',  desc: 'Land the most perfect catches' },
+]
+
+const WAGERS = [0, 50, 100, 500]
+
+function typeLabel(t: ChallengeType) {
+  if (t === 'most_fish') return 'most fish'
+  if (t === 'most_doubloons') return 'most ⟡'
+  return 'most perfects'
+}
+
+function durationLabel(s: number) {
+  if (s < 60) return `${s}s`
+  return `${s / 60}m`
+}
+
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
+}
+
+interface CreateModalProps {
+  targetUsername: string
+  myDoubloons: number
+  onClose: () => void
+  onCreated: () => void
+}
+
+function CreateChallengeModal({ targetUsername, myDoubloons, onClose, onCreated }: CreateModalProps) {
+  const [duration, setDuration] = useState(300)
+  const [type, setType] = useState<ChallengeType>('most_fish')
+  const [wager, setWager] = useState(0)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [, startTransition] = useTransition()
+  const [loading, setLoading] = useState(false)
+
+  function submit() {
+    setLoading(true)
+    setError('')
+    startTransition(async () => {
+      const result = await createChallenge(targetUsername, duration, type, wager, message)
+      if ('error' in result) {
+        setError(result.error)
+        setLoading(false)
+      } else {
+        onCreated()
+      }
+    })
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background: '#0f0d0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px 18px 0 0', padding: '1.5rem', width: '100%', maxWidth: 480, paddingBottom: '2rem' }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.95rem' }}>
+            Challenge {targetUsername}
+          </p>
+          <button onClick={onClose} style={{ color: '#4a4845', lineHeight: 1 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        {/* Duration */}
+        <p className="font-karla font-600 uppercase tracking-[0.12em] mb-2" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Duration</p>
+        <div className="flex gap-2 mb-4">
+          {DURATIONS.map(d => (
+            <button
+              key={d.seconds}
+              onClick={() => setDuration(d.seconds)}
+              className="flex-1 font-karla font-700"
+              style={{
+                padding: '0.5rem', borderRadius: 8, fontSize: '0.72rem',
+                background: duration === d.seconds ? 'rgba(240,192,64,0.15)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${duration === d.seconds ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                color: duration === d.seconds ? '#f0c040' : '#6a6764',
+                cursor: 'pointer',
+              }}
+            >{d.label}</button>
+          ))}
+        </div>
+
+        {/* Type */}
+        <p className="font-karla font-600 uppercase tracking-[0.12em] mb-2" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Challenge Type</p>
+        <div className="flex flex-col gap-2 mb-4">
+          {TYPES.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setType(t.key)}
+              className="flex items-center gap-3 text-left"
+              style={{
+                padding: '0.6rem 0.75rem', borderRadius: 8,
+                background: type === t.key ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${type === t.key ? 'rgba(240,192,64,0.4)' : 'rgba(255,255,255,0.07)'}`,
+                cursor: 'pointer',
+              }}
+            >
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: type === t.key ? '#f0c040' : '#3a3835', flexShrink: 0 }} />
+              <div>
+                <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: type === t.key ? '#f0c040' : '#a0a09a' }}>{t.label}</p>
+                <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#4a4845' }}>{t.desc}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Wager */}
+        <p className="font-karla font-600 uppercase tracking-[0.12em] mb-2" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Wager (optional)</p>
+        <div className="flex gap-2 mb-4">
+          {WAGERS.map(w => (
+            <button
+              key={w}
+              onClick={() => setWager(w)}
+              className="flex-1 font-karla font-700"
+              disabled={w > myDoubloons}
+              style={{
+                padding: '0.5rem', borderRadius: 8, fontSize: '0.68rem',
+                background: wager === w ? 'rgba(240,192,64,0.15)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${wager === w ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                color: wager === w ? '#f0c040' : w > myDoubloons ? '#3a3835' : '#6a6764',
+                cursor: w > myDoubloons ? 'not-allowed' : 'pointer',
+              }}
+            >{w === 0 ? 'None' : `${w} ⟡`}</button>
+          ))}
+        </div>
+
+        {/* Message */}
+        <p className="font-karla font-600 uppercase tracking-[0.12em] mb-2" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Message (optional)</p>
+        <input
+          type="text"
+          value={message}
+          onChange={e => setMessage(e.target.value)}
+          placeholder="Trash talk or friendly nudge…"
+          maxLength={100}
+          className="sg-input font-karla w-full mb-4"
+          style={{ fontSize: '0.82rem' }}
+        />
+
+        {error && <p className="font-karla mb-3" style={{ fontSize: '0.7rem', color: '#f87171' }}>{error}</p>}
+
+        <button
+          onClick={submit}
+          disabled={loading}
+          className="w-full font-karla font-700 uppercase tracking-[0.12em]"
+          style={{
+            padding: '0.75rem', borderRadius: 10, fontSize: '0.7rem',
+            background: 'rgba(240,192,64,0.15)', border: '1px solid rgba(240,192,64,0.4)',
+            color: '#f0c040', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1,
+          }}
+        >
+          {loading ? 'Sending…' : 'Send Challenge'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+interface Props {
+  challenges: PendingChallenge[]
+  wlRecord: { wins: number; losses: number; ties: number }
+  myDoubloons: number
+}
+
+export default function ChallengeSection({ challenges, wlRecord, myDoubloons }: Props) {
+  const router = useRouter()
+  const [, startTransition] = useTransition()
+  const [loadingId, setLoadingId] = useState<string | null>(null)
+
+  const incoming = challenges.filter(c => c.isIncoming && (c.status === 'pending' || c.status === 'challenger_done'))
+  const outgoing = challenges.filter(c => !c.isIncoming && c.status === 'pending')
+  const myTurn = challenges.filter(c => c.isIncoming && c.status === 'challenger_done')
+  const active = challenges.filter(c =>
+    (c.isIncoming && c.status === 'challenged_active') ||
+    (!c.isIncoming && c.status === 'challenger_active')
+  )
+  const readyToStart = challenges.filter(c => c.isIncoming && c.status === 'challenger_done')
+  const complete = challenges.filter(c => c.status === 'complete')
+
+  const pendingCount = incoming.filter(c => c.status === 'pending').length + myTurn.length
+
+  function handleAccept(id: string) {
+    setLoadingId(id)
+    startTransition(async () => {
+      await acceptChallenge(id)
+      router.refresh()
+      setLoadingId(null)
+    })
+  }
+
+  function handleDecline(id: string) {
+    setLoadingId(id)
+    startTransition(async () => {
+      await declineChallenge(id)
+      router.refresh()
+      setLoadingId(null)
+    })
+  }
+
+  function handleStart(id: string) {
+    setLoadingId(id)
+    startTransition(async () => {
+      await startSession(id)
+      router.push('/fishing')
+    })
+  }
+
+  const totalGames = wlRecord.wins + wlRecord.losses + wlRecord.ties
+
+  return (
+    <div className="flex flex-col gap-6">
+
+      {/* W-L record */}
+      {totalGames > 0 && (
+        <div style={{ background: 'rgba(4,10,20,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '1rem' }}>
+          <p className="font-karla font-600 uppercase tracking-[0.14em] mb-3" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Challenge Record</p>
+          <div className="flex gap-6">
+            <div>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#4ade80', lineHeight: 1 }}>{wlRecord.wins}</p>
+              <p className="font-karla font-400" style={{ fontSize: '0.55rem', color: '#4a4845', marginTop: 2 }}>Wins</p>
+            </div>
+            <div>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f87171', lineHeight: 1 }}>{wlRecord.losses}</p>
+              <p className="font-karla font-400" style={{ fontSize: '0.55rem', color: '#4a4845', marginTop: 2 }}>Losses</p>
+            </div>
+            {wlRecord.ties > 0 && (
+              <div>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#6a6764', lineHeight: 1 }}>{wlRecord.ties}</p>
+                <p className="font-karla font-400" style={{ fontSize: '0.55rem', color: '#4a4845', marginTop: 2 }}>Ties</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Incoming challenges needing response */}
+      {incoming.filter(c => c.status === 'pending').length > 0 && (
+        <div>
+          <p className="font-karla font-600 uppercase tracking-[0.14em] mb-3" style={{ fontSize: '0.52rem', color: '#9a9488' }}>
+            Incoming Challenges · {incoming.filter(c => c.status === 'pending').length}
+          </p>
+          <div style={{ background: 'rgba(4,10,20,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
+            {incoming.filter(c => c.status === 'pending').map((c, i, arr) => (
+              <div key={c.id} style={{ padding: '0.9rem 1rem', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                <div className="flex items-start justify-between gap-3 mb-1">
+                  <div>
+                    <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#f0ede8' }}>
+                      {c.challengerUsername}
+                    </p>
+                    <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: '#6a6764', marginTop: 2 }}>
+                      {durationLabel(c.durationSeconds)} · {typeLabel(c.challengeType)}{c.wager > 0 ? ` · ${c.wager} ⟡ wager` : ''}
+                    </p>
+                    {c.message && (
+                      <p className="font-karla font-400 italic mt-1" style={{ fontSize: '0.65rem', color: '#8a8070' }}>
+                        "{c.message}"
+                      </p>
+                    )}
+                  </div>
+                  <p className="font-karla font-300 shrink-0" style={{ fontSize: '0.55rem', color: '#3a3835', marginTop: 2 }}>
+                    {timeAgo(c.createdAt)}
+                  </p>
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => handleAccept(c.id)}
+                    disabled={loadingId === c.id}
+                    className="font-karla font-700 uppercase tracking-[0.1em]"
+                    style={{ flex: 1, padding: '0.45rem', borderRadius: 8, fontSize: '0.6rem', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.35)', color: '#4ade80', cursor: 'pointer', opacity: loadingId === c.id ? 0.5 : 1 }}
+                  >
+                    {loadingId === c.id ? '…' : 'Accept'}
+                  </button>
+                  <button
+                    onClick={() => handleDecline(c.id)}
+                    disabled={loadingId === c.id}
+                    className="font-karla font-600"
+                    style={{ padding: '0.45rem 0.75rem', borderRadius: 8, fontSize: '0.6rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', color: '#4a4845', cursor: 'pointer' }}
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Ready to fish — challenger done, your turn */}
+      {readyToStart.length > 0 && (
+        <div>
+          <p className="font-karla font-600 uppercase tracking-[0.14em] mb-3" style={{ fontSize: '0.52rem', color: '#fb923c' }}>
+            Your Turn
+          </p>
+          <div style={{ background: 'rgba(4,10,20,0.6)', border: '1px solid rgba(251,146,60,0.2)', borderRadius: 14, overflow: 'hidden' }}>
+            {readyToStart.map((c, i, arr) => (
+              <div key={c.id} style={{ padding: '0.9rem 1rem', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                <p className="font-karla font-700 mb-0.5" style={{ fontSize: '0.8rem', color: '#f0ede8' }}>
+                  vs {c.challengerUsername}
+                </p>
+                <p className="font-karla font-400 mb-3" style={{ fontSize: '0.65rem', color: '#6a6764' }}>
+                  {durationLabel(c.durationSeconds)} · {typeLabel(c.challengeType)}{c.wager > 0 ? ` · ${c.wager} ⟡` : ''}
+                </p>
+                <button
+                  onClick={() => handleStart(c.id)}
+                  disabled={loadingId === c.id}
+                  className="font-karla font-700 uppercase tracking-[0.1em] w-full"
+                  style={{ padding: '0.5rem', borderRadius: 8, fontSize: '0.62rem', background: 'rgba(251,146,60,0.15)', border: '1px solid rgba(251,146,60,0.4)', color: '#fb923c', cursor: 'pointer', opacity: loadingId === c.id ? 0.5 : 1 }}
+                >
+                  {loadingId === c.id ? '…' : 'Start Your Session →'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Outgoing — waiting for opponent */}
+      {outgoing.length > 0 && (
+        <div>
+          <p className="font-karla font-600 uppercase tracking-[0.14em] mb-3" style={{ fontSize: '0.52rem', color: '#6a6764' }}>
+            Waiting on Response
+          </p>
+          <div style={{ background: 'rgba(4,10,20,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
+            {outgoing.map((c, i, arr) => (
+              <div key={c.id} style={{ padding: '0.9rem 1rem', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div>
+                  <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#a0a09a' }}>{c.challengedUsername}</p>
+                  <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#4a4845', marginTop: 2 }}>
+                    {durationLabel(c.durationSeconds)} · {typeLabel(c.challengeType)}
+                  </p>
+                </div>
+                <p className="font-karla font-300 shrink-0" style={{ fontSize: '0.55rem', color: '#3a3835' }}>{timeAgo(c.createdAt)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Start your own session (challenger who hasn't gone yet) */}
+      {challenges.filter(c => !c.isIncoming && c.status === 'pending' && !c.challengerFinishedAt).map(c => (
+        <div key={`start-${c.id}`} style={{ background: 'rgba(4,10,20,0.6)', border: '1px solid rgba(240,192,64,0.2)', borderRadius: 14, padding: '1rem' }}>
+          <p className="font-karla font-700 mb-0.5" style={{ fontSize: '0.8rem', color: '#f0ede8' }}>Challenge sent to {c.challengedUsername}</p>
+          <p className="font-karla font-400 mb-3" style={{ fontSize: '0.65rem', color: '#6a6764' }}>
+            {durationLabel(c.durationSeconds)} · {typeLabel(c.challengeType)} — start your session whenever you're ready
+          </p>
+          <button
+            onClick={() => handleStart(c.id)}
+            disabled={loadingId === c.id}
+            className="font-karla font-700 uppercase tracking-[0.1em] w-full"
+            style={{ padding: '0.5rem', borderRadius: 8, fontSize: '0.62rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.35)', color: '#f0c040', cursor: 'pointer', opacity: loadingId === c.id ? 0.5 : 1 }}
+          >
+            {loadingId === c.id ? '…' : 'Start Your Session →'}
+          </button>
+        </div>
+      ))}
+
+      {/* Completed */}
+      {complete.length > 0 && (
+        <div>
+          <p className="font-karla font-600 uppercase tracking-[0.14em] mb-3" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Recent Results</p>
+          <div style={{ background: 'rgba(4,10,20,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
+            {complete.slice(0, 5).map((c, i, arr) => {
+              const won = c.winnerId === c.myId
+              const tied = c.winnerId === null
+              const opponentName = c.isIncoming ? c.challengerUsername : c.challengedUsername
+              const myScore = c.myScore
+              const opponentScore = c.opponentScore ?? 0
+              return (
+                <div key={c.id} style={{ padding: '0.8rem 1rem', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: tied ? 'rgba(107,114,128,0.2)' : won ? 'rgba(74,222,128,0.15)' : 'rgba(248,113,113,0.15)', border: `1px solid ${tied ? 'rgba(107,114,128,0.3)' : won ? 'rgba(74,222,128,0.4)' : 'rgba(248,113,113,0.4)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.5rem', color: tied ? '#6b7280' : won ? '#4ade80' : '#f87171' }}>
+                      {tied ? 'TIE' : won ? 'W' : 'L'}
+                    </span>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p className="font-karla font-700 truncate" style={{ fontSize: '0.75rem', color: '#a0a09a' }}>vs {opponentName}</p>
+                    <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#4a4845', marginTop: 1 }}>
+                      {myScore} – {opponentScore} · {typeLabel(c.challengeType)}
+                    </p>
+                  </div>
+                  <p className="font-karla font-300 shrink-0" style={{ fontSize: '0.55rem', color: '#3a3835' }}>{timeAgo(c.createdAt)}</p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function ChallengeButton({ username, myDoubloons, onCreated }: { username: string; myDoubloons: number; onCreated: () => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="font-karla font-600 uppercase tracking-[0.1em]"
+        style={{ fontSize: '0.52rem', padding: '0.28rem 0.6rem', borderRadius: 6, background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.25)', color: '#f0c040', cursor: 'pointer', flexShrink: 0 }}
+      >
+        Challenge
+      </button>
+      {open && (
+        <CreateChallengeModal
+          targetUsername={username}
+          myDoubloons={myDoubloons}
+          onClose={() => setOpen(false)}
+          onCreated={() => { setOpen(false); onCreated() }}
+        />
+      )}
+    </>
+  )
+}
