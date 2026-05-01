@@ -145,35 +145,12 @@ export default function TackleShopClient({
     })
   }
 
-  const CATEGORIES: { key: Exclude<Section, null>; label: string; desc: string; color: string; active: string; imageUrl?: string }[] = [
-    {
-      key: 'bait', label: 'Bait', color: '#34d399',
-      desc: 'Consumables used per cast.',
-      active: `${totalBait} owned`,
-      imageUrl: '/worm.png',
-    },
-    {
-      key: 'hook', label: 'Hooks', color: HOOKS[hookTier]?.color ?? '#f0c040',
-      desc: 'Widens the catch zone on the dial.',
-      active: HOOKS[hookTier]?.name ?? '',
-      imageUrl: HOOKS[hookTier]?.imageUrl,
-    },
-    {
-      key: 'rod', label: 'Rods', color: RODS.find(r => r.tier === equippedRod)?.color ?? '#a07858',
-      desc: 'Every rod has a unique ability.',
-      active: RODS.find(r => r.tier === equippedRod)?.name ?? '',
-      imageUrl: RODS.find(r => r.tier === equippedRod)?.imageUrl ?? '/rod.png',
-    },
-    {
-      key: 'reel', label: 'Reels', color: REELS[reelTier]?.color ?? '#60a5fa',
-      desc: 'Slows the needle for easier timing.',
-      active: REELS[reelTier]?.name ?? '',
-    },
-    {
-      key: 'line', label: 'Line', color: LINES[lineTier]?.color ?? '#4ade80',
-      desc: 'Shrinks snag zones. Earned by species.',
-      active: LINES[lineTier]?.name ?? '',
-    },
+  const CATEGORIES: { key: Exclude<Section, null>; label: string; desc: string; color: string; imageUrl?: string }[] = [
+    { key: 'bait',  label: 'Bait',  color: '#34d399', desc: 'Consumables used per cast.',           imageUrl: '/worm.png' },
+    { key: 'hook',  label: 'Hooks', color: '#f0c040', desc: 'Widens the catch zone on the dial.' },
+    { key: 'rod',   label: 'Rods',  color: '#b8956a', desc: 'Every rod has a unique ability.',       imageUrl: '/driftwoodrod.png' },
+    { key: 'reel',  label: 'Reels', color: '#60a5fa', desc: 'Slows the needle for easier timing.' },
+    { key: 'line',  label: 'Line',  color: '#4ade80', desc: 'Shrinks snag zones. Earned by species.' },
   ]
 
   // ── Landing ────────────────────────────────────────────────────────────
@@ -184,7 +161,7 @@ export default function TackleShopClient({
           Tackle Shop
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          {CATEGORIES.map(({ key, label, desc, color, active, imageUrl }) => (
+          {CATEGORIES.map(({ key, label, desc, color, imageUrl }) => (
             <div
               key={key}
               onClick={() => { setSection(key); setError(null) }}
@@ -216,15 +193,10 @@ export default function TackleShopClient({
                 )}
               </div>
 
-              {/* Name + active */}
-              <div>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8', lineHeight: 1.2 }}>
-                  {label}
-                </p>
-                <p className="font-karla font-600" style={{ fontSize: '0.58rem', color, marginTop: 2 }}>
-                  {active}
-                </p>
-              </div>
+              {/* Name */}
+              <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8', lineHeight: 1.2 }}>
+                {label}
+              </p>
 
               {/* Description */}
               <p className="font-karla font-300" style={{ fontSize: '0.65rem', color: '#6a6764', lineHeight: 1.4 }}>
