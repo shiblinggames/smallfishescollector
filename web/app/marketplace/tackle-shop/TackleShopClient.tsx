@@ -161,7 +161,7 @@ export default function TackleShopClient({
       key: 'rod', label: 'Rods', color: RODS.find(r => r.tier === equippedRod)?.color ?? '#a07858',
       desc: 'Every rod has a unique ability.',
       active: RODS.find(r => r.tier === equippedRod)?.name ?? '',
-      imageUrl: '/rod.png',
+      imageUrl: RODS.find(r => r.tier === equippedRod)?.imageUrl ?? '/rod.png',
     },
     {
       key: 'reel', label: 'Reels', color: REELS[reelTier]?.color ?? '#60a5fa',
@@ -523,13 +523,22 @@ export default function TackleShopClient({
               <div
                 key={rod.tier}
                 style={{
-                  padding: '0.9rem 0.85rem',
+                  padding: '0.7rem 0.65rem',
                   background: 'rgba(8,8,6,0.82)',
                   border: `1px solid ${isActive ? `${c}55` : owned ? `${c}40` : 'rgba(255,255,255,0.14)'}`,
+                  boxShadow: isActive ? `0 0 18px ${c}30` : 'none',
                   borderRadius: 12,
                   display: 'flex', flexDirection: 'column', gap: 7,
                 }}
               >
+                {/* Rod image */}
+                {rod.imageUrl && (
+                  <div style={{ width: '100%', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6%' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={rod.imageUrl} alt={rod.name} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: owned ? 'none' : 'grayscale(1) brightness(0.4)' }} />
+                  </div>
+                )}
+
                 {/* Name + status */}
                 <div>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? '#f0ede8' : '#6a6764', lineHeight: 1.25 }}>{rod.name}</p>

@@ -14,6 +14,7 @@ export interface RodDef {
   perfectZoneBonus: number   // degrees added to the perfect zone (base is 5°)
   jackpotChance?: number     // chance to catch jackpotMultiplier fish at once (0–1)
   jackpotMultiplier?: number // how many fish on a jackpot hit
+  imageUrl?: string
 }
 
 export const RODS: RodDef[] = [
@@ -22,12 +23,14 @@ export const RODS: RodDef[] = [
     description: 'A simple bamboo pole. Gets the job done.',
     color: '#a07858', rarityBonus: 0, biteIntervalMs: 3800, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    imageUrl: '/rod.png',
   },
   {
     tier: 1, name: 'Driftwood Staff', cost: 1500,
     description: 'Heavy and slow, but the wide tip gives you a much more forgiving catch window.',
     color: '#b8956a', rarityBonus: 0, biteIntervalMs: 4500, catchZoneBonus: 10,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    imageUrl: '/driftwoodrod.png',
   },
   {
     tier: 2, name: 'Fiberglass Rod', cost: 2500,
