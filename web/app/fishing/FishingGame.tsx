@@ -636,6 +636,21 @@ const FRAME_SRC: Record<SceneFrame, string> = {
   catching: '/fishing.jpeg',
 }
 
+function fishImageUrl(name: string) {
+  return `/fish/${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.png`
+}
+
+function FishImg({ name, style }: { name: string; style?: React.CSSProperties }) {
+  return (
+    <img
+      src={fishImageUrl(name)}
+      alt={name}
+      style={style}
+      onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+    />
+  )
+}
+
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
 function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier }: {
@@ -885,13 +900,18 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
 
         {/* Body */}
         <div className="px-4 py-4" style={{ position: 'relative', zIndex: 2 }}>
-          <p className="font-cinzel font-700 mb-0.5" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>
-            {fish.name}
-          </p>
-          <p className="font-karla font-300 italic mb-3" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
-            {fish.scientific_name}
-          </p>
-          <p className="font-karla font-400 leading-relaxed" style={{ fontSize: '0.76rem', color: '#b0afa8' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+            <FishImg name={fish.name} style={{ width: 72, height: 56, objectFit: 'contain', flexShrink: 0 }} />
+            <div>
+              <p className="font-cinzel font-700 mb-0.5" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>
+                {fish.name}
+              </p>
+              <p className="font-karla font-300 italic" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
+                {fish.scientific_name}
+              </p>
+            </div>
+          </div>
+          <p className="font-karla font-400 leading-relaxed mb-0" style={{ fontSize: '0.76rem', color: '#b0afa8' }}>
             {fish.fun_fact}
           </p>
           <div className="flex items-center gap-1.5 mt-3">
@@ -2379,7 +2399,7 @@ export default function FishingGame({
                                 if (!isTapped) setUncheckedNewFishIds(prev => { const next = new Set(prev); next.delete(f.id); return next })
                               }}
                             >
-                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: rarityColor, flexShrink: 0 }} />
+                              <FishImg name={f.name} style={{ width: 44, height: 34, objectFit: 'contain', flexShrink: 0 }} />
                               <p className="font-cinzel font-700 flex-1 truncate"
                                 style={{ fontSize: '0.78rem', color: '#f0ede8' }}>{f.name}</p>
                               {uncheckedNewFishIds.has(f.id) && (
@@ -2396,6 +2416,7 @@ export default function FishingGame({
                               >
                                 <div className="px-3 pt-2 pb-3 mx-0.5 rounded-b-xl"
                                   style={{ background: `${rarityColor}0a`, border: `1px solid ${rarityColor}25`, borderTop: 'none' }}>
+                                  <FishImg name={f.name} style={{ width: '100%', height: 100, objectFit: 'contain', marginBottom: '0.5rem' }} />
                                   <p className="font-karla font-300 italic mb-2"
                                     style={{ fontSize: '0.68rem', color: rarityColor + 'aa' }}>{f.scientific_name}</p>
                                   <p className="font-karla font-400 mb-3"
