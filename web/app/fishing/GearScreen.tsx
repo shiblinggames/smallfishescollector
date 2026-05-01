@@ -62,7 +62,7 @@ function LineIcon({ color }: { color: string }) {
 function StatCell({ label, value, color, muted }: { label: string; value: string; color?: string; muted?: boolean }) {
   return (
     <div style={{ background: 'rgba(0,0,0,0.35)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
-      <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.42rem', color: 'rgba(255,255,255,0.28)', marginBottom: 5 }}>{label}</p>
+      <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.5)', marginBottom: 5 }}>{label}</p>
       <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: muted ? '#2e2c2a' : (color ?? '#f0ede8'), lineHeight: 1 }}>{value}</p>
     </div>
   )
@@ -112,8 +112,8 @@ function GearSlot({
         }
       </div>
       <div style={{ textAlign: 'center' }}>
-        <p className="font-karla font-600 uppercase" style={{ fontSize: '0.46rem', color: color + '88', letterSpacing: '0.14em', marginBottom: 1 }}>{label}</p>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.58rem', color: '#a0a09a', lineHeight: 1.2 }}>{itemName}</p>
+        <p className="font-karla font-600 uppercase" style={{ fontSize: '0.55rem', color: color + 'cc', letterSpacing: '0.14em', marginBottom: 1 }}>{label}</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.65rem', color: '#d0cdc8', lineHeight: 1.2 }}>{itemName}</p>
       </div>
     </button>
   )
@@ -224,7 +224,7 @@ export default function GearScreen({
 
       {/* ── Loadout stats ── */}
       <div style={{ background: 'rgba(4,10,20,0.75)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '0.9rem' }}>
-        <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.46rem', color: 'rgba(255,255,255,0.28)', marginBottom: 8 }}>
+        <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>
           Loadout Stats
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
@@ -292,7 +292,7 @@ export default function GearScreen({
             >
               {/* Close row */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)' }}>
+                <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)' }}>
                   {openSlot.charAt(0).toUpperCase() + openSlot.slice(1)}
                 </p>
                 <button onClick={() => setOpenSlot(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: '0 2px', touchAction: 'manipulation' }}>×</button>

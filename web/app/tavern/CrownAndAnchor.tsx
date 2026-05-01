@@ -65,42 +65,50 @@ const SYMBOL_COLOR: Record<Symbol, string> = {
   club:    '#4ade80',
 }
 
-function Die({ symbol, rolling, delay }: { symbol: Symbol; rolling: boolean; delay: number }) {
+function Die({ symbol, rolling }: { symbol: Symbol; rolling: boolean }) {
   const [display, setDisplay] = useState<Symbol>(symbol)
+  const [justLanded, setJustLanded] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     if (rolling) {
-      let idx = 0
+      setJustLanded(false)
       intervalRef.current = setInterval(() => {
-        idx = (idx + 1) % SYMBOLS.length
-        setDisplay(SYMBOLS[idx])
-      }, 80)
+        setDisplay(SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)])
+      }, 70)
     } else {
       timeoutRef.current = setTimeout(() => {
         if (intervalRef.current) clearInterval(intervalRef.current)
         setDisplay(symbol)
-      }, delay)
+        setJustLanded(true)
+        setTimeout(() => setJustLanded(false), 500)
+      }, 60)
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [rolling, symbol, delay])
+  }, [rolling, symbol])
 
   return (
     <div
-      className="flex items-center justify-center rounded-2xl transition-transform duration-150"
+      className="flex items-center justify-center rounded-2xl"
       style={{
-        width: 80, height: 80,
-        background: rolling ? 'rgba(255,255,255,0.11)' : 'rgba(255,255,255,0.15)',
-        border: `2px solid ${rolling ? 'rgba(255,255,255,0.12)' : SYMBOL_COLOR[display]}`,
+        width: 88, height: 88,
+        background: rolling ? 'rgba(4,10,20,0.78)' : 'rgba(4,10,20,0.92)',
+        border: `2.5px solid ${rolling ? 'rgba(255,255,255,0.12)' : SYMBOL_COLOR[display]}`,
         color: SYMBOL_COLOR[display],
-        boxShadow: rolling ? 'none' : `0 0 16px ${SYMBOL_COLOR[display]}40`,
+        boxShadow: rolling ? 'none' : `0 0 20px ${SYMBOL_COLOR[display]}55`,
+        animation: rolling
+          ? 'die-tumble 0.22s linear infinite'
+          : justLanded
+          ? 'die-land 0.45s cubic-bezier(0.36,0.07,0.19,0.97) forwards'
+          : 'none',
+        transformOrigin: 'center',
       }}
     >
-      <SymbolIcon name={display} size={36} />
+      <SymbolIcon name={display} size={40} />
     </div>
   )
 }
@@ -117,8 +125,9 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
   const [dailyWagered, setDailyWagered] = useState(initialWagered)
   const [selected, setSelected] = useState<Symbol | null>(null)
   const [wager, setWager] = useState(25)
-  const [rolling, setRolling] = useState(false)
+  const [diceRolling, setDiceRolling] = useState([false, false, false])
   const [diceResult, setDiceResult] = useState<Symbol[]>(['anchor', 'crown', 'heart'])
+  const rolling = diceRolling.some(Boolean)
   const [lastResult, setLastResult] = useState<RollResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [achievementKeys, setAchievementKeys] = useState<string[]>([])
@@ -130,30 +139,54 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
     if (!selected || !canRoll) return
     setError(null)
     setLastResult(null)
-    setRolling(true)
+    setDiceRolling([true, true, true])
 
     const result = await rollDice(selected, wager)
 
     if ('error' in result) {
-      setRolling(false)
+      setDiceRolling([false, false, false])
       setError(result.error)
       return
     }
 
     setDiceResult(result.result)
     if (result.newAchievements?.length) setAchievementKeys(result.newAchievements)
-    // Stagger die landing
-    setTimeout(() => setRolling(false), 1200)
+    // Random stop times between 800–1300ms, in a random order (any die can land first)
+    const stopTimes = [800, 950, 1100].map(base => base + Math.floor(Math.random() * 250))
+    const order = [0, 1, 2].sort(() => Math.random() - 0.5)
+    order.forEach((dieIdx, i) => {
+      setTimeout(() => {
+        setDiceRolling(prev => { const next = [...prev]; next[dieIdx] = false; return next })
+      }, stopTimes[i])
+    })
+    const lastStop = Math.max(...stopTimes)
     setTimeout(() => {
       setDoubloons(result.newDoubloons)
       setDailyWagered(result.dailyWagered)
       setLastResult(result)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
-    }, 1400)
+    }, lastStop + 220)
   }
 
   return (
     <div className="flex flex-col items-center gap-8 w-full max-w-sm mx-auto">
+      <style>{`
+        @keyframes die-tumble {
+          0%   { transform: rotate(-10deg) scale(0.95); }
+          25%  { transform: rotate(7deg)  scale(1.03); }
+          50%  { transform: rotate(-5deg) scale(0.97); }
+          75%  { transform: rotate(9deg)  scale(1.02); }
+          100% { transform: rotate(-10deg) scale(0.95); }
+        }
+        @keyframes die-land {
+          0%   { transform: scale(1)    rotate(0deg); }
+          22%  { transform: scale(1.18) rotate(3deg); }
+          46%  { transform: scale(0.90) rotate(-1deg); }
+          68%  { transform: scale(1.07) rotate(1deg); }
+          84%  { transform: scale(0.97) rotate(0deg); }
+          100% { transform: scale(1)    rotate(0deg); }
+        }
+      `}</style>
       <AchievementToast keys={achievementKeys} onDone={() => setAchievementKeys([])} />
       {/* Balance + daily cap */}
       <div className="text-center">
@@ -173,10 +206,10 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
               onClick={() => setSelected(s)}
               className="flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all duration-150"
               style={{
-                background: selected === s ? `${SYMBOL_COLOR[s]}18` : 'rgba(255,255,255,0.08)',
-                border: `1px solid ${selected === s ? SYMBOL_COLOR[s] : 'rgba(255,255,255,0.15)'}`,
-                color: selected === s ? SYMBOL_COLOR[s] : '#a0a09a',
-                boxShadow: selected === s ? `0 0 12px ${SYMBOL_COLOR[s]}30` : 'none',
+                background: selected === s ? `rgba(4,10,20,0.88)` : 'rgba(4,10,20,0.72)',
+                border: `1px solid ${selected === s ? SYMBOL_COLOR[s] : 'rgba(255,255,255,0.12)'}`,
+                color: selected === s ? SYMBOL_COLOR[s] : '#9a9488',
+                boxShadow: selected === s ? `0 0 14px ${SYMBOL_COLOR[s]}40` : 'none',
               }}
             >
               <SymbolIcon name={s} size={24} />
@@ -189,13 +222,13 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
       {/* Dice */}
       <div className="flex gap-4">
         {diceResult.map((sym, i) => (
-          <Die key={i} symbol={sym} rolling={rolling} delay={i * 200} />
+          <Die key={i} symbol={sym} rolling={diceRolling[i]} />
         ))}
       </div>
 
       {/* Result */}
       {lastResult && !rolling && (
-        <div className="text-center">
+        <div className="text-center" style={{ background: 'rgba(4,10,20,0.82)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '0.65rem 1.25rem' }}>
           {lastResult.matches > 0 ? (
             <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.1rem' }}>
               {lastResult.matches === 3 ? '🎰 ' : ''}{lastResult.matches}× match — +{lastResult.payout} ⟡
@@ -220,9 +253,9 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
                 onClick={() => !disabled && setWager(amt)}
                 className="font-karla font-600 text-xs uppercase tracking-[0.10em] px-3 py-2 rounded-lg transition-all"
                 style={{
-                  background: wager === amt ? 'rgba(240,192,64,0.15)' : 'rgba(255,255,255,0.08)',
-                  border: `1px solid ${wager === amt ? '#f0c040' : 'rgba(255,255,255,0.15)'}`,
-                  color: disabled ? '#3a3835' : wager === amt ? '#f0c040' : '#a0a09a',
+                  background: wager === amt ? 'rgba(4,10,20,0.88)' : 'rgba(4,10,20,0.72)',
+                  border: `1px solid ${wager === amt ? '#f0c040' : 'rgba(255,255,255,0.12)'}`,
+                  color: disabled ? '#3a3835' : wager === amt ? '#f0c040' : '#9a9488',
                   cursor: disabled ? 'default' : 'pointer',
                 }}
               >
