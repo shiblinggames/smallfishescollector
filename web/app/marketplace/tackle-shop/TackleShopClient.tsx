@@ -523,7 +523,7 @@ export default function TackleShopClient({
               <div
                 key={rod.tier}
                 style={{
-                  padding: '0.7rem 0.65rem',
+                  padding: '0.9rem 0.85rem',
                   background: 'rgba(8,8,6,0.82)',
                   border: `1px solid ${isActive ? `${c}55` : owned ? `${c}40` : 'rgba(255,255,255,0.14)'}`,
                   boxShadow: isActive ? `0 0 18px ${c}30` : 'none',
@@ -531,19 +531,19 @@ export default function TackleShopClient({
                   display: 'flex', flexDirection: 'column', gap: 7,
                 }}
               >
-                {/* Rod image */}
-                {rod.imageUrl && (
-                  <div style={{ width: '100%', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6%' }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={rod.imageUrl} alt={rod.name} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: owned ? 'none' : 'grayscale(1) brightness(0.4)' }} />
+                {/* Name + image row */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  {rod.imageUrl && (
+                    <div style={{ width: 36, height: 36, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${c}14`, border: `1px solid ${c}30`, borderRadius: 8, padding: 4 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={rod.imageUrl} alt={rod.name} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: owned ? 'none' : 'grayscale(1) brightness(0.4)' }} />
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? '#f0ede8' : '#6a6764', lineHeight: 1.25 }}>{rod.name}</p>
+                    {isActive && <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: c }}>Equipped</span>}
+                    {owned && !isActive && <span className="font-karla font-300 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#4ade80' }}>Owned</span>}
                   </div>
-                )}
-
-                {/* Name + status */}
-                <div>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? '#f0ede8' : '#6a6764', lineHeight: 1.25 }}>{rod.name}</p>
-                  {isActive && <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: c }}>Equipped</span>}
-                  {owned && !isActive && <span className="font-karla font-300 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#4ade80' }}>Owned</span>}
                 </div>
 
                 {/* Stat pills */}
