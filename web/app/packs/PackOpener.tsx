@@ -276,6 +276,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
               opacity: loading ? 0.6 : 1,
               transition: 'transform 0.15s ease, background 0.15s ease',
               animation: 'pack-pulse 2s ease-in-out infinite',
+              textAlign: 'center',
             }}
             onPointerEnter={e => { if (e.pointerType !== 'touch' && !loading) e.currentTarget.style.transform = 'translateY(-3px)' }}
             onPointerLeave={e => { e.currentTarget.style.transform = '' }}
