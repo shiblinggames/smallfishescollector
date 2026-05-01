@@ -29,10 +29,10 @@ function ShopLink({ href, label, color, onClick }: { href: string; label: string
 
 function Pill({ label, color, muted }: { label: string; color?: string; muted?: boolean }) {
   if (muted) return (
-    <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#4a4845', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
+    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
   )
   return (
-    <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: `${color}cc`, background: `${color}14`, border: `1px solid ${color}30`, padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
+    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${color}cc`, background: `${color}14`, border: `1px solid ${color}30`, padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
   )
 }
 
@@ -62,8 +62,8 @@ function LineIcon({ color }: { color: string }) {
 function StatCell({ label, value, color, muted }: { label: string; value: string; color?: string; muted?: boolean }) {
   return (
     <div style={{ background: 'rgba(0,0,0,0.35)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
-      <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.5)', marginBottom: 5 }}>{label}</p>
-      <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: muted ? '#2e2c2a' : (color ?? '#f0ede8'), lineHeight: 1 }}>{value}</p>
+      <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)', marginBottom: 5 }}>{label}</p>
+      <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: muted ? '#2e2c2a' : (color ?? '#f0ede8'), lineHeight: 1 }}>{value}</p>
     </div>
   )
 }
@@ -112,8 +112,8 @@ function GearSlot({
         }
       </div>
       <div style={{ textAlign: 'center' }}>
-        <p className="font-karla font-600 uppercase" style={{ fontSize: '0.55rem', color: color + 'cc', letterSpacing: '0.14em', marginBottom: 1 }}>{label}</p>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.65rem', color: '#d0cdc8', lineHeight: 1.2 }}>{itemName}</p>
+        <p className="font-karla font-600 uppercase" style={{ fontSize: '0.62rem', color: color + 'cc', letterSpacing: '0.14em', marginBottom: 1 }}>{label}</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d0cdc8', lineHeight: 1.2 }}>{itemName}</p>
       </div>
     </button>
   )
@@ -178,27 +178,28 @@ export default function GearScreen({
           <GearSlot label="Hook" image={hook.imageUrl ?? null} itemName={hook.name} color={hook.color} onClick={() => setOpenSlot('hook')} />
         </div>
 
-        {/* Center: Ship */}
-        <div style={{
+        {/* Center: Ship — tap to go to Shipyard */}
+        <Link href="/marketplace/shipyard" onClick={onClose} style={{
           gridColumn: '2', gridRow: '1 / 3',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
           background: 'rgba(4,10,20,0.75)',
-          border: `1px solid ${ship.color}30`,
+          border: `1px solid ${ship.color}45`,
           borderRadius: 14,
           padding: '0.75rem 0.5rem 0.6rem',
+          textDecoration: 'none',
+          cursor: 'pointer',
         }}>
           <img src={ship.imageUrl} alt={ship.name} style={{ width: '90%', maxHeight: 100, objectFit: 'contain', filter: `drop-shadow(0 4px 16px ${ship.color}44)` }} />
           <div style={{ textAlign: 'center', marginTop: 6 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.65rem', color: ship.color, lineHeight: 1.2 }}>{ship.name}</p>
-            <p className="font-karla font-600" style={{ fontSize: '0.54rem', color: ship.color + 'aa', marginTop: 3 }}>
-              {ship.holdCapacity} inventory slots
+            <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: ship.color, lineHeight: 1.2 }}>{ship.name}</p>
+            <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: ship.color + 'aa', marginTop: 3 }}>
+              {ship.holdCapacity} hold
             </p>
-            <Link href="/marketplace/shipyard" onClick={onClose} className="font-karla font-600"
-              style={{ fontSize: '0.48rem', color: '#4a4845', textDecoration: 'none', letterSpacing: '0.1em', marginTop: 2, display: 'inline-block' }}>
-              upgrade ↗
-            </Link>
+            <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: ship.color + '88', marginTop: 5, letterSpacing: '0.12em' }}>
+              Shipyard ↗
+            </p>
           </div>
-        </div>
+        </Link>
 
         <div style={{ gridColumn: '3', gridRow: '1' }}>
           <GearSlot label="Reel" icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} onClick={() => setOpenSlot('reel')} />
@@ -224,7 +225,7 @@ export default function GearScreen({
 
       {/* ── Loadout stats ── */}
       <div style={{ background: 'rgba(4,10,20,0.75)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '0.9rem' }}>
-        <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>
+        <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>
           Loadout Stats
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
@@ -292,7 +293,7 @@ export default function GearScreen({
             >
               {/* Close row */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)' }}>
+                <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)' }}>
                   {openSlot.charAt(0).toUpperCase() + openSlot.slice(1)}
                 </p>
                 <button onClick={() => setOpenSlot(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: '0 2px', touchAction: 'manipulation' }}>×</button>
@@ -313,7 +314,7 @@ export default function GearScreen({
                         border: `1px solid ${isEquipped ? r.color + '50' : 'rgba(255,255,255,0.09)'}`,
                       }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f0ede8', marginBottom: 3 }}>{r.name}</p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8', marginBottom: 3 }}>{r.name}</p>
                           <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                             {r.doubleCatchChance > 0 && <Pill label={r.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(r.doubleCatchChance*100)}% double`} color={r.color} />}
                             {r.retryOnMissChance > 0 && <Pill label={`${Math.round(r.retryOnMissChance*100)}% retry`} color={r.color} />}
@@ -344,11 +345,11 @@ export default function GearScreen({
               {/* ── Reel ── */}
               {openSlot === 'reel' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: reel.color }}>{reel.name}</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: reel.color }}>{reel.name}</p>
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                     {dragPct > 0 ? <Pill label={`−${dragPct}% needle speed`} color={reel.color} /> : <Pill label="Base needle speed" muted />}
                   </div>
-                  <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.55 }}>{reel.description}</p>
+                  <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#6a6764', lineHeight: 1.55 }}>{reel.description}</p>
                   <ShopLink href="/marketplace/tackle-shop#reel" label="Upgrade reel" color={reel.color} onClick={onClose} />
                 </div>
               )}
@@ -361,13 +362,13 @@ export default function GearScreen({
                       <img src={hook.imageUrl} alt={hook.name} style={{ width: 44, height: 44, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${hook.color}66)` }} />
                     )}
                     <div>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: hook.color }}>{hook.name}</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: hook.color }}>{hook.name}</p>
                       <div style={{ display: 'flex', gap: 4, marginTop: 3 }}>
                         {hookTier > 0 ? <Pill label={`+${hookTier * 3}° catch zone`} color={hook.color} /> : <Pill label="No catch zone bonus" muted />}
                       </div>
                     </div>
                   </div>
-                  <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.55 }}>{hook.description}</p>
+                  <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#6a6764', lineHeight: 1.55 }}>{hook.description}</p>
                   <ShopLink href="/marketplace/tackle-shop#hook" label="Upgrade hook" color={hook.color} onClick={onClose} />
                 </div>
               )}
@@ -375,11 +376,11 @@ export default function GearScreen({
               {/* ── Line ── */}
               {openSlot === 'line' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: line.color }}>{line.name}</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: line.color }}>{line.name}</p>
                   <div style={{ display: 'flex', gap: 4 }}>
                     {snagRedPct > 0 ? <Pill label={`−${snagRedPct}% snag zone`} color={line.color} /> : <Pill label="Standard snag zones" muted />}
                   </div>
-                  <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.55 }}>{line.description}</p>
+                  <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#6a6764', lineHeight: 1.55 }}>{line.description}</p>
                   <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#4a4845', lineHeight: 1.5 }}>
                     Lines are earned by catching unique species — no purchase needed.
                   </p>
