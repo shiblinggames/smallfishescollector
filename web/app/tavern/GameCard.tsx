@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface Props {
@@ -15,9 +14,8 @@ interface Props {
   variant?: 'default' | 'featured'
 }
 
-export default function GameCard({ href, eyebrow, title, statusText, info, icon, completed, streak, variant = 'default' }: Props) {
+export default function GameCard({ href, eyebrow, title, statusText, info: _info, icon, completed, streak, variant = 'default' }: Props) {
   const router = useRouter()
-  const [showModal, setShowModal] = useState(false)
   const done = !!completed
   const featured = variant === 'featured'
 
@@ -58,16 +56,6 @@ export default function GameCard({ href, eyebrow, title, statusText, info, icon,
               <path d="M20 6L9 17l-5-5"/>
             </svg>
           )}
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowModal(true) }}
-            style={{ color: '#4a4845', flexShrink: 0, lineHeight: 1 }}
-            aria-label="More info"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 16v-4M12 8h.01"/>
-            </svg>
-          </button>
         </div>
 
         {/* Title */}
@@ -86,51 +74,6 @@ export default function GameCard({ href, eyebrow, title, statusText, info, icon,
         )}
       </div>
 
-      {showModal && (
-        <div
-          onClick={() => setShowModal(false)}
-          style={{
-            position: 'fixed', inset: 0,
-            background: 'rgba(0,0,0,0.65)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 50,
-            padding: '1.5rem',
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: '#1c1917',
-              border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: '18px',
-              padding: '1.5rem',
-              width: '100%',
-              maxWidth: '22rem',
-            }}
-          >
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <div>
-                <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>{eyebrow}</p>
-                <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.1rem' }}>{title}</p>
-              </div>
-              <button onClick={() => setShowModal(false)} style={{ color: '#6a6764', lineHeight: 1, marginTop: 2, flexShrink: 0 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginBottom: '1rem' }} />
-            <ul className="flex flex-col gap-2">
-              {info.map((item, i) => (
-                <li key={i} className="flex items-start gap-2.5">
-                  <span style={{ color: '#f0c040', fontSize: '0.5rem', lineHeight: '1.8rem', flexShrink: 0 }}>✦</span>
-                  <span className="font-karla text-[#a0a09a]" style={{ fontSize: '0.82rem', lineHeight: 1.55 }}>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
     </>
   )
 }
