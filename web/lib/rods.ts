@@ -37,6 +37,7 @@ export const RODS: RodDef[] = [
     description: 'Lighter than bamboo. Fish bite noticeably faster.',
     color: '#9ca3af', rarityBonus: 0, biteIntervalMs: 2800, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    imageUrl: '/fiberglassrod.png',
   },
   {
     tier: 3, name: 'Reef Guard', cost: 8000,
