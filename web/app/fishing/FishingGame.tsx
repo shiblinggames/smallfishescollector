@@ -1616,6 +1616,15 @@ export default function FishingGame({
           ))}
         </motion.div>
 
+        {/* Zone darkness overlay */}
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
+          background: 'rgba(0,0,0,' + (
+            selectedZone === 'abyss'       ? '0.62' :
+            selectedZone === 'deep'        ? '0.38' :
+            selectedZone === 'open_waters' ? '0.18' : '0'
+          ) + ')',
+        }} />
 
         {/* UI content — fills full height as flex column */}
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem', paddingBottom: '1.25rem' }}>
