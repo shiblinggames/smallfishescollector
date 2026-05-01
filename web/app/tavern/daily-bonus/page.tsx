@@ -13,7 +13,7 @@ export default async function DailyBonusPage() {
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('packs_available, doubloons, is_premium, premium_expires_at, last_daily_claim, last_pack_claim, gems')
+    .select('packs_available, doubloons, is_premium, premium_expires_at, last_daily_claim, last_pack_claim, last_worm_claim, gems')
     .eq('id', user.id)
     .single()
 
@@ -33,6 +33,7 @@ export default async function DailyBonusPage() {
           <DailyBonusClient
             dailyClaimed={profile?.last_daily_claim === today}
             packClaimed={profile?.last_pack_claim === today}
+            wormClaimed={profile?.last_worm_claim === today}
             baseAmount={baseAmount}
             isPremium={isPremium}
           />

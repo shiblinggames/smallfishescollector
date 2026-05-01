@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { claimDailyBonus } from '@/app/actions/dailyBonus'
+import { claimDailyBonus, claimDailyWorms } from '@/app/actions/dailyBonus'
 import { claimDailyPack } from '@/app/actions/dailyPack'
 import AchievementToast from '@/components/AchievementToast'
 
 interface Props {
   dailyClaimed: boolean
   packClaimed: boolean
+  wormClaimed: boolean
   baseAmount: number
   isPremium: boolean
 }
@@ -15,13 +16,16 @@ interface Props {
 export default function DailyBonusClient({
   dailyClaimed: initialDailyClaimed,
   packClaimed: initialPackClaimed,
+  wormClaimed: initialWormClaimed,
   baseAmount,
   isPremium,
 }: Props) {
   const [dailyClaimed, setDailyClaimed] = useState(initialDailyClaimed)
   const [packClaimed, setPackClaimed] = useState(initialPackClaimed)
+  const [wormClaimed, setWormClaimed] = useState(initialWormClaimed)
   const [loadingDaily, setLoadingDaily] = useState(false)
   const [loadingPack, setLoadingPack] = useState(false)
+  const [loadingWorms, setLoadingWorms] = useState(false)
   const [achievementKeys, setAchievementKeys] = useState<string[]>([])
 
   async function handleClaimDaily() {
@@ -44,6 +48,14 @@ export default function DailyBonusClient({
     setLoadingPack(false)
   }
 
+  async function handleClaimWorms() {
+    if (wormClaimed || loadingWorms) return
+    setLoadingWorms(true)
+    const result = await claimDailyWorms()
+    if (result.claimed) setWormClaimed(true)
+    setLoadingWorms(false)
+  }
+
   return (
     <>
       <AchievementToast keys={achievementKeys} onDone={() => setAchievementKeys([])} />
@@ -53,12 +65,23 @@ export default function DailyBonusClient({
         <ClaimCard
           eyebrow="Daily Bonus"
           title={`+${baseAmount} ◆`}
-          description={isPremium ? 'Your daily gem bonus and 10 worms as a Member.' : 'Your daily gem bonus and 10 worms.'}
+          description={isPremium ? 'Your daily gem bonus as a Member.' : 'Your daily gem bonus.'}
           claimed={dailyClaimed}
           loading={loadingDaily}
           onClaim={handleClaimDaily}
           icon={<CoinIcon />}
           badge={isPremium ? 'Member' : undefined}
+        />
+
+        {/* Daily worms */}
+        <ClaimCard
+          eyebrow="Daily Bait"
+          title="+20 Worms"
+          description="A fresh batch of worms to keep you fishing."
+          claimed={wormClaimed}
+          loading={loadingWorms}
+          onClaim={handleClaimWorms}
+          icon={<WormIcon />}
         />
 
         {/* Daily pack */}
@@ -168,6 +191,15 @@ function CoinIcon() {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
       <circle cx="12" cy="12" r="9"/>
       <path d="M12 7v1.5M12 15.5V17M9.5 9.5C9.5 8.4 10.6 8 12 8s2.5.6 2.5 1.8c0 2.4-5 2-5 4.4C9.5 15.4 10.6 16 12 16s2.5-.5 2.5-1.7"/>
+    </svg>
+  )
+}
+
+function WormIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 8c0-2 2-3 4-2s3 3 2 5-3 3-3 5 2 3 4 2"/>
+      <circle cx="7" cy="6" r="2" fill="currentColor" stroke="none"/>
     </svg>
   )
 }
