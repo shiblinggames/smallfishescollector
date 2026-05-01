@@ -1064,7 +1064,7 @@ function XPBarDisplay({ xp, bestStreak }: { xp: number; bestStreak?: number }) {
     <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
       style={{ background: 'rgba(4,10,18,0.72)', border: `1px solid ${c}28` }}>
       <div className="shrink-0 flex items-baseline gap-0.5">
-        <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: c + '77', letterSpacing: '0.08em' }}>LV</span>
+        <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: c + 'bb', letterSpacing: '0.08em' }}>LV</span>
         <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: c, lineHeight: 1 }}>{level}</span>
       </div>
       <div style={{ flex: 1, height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
@@ -1082,11 +1082,11 @@ function XPBarDisplay({ xp, bestStreak }: { xp: number; bestStreak?: number }) {
       </div>
       <div className="shrink-0 flex items-center gap-2">
         <p className="font-karla font-600"
-          style={{ fontSize: '0.6rem', color: isMax ? c : 'rgba(255,255,255,0.28)', textAlign: 'right', lineHeight: 1 }}>
+          style={{ fontSize: '0.6rem', color: isMax ? c : 'rgba(255,255,255,0.65)', textAlign: 'right', lineHeight: 1 }}>
           {isMax ? 'MAX' : `${toGo.toLocaleString()} xp`}
         </p>
         {(bestStreak ?? 0) > 0 && (
-          <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: 'rgba(251,146,60,0.55)', lineHeight: 1 }}>
+          <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: 'rgba(251,146,60,0.9)', lineHeight: 1 }}>
             🔥{bestStreak}
           </span>
         )}
@@ -1712,13 +1712,13 @@ export default function FishingGame({
               }}
             >
               <span className="font-karla font-600 uppercase tracking-[0.1em]"
-                style={{ fontSize: '0.48rem', color: HABITAT_COLOR[selectedZone] + 'aa', lineHeight: 1 }}>
+                style={{ fontSize: '0.48rem', color: HABITAT_COLOR[selectedZone] + 'dd', lineHeight: 1 }}>
                 Collection
               </span>
               <span className="font-cinzel font-700"
                 style={{ fontSize: '0.88rem', color: HABITAT_COLOR[selectedZone], lineHeight: 1 }}>
                 {caughtFishIds.size}
-                <span className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#6a6764' }}>
+                <span className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }}>
                   /{allFishSpecies.length}
                 </span>
               </span>
