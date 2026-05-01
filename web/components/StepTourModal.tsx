@@ -3,10 +3,16 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
+export type TourPlacement =
+  | 'center'
+  | 'top' | 'top-left' | 'top-right'
+  | 'bottom' | 'bottom-left' | 'bottom-right'
+
 export interface TourStep {
   color: string
   title: string
   body: string
+  placement?: TourPlacement
 }
 
 interface Props {
@@ -14,10 +20,46 @@ interface Props {
   onDone: () => void
 }
 
+const NAV_OFFSET = '5rem'   // below the nav bar
+const BOTTOM_OFFSET = '7rem' // above the mobile tab bar
+
+function cardStyle(placement: TourPlacement): React.CSSProperties {
+  switch (placement) {
+    case 'top':         return { position: 'fixed', top: NAV_OFFSET, left: '1rem', right: '1rem' }
+    case 'top-left':    return { position: 'fixed', top: NAV_OFFSET, left: '1rem', maxWidth: 320 }
+    case 'top-right':   return { position: 'fixed', top: NAV_OFFSET, right: '1rem', maxWidth: 320 }
+    case 'bottom':      return { position: 'fixed', bottom: BOTTOM_OFFSET, left: '1rem', right: '1rem' }
+    case 'bottom-left': return { position: 'fixed', bottom: BOTTOM_OFFSET, left: '1rem', maxWidth: 320 }
+    case 'bottom-right':return { position: 'fixed', bottom: BOTTOM_OFFSET, right: '1rem', maxWidth: 320 }
+    default:            return { position: 'fixed', top: '50%', left: '1rem', right: '1rem', transform: 'translateY(-50%)', maxWidth: 400, margin: '0 auto' }
+  }
+}
+
+function Arrow({ placement, color }: { placement: TourPlacement; color: string }) {
+  const base: React.CSSProperties = {
+    position: 'absolute', width: 10, height: 10,
+    background: '#0a1828',
+    transform: 'rotate(45deg)',
+  }
+
+  // For top-placed cards the arrow points UP (at content above)
+  // For bottom-placed cards the arrow points DOWN (at content below)
+  if (placement === 'top' || placement === 'top-left' || placement === 'top-right') {
+    const h: React.CSSProperties = placement === 'top-right' ? { right: 22 } : { left: 22 }
+    return <div style={{ ...base, top: -6, ...h, borderTop: `1px solid ${color}45`, borderLeft: `1px solid ${color}45` }} />
+  }
+  if (placement === 'bottom' || placement === 'bottom-left' || placement === 'bottom-right') {
+    const h: React.CSSProperties = placement === 'bottom-right' ? { right: 22 } : { left: 22 }
+    return <div style={{ ...base, bottom: -6, ...h, borderBottom: `1px solid ${color}45`, borderRight: `1px solid ${color}45` }} />
+  }
+  return null
+}
+
 export default function StepTourModal({ steps, onDone }: Props) {
   const [step, setStep] = useState(0)
   const [visible, setVisible] = useState(true)
   const current = steps[step]
+  const placement = current.placement ?? 'center'
   const isLast = step === steps.length - 1
 
   function advance() {
@@ -33,12 +75,7 @@ export default function StepTourModal({ steps, onDone }: Props) {
 
   return (
     <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 50,
-        background: 'rgba(0,0,0,0.72)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '1.5rem',
-      }}
+      style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.62)' }}
       onClick={advance}
     >
       <AnimatePresence mode="wait">
@@ -49,16 +86,18 @@ export default function StepTourModal({ steps, onDone }: Props) {
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.18 }}
           style={{
+            ...cardStyle(placement),
+            zIndex: 51,
             background: '#0a1828',
             border: '1px solid rgba(255,255,255,0.1)',
             borderLeft: `3px solid ${current.color}`,
             borderRadius: 14,
             padding: '1.1rem 1.25rem',
-            maxWidth: 380,
-            width: '100%',
           }}
           onClick={e => e.stopPropagation()}
         >
+          <Arrow placement={placement} color={current.color} />
+
           <div className="flex items-center gap-2.5 mb-2">
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: current.color, flexShrink: 0 }} />
             <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: current.color }}>
