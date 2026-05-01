@@ -89,11 +89,13 @@ export default async function MarketplacePage() {
                 href="/marketplace/tackle-shop"
                 eyebrow="Tackle Shop"
                 title="Tackle Shop"
-                description="Upgrade your hook for better pulls."
+                description="Hooks, rods, reels, bait, and line."
                 info={[
-                  'Better hooks unlock deeper zones',
-                  'Improve your chances at rarer variants',
-                  'Buy with doubloons earned daily',
+                  'Hooks widen your catch zone',
+                  'Rods each have a unique special ability',
+                  'Reels slow the dial needle for easier timing',
+                  'Bait affects bite speed and catch window',
+                  'Line reduces snag zones — earned free',
                 ]}
                 icon={<HookIcon />}
               />
@@ -101,11 +103,11 @@ export default async function MarketplacePage() {
                 href="/marketplace/shipyard"
                 eyebrow="Shipyard"
                 title="Shipyard"
-                description="Upgrade your ship to take on more dangerous expeditions."
+                description="Bigger hold, more crew, more firepower."
                 info={[
-                  'Better ships unlock harder zones and bigger rewards',
-                  'More crew slots for stronger voyage loadouts',
-                  'Bigger ships also earn more doubloons daily',
+                  'Larger fish hold for longer sessions',
+                  'More crew slots for expedition loadouts',
+                  'Higher base damage in combat',
                 ]}
                 icon={<ShipIcon />}
               />

@@ -15,7 +15,7 @@ export const BAITS: BaitDef[] = [
   {
     type: 'worm',
     name: 'Worm',
-    description: 'Reliable and cheap. You get 10 free every day.',
+    description: 'Reliable all-purpose bait. Claim 20 free from your Daily Bonus.',
     color: '#a07858',
     imageUrl: '/worm.png',
     waitMult: 1.0,
