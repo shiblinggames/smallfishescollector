@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import MarketClient from './MarketClient'
+import MarketIntroModal from './MarketIntroModal'
 
 export type MarketFishEntry = {
   fish_id: number
@@ -42,7 +43,7 @@ export default async function MarketPage() {
   }
 
   const [{ data: profile }, marketRes, inventoryRes, stateRes, collectionRes] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, gems, is_premium, premium_expires_at').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, gems, is_premium, premium_expires_at, has_seen_market_intro').eq('id', user.id).single(),
     admin.from('fish_market')
       .select('fish_id, multiplier, prev_multiplier, history, fish_species(id, name, habitat, bite_rarity, sell_value)'),
     admin.from('fish_inventory')
@@ -90,6 +91,7 @@ export default async function MarketPage() {
         doubloons={profile?.doubloons ?? 0}
         gems={profile?.gems ?? 0}
       />
+      {!profile?.has_seen_market_intro && <MarketIntroModal />}
       <MarketClient
         portfolio={portfolio}
         allMarket={discovered}
