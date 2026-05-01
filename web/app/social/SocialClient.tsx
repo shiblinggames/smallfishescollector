@@ -16,6 +16,7 @@ interface SearchResult {
 interface Props {
   initialCrew: CrewMember[]
   username: string
+  newFollowers: { username: string; fishingXP: number }[]
   initialChallenges: PendingChallenge[]
   wlRecord: { wins: number; losses: number; ties: number }
   myDoubloons: number
@@ -44,9 +45,10 @@ function Avatar({ username, size = 40 }: { username: string; size?: number }) {
   )
 }
 
-export default function SocialClient({ initialCrew, username, initialChallenges, wlRecord, myDoubloons }: Props) {
+export default function SocialClient({ initialCrew, username, newFollowers: initialNewFollowers, initialChallenges, wlRecord, myDoubloons }: Props) {
   const router = useRouter()
   const [crew, setCrew] = useState<CrewMember[]>(initialCrew)
+  const [newFollowers, setNewFollowers] = useState(initialNewFollowers)
   const crewSet = new Set(crew.map(m => m.username.toLowerCase()))
 
   const [query, setQuery] = useState('')
@@ -96,6 +98,51 @@ export default function SocialClient({ initialCrew, username, initialChallenges,
 
   return (
     <div className="px-6 max-w-xl mx-auto pb-14 flex flex-col gap-10">
+
+      {/* ── New followers ── */}
+      {newFollowers.length > 0 && (
+        <div>
+          <p className="font-karla font-600 uppercase tracking-[0.14em] mb-3" style={{ fontSize: '0.55rem', color: '#9a9488' }}>
+            Added You · {newFollowers.length}
+          </p>
+          <div style={{ background: 'rgba(4,10,20,0.6)', border: '1px solid rgba(240,192,64,0.15)', borderRadius: 14, overflow: 'hidden' }}>
+            {newFollowers.map((f, i) => (
+              <div
+                key={f.username}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '0.75rem 1rem',
+                  borderBottom: i < newFollowers.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                }}
+              >
+                <Avatar username={f.username} size={36} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>{f.username}</p>
+                  <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#f0c04077', marginTop: 2 }}>Lv {getLevelFromXP(f.fishingXP)}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    startTransition(async () => {
+                      await addCrewMember(f.username)
+                      setCrew(prev => [...prev, { username: f.username, fishingXP: f.fishingXP }])
+                      setNewFollowers(prev => prev.filter(n => n.username !== f.username))
+                    })
+                  }}
+                  disabled={pending}
+                  className="font-karla font-700 uppercase tracking-[0.1em]"
+                  style={{
+                    fontSize: '0.55rem', padding: '0.3rem 0.75rem', borderRadius: 8, flexShrink: 0,
+                    background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.35)',
+                    color: '#f0c040', cursor: 'pointer', opacity: pending ? 0.5 : 1,
+                  }}
+                >
+                  + Add Back
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Challenges ── */}
       {(initialChallenges.length > 0 || wlRecord.wins + wlRecord.losses + wlRecord.ties > 0) && (

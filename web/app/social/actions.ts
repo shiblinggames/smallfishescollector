@@ -62,6 +62,41 @@ export async function addCrewMember(targetUsername: string): Promise<{ error?: s
   return {}
 }
 
+export async function getNewFollowers(): Promise<{ username: string; fishingXP: number }[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const admin = createAdminClient()
+
+  // People who follow me
+  const { data: followers } = await admin
+    .from('crew')
+    .select('follower_id')
+    .eq('following_id', user.id)
+
+  const followerIds = (followers ?? []).map(r => r.follower_id)
+  if (!followerIds.length) return []
+
+  // People I already follow back
+  const { data: following } = await admin
+    .from('crew')
+    .select('following_id')
+    .eq('follower_id', user.id)
+    .in('following_id', followerIds)
+
+  const alreadyFollowingIds = new Set((following ?? []).map(r => r.following_id))
+  const notAddedBack = followerIds.filter(id => !alreadyFollowingIds.has(id))
+  if (!notAddedBack.length) return []
+
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('username, fishing_xp')
+    .in('id', notAddedBack)
+
+  return (profiles ?? []).map(p => ({ username: p.username, fishingXP: p.fishing_xp ?? 0 }))
+}
+
 export async function removeCrewMember(targetUsername: string): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

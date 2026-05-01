@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Nav from '@/components/Nav'
 import SocialClient from './SocialClient'
-import { getCrew } from './actions'
+import { getCrew, getNewFollowers } from './actions'
 import { getChallenges, getWLRecord } from './challengeActions'
 
 export default async function SocialPage() {
@@ -11,9 +11,10 @@ export default async function SocialPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, crew, challenges, wlRecord] = await Promise.all([
+  const [{ data: profile }, crew, newFollowers, challenges, wlRecord] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons, gems, username').eq('id', user.id).single(),
     getCrew(),
+    getNewFollowers(),
     getChallenges(),
     getWLRecord(),
   ])
@@ -40,6 +41,7 @@ export default async function SocialPage() {
         <SocialClient
           initialCrew={crew}
           username={profile?.username ?? ''}
+          newFollowers={newFollowers}
           initialChallenges={challenges}
           wlRecord={wlRecord}
           myDoubloons={profile?.doubloons ?? 0}
