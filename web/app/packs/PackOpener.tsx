@@ -244,7 +244,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
   if (phase === 'idle') {
     return (
       <div
-        className="flex flex-col items-center gap-8 w-full max-w-sm"
+        className="flex flex-col gap-8 w-full max-w-sm"
         style={{
           background: 'rgba(8,8,6,0.82)',
           border: '1px solid rgba(255,255,255,0.16)',
