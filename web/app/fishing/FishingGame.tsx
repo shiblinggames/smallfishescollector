@@ -1215,7 +1215,7 @@ export default function FishingGame({
   const [castAnimDone, setCastAnimDone] = useState(false)
   useEffect(() => {
     if (phase === 'catching') { setSceneFrame('catching'); return }
-    if (phase !== 'casting') { setSceneFrame('fishing'); setCastAnimDone(false); return }
+    if (phase !== 'casting') { setCastAnimDone(false); return }
     setCastAnimDone(false)
     setSceneFrame('windup')
     const t1 = setTimeout(() => setSceneFrame('cast1'), 350)
