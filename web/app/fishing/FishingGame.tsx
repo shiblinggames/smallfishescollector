@@ -1122,6 +1122,7 @@ export default function FishingGame({
   const [challengeActive, setChallengeActive] = useState(false)
   const [perfectStreak, setPerfectStreak] = useState(0)
   const [highestPerfectStreak, setHighestPerfectStreak] = useState(initialHighestPerfectStreak)
+  const [showStreak, setShowStreak] = useState(true)
   const [newStreakRecord, setNewStreakRecord] = useState<number | null>(null)
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
@@ -1701,16 +1702,27 @@ export default function FishingGame({
             </div>
           </div>
 
-          {/* Best perfect streak */}
+          {/* Best perfect streak — toggleable */}
           {highestPerfectStreak > 0 && (
-            <div style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
-              <p className="font-pirata" style={{ fontSize: '2.2rem', color: '#fb923c', textShadow: '0 0 18px rgba(251,146,60,0.65)', lineHeight: 1 }}>
-                {highestPerfectStreak}
-              </p>
-              <p className="font-karla font-600 uppercase tracking-[0.18em]" style={{ fontSize: '0.42rem', color: 'rgba(255,255,255,0.9)', marginTop: 2 }}>
-                best streak
-              </p>
-            </div>
+            <button
+              onClick={() => setShowStreak(v => !v)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: '0.5rem', touchAction: 'manipulation' }}
+            >
+              {showStreak ? (
+                <div style={{ textAlign: 'center' }}>
+                  <p className="font-pirata" style={{ fontSize: '2.2rem', color: '#fb923c', textShadow: '0 0 18px rgba(251,146,60,0.65)', lineHeight: 1 }}>
+                    {highestPerfectStreak}
+                  </p>
+                  <p className="font-karla font-600 uppercase tracking-[0.18em]" style={{ fontSize: '0.42rem', color: 'rgba(255,255,255,0.9)', marginTop: 2 }}>
+                    best streak
+                  </p>
+                </div>
+              ) : (
+                <p className="font-karla font-600 uppercase tracking-[0.18em]" style={{ fontSize: '0.42rem', color: 'rgba(255,255,255,0.35)' }}>
+                  streak
+                </p>
+              )}
+            </button>
           )}
 
           {/* Challenge session strip */}
