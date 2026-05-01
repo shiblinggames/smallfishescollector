@@ -158,40 +158,38 @@ export default function ProfileClient({
               spellCheck={false}
             />
             {usernameError && (
-              <p className="font-karla font-300 text-red-400 text-center" style={{ fontSize: '0.68rem' }}>{usernameError}</p>
+              <p className="font-karla font-300 text-red-400 text-center" style={{ fontSize: '0.72rem' }}>{usernameError}</p>
             )}
-            <p className="font-karla font-300 text-center" style={{ fontSize: '0.56rem', color: '#4a4845' }}>
+            <p className="font-karla font-300 text-center" style={{ fontSize: '0.65rem', color: '#6a6764' }}>
               3–20 chars · letters, numbers, underscores · can only be changed once
             </p>
             <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-              <button type="submit" disabled={pending} className="btn-ghost" style={{ fontSize: '0.62rem', padding: '0.35rem 1.1rem' }}>
+              <button type="submit" disabled={pending} className="btn-ghost" style={{ fontSize: '0.72rem', padding: '0.45rem 1.25rem' }}>
                 {pending ? '…' : 'Save'}
               </button>
-              <button type="button" onClick={() => { setShowUsernameForm(false); setUsernameError('') }} className="btn-ghost" style={{ fontSize: '0.62rem', padding: '0.35rem 1.1rem' }}>
+              <button type="button" onClick={() => { setShowUsernameForm(false); setUsernameError('') }} className="btn-ghost" style={{ fontSize: '0.72rem', padding: '0.45rem 1.25rem' }}>
                 Cancel
               </button>
             </div>
           </form>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, position: 'relative', zIndex: 1 }}>
             <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>{username}</p>
             {!usernameChanged && (
               <button
                 onClick={() => setShowUsernameForm(true)}
                 style={{
-                  background: 'rgba(255,255,255,0.07)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: 7, padding: '0.22rem 0.55rem', cursor: 'pointer',
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 }}
               >
-                <span className="font-karla font-600 uppercase" style={{ fontSize: '0.52rem', color: '#6a6764', letterSpacing: '0.12em' }}>Rename</span>
+                <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#6a6764', textDecoration: 'underline', textUnderlineOffset: 3 }}>Rename</span>
               </button>
             )}
           </div>
         )}
 
         {/* Email */}
-        <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: '#4a4845', position: 'relative', zIndex: 1 }}>{email}</p>
+        <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#6a6764', position: 'relative', zIndex: 1 }}>{email}</p>
 
         {/* Badges row */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', position: 'relative', zIndex: 1 }}>
@@ -204,7 +202,7 @@ export default function ProfileClient({
               <svg width="8" height="8" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
-              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', color: '#f0c040', letterSpacing: '0.12em' }}>Member</span>
+              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', color: '#f0c040', letterSpacing: '0.12em' }}>Member</span>
             </div>
           )}
           <Link
@@ -216,7 +214,7 @@ export default function ProfileClient({
               textDecoration: 'none',
             }}
           >
-            <span className="font-karla font-600 uppercase" style={{ fontSize: '0.52rem', color: '#6a6764', letterSpacing: '0.1em' }}>Public Profile ↗</span>
+            <span className="font-karla font-600 uppercase" style={{ fontSize: '0.6rem', color: '#6a6764', letterSpacing: '0.1em' }}>Public Profile ↗</span>
           </Link>
         </div>
       </div>
@@ -240,7 +238,7 @@ export default function ProfileClient({
             }}>
               {value}
             </p>
-            <p className="font-karla font-600 uppercase" style={{ fontSize: '0.48rem', color: '#3a3835', letterSpacing: '0.12em', marginTop: 5 }}>
+            <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', color: '#6a6764', letterSpacing: '0.12em', marginTop: 5 }}>
               {label}
             </p>
           </div>
@@ -257,7 +255,7 @@ export default function ProfileClient({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
           <div>
             <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0ede8' }}>Showcase</p>
-            <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#4a4845', marginTop: 2 }}>
+            <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#6a6764', marginTop: 2 }}>
               {showcaseCards.length > 0 ? `${showcaseCards.length} / 5 fish on your public profile` : 'Pin your best catches to your profile'}
             </p>
           </div>
@@ -329,10 +327,10 @@ export default function ProfileClient({
             borderRadius: 12, textDecoration: 'none',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ color: '#4a4845' }}>{icon}</span>
-              <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#a0a09a' }}>{label}</span>
+              <span style={{ color: '#6a6764' }}>{icon}</span>
+              <span className="font-karla font-600" style={{ fontSize: '0.82rem', color: '#b8b8b2' }}>{label}</span>
             </div>
-            <span style={{ color: '#3a3835', fontSize: '0.9rem' }}>›</span>
+            <span style={{ color: '#5a5755', fontSize: '1rem' }}>›</span>
           </Link>
         ))}
       </div>
@@ -347,12 +345,12 @@ export default function ProfileClient({
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}
       >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6a6764" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
           <polyline points="16 17 21 12 16 7"/>
           <line x1="21" y1="12" x2="9" y2="12"/>
         </svg>
-        <span className="font-karla font-600 uppercase" style={{ fontSize: '0.65rem', color: '#4a4845', letterSpacing: '0.14em' }}>Sign Out</span>
+        <span className="font-karla font-600 uppercase" style={{ fontSize: '0.72rem', color: '#6a6764', letterSpacing: '0.14em' }}>Sign Out</span>
       </button>
 
       {/* ── Showcase picker modal ── */}
