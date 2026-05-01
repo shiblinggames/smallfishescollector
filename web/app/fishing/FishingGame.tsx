@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, type FishSpecies, type FishingBountyCompletion } from './actions'
 import { equipRod } from '@/app/marketplace/tackle-shop/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
@@ -1060,6 +1060,7 @@ export default function FishingGame({
   ownedRods: initialOwnedRods,
   allFishSpecies, initialCaughtFishIds,
   initialHighestPerfectStreak,
+  hasSeenFishingTour, hasSeenFishingCatchTour,
   selectedZone: initialZone, onBack,
 }: {
   hookTier: number
@@ -1077,6 +1078,8 @@ export default function FishingGame({
   allFishSpecies: FishSpeciesBasic[]
   initialCaughtFishIds: number[]
   initialHighestPerfectStreak: number
+  hasSeenFishingTour: boolean
+  hasSeenFishingCatchTour: boolean
   selectedZone: ZoneKey
   onBack: () => void
 }) {
@@ -1164,19 +1167,15 @@ export default function FishingGame({
   }, [])
 
   useEffect(() => {
-    try {
-      if (!localStorage.getItem('fishing_tour_done')) setTourStep(0)
-    } catch {}
-  }, [])
+    if (!hasSeenFishingTour) setTourStep(0)
+  }, [hasSeenFishingTour])
 
   useEffect(() => {
     if (phase === 'catching' && !catchTourShownRef.current) {
       catchTourShownRef.current = true
-      try {
-        if (!localStorage.getItem('fishing_catch_tour_done')) setCatchTourStep(0)
-      } catch {}
+      if (!hasSeenFishingCatchTour) setCatchTourStep(0)
     }
-  }, [phase])
+  }, [phase, hasSeenFishingCatchTour])
 
   // Scene background frame — animates during casting phase
   const [sceneFrame, setSceneFrame] = useState<SceneFrame>('fishing')
@@ -1275,7 +1274,7 @@ export default function FishingGame({
     setTourStep(prev => {
       if (prev === null) return null
       if (prev >= TOUR_STEPS.length - 1) {
-        try { localStorage.setItem('fishing_tour_done', '1') } catch {}
+        startTransition(async () => { await markFishingTourSeen() })
         return null
       }
       return prev + 1
@@ -1286,7 +1285,7 @@ export default function FishingGame({
     setCatchTourStep(prev => {
       if (prev === null) return null
       if (prev >= CATCH_TOUR_STEPS.length - 1) {
-        try { localStorage.setItem('fishing_catch_tour_done', '1') } catch {}
+        startTransition(async () => { await markFishingCatchTourSeen() })
         return null
       }
       return prev + 1

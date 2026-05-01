@@ -436,3 +436,18 @@ export async function claimDailyBait(userId: string): Promise<void> {
     admin.from('profiles').update({ bait_last_topup: todayStr }).eq('id', userId),
   ])
 }
+
+export async function markFishingTourSeen(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await createAdminClient().from('profiles').update({ has_seen_fishing_tour: true }).eq('id', user.id)
+}
+
+export async function markFishingCatchTourSeen(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await createAdminClient().from('profiles').update({ has_seen_fishing_catch_tour: true }).eq('id', user.id)
+}
+

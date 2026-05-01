@@ -19,6 +19,7 @@ export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
   holdCapacity, shipTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
+  hasSeenFishingTour, hasSeenFishingCatchTour,
 }: {
   hookTier: number
   rodTier: number
@@ -35,6 +36,8 @@ export default function FishingPageClient({
   allFishSpecies: FishSpeciesBasic[]
   caughtFishIds: number[]
   initialHighestPerfectStreak: number
+  hasSeenFishingTour: boolean
+  hasSeenFishingCatchTour: boolean
 }) {
   const [selectedZone, setSelectedZone] = useState<ZoneKey | null>(null)
 
@@ -67,6 +70,8 @@ export default function FishingPageClient({
       allFishSpecies={allFishSpecies}
       initialCaughtFishIds={caughtFishIds}
       initialHighestPerfectStreak={initialHighestPerfectStreak}
+      hasSeenFishingTour={hasSeenFishingTour}
+      hasSeenFishingCatchTour={hasSeenFishingCatchTour}
       selectedZone={selectedZone}
       onBack={() => setSelectedZone(null)}
     />

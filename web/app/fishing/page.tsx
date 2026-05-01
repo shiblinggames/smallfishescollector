@@ -26,7 +26,7 @@ export default async function FishingPage() {
     { data: collectionRows },
   ] = await Promise.all([
     admin.from('profiles')
-      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, ship_tier, highest_perfect_streak')
+      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, ship_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour')
       .eq('id', user.id)
       .single(),
     admin.from('bait_inventory')
@@ -82,6 +82,8 @@ export default async function FishingPage() {
           allFishSpecies={(allSpecies ?? []) as { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }[]}
           caughtFishIds={caughtFishIds}
           initialHighestPerfectStreak={profile?.highest_perfect_streak ?? 0}
+          hasSeenFishingTour={profile?.has_seen_fishing_tour ?? false}
+          hasSeenFishingCatchTour={profile?.has_seen_fishing_catch_tour ?? false}
         />
 
       </main>
