@@ -614,13 +614,14 @@ function BaitSelector({ baitInventory, selectedBait, onSelect }: {
   )
 }
 
-type SceneFrame = 'windup' | 'cast1' | 'cast2' | 'fishing'
+type SceneFrame = 'windup' | 'cast1' | 'cast2' | 'fishing' | 'catching'
 
 const FRAME_SRC: Record<SceneFrame, string> = {
-  windup:  '/windup.jpg',
-  cast1:   '/cast1.jpg',
-  cast2:   '/cast2.jpeg',
-  fishing: '/fishing.jpeg',
+  windup:   '/windup.jpg',
+  cast1:    '/cast1.jpg',
+  cast2:    '/cast2.jpeg',
+  fishing:  '/fishing1.jpg',
+  catching: '/fishing.jpeg',
 }
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
@@ -1213,6 +1214,7 @@ export default function FishingGame({
   const [sceneFrame, setSceneFrame] = useState<SceneFrame>('fishing')
   const [castAnimDone, setCastAnimDone] = useState(false)
   useEffect(() => {
+    if (phase === 'catching') { setSceneFrame('catching'); return }
     if (phase !== 'casting') { setSceneFrame('fishing'); setCastAnimDone(false); return }
     setCastAnimDone(false)
     setSceneFrame('windup')
