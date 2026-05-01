@@ -66,7 +66,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
 
   const rarity = (variantName && dropWeight != null) ? rarityFromVariant(variantName, dropWeight) : null
   const rarityColor = rarity ? (RARITY_COLOR[rarity] ?? '#a0a09a') : null
-  const nameFontSize = name.length > 15 ? '7cqw' : name.length > 10 ? '8.5cqw' : '10cqw'
+  const nameFontSize = name.length > 16 ? '7cqw' : name.length > 13 ? '8cqw' : '10cqw'
 
   let frame: React.ReactNode
 
