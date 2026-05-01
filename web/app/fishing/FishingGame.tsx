@@ -205,17 +205,7 @@ function DialSVG({
     }
   }, [snapKey])
 
-  // Zone transition flash
-  const prevNeedleColorRef = useRef(needleColor)
-  const [flashKey, setFlashKey] = useState(0)
-  const [flashColor, setFlashColor] = useState(needleColor)
-  useEffect(() => {
-    if (needleColor !== prevNeedleColorRef.current && needleColor !== 'rgba(255,255,255,0.3)') {
-      setFlashColor(needleColor)
-      setFlashKey(k => k + 1)
-    }
-    prevNeedleColorRef.current = needleColor
-  }, [needleColor])
+
 
   return (
     <div style={{
@@ -261,14 +251,7 @@ function DialSVG({
             return <text key={i} x={mid.x.toFixed(2)} y={mid.y.toFixed(2)} textAnchor="middle" dominantBaseline="central" fill={pz.color} fontSize="9" opacity="0.85">✕</text>
           })}
         </g>
-        {/* Zone transition flash */}
-        {flashKey > 0 && (
-          <motion.circle key={flashKey} cx={CX} cy={CY} r={OUTER_R - 4}
-            fill={flashColor}
-            initial={{ fillOpacity: 0.28 }} animate={{ fillOpacity: 0 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
-          />
-        )}
+
         <circle cx={CX} cy={CY} r={INNER_R - 2} fill="url(#innerGrad)" />
         <g transform={`rotate(${angle}, ${CX}, ${CY})`}>
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={needleColor} strokeWidth="10" strokeOpacity="0.12" strokeLinecap="round" />
