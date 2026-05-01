@@ -26,6 +26,7 @@ interface Props {
   zoneName: string
   zoneIcon: string
   playerAvatarUrl: string | null
+  username: string
 }
 
 type Phase =
@@ -42,7 +43,7 @@ type Phase =
   | { type: 'claiming_loot' }
   | { type: 'loot_result'; loot: ZoneLoot }
 
-export default function VoyagePage({ expedition: initExp, nodeType: initNodeType, currentEvent: initEvent, shopOptions, zoneName, zoneIcon, playerAvatarUrl }: Props) {
+export default function VoyagePage({ expedition: initExp, nodeType: initNodeType, currentEvent: initEvent, shopOptions, zoneName, zoneIcon, playerAvatarUrl, username }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -607,7 +608,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
               <Hitsplat text="DODGED!" color="#4ade80" animKey={log.round} />
             )}
           </div>
-          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.68rem', color: '#f0ede8', lineHeight: 1.2 }}>{ship.name}</p>
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.68rem', color: '#f0ede8', lineHeight: 1.2 }}>{username}</p>
           {/* HP bar */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
