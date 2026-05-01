@@ -243,8 +243,15 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
 
   if (phase === 'idle') {
     return (
-      <div className="flex flex-col items-center gap-10 w-full max-w-sm">
-
+      <div
+        className="flex flex-col items-center gap-8 w-full max-w-sm"
+        style={{
+          background: 'rgba(8,8,6,0.82)',
+          border: '1px solid rgba(255,255,255,0.16)',
+          borderRadius: 20,
+          padding: '2rem 1.75rem',
+        }}
+      >
         {/* Crew Notices count */}
         <div className="flex flex-col items-center gap-1 text-center">
           <p className="font-cinzel font-700" style={{ fontSize: '3.5rem', lineHeight: 1, color: '#f0ede8' }}>{packs}</p>
@@ -273,7 +280,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
             onPointerEnter={e => { if (e.pointerType !== 'touch' && !loading) e.currentTarget.style.transform = 'translateY(-3px)' }}
             onPointerLeave={e => { e.currentTarget.style.transform = '' }}
           >
-            <p className="font-cinzel font-700 uppercase tracking-[0.14em]" style={{ fontSize: '1rem', color: '#f0c040' }}>
+            <p className="font-cinzel font-700 uppercase tracking-[0.14em] text-center" style={{ fontSize: '1rem', color: '#f0c040' }}>
               {loading ? 'Recruiting…' : 'Recruit Crew'}
             </p>
           </button>

@@ -28,7 +28,7 @@ export default async function PacksPage() {
           🚧 Under Construction — This feature is still being worked on.
         </p>
       </div>
-      <main className="min-h-screen px-6 py-4 sm:py-0 flex flex-col items-center sm:justify-center">
+      <main className="min-h-screen px-6 py-8 flex flex-col items-center justify-center">
         <PackOpener packsAvailable={packsAvailable} gems={gems} />
         {stats && <PackStatsToggle stats={stats} history={history} />}
       </main>
