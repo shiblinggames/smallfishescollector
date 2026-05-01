@@ -1621,7 +1621,7 @@ export default function FishingGame({
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem', paddingBottom: '1.25rem' }}>
 
           {/* Header row — back button left, gear button right */}
-          <div className="flex items-center justify-between mb-2" style={{ position: 'relative' }}>
+          <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => sessionCatches.length > 0 ? setShowingSummary(true) : onBack()}
               className="font-karla font-600 uppercase tracking-[0.1em]"
@@ -1663,21 +1663,10 @@ export default function FishingGame({
               )}
             </button>
 
-            {/* Best perfect streak — centered in header */}
-            {highestPerfectStreak > 0 && (
-              <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', textAlign: 'center', pointerEvents: 'none' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#fb923c', textShadow: '0 0 20px rgba(251,146,60,0.75), 0 0 40px rgba(251,146,60,0.3)', lineHeight: 1 }}>
-                  {highestPerfectStreak}
-                </p>
-                <p className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.42rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
-                  🔥 best streak
-                </p>
-              </div>
-            )}
           </div>
 
           {/* XP bar */}
-          <div style={{ marginBottom: '0.6rem' }}>
+          <div style={{ marginBottom: highestPerfectStreak > 0 ? '0.25rem' : '0.6rem' }}>
             <div style={{ position: 'relative' }}>
               <XPBarDisplay xp={fishingXP} />
               <AnimatePresence>
@@ -1702,6 +1691,18 @@ export default function FishingGame({
               </AnimatePresence>
             </div>
           </div>
+
+          {/* Best perfect streak */}
+          {highestPerfectStreak > 0 && (
+            <div style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
+              <p className="font-karla font-800" style={{ fontSize: '1.75rem', fontStyle: 'italic', color: '#fb923c', textShadow: '0 0 18px rgba(251,146,60,0.65)', lineHeight: 1 }}>
+                {highestPerfectStreak}
+              </p>
+              <p className="font-karla font-600 uppercase tracking-[0.18em]" style={{ fontSize: '0.42rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                best streak
+              </p>
+            </div>
+          )}
 
           {/* Challenge session strip */}
           {activeSession && !sessionDone && sessionSecondsLeft !== null && (
