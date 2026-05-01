@@ -3,6 +3,7 @@
 @theme inline {
   --font-cinzel: var(--font-cinzel);
   --font-karla:  var(--font-karla);
+  --font-pirata: var(--font-pirata);
 
   --color-sg-bg:          #000000;
   --color-sg-text:        #f0ede8;
@@ -29,6 +30,7 @@ body {
 
 .font-cinzel { font-family: var(--font-cinzel), serif; }
 .font-karla  { font-family: var(--font-karla), system-ui, sans-serif; }
+.font-pirata { font-family: var(--font-pirata), serif; }
 
 /* ── Buttons ── */
 .btn-gold {

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Cinzel, Karla } from 'next/font/google'
+import { Cinzel, Karla, Pirata_One } from 'next/font/google'
 import './globals.css'
 import PageTransition from '@/components/PageTransition'
 import ClientBackground from '@/components/ClientBackground'
@@ -9,6 +9,12 @@ const cinzel = Cinzel({
   subsets: ['latin'],
   weight: ['400', '700', '900'],
   variable: '--font-cinzel',
+})
+
+const pirata = Pirata_One({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--font-pirata',
 })
 
 const karla = Karla({
@@ -25,7 +31,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`h-full ${cinzel.variable} ${karla.variable}`}>
+    <html lang="en" className={`h-full ${cinzel.variable} ${karla.variable} ${pirata.variable}`}>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#000000" />

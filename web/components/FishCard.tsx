@@ -52,7 +52,7 @@ function StatCell({ label, value }: { label: string; value: number }) {
       <span className="font-karla font-700 uppercase" style={{ fontSize: '6cqw', color: '#5a4a30', letterSpacing: '0.06em' }}>
         {label}
       </span>
-      <span className="font-cinzel font-700" style={{ fontSize: '12cqw', color: '#1a1008', lineHeight: 1 }}>
+      <span className="font-pirata" style={{ fontSize: '12cqw', color: '#1a1008', lineHeight: 1 }}>
         {value}
       </span>
     </div>
@@ -118,7 +118,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
 
         {/* Bottom text: name + rarity + stats — strictly bottom 40% */}
         <div className="absolute left-0 right-0 bottom-0 pointer-events-none overflow-hidden" style={{ height: '40%', zIndex: 6, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '0 8% 4%', gap: '1cqw' }}>
-          <p className="font-cinzel font-700 text-center w-full" style={{ fontSize: nameFontSize, color: '#1a1008', letterSpacing: '0.04em', lineHeight: 1.1 }}>
+          <p className="font-pirata text-center w-full" style={{ fontSize: nameFontSize, color: '#1a1008', letterSpacing: '0.04em', lineHeight: 1.1 }}>
             {name}
           </p>
           {rarity && (
