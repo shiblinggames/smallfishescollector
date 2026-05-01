@@ -200,7 +200,7 @@ export default function TackleShopClient({
               }}
             >
               {/* Image */}
-              <div style={{ width: '100%', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6%' }}>
+              <div style={{ width: '100%', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6%' }}>
                 {imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -532,9 +532,9 @@ export default function TackleShopClient({
                 }}
               >
                 {/* Name + image row */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                   {rod.imageUrl && (
-                    <div style={{ width: 36, height: 36, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${c}14`, border: `1px solid ${c}30`, borderRadius: 8, padding: 4 }}>
+                    <div style={{ width: 64, height: 64, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${c}14`, border: `1px solid ${c}30`, borderRadius: 10, padding: 6 }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={rod.imageUrl} alt={rod.name} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: owned ? 'none' : 'grayscale(1) brightness(0.4)' }} />
                     </div>
