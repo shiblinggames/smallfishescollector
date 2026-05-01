@@ -341,6 +341,31 @@ export default function ChallengeSection({ challenges, wlRecord, myDoubloons }: 
         </div>
       )}
 
+      {/* In Progress — active session running */}
+      {active.length > 0 && (
+        <div>
+          <p className="font-karla font-600 uppercase tracking-[0.14em] mb-3" style={{ fontSize: '0.52rem', color: '#fb923c' }}>
+            In Progress
+          </p>
+          <div style={{ background: 'rgba(4,10,20,0.6)', border: '1px solid rgba(251,146,60,0.25)', borderRadius: 14, overflow: 'hidden' }}>
+            {active.map((c, i, arr) => {
+              const opponentName = c.isIncoming ? c.challengerUsername : c.challengedUsername
+              return (
+                <div key={c.id} style={{ padding: '0.9rem 1rem', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fb923c', flexShrink: 0, animation: 'pulse 2s infinite' }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>vs {opponentName}</p>
+                    <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: 2 }}>
+                      {durationLabel(c.durationSeconds)} · {typeLabel(c.challengeType)}{c.wager > 0 ? ` · ${c.wager} ⟡` : ''} · session underway
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Outgoing — waiting for opponent */}
       {outgoing.length > 0 && (
         <div>
@@ -392,20 +417,44 @@ export default function ChallengeSection({ challenges, wlRecord, myDoubloons }: 
               const opponentName = c.isIncoming ? c.challengerUsername : c.challengedUsername
               const myScore = c.myScore
               const opponentScore = c.opponentScore ?? 0
+              const outcomeColor = tied ? '#6b7280' : won ? '#4ade80' : '#f87171'
+              const payout = c.wager > 0
+                ? tied ? `${c.wager} ⟡ returned` : won ? `+${c.wager * 2} ⟡` : `−${c.wager} ⟡`
+                : null
+              const scoreUnit = c.challengeType === 'most_fish' ? 'fish' : c.challengeType === 'most_doubloons' ? '⟡' : 'perfects'
               return (
-                <div key={c.id} style={{ padding: '0.8rem 1rem', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: tied ? 'rgba(107,114,128,0.2)' : won ? 'rgba(74,222,128,0.15)' : 'rgba(248,113,113,0.15)', border: `1px solid ${tied ? 'rgba(107,114,128,0.3)' : won ? 'rgba(74,222,128,0.4)' : 'rgba(248,113,113,0.4)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span className="font-cinzel font-700" style={{ fontSize: '0.5rem', color: tied ? '#6b7280' : won ? '#4ade80' : '#f87171' }}>
-                      {tied ? 'TIE' : won ? 'W' : 'L'}
-                    </span>
+                <div key={c.id} style={{ padding: '0.85rem 1rem', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: tied ? 'rgba(107,114,128,0.2)' : won ? 'rgba(74,222,128,0.15)' : 'rgba(248,113,113,0.15)', border: `1px solid ${outcomeColor}55`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span className="font-cinzel font-700" style={{ fontSize: '0.5rem', color: outcomeColor }}>
+                        {tied ? 'TIE' : won ? 'W' : 'L'}
+                      </span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p className="font-karla font-700 truncate" style={{ fontSize: '0.75rem', color: '#f0ede8' }}>vs {opponentName}</p>
+                      <p className="font-karla font-300" style={{ fontSize: '0.58rem', color: '#4a4845', marginTop: 1 }}>
+                        {durationLabel(c.durationSeconds)} · {typeLabel(c.challengeType)}{c.wager > 0 ? ` · ${c.wager} ⟡ wager` : ''} · {timeAgo(c.createdAt)}
+                      </p>
+                    </div>
+                    {payout && (
+                      <span className="font-karla font-700 shrink-0" style={{ fontSize: '0.68rem', color: outcomeColor }}>
+                        {payout}
+                      </span>
+                    )}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="font-karla font-700 truncate" style={{ fontSize: '0.75rem', color: '#a0a09a' }}>vs {opponentName}</p>
-                    <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#4a4845', marginTop: 1 }}>
-                      {myScore} – {opponentScore} · {typeLabel(c.challengeType)}
-                    </p>
+                  {/* Score breakdown */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                    <div style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${won && !tied ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '0.4rem 0.6rem' }}>
+                      <p className="font-karla font-400" style={{ fontSize: '0.52rem', color: '#4a4845', marginBottom: 2 }}>You</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: won && !tied ? '#4ade80' : '#f0ede8', lineHeight: 1 }}>{myScore}</p>
+                      <p className="font-karla font-300" style={{ fontSize: '0.5rem', color: '#4a4845', marginTop: 1 }}>{scoreUnit}</p>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${!won && !tied ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '0.4rem 0.6rem' }}>
+                      <p className="font-karla font-400" style={{ fontSize: '0.52rem', color: '#4a4845', marginBottom: 2 }}>{opponentName}</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: !won && !tied ? '#4ade80' : '#f0ede8', lineHeight: 1 }}>{opponentScore}</p>
+                      <p className="font-karla font-300" style={{ fontSize: '0.5rem', color: '#4a4845', marginTop: 1 }}>{scoreUnit}</p>
+                    </div>
                   </div>
-                  <p className="font-karla font-300 shrink-0" style={{ fontSize: '0.55rem', color: '#3a3835' }}>{timeAgo(c.createdAt)}</p>
                 </div>
               )
             })}
@@ -416,16 +465,17 @@ export default function ChallengeSection({ challenges, wlRecord, myDoubloons }: 
   )
 }
 
-export function ChallengeButton({ username, myDoubloons, onCreated }: { username: string; myDoubloons: number; onCreated: () => void }) {
+export function ChallengeButton({ username, myDoubloons, onCreated, hasActiveChallenge }: { username: string; myDoubloons: number; onCreated: () => void; hasActiveChallenge?: boolean }) {
   const [open, setOpen] = useState(false)
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => { if (!hasActiveChallenge) setOpen(true) }}
+        disabled={hasActiveChallenge}
         className="font-karla font-600 uppercase tracking-[0.1em]"
-        style={{ fontSize: '0.52rem', padding: '0.28rem 0.6rem', borderRadius: 6, background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.25)', color: '#f0c040', cursor: 'pointer', flexShrink: 0 }}
+        style={{ fontSize: '0.52rem', padding: '0.28rem 0.6rem', borderRadius: 6, background: hasActiveChallenge ? 'rgba(255,255,255,0.04)' : 'rgba(240,192,64,0.08)', border: `1px solid ${hasActiveChallenge ? 'rgba(255,255,255,0.1)' : 'rgba(240,192,64,0.25)'}`, color: hasActiveChallenge ? '#4a4845' : '#f0c040', cursor: hasActiveChallenge ? 'default' : 'pointer', flexShrink: 0 }}
       >
-        Challenge
+        {hasActiveChallenge ? 'Active' : 'Challenge'}
       </button>
       {open && (
         <CreateChallengeModal

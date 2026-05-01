@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { finishSession, type ActiveSession } from '@/app/social/challengeActions'
 import { equipRod } from '@/app/marketplace/tackle-shop/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
@@ -1061,7 +1062,7 @@ export default function FishingGame({
   allFishSpecies, initialCaughtFishIds,
   initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour,
-  selectedZone: initialZone, onBack,
+  selectedZone: initialZone, onBack, activeSession,
 }: {
   hookTier: number
   rodTier: number
@@ -1082,6 +1083,7 @@ export default function FishingGame({
   hasSeenFishingCatchTour: boolean
   selectedZone: ZoneKey
   onBack: () => void
+  activeSession?: ActiveSession
 }) {
 
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
@@ -1132,6 +1134,16 @@ export default function FishingGame({
   const [levelUpNotif, setLevelUpNotif] = useState<number | null>(null)
   const [, startTransition]         = useTransition()
 
+  // ── Challenge session ───────────────────────────────────────────────────
+  const [sessionSecondsLeft, setSessionSecondsLeft] = useState<number | null>(() =>
+    activeSession ? Math.max(0, Math.floor((new Date(activeSession.endsAt).getTime() - Date.now()) / 1000)) : null
+  )
+  const [sessionDone, setSessionDone] = useState(() =>
+    activeSession ? new Date(activeSession.endsAt).getTime() <= Date.now() : false
+  )
+  const [sessionScore, setSessionScore] = useState(activeSession?.myScore ?? 0)
+  const sessionFinishedRef = useRef(false)
+
   const fishingLevel = getLevelFromXP(fishingXP)
   const levelBonus   = levelCatchBonus(fishingLevel)
 
@@ -1152,6 +1164,25 @@ export default function FishingGame({
   const frameRefs       = useRef<Partial<Record<SceneFrame, HTMLImageElement>>>({})
 
   useEffect(() => { phaseRef.current = phase }, [phase])
+
+  useEffect(() => {
+    if (!activeSession || sessionDone) return
+    const id = setInterval(() => {
+      setSessionSecondsLeft(s => {
+        if (s === null || s <= 1) {
+          clearInterval(id)
+          setSessionDone(true)
+          if (!sessionFinishedRef.current) {
+            sessionFinishedRef.current = true
+            startTransition(async () => { await finishSession(activeSession.challengeId) })
+          }
+          return 0
+        }
+        return s - 1
+      })
+    }, 1000)
+    return () => clearInterval(id)
+  }, [activeSession, sessionDone]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { selectedBaitRef.current = selectedBait }, [selectedBait])
   useEffect(() => { hookedFishRef.current = hookedFish }, [hookedFish])
   useEffect(() => {
@@ -1422,6 +1453,12 @@ export default function FishingGame({
         if (wasPerfect) setSessionPerfects(newPerfects)
         if (isNewSpecies) setSessionNewSpecies(newNewSpecies)
         if (wonChallenge) setSessionGems(newGems)
+        if (activeSession && !sessionDone) {
+          const ct = activeSession.challengeType
+          if (ct === 'most_fish') setSessionScore(s => s + catchCount)
+          else if (ct === 'most_doubloons') setSessionScore(s => s + (fish.sell_value ?? 0) * catchCount)
+          else if (ct === 'most_perfects' && wasPerfect) setSessionScore(s => s + 1)
+        }
 
         // Persist session to localStorage so Nav-away still surfaces a last session card
         try {
@@ -1661,6 +1698,28 @@ export default function FishingGame({
               </div>
             )}
           </div>
+
+          {/* Challenge session strip */}
+          {activeSession && !sessionDone && sessionSecondsLeft !== null && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: 'rgba(4,10,18,0.82)', border: '1px solid rgba(251,146,60,0.35)',
+              borderRadius: 9, padding: '0.3rem 0.65rem', marginBottom: '0.5rem', gap: 8,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fb923c', animation: 'pulse 2s infinite', flexShrink: 0 }} />
+                <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#fb923c' }}>
+                  vs {activeSession.opponentUsername}
+                </span>
+                <span className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)' }}>
+                  · {sessionScore} {activeSession.challengeType === 'most_fish' ? 'fish' : activeSession.challengeType === 'most_doubloons' ? '⟡' : 'perfects'}
+                </span>
+              </div>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#fb923c', flexShrink: 0 }}>
+                {Math.floor(sessionSecondsLeft / 60)}:{(sessionSecondsLeft % 60).toString().padStart(2, '0')}
+              </span>
+            </div>
+          )}
 
           {/* Phase content — grows to fill available space */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -2683,6 +2742,33 @@ export default function FishingGame({
         )}
       </AnimatePresence>
 
+
+      {/* ── Challenge session complete overlay ── */}
+      {activeSession && sessionDone && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 60,
+          background: 'rgba(4,8,14,0.92)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          padding: '2rem',
+        }}>
+          <p className="font-karla font-600 uppercase tracking-[0.18em] mb-2" style={{ fontSize: '0.55rem', color: '#fb923c' }}>Challenge</p>
+          <p className="font-cinzel font-700 mb-1" style={{ fontSize: '1.4rem', color: '#f0ede8', textAlign: 'center' }}>Session Complete</p>
+          <p className="font-karla font-400 mb-6" style={{ fontSize: '0.78rem', color: '#6a6764' }}>vs {activeSession.opponentUsername}</p>
+          <div style={{ background: 'rgba(251,146,60,0.1)', border: '1px solid rgba(251,146,60,0.3)', borderRadius: 14, padding: '1.25rem 2rem', textAlign: 'center', marginBottom: '1.5rem' }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '2.4rem', color: '#fb923c', lineHeight: 1 }}>{sessionScore}</p>
+            <p className="font-karla font-400 mt-1" style={{ fontSize: '0.68rem', color: '#a0a09a' }}>
+              {activeSession.challengeType === 'most_fish' ? 'fish caught' : activeSession.challengeType === 'most_doubloons' ? 'doubloons earned' : 'perfect catches'}
+            </p>
+          </div>
+          <Link
+            href="/social"
+            className="font-karla font-700 uppercase tracking-[0.12em] w-full text-center"
+            style={{ padding: '0.75rem', borderRadius: 10, fontSize: '0.68rem', background: 'rgba(251,146,60,0.15)', border: '1px solid rgba(251,146,60,0.4)', color: '#fb923c', textDecoration: 'none', display: 'block' }}
+          >
+            View Results on Social →
+          </Link>
+        </div>
+      )}
 
       </div>
     </div>

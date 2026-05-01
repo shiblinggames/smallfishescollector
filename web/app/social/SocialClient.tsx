@@ -47,6 +47,11 @@ function Avatar({ username, size = 40 }: { username: string; size?: number }) {
 
 export default function SocialClient({ initialCrew, username, newFollowers: initialNewFollowers, initialChallenges, wlRecord, myDoubloons }: Props) {
   const router = useRouter()
+  const activeOpponents = new Set(
+    initialChallenges
+      .filter(c => ['pending', 'challenger_active', 'challenger_done', 'challenged_active'].includes(c.status))
+      .map(c => c.isIncoming ? c.challengerUsername : c.challengedUsername)
+  )
   const [crew, setCrew] = useState<CrewMember[]>(initialCrew)
   const [newFollowers, setNewFollowers] = useState(initialNewFollowers)
   const crewSet = new Set(crew.map(m => m.username.toLowerCase()))
@@ -296,7 +301,7 @@ export default function SocialClient({ initialCrew, username, newFollowers: init
                       Lv {getLevelFromXP(member.fishingXP)}
                     </span>
                   </div>
-                  <ChallengeButton username={member.username} myDoubloons={myDoubloons} onCreated={() => router.refresh()} />
+                  <ChallengeButton username={member.username} myDoubloons={myDoubloons} onCreated={() => router.refresh()} hasActiveChallenge={activeOpponents.has(member.username)} />
                   <Link
                     href={`/u/${member.username}`}
                     className="font-karla font-600"

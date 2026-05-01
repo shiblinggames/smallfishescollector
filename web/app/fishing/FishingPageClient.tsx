@@ -6,6 +6,7 @@ import FishingGame from './FishingGame'
 import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { ZONE_MIN_LEVEL } from './zoneData'
+import type { ActiveSession } from '@/app/social/challengeActions'
 
 const LAST_ZONE_KEY = 'fishing_last_zone'
 
@@ -22,7 +23,7 @@ export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
   holdCapacity, shipTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
-  hasSeenFishingTour, hasSeenFishingCatchTour,
+  hasSeenFishingTour, hasSeenFishingCatchTour, activeSession,
 }: {
   hookTier: number
   rodTier: number
@@ -41,6 +42,7 @@ export default function FishingPageClient({
   initialHighestPerfectStreak: number
   hasSeenFishingTour: boolean
   hasSeenFishingCatchTour: boolean
+  activeSession?: ActiveSession
 }) {
   const fishingLevel = getLevelFromXP(initialFishingXP)
 
@@ -95,6 +97,7 @@ export default function FishingPageClient({
       hasSeenFishingCatchTour={hasSeenFishingCatchTour}
       selectedZone={selectedZone}
       onBack={goBack}
+      activeSession={activeSession}
     />
   )
 }
