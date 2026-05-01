@@ -2117,7 +2117,7 @@ export default function FishingGame({
             <button
               onClick={() => { setGearOpen(o => !o); setHoldOpen(false) }}
               style={{
-                flex: 1, height: 80, borderRadius: 14,
+                flex: 1, height: 80, borderRadius: 20,
                 background: gearOpen ? `${selectedBaitDef?.color ?? '#fff'}10` : 'rgba(4,10,18,0.72)',
                 border: `1px solid ${gearOpen ? (selectedBaitDef?.color ?? 'rgba(255,255,255,0.2)') + '45' : 'rgba(255,255,255,0.09)'}`,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
@@ -2152,7 +2152,7 @@ export default function FishingGame({
             <button
               onClick={() => { setHoldOpen(o => !o); setGearOpen(false) }}
               style={{
-                flex: 1, height: 80, borderRadius: 14,
+                flex: 1, height: 80, borderRadius: 20,
                 background: holdOpen ? 'rgba(240,192,64,0.08)' : 'rgba(4,10,18,0.72)',
                 border: `1px solid ${holdOpen ? 'rgba(240,192,64,0.35)' : 'rgba(255,255,255,0.09)'}`,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
@@ -2711,7 +2711,7 @@ export default function FishingGame({
                 <Link href="/tavern/market" onClick={() => setHoldOpen(false)} style={{ textDecoration: 'none' }}>
                   <div style={{
                     background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.3)',
-                    borderRadius: 14, padding: '1rem 1.1rem',
+                    borderRadius: 20, padding: '1rem 1.1rem',
                     boxShadow: '0 0 20px rgba(56,189,248,0.06)',
                   }}>
                     <div className="flex items-center justify-between mb-2">
@@ -2730,7 +2730,7 @@ export default function FishingGame({
                 {/* Quick Sell — secondary, discounted */}
                 <div style={{
                   background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: 14, padding: '1rem 1.1rem',
+                  borderRadius: 20, padding: '1rem 1.1rem',
                 }}>
                   <div className="flex items-center justify-between mb-2">
                     <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>Quick Sell</p>

@@ -15,7 +15,7 @@ type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'bait'
 
 function ShopLink({ href, label, color, onClick }: { href: string; label: string; color: string; onClick: () => void }) {
   return (
-    <Link href={href} onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.9rem 1rem', borderRadius: 12, background: `${color}12`, border: `1px solid ${color}45`, textDecoration: 'none', marginTop: 6 }}>
+    <Link href={href} onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.9rem 1rem', borderRadius: 20, background: `${color}12`, border: `1px solid ${color}45`, textDecoration: 'none', marginTop: 6 }}>
       <div style={{ flex: 1 }}>
         <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color }}>{label}</p>
         <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: `${color}80`, marginTop: 2 }}>Tackle Shop</p>
@@ -97,7 +97,7 @@ function GearSlot({
         width: '100%',
         border: `1px solid ${color}40`,
         background: 'rgba(4,10,20,0.75)',
-        borderRadius: 12,
+        borderRadius: 20,
         padding: small ? '0.55rem 0.4rem' : '0.65rem 0.5rem',
         cursor: 'pointer',
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
@@ -184,7 +184,7 @@ export default function GearScreen({
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
           background: 'rgba(4,10,20,0.75)',
           border: `1px solid ${ship.color}45`,
-          borderRadius: 14,
+          borderRadius: 20,
           padding: '0.75rem 0.5rem 0.6rem',
           textDecoration: 'none',
           cursor: 'pointer',
@@ -224,7 +224,7 @@ export default function GearScreen({
       </div>
 
       {/* ── Loadout stats ── */}
-      <div style={{ background: 'rgba(4,10,20,0.75)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '0.9rem' }}>
+      <div style={{ background: 'rgba(4,10,20,0.75)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '0.9rem' }}>
         <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>
           Loadout Stats
         </p>
@@ -275,7 +275,7 @@ export default function GearScreen({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
               onClick={() => setOpenSlot(null)}
-              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', borderRadius: 14, zIndex: 10 }}
+              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', borderRadius: 20, zIndex: 10 }}
             />
             {/* Sheet */}
             <motion.div
@@ -287,7 +287,7 @@ export default function GearScreen({
               style={{
                 position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 11,
                 background: 'rgba(6,12,22,0.98)', border: '1px solid rgba(255,255,255,0.11)',
-                borderRadius: 14, padding: '1rem 0.9rem 1.1rem',
+                borderRadius: 20, padding: '1rem 0.9rem 1.1rem',
                 maxHeight: '80%', overflowY: 'auto',
               }}
             >
