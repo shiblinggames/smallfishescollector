@@ -214,22 +214,11 @@ function DialSVG({
             const tL0 = polar(tickOuter, perfectZone.from), tL1 = polar(tickInner, perfectZone.from)
             const tR0 = polar(tickOuter, perfectZone.to),   tR1 = polar(tickInner, perfectZone.to)
 
-            // Star label
-            const star = polar(OUTER_R + 16, midDeg)
-
             return (
               <>
                 {/* Bracket ticks */}
                 <line x1={tL0.x.toFixed(2)} y1={tL0.y.toFixed(2)} x2={tL1.x.toFixed(2)} y2={tL1.y.toFixed(2)} stroke="#fde68a" strokeWidth="1.5" strokeOpacity="0.9" />
                 <line x1={tR0.x.toFixed(2)} y1={tR0.y.toFixed(2)} x2={tR1.x.toFixed(2)} y2={tR1.y.toFixed(2)} stroke="#fde68a" strokeWidth="1.5" strokeOpacity="0.9" />
-                {/* Pulsing star */}
-                <motion.text
-                  x={star.x.toFixed(2)} y={star.y.toFixed(2)}
-                  textAnchor="middle" dominantBaseline="central"
-                  fill="#fde68a" fontSize="12"
-                  animate={{ opacity: [0.6, 1, 0.6] }}
-                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-                >✦</motion.text>
               </>
             )
           })()}
