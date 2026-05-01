@@ -588,10 +588,10 @@ export default function TackleShopClient({
                   display: 'flex', flexDirection: 'column',
                 }}
               >
-                <div className="flex flex-col sm:flex-row sm:items-start sm:gap-2.5 flex-1">
+                <div className="flex flex-col sm:flex-row sm:gap-2.5 flex-1">
                   {/* Image — full-width on mobile, 80px fixed on desktop */}
                   {rod.imageUrl && (
-                    <div className="w-full sm:w-20 sm:flex-shrink-0 mb-2 sm:mb-0"
+                    <div className="w-full sm:w-20 sm:flex-shrink-0 sm:self-start mb-2 sm:mb-0"
                       style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(6,6,4,0.95)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 8, padding: 6 }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={rod.imageUrl} alt={rod.name} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: owned ? 'none' : 'grayscale(1) brightness(0.4)' }} />
