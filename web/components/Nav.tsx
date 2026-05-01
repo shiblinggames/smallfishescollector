@@ -139,6 +139,15 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
+    { href: '/leaderboard', label: 'Ranks', badge: null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="14" width="5" height="7" rx="1"/>
+          <rect x="9.5" y="9" width="5" height="12" rx="1"/>
+          <rect x="17" y="4" width="5" height="17" rx="1"/>
+        </svg>
+      )
+    },
   ]
 
   const mobileMenuLinks = [
@@ -195,9 +204,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   ]
 
   const desktopOnlyLinks = [
-    { href: '/expeditions',  label: 'Expeditions',  badge: null },
     { href: '/achievements', label: 'Achievements', badge: achievementsBadge ? true : null },
-    { href: '/leaderboard',  label: 'Leaderboard',  badge: null },
     { href: '/social',       label: 'Social',        badge: null },
     { href: '/guide',        label: 'Guide',         badge: null },
     { href: '/contact',      label: 'Contact',       badge: null },
@@ -230,6 +237,24 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
           <path d="M12 2v10"/>
           <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
           <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
+        </svg>
+      )
+    },
+    { href: '/expeditions', label: 'Expeditions', badge: null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 17c2 4 16 4 18 0"/><path d="M4 17L6 12l13 0 2 5"/>
+          <line x1="10" y1="12" x2="10" y2="4"/>
+          <path d="M10 4L17 9 10 12"/>
+        </svg>
+      )
+    },
+    { href: '/leaderboard', label: 'Leaderboard', badge: null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="14" width="5" height="7" rx="1"/>
+          <rect x="9.5" y="9" width="5" height="12" rx="1"/>
+          <rect x="17" y="4" width="5" height="17" rx="1"/>
         </svg>
       )
     },
