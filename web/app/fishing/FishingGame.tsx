@@ -1182,6 +1182,7 @@ export default function FishingGame({
   const [xpPopup, setXpPopup]       = useState<{ value: number; id: number } | null>(null)
   const [levelUpNotif, setLevelUpNotif] = useState<number | null>(null)
   const [podiumNotif, setPodiumNotif] = useState<PodiumNotif | null>(null)
+  const podiumPositionsRef = useRef<{ fishingLevel: number | null; perfectStreak: number | null }>({ fishingLevel: null, perfectStreak: null })
   const [, startTransition]         = useTransition()
 
   // ── Challenge session ───────────────────────────────────────────────────
@@ -1215,6 +1216,18 @@ export default function FishingGame({
   const frameRefs       = useRef<Partial<Record<SceneFrame, HTMLImageElement>>>({})
 
   useEffect(() => { phaseRef.current = phase }, [phase])
+
+  useEffect(() => {
+    Promise.all([
+      checkLeaderboardPosition('fishingLevel'),
+      checkLeaderboardPosition('perfectStreak'),
+    ]).then(([fl, ps]) => {
+      podiumPositionsRef.current = {
+        fishingLevel: fl?.position ?? null,
+        perfectStreak: ps?.position ?? null,
+      }
+    }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!activeSession || sessionDone) return
@@ -1502,7 +1515,9 @@ export default function FishingGame({
             setNewStreakRecord(newStreak)
             startTransition(() => { saveHighestPerfectStreak(newStreak) })
             checkLeaderboardPosition('perfectStreak').then(r => {
-              if (r?.position === 1) setPodiumNotif({ category: 'Perfect Streak', position: 1 })
+              const cur = r?.position ?? null
+              if (cur === 1 && podiumPositionsRef.current.perfectStreak !== 1) setPodiumNotif({ category: 'Perfect Streak', position: 1 })
+              podiumPositionsRef.current.perfectStreak = cur
             }).catch(() => {})
           }
         }
@@ -1549,7 +1564,9 @@ export default function FishingGame({
         if (newLevel > oldLevel) {
           setLevelUpNotif(newLevel)
           checkLeaderboardPosition('fishingLevel').then(r => {
-            if (r?.position === 1) setPodiumNotif({ category: 'Fishing Level', position: 1 })
+            const cur = r?.position ?? null
+            if (cur === 1 && podiumPositionsRef.current.fishingLevel !== 1) setPodiumNotif({ category: 'Fishing Level', position: 1 })
+            podiumPositionsRef.current.fishingLevel = cur
           }).catch(() => {})
         }
         setInventory(prev => {
