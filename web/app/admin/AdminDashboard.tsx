@@ -5,7 +5,7 @@ import { generateTokens } from './actions'
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://seasthebooty.com'
 
-type Result = { email: string; packs: number; token: string }
+type Result = { email: string | null; packs: number; token: string }
 type State = { results: Result[]; error?: string }
 
 const INITIAL: State = { results: [] }
@@ -14,13 +14,14 @@ export default function AdminDashboard() {
   const [state, action, pending] = useActionState(generateTokens, INITIAL)
   const copiedRef = useRef(false)
 
-  function claimUrl(token: string, email: string) {
-    return `${BASE_URL}/claim?token=${token}&email=${encodeURIComponent(email)}`
+  function claimUrl(token: string, email: string | null) {
+    if (email) return `${BASE_URL}/claim?token=${token}&email=${encodeURIComponent(email)}`
+    return `${BASE_URL}/claim?token=${token}`
   }
 
   function copyAll() {
     const text = state.results
-      .map((r) => `${r.email}\t${r.packs} pack${r.packs !== 1 ? 's' : ''}\t${claimUrl(r.token, r.email)}`)
+      .map((r) => `${r.email ?? 'any'}\t${r.packs} pack${r.packs !== 1 ? 's' : ''}\t${claimUrl(r.token, r.email)}`)
       .join('\n')
     navigator.clipboard.writeText(text)
     copiedRef.current = true
@@ -32,14 +33,14 @@ export default function AdminDashboard() {
         <div className="space-y-1.5">
           <label className="sg-eyebrow block">Bulk Input</label>
           <p className="font-karla font-300 text-[#a0a09a] text-xs mb-2">
-            One customer per line: <span className="text-[#f0ede8]">email, packs</span>
+            One per line: <span className="text-[#f0ede8]">packs</span> for open links, or <span className="text-[#f0ede8]">email, packs</span> to lock to a specific account
           </p>
           <textarea
             name="bulk"
             required
             rows={10}
             className="sg-input font-karla text-sm leading-relaxed resize-y"
-            placeholder={"customer1@gmail.com, 3\ncustomer2@gmail.com, 5\nbacker@email.com, 10"}
+            placeholder={"20\n20\n20\ncustomer@gmail.com, 20"}
             spellCheck={false}
           />
         </div>
@@ -65,7 +66,7 @@ export default function AdminDashboard() {
             {state.results.map((r) => (
               <div key={r.token} className="flex items-center gap-3 border border-[rgba(255,255,255,0.11)] px-4 py-3">
                 <div className="flex-1 min-w-0">
-                  <p className="font-karla font-400 text-[#f0ede8] text-sm truncate">{r.email}</p>
+                  <p className="font-karla font-400 text-[#f0ede8] text-sm truncate">{r.email ?? <span className="text-[#6a6764]">Any account</span>}</p>
                   <p className="font-karla font-300 text-[#a0a09a] text-xs truncate">{claimUrl(r.token, r.email)}</p>
                 </div>
                 <span className="font-karla font-600 text-[#f0c040] text-sm shrink-0">
