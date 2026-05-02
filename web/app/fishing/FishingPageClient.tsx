@@ -23,7 +23,7 @@ export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
   holdCapacity, shipTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
-  hasSeenFishingTour, hasSeenFishingCatchTour, activeSession,
+  hasSeenFishingTour, hasSeenFishingCatchTour, activeSession, username,
 }: {
   hookTier: number
   rodTier: number
@@ -43,6 +43,7 @@ export default function FishingPageClient({
   hasSeenFishingTour: boolean
   hasSeenFishingCatchTour: boolean
   activeSession?: ActiveSession
+  username: string
 }) {
   const fishingLevel = getLevelFromXP(initialFishingXP)
 
@@ -71,6 +72,7 @@ export default function FishingPageClient({
         fishingXP={initialFishingXP}
         uniqueSpeciesCaught={uniqueSpeciesCaught}
         highestPerfectStreak={initialHighestPerfectStreak}
+        username={username}
         onSelect={selectZone}
       />
     )

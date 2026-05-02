@@ -1,8 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ZONE_MIN_LEVEL } from './zoneData'
+import { updateUsername } from '@/app/u/actions'
+
+const AUTO_NAME_RE = /^crew_[0-9a-f]{5}$/
+const DISMISSED_KEY = 'sf_username_prompt_dismissed'
+const XP_THRESHOLD = 100
 
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 export type ZoneKey = typeof ZONES[number]
@@ -72,15 +77,49 @@ const HOW_IT_WORKS = [
 ]
 
 export default function ZoneLanding({
-  fishingLevel, fishingXP, uniqueSpeciesCaught, highestPerfectStreak, onSelect,
+  fishingLevel, fishingXP, uniqueSpeciesCaught, highestPerfectStreak, username, onSelect,
 }: {
   fishingLevel: number
   fishingXP: number
   uniqueSpeciesCaught: number
   highestPerfectStreak: number
+  username: string
   onSelect: (zone: ZoneKey) => void
 }) {
   const [modalOpen, setModalOpen] = useState(false)
+
+  const showUsernamePrompt = AUTO_NAME_RE.test(username) && fishingXP >= XP_THRESHOLD
+  const [usernamePromptOpen, setUsernamePromptOpen] = useState(false)
+  const [usernameInput, setUsernameInput] = useState('')
+  const [usernameError, setUsernameError] = useState('')
+  const [, startTransition] = useTransition()
+  const [usernameSaving, setUsernameSaving] = useState(false)
+
+  useEffect(() => {
+    if (showUsernamePrompt && !localStorage.getItem(DISMISSED_KEY)) {
+      setUsernamePromptOpen(true)
+    }
+  }, [showUsernamePrompt])
+
+  function dismissUsernamePrompt() {
+    localStorage.setItem(DISMISSED_KEY, '1')
+    setUsernamePromptOpen(false)
+  }
+
+  function saveUsername() {
+    setUsernameError('')
+    setUsernameSaving(true)
+    startTransition(async () => {
+      const res = await updateUsername(usernameInput)
+      if (res.error) {
+        setUsernameError(res.error)
+        setUsernameSaving(false)
+      } else {
+        localStorage.setItem(DISMISSED_KEY, '1')
+        setUsernamePromptOpen(false)
+      }
+    })
+  }
 
   return (
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0"
@@ -225,6 +264,81 @@ export default function ZoneLanding({
             })}
           </div>
         </div>
+
+        {/* Username prompt modal */}
+        <AnimatePresence>
+          {usernamePromptOpen && (
+            <>
+              <motion.div
+                key="username-backdrop"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                onClick={dismissUsernamePrompt}
+                style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 50 }}
+              />
+              <motion.div
+                key="username-modal"
+                initial={{ opacity: 0, y: 20, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.97 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                style={{
+                  position: 'absolute', left: '1rem', right: '1rem',
+                  top: '50%', transform: 'translateY(-50%)',
+                  background: '#0d1e2e',
+                  border: '1px solid rgba(240,192,64,0.2)',
+                  borderRadius: 18, zIndex: 51,
+                  padding: '1.5rem 1.25rem',
+                }}
+              >
+                <p className="font-karla font-600 uppercase tracking-[0.18em] mb-1" style={{ fontSize: '0.5rem', color: '#f0c04077' }}>Your Identity</p>
+                <p className="font-cinzel font-700 mb-1" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>Set your captain name</p>
+                <p className="font-karla font-400 mb-5" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
+                  You&apos;re showing up on the leaderboard as <span style={{ color: '#f0c040', fontFamily: 'monospace' }}>{username}</span>. Pick a name — you can only do this once.
+                </p>
+                <input
+                  type="text"
+                  value={usernameInput}
+                  onChange={e => { setUsernameInput(e.target.value); setUsernameError('') }}
+                  placeholder="your_name"
+                  maxLength={20}
+                  className="sg-input font-karla font-600 w-full mb-1"
+                  style={{ fontSize: '0.88rem' }}
+                  spellCheck={false}
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  onKeyDown={e => e.key === 'Enter' && saveUsername()}
+                />
+                <p className="font-karla font-300 mb-4" style={{ fontSize: '0.58rem', color: '#4a4845' }}>
+                  3–20 chars · letters, numbers, underscores · one time only
+                </p>
+                {usernameError && (
+                  <p className="font-karla font-600 mb-3" style={{ fontSize: '0.68rem', color: '#f87171' }}>{usernameError}</p>
+                )}
+                <button
+                  onClick={saveUsername}
+                  disabled={usernameSaving || usernameInput.trim().length < 3}
+                  className="w-full font-karla font-700 uppercase tracking-[0.12em] mb-2"
+                  style={{
+                    padding: '0.7rem', borderRadius: 10, fontSize: '0.68rem',
+                    background: 'rgba(240,192,64,0.15)', border: '1px solid rgba(240,192,64,0.4)',
+                    color: '#f0c040', cursor: usernameSaving ? 'not-allowed' : 'pointer',
+                    opacity: (usernameSaving || usernameInput.trim().length < 3) ? 0.5 : 1,
+                  }}
+                >
+                  {usernameSaving ? 'Saving…' : 'Set Captain Name'}
+                </button>
+                <button
+                  onClick={dismissUsernamePrompt}
+                  className="w-full font-karla font-600"
+                  style={{ padding: '0.5rem', fontSize: '0.65rem', color: '#4a4845', background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  Maybe later
+                </button>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         {/* Info modal */}
         <AnimatePresence>
