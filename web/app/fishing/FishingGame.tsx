@@ -1360,6 +1360,7 @@ export default function FishingGame({
       return
     }
     setTimeout(() => {
+      if (phaseRef.current !== 'hooked') return
       const rot = Math.floor(Math.random() * 360)
       setZoneRotation(rot)
       angleRef.current = Math.random() * 360
@@ -1582,6 +1583,7 @@ export default function FishingGame({
   }
 
   async function handleCastAgain() {
+    if (phase !== 'result') return
     setCastRippleKey(k => k + 1)
     setTimeout(() => setCastRippleKey(0), 1800)
     setCatchResult(null)
