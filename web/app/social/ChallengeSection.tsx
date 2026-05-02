@@ -79,7 +79,7 @@ function CreateChallengeModal({ targetUsername, myDoubloons, onClose, onCreated 
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ background: '#0f0d0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px 18px 0 0', padding: '1.5rem', width: '100%', maxWidth: 480, paddingBottom: '2rem' }}
+        style={{ background: '#0f0d0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px 18px 0 0', padding: '1.5rem', width: '100%', maxWidth: 480, paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="flex items-center justify-between mb-4">
           <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.95rem' }}>
