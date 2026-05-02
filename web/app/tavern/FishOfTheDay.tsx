@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { submitFishGuess } from './fishActions'
 import AchievementToast from '@/components/AchievementToast'
+import type { FishPuzzleState, FishAnswer, ComparisonResult } from './fishActions'
 
 function nextMilestone(streak: number): { day: number; reward: number } {
   if (streak < 3) return { day: 3, reward: 25 }
@@ -11,9 +12,19 @@ function nextMilestone(streak: number): { day: number; reward: number } {
   if (next30 < next7) return { day: next30, reward: 150 }
   return { day: next7, reward: 50 }
 }
-import type { FishPuzzleState, FishAnswer } from './fishActions'
+
+function capitalize(s: string): string {
+  return s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
 
 const GEM_REWARDS = [100, 75, 50, 25]
+
+const COMPARISON_ATTRS: { key: keyof ComparisonResult['matches']; label: string }[] = [
+  { key: 'habitat_type',  label: 'Habitat' },
+  { key: 'size_category', label: 'Size'    },
+  { key: 'diet_type',     label: 'Diet'    },
+  { key: 'fish_group',    label: 'Group'   },
+]
 
 export default function FishOfTheDay({
   initialPuzzle,
@@ -65,6 +76,7 @@ export default function FishOfTheDay({
       setPuzzle(prev => ({
         ...prev,
         guesses: [...prev.guesses, guessing],
+        guessComparisons: [...prev.guessComparisons, result.comparison ?? null],
         solved: result.correct,
         isOver: result.isOver,
         gems_awarded: result.gems ?? prev.gems_awarded,
@@ -172,17 +184,61 @@ export default function FishOfTheDay({
 
       {/* Guess history */}
       {puzzle.guesses.length > 0 && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-3">
           {puzzle.guesses.map((g, i) => {
             const isCorrect = puzzle.solved && i === puzzle.guesses.length - 1
+            const comparison = puzzle.guessComparisons[i]
             return (
-              <div key={i} className="flex items-center gap-2">
-                <span style={{ color: isCorrect ? '#f0c040' : '#f87171', fontSize: '0.8rem', width: '1rem', flexShrink: 0 }}>
-                  {isCorrect ? '✓' : '✗'}
-                </span>
-                <span className="font-karla" style={{ fontSize: '0.875rem', color: isCorrect ? '#f0c040' : '#6a6764' }}>
-                  {g}
-                </span>
+              <div key={i}>
+                <div className="flex items-center gap-2">
+                  <span style={{ color: isCorrect ? '#f0c040' : '#f87171', fontSize: '0.8rem', width: '1rem', flexShrink: 0 }}>
+                    {isCorrect ? '✓' : '✗'}
+                  </span>
+                  <span className="font-karla" style={{ fontSize: '0.875rem', color: isCorrect ? '#f0c040' : '#6a6764' }}>
+                    {g}
+                  </span>
+                </div>
+                {!isCorrect && comparison && (
+                  <div className="flex flex-wrap gap-1.5 mt-2" style={{ paddingLeft: '1.5rem' }}>
+                    {COMPARISON_ATTRS.map(({ key, label }) => {
+                      const value = comparison[key as keyof Omit<ComparisonResult, 'matches'>] as string
+                      const match = comparison.matches[key]
+                      return (
+                        <div
+                          key={key}
+                          style={{
+                            display: 'inline-flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '6px',
+                            background: match ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.05)',
+                            border: `1px solid ${match ? 'rgba(52,211,153,0.25)' : 'rgba(255,255,255,0.1)'}`,
+                          }}
+                        >
+                          <span style={{
+                            fontSize: '0.5rem',
+                            fontFamily: 'var(--font-karla)',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.1em',
+                            color: match ? '#34d399' : '#6a6764',
+                          }}>
+                            {label}
+                          </span>
+                          <span style={{
+                            fontSize: '0.65rem',
+                            fontFamily: 'var(--font-karla)',
+                            color: match ? '#34d399' : '#a0a09a',
+                            marginTop: '0.1rem',
+                          }}>
+                            {capitalize(value)}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )
           })}
@@ -201,7 +257,6 @@ export default function FishOfTheDay({
       )}
 
       {/* Picker */}
-
       {!puzzle.isOver && (
         <div className="flex flex-col gap-3">
           <div className="relative">
@@ -281,10 +336,10 @@ export default function FishOfTheDay({
 }
 
 const DETAIL_ROWS: { key: keyof FishAnswer; label: string }[] = [
-  { key: 'habitat',             label: 'Habitat' },
-  { key: 'range',               label: 'Range' },
-  { key: 'diet',                label: 'Diet' },
-  { key: 'size',                label: 'Size' },
+  { key: 'habitat',             label: 'Habitat'      },
+  { key: 'range',               label: 'Range'        },
+  { key: 'diet',                label: 'Diet'         },
+  { key: 'size',                label: 'Size'         },
   { key: 'conservation_status', label: 'Conservation' },
 ]
 
@@ -302,7 +357,6 @@ function AnswerCard({ answer, solved, gemsAwarded, streak, milestoneReward }: {
       borderRadius: '14px',
       overflow: 'hidden',
     }}>
-      {/* Header */}
       <div style={{ padding: '1.125rem 1.125rem 0.875rem' }}>
         <p className="font-cinzel font-700" style={{ color: solved ? '#f0c040' : '#f0ede8', fontSize: '1.1rem', marginBottom: '0.2rem' }}>
           {solved ? answer.common_name : `It was the ${answer.common_name}`}
@@ -327,7 +381,6 @@ function AnswerCard({ answer, solved, gemsAwarded, streak, milestoneReward }: {
         )}
       </div>
 
-      {/* Detail rows */}
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.11)' }}>
         {DETAIL_ROWS.map(({ key, label }) => {
           const val = answer[key]

@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkAchievements } from '@/lib/checkAchievements'
 import { getTodaysFishPuzzle } from './fish-of-the-day/generate'
-import { FISH_SPECIES } from '@/lib/fish-species'
 
 const GEM_REWARDS = [100, 75, 50, 25]
 
@@ -19,10 +18,32 @@ export interface FishAnswer {
   range?: string
 }
 
+export interface ComparisonResult {
+  habitat_type: string
+  size_category: string
+  diet_type: string
+  fish_group: string
+  matches: {
+    habitat_type: boolean
+    size_category: boolean
+    diet_type: boolean
+    fish_group: boolean
+  }
+}
+
+type SpeciesAttrs = {
+  name: string
+  habitat_type: string | null
+  size_category: string | null
+  diet_type: string | null
+  fish_group: string | null
+}
+
 export interface FishPuzzleState {
   date: string
   cluesRevealed: string[]
   guesses: string[]
+  guessComparisons: (ComparisonResult | null)[]
   solved: boolean
   isOver: boolean
   gems_awarded: number
@@ -36,6 +57,21 @@ function milestoneBonus(streak: number): number {
   if (streak % 30 === 0) return 150
   if (streak % 7 === 0) return 50
   return 0
+}
+
+function buildComparison(guessAttrs: SpeciesAttrs, answerAttrs: SpeciesAttrs): ComparisonResult {
+  return {
+    habitat_type: guessAttrs.habitat_type ?? '',
+    size_category: guessAttrs.size_category ?? '',
+    diet_type: guessAttrs.diet_type ?? '',
+    fish_group: guessAttrs.fish_group ?? '',
+    matches: {
+      habitat_type: guessAttrs.habitat_type === answerAttrs.habitat_type,
+      size_category: guessAttrs.size_category === answerAttrs.size_category,
+      diet_type: guessAttrs.diet_type === answerAttrs.diet_type,
+      fish_group: guessAttrs.fish_group === answerAttrs.fish_group,
+    },
+  }
 }
 
 export async function getDailyFishPuzzle(): Promise<FishPuzzleState | { error: string }> {
@@ -61,10 +97,31 @@ export async function getDailyFishPuzzle(): Promise<FishPuzzleState | { error: s
   const numClues = Math.min(wrongCount + 1, 4)
   const cluesRevealed = [fish.clue_1, fish.clue_2, fish.clue_3, fish.clue_4].slice(0, numClues)
 
+  let guessComparisons: (ComparisonResult | null)[] = []
+  if (guesses.length > 0) {
+    const namesToFetch = [...new Set([fish.common_name, ...guesses])]
+    const { data: speciesRows } = await admin
+      .from('fish_species')
+      .select('name, habitat_type, size_category, diet_type, fish_group')
+      .in('name', namesToFetch)
+
+    const speciesMap = new Map((speciesRows ?? []).map((s: SpeciesAttrs) => [s.name, s]))
+    const answerAttrs = speciesMap.get(fish.common_name)
+
+    guessComparisons = guesses.map((g, i) => {
+      const isCorrectGuess = solved && i === guesses.length - 1
+      if (isCorrectGuess) return null
+      const guessAttrs = speciesMap.get(g)
+      if (!guessAttrs || !answerAttrs) return null
+      return buildComparison(guessAttrs, answerAttrs)
+    })
+  }
+
   return {
     date: today,
     cluesRevealed,
     guesses,
+    guessComparisons,
     solved,
     isOver,
     gems_awarded: attempt?.gems_awarded ?? 0,
@@ -92,6 +149,7 @@ export async function submitFishGuess(guessName: string): Promise<{
   milestoneReward?: number
   newAchievements?: string[]
   answer?: FishAnswer
+  comparison?: ComparisonResult
 } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -139,6 +197,21 @@ export async function submitFishGuess(guessName: string): Promise<{
     size: fish.size,
     conservation_status: fish.conservation_status,
     range: fish.range,
+  }
+
+  let comparison: ComparisonResult | undefined
+  if (!correct) {
+    const { data: speciesRows } = await admin
+      .from('fish_species')
+      .select('name, habitat_type, size_category, diet_type, fish_group')
+      .in('name', [fish.common_name, guessName])
+
+    const speciesMap = new Map((speciesRows ?? []).map((s: SpeciesAttrs) => [s.name, s]))
+    const answerAttrs = speciesMap.get(fish.common_name)
+    const guessAttrs = speciesMap.get(guessName)
+    if (answerAttrs && guessAttrs) {
+      comparison = buildComparison(guessAttrs, answerAttrs)
+    }
   }
 
   if (isOver) {
@@ -196,6 +269,7 @@ export async function submitFishGuess(guessName: string): Promise<{
         milestoneReward: bonus > 0 ? bonus : undefined,
         newAchievements,
         answer,
+        comparison,
       }
     }
   }
@@ -206,9 +280,12 @@ export async function submitFishGuess(guessName: string): Promise<{
     nextClue,
     isOver,
     answer: isOver ? answer : undefined,
+    comparison,
   }
 }
 
 export async function getAllFishNames(): Promise<string[]> {
-  return [...FISH_SPECIES].sort()
+  const admin = createAdminClient()
+  const { data } = await admin.from('fish_species').select('name').eq('fotd_eligible', true).order('name')
+  return (data ?? []).map((r: { name: string }) => r.name)
 }

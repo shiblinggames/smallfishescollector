@@ -1,6 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { anthropic } from '@/lib/anthropic'
-import { FISH_SPECIES } from '@/lib/fish-species'
 
 export interface GeneratedFish {
   common_name: string
@@ -66,7 +65,9 @@ export async function getTodaysFishPuzzle(): Promise<GeneratedFish | null> {
 
   if (cached) return cached as GeneratedFish
 
-  const speciesList = [...FISH_SPECIES].sort(() => 0.5 - Math.random()).join('\n')
+  const { data: speciesRows } = await admin.from('fish_species').select('name').eq('fotd_eligible', true)
+  const allNames = (speciesRows ?? []).map((r: { name: string }) => r.name)
+  const speciesList = [...allNames].sort(() => 0.5 - Math.random()).join('\n')
 
   try {
     const message = await anthropic.messages.create({
@@ -90,7 +91,7 @@ export async function getTodaysFishPuzzle(): Promise<GeneratedFish | null> {
       }
     }
 
-    if (!FISH_SPECIES.includes(fish.common_name as any)) {
+    if (!allNames.includes(fish.common_name)) {
       throw new Error(`Species not in approved list: ${fish.common_name}`)
     }
 
