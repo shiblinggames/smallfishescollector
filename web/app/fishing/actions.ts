@@ -406,7 +406,7 @@ export async function saveHighestPerfectStreak(streak: number): Promise<void> {
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles').select('highest_perfect_streak').eq('id', user.id).single()
   if ((profile?.highest_perfect_streak ?? 0) < streak) {
-    await admin.from('profiles').update({ highest_perfect_streak: streak }).eq('id', user.id)
+    await admin.from('profiles').update({ highest_perfect_streak: streak, highest_streak_set_at: new Date().toISOString() }).eq('id', user.id)
   }
 }
 
