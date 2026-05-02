@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-type Status = 'loading' | 'success' | 'needs_login' | 'sending_magic_link' | 'magic_link_sent' | 'error'
+type Status = 'loading' | 'success' | 'needs_login' | 'error'
 
 export default function ClaimContent() {
   const searchParams = useSearchParams()
@@ -28,17 +28,7 @@ export default function ClaimContent() {
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
-        if (emailParam) {
-          setStatus('sending_magic_link')
-          const claimRedirect = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://seasthebooty.com'}/auth/callback?next=${encodeURIComponent(`/claim?token=${token}`)}`
-          await supabase.auth.signInWithOtp({
-            email: emailParam,
-            options: { emailRedirectTo: claimRedirect },
-          })
-          setStatus('magic_link_sent')
-        } else {
-          setStatus('needs_login')
-        }
+        setStatus('needs_login')
         return
       }
 
@@ -81,35 +71,19 @@ export default function ClaimContent() {
     )
   }
 
-  if (status === 'sending_magic_link') {
-    return (
-      <div className="sg-card p-8 text-center">
-        <p className="font-karla font-300 text-[#a0a09a] text-sm">Sending sign-in link…</p>
-      </div>
-    )
-  }
-
-  if (status === 'magic_link_sent') {
-    return (
-      <div className="sg-card p-8 text-center space-y-3">
-        <p className="sg-eyebrow">Check Your Email</p>
-        <p className="font-karla font-400 text-[#f0ede8] leading-relaxed">
-          We sent a sign-in link to{' '}
-          <span className="text-[#f0c040]">{emailParam}</span>.
-        </p>
-        <p className="font-karla font-300 text-[#a0a09a] text-sm">
-          Click the sign-in link, then come back and click your claim link again to get your packs.
-        </p>
-      </div>
-    )
-  }
-
   if (status === 'needs_login') {
     const loginUrl = `/login?next=${encodeURIComponent(`/claim?token=${token}`)}`
     return (
       <div className="sg-card p-8 space-y-6 text-center">
-        <p className="font-karla font-400 text-[#f0ede8] text-sm leading-relaxed">
+        <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.1rem' }}>
+          Packs waiting for you
+        </p>
+        <p className="font-karla font-400 text-[#a0a09a] text-sm leading-relaxed">
           Sign in to claim your booster packs.
+          {emailParam && (
+            <><br /><span className="text-[#6a6764]">Use the account for </span>
+            <span className="text-[#f0ede8]">{emailParam}</span></>
+          )}
         </p>
         <Link href={loginUrl} className="btn-ghost block w-full text-center">
           Sign In
