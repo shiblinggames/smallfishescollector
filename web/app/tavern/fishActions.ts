@@ -286,6 +286,12 @@ export async function submitFishGuess(guessName: string): Promise<{
 
 export async function getAllFishNames(): Promise<string[]> {
   const admin = createAdminClient()
-  const { data } = await admin.from('fish_species').select('name').eq('fotd_eligible', true).order('name')
-  return (data ?? []).map((r: { name: string }) => r.name)
+  const today = new Date().toISOString().split('T')[0]
+  const [{ data: eligible }, { data: todayPuzzle }] = await Promise.all([
+    admin.from('fish_species').select('name').eq('fotd_eligible', true).order('name'),
+    admin.from('daily_fish_generated').select('common_name').eq('date', today).single(),
+  ])
+  const names = new Set((eligible ?? []).map((r: { name: string }) => r.name))
+  if (todayPuzzle?.common_name) names.add(todayPuzzle.common_name)
+  return [...names].sort()
 }
