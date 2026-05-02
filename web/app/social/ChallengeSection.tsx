@@ -433,49 +433,58 @@ export default function ChallengeSection({ challenges, wlRecord, myDoubloons, my
       {complete.length > 0 && (
         <div>
           <p className="font-karla font-600 uppercase tracking-[0.14em] mb-3" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Recent Results</p>
-          <div style={{ background: 'rgba(4,10,20,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
-            {complete.slice(0, 5).map((c, i, arr) => {
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {complete.slice(0, 5).map((c) => {
               const won = c.winnerId === c.myId
               const tied = c.winnerId === null
               const opponentName = c.isIncoming ? c.challengerUsername : c.challengedUsername
               const myScore = c.myScore
               const opponentScore = c.opponentScore ?? 0
-              const outcomeColor = tied ? '#6b7280' : won ? '#4ade80' : '#f87171'
+              const outcomeColor = tied ? '#9ca3af' : won ? '#4ade80' : '#f87171'
               const payout = c.wager > 0
                 ? tied ? `${c.wager} ⟡ returned` : won ? `+${c.wager * 2} ⟡` : `−${c.wager} ⟡`
                 : null
               const scoreUnit = c.challengeType === 'most_fish' ? 'fish' : c.challengeType === 'most_doubloons' ? '⟡' : 'perfects'
               return (
-                <div key={c.id} style={{ padding: '0.85rem 1rem', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: tied ? 'rgba(107,114,128,0.2)' : won ? 'rgba(74,222,128,0.15)' : 'rgba(248,113,113,0.15)', border: `1px solid ${outcomeColor}55`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span className="font-cinzel font-700" style={{ fontSize: '0.5rem', color: outcomeColor }}>
-                        {tied ? 'TIE' : won ? 'W' : 'L'}
-                      </span>
+                <div key={c.id} style={{
+                  background: won ? 'rgba(74,222,128,0.06)' : tied ? 'rgba(156,163,175,0.05)' : 'rgba(248,113,113,0.06)',
+                  border: `1px solid ${outcomeColor}30`,
+                  borderRadius: 14, overflow: 'hidden',
+                  boxShadow: won ? '0 0 24px rgba(74,222,128,0.1)' : 'none',
+                }}>
+                  {/* Outcome header */}
+                  <div style={{
+                    padding: '0.65rem 1rem',
+                    borderBottom: `1px solid ${outcomeColor}15`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  }}>
+                    <p className="font-cinzel font-700" style={{
+                      fontSize: '1rem', color: outcomeColor, lineHeight: 1,
+                      textShadow: won ? '0 0 18px rgba(74,222,128,0.55)' : 'none',
+                    }}>
+                      {tied ? 'Tie' : won ? 'Victory' : 'Defeat'}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {payout && <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: outcomeColor }}>{payout}</span>}
+                      <span className="font-karla font-300" style={{ fontSize: '0.55rem', color: '#4a4845' }}>{timeAgo(c.createdAt)}</span>
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p className="font-karla font-700 truncate" style={{ fontSize: '0.75rem', color: '#f0ede8' }}>vs {opponentName}</p>
-                      <p className="font-karla font-300" style={{ fontSize: '0.58rem', color: '#4a4845', marginTop: 1 }}>
-                        {durationLabel(c.durationSeconds)} · {typeLabel(c.challengeType)}{c.wager > 0 ? ` · ${c.wager} ⟡ wager` : ''} · {timeAgo(c.createdAt)}
-                      </p>
-                    </div>
-                    {payout && (
-                      <span className="font-karla font-700 shrink-0" style={{ fontSize: '0.68rem', color: outcomeColor }}>
-                        {payout}
-                      </span>
-                    )}
                   </div>
-                  {/* Score breakdown */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                    <div style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${won && !tied ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '0.4rem 0.6rem' }}>
-                      <p className="font-karla font-400" style={{ fontSize: '0.52rem', color: '#4a4845', marginBottom: 2 }}>You</p>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: won && !tied ? '#4ade80' : '#f0ede8', lineHeight: 1 }}>{myScore}</p>
-                      <p className="font-karla font-300" style={{ fontSize: '0.5rem', color: '#4a4845', marginTop: 1 }}>{scoreUnit}</p>
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${!won && !tied ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '0.4rem 0.6rem' }}>
-                      <p className="font-karla font-400" style={{ fontSize: '0.52rem', color: '#4a4845', marginBottom: 2 }}>{opponentName}</p>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: !won && !tied ? '#4ade80' : '#f0ede8', lineHeight: 1 }}>{opponentScore}</p>
-                      <p className="font-karla font-300" style={{ fontSize: '0.5rem', color: '#4a4845', marginTop: 1 }}>{scoreUnit}</p>
+                  {/* Details + scores */}
+                  <div style={{ padding: '0.75rem 1rem' }}>
+                    <p className="font-karla font-600" style={{ fontSize: '0.65rem', color: '#6a6764', marginBottom: 8 }}>
+                      vs {opponentName} · {durationLabel(c.durationSeconds)} · {typeLabel(c.challengeType)}
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                      <div style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${won && !tied ? `${outcomeColor}35` : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '0.4rem 0.6rem' }}>
+                        <p className="font-karla font-400" style={{ fontSize: '0.52rem', color: '#4a4845', marginBottom: 2 }}>You</p>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: won && !tied ? outcomeColor : '#f0ede8', lineHeight: 1 }}>{myScore}</p>
+                        <p className="font-karla font-300" style={{ fontSize: '0.5rem', color: '#4a4845', marginTop: 1 }}>{scoreUnit}</p>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${!won && !tied ? `${outcomeColor}35` : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '0.4rem 0.6rem' }}>
+                        <p className="font-karla font-400" style={{ fontSize: '0.52rem', color: '#4a4845', marginBottom: 2 }}>{opponentName}</p>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: !won && !tied ? outcomeColor : '#f0ede8', lineHeight: 1 }}>{opponentScore}</p>
+                        <p className="font-karla font-300" style={{ fontSize: '0.5rem', color: '#4a4845', marginTop: 1 }}>{scoreUnit}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
