@@ -20,6 +20,7 @@ interface Props {
   initialChallenges: PendingChallenge[]
   wlRecord: { wins: number; losses: number; ties: number }
   myDoubloons: number
+  myBait: number
 }
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
@@ -45,7 +46,7 @@ function Avatar({ username, size = 40 }: { username: string; size?: number }) {
   )
 }
 
-export default function SocialClient({ initialCrew, username, newFollowers: initialNewFollowers, initialChallenges, wlRecord, myDoubloons }: Props) {
+export default function SocialClient({ initialCrew, username, newFollowers: initialNewFollowers, initialChallenges, wlRecord, myDoubloons, myBait }: Props) {
   const router = useRouter()
   const activeOpponents = new Set(
     initialChallenges
@@ -153,7 +154,7 @@ export default function SocialClient({ initialCrew, username, newFollowers: init
       {(initialChallenges.length > 0 || wlRecord.wins + wlRecord.losses + wlRecord.ties > 0) && (
         <div>
           <p className="font-karla font-600 uppercase tracking-[0.14em] mb-3" style={{ fontSize: '0.55rem', color: '#9a9488' }}>Challenges</p>
-          <ChallengeSection challenges={initialChallenges} wlRecord={wlRecord} myDoubloons={myDoubloons} />
+          <ChallengeSection challenges={initialChallenges} wlRecord={wlRecord} myDoubloons={myDoubloons} myBait={myBait} />
         </div>
       )}
 

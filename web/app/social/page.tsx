@@ -11,13 +11,16 @@ export default async function SocialPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, crew, newFollowers, challenges, wlRecord] = await Promise.all([
+  const [{ data: profile }, crew, newFollowers, challenges, wlRecord, { data: baitRows }] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons, gems, username').eq('id', user.id).single(),
     getCrew(),
     getNewFollowers(),
     getChallenges(),
     getWLRecord(),
+    supabase.from('bait_inventory').select('quantity').eq('user_id', user.id),
   ])
+
+  const myBait = (baitRows ?? []).reduce((sum: number, row: { quantity: number }) => sum + (row.quantity ?? 0), 0)
 
   return (
     <>
@@ -45,6 +48,7 @@ export default async function SocialPage() {
           initialChallenges={challenges}
           wlRecord={wlRecord}
           myDoubloons={profile?.doubloons ?? 0}
+          myBait={myBait}
         />
       </main>
     </>

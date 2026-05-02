@@ -188,9 +188,30 @@ interface Props {
   challenges: PendingChallenge[]
   wlRecord: { wins: number; losses: number; ties: number }
   myDoubloons: number
+  myBait: number
 }
 
-export default function ChallengeSection({ challenges, wlRecord, myDoubloons }: Props) {
+function BaitWarning({ myBait }: { myBait: number }) {
+  if (myBait >= 10) return null
+  const color = myBait === 0 ? '#f87171' : '#fb923c'
+  const label = myBait === 0 ? 'No bait' : `${myBait} bait (low)`
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '0.35rem 0.65rem', borderRadius: 8, marginBottom: 8,
+      background: myBait === 0 ? 'rgba(248,113,113,0.08)' : 'rgba(251,146,60,0.08)',
+      border: `1px solid ${color}30`,
+    }}>
+      <span className="font-karla font-600" style={{ fontSize: '0.58rem', color }}>{label}</span>
+      <a href="/marketplace/tackle-shop#bait" className="font-karla font-700"
+        style={{ fontSize: '0.58rem', color, textDecoration: 'none', opacity: 0.85 }}>
+        Buy more →
+      </a>
+    </div>
+  )
+}
+
+export default function ChallengeSection({ challenges, wlRecord, myDoubloons, myBait }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [loadingId, setLoadingId] = useState<string | null>(null)
@@ -327,6 +348,7 @@ export default function ChallengeSection({ challenges, wlRecord, myDoubloons }: 
                 <p className="font-karla font-400 mb-3" style={{ fontSize: '0.65rem', color: '#6a6764' }}>
                   {durationLabel(c.durationSeconds)} · {typeLabel(c.challengeType)}{c.wager > 0 ? ` · ${c.wager} ⟡` : ''}
                 </p>
+                <BaitWarning myBait={myBait} />
                 <button
                   onClick={() => handleStart(c.id)}
                   disabled={loadingId === c.id}
@@ -395,6 +417,7 @@ export default function ChallengeSection({ challenges, wlRecord, myDoubloons }: 
           <p className="font-karla font-400 mb-3" style={{ fontSize: '0.65rem', color: '#6a6764' }}>
             {durationLabel(c.durationSeconds)} · {typeLabel(c.challengeType)} — start your session whenever you're ready
           </p>
+          <BaitWarning myBait={myBait} />
           <button
             onClick={() => handleStart(c.id)}
             disabled={loadingId === c.id}
