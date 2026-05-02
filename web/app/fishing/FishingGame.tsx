@@ -1191,6 +1191,7 @@ export default function FishingGame({
   )
   const [sessionScore, setSessionScore] = useState(activeSession?.myScore ?? 0)
   const sessionFinishedRef = useRef(false)
+  const [sessionOverlayDismissed, setSessionOverlayDismissed] = useState(false)
 
   const fishingLevel = getLevelFromXP(fishingXP)
   const levelBonus   = levelCatchBonus(fishingLevel)
@@ -2778,10 +2779,10 @@ export default function FishingGame({
 
 
       {/* ── Challenge session complete overlay ── */}
-      {activeSession && sessionDone && (
+      {activeSession && sessionDone && !sessionOverlayDismissed && (
         <div style={{
           position: 'absolute', inset: 0, zIndex: 60,
-          background: 'rgba(4,8,14,0.92)',
+          background: 'rgba(4,8,14,0.88)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           padding: '2rem',
         }}>
@@ -2797,10 +2798,17 @@ export default function FishingGame({
           <Link
             href="/social"
             className="font-karla font-700 uppercase tracking-[0.12em] w-full text-center"
-            style={{ padding: '0.75rem', borderRadius: 10, fontSize: '0.68rem', background: 'rgba(251,146,60,0.15)', border: '1px solid rgba(251,146,60,0.4)', color: '#fb923c', textDecoration: 'none', display: 'block' }}
+            style={{ padding: '0.75rem', borderRadius: 10, fontSize: '0.68rem', background: 'rgba(251,146,60,0.15)', border: '1px solid rgba(251,146,60,0.4)', color: '#fb923c', textDecoration: 'none', display: 'block', marginBottom: '0.75rem' }}
           >
             View Results on Social →
           </Link>
+          <button
+            onClick={() => setSessionOverlayDismissed(true)}
+            className="font-karla font-600 w-full"
+            style={{ padding: '0.75rem', borderRadius: 10, fontSize: '0.68rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#6a6764', cursor: 'pointer' }}
+          >
+            Keep Fishing
+          </button>
         </div>
       )}
 
