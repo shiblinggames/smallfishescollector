@@ -46,6 +46,10 @@ interface Props {
   isInCrew?: boolean
 }
 
+function fishImageUrl(name: string) {
+  return `/fish/${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.png`
+}
+
 const RARITY_COLOR: Record<number, string> = {
   1: '#94a3b8', 2: '#4ade80', 3: '#60a5fa', 4: '#c084fc', 5: '#f59e0b',
 }
@@ -278,27 +282,37 @@ export default function ProfileClient({ username, showcaseVariants, stats, gear,
               </div>
             )}
             {rarestFish.length > 0 && (
-              <div style={{
-                background: 'rgba(4,10,20,0.7)', border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 12, padding: '0.8rem 1rem',
-              }}>
-                <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#6a6764', marginBottom: 10 }}>Rarest Catches</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                  {rarestFish.map(fish => (
-                    <div key={fish.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#f0ede8' }}>{fish.name}</p>
-                      <span style={{
-                        fontSize: '0.5rem', padding: '0.15rem 0.5rem', borderRadius: '2rem',
-                        background: `${RARITY_COLOR[fish.bite_rarity]}14`,
-                        border: `1px solid ${RARITY_COLOR[fish.bite_rarity]}35`,
-                        color: RARITY_COLOR[fish.bite_rarity],
-                        fontFamily: 'var(--font-karla)', fontWeight: 600,
-                        textTransform: 'uppercase', letterSpacing: '0.1em',
+              <div>
+                <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#6a6764', marginBottom: 8 }}>Rarest Catches</p>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rarestFish.length}, 1fr)`, gap: 8 }}>
+                  {rarestFish.map(fish => {
+                    const c = RARITY_COLOR[fish.bite_rarity]
+                    return (
+                      <div key={fish.id} style={{
+                        background: `${c}0a`, border: `1px solid ${c}35`,
+                        borderRadius: 12, padding: '0.75rem 0.5rem',
+                        textAlign: 'center', boxShadow: `0 0 16px ${c}18`,
                       }}>
-                        {RARITY_LABEL[fish.bite_rarity] ?? 'Unknown'}
-                      </span>
-                    </div>
-                  ))}
+                        <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 6 }}>
+                          <img
+                            src={fishImageUrl(fish.name)}
+                            alt={fish.name}
+                            style={{ maxWidth: 52, maxHeight: 52, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${c}55)` }}
+                            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                          />
+                        </div>
+                        <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#f0ede8', marginBottom: 5, lineHeight: 1.2 }}>{fish.name}</p>
+                        <span style={{
+                          fontSize: '0.45rem', padding: '0.12rem 0.4rem', borderRadius: '2rem',
+                          background: `${c}14`, border: `1px solid ${c}35`, color: c,
+                          fontFamily: 'var(--font-karla)', fontWeight: 600,
+                          textTransform: 'uppercase', letterSpacing: '0.1em',
+                        }}>
+                          {RARITY_LABEL[fish.bite_rarity] ?? 'Unknown'}
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
