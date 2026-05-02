@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
@@ -22,6 +23,14 @@ function snooze() {
 function permanentlyDismiss() {
   localStorage.setItem(SNOOZE_KEY, String(Date.now() + 365 * 24 * 60 * 60 * 1000))
 }
+
+const IOS_STEPS = [
+  { src: '/PWA1.png', label: 'Tap ···' },
+  { src: '/PWA2.png', label: 'Tap Share' },
+  { src: '/PWA3.png', label: 'View More' },
+  { src: '/PWA4.png', label: 'Add to Home' },
+  { src: '/PWA5.png', label: 'Tap Add' },
+]
 
 export default function InstallPrompt() {
   const [show, setShow] = useState(false)
@@ -93,72 +102,80 @@ export default function InstallPrompt() {
         padding: '1rem',
       }}
     >
-      <div className="flex items-start gap-3">
-        <span style={{ fontSize: '1.4rem', lineHeight: 1, marginTop: 2, flexShrink: 0 }}>🐟</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#f0ede8', marginBottom: '0.5rem' }}>
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2">
+          <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🐟</span>
+          <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#f0ede8' }}>
             Add to your home screen
           </p>
-          {isIOS ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                <span style={{
-                  width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-                  background: 'rgba(240,192,64,0.15)', border: '1px solid rgba(240,192,64,0.35)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#f0c040' }}>1</span>
-                </span>
-                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a0a09a', lineHeight: 1.45 }}>
-                  Tap the{' '}
-                  <span style={{ color: '#f0c040', fontWeight: 600 }}>Share</span>{' '}
-                  <svg style={{ display: 'inline', verticalAlign: 'middle', marginBottom: 1 }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                    <polyline points="16 6 12 2 8 6"/>
-                    <line x1="12" y1="2" x2="12" y2="15"/>
-                  </svg>{' '}
-                  button at the bottom of Safari
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                <span style={{
-                  width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-                  background: 'rgba(240,192,64,0.15)', border: '1px solid rgba(240,192,64,0.35)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#f0c040' }}>2</span>
-                </span>
-                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a0a09a', lineHeight: 1.45 }}>
-                  Tap <span style={{ color: '#f0c040', fontWeight: 600 }}>Add to Home Screen</span>
-                </p>
-              </div>
-            </div>
-          ) : (
-            <p className="font-karla" style={{ fontSize: '0.7rem', color: '#6a6764', lineHeight: 1.5 }}>
-              Play full-screen, no browser chrome
-            </p>
-          )}
-
-          <div className="flex items-center gap-2 mt-3">
-            {!isIOS && (
-              <button
-                onClick={install}
-                className="font-karla font-700 uppercase tracking-[0.1em]"
-                style={{ fontSize: '0.62rem', color: '#f0c040', background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.3)', borderRadius: 8, padding: '0.4rem 0.85rem', cursor: 'pointer' }}
-              >
-                Install
-              </button>
-            )}
-            <button
-              onClick={dismiss}
-              className="font-karla font-400"
-              style={{ fontSize: '0.62rem', color: '#4a4845', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem 0.5rem' }}
-            >
-              Not now
-            </button>
-          </div>
         </div>
+        <button
+          onClick={dismiss}
+          style={{ background: 'none', border: 'none', color: '#4a4845', cursor: 'pointer', padding: '0.15rem', lineHeight: 1, flexShrink: 0 }}
+          aria-label="Not now"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
       </div>
+
+      {isIOS ? (
+        <>
+          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '0.25rem' }}>
+            {IOS_STEPS.map(({ src, label }, i) => (
+              <div key={i} style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
+                <div style={{ position: 'relative' }}>
+                  <span style={{
+                    position: 'absolute', top: 4, left: 4, zIndex: 1,
+                    width: 16, height: 16, borderRadius: '50%',
+                    background: 'rgba(240,192,64,0.95)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <span className="font-karla font-700" style={{ fontSize: '0.48rem', color: '#000' }}>{i + 1}</span>
+                  </span>
+                  <Image
+                    src={src}
+                    alt={label}
+                    width={55}
+                    height={119}
+                    style={{
+                      borderRadius: 8,
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      objectFit: 'cover',
+                      display: 'block',
+                    }}
+                  />
+                </div>
+                <p className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#a0a09a', textAlign: 'center', maxWidth: 55, lineHeight: 1.2 }}>
+                  {label}
+                </p>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={dismiss}
+            className="font-karla font-400 mt-3"
+            style={{ fontSize: '0.62rem', color: '#4a4845', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            Not now
+          </button>
+        </>
+      ) : (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={install}
+            className="font-karla font-700 uppercase tracking-[0.1em]"
+            style={{ fontSize: '0.62rem', color: '#f0c040', background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.3)', borderRadius: 8, padding: '0.4rem 0.85rem', cursor: 'pointer' }}
+          >
+            Install
+          </button>
+          <p className="font-karla" style={{ fontSize: '0.65rem', color: '#6a6764' }}>
+            Play full-screen, no browser chrome
+          </p>
+        </div>
+      )}
     </div>
   )
 }
