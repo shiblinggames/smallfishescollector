@@ -32,6 +32,7 @@ const LINKS = [
 
 export default function MobileTabBar() {
   const pathname = usePathname()
+  if (pathname === '/' || pathname === '/login') return null
   const tint = PAGE_TINTS.find(([p]) => pathname === p || pathname.startsWith(p + '/'))?.[1]
   const bg = tint ? `linear-gradient(${tint}, ${tint}), black` : 'black'
 
