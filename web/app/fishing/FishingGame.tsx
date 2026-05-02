@@ -1502,7 +1502,7 @@ export default function FishingGame({
             setNewStreakRecord(newStreak)
             startTransition(() => { saveHighestPerfectStreak(newStreak) })
             checkLeaderboardPosition('perfectStreak').then(r => {
-              if (r) setPodiumNotif({ category: 'Perfect Streak', position: r.position })
+              if (r?.position === 1) setPodiumNotif({ category: 'Perfect Streak', position: 1 })
             }).catch(() => {})
           }
         }
@@ -1549,7 +1549,7 @@ export default function FishingGame({
         if (newLevel > oldLevel) {
           setLevelUpNotif(newLevel)
           checkLeaderboardPosition('fishingLevel').then(r => {
-            if (r) setPodiumNotif({ category: 'Fishing Level', position: r.position })
+            if (r?.position === 1) setPodiumNotif({ category: 'Fishing Level', position: 1 })
           }).catch(() => {})
         }
         setInventory(prev => {
