@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export type ChallengeType = 'most_fish' | 'most_doubloons' | 'most_perfects'
 export type ChallengeStatus =
   | 'pending'
+  | 'accepted'
   | 'challenger_active'
   | 'challenger_done'
   | 'both_active'
@@ -69,7 +70,7 @@ export async function createChallenge(
     .from('fishing_challenges')
     .select('id')
     .or(`and(challenger_id.eq.${user.id},challenged_id.eq.${challenged.id}),and(challenger_id.eq.${challenged.id},challenged_id.eq.${user.id})`)
-    .in('status', ['pending', 'challenger_active', 'challenger_done', 'challenged_active'])
+    .in('status', ['pending', 'accepted', 'challenger_active', 'challenger_done', 'challenged_active'])
     .maybeSingle()
 
   if (existing) return { error: 'You already have an active challenge with this player' }
@@ -110,12 +111,13 @@ export async function acceptChallenge(challengeId: string): Promise<{ success: t
   if (challenge.status !== 'pending' && challenge.status !== 'challenger_done') return { error: 'Challenge is not pending' }
   if (new Date(challenge.expires_at) < new Date()) return { error: 'Challenge has expired' }
 
+  // Verify they can afford the wager upfront (deduction happens at startSession)
   if (challenge.wager > 0) {
     const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
     if (!profile || (profile.doubloons ?? 0) < challenge.wager) return { error: 'Not enough doubloons' }
-    await admin.from('profiles').update({ doubloons: (profile.doubloons ?? 0) - challenge.wager }).eq('id', user.id)
   }
 
+  await admin.from('fishing_challenges').update({ status: 'accepted' }).eq('id', challengeId)
   return { success: true }
 }
 
@@ -129,14 +131,14 @@ export async function declineChallenge(challengeId: string): Promise<{ success: 
 
   if (!challenge) return { error: 'Challenge not found' }
   if (challenge.challenged_id !== user.id) return { error: 'Not your challenge' }
-  if (challenge.status !== 'pending' && challenge.status !== 'challenger_done') return { error: 'Cannot decline' }
+  if (challenge.status !== 'pending' && challenge.status !== 'accepted' && challenge.status !== 'challenger_done') return { error: 'Cannot decline' }
 
   // Refund challenger's wager
   if (challenge.wager > 0) {
     const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', challenge.challenger_id).single()
-    if (profile) {
-      await admin.from('profiles').update({ doubloons: (profile.doubloons ?? 0) + challenge.wager }).eq('id', challenge.challenger_id)
-    }
+    if (!profile) return { error: 'Could not process refund' }
+    const { error: refundErr } = await admin.from('profiles').update({ doubloons: (profile.doubloons ?? 0) + challenge.wager }).eq('id', challenge.challenger_id)
+    if (refundErr) return { error: 'Refund failed' }
   }
 
   await admin.from('fishing_challenges').update({ status: 'declined' }).eq('id', challengeId)
@@ -158,9 +160,16 @@ export async function startSession(challengeId: string): Promise<{ endsAt: strin
 
   if (!isChallenger && !isChallenged) return { error: 'Not your challenge' }
 
-  // Challenger can start from 'pending', challenged can start once challenger is done
-  if (isChallenger && challenge.status !== 'pending') return { error: 'Cannot start session now' }
+  // Challenger can start from pending or accepted; challenged can start once challenger is active/done
+  if (isChallenger && challenge.status !== 'pending' && challenge.status !== 'accepted') return { error: 'Cannot start session now' }
   if (isChallenged && challenge.status !== 'challenger_done' && challenge.status !== 'challenger_active') return { error: 'Cannot start session now' }
+
+  // Deduct challenged player's wager at session start (not at accept time)
+  if (isChallenged && challenge.wager > 0) {
+    const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
+    if (!profile || (profile.doubloons ?? 0) < challenge.wager) return { error: 'Not enough doubloons' }
+    await admin.from('profiles').update({ doubloons: (profile.doubloons ?? 0) - challenge.wager }).eq('id', user.id)
+  }
 
   const now = new Date().toISOString()
   const endsAt = new Date(Date.now() + challenge.duration_seconds * 1000).toISOString()
@@ -173,6 +182,31 @@ export async function startSession(challengeId: string): Promise<{ endsAt: strin
 
   await admin.from('fishing_challenges').update(update).eq('id', challengeId)
   return { endsAt }
+}
+
+async function processWagerPayout(admin: ReturnType<typeof createAdminClient>, challenge: FishingChallenge): Promise<void> {
+  if (challenge.wager <= 0) return
+  const cScore = challenge.challenger_score
+  const dScore = challenge.challenged_score
+  const winnerId = cScore > dScore ? challenge.challenger_id : dScore > cScore ? challenge.challenged_id : null
+
+  if (winnerId) {
+    const payout = challenge.wager * 2
+    const { data: winnerProfile } = await admin.from('profiles').select('doubloons').eq('id', winnerId).single()
+    if (winnerProfile) {
+      await admin.from('profiles').update({ doubloons: (winnerProfile.doubloons ?? 0) + payout }).eq('id', winnerId)
+    }
+  } else {
+    // Tie — refund both
+    const [{ data: cp }, { data: dp }] = await Promise.all([
+      admin.from('profiles').select('doubloons').eq('id', challenge.challenger_id).single(),
+      admin.from('profiles').select('doubloons').eq('id', challenge.challenged_id).single(),
+    ])
+    await Promise.all([
+      cp && admin.from('profiles').update({ doubloons: (cp.doubloons ?? 0) + challenge.wager }).eq('id', challenge.challenger_id),
+      dp && admin.from('profiles').update({ doubloons: (dp.doubloons ?? 0) + challenge.wager }).eq('id', challenge.challenged_id),
+    ])
+  }
 }
 
 export async function finishSession(challengeId: string): Promise<{ success: true } | { error: string }> {
@@ -208,8 +242,7 @@ export async function finishSession(challengeId: string): Promise<{ success: tru
     return { success: true }
   }
 
-  if (isChallenged && challenge.status === 'challenged_active') {
-    // Determine winner
+  if (isChallenged && (challenge.status === 'challenged_active' || challenge.status === 'both_active')) {
     const cScore = challenge.challenger_score
     const dScore = challenge.challenged_score
     const winnerId = cScore > dScore ? challenge.challenger_id : dScore > cScore ? challenge.challenged_id : null
@@ -220,57 +253,7 @@ export async function finishSession(challengeId: string): Promise<{ success: tru
       winner_id: winnerId,
     }).eq('id', challengeId)
 
-    // Pay out wager to winner (both wagers pooled)
-    if (challenge.wager > 0 && winnerId) {
-      const payout = challenge.wager * 2
-      const { data: winnerProfile } = await admin.from('profiles').select('doubloons').eq('id', winnerId).single()
-      if (winnerProfile) {
-        await admin.from('profiles').update({ doubloons: (winnerProfile.doubloons ?? 0) + payout }).eq('id', winnerId)
-      }
-    } else if (challenge.wager > 0 && !winnerId) {
-      // Tie — refund both
-      const [{ data: cp }, { data: dp }] = await Promise.all([
-        admin.from('profiles').select('doubloons').eq('id', challenge.challenger_id).single(),
-        admin.from('profiles').select('doubloons').eq('id', challenge.challenged_id).single(),
-      ])
-      await Promise.all([
-        cp && admin.from('profiles').update({ doubloons: (cp.doubloons ?? 0) + challenge.wager }).eq('id', challenge.challenger_id),
-        dp && admin.from('profiles').update({ doubloons: (dp.doubloons ?? 0) + challenge.wager }).eq('id', challenge.challenged_id),
-      ])
-    }
-
-    return { success: true }
-  }
-
-  if (isChallenged && challenge.status === 'both_active') {
-    // Challenged finishes while challenger is also still active (or already finished) — determine winner
-    const cScore = challenge.challenger_score
-    const dScore = challenge.challenged_score
-    const winnerId = cScore > dScore ? challenge.challenger_id : dScore > cScore ? challenge.challenged_id : null
-
-    await admin.from('fishing_challenges').update({
-      status: 'complete',
-      challenged_finished_at: now,
-      winner_id: winnerId,
-    }).eq('id', challengeId)
-
-    if (challenge.wager > 0 && winnerId) {
-      const payout = challenge.wager * 2
-      const { data: winnerProfile } = await admin.from('profiles').select('doubloons').eq('id', winnerId).single()
-      if (winnerProfile) {
-        await admin.from('profiles').update({ doubloons: (winnerProfile.doubloons ?? 0) + payout }).eq('id', winnerId)
-      }
-    } else if (challenge.wager > 0 && !winnerId) {
-      const [{ data: cp }, { data: dp }] = await Promise.all([
-        admin.from('profiles').select('doubloons').eq('id', challenge.challenger_id).single(),
-        admin.from('profiles').select('doubloons').eq('id', challenge.challenged_id).single(),
-      ])
-      await Promise.all([
-        cp && admin.from('profiles').update({ doubloons: (cp.doubloons ?? 0) + challenge.wager }).eq('id', challenge.challenger_id),
-        dp && admin.from('profiles').update({ doubloons: (dp.doubloons ?? 0) + challenge.wager }).eq('id', challenge.challenged_id),
-      ])
-    }
-
+    await processWagerPayout(admin, { ...challenge, winner_id: winnerId })
     return { success: true }
   }
 

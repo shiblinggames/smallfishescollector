@@ -422,11 +422,16 @@ export default function ChallengeSection({ challenges, wlRecord, myDoubloons, my
       )}
 
       {/* Start your own session (challenger who hasn't gone yet) */}
-      {challenges.filter(c => !c.isIncoming && c.status === 'pending' && !c.challengerFinishedAt).map(c => (
-        <div key={`start-${c.id}`} style={{ background: 'rgba(4,10,20,0.6)', border: '1px solid rgba(240,192,64,0.2)', borderRadius: 14, padding: '1rem' }}>
-          <p className="font-karla font-700 mb-0.5" style={{ fontSize: '0.8rem', color: '#f0ede8' }}>Challenge sent to {c.challengedUsername}</p>
+      {challenges.filter(c => !c.isIncoming && (c.status === 'pending' || c.status === 'accepted') && !c.challengerFinishedAt).map(c => (
+        <div key={`start-${c.id}`} style={{ background: 'rgba(4,10,20,0.6)', border: `1px solid ${c.status === 'accepted' ? 'rgba(74,222,128,0.25)' : 'rgba(240,192,64,0.2)'}`, borderRadius: 14, padding: '1rem' }}>
+          <p className="font-karla font-700 mb-0.5" style={{ fontSize: '0.8rem', color: '#f0ede8' }}>
+            Challenge sent to {c.challengedUsername}
+            {c.status === 'accepted' && (
+              <span className="font-karla font-600 ml-2" style={{ fontSize: '0.58rem', color: '#4ade80', verticalAlign: 'middle' }}>Accepted!</span>
+            )}
+          </p>
           <p className="font-karla font-400 mb-3" style={{ fontSize: '0.65rem', color: '#6a6764' }}>
-            {durationLabel(c.durationSeconds)} · {typeLabel(c.challengeType)} — start your session whenever you're ready
+            {durationLabel(c.durationSeconds)} · {typeLabel(c.challengeType)} — start your session whenever you&apos;re ready
           </p>
           <BaitWarning myBait={myBait} />
           <button

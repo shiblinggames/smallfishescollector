@@ -117,40 +117,28 @@ export async function castLine(baitType: string, habitat: string): Promise<
     return { error: `Reach Fishing Level ${minLevel} to fish here` }
   }
 
-  // Check fish hold capacity
+  // Fetch hold, bait, and candidates in parallel
   const ship = getShip(profile.ship_tier ?? 0)
-  const { data: holdRows } = await admin
-    .from('fish_inventory')
-    .select('quantity')
-    .eq('user_id', user.id)
+  const [{ data: holdRows }, { data: baitRow }, { data: candidates }] = await Promise.all([
+    admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
+    admin.from('bait_inventory').select('quantity').eq('user_id', user.id).eq('bait_type', baitType).single(),
+    admin.from('fish_species').select('id, catch_difficulty, catch_score, bite_rarity').eq('habitat', habitat),
+  ])
+
   const totalFish = (holdRows ?? []).reduce((sum, r) => sum + (r.quantity ?? 0), 0)
   if (totalFish >= ship.holdCapacity) {
     return { error: `Fish hold full (${ship.holdCapacity}/${ship.holdCapacity}). Sell some fish to make room.` }
   }
 
-  // Consume 1 bait
-  const { data: baitRow } = await admin
-    .from('bait_inventory')
-    .select('quantity')
-    .eq('user_id', user.id)
-    .eq('bait_type', baitType)
-    .single()
-
   if (!baitRow || baitRow.quantity <= 0) return { error: 'No bait remaining.' }
+
+  if (!candidates || candidates.length === 0) return { error: 'No fish found in this zone' }
 
   await admin
     .from('bait_inventory')
     .update({ quantity: baitRow.quantity - 1 })
     .eq('user_id', user.id)
     .eq('bait_type', baitType)
-
-  // Draw a random fish from the selected habitat
-  const { data: candidates } = await admin
-    .from('fish_species')
-    .select('id, catch_difficulty, catch_score, bite_rarity')
-    .eq('habitat', habitat)
-
-  if (!candidates || candidates.length === 0) return { error: 'No fish found in this zone' }
 
   const rod = getRod(profile.rod_tier ?? 0)
   const fish = tierWeightedPick(candidates, habitat, rod.rarityBonus)
@@ -270,21 +258,18 @@ export async function reelIn(
   const xpGained = catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + (result === 'perfect' ? streakBonus : 0)
   const newXP = (profile.fishing_xp ?? 0) + xpGained
 
-  await admin.from('profiles').update({ fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP }).eq('id', user.id)
+  const [, baitFetchResult] = await Promise.all([
+    admin.from('profiles').update({ fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP }).eq('id', user.id),
+    baitSaved
+      ? admin.from('bait_inventory').select('quantity').eq('user_id', user.id).eq('bait_type', baitType).single()
+      : Promise.resolve({ data: null }),
+  ])
 
-  if (baitSaved) {
-    const { data: baitRow } = await admin
-      .from('bait_inventory')
-      .select('quantity')
+  if (baitSaved && baitFetchResult.data) {
+    await admin.from('bait_inventory')
+      .update({ quantity: baitFetchResult.data.quantity + 1 })
       .eq('user_id', user.id)
       .eq('bait_type', baitType)
-      .single()
-    if (baitRow) {
-      await admin.from('bait_inventory')
-        .update({ quantity: baitRow.quantity + 1 })
-        .eq('user_id', user.id)
-        .eq('bait_type', baitType)
-    }
   }
 
   // Record challenge score (fire and forget)
