@@ -23,6 +23,16 @@ export default async function HomePage() {
         <p className="font-karla font-600 uppercase tracking-[0.22em] mb-4" style={{ fontSize: '0.58rem', color: '#5a9aaa' }}>
           Shibling Games
         </p>
+        <span className="font-karla font-700 uppercase tracking-[0.18em] inline-block mb-4 px-3 py-1" style={{
+          fontSize: '0.55rem',
+          color: '#f0c040',
+          background: 'rgba(240,192,64,0.1)',
+          border: '1px solid rgba(240,192,64,0.25)',
+          borderRadius: '999px',
+        }}>
+          Open Beta
+        </span>
+
         <h1
           className="font-cinzel font-900 text-[#f0ede8] leading-[0.9] tracking-[-0.01em] mb-3"
           style={{

@@ -250,7 +250,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         <Link href="/" className="flex items-center gap-2 font-cinzel font-700 text-[#f0ede8] tracking-wide text-sm uppercase">
           Small Fishes
           <span style={{ fontSize: '0.48rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.25)', color: '#f0c040', borderRadius: 4, padding: '0.15rem 0.4rem', letterSpacing: '0.12em', lineHeight: 1.4, fontFamily: 'inherit' }}>
-            ALPHA
+            BETA
           </span>
         </Link>
 
@@ -308,7 +308,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         <Link href="/" className="flex items-center gap-1.5 font-cinzel font-700 text-[#f0ede8] tracking-wide text-xs uppercase">
           Small Fishes
           <span style={{ fontSize: '0.44rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.25)', color: '#f0c040', borderRadius: 4, padding: '0.15rem 0.35rem', letterSpacing: '0.12em', lineHeight: 1.4, fontFamily: 'inherit' }}>
-            ALPHA
+            BETA
           </span>
         </Link>
 
