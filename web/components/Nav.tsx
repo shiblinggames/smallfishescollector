@@ -29,6 +29,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
     return parseInt(localStorage.getItem('tavernBadge') ?? '0', 10) || 0
   })
   const [achievementsBadge, setAchievementsBadge] = useState(false)
+  const [showInstallEntry, setShowInstallEntry] = useState(false)
   const [displayDoubloons, setDisplayDoubloons] = useState(doubloons)
   const [displayGems, setDisplayGems] = useState(gems)
   const [displayPacks, setDisplayPacks] = useState(packsAvailable)
@@ -58,6 +59,13 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   }, [])
 
   useEffect(() => { fetchBadge() }, [fetchBadge])
+
+  useEffect(() => {
+    const standalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      ('standalone' in window.navigator && (window.navigator as { standalone?: boolean }).standalone === true)
+    if (!standalone) setShowInstallEntry(true)
+  }, [])
 
   useEffect(() => {
     window.addEventListener('tavern-daily-completed', fetchBadge)
@@ -377,6 +385,22 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
                 </Link>
               )
             })}
+            {showInstallEntry && (
+              <button
+                onClick={() => {
+                  setMenuOpen(false)
+                  window.dispatchEvent(new CustomEvent('pwa-install-request'))
+                }}
+                className="w-full flex items-center gap-3 px-5 py-3.5"
+                style={{ color: '#a0a09a', background: 'none', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.09)', cursor: 'pointer' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2v13M8 11l4 4 4-4"/>
+                  <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+                </svg>
+                <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem' }}>Install App</span>
+              </button>
+            )}
             <button
               onClick={signOut}
               className="w-full flex items-center gap-3 px-5 py-3.5"

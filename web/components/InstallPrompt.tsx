@@ -7,14 +7,28 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+const SNOOZE_KEY = 'pwa-snooze-until'
+const SNOOZE_MS = 3 * 24 * 60 * 60 * 1000
+
+function isSnoozed() {
+  const until = localStorage.getItem(SNOOZE_KEY)
+  return until ? Date.now() < parseInt(until, 10) : false
+}
+
+function snooze() {
+  localStorage.setItem(SNOOZE_KEY, String(Date.now() + SNOOZE_MS))
+}
+
+function permanentlyDismiss() {
+  localStorage.setItem(SNOOZE_KEY, String(Date.now() + 365 * 24 * 60 * 60 * 1000))
+}
+
 export default function InstallPrompt() {
   const [show, setShow] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
 
   useEffect(() => {
-    if (localStorage.getItem('pwa-prompt-dismissed')) return
-
     const standalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       ('standalone' in window.navigator && (window.navigator as { standalone?: boolean }).standalone === true)
@@ -23,22 +37,37 @@ export default function InstallPrompt() {
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window)
     setIsIOS(ios)
 
-    if (ios) {
-      const timer = setTimeout(() => setShow(true), 4000)
-      return () => clearTimeout(timer)
+    function tryShow() {
+      if (!isSnoozed()) setShow(true)
     }
 
-    function handlePrompt(e: Event) {
-      e.preventDefault()
-      setDeferredPrompt(e as BeforeInstallPromptEvent)
+    function handleRequest() {
       setShow(true)
     }
-    window.addEventListener('beforeinstallprompt', handlePrompt)
-    return () => window.removeEventListener('beforeinstallprompt', handlePrompt)
+    window.addEventListener('pwa-install-request', handleRequest)
+
+    let cleanup: (() => void) | undefined
+    if (ios) {
+      const timer = setTimeout(tryShow, 4000)
+      cleanup = () => clearTimeout(timer)
+    } else {
+      function handlePrompt(e: Event) {
+        e.preventDefault()
+        setDeferredPrompt(e as BeforeInstallPromptEvent)
+        tryShow()
+      }
+      window.addEventListener('beforeinstallprompt', handlePrompt)
+      cleanup = () => window.removeEventListener('beforeinstallprompt', handlePrompt)
+    }
+
+    return () => {
+      cleanup?.()
+      window.removeEventListener('pwa-install-request', handleRequest)
+    }
   }, [])
 
   function dismiss() {
-    localStorage.setItem('pwa-prompt-dismissed', '1')
+    snooze()
     setShow(false)
   }
 
@@ -46,7 +75,7 @@ export default function InstallPrompt() {
     if (!deferredPrompt) return
     await deferredPrompt.prompt()
     const { outcome } = await deferredPrompt.userChoice
-    if (outcome === 'accepted') localStorage.setItem('pwa-prompt-dismissed', '1')
+    if (outcome === 'accepted') permanentlyDismiss()
     setShow(false)
     setDeferredPrompt(null)
   }
@@ -59,59 +88,75 @@ export default function InstallPrompt() {
       style={{
         bottom: '76px',
         background: '#111110',
-        border: '1px solid rgba(240,192,64,0.2)',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
-        padding: '0.875rem 1rem',
+        border: '1px solid rgba(240,192,64,0.25)',
+        boxShadow: '0 4px 32px rgba(0,0,0,0.7)',
+        padding: '1rem',
       }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <span style={{ fontSize: '1.4rem', lineHeight: 1, marginTop: 1 }}>🐟</span>
-          <div>
-            <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#f0ede8', marginBottom: '0.2rem' }}>
-              Add to your home screen
-            </p>
-            {isIOS ? (
-              <p className="font-karla" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.5 }}>
-                Tap{' '}
-                <span style={{ color: '#a0a09a' }}>
-                  Share{' '}
-                  <svg style={{ display: 'inline', verticalAlign: 'middle', marginTop: -2 }} width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <div className="flex items-start gap-3">
+        <span style={{ fontSize: '1.4rem', lineHeight: 1, marginTop: 2, flexShrink: 0 }}>🐟</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#f0ede8', marginBottom: '0.5rem' }}>
+            Add to your home screen
+          </p>
+          {isIOS ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                <span style={{
+                  width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                  background: 'rgba(240,192,64,0.15)', border: '1px solid rgba(240,192,64,0.35)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#f0c040' }}>1</span>
+                </span>
+                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a0a09a', lineHeight: 1.45 }}>
+                  Tap the{' '}
+                  <span style={{ color: '#f0c040', fontWeight: 600 }}>Share</span>{' '}
+                  <svg style={{ display: 'inline', verticalAlign: 'middle', marginBottom: 1 }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
                     <polyline points="16 6 12 2 8 6"/>
                     <line x1="12" y1="2" x2="12" y2="15"/>
-                  </svg>
+                  </svg>{' '}
+                  button at the bottom of Safari
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                <span style={{
+                  width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                  background: 'rgba(240,192,64,0.15)', border: '1px solid rgba(240,192,64,0.35)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#f0c040' }}>2</span>
                 </span>
-                {' '}then{' '}
-                <span style={{ color: '#a0a09a' }}>Add to Home Screen</span>
-              </p>
-            ) : (
-              <p className="font-karla" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
-                Play full-screen, no browser chrome
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {!isIOS && (
-            <button
-              onClick={install}
-              className="font-karla font-600 uppercase tracking-[0.1em]"
-              style={{ fontSize: '0.62rem', color: '#f0c040', background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.25)', borderRadius: 8, padding: '0.35rem 0.7rem', cursor: 'pointer' }}
-            >
-              Install
-            </button>
+                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a0a09a', lineHeight: 1.45 }}>
+                  Tap <span style={{ color: '#f0c040', fontWeight: 600 }}>Add to Home Screen</span>
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="font-karla" style={{ fontSize: '0.7rem', color: '#6a6764', lineHeight: 1.5 }}>
+              Play full-screen, no browser chrome
+            </p>
           )}
-          <button
-            onClick={dismiss}
-            style={{ background: 'none', border: 'none', color: '#4a4845', cursor: 'pointer', padding: '0.25rem', lineHeight: 1 }}
-            aria-label="Dismiss"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+
+          <div className="flex items-center gap-2 mt-3">
+            {!isIOS && (
+              <button
+                onClick={install}
+                className="font-karla font-700 uppercase tracking-[0.1em]"
+                style={{ fontSize: '0.62rem', color: '#f0c040', background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.3)', borderRadius: 8, padding: '0.4rem 0.85rem', cursor: 'pointer' }}
+              >
+                Install
+              </button>
+            )}
+            <button
+              onClick={dismiss}
+              className="font-karla font-400"
+              style={{ fontSize: '0.62rem', color: '#4a4845', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem 0.5rem' }}
+            >
+              Not now
+            </button>
+          </div>
         </div>
       </div>
     </div>
