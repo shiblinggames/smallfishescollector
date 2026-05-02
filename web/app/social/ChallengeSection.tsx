@@ -220,10 +220,11 @@ export default function ChallengeSection({ challenges, wlRecord, myDoubloons, my
   const outgoing = challenges.filter(c => !c.isIncoming && c.status === 'pending')
   const myTurn = challenges.filter(c => c.isIncoming && c.status === 'challenger_done')
   const active = challenges.filter(c =>
+    c.status === 'both_active' ||
     (c.isIncoming && c.status === 'challenged_active') ||
     (!c.isIncoming && c.status === 'challenger_active')
   )
-  const readyToStart = challenges.filter(c => c.isIncoming && c.status === 'challenger_done')
+  const readyToStart = challenges.filter(c => c.isIncoming && (c.status === 'challenger_done' || c.status === 'challenger_active'))
   const complete = challenges.filter(c => c.status === 'complete')
 
   const pendingCount = incoming.filter(c => c.status === 'pending').length + myTurn.length
@@ -345,9 +346,19 @@ export default function ChallengeSection({ challenges, wlRecord, myDoubloons, my
                 <p className="font-karla font-700 mb-0.5" style={{ fontSize: '0.8rem', color: '#f0ede8' }}>
                   vs {c.challengerUsername}
                 </p>
-                <p className="font-karla font-400 mb-3" style={{ fontSize: '0.65rem', color: '#6a6764' }}>
+                <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: '#6a6764' }}>
                   {durationLabel(c.durationSeconds)} · {typeLabel(c.challengeType)}{c.wager > 0 ? ` · ${c.wager} ⟡` : ''}
                 </p>
+                {c.status === 'challenger_active' && (
+                  <p className="font-karla font-600 mb-3" style={{ fontSize: '0.6rem', color: '#fb923c', marginTop: 4 }}>
+                    🎣 Challenger is fishing now — start simultaneously
+                  </p>
+                )}
+                {c.status === 'challenger_done' && (
+                  <p className="font-karla font-600 mb-3" style={{ fontSize: '0.6rem', color: '#9ca3af', marginTop: 4 }}>
+                    Challenger finished — now it&apos;s your turn
+                  </p>
+                )}
                 <BaitWarning myBait={myBait} />
                 <button
                   onClick={() => handleStart(c.id)}

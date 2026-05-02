@@ -8,6 +8,7 @@ export type ChallengeStatus =
   | 'pending'
   | 'challenger_active'
   | 'challenger_done'
+  | 'both_active'
   | 'challenged_active'
   | 'complete'
   | 'expired'
@@ -159,14 +160,16 @@ export async function startSession(challengeId: string): Promise<{ endsAt: strin
 
   // Challenger can start from 'pending', challenged can start once challenger is done
   if (isChallenger && challenge.status !== 'pending') return { error: 'Cannot start session now' }
-  if (isChallenged && challenge.status !== 'challenger_done') return { error: 'Wait for challenger to finish first' }
+  if (isChallenged && challenge.status !== 'challenger_done' && challenge.status !== 'challenger_active') return { error: 'Cannot start session now' }
 
   const now = new Date().toISOString()
   const endsAt = new Date(Date.now() + challenge.duration_seconds * 1000).toISOString()
 
   const update = isChallenger
     ? { status: 'challenger_active', challenger_started_at: now }
-    : { status: 'challenged_active', challenged_started_at: now }
+    : challenge.status === 'challenger_active'
+      ? { status: 'both_active', challenged_started_at: now }
+      : { status: 'challenged_active', challenged_started_at: now }
 
   await admin.from('fishing_challenges').update(update).eq('id', challengeId)
   return { endsAt }
@@ -191,6 +194,15 @@ export async function finishSession(challengeId: string): Promise<{ success: tru
   if (isChallenger && challenge.status === 'challenger_active') {
     await admin.from('fishing_challenges').update({
       status: 'challenger_done',
+      challenger_finished_at: now,
+    }).eq('id', challengeId)
+    return { success: true }
+  }
+
+  if (isChallenger && challenge.status === 'both_active') {
+    // Challenger finishes while challenged is also active — challenged keeps running
+    await admin.from('fishing_challenges').update({
+      status: 'challenged_active',
       challenger_finished_at: now,
     }).eq('id', challengeId)
     return { success: true }
@@ -230,6 +242,38 @@ export async function finishSession(challengeId: string): Promise<{ success: tru
     return { success: true }
   }
 
+  if (isChallenged && challenge.status === 'both_active') {
+    // Challenged finishes while challenger is also still active (or already finished) — determine winner
+    const cScore = challenge.challenger_score
+    const dScore = challenge.challenged_score
+    const winnerId = cScore > dScore ? challenge.challenger_id : dScore > cScore ? challenge.challenged_id : null
+
+    await admin.from('fishing_challenges').update({
+      status: 'complete',
+      challenged_finished_at: now,
+      winner_id: winnerId,
+    }).eq('id', challengeId)
+
+    if (challenge.wager > 0 && winnerId) {
+      const payout = challenge.wager * 2
+      const { data: winnerProfile } = await admin.from('profiles').select('doubloons').eq('id', winnerId).single()
+      if (winnerProfile) {
+        await admin.from('profiles').update({ doubloons: (winnerProfile.doubloons ?? 0) + payout }).eq('id', winnerId)
+      }
+    } else if (challenge.wager > 0 && !winnerId) {
+      const [{ data: cp }, { data: dp }] = await Promise.all([
+        admin.from('profiles').select('doubloons').eq('id', challenge.challenger_id).single(),
+        admin.from('profiles').select('doubloons').eq('id', challenge.challenged_id).single(),
+      ])
+      await Promise.all([
+        cp && admin.from('profiles').update({ doubloons: (cp.doubloons ?? 0) + challenge.wager }).eq('id', challenge.challenger_id),
+        dp && admin.from('profiles').update({ doubloons: (dp.doubloons ?? 0) + challenge.wager }).eq('id', challenge.challenged_id),
+      ])
+    }
+
+    return { success: true }
+  }
+
   return { error: 'No active session to finish' }
 }
 
@@ -245,7 +289,7 @@ export async function recordChallengeScore(
     .from('fishing_challenges')
     .select('*')
     .or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`)
-    .in('status', ['challenger_active', 'challenged_active'])
+    .in('status', ['challenger_active', 'challenged_active', 'both_active'])
     .maybeSingle()
 
   if (!challenge) return
@@ -290,7 +334,7 @@ export async function getActiveChallengeSession(): Promise<ActiveSession | null>
     .from('fishing_challenges')
     .select('*')
     .or(`challenger_id.eq.${user.id},challenged_id.eq.${user.id}`)
-    .in('status', ['challenger_active', 'challenged_active'])
+    .in('status', ['challenger_active', 'challenged_active', 'both_active'])
     .maybeSingle()
 
   if (!data) return null

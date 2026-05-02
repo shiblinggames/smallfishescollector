@@ -50,7 +50,7 @@ export default function SocialClient({ initialCrew, username, newFollowers: init
   const router = useRouter()
   const activeOpponents = new Set(
     initialChallenges
-      .filter(c => ['pending', 'challenger_active', 'challenger_done', 'challenged_active'].includes(c.status))
+      .filter(c => ['pending', 'challenger_active', 'challenger_done', 'both_active', 'challenged_active'].includes(c.status))
       .map(c => c.isIncoming ? c.challengerUsername : c.challengedUsername)
   )
   const [crew, setCrew] = useState<CrewMember[]>(initialCrew)
