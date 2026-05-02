@@ -230,7 +230,7 @@ export async function submitFishGuess(guessName: string): Promise<{
       const bonus = milestoneBonus(newStreak)
       const newGems = (profile.gems ?? 0) + guessGems + bonus
 
-      const writes: Promise<unknown>[] = [
+      const writes: PromiseLike<unknown>[] = [
         admin.from('profiles').update({
           gems: newGems,
           fotd_streak: newStreak,
