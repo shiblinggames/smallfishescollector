@@ -410,3 +410,25 @@ export async function markFishingCatchTourSeen(): Promise<void> {
   await createAdminClient().from('profiles').update({ has_seen_fishing_catch_tour: true }).eq('id', user.id)
 }
 
+export async function checkLeaderboardPosition(
+  category: 'fishingLevel' | 'perfectStreak',
+): Promise<{ position: number } | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const admin = createAdminClient()
+  const field = category === 'fishingLevel' ? 'fishing_xp' : 'highest_perfect_streak'
+
+  const { data: me } = await admin.from('profiles').select(field).eq('id', user.id).single()
+  if (!me) return null
+
+  const myValue = (me as Record<string, number>)[field] ?? 0
+  const { count } = await admin.from('profiles')
+    .select('*', { count: 'exact', head: true })
+    .gt(field, myValue)
+
+  if (count !== null && count < 3) return { position: count + 1 }
+  return null
+}
+

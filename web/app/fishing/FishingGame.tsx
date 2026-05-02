@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, type FishSpecies, type FishingBountyCompletion } from './actions'
+import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import { finishSession, type ActiveSession } from '@/app/social/challengeActions'
 import { equipRod } from '@/app/marketplace/tackle-shop/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
@@ -1180,6 +1181,7 @@ export default function FishingGame({
   const [fishingXP, setFishingXP]   = useState(initialFishingXP)
   const [xpPopup, setXpPopup]       = useState<{ value: number; id: number } | null>(null)
   const [levelUpNotif, setLevelUpNotif] = useState<number | null>(null)
+  const [podiumNotif, setPodiumNotif] = useState<PodiumNotif | null>(null)
   const [, startTransition]         = useTransition()
 
   // ── Challenge session ───────────────────────────────────────────────────
@@ -1499,6 +1501,9 @@ export default function FishingGame({
             setHighestPerfectStreak(newStreak)
             setNewStreakRecord(newStreak)
             startTransition(() => { saveHighestPerfectStreak(newStreak) })
+            checkLeaderboardPosition('perfectStreak').then(r => {
+              if (r) setPodiumNotif({ category: 'Perfect Streak', position: r.position })
+            }).catch(() => {})
           }
         }
         setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge, perfectStreak: newStreak, streakBonusXP, jackpotMultiplier: jackpotMultiplier > 1 ? jackpotMultiplier : undefined })
@@ -1541,7 +1546,12 @@ export default function FishingGame({
         const newLevel = getLevelFromXP(newXP)
         setFishingXP(newXP)
         setXpPopup({ value: xpGained, id: Date.now() })
-        if (newLevel > oldLevel) setLevelUpNotif(newLevel)
+        if (newLevel > oldLevel) {
+          setLevelUpNotif(newLevel)
+          checkLeaderboardPosition('fishingLevel').then(r => {
+            if (r) setPodiumNotif({ category: 'Fishing Level', position: r.position })
+          }).catch(() => {})
+        }
         setInventory(prev => {
           const existing = prev.find(i => i.fish_id === fish.id)
           const addQty = doubleCatch ? 2 : jackpotMultiplier
@@ -2691,6 +2701,8 @@ export default function FishingGame({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <PodiumToast notif={podiumNotif} onDone={() => setPodiumNotif(null)} />
 
       {/* ── Fish Hold drawer ── */}
       <AnimatePresence>
