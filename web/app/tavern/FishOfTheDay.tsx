@@ -267,7 +267,7 @@ export default function FishOfTheDay({
               onChange={e => handleSearchChange(e.target.value)}
               onFocus={() => search.length > 0 && setShowDropdown(true)}
               className="sg-input"
-              style={{ borderRadius: '10px', fontSize: '0.875rem' }}
+              style={{ borderRadius: '10px', fontSize: '1rem' }}
               autoComplete="off"
             />
 
