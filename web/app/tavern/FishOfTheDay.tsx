@@ -149,7 +149,7 @@ export default function FishOfTheDay({
                style={{ fontSize: '0.58rem' }}>
               Clue {i + 1}
             </p>
-            <p className="font-karla text-[#f0ede8]" style={{ fontSize: '0.875rem', lineHeight: 1.55 }}>
+            <p className="font-karla text-[#f0ede8]" style={{ fontSize: '1rem', lineHeight: 1.6 }}>
               {clue}
             </p>
           </div>
@@ -194,7 +194,7 @@ export default function FishOfTheDay({
                   <span style={{ color: isCorrect ? '#f0c040' : '#f87171', fontSize: '0.8rem', width: '1rem', flexShrink: 0 }}>
                     {isCorrect ? '✓' : '✗'}
                   </span>
-                  <span className="font-karla" style={{ fontSize: '0.875rem', color: isCorrect ? '#f0c040' : '#6a6764' }}>
+                  <span className="font-karla" style={{ fontSize: '0.9rem', color: isCorrect ? '#f0c040' : '#c8c4bc' }}>
                     {g}
                   </span>
                 </div>
@@ -217,19 +217,19 @@ export default function FishOfTheDay({
                           }}
                         >
                           <span style={{
-                            fontSize: '0.5rem',
+                            fontSize: '0.58rem',
                             fontFamily: 'var(--font-karla)',
                             fontWeight: 600,
                             textTransform: 'uppercase',
                             letterSpacing: '0.1em',
-                            color: match ? '#34d399' : '#6a6764',
+                            color: match ? '#34d399' : '#9a9488',
                           }}>
                             {label}
                           </span>
                           <span style={{
-                            fontSize: '0.65rem',
+                            fontSize: '0.75rem',
                             fontFamily: 'var(--font-karla)',
-                            color: match ? '#34d399' : '#a0a09a',
+                            color: match ? '#34d399' : '#c8c4bc',
                             marginTop: '0.1rem',
                           }}>
                             {capitalize(value)}
@@ -366,7 +366,7 @@ function AnswerCard({ answer, solved, gemsAwarded, streak, milestoneReward }: {
             {answer.scientific_name}
           </p>
         )}
-        <p className="font-karla" style={{ color: '#c8c4bc', fontSize: '0.82rem', lineHeight: 1.6 }}>
+        <p className="font-karla" style={{ color: '#e8e4de', fontSize: '0.9rem', lineHeight: 1.65 }}>
           {answer.fun_fact}
         </p>
         {solved && gemsAwarded > 0 && (
@@ -394,10 +394,10 @@ function AnswerCard({ answer, solved, gemsAwarded, streak, milestoneReward }: {
                 borderBottom: '1px solid rgba(255,255,255,0.08)',
               }}
             >
-              <p className="font-karla font-600 uppercase tracking-[0.10em] shrink-0" style={{ fontSize: '0.58rem', color: '#6a6764', width: 80, paddingTop: 2 }}>
+              <p className="font-karla font-600 uppercase tracking-[0.10em] shrink-0" style={{ fontSize: '0.6rem', color: '#9a9488', width: 80, paddingTop: 2 }}>
                 {label}
               </p>
-              <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a0a09a', lineHeight: 1.5 }}>
+              <p className="font-karla" style={{ fontSize: '0.82rem', color: '#c8c4bc', lineHeight: 1.55 }}>
                 {val}
               </p>
             </div>
