@@ -79,7 +79,7 @@ export default function ClaimContent() {
           Packs waiting for you
         </p>
         <p className="font-karla font-400 text-[#a0a09a] text-sm leading-relaxed">
-          Sign in to claim your booster packs.
+          Sign in to claim your Crew Notices.
           {emailParam && (
             <><br /><span className="text-[#6a6764]">Use the account for </span>
             <span className="text-[#f0ede8]">{emailParam}</span></>
@@ -96,11 +96,11 @@ export default function ClaimContent() {
     return (
       <div className="sg-card p-8 space-y-6 text-center">
         <div className="border border-[rgba(240,192,64,0.38)] bg-[rgba(240,192,64,0.06)] px-4 py-5 space-y-1">
-          <p className="font-cinzel font-700 text-[#f0c040] text-lg">✦ {packs} Pack{packs !== 1 ? 's' : ''} Added</p>
-          <p className="font-karla font-300 text-[#a0a09a] text-xs tracking-wide">Ready to open in your account</p>
+          <p className="font-cinzel font-700 text-[#f0c040] text-lg">✦ {packs} Crew Notice{packs !== 1 ? 's' : ''} Added</p>
+          <p className="font-karla font-300 text-[#a0a09a] text-xs tracking-wide">Ready to recruit from your account</p>
         </div>
         <button onClick={() => router.push('/packs')} className="btn-ghost w-full">
-          Open Packs
+          Recruit Crew
         </button>
       </div>
     )

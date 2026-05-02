@@ -5,7 +5,7 @@ export default function ClaimPage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
-        <p className="sg-eyebrow text-center mb-4">Booster Packs</p>
+        <p className="sg-eyebrow text-center mb-4">Crew Notices</p>
         <h1 className="font-cinzel font-700 text-[#f0ede8] text-center leading-[0.92] tracking-[-0.01em] mb-10"
             style={{ fontSize: 'clamp(2rem, 5vw, 3rem)' }}>
           Claim.
