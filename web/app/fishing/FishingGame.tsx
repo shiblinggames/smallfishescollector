@@ -1995,9 +1995,11 @@ export default function FishingGame({
                         style={{ fontSize: '1rem', color: missResult === 'penalty' ? '#f87171' : '#64748b' }}>
                         {missResult === 'penalty' ? 'Snagged!' : 'No catch'}
                       </p>
-                      <p className="font-karla font-400" style={{ fontSize: '0.75rem', color: missResult === 'penalty' ? '#fca5a5' : '#94a3b8' }}>
-                        The fish slipped away.
-                      </p>
+                      {missResult !== 'penalty' && (
+                        <p className="font-karla font-400" style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                          The fish slipped away.
+                        </p>
+                      )}
                     </motion.div>
                   )}
 
