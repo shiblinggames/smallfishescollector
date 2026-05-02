@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { addCrewMember, removeCrewMember } from '@/app/social/actions'
@@ -92,6 +92,7 @@ function cardTransform(off: number): { tx: number; tz: number; ry: number; scale
 function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   const [active, setActive] = useState(0)
   const total = variants.length
+  const touchStartX = useRef<number | null>(null)
 
   function prev() { setActive(i => (i - 1 + total) % total) }
   function next() { setActive(i => (i + 1) % total) }
@@ -101,16 +102,24 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
 
   return (
     <div>
-      {/* Section header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Crew</p>
-        {isActiveCaptain && (
-          <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#f0c04077' }}>⚓ Captain</span>
-        )}
-      </div>
+      {isActiveCaptain && (
+        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+          <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#f0c04066' }}>⚓ Captain</span>
+        </div>
+      )}
 
-      {/* 3D stage */}
-      <div style={{ position: 'relative', height: 210, perspective: '800px', overflow: 'visible' }}>
+      {/* 3D stage — touch-swipeable */}
+      <div
+        style={{ position: 'relative', height: 210, perspective: '800px', overflow: 'visible' }}
+        onTouchStart={e => { touchStartX.current = e.touches[0].clientX }}
+        onTouchEnd={e => {
+          if (touchStartX.current === null || total <= 1) return
+          const dx = e.changedTouches[0].clientX - touchStartX.current
+          if (dx > 40) prev()
+          else if (dx < -40) next()
+          touchStartX.current = null
+        }}
+      >
         {variants.map((cv, idx) => {
           const off = getOff(idx, active, total)
           if (Math.abs(off) > 2) return null
@@ -243,122 +252,120 @@ export default function ProfileClient({ username, showcaseVariants, stats, gear,
         </div>
       </div>
 
-      {/* ── Stats row ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-        {[
-          { value: `Lv ${fishingLevel}`, label: 'Fishing' },
-          { value: stats.packsOpened.toLocaleString(), label: 'Packs' },
-          { value: stats.uniqueSpecies.toLocaleString(), label: 'Species' },
-        ].map(({ value, label }) => (
-          <div key={label} style={{
-            background: 'rgba(4,10,20,0.7)', border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 12, padding: '0.75rem 0.5rem', textAlign: 'center',
-          }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1 }}>{value}</p>
-            <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.42rem', color: '#4a4845', marginTop: 5 }}>{label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Crew carousel ── */}
-      {variants.length > 0 && <CrewCarousel variants={variants} />}
-
-      {/* ── Fishing ── */}
-      {(stats.highestPerfectStreak > 0 || rarestFish.length > 0) && (
+      {/* ── Crew ── */}
+      {(variants.length > 0 || stats.packsOpened > 0) && (
         <div>
-          <SectionLabel>Fishing</SectionLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {stats.highestPerfectStreak > 0 && (
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                background: 'rgba(4,10,20,0.7)', border: '1px solid rgba(251,146,60,0.2)',
-                borderRadius: 12, padding: '0.8rem 1rem',
-              }}>
-                <div>
-                  <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#fb923c88', marginBottom: 4 }}>Best Perfect Streak</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#fb923c', lineHeight: 1 }}>{stats.highestPerfectStreak}×</p>
-                </div>
-                <img src="/models/hooks/gold-hook.png" alt="" style={{ width: 28, height: 28, objectFit: 'contain', opacity: 0.5 }} />
-              </div>
-            )}
-            {rarestFish.length > 0 && (
-              <div>
-                <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#6a6764', marginBottom: 8 }}>Rarest Catches</p>
-                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rarestFish.length}, 1fr)`, gap: 8 }}>
-                  {rarestFish.map(fish => {
-                    const c = RARITY_COLOR[fish.bite_rarity]
-                    return (
-                      <div key={fish.id} style={{
-                        background: `${c}0a`, border: `1px solid ${c}35`,
-                        borderRadius: 12, padding: '0.75rem 0.5rem',
-                        textAlign: 'center', boxShadow: `0 0 16px ${c}18`,
-                      }}>
-                        <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 6 }}>
-                          <img
-                            src={fishImageUrl(fish.name)}
-                            alt={fish.name}
-                            style={{ maxWidth: 52, maxHeight: 52, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${c}55)` }}
-                            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                          />
-                        </div>
-                        <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#f0ede8', marginBottom: 5, lineHeight: 1.2 }}>{fish.name}</p>
-                        <span style={{
-                          fontSize: '0.45rem', padding: '0.12rem 0.4rem', borderRadius: '2rem',
-                          background: `${c}14`, border: `1px solid ${c}35`, color: c,
-                          fontFamily: 'var(--font-karla)', fontWeight: 600,
-                          textTransform: 'uppercase', letterSpacing: '0.1em',
-                        }}>
-                          {RARITY_LABEL[fish.bite_rarity] ?? 'Unknown'}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Crew</p>
+            {stats.packsOpened > 0 && (
+              <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#4a4845' }}>
+                {stats.packsOpened.toLocaleString()} packs opened
+              </p>
             )}
           </div>
+          {variants.length > 0 && <CrewCarousel variants={variants} />}
         </div>
       )}
 
-      {/* ── Gear ── */}
+      {/* ── Fishing ── */}
       <div>
-        <SectionLabel>Equipment</SectionLabel>
+        <SectionLabel>Fishing</SectionLabel>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {/* 4-item row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+
+          {/* Stats row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
             {[
-              { label: 'Rod',  color: rod.color,  name: rod.name,  img: '/rod.png' },
-              { label: 'Hook', color: hook.color, name: hook.name, img: hook.imageUrl ?? null },
-              { label: 'Reel', color: reel.color, name: reel.name, img: null },
-              { label: 'Line', color: line.color, name: line.name, img: null },
-            ].map(({ label, color, name, img }) => (
+              { value: `Lv ${fishingLevel}`, label: 'Level' },
+              { value: stats.uniqueSpecies.toLocaleString(), label: 'Species' },
+              { value: stats.highestPerfectStreak > 0 ? `${stats.highestPerfectStreak}×` : '—', label: 'Best Streak' },
+            ].map(({ value, label }) => (
               <div key={label} style={{
-                background: 'rgba(4,10,20,0.7)', border: `1px solid ${color}30`,
-                borderRadius: 10, padding: '0.55rem 0.4rem', textAlign: 'center',
+                background: 'rgba(4,10,20,0.7)', border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 12, padding: '0.75rem 0.5rem', textAlign: 'center',
               }}>
-                <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 5 }}>
-                  {img
-                    ? <img src={img} alt={label} style={{ width: 24, height: 24, objectFit: 'contain', filter: `drop-shadow(0 1px 4px ${color}55)` }} />
-                    : <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, opacity: 0.6 }} />
-                  }
-                </div>
-                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.4rem', color: color + '88', marginBottom: 2 }}>{label}</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.52rem', color: '#a0a09a', lineHeight: 1.2 }}>{name}</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1 }}>{value}</p>
+                <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.42rem', color: '#4a4845', marginTop: 5 }}>{label}</p>
               </div>
             ))}
           </div>
-          {/* Ship — full width */}
-          <div style={{
-            background: 'rgba(4,10,20,0.7)', border: `1px solid ${ship.color}30`,
-            borderRadius: 10, padding: '0.65rem 1rem',
-            display: 'flex', alignItems: 'center', gap: 12,
-          }}>
-            <img src={ship.imageUrl} alt={ship.name} style={{ width: 44, height: 36, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${ship.color}44)` }} />
-            <div>
-              <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: ship.color + '88', marginBottom: 3 }}>Ship</p>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: ship.color }}>{ship.name}</p>
+
+          {/* Rarest Catches */}
+          {rarestFish.length > 0 && (
+            <div style={{ marginTop: 4 }}>
+              <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#6a6764', marginBottom: 8 }}>Rarest Catches</p>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rarestFish.length}, 1fr)`, gap: 8 }}>
+                {rarestFish.map(fish => {
+                  const c = RARITY_COLOR[fish.bite_rarity]
+                  return (
+                    <div key={fish.id} style={{
+                      background: `${c}0a`, border: `1px solid ${c}35`,
+                      borderRadius: 12, padding: '0.75rem 0.5rem',
+                      textAlign: 'center', boxShadow: `0 0 16px ${c}18`,
+                    }}>
+                      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 6 }}>
+                        <img
+                          src={fishImageUrl(fish.name)}
+                          alt={fish.name}
+                          style={{ maxWidth: 52, maxHeight: 52, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${c}55)` }}
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                        />
+                      </div>
+                      <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#f0ede8', marginBottom: 5, lineHeight: 1.2 }}>{fish.name}</p>
+                      <span style={{
+                        fontSize: '0.45rem', padding: '0.12rem 0.4rem', borderRadius: '2rem',
+                        background: `${c}14`, border: `1px solid ${c}35`, color: c,
+                        fontFamily: 'var(--font-karla)', fontWeight: 600,
+                        textTransform: 'uppercase', letterSpacing: '0.1em',
+                      }}>
+                        {RARITY_LABEL[fish.bite_rarity] ?? 'Unknown'}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Equipment */}
+          <div style={{ marginTop: 4 }}>
+            <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#6a6764', marginBottom: 8 }}>Equipment</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {[
+                  { label: 'Rod',  color: rod.color,  name: rod.name,  img: '/rod.png' },
+                  { label: 'Hook', color: hook.color, name: hook.name, img: hook.imageUrl ?? null },
+                  { label: 'Reel', color: reel.color, name: reel.name, img: null },
+                  { label: 'Line', color: line.color, name: line.name, img: null },
+                ].map(({ label, color, name, img }) => (
+                  <div key={label} style={{
+                    background: 'rgba(4,10,20,0.7)', border: `1px solid ${color}30`,
+                    borderRadius: 10, padding: '0.55rem 0.4rem', textAlign: 'center',
+                  }}>
+                    <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 5 }}>
+                      {img
+                        ? <img src={img} alt={label} style={{ width: 24, height: 24, objectFit: 'contain', filter: `drop-shadow(0 1px 4px ${color}55)` }} />
+                        : <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, opacity: 0.6 }} />
+                      }
+                    </div>
+                    <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.4rem', color: color + '88', marginBottom: 2 }}>{label}</p>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.52rem', color: '#a0a09a', lineHeight: 1.2 }}>{name}</p>
+                  </div>
+                ))}
+              </div>
+              <div style={{
+                background: 'rgba(4,10,20,0.7)', border: `1px solid ${ship.color}30`,
+                borderRadius: 10, padding: '0.65rem 1rem',
+                display: 'flex', alignItems: 'center', gap: 12,
+              }}>
+                <img src={ship.imageUrl} alt={ship.name} style={{ width: 44, height: 36, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${ship.color}44)` }} />
+                <div>
+                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: ship.color + '88', marginBottom: 3 }}>Ship</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: ship.color }}>{ship.name}</p>
+                </div>
+              </div>
             </div>
           </div>
+
         </div>
       </div>
 
