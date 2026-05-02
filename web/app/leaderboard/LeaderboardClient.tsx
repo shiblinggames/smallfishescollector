@@ -194,23 +194,33 @@ export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, m
   return (
     <div style={{ paddingBottom: '2rem' }}>
 
-      {/* ── Filter pills ── */}
-      <div className="flex gap-2 mb-8">
+      {/* ── Tabs ── */}
+      <div
+        className="flex mb-8"
+        style={{
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 14,
+          padding: 4,
+          gap: 4,
+        }}
+      >
         {TABS.map(t => {
           const isActive = activeTab === t.key
           return (
             <button
               key={t.key}
               onClick={() => setActiveTab(t.key)}
-              className="flex-1 font-karla font-700 transition-all"
+              className="flex-1 font-karla font-700 uppercase tracking-[0.1em] transition-all"
               style={{
-                padding: '0.55rem 0.25rem',
+                padding: '0.65rem 0.5rem',
                 borderRadius: 10,
-                fontSize: '0.62rem',
-                background: isActive ? `${t.accent}28` : 'rgba(4,10,20,0.55)',
-                border: `1px solid ${isActive ? t.accent + '80' : 'rgba(255,255,255,0.14)'}`,
-                color: isActive ? t.accent : '#7a7875',
+                fontSize: '0.6rem',
+                background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
+                border: `1px solid ${isActive ? 'rgba(255,255,255,0.18)' : 'transparent'}`,
+                color: isActive ? t.accent : '#9a9488',
                 cursor: 'pointer',
+                boxShadow: isActive ? '0 1px 6px rgba(0,0,0,0.4)' : 'none',
               }}
             >
               {t.label}
