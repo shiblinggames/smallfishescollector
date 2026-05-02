@@ -67,7 +67,18 @@ export async function getTodaysFishPuzzle(): Promise<GeneratedFish | null> {
 
   const { data: speciesRows } = await admin.from('fish_species').select('name').eq('fotd_eligible', true)
   const allNames = (speciesRows ?? []).map((r: { name: string }) => r.name)
-  const speciesList = [...allNames].sort(() => 0.5 - Math.random()).join('\n')
+
+  const windowStart = new Date(Date.now() - 54 * 86400000).toISOString().split('T')[0]
+  const { data: recentRows } = await admin
+    .from('daily_fish_generated')
+    .select('common_name')
+    .gte('date', windowStart)
+    .lt('date', today)
+
+  const recentNames = new Set((recentRows ?? []).map((r: { common_name: string }) => r.common_name))
+  const available = allNames.filter(n => !recentNames.has(n))
+  const pool = available.length > 0 ? available : allNames
+  const speciesList = [...pool].sort(() => 0.5 - Math.random()).join('\n')
 
   try {
     const message = await anthropic.messages.create({
