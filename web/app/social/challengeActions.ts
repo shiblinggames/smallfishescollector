@@ -266,12 +266,11 @@ export async function recordChallengeScore(
 
   if (increment === 0) return
 
-  const scoreField = isChallenger ? 'challenger_score' : 'challenged_score'
-  const currentScore = isChallenger ? challenge.challenger_score : challenge.challenged_score
-
-  await admin.from('fishing_challenges')
-    .update({ [scoreField]: currentScore + increment })
-    .eq('id', challenge.id)
+  await admin.rpc('increment_challenge_score', {
+    p_challenge_id: challenge.id,
+    p_is_challenger: isChallenger,
+    p_increment: increment,
+  })
 }
 
 export interface ActiveSession {
