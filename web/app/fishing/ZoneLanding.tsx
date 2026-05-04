@@ -39,10 +39,17 @@ const ZONE_DIFFICULTY: Record<string, number> = {
 }
 
 const ZONE_CONDITIONS: Record<string, string[]> = {
-  shallows:    ['Steady, easy to time', 'Wider catch window', 'No reversals'],
-  open_waters: ['Occasional speed changes', 'Mild currents', 'Rare direction reversals'],
-  deep:        ['Frequent speed changes', 'Dial reverses direction', 'Tighter catch window'],
-  abyss:       ['Erratic, hard to time', 'Constant reversals', 'Smallest catch window'],
+  shallows:    ['No reversals', 'Widest window'],
+  open_waters: ['Rare reversals', 'Moderate window'],
+  deep:        ['Frequent reversals', 'Tight window'],
+  abyss:       ['Constant reversals', 'Narrowest window'],
+}
+
+const ZONE_STATS: Record<string, { topFish: string; topSell: number; legendaryChance: string; sellRange: string }> = {
+  shallows:    { topFish: 'Arapaima',               topSell: 360,  legendaryChance: '1%',  sellRange: '10–360' },
+  open_waters: { topFish: 'Atlantic Bluefin Tuna',  topSell: 500,  legendaryChance: '1%',  sellRange: '20–500' },
+  deep:        { topFish: 'Giant Squid',             topSell: 680,  legendaryChance: '1%',  sellRange: '40–680' },
+  abyss:       { topFish: 'Coelacanth',              topSell: 1380, legendaryChance: '2%',  sellRange: '75–1,380' },
 }
 
 const HOW_IT_WORKS = [
@@ -194,71 +201,103 @@ export default function ZoneLanding({
               const color = HABITAT_COLOR[zone]
               const difficulty = ZONE_DIFFICULTY[zone]
               const conditions = ZONE_CONDITIONS[zone]
+              const stats = ZONE_STATS[zone]
+              const isRecommended = accessible && ZONES.filter(z => fishingLevel >= (ZONE_MIN_LEVEL[z] ?? 1)).slice(-1)[0] === zone
 
               return (
                 <motion.div key={zone}
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2, delay: i * 0.06 }}
+                  transition={{ duration: 0.22, delay: i * 0.07 }}
                   onClick={() => accessible && onSelect(zone)}
                   style={{
-                    border: `1px solid ${accessible ? color + 'aa' : 'rgba(255,255,255,0.18)'}`,
-                    background: accessible ? `${color}3a` : 'rgba(255,255,255,0.08)',
-                    borderRadius: 14,
-                    padding: '1rem 1rem 0.9rem',
-                    opacity: accessible ? 1 : 0.65,
+                    borderRadius: 16,
+                    border: `1px solid ${accessible ? color + '55' : 'rgba(255,255,255,0.1)'}`,
+                    borderLeft: `3px solid ${accessible ? color + 'cc' : 'rgba(255,255,255,0.15)'}`,
+                    background: accessible
+                      ? `linear-gradient(135deg, rgba(6,16,26,0.97) 0%, ${color}14 100%)`
+                      : 'rgba(255,255,255,0.04)',
+                    opacity: accessible ? 1 : 0.5,
                     cursor: accessible ? 'pointer' : 'default',
+                    overflow: 'hidden',
                   }}
                 >
-                  <div className="flex items-start justify-between mb-2.5">
-                    <div>
-                      <p className="font-cinzel font-700"
-                        style={{ fontSize: '1.05rem', color: accessible ? color : '#8a8784' }}>
-                        {HABITAT_LABEL[zone]}
-                      </p>
-                      <p className="font-karla font-400 mt-0.5"
-                        style={{ fontSize: '0.75rem', color: accessible ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)' }}>
-                        {HABITAT_TAGLINE[zone]}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5 shrink-0 ml-3">
-                      {/* Difficulty dots */}
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4].map(d => (
-                          <div key={d} style={{
-                            width: 7, height: 7, borderRadius: '50%',
-                            background: d <= difficulty
-                              ? (accessible ? color : '#5a5956')
-                              : 'rgba(255,255,255,0.12)',
-                          }} />
-                        ))}
+                  {/* Top section */}
+                  <div style={{ padding: '0.9rem 1rem 0.75rem' }}>
+                    <div className="flex items-start justify-between">
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="flex items-center gap-2">
+                          <p className="font-cinzel font-700"
+                            style={{ fontSize: '1.08rem', color: accessible ? color : '#4a4845', letterSpacing: '0.04em' }}>
+                            {HABITAT_LABEL[zone]}
+                          </p>
+                          {isRecommended && (
+                            <span className="font-karla font-700 uppercase tracking-[0.1em]"
+                              style={{
+                                fontSize: '0.42rem', color: color,
+                                background: `${color}1a`, border: `1px solid ${color}44`,
+                                padding: '0.18rem 0.5rem', borderRadius: '2rem', flexShrink: 0,
+                              }}>
+                              Recommended
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-karla font-300 italic mt-0.5"
+                          style={{ fontSize: '0.7rem', color: accessible ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)' }}>
+                          {HABITAT_TAGLINE[zone]}
+                        </p>
                       </div>
-                      {!accessible && (
-                        <span className="font-karla font-700 uppercase tracking-[0.1em]"
-                          style={{
-                            fontSize: '0.58rem', color: '#8a8784',
-                            background: 'rgba(255,255,255,0.08)',
-                            border: '1px solid rgba(255,255,255,0.18)',
-                            padding: '0.28rem 0.65rem', borderRadius: '2rem',
-                          }}>
-                          Lv {minLevel}
-                        </span>
-                      )}
+                      <div className="flex flex-col items-end gap-1.5 shrink-0 ml-3">
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4].map(d => (
+                            <div key={d} style={{
+                              width: 6, height: 6, borderRadius: '50%',
+                              background: d <= difficulty
+                                ? (accessible ? color : '#3a3835')
+                                : 'rgba(255,255,255,0.1)',
+                            }} />
+                          ))}
+                        </div>
+                        {!accessible && (
+                          <span className="font-karla font-700 uppercase tracking-[0.1em]"
+                            style={{
+                              fontSize: '0.5rem', color: '#5a5956',
+                              background: 'rgba(255,255,255,0.06)',
+                              border: '1px solid rgba(255,255,255,0.12)',
+                              padding: '0.22rem 0.55rem', borderRadius: '2rem',
+                            }}>
+                            Lv {minLevel}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Conditions */}
-                  <div className="flex flex-col gap-1">
-                    {conditions.map(cond => (
-                      <div key={cond} className="flex items-center gap-1.5">
-                        <div style={{ width: 3, height: 3, borderRadius: '50%', background: accessible ? color + 'aa' : '#3a3835', flexShrink: 0 }} />
-                        <p className="font-karla font-400"
-                          style={{ fontSize: '0.72rem', color: accessible ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.2)' }}>
-                          {cond}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                  {accessible && (<>
+                    {/* Stats row */}
+                    <div style={{ borderTop: `1px solid ${color}1a`, padding: '0.55rem 1rem', display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <span className="font-karla font-600 uppercase tracking-[0.08em]"
+                        style={{ fontSize: '0.5rem', color: `${color}cc`, background: `${color}18`, border: `1px solid ${color}30`, padding: '0.2rem 0.55rem', borderRadius: '2rem' }}>
+                        {stats.sellRange} ⟡
+                      </span>
+                      <span className="font-karla font-600 uppercase tracking-[0.08em]"
+                        style={{ fontSize: '0.5rem', color: 'rgba(245,158,11,0.8)', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.22)', padding: '0.2rem 0.55rem', borderRadius: '2rem' }}>
+                        Legendary {stats.legendaryChance}
+                      </span>
+                      {conditions.map(c => (
+                        <span key={c} className="font-karla font-500 uppercase tracking-[0.06em]"
+                          style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', padding: '0.2rem 0.55rem', borderRadius: '2rem' }}>
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Top catch — no spoilers, just the value */}
+                    <div style={{ padding: '0.45rem 1rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.28)' }}>Top catch worth up to</span>
+                      <span className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: '#f59e0b' }}>{stats.topSell.toLocaleString()} ⟡</span>
+                    </div>
+                  </>)}
                 </motion.div>
               )
             })}
