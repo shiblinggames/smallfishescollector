@@ -89,6 +89,16 @@ export async function sendDailyVoyage(crewVariantIds: number[]): Promise<
 
   if (existing) return { error: 'Your crew is already at sea' }
 
+  // Block if a raid is in progress
+  const { data: activeRaid } = await admin
+    .from('expeditions')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  if (activeRaid) return { error: 'Finish your raid before sending a voyage' }
+
   // Load profile for ship tier
   const { data: profile } = await admin
     .from('profiles')

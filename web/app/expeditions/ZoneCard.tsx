@@ -51,9 +51,10 @@ interface Props {
   expedition: Expedition | null
   shipTier: number
   doubloons: number
+  voyageLocked?: boolean
 }
 
-export default function ZoneCard({ zoneKey, config, expedition, shipTier, doubloons }: Props) {
+export default function ZoneCard({ zoneKey, config, expedition, shipTier, doubloons, voyageLocked = false }: Props) {
   const router = useRouter()
   const theme = ZONE_THEME[zoneKey]
 
@@ -65,10 +66,11 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, doublo
   const isCompleted = expedition?.status === 'completed'
   const isFailed = expedition?.status === 'failed'
   const isAttempted = isCompleted || isFailed
-  const interactive = !isUnderConstruction && (!isLocked || isActive || isAttempted)
+  const voyageBlocked = voyageLocked && !isActive && !isAttempted
+  const interactive = !isUnderConstruction && (!isLocked || isActive || isAttempted) && !voyageBlocked
 
   function handleClick() {
-    if (isUnderConstruction) return
+    if (isUnderConstruction || voyageBlocked) return
     if (isActive) { router.push(`/expeditions/voyage?id=${expedition!.id}`); return }
     if (isAttempted) { router.push(`/expeditions/results?id=${expedition!.id}`); return }
     if (isLocked) return
@@ -81,7 +83,7 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, doublo
   if (tierLocked) lockReason = `Requires ${['Rowboat','Dinghy','Sloop','Schooner','Brigantine','Galleon','Man-o-War'][config.requiredShipTier]}`
   else if (fundsLocked) lockReason = `Need ${config.entryCost.toLocaleString()} ⟡ to enter`
 
-  const dimCard = isUnderConstruction || (isLocked && !fundsLocked) || isFailed
+  const dimCard = isUnderConstruction || (isLocked && !fundsLocked) || isFailed || voyageBlocked
 
   return (
     <div
@@ -223,6 +225,10 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, doublo
         ) : isFailed ? (
           <p className="font-karla" style={{ fontSize: '0.68rem', color: '#4a4845' }}>
             View results
+          </p>
+        ) : voyageBlocked ? (
+          <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#4a4845' }}>
+            Crew is on a voyage
           </p>
         ) : isLocked ? (
           <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#4a4845' }}>

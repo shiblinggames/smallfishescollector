@@ -138,6 +138,19 @@ export async function startExpedition(
 
   if (active) return { error: 'You already have an expedition in progress' }
 
+  // Block if a voyage is currently at sea
+  const { data: activeVoyage } = await admin
+    .from('daily_voyages')
+    .select('id, created_at')
+    .eq('user_id', user.id)
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (activeVoyage) {
+    const returnTime = new Date(activeVoyage.created_at as string).getTime() + 6 * 60 * 60 * 1000
+    if (Date.now() < returnTime) return { error: 'Your crew is at sea on a voyage' }
+  }
+
   // Validate equipped item ownership
   if (equippedItem) {
     const { data: ownedItem } = await admin

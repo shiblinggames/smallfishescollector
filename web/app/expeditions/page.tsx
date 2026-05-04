@@ -39,6 +39,8 @@ export default async function ExpeditionsPage() {
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
 
   const activeExpedition = recentExpeditions.find(e => e.status === 'active') ?? null
+  const hasPendingVoyage = !('error' in dailyVoyageState) && dailyVoyageState.todayVoyage !== null
+  const hasActiveRaid = !!activeExpedition
 
   return (
     <>
@@ -87,6 +89,7 @@ export default async function ExpeditionsPage() {
               shipTier={shipTier}
               todayVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.todayVoyage}
               readyVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.readyVoyage}
+              raidActive={hasActiveRaid}
             />
           </div>
 
@@ -156,6 +159,7 @@ export default async function ExpeditionsPage() {
                     expedition={expedition}
                     shipTier={shipTier}
                     doubloons={doubloons}
+                    voyageLocked={hasPendingVoyage}
                   />
                 )
               })}
