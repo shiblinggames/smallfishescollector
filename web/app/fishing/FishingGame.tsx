@@ -832,10 +832,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                     </p>
                   )}
                   {streakBonusXP > 0 && (
-                    <div>
-                      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: `rgba(${accentRgb},0.55)`, marginBottom: 1 }}>streak bonus</p>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: accent }}>+{streakBonusXP} XP</p>
-                    </div>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: accent }}>+{streakBonusXP} XP</p>
                   )}
                   {baitSaved && (
                     <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#86efac' }}>
@@ -2155,8 +2152,6 @@ export default function FishingGame({
 
           {/* ── Action button — same position every phase ── */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', paddingTop: '0.5rem', paddingBottom: '0.75rem' }}>
-            <AnimatePresence>
-            </AnimatePresence>
             <AnimatePresence mode="wait">
               {(phase === 'idle' || phase === 'result') && holdTotalCount >= holdCapacity && (
                 <motion.div key="holdfull"
