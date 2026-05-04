@@ -1331,6 +1331,7 @@ export default function FishingGame({
     const currentQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
     if (currentQty <= 0) { setPhase('idle'); return }
 
+    setPerfectBurstKey(0)
     deductBait(selectedBait)
     await new Promise(r => setTimeout(r, 200))
     setPhase('casting')
