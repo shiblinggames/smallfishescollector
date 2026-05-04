@@ -832,9 +832,10 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                     </p>
                   )}
                   {streakBonusXP > 0 && (
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: accent }}>
-                      +{streakBonusXP} streak
-                    </p>
+                    <div>
+                      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: `rgba(${accentRgb},0.55)`, marginBottom: 1 }}>streak bonus</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: accent }}>+{streakBonusXP} XP</p>
+                    </div>
                   )}
                   {baitSaved && (
                     <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#86efac' }}>
