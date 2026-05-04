@@ -73,6 +73,104 @@ const RARITY: Record<number, { label: string; color: string; hookedText: string 
   5: { label: 'Legendary', color: '#f59e0b', hookedText: "SOMETHING MASSIVE IS ON THE LINE!" },
 }
 
+// ─── Wait messages ───────────────────────────────────────────────────────────
+
+const WAIT_MESSAGES: Record<ZoneKey, string[]> = {
+  shallows: [
+    "Waiting for a bite…",
+    "Keep the line steady.",
+    "The water's calm today.",
+    "Patience pays off.",
+    "Tip: Upgrade your Hook to widen the catch zone.",
+    "Tip: Better bait means faster bites.",
+    "Even shallows have surprises.",
+    "Tip: Land in the gold zone for a Perfect — and a chance to keep your bait.",
+    "A gentle current today.",
+    "Tip: Level up your fishing to unlock shorter wait times.",
+  ],
+  open_waters: [
+    "Drifting on the open sea…",
+    "The current's pulling gently.",
+    "Something's circling out there.",
+    "Open waters, open possibilities.",
+    "Tip: Upgrade your Line to shrink snag zones.",
+    "Tip: A better Reel gives you more dial control.",
+    "Keep your eyes on the dial.",
+    "Rare fish love open water.",
+    "Tip: Perfect catches have a 50% chance to return your bait.",
+    "The horizon stretches on forever.",
+  ],
+  deep: [
+    "Waiting in the dark…",
+    "Something's down there.",
+    "It's cold. And quiet.",
+    "Bigger fish live deeper.",
+    "Tip: Snag zones are punishing down here — upgrade your Line.",
+    "Tip: Chain Perfects for bonus XP that grows fast.",
+    "The reel really matters in these depths.",
+    "Tip: Some rods have special abilities — check the tackle shop.",
+    "The deep holds secrets.",
+    "Tip: Rarer fish are worth far more at the market.",
+  ],
+  abyss: [
+    "Something stirs in the deep…",
+    "Not many dare fish here.",
+    "The abyss stares back.",
+    "Coelacanth sightings have been reported…",
+    "Stay calm. Stay focused.",
+    "Few return with what swims here.",
+    "Tip: Your gear matters more than ever down here.",
+    "The pressure down here is immense.",
+    "Legendary creatures lurk in these waters.",
+    "Tip: A Perfect streak at this depth pays off massively.",
+  ],
+}
+
+const STREAK_MESSAGES: [number, string[]][] = [
+  [10, [
+    "YOU ARE UNSTOPPABLE!!! 🔥🔥🔥",
+    "THIS IS LEGENDARY. LITERALLY. 🔥🔥🔥",
+    "FISHING GOD MODE. ACTIVATED. 🔥🔥🔥",
+    "NO ONE DOES IT LIKE YOU!!! 🔥🔥🔥",
+    "WHAT IS HAPPENING RIGHT NOW?! 🔥🔥🔥",
+  ]],
+  [6, [
+    "YOU ARE ON FIRE!!! 🔥🔥",
+    "INCREDIBLE!!! Keep. It. Going! 🔥🔥",
+    "This is INSANE!! Absolutely unstoppable! 🔥🔥",
+    "THE FISH DON'T STAND A CHANCE!! 🔥🔥",
+    "You are DIALLED IN right now!! 🔥🔥",
+  ]],
+  [4, [
+    "You're REALLY on fire!! 🔥",
+    "FOUR+ in a row! Don't you dare miss! 🔥",
+    "Unstoppable! Keep going! 🔥",
+    "You're in the zone right now! 🔥",
+    "This streak is getting serious!! 🔥",
+  ]],
+  [3, [
+    "Three perfects! You're blazing! 🔥",
+    "On fire! Don't stop now!",
+    "Hat trick! The dial loves you. 🔥",
+    "You're really feeling it!",
+  ]],
+  [2, [
+    "Two in a row! You're on fire!",
+    "Back to back! Keep it going!",
+    "Nice! Keep that streak alive.",
+    "You're dialled in.",
+    "Bait saved and streak alive — let's go!",
+  ]],
+]
+
+function pickWaitMessage(zone: ZoneKey, streak: number): string {
+  for (const [threshold, msgs] of STREAK_MESSAGES) {
+    if (streak >= threshold) return msgs[Math.floor(Math.random() * msgs.length)]
+  }
+  const pool = WAIT_MESSAGES[zone]
+  return pool[Math.floor(Math.random() * pool.length)]
+}
+
 // ─── Catch mechanics tour ────────────────────────────────────────────────────
 
 const CATCH_TOUR_STEPS = [
@@ -1190,6 +1288,7 @@ export default function FishingGame({
   const [bountyNotif, setBountyNotif] = useState<FishingBountyCompletion | null>(null)
   const [perfectFlash, setPerfectFlash] = useState(false)
   const [perfectBurstKey, setPerfectBurstKey] = useState(0)
+  const [waitMessage, setWaitMessage] = useState('')
   const [retryFlash, setRetryFlash] = useState(false)
   const [missResult, setMissResult] = useState<ZoneType | null>(null)
   const [fishingXP, setFishingXP]   = useState(initialFishingXP)
@@ -1363,6 +1462,7 @@ export default function FishingGame({
     if (currentQty <= 0) { setPhase('idle'); return }
 
     setPerfectBurstKey(0)
+    setWaitMessage(pickWaitMessage(selectedZone as ZoneKey, perfectStreak))
     deductBait(selectedBait)
     await new Promise(r => setTimeout(r, 200))
     setPhase('casting')
@@ -1864,10 +1964,7 @@ export default function FishingGame({
                             textAlign: 'center',
                           }}>
                           <p className="font-karla font-600" style={{ fontSize: '1rem', color: '#e8e4de' }}>
-                            {selectedZone === 'abyss'       ? 'Something stirs in the deep…' :
-                             selectedZone === 'deep'        ? 'Waiting in the dark…' :
-                             selectedZone === 'open_waters' ? 'Drifting on the open sea…' :
-                                                              'Waiting for a bite…'}
+                            {waitMessage}
                           </p>
                           <div style={{
                             position: 'absolute', bottom: -7, left: '50%',
