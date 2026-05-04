@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { redeemCode } from './actions'
 
 export default function RedeemClient() {
   const router = useRouter()
@@ -15,34 +15,17 @@ export default function RedeemClient() {
     setStatus('loading')
     setMessage('')
 
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/login'); return }
+    const result = await redeemCode(code)
 
-    const normalized = code.trim().toUpperCase()
-    const { data: row, error } = await supabase
-      .from('redemption_codes')
-      .select('id, redeemed_by, packs_granted')
-      .eq('code', normalized)
-      .single()
-
-    if (error || !row) { setStatus('error'); setMessage('Code not found. Double-check and try again.'); return }
-    if (row.redeemed_by) { setStatus('error'); setMessage('This code has already been redeemed.'); return }
-
-    const { error: updateErr } = await supabase
-      .from('redemption_codes')
-      .update({ redeemed_by: user.id, redeemed_at: new Date().toISOString() })
-      .eq('id', row.id)
-
-    if (updateErr) { setStatus('error'); setMessage('Something went wrong. Please try again.'); return }
-
-    const { data: profile } = await supabase.from('profiles').select('packs_available').eq('id', user.id).single()
-    await supabase.from('profiles').update({ packs_available: (profile?.packs_available ?? 0) + row.packs_granted }).eq('id', user.id)
-
-    setStatus('success')
-    setMessage(`✦ ${row.packs_granted} pack${row.packs_granted > 1 ? 's' : ''} added to your account.`)
-    setCode('')
-    router.refresh()
+    if (result.success) {
+      setStatus('success')
+      setMessage(result.message)
+      setCode('')
+      router.refresh()
+    } else {
+      setStatus('error')
+      setMessage(result.message)
+    }
   }
 
   return (
