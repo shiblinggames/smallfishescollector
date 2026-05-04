@@ -91,7 +91,7 @@ function tierWeightedPick<T extends { bite_rarity: number }>(items: T[], habitat
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
-export async function castLine(baitType: string, habitat: string): Promise<
+export async function castLine(baitType: string, habitat: string, noBait = false, eventRarityBonus = 0): Promise<
   | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number }
   | { error: string }
 > {
@@ -131,18 +131,20 @@ export async function castLine(baitType: string, habitat: string): Promise<
     return { error: `Fish hold full (${ship.holdCapacity}/${ship.holdCapacity}). Sell some fish to make room.` }
   }
 
-  if (!baitRow || baitRow.quantity <= 0) return { error: 'No bait remaining.' }
+  if (!noBait && (!baitRow || baitRow.quantity <= 0)) return { error: 'No bait remaining.' }
 
   if (!candidates || candidates.length === 0) return { error: 'No fish found in this zone' }
 
-  await admin
-    .from('bait_inventory')
-    .update({ quantity: baitRow.quantity - 1 })
-    .eq('user_id', user.id)
-    .eq('bait_type', baitType)
+  if (!noBait && baitRow) {
+    await admin
+      .from('bait_inventory')
+      .update({ quantity: baitRow.quantity - 1 })
+      .eq('user_id', user.id)
+      .eq('bait_type', baitType)
+  }
 
   const rod = getRod(profile.rod_tier ?? 0)
-  const fish = tierWeightedPick(candidates, habitat, rod.rarityBonus)
+  const fish = tierWeightedPick(candidates, habitat, rod.rarityBonus + eventRarityBonus)
   const waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel)
 
   return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs }
@@ -332,6 +334,7 @@ export async function reelIn(
 export async function sellFish(
   fishId: number,
   quantity: number,
+  fullPrice = false,
 ): Promise<{ earned: number; doubloons: number } | { error: string }> {
   if (quantity <= 0) return { error: 'Invalid quantity' }
 
@@ -350,7 +353,7 @@ export async function sellFish(
   if (!invRow || !fish || !profile) return { error: 'Data not found' }
   if (invRow.quantity < quantity) return { error: 'Not enough fish' }
 
-  const earned = Math.floor(fish.sell_value * 0.65) * quantity
+  const earned = Math.floor(fish.sell_value * (fullPrice ? 1.0 : 0.65)) * quantity
   const newDoubloons = (profile.doubloons ?? 0) + earned
 
   await Promise.all([

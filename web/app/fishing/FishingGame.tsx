@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useTransition } from 'react'
+import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, type FishSpecies, type FishingBountyCompletion } from './actions'
@@ -73,6 +73,21 @@ const RARITY: Record<number, { label: string; color: string; hookedText: string 
   4: { label: 'Epic',      color: '#c084fc', hookedText: "A big one! Hold tight!" },
   5: { label: 'Legendary', color: '#f59e0b', hookedText: "SOMETHING MASSIVE IS ON THE LINE!" },
 }
+
+// ─── Random events ───────────────────────────────────────────────────────────
+
+type EventType = 'bloom' | 'fullmoon' | 'redtide' | 'glassy'
+
+const EVENT_DEFS: Record<EventType, { name: string; tagline: string; color: string; tint: string }> = {
+  bloom:    { name: 'Bioluminescent Bloom', tagline: 'No bait consumed this cycle',        color: '#2dd4bf', tint: 'rgba(45,212,191,0.09)' },
+  fullmoon: { name: 'Full Moon Rising',     tagline: 'Quick sell pays full market price',  color: '#e2e8f0', tint: 'rgba(226,232,240,0.07)' },
+  redtide:  { name: 'Red Tide',             tagline: 'Rare fish are surfacing',             color: '#f87171', tint: 'rgba(248,113,113,0.08)' },
+  glassy:   { name: 'Glassy Waters',        tagline: 'Catch window is wider',              color: '#c084fc', tint: 'rgba(192,132,252,0.08)' },
+}
+
+const EVENT_TYPES: EventType[] = ['bloom', 'fullmoon', 'redtide', 'glassy']
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const ZONE_REWARD_DOUBLOONS_UI: Record<string, number> = {
   shallows:    10000,
@@ -1047,6 +1062,85 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   )
 }
 
+// ─── EventParticles ──────────────────────────────────────────────────────────
+
+function EventParticles({ color }: { color: string }) {
+  const particles = useMemo(() => Array.from({ length: 10 }, () => ({
+    x: 5 + Math.random() * 90,
+    size: 3 + Math.random() * 4,
+    delay: Math.random() * 7,
+    duration: 8 + Math.random() * 6,
+    drift: (Math.random() - 0.5) * 50,
+  })), [])
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+      {particles.map((p, i) => (
+        <motion.div
+          key={i}
+          style={{
+            position: 'absolute', left: `${p.x}%`, bottom: 0,
+            width: p.size, height: p.size, borderRadius: '50%',
+            background: color, boxShadow: `0 0 ${p.size * 2}px ${color}88`,
+          }}
+          animate={{ y: [0, -800], x: [0, p.drift], opacity: [0, 0.75, 0.75, 0] }}
+          transition={{ duration: p.duration, delay: p.delay, repeat: Infinity, ease: 'easeOut' }}
+        />
+      ))}
+    </div>
+  )
+}
+
+// ─── EventBanner ─────────────────────────────────────────────────────────────
+
+function EventBanner({ event, announcing }: {
+  event: { type: EventType; endsAt: number } | null
+  announcing: boolean
+}) {
+  const def = event ? EVENT_DEFS[event.type] : null
+  return (
+    <AnimatePresence>
+      {announcing && def && (
+        <motion.div
+          key={event!.type}
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.35 }}
+          style={{
+            position: 'fixed', top: 56, left: 0, right: 0,
+            display: 'flex', justifyContent: 'center',
+            zIndex: 200, pointerEvents: 'none', padding: '0 1rem',
+          }}
+        >
+          <div style={{
+            background: 'rgba(4,10,18,0.94)',
+            border: `1px solid ${def.color}45`,
+            borderLeft: `3px solid ${def.color}`,
+            borderRadius: 14, padding: '0.7rem 1.1rem',
+            backdropFilter: 'blur(8px)',
+            boxShadow: `0 4px 24px rgba(0,0,0,0.55), 0 0 20px ${def.color}18`,
+            maxWidth: 340,
+          }}>
+            <p className="font-karla font-700 uppercase tracking-[0.1em]"
+              style={{ fontSize: '0.42rem', color: def.color + '88', marginBottom: 3 }}>
+              Event Active
+            </p>
+            <p className="font-cinzel font-700"
+              style={{ fontSize: '0.9rem', color: def.color, marginBottom: 2 }}>
+              {def.name}
+            </p>
+            <p className="font-karla font-400"
+              style={{ fontSize: '0.62rem', color: '#a0a09a' }}>
+              {def.tagline}
+            </p>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
 // ─── FishInventory ────────────────────────────────────────────────────────────
 
 function FishInventory({ inventory, onSell }: {
@@ -1317,6 +1411,12 @@ export default function FishingGame({
   const podiumPositionsRef = useRef<{ fishingLevel: number | null; perfectStreak: number | null }>({ fishingLevel: null, perfectStreak: null })
   const [, startTransition]         = useTransition()
 
+  // ── Random events ───────────────────────────────────────────────────────
+  const [activeEvent, setActiveEvent] = useState<{ type: EventType; endsAt: number } | null>(null)
+  const [eventAnnouncing, setEventAnnouncing] = useState(false)
+  const activeEventRef = useRef<{ type: EventType; endsAt: number } | null>(null)
+  const eventTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // ── Challenge session ───────────────────────────────────────────────────
   const [sessionSecondsLeft, setSessionSecondsLeft] = useState<number | null>(() =>
     activeSession ? Math.max(0, Math.floor((new Date(activeSession.endsAt).getTime() - Date.now()) / 1000)) : null
@@ -1379,6 +1479,26 @@ export default function FishingGame({
     }, 1000)
     return () => clearInterval(id)
   }, [activeSession, sessionDone]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { activeEventRef.current = activeEvent }, [activeEvent])
+
+  useEffect(() => {
+    function scheduleNext() {
+      const delay = (15 + Math.random() * 5) * 60 * 1000
+      eventTimerRef.current = setTimeout(() => {
+        const type = EVENT_TYPES[Math.floor(Math.random() * EVENT_TYPES.length)]
+        const ev = { type, endsAt: Date.now() + 90_000 }
+        setActiveEvent(ev)
+        activeEventRef.current = ev
+        setEventAnnouncing(true)
+        setTimeout(() => setEventAnnouncing(false), 5_000)
+        setTimeout(() => { setActiveEvent(null); activeEventRef.current = null }, 90_000)
+        scheduleNext()
+      }, delay)
+    }
+    scheduleNext()
+    return () => { if (eventTimerRef.current) clearTimeout(eventTimerRef.current) }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => { selectedBaitRef.current = selectedBait }, [selectedBait])
   useEffect(() => { hookedFishRef.current = hookedFish }, [hookedFish])
   useEffect(() => {
@@ -1480,17 +1600,21 @@ export default function FishingGame({
     const currentQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
     if (currentQty <= 0) { setPhase('idle'); return }
 
+    const ev = activeEventRef.current
+    const isBloom = ev?.type === 'bloom'
+    const isRedTide = ev?.type === 'redtide'
+
     setPerfectBurstKey(0)
     setWaitMessage(pickWaitMessage(selectedZone as ZoneKey, perfectStreak))
-    deductBait(selectedBait)
+    if (!isBloom) deductBait(selectedBait)
     await new Promise(r => setTimeout(r, 200))
     setPhase('casting')
 
     try {
-      const res = await castLine(selectedBait, selectedZone)
+      const res = await castLine(selectedBait, selectedZone, isBloom, isRedTide ? 0.25 : 0)
 
       if ('error' in res) {
-        setBaitInventory(prev => prev.map(b =>
+        if (!isBloom) setBaitInventory(prev => prev.map(b =>
           b.bait_type === selectedBait ? { ...b, quantity: b.quantity + 1 } : b
         ))
         setPhase('idle')
@@ -1502,7 +1626,7 @@ export default function FishingGame({
       setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity })
       setPhase('hooked')
     } catch {
-      setBaitInventory(prev => prev.map(b =>
+      if (!isBloom) setBaitInventory(prev => prev.map(b =>
         b.bait_type === selectedBait ? { ...b, quantity: b.quantity + 1 } : b
       ))
       setPhase('idle')
@@ -1557,7 +1681,8 @@ export default function FishingGame({
 
     const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
     const baitBonus = getBait(selectedBaitRef.current).catchZoneBonus
-    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus + baitBonus + rod.catchZoneBonus, rod.perfectZoneBonus + 1)
+    const eventCatchBonus = activeEventRef.current?.type === 'glassy' ? 12 : 0
+    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus + baitBonus + rod.catchZoneBonus + eventCatchBonus, rod.perfectZoneBonus + 1)
     const zone  = getZone(zones, angleRef.current, zoneRotation)
 
     // Snag immune: treat penalty as miss — no extra bait lost
@@ -1733,7 +1858,7 @@ export default function FishingGame({
 
   async function handleSell(fishId: number, qty: number) {
     setSellPending(fishId)
-    const res = await sellFish(fishId, qty)
+    const res = await sellFish(fishId, qty, activeEvent?.type === 'fullmoon')
     setSellPending(null)
     if ('error' in res) return
     setDoubloons(res.doubloons)
@@ -1780,7 +1905,7 @@ export default function FishingGame({
   }
 
   // Zone display helpers
-  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus, rod.perfectZoneBonus + 1) : []
+  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus + (activeEvent?.type === 'glassy' ? 12 : 0), rod.perfectZoneBonus + 1) : []
   const currentZone   = (phase === 'catching' || phase === 'reeling') ? getZone(catchingZones, angle, zoneRotation) : null
 
   function needleColor(): string {
@@ -1799,7 +1924,8 @@ export default function FishingGame({
   const selectedBaitQty  = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
   const selectedBaitDef  = BAITS.find(b => b.type === selectedBait)
   const holdTotalCount   = inventory.reduce((s, i) => s + i.quantity, 0)
-  const holdTotalValue   = inventory.reduce((s, i) => s + Math.floor(i.fish_species.sell_value * 0.65) * i.quantity, 0)
+  const isFullMoon = activeEvent?.type === 'fullmoon'
+  const holdTotalValue   = inventory.reduce((s, i) => s + Math.floor(i.fish_species.sell_value * (isFullMoon ? 1.0 : 0.65)) * i.quantity, 0)
   const holdBaseValue    = inventory.reduce((s, i) => s + i.fish_species.sell_value * i.quantity, 0)
 
   const isBobbing = sceneFrame === 'fishing' && (phase === 'casting' || phase === 'hooked')
@@ -1859,6 +1985,29 @@ export default function FishingGame({
             selectedZone === 'open_waters' ? '0.22' : '0'
           }) 100%)`,
         }} />
+
+        {/* Event overlay — atmospheric tint + particles */}
+        <AnimatePresence>
+          {activeEvent && (() => {
+            const def = EVENT_DEFS[activeEvent.type]
+            return (
+              <motion.div
+                key={activeEvent.type}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                transition={{ duration: 2 }}
+                style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}
+              >
+                <div style={{ position: 'absolute', inset: 0, background: def.tint, mixBlendMode: 'screen' }} />
+                <motion.div
+                  animate={{ opacity: [0.3, 0.8, 0.3] }}
+                  transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{ position: 'absolute', inset: 0, background: def.tint, mixBlendMode: 'screen' }}
+                />
+                <EventParticles color={def.color} />
+              </motion.div>
+            )
+          })()}
+        </AnimatePresence>
 
         {/* UI content — fills full height as flex column */}
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem', paddingBottom: '1.25rem' }}>
@@ -2981,22 +3130,33 @@ export default function FishingGame({
                   background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
                   borderRadius: 16, padding: '1rem 1.1rem',
                 }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#a0a09a', marginBottom: 6 }}>Quick Sell</p>
-                  <p className="font-cinzel font-600" style={{ fontSize: '1.4rem', color: '#f0ede8', lineHeight: 1 }}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>Quick Sell</p>
+                    {isFullMoon && (
+                      <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{
+                        fontSize: '0.48rem', color: '#e2e8f0', padding: '0.1rem 0.45rem', borderRadius: '2rem',
+                        background: 'rgba(226,232,240,0.12)', border: '1px solid rgba(226,232,240,0.3)',
+                      }}>Full Moon · Full Price</span>
+                    )}
+                  </div>
+                  <p className="font-cinzel font-600" style={{ fontSize: '1.4rem', color: isFullMoon ? '#e2e8f0' : '#f0ede8', lineHeight: 1 }}>
                     {holdTotalValue.toLocaleString()} ⟡
                   </p>
                   <p className="font-karla font-400 mt-1.5" style={{ fontSize: '0.68rem', color: '#9a9488' }}>
-                    65% of base value · you lose{' '}
-                    <span style={{ color: '#f87171' }}>{Math.floor(holdBaseValue * 0.35).toLocaleString()} ⟡</span>
+                    {isFullMoon
+                      ? 'Full market price · Full Moon Rising'
+                      : <>65% of base value · you lose{' '}<span style={{ color: '#f87171' }}>{Math.floor(holdBaseValue * 0.35).toLocaleString()} ⟡</span></>
+                    }
                   </p>
                   <button
                     onClick={async () => { for (const item of inventory) await handleSell(item.fish_id, item.quantity) }}
                     disabled={!!sellPending}
                     className="font-karla font-600 uppercase tracking-[0.1em] w-full"
                     style={{ fontSize: '0.65rem', padding: '0.65rem', borderRadius: 10, marginTop: 12,
-                      background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
-                      color: '#a0a09a', opacity: sellPending ? 0.5 : 1, cursor: sellPending ? 'default' : 'pointer' }}>
-                    {sellPending ? 'Selling…' : 'Sell All at Discount'}
+                      background: isFullMoon ? 'rgba(226,232,240,0.09)' : 'rgba(255,255,255,0.07)',
+                      border: `1px solid ${isFullMoon ? 'rgba(226,232,240,0.28)' : 'rgba(255,255,255,0.15)'}`,
+                      color: isFullMoon ? '#e2e8f0' : '#a0a09a', opacity: sellPending ? 0.5 : 1, cursor: sellPending ? 'default' : 'pointer' }}>
+                    {sellPending ? 'Selling…' : isFullMoon ? 'Sell All at Full Price' : 'Sell All at Discount'}
                   </button>
                 </div>
               </div>
@@ -3308,6 +3468,8 @@ export default function FishingGame({
       )}
 
       </div>
+
+      <EventBanner event={activeEvent} announcing={eventAnnouncing} />
     </div>
   )
 }
