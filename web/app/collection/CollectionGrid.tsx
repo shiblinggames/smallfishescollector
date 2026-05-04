@@ -5,7 +5,14 @@ import { motion } from 'framer-motion'
 import FishCard from '@/components/FishCard'
 import type { Card } from '@/lib/types'
 import type { OwnedEntry, AllVariantEntry } from './page'
+
+function variantStats(card: Card, variantName: string) {
+  const base   = { power: card.power ?? 0,        dodge: card.dodge ?? 0,        fortune: card.fortune ?? 0 }
+  const mythic = { power: card.mythic_power ?? 0, dodge: card.mythic_dodge ?? 0, fortune: card.mythic_fortune ?? 0 }
+  return applyVariantBoosts(base, variantName, mythic)
+}
 import { rarityFromVariant, RARITY_COLOR } from '@/lib/variants'
+import { applyVariantBoosts } from '@/lib/expeditions'
 import { sellDuplicate, sellAllDuplicates, getDuplicatesBreakdown, GEM_VALUES } from './actions'
 import type { DuplicateBreakdownItem } from './actions'
 import { updateUsername, updateShowcase } from '@/app/u/actions'
@@ -183,18 +190,21 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
   // Build sorted picker cards from owned collection
   const pickerCards: PickerCard[] = allCards.flatMap(card => {
     const entries = ownedState[card.id] ?? []
-    return entries.map(e => ({
-      variantId: e.variantId,
-      variantName: e.variantName,
-      borderStyle: e.borderStyle,
-      artEffect: e.artEffect,
-      dropWeight: e.dropWeight,
-      name: card.name,
-      filename: card.filename,
-      power:   card.power   ?? 0,
-      dodge:   card.dodge   ?? 0,
-      fortune: card.fortune ?? 0,
-    }))
+    return entries.map(e => {
+      const stats = variantStats(card, e.variantName)
+      return {
+        variantId: e.variantId,
+        variantName: e.variantName,
+        borderStyle: e.borderStyle,
+        artEffect: e.artEffect,
+        dropWeight: e.dropWeight,
+        name: card.name,
+        filename: card.filename,
+        power:   stats.power,
+        dodge:   stats.dodge,
+        fortune: stats.fortune,
+      }
+    })
   }).sort((a, b) => a.dropWeight - b.dropWeight)
 
   function toggleShowcaseCard(variantId: number) {
@@ -467,7 +477,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                         borderStyle={best?.borderStyle ?? 'standard'}
                         artEffect={best?.artEffect ?? 'normal'}
                         unowned={!isOwned}
-                        stats={isOwned ? { power: card.power ?? 0, dodge: card.dodge ?? 0, fortune: card.fortune ?? 0 } : undefined}
+                        stats={isOwned ? variantStats(card, best?.variantName ?? 'Standard') : undefined}
                       />
                     </div>
                     <p className="font-karla font-300 text-[0.62rem] text-[#a0a09a] tracking-wide">
@@ -527,7 +537,7 @@ export default function CollectionGrid({ allCards, ownedByCardId, totalVariants,
                           artEffect={owned.artEffect}
                           variantName={owned.variantName}
                           dropWeight={owned.dropWeight}
-                          stats={{ power: modal.card.power ?? 0, dodge: modal.card.dodge ?? 0, fortune: modal.card.fortune ?? 0 }}
+                          stats={variantStats(modal.card, owned.variantName)}
                         />
                       </div>
                       {dupeCount > 0 && (() => {
