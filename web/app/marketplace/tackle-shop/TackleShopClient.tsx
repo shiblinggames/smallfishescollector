@@ -63,7 +63,7 @@ export default function TackleShopClient({
 
   const baitMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
   const totalBait = Object.values(baitMap).reduce((a, b) => a + b, 0)
-  const shopBaits = BAITS.filter(b => b.shopCost > 0)
+  const shopBaits = BAITS
 
   function broadcastDoubloons(amount: number) {
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: amount }))
@@ -301,44 +301,49 @@ export default function TackleShopClient({
                   )}
                 </div>
 
-                {/* Buy buttons — ×5 and ×25 */}
-                <div style={{ display: 'flex', gap: '0.35rem', marginTop: 2 }}>
-                  {([10, 25] as const).map(buyQty => {
-                    const cost       = bait.shopCost * buyQty
-                    const canAfford  = doubloons >= cost
-                    const isBuying   = buyingBait === `${bait.type}-${buyQty}` && isPending
-                    return (
-                      <button
-                        key={buyQty}
-                        onClick={() => handleBuyBait(bait.type, buyQty)}
-                        disabled={!canAfford || isPending}
-                        style={{
-                          flex: 1,
-                          borderRadius: 8, padding: '0.4rem 0.25rem',
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
-                          background: canAfford ? `${bait.color}18` : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${canAfford ? bait.color + '42' : 'rgba(255,255,255,0.08)'}`,
-                          color: canAfford ? bait.color : '#4a4845',
-                          cursor: canAfford && !isPending ? 'pointer' : 'default',
-                          opacity: isBuying ? 0.5 : 1, transition: 'opacity 0.15s',
-                        }}
-                      >
-                        <span className="font-karla font-700" style={{ fontSize: '0.72rem', lineHeight: 1 }}>
-                          {isBuying ? '…' : `×${buyQty}`}
-                        </span>
-                        <span className="font-karla" style={{ fontSize: '0.52rem', color: canAfford ? 'rgba(255,255,255,0.38)' : '#3a3835', lineHeight: 1 }}>
-                          {cost.toLocaleString()} ⟡
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
+                {/* Buy buttons or earned badge */}
+                {bait.shopCost > 0 ? (
+                  <div style={{ display: 'flex', gap: '0.35rem', marginTop: 2 }}>
+                    {([10, 25] as const).map(buyQty => {
+                      const cost       = bait.shopCost * buyQty
+                      const canAfford  = doubloons >= cost
+                      const isBuying   = buyingBait === `${bait.type}-${buyQty}` && isPending
+                      return (
+                        <button
+                          key={buyQty}
+                          onClick={() => handleBuyBait(bait.type, buyQty)}
+                          disabled={!canAfford || isPending}
+                          style={{
+                            flex: 1,
+                            borderRadius: 8, padding: '0.4rem 0.25rem',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
+                            background: canAfford ? `${bait.color}18` : 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${canAfford ? bait.color + '42' : 'rgba(255,255,255,0.08)'}`,
+                            color: canAfford ? bait.color : '#4a4845',
+                            cursor: canAfford && !isPending ? 'pointer' : 'default',
+                            opacity: isBuying ? 0.5 : 1, transition: 'opacity 0.15s',
+                          }}
+                        >
+                          <span className="font-karla font-700" style={{ fontSize: '0.72rem', lineHeight: 1 }}>
+                            {isBuying ? '…' : `×${buyQty}`}
+                          </span>
+                          <span className="font-karla" style={{ fontSize: '0.52rem', color: canAfford ? 'rgba(255,255,255,0.38)' : '#3a3835', lineHeight: 1 }}>
+                            {cost.toLocaleString()} ⟡
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 2, padding: '0.35rem 0.5rem', borderRadius: 8, background: `${bait.color}10`, border: `1px solid ${bait.color}28`, textAlign: 'center' }}>
+                    <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: bait.color }}>
+                      Earned — not for sale
+                    </span>
+                  </div>
+                )}
               </div>
             )
           })}
-          <p className="font-karla font-400 text-center" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.18)', gridColumn: 'span 2', marginTop: 2 }}>
-            Luminous Lure &amp; Golden Lure are earned — not for sale
-          </p>
         </div>
       )}
 
