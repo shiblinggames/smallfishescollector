@@ -75,6 +75,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
 
   function persist(next: (CollectionCard | null)[]) {
     const ids = next.filter(Boolean).map(c => c!.variantId)
+    window.dispatchEvent(new CustomEvent('crew-changed', { detail: ids }))
     startTransition(async () => { await saveCrew(ids) })
   }
 

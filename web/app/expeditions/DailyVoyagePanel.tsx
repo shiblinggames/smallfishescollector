@@ -70,6 +70,13 @@ export default function DailyVoyagePanel({
   const [error, setError] = useState<string | null>(null)
   const [selectedRoute, setSelectedRoute] = useState<VoyageRoute | null>(null)
   const [claimedRingSkins, setClaimedRingSkins] = useState<string[]>([])
+  const [liveCrewIds, setLiveCrewIds] = useState<number[]>(savedCrewVariantIds)
+
+  useEffect(() => {
+    const handler = (e: Event) => setLiveCrewIds((e as CustomEvent<number[]>).detail)
+    window.addEventListener('crew-changed', handler)
+    return () => window.removeEventListener('crew-changed', handler)
+  }, [])
 
   const returnTime = activeVoyage
     ? new Date(activeVoyage.created_at).getTime() + VOYAGE_DURATION_MS
@@ -92,7 +99,7 @@ export default function DailyVoyagePanel({
 
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
   const byVariantId = new Map(collection.map(c => [c.variantId, c]))
-  const savedCrew: CrewCard[] = savedCrewVariantIds
+  const savedCrew: CrewCard[] = liveCrewIds
     .slice(0, shipStats.crewSlots)
     .map(id => byVariantId.get(id))
     .filter(Boolean) as CrewCard[]
