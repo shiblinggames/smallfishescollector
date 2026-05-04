@@ -11,6 +11,8 @@ function today(): string {
   return new Date().toISOString().split('T')[0]
 }
 
+const VOYAGE_DURATION_MS = 6 * 60 * 60 * 1000 // 6 hours
+
 export interface DailyVoyage {
   id: number
   voyage_date: string
@@ -36,15 +38,17 @@ export async function getDailyVoyageState(): Promise<{
     .from('daily_voyages')
     .select('*')
     .eq('user_id', user.id)
-    .order('voyage_date', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(10)
 
   const rows = (data ?? []) as DailyVoyage[]
-  const todayStr = today()
-  const todayVoyage = rows.find(r => r.voyage_date === todayStr) ?? null
-  const readyVoyage = rows.find(r => r.voyage_date < todayStr && r.status === 'pending') ?? null
+  const now = Date.now()
+  const pending = rows.filter(r => r.status === 'pending')
 
-  return { todayVoyage, readyVoyage }
+  const activeVoyage = pending.find(r => new Date(r.created_at).getTime() + VOYAGE_DURATION_MS > now) ?? null
+  const readyVoyage  = pending.find(r => new Date(r.created_at).getTime() + VOYAGE_DURATION_MS <= now) ?? null
+
+  return { todayVoyage: activeVoyage, readyVoyage }
 }
 
 type CollectionRow = {
@@ -74,17 +78,16 @@ export async function sendDailyVoyage(crewVariantIds: number[]): Promise<
   if (crewVariantIds.length === 0) return { error: 'Select at least one crew member' }
 
   const admin = createAdminClient()
-  const todayStr = today()
 
-  // Check if already sent today
+  // Block if a voyage is already pending (at sea or ready to reveal)
   const { data: existing } = await admin
     .from('daily_voyages')
     .select('id')
     .eq('user_id', user.id)
-    .eq('voyage_date', todayStr)
+    .eq('status', 'pending')
     .maybeSingle()
 
-  if (existing) return { error: 'Your crew already set sail today' }
+  if (existing) return { error: 'Your crew is already at sea' }
 
   // Load profile for ship tier
   const { data: profile } = await admin
@@ -148,7 +151,7 @@ export async function sendDailyVoyage(crewVariantIds: number[]): Promise<
     .from('daily_voyages')
     .insert({
       user_id: user.id,
-      voyage_date: todayStr,
+      voyage_date: today(),
       crew_variant_ids: crewVariantIds,
       ship_tier: shipTier,
       status: 'pending',
@@ -181,7 +184,8 @@ export async function revealVoyageResults(voyageId: number): Promise<
 
   if (!voyageRow) return { error: 'Voyage not found' }
   if (voyageRow.status === 'revealed') return { error: 'Already revealed' }
-  if ((voyageRow.voyage_date as string) >= today()) return { error: 'Your crew has not returned yet' }
+  const sentAt = new Date(voyageRow.created_at as string).getTime()
+  if (Date.now() < sentAt + VOYAGE_DURATION_MS) return { error: 'Your crew has not returned yet' }
 
   const voyage = voyageRow as DailyVoyage
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useCallback } from 'react'
+import { useState, useTransition, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { EXPEDITION_SHIP_STATS, RARITY_COLORS, computeTotalCrewStats, type CrewCard } from '@/lib/expeditions'
 import type { VoyageEvent } from '@/lib/voyageEvents'
@@ -24,6 +24,16 @@ const OUTCOME_STYLES: Record<string, { label: string; bg: string; color: string;
 
 function rarityColor(rarity: string): string {
   return RARITY_COLORS[(rarity ?? 'common').toLowerCase()] ?? '#8a8880'
+}
+
+function formatCountdown(ms: number): string {
+  const totalSec = Math.ceil(ms / 1000)
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  const mm = m.toString().padStart(2, '0')
+  const ss = s.toString().padStart(2, '0')
+  return h > 0 ? `${h}h ${mm}m ${ss}s` : `${mm}m ${ss}s`
 }
 
 interface Props {
@@ -53,6 +63,25 @@ export default function DailyVoyagePanel({
   const [activeVoyage, setActiveVoyage] = useState<DailyVoyage | null>(readyVoyage ?? todayVoyage)
   const [revealIndex, setRevealIndex] = useState(0)
   const [error, setError] = useState<string | null>(null)
+
+  const returnTime = activeVoyage
+    ? new Date(activeVoyage.created_at).getTime() + 6 * 60 * 60 * 1000
+    : null
+  const [msRemaining, setMsRemaining] = useState<number>(() =>
+    returnTime ? Math.max(0, returnTime - Date.now()) : 0
+  )
+
+  useEffect(() => {
+    if (!returnTime || panelState !== 'away') return
+    const tick = () => {
+      const ms = Math.max(0, returnTime - Date.now())
+      setMsRemaining(ms)
+      if (ms === 0) setPanelState('returned')
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [returnTime, panelState])
 
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
   const byVariantId = new Map(collection.map(c => [c.variantId, c]))
@@ -123,7 +152,7 @@ export default function DailyVoyagePanel({
           ) : (
             <>
               <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a6a52', lineHeight: 1.5, marginBottom: '0.85rem' }}>
-                Send your crew out once a day. They return with stories — and sometimes something worth keeping.
+                Send your crew on a 6-hour voyage. They return with stories — and sometimes something worth keeping.
               </p>
 
               {/* Crew pills */}
@@ -201,8 +230,13 @@ export default function DailyVoyagePanel({
                 Voyage underway
               </p>
               <p className="font-karla" style={{ fontSize: '0.62rem', color: '#4a5870', marginTop: 4 }}>
-                The {shipStats.name} is at sea. Check back tomorrow for the log.
+                The {shipStats.name} is at sea.
               </p>
+              {msRemaining > 0 && (
+                <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#6080b0', marginTop: 6, letterSpacing: '0.04em' }}>
+                  {formatCountdown(msRemaining)}
+                </p>
+              )}
             </div>
             <span style={{ fontSize: '1.8rem', flexShrink: 0 }}>⛵</span>
           </div>
