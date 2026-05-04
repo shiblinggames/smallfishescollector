@@ -86,12 +86,40 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
 
       case 'encounter': {
         const win = rollPower()
-        const template = pick(win ? ENCOUNTER_WIN : ENCOUNTER_LOSS)
-        event = {
-          type, outcome: win ? 'success' : 'neutral',
-          title: template.title, narrative: fill(template.narrative),
-          doubloonDelta: win ? payout(30, 80) : 0,
-          crewVariantLost: null,
+        if (win) {
+          // Crushing win: separate roll — high power makes it more likely
+          const crush = Math.random() * 30 < power * 0.6
+          const template = pick(crush ? ENCOUNTER_CRUSH : ENCOUNTER_WIN)
+          event = {
+            type, outcome: 'success',
+            title: template.title, narrative: fill(template.narrative),
+            doubloonDelta: crush ? payout(120, 240) : payout(30, 80),
+            crewVariantLost: null,
+          }
+        } else {
+          // Loss: low power risks crew loss — chance fades to 0 at power 15+
+          const canLoseCrew = crewCount >= 2 && crewLost.length === 0
+          const crewLossChance = canLoseCrew ? Math.max(0, 0.6 - power / 25) : 0
+          const loseCrew = crewLossChance > 0 && Math.random() < crewLossChance
+          if (loseCrew) {
+            const victims = crew.slice(1)
+            const victim = pick(victims)
+            const template = pick(ENCOUNTER_CREW_LOSS)
+            const narrative = fill(template.narrative, { name: victim.name })
+            crewLost.push(victim.variantId)
+            event = {
+              type, outcome: 'failure',
+              title: template.title, narrative,
+              doubloonDelta: 0, crewVariantLost: victim.variantId,
+            }
+          } else {
+            const template = pick(ENCOUNTER_LOSS)
+            event = {
+              type, outcome: 'failure',
+              title: template.title, narrative: fill(template.narrative),
+              doubloonDelta: 0, crewVariantLost: null,
+            }
+          }
         }
         break
       }
@@ -197,6 +225,20 @@ const ENCOUNTER_LOSS = [
   { title: 'Naval Patrol',    narrative: "A patrol cutter demanded inspection. {captain} had nothing to hide — but the delay burned hours." },
   { title: 'Bad Weather',     narrative: "Pushed off course by a sudden squall. By the time they righted, the opportunity had passed." },
   { title: 'Rough Passage',   narrative: "The route was blocked by hostile ships. The long way around added a day and cost the crew any prizes." },
+]
+
+const ENCOUNTER_CRUSH = [
+  { title: 'Ship Taken',       narrative: "{captain} hit them before they got their cannons loaded. The ship was theirs in ten minutes. They stripped it clean." },
+  { title: 'Enemy Boarded',    narrative: "The boarding was swift and total. {captain} led the charge. The crew took everything worth taking and left the hull to sink." },
+  { title: 'Captain Captured', narrative: "The enemy captain surrendered before the second volley. {captain} accepted — and took the ship's strongbox with the terms." },
+  { title: 'Ambush Turned',    narrative: "They thought they had the advantage. {captain} had spotted them an hour earlier. By the time they moved, it was already over." },
+]
+
+const ENCOUNTER_CREW_LOSS = [
+  { title: 'Pirate Ambush',    narrative: "The corsairs overwhelmed the deck. {captain} held the ship, but {name} was taken in the fighting and didn't come back." },
+  { title: 'Sea Monster',      narrative: "It came up under the hull. {name} was over the side before anyone could reach them. The creature was gone by dawn." },
+  { title: 'Hostile Boarding', narrative: "They swarmed the deck before the crew could form up. {name} was dragged off before {captain} could get there." },
+  { title: 'Rival Crew',       narrative: "Outmatched and outgunned. {name} took the worst of it. {captain} got the ship away, but not everyone made it back." },
 ]
 
 const DANGER_SUCCESS = [
