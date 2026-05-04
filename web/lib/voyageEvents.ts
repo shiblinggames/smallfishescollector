@@ -199,7 +199,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
           event = {
             type, outcome: 'neutral',
             title: template.title, narrative: template.narrative,
-            doubloonDelta: 0, gemDelta: 0, crewVariantLost: null,
+            doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, ringSkinDrop: null,
           }
         } else {
           const canLoseCrew = crewCount >= 2 && crewLost.length === 0
