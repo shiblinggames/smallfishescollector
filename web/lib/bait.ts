@@ -14,10 +14,10 @@ export interface BaitDef {
 export const BAITS: BaitDef[] = [
   {
     type: 'worm',
-    name: 'Worm',
+    name: 'Worms',
     description: 'Reliable all-purpose bait. Claim 20 free from your Daily Bonus.',
     color: '#a07858',
-    imageUrl: '/worm.png',
+    imageUrl: '/worms.png',
     waitMult: 1.0,
     catchZoneBonus: 0,
     acquisition: ['shop', 'daily'],
