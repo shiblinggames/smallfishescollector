@@ -3572,72 +3572,78 @@ export default function FishingGame({
               background: 'rgba(6,12,20,0.98)',
               borderTop: '1px solid rgba(255,255,255,0.09)',
               borderRadius: '18px 18px 0 0',
-              padding: '0 1rem 2rem',
-              maxHeight: '72vh', overflowY: 'auto', overscrollBehavior: 'contain',
+              maxHeight: '72vh',
+              display: 'flex', flexDirection: 'column',
             }}
           >
+            {/* Non-scrollable drag zone */}
             <DrawerHandle />
-            {/* Header */}
-            <div className="flex items-start justify-between mb-4" style={{ paddingTop: '0.75rem' }}>
-              <div>
-                <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                  style={{ fontSize: '0.72rem', color: '#9a9488', marginBottom: 3 }}>Fish Hold</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: holdTotalCount >= holdCapacity ? '#f87171' : '#f0ede8', lineHeight: 1.1 }}>
-                  {holdTotalCount} <span style={{ fontSize: '1.1rem', color: '#6a6764' }}>/ {holdCapacity}</span>
-                </p>
+            <div style={{ padding: '0.75rem 1rem 0', flexShrink: 0 }}>
+              {/* Header */}
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                    style={{ fontSize: '0.72rem', color: '#9a9488', marginBottom: 3 }}>Fish Hold</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: holdTotalCount >= holdCapacity ? '#f87171' : '#f0ede8', lineHeight: 1.1 }}>
+                    {holdTotalCount} <span style={{ fontSize: '1.1rem', color: '#6a6764' }}>/ {holdCapacity}</span>
+                  </p>
+                </div>
+                <button onClick={() => setHoldOpen(false)}
+                  style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
               </div>
-              <button onClick={() => setHoldOpen(false)}
-                style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
             </div>
 
-            {/* Upgrade boat CTA */}
-            <Link href="/marketplace/shipyard" onClick={() => setHoldOpen(false)} style={{ textDecoration: 'none', display: 'block', marginBottom: '1rem' }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '0.75rem 1rem',
-                background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.28)',
-                borderRadius: 14, boxShadow: '0 0 14px rgba(96,165,250,0.07)',
-                transition: 'box-shadow 0.2s',
-              }}>
-                <div>
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#60a5fa', marginBottom: 2 }}>Shipyard</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>Upgrade your boat</p>
-                  <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#60a5faaa', marginTop: 1 }}>More storage · faster sail · bigger crew</p>
+            {/* Scrollable content */}
+            <div style={{ overflowY: 'auto', overscrollBehavior: 'contain', flex: 1, padding: '0 1rem 2rem' }}>
+              {/* Upgrade boat CTA */}
+              <Link href="/marketplace/shipyard" onClick={() => setHoldOpen(false)} style={{ textDecoration: 'none', display: 'block', marginBottom: '1rem' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '0.75rem 1rem',
+                  background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.28)',
+                  borderRadius: 14, boxShadow: '0 0 14px rgba(96,165,250,0.07)',
+                  transition: 'box-shadow 0.2s',
+                }}>
+                  <div>
+                    <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#60a5fa', marginBottom: 2 }}>Shipyard</p>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>Upgrade your boat</p>
+                    <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#60a5faaa', marginTop: 1 }}>More storage · faster sail · bigger crew</p>
+                  </div>
+                  <span style={{ fontSize: '1.3rem', color: '#60a5fa', marginLeft: '0.75rem' }}>⛵</span>
                 </div>
-                <span style={{ fontSize: '1.3rem', color: '#60a5fa', marginLeft: '0.75rem' }}>⛵</span>
-              </div>
-            </Link>
+              </Link>
 
-            {inventory.length === 0 ? (
-              <p className="font-karla font-300 text-center py-6" style={{ fontSize: '0.8rem', color: '#4a4845' }}>
-                No fish yet. Cast a line!
-              </p>
-            ) : (
-              <div className="flex flex-col gap-1.5">
-                {inventory.map(item => {
-                  const fish = item.fish_species
-                  const hColor = HABITAT_COLOR[fish.habitat] ?? '#888'
-                  return (
-                    <div key={item.fish_id}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                      style={{ background: `${hColor}0a`, border: `1px solid ${hColor}20` }}>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>{fish.name}</p>
-                          <span className="font-karla font-600 shrink-0" style={{ fontSize: '0.52rem', color: hColor, background: `${hColor}18`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
-                            ×{item.quantity}
-                          </span>
+              {inventory.length === 0 ? (
+                <p className="font-karla font-300 text-center py-6" style={{ fontSize: '0.8rem', color: '#4a4845' }}>
+                  No fish yet. Cast a line!
+                </p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {inventory.map(item => {
+                    const fish = item.fish_species
+                    const hColor = HABITAT_COLOR[fish.habitat] ?? '#888'
+                    return (
+                      <div key={item.fish_id}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                        style={{ background: `${hColor}0a`, border: `1px solid ${hColor}20` }}>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>{fish.name}</p>
+                            <span className="font-karla font-600 shrink-0" style={{ fontSize: '0.52rem', color: hColor, background: `${hColor}18`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                              ×{item.quantity}
+                            </span>
+                          </div>
+                          <p className="font-karla font-600 mt-0.5" style={{ fontSize: '0.58rem', color: '#f0c04088' }}>
+                            {fish.sell_value.toLocaleString()} ⟡ each
+                            {item.quantity > 1 && <span style={{ color: '#6a676488' }}> · {(fish.sell_value * item.quantity).toLocaleString()} ⟡</span>}
+                          </p>
                         </div>
-                        <p className="font-karla font-600 mt-0.5" style={{ fontSize: '0.58rem', color: '#f0c04088' }}>
-                          {fish.sell_value.toLocaleString()} ⟡ each
-                          {item.quantity > 1 && <span style={{ color: '#6a676488' }}> · {(fish.sell_value * item.quantity).toLocaleString()} ⟡</span>}
-                        </p>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
