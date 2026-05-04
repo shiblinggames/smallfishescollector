@@ -10,11 +10,12 @@ interface Props {
   description: string
   info: string[]
   icon: React.ReactNode
+  accentColor?: string
   badge?: string
   external?: boolean
 }
 
-export default function ShopCard({ href, eyebrow, title, description, info, icon, badge, external }: Props) {
+export default function ShopCard({ href, eyebrow, title, description, info, icon, accentColor = '#f0c040', badge, external }: Props) {
   const router = useRouter()
   const [showModal, setShowModal] = useState(false)
 
@@ -35,7 +36,7 @@ export default function ShopCard({ href, eyebrow, title, description, info, icon
         onKeyDown={(e) => e.key === 'Enter' && handleClick()}
         style={{
           background: 'rgba(8,8,6,0.82)',
-          border: '1px solid rgba(255,255,255,0.16)',
+          border: `1px solid ${accentColor}30`,
           borderRadius: '14px',
           padding: '0.875rem',
           cursor: 'pointer',
@@ -46,16 +47,16 @@ export default function ShopCard({ href, eyebrow, title, description, info, icon
         <div className="flex items-center gap-2 mb-2.5">
           <div style={{
             width: 34, height: 34,
-            background: 'rgba(240,192,64,0.08)',
-            border: '1px solid rgba(240,192,64,0.18)',
+            background: `${accentColor}12`,
+            border: `1px solid ${accentColor}30`,
             borderRadius: '9px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
-            color: '#f0c040',
+            color: accentColor,
           }}>
             {icon}
           </div>
-          <p className="sg-eyebrow flex-1 truncate" style={{ color: '#9a9488' }}>{eyebrow}</p>
+          <p className="sg-eyebrow flex-1 truncate" style={{ color: accentColor + 'aa' }}>{eyebrow}</p>
           {badge && (
             <span className="font-karla font-700 uppercase tracking-[0.10em] text-[#f0c040]" style={{ fontSize: '0.48rem', flexShrink: 0 }}>{badge}</span>
           )}
@@ -72,7 +73,7 @@ export default function ShopCard({ href, eyebrow, title, description, info, icon
         </div>
 
         {/* Title */}
-        <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.88rem', lineHeight: 1.2, marginBottom: '0.3rem' }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', lineHeight: 1.2, marginBottom: '0.3rem', color: accentColor }}>
           {title}
         </p>
 

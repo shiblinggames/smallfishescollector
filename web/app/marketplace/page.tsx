@@ -87,9 +87,9 @@ export default async function MarketplacePage() {
             <div className="grid grid-cols-2 gap-3">
               <ShopCard
                 href="/marketplace/tackle-shop"
-                eyebrow="Tackle Shop"
+                eyebrow="Hooks · Rods · Bait"
                 title="Tackle Shop"
-                description="Hooks, rods, reels, bait, and line."
+                description="Upgrade your fishing gear to catch more and catch better."
                 info={[
                   'Hooks widen your catch zone',
                   'Rods each have a unique special ability',
@@ -98,18 +98,20 @@ export default async function MarketplacePage() {
                   'Line reduces snag zones — earned free',
                 ]}
                 icon={<HookIcon />}
+                accentColor="#22d3ee"
               />
               <ShopCard
                 href="/marketplace/shipyard"
-                eyebrow="Shipyard"
+                eyebrow="Ship · Hold · Crew"
                 title="Shipyard"
-                description="Bigger hold, more crew, more firepower."
+                description="Upgrade your ship for bigger hauls and stronger expeditions."
                 info={[
                   'Larger fish hold for longer sessions',
                   'More crew slots for expedition loadouts',
                   'Higher base damage in combat',
                 ]}
                 icon={<ShipIcon />}
+                accentColor="#fb923c"
               />
             </div>
           </div>
