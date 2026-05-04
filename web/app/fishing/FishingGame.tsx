@@ -1036,6 +1036,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
         </div>
       </motion.div>
     </div>
+    </div>
   )
 }
 
