@@ -108,7 +108,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
             <img src={shipStats.image} alt="" style={{ width: 22, height: 22, objectFit: 'contain', opacity: 0.75 }} />
             <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#c0bdb8' }}>{shipStats.name}</p>
           </div>
-          <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#4a4845' }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#8a8784' }}>
             {slots.filter(Boolean).length}/{shipStats.crewSlots} crew
           </p>
         </div>
@@ -182,7 +182,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={isCaptain ? 'rgba(240,192,64,0.22)' : 'rgba(255,255,255,0.12)'} strokeWidth="2.5" strokeLinecap="round">
                         <path d="M12 5v14M5 12h14"/>
                       </svg>
-                      <p className="font-karla" style={{ fontSize: '0.38rem', color: isCaptain ? '#6a5820' : '#3a3835' }}>
+                      <p className="font-karla" style={{ fontSize: '0.38rem', color: isCaptain ? '#8a7030' : '#5a5856' }}>
                         {isCaptain ? 'Captain' : 'Crew'}
                       </p>
                     </button>
@@ -205,7 +205,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
                   <p className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.52rem', color: '#c0bdb8', marginTop: 4 }}>
                     {s.label}
                   </p>
-                  <p className="font-karla" style={{ fontSize: '0.48rem', color: '#4a4845', marginTop: 2 }}>
+                  <p className="font-karla" style={{ fontSize: '0.48rem', color: '#8a8784', marginTop: 2 }}>
                     {s.sub}
                   </p>
                 </div>
@@ -219,7 +219,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
               style={{
                 width: '100%', marginTop: '0.9rem', paddingTop: '0.65rem',
                 background: 'none', border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)',
-                cursor: 'pointer', fontSize: '0.48rem', color: '#4a4845',
+                cursor: 'pointer', fontSize: '0.48rem', color: '#8a8784',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem',
               }}
             >
@@ -230,7 +230,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
             {showBreakdown && (
               <div style={{ marginTop: '0.65rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                 <div style={{ display: 'flex', paddingBottom: '0.3rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                  <p className="font-karla font-600 uppercase" style={{ fontSize: '0.38rem', color: '#3a3835', flex: 1 }}>Crew</p>
+                  <p className="font-karla font-600 uppercase" style={{ fontSize: '0.38rem', color: '#6a6764', flex: 1 }}>Crew</p>
                   {STAT_COLS.map(s => (
                     <p key={s.key} className="font-karla font-700 uppercase" style={{ fontSize: '0.38rem', color: s.color, width: 32, textAlign: 'right' }}>{s.label.slice(0,3)}</p>
                   ))}
@@ -243,7 +243,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
                     <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
                       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0 }}>
                         <p className="font-karla font-600 truncate" style={{ fontSize: '0.5rem', color: isCaptain ? '#d4b870' : '#6a6764' }}>{card.name}</p>
-                        <span className="font-karla" style={{ fontSize: '0.38rem', color: '#3a3835', flexShrink: 0 }}>{isCaptain ? '×1.0' : '×0.8'}</span>
+                        <span className="font-karla" style={{ fontSize: '0.38rem', color: '#6a6764', flexShrink: 0 }}>{isCaptain ? '×1.0' : '×0.8'}</span>
                       </div>
                       {STAT_COLS.map(s => (
                         <p key={s.key} className="font-cinzel font-700" style={{ fontSize: '0.5rem', color: s.color, width: 32, textAlign: 'right' }}>
