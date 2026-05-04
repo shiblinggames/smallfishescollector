@@ -6,6 +6,7 @@ import { EXPEDITION_SHIP_STATS, RARITY_COLORS, computeTotalCrewStats, type CrewC
 import type { VoyageEvent } from '@/lib/voyageEvents'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageEvents'
 import { getRingSkin, type RingSkinId } from '@/lib/ringSkins'
+import { getBait } from '@/lib/bait'
 import { sendDailyVoyage, revealVoyageResults, type DailyVoyage } from './voyageActions'
 
 type PanelState = 'idle' | 'away' | 'returned' | 'done'
@@ -46,6 +47,12 @@ const ROUTE_SKINS: Record<VoyageRoute, RingSkinId[]> = {
   deep:    ['gilded_compass', 'abyssal_sigil'],
 }
 
+const ROUTE_LURE_DROPS: Record<VoyageRoute, { type: string; rate: string }[]> = {
+  coastal: [],
+  open:    [{ type: 'luminous', rate: '~10%' }],
+  deep:    [{ type: 'luminous', rate: '~25%' }, { type: 'golden', rate: '~5%' }],
+}
+
 function computeRouteEstimate(
   stats: { power: number; dodge: number; fortune: number },
   crewCount: number,
@@ -77,7 +84,7 @@ function computeRouteEstimate(
     crewRiskPct = Math.round(Math.min(95, (encRisk + dngRisk) * 100))
   }
 
-  return { lootMin, lootMax, crewRiskPct, skinIds: ROUTE_SKINS[route] }
+  return { lootMin, lootMax, crewRiskPct, skinIds: ROUTE_SKINS[route], lureDrops: ROUTE_LURE_DROPS[route] }
 }
 
 interface Props {
@@ -284,8 +291,8 @@ export default function DailyVoyagePanel({
                                 {est.crewRiskPct === 0 ? 'No crew risk' : `${est.crewRiskPct}% crew risk`}
                               </span>
                             ) : (
-                              <span className="font-karla" style={{ fontSize: '0.58rem', color: '#6a6460' }}>
-                                Solo voyage
+                              <span className="font-karla" style={{ fontSize: '0.58rem', color: '#c87a4a' }}>
+                                Need 1 more crew
                               </span>
                             )}
 
@@ -307,6 +314,30 @@ export default function DailyVoyagePanel({
                                 )
                               })}
                             </div>
+                          </div>
+                        )}
+
+                        {/* Lure drops */}
+                        {est && est.lureDrops.length > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+                            <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.42rem', color: '#5a5248' }}>
+                              drops
+                            </span>
+                            {est.lureDrops.map(({ type, rate }) => {
+                              const bait = getBait(type)
+                              return (
+                                <span key={type} className="font-karla" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.54rem', color: isSelected ? bait.color : `${bait.color}99` }}>
+                                  <span style={{
+                                    display: 'inline-block', width: 6, height: 6, borderRadius: '2px',
+                                    background: bait.color,
+                                    opacity: isSelected ? 0.9 : 0.55,
+                                    boxShadow: `0 0 3px ${bait.color}88`,
+                                    flexShrink: 0,
+                                  }} />
+                                  {bait.name} <span style={{ color: isSelected ? '#a89878' : '#5a5248' }}>{rate}</span>
+                                </span>
+                              )
+                            })}
                           </div>
                         )}
                       </button>
