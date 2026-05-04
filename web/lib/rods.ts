@@ -79,24 +79,28 @@ export const RODS: RodDef[] = [
     description: 'Precision-engineered. Bites come blazingly fast.',
     color: '#4ade80', rarityBonus: 0, biteIntervalMs: 1600, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    imageUrl: '/carbonrod.png',
   },
   {
     tier: 9, name: 'Deep Diver', cost: 90000,
     description: 'Built for the abyss. The widest catch window money can buy.',
     color: '#22d3ee', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 16,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    imageUrl: '/deepdiverrod.png',
   },
   {
     tier: 10, name: 'Legendary Rod', cost: 200000,
     description: 'Forged from the mast of a sunken galleon. The rarest fish cannot resist.',
     color: '#ff6b35', rarityBonus: 0.50, biteIntervalMs: 1400, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    imageUrl: '/legendaryrod.png',
   },
   {
     tier: 11, name: 'Twin-Strike', cost: 45000,
     description: 'Two hooks on one line. When luck strikes, they both bite.',
     color: '#fbbf24', rarityBonus: 0, biteIntervalMs: 3200, catchZoneBonus: 0,
     doubleCatchChance: 0.25, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    imageUrl: '/twin-strikerod.png',
   },
   {
     tier: 12, name: 'Second Wind', cost: 28000,
