@@ -110,6 +110,7 @@ export default function DailyVoyagePanel({
   const [error, setError] = useState<string | null>(null)
   const [selectedRoute, setSelectedRoute] = useState<VoyageRoute | null>(null)
   const [claimedRingSkins, setClaimedRingSkins] = useState<string[]>([])
+  const [claimedBait, setClaimedBait] = useState<{ type: string; qty: number }[]>([])
   const [liveCrewIds, setLiveCrewIds] = useState<number[]>(savedCrewVariantIds)
 
   useEffect(() => {
@@ -166,6 +167,7 @@ export default function DailyVoyagePanel({
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
       if (res.earnedGems > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.newGemTotal }))
       setClaimedRingSkins(res.newRingSkins)
+      setClaimedBait(res.earnedBait)
       setPanelState('done')
       router.refresh()
     })
@@ -465,6 +467,14 @@ export default function DailyVoyagePanel({
                         </div>
                       )
                     })()}
+                    {e.baitDrop && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.3rem' }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: e.baitDrop === 'golden' ? '#fde68a' : '#4ade80', flexShrink: 0 }} />
+                        <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: e.baitDrop === 'golden' ? '#fde68a' : '#4ade80' }}>
+                          {e.baitDrop === 'golden' ? 'Golden Lure found!' : 'Luminous Lure found!'}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -606,6 +616,26 @@ export default function DailyVoyagePanel({
                   </div>
                 )
               })}
+            </div>
+          )}
+
+          {claimedBait.length > 0 && (
+            <div style={{
+              background: 'rgba(74,222,128,0.05)',
+              border: '1px solid rgba(74,222,128,0.2)',
+              borderRadius: 8, padding: '0.55rem 0.8rem',
+            }}>
+              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4ade80', marginBottom: '0.3rem' }}>
+                Bait recovered
+              </p>
+              {claimedBait.map(({ type, qty }) => (
+                <div key={type} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: type === 'golden' ? '#fde68a' : '#4ade80', flexShrink: 0 }} />
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: type === 'golden' ? '#fde68a' : '#4ade80', lineHeight: 1.3 }}>
+                    {type === 'golden' ? 'Golden Lure' : 'Luminous Lure'} ×{qty}
+                  </p>
+                </div>
+              ))}
             </div>
           )}
 

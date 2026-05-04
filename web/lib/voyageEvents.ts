@@ -54,6 +54,7 @@ export interface VoyageEvent {
   gemDelta: number           // always >= 0
   crewVariantLost: number | null
   ringSkinDrop: string | null
+  baitDrop: string | null    // 'luminous' or 'golden'
 }
 
 export interface VoyageResult {
@@ -62,6 +63,7 @@ export interface VoyageResult {
   totalGems: number
   crewLost: number[]  // variantIds permanently lost
   ringSkinDrops: string[]
+  baitDrops: { type: string; qty: number }[]
 }
 
 function rand(min: number, max: number): number {
@@ -129,6 +131,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
         const gemDrop = success && Math.random() * 55 < fortune ? Math.round(rand(3, 10) * rc.gemScale) : 0
         const skinPool: Record<VoyageRoute, string> = { coastal: 'whale_bone', open: 'coral_spire', deep: 'gilded_compass' }
         const skinDrop = success && Math.random() < 0.05 ? skinPool[route] : null
+        const baitDrop = success && route === 'deep' && Math.random() < 0.04 ? 'luminous' : null
         const template = pick(success ? DISCOVERY_SUCCESS : DISCOVERY_FAIL)
         event = {
           type, outcome: success ? 'success' : 'neutral',
@@ -137,6 +140,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
           gemDelta: gemDrop,
           crewVariantLost: null,
           ringSkinDrop: skinDrop,
+          baitDrop,
         }
         break
       }
@@ -144,7 +148,6 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
       case 'encounter': {
         const win = rollPower()
         if (win) {
-          // Crushing win: separate roll — high power makes it more likely
           const crush = Math.random() * 30 < power * 0.6
           const gemDrop = crush
             ? Math.round(rand(5, 15) * rc.gemScale)
@@ -155,6 +158,12 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
               : route === 'deep' && Math.random() < 0.05 ? 'gilded_compass'
               : null)
             : null
+          // Lure drops: Luminous on win/crush (open+deep), Golden only on deep crush
+          const baitDrop = crush
+            ? (route === 'deep' && Math.random() < 0.05 ? 'golden'
+              : route !== 'coastal' && Math.random() < 0.12 ? 'luminous'
+              : null)
+            : (route !== 'coastal' && Math.random() < 0.07 ? 'luminous' : null)
           const template = pick(crush ? ENCOUNTER_CRUSH : ENCOUNTER_WIN)
           event = {
             type, outcome: 'success',
@@ -163,9 +172,9 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
             gemDelta: gemDrop,
             crewVariantLost: null,
             ringSkinDrop: crushSkinDrop,
+            baitDrop,
           }
         } else {
-          // Loss: low power risks crew loss — chance fades to 0 at power 15+
           const canLoseCrew = crewCount >= 2 && crewLost.length === 0
           const crewLossChance = canLoseCrew ? Math.max(0.10, 0.5 - power / 60) * rc.crewLossScale : 0
           const loseCrew = crewLossChance > 0 && Math.random() < crewLossChance
@@ -178,14 +187,14 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
             event = {
               type, outcome: 'failure',
               title: template.title, narrative,
-              doubloonDelta: 0, gemDelta: 0, crewVariantLost: victim.variantId, ringSkinDrop: null,
+              doubloonDelta: 0, gemDelta: 0, crewVariantLost: victim.variantId, ringSkinDrop: null, baitDrop: null,
             }
           } else {
             const template = pick(ENCOUNTER_LOSS)
             event = {
               type, outcome: 'failure',
               title: template.title, narrative: fill(template.narrative),
-              doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, ringSkinDrop: null,
+              doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, ringSkinDrop: null, baitDrop: null,
             }
           }
         }
@@ -199,7 +208,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
           event = {
             type, outcome: 'neutral',
             title: template.title, narrative: template.narrative,
-            doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, ringSkinDrop: null,
+            doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, ringSkinDrop: null, baitDrop: null,
           }
         } else {
           const canLoseCrew = crewCount >= 2 && crewLost.length === 0
@@ -213,14 +222,14 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
             event = {
               type, outcome: 'failure',
               title: template.title, narrative,
-              doubloonDelta: 0, gemDelta: 0, crewVariantLost: victim.variantId, ringSkinDrop: null,
+              doubloonDelta: 0, gemDelta: 0, crewVariantLost: victim.variantId, ringSkinDrop: null, baitDrop: null,
             }
           } else {
             const template = pick(DANGER_SETBACK)
             event = {
               type, outcome: 'failure',
               title: template.title, narrative: template.narrative,
-              doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, ringSkinDrop: null,
+              doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, ringSkinDrop: null, baitDrop: null,
             }
           }
         }
@@ -234,7 +243,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
           type, outcome: safe ? (Math.random() < 0.35 ? 'success' : 'neutral') : 'neutral',
           title: template.title, narrative: template.narrative,
           doubloonDelta: safe && Math.random() < 0.35 ? payout(20, 50) : 0,
-          gemDelta: 0, crewVariantLost: null, ringSkinDrop: null,
+          gemDelta: 0, crewVariantLost: null, ringSkinDrop: null, baitDrop: null,
         }
         break
       }
@@ -246,7 +255,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
         event = {
           type, outcome: 'neutral',
           title: template.title, narrative: fill(template.narrative),
-          doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, ringSkinDrop: null,
+          doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, ringSkinDrop: null, baitDrop: null,
         }
         break
       }
@@ -258,7 +267,12 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
   const totalDoubloons = events.reduce((sum, e) => sum + e.doubloonDelta, 0)
   const totalGems = events.reduce((sum, e) => sum + e.gemDelta, 0)
   const ringSkinDrops = events.map(e => e.ringSkinDrop).filter((s): s is string => s !== null)
-  return { events, totalDoubloons, totalGems, crewLost, ringSkinDrops }
+  const baitDropMap = new Map<string, number>()
+  for (const e of events) {
+    if (e.baitDrop) baitDropMap.set(e.baitDrop, (baitDropMap.get(e.baitDrop) ?? 0) + 1)
+  }
+  const baitDrops = Array.from(baitDropMap.entries()).map(([type, qty]) => ({ type, qty }))
+  return { events, totalDoubloons, totalGems, crewLost, ringSkinDrops, baitDrops }
 }
 
 // ── Event text pools ──────────────────────────────────────────────────────────

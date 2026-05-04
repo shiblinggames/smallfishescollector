@@ -181,7 +181,7 @@ export async function sendDailyVoyage(crewVariantIds: number[], route: VoyageRou
 }
 
 export async function revealVoyageResults(voyageId: number): Promise<
-  { ok: true; earnedDoubloons: number; newDoubloonTotal: number; earnedGems: number; newGemTotal: number; crewLost: number[]; newRingSkins: string[] } | { error: string }
+  { ok: true; earnedDoubloons: number; newDoubloonTotal: number; earnedGems: number; newGemTotal: number; crewLost: number[]; newRingSkins: string[]; earnedBait: { type: string; qty: number }[] } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -224,6 +224,13 @@ export async function revealVoyageResults(voyageId: number): Promise<
   const newRingSkins = allDropped.filter(s => !currentSkins.includes(s))
   const updatedSkins = newRingSkins.length > 0 ? [...new Set([...currentSkins, ...allDropped])] : currentSkins
 
+  // Collect bait drops
+  const baitDropMap = new Map<string, number>()
+  for (const e of voyage.events as { baitDrop?: string | null }[]) {
+    if (e.baitDrop) baitDropMap.set(e.baitDrop, (baitDropMap.get(e.baitDrop) ?? 0) + 1)
+  }
+  const earnedBait = Array.from(baitDropMap.entries()).map(([type, qty]) => ({ type, qty }))
+
   await Promise.all([
     admin.from('profiles').update({ doubloons: newDoubloons, gems: newGems, saved_crew: newSavedCrew, unlocked_ring_skins: updatedSkins }).eq('id', user.id),
     admin.from('daily_voyages').update({ status: 'revealed' }).eq('id', voyageId),
@@ -233,7 +240,10 @@ export async function revealVoyageResults(voyageId: number): Promise<
     ...(voyage.total_doubloons > 0
       ? [admin.from('doubloon_transactions').insert({ user_id: user.id, amount: voyage.total_doubloons, reason: 'Daily crew voyage' })]
       : []),
+    ...earnedBait.map(({ type, qty }) =>
+      admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: type, p_qty: qty })
+    ),
   ])
 
-  return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, earnedGems: voyage.total_gems, newGemTotal: newGems, crewLost: voyage.crew_lost, newRingSkins }
+  return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, earnedGems: voyage.total_gems, newGemTotal: newGems, crewLost: voyage.crew_lost, newRingSkins, earnedBait }
 }
