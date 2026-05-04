@@ -2294,113 +2294,107 @@ export default function FishingGame({
             </AnimatePresence>
           </div>
 
-          {/* ── Bottom buttons — Gear & Bait + Fish Hold ── */}
+          {/* ── Bottom buttons — 4 action tiles ── */}
           {(() => {
-            const holdPct = holdCapacity > 0 ? holdTotalCount / holdCapacity : 0
-            const holdFull = holdTotalCount >= holdCapacity
+            const holdPct      = holdCapacity > 0 ? holdTotalCount / holdCapacity : 0
+            const holdFull     = holdTotalCount >= holdCapacity
             const holdCritical = !holdFull && holdPct >= 0.9
             const holdWarning  = !holdFull && !holdCritical && holdPct >= 0.75
-            const holdAccent = holdFull ? '#f87171' : holdCritical ? '#fb923c' : holdWarning ? '#fbbf24' : '#f0c040'
-            const holdBg = holdOpen
-              ? `${holdAccent}10`
-              : holdFull ? 'rgba(248,113,113,0.06)' : holdCritical ? 'rgba(251,146,60,0.05)' : 'rgba(4,10,18,0.72)'
-            const holdBorder = holdOpen
-              ? `${holdAccent}50`
-              : holdFull ? 'rgba(248,113,113,0.35)' : holdCritical ? 'rgba(251,146,60,0.28)' : holdWarning ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.09)'
-            const baitAccent = selectedBaitDef?.color ?? '#94a3b8'
-            const baitStat = selectedBaitQty === 0
+            const holdAccent   = holdFull ? '#f87171' : holdCritical ? '#fb923c' : holdWarning ? '#fbbf24' : '#f0c040'
+            const baitAccent   = selectedBaitDef?.color ?? '#94a3b8'
+            const outOfBait    = selectedBaitQty === 0
+
+            const baitStat = outOfBait
               ? 'Out of bait'
               : (selectedBaitDef?.catchZoneBonus ?? 0) > 0
-                ? `+${selectedBaitDef!.catchZoneBonus}° catch zone`
+                ? `+${selectedBaitDef!.catchZoneBonus}° zone`
                 : (selectedBaitDef?.waitMult ?? 1) < 1.0
-                  ? `${Math.round((1 - selectedBaitDef!.waitMult) * 100)}% faster bites`
-                  : (selectedBaitDef?.waitMult ?? 1) > 1.0
-                    ? `${Math.round((selectedBaitDef!.waitMult - 1) * 100)}% slower bites`
-                    : 'Standard bait'
-            return (
-              <div className="flex gap-2.5" style={{ paddingTop: '0.75rem' }}>
+                  ? `${Math.round((1 - selectedBaitDef!.waitMult) * 100)}% faster`
+                  : 'Standard'
 
-                {/* Gear & Bait */}
+            const tile: React.CSSProperties = {
+              flex: 1, height: 74, borderRadius: 16,
+              display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center',
+              gap: 2, padding: '0 0.65rem', minWidth: 0,
+              cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
+            }
+
+            return (
+              <div style={{ display: 'flex', gap: '0.45rem', paddingTop: '0.75rem' }}>
+
+                {/* Gear */}
                 <button
                   onClick={() => { setGearOpen(o => !o); setHoldOpen(false) }}
                   style={{
-                    flex: 1, height: 86, borderRadius: 20,
-                    background: gearOpen ? `${baitAccent}12` : 'rgba(4,10,18,0.72)',
-                    border: `1px solid ${gearOpen ? baitAccent + '50' : 'rgba(255,255,255,0.09)'}`,
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center',
-                    gap: 3, padding: '0 1rem',
-                    cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
+                    ...tile,
+                    background: gearOpen ? 'rgba(240,192,64,0.10)' : 'rgba(4,10,18,0.72)',
+                    border: `1px solid ${gearOpen ? 'rgba(240,192,64,0.32)' : 'rgba(255,255,255,0.09)'}`,
                   }}
                 >
-                  <div className="flex items-center gap-1.5">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 4L6 16M6 16l4-1-1 4M18 4l1 4-4-1"/>
-                      <circle cx="9" cy="19" r="1.5" fill="rgba(255,255,255,0.3)" stroke="none"/>
-                    </svg>
-                    <p className="font-karla font-700 uppercase tracking-[0.12em]"
-                      style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)' }}>Gear & Bait</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-cinzel font-700"
-                      style={{ fontSize: '0.95rem', color: selectedBaitQty === 0 ? '#f87171' : baitAccent, lineHeight: 1 }}>
-                      {selectedBaitDef?.name ?? '—'}
-                    </p>
-                    {selectedBaitQty > 0 && (
-                      <span className="font-karla font-700"
-                        style={{
-                          fontSize: '0.6rem', color: baitAccent,
-                          background: baitAccent + '18', border: `1px solid ${baitAccent}35`,
-                          borderRadius: 20, padding: '0.1rem 0.4rem', lineHeight: 1.4,
-                        }}>
-                        ×{selectedBaitQty}
-                      </span>
-                    )}
-                  </div>
-                  <p className="font-karla font-500"
-                    style={{ fontSize: '0.62rem', color: selectedBaitQty === 0 ? '#f87171' : 'rgba(255,255,255,0.35)', lineHeight: 1 }}>
-                    {baitStat}
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: 'rgba(255,255,255,0.25)' }}>Gear</p>
+                  <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#d4c09a', lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+                    {rod.name}
+                  </p>
+                  <p className="font-karla" style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.22)', lineHeight: 1 }}>
+                    Hk{hookTier} · Re{reelTier} · Ln{lineTier}
                   </p>
                 </button>
 
-                {/* Fish Hold */}
+                {/* Bait */}
+                <button
+                  onClick={() => { setGearOpen(o => !o); setHoldOpen(false) }}
+                  style={{
+                    ...tile,
+                    background: gearOpen ? `${baitAccent}10` : 'rgba(4,10,18,0.72)',
+                    border: `1px solid ${gearOpen ? baitAccent + '38' : outOfBait ? 'rgba(248,113,113,0.25)' : 'rgba(255,255,255,0.09)'}`,
+                  }}
+                >
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: 'rgba(255,255,255,0.25)' }}>Bait</p>
+                  <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: outOfBait ? '#f87171' : baitAccent, lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+                    {selectedBaitDef?.name ?? '—'}
+                  </p>
+                  <p className="font-karla" style={{ fontSize: '0.48rem', color: outOfBait ? 'rgba(248,113,113,0.55)' : 'rgba(255,255,255,0.22)', lineHeight: 1 }}>
+                    {outOfBait ? 'Out of bait' : `×${selectedBaitQty} · ${baitStat}`}
+                  </p>
+                </button>
+
+                {/* Hold */}
                 <button
                   onClick={() => { setHoldOpen(o => !o); setGearOpen(false) }}
                   style={{
-                    flex: 1, height: 86, borderRadius: 20,
-                    background: holdBg,
-                    border: `1px solid ${holdBorder}`,
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center',
-                    gap: 3, padding: '0 1rem',
-                    cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.2s',
+                    ...tile,
+                    background: holdOpen
+                      ? `${holdAccent}10`
+                      : holdFull ? 'rgba(248,113,113,0.06)' : 'rgba(4,10,18,0.72)',
+                    border: `1px solid ${holdOpen
+                      ? holdAccent + '45'
+                      : holdFull ? 'rgba(248,113,113,0.35)' : holdCritical ? 'rgba(251,146,60,0.28)' : holdWarning ? 'rgba(251,191,36,0.20)' : 'rgba(255,255,255,0.09)'}`,
                   }}
                 >
-                  <div className="flex items-center gap-1.5">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
-                    </svg>
-                    <p className="font-karla font-700 uppercase tracking-[0.12em]"
-                      style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)' }}>Fish Hold</p>
-                    {(holdFull || holdCritical) && (
-                      <span className="font-karla font-700 uppercase"
-                        style={{
-                          fontSize: '0.48rem', color: holdAccent,
-                          background: holdAccent + '18', border: `1px solid ${holdAccent}40`,
-                          borderRadius: 20, padding: '0.1rem 0.4rem', lineHeight: 1.4,
-                        }}>
-                        {holdFull ? 'Full' : 'Almost full'}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-cinzel font-700"
-                      style={{ fontSize: '0.95rem', color: holdTotalCount > 0 ? holdAccent : '#3a3835', lineHeight: 1 }}>
-                      {holdTotalCount}
-                      <span className="font-karla font-400" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)' }}> / {holdCapacity}</span>
-                    </p>
-                  </div>
-                  <p className="font-karla font-500"
-                    style={{ fontSize: '0.62rem', color: holdTotalCount > 0 ? 'rgba(255,255,255,0.35)' : '#3a3835', lineHeight: 1 }}>
-                    {holdTotalCount > 0 ? `${holdTotalValue.toLocaleString()} ⟡ · tap to sell` : 'Nothing caught yet'}
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: 'rgba(255,255,255,0.25)' }}>Hold</p>
+                  <p className="font-karla font-700" style={{ fontSize: '0.72rem', lineHeight: 1, color: holdTotalCount > 0 ? holdAccent : '#3a3835' }}>
+                    {holdTotalCount}<span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.18)', fontWeight: 400 }}> /{holdCapacity}</span>
+                  </p>
+                  <p className="font-karla" style={{ fontSize: '0.48rem', lineHeight: 1, color: holdFull ? '#f87171aa' : holdCritical ? '#fb923caa' : holdTotalCount > 0 ? 'rgba(255,255,255,0.22)' : '#2a2825' }}>
+                    {holdFull ? 'Full' : holdCritical ? 'Almost full' : holdWarning ? 'Getting full' : holdTotalCount > 0 ? 'fish in hold' : 'empty'}
+                  </p>
+                </button>
+
+                {/* Sell */}
+                <button
+                  onClick={() => { setHoldOpen(o => !o); setGearOpen(false) }}
+                  style={{
+                    ...tile,
+                    background: holdOpen ? 'rgba(240,192,64,0.08)' : 'rgba(4,10,18,0.72)',
+                    border: `1px solid ${holdOpen ? 'rgba(240,192,64,0.28)' : 'rgba(255,255,255,0.09)'}`,
+                  }}
+                >
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: 'rgba(255,255,255,0.25)' }}>Sell</p>
+                  <p className="font-karla font-700" style={{ fontSize: '0.72rem', lineHeight: 1, color: holdTotalValue > 0 ? '#f0c040' : '#3a3835' }}>
+                    {holdTotalValue > 0 ? `${holdTotalValue.toLocaleString()} ⟡` : '—'}
+                  </p>
+                  <p className="font-karla" style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.22)', lineHeight: 1 }}>
+                    quick sell · market
                   </p>
                 </button>
 
