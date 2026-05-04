@@ -2060,42 +2060,83 @@ export default function FishingGame({
               ← {HABITAT_LABEL[selectedZone]}
             </button>
 
-            <button
-              onClick={() => { setCollectionOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
-              style={{
-                background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
-                borderRadius: 20, padding: '0.28rem 0.7rem',
-                cursor: 'pointer', touchAction: 'manipulation',
-                position: 'relative',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
-              }}
-            >
-              <span className="font-karla font-600 uppercase tracking-[0.1em]"
-                style={{ fontSize: '0.48rem', color: HABITAT_COLOR[selectedZone] + 'dd', lineHeight: 1 }}>
-                Collection
-              </span>
-              <span className="font-cinzel font-700"
-                style={{ fontSize: '0.88rem', color: HABITAT_COLOR[selectedZone], lineHeight: 1 }}>
-                {caughtFishIds.size}
-                <span className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }}>
-                  /{allFishSpecies.length}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              {/* Daily challenge icon */}
+              {(() => {
+                const claimable = dailyChallenges.some((c, i) => dailyProgress[i] >= c.target && !dailyClaimed[i])
+                const allClaimed = dailyClaimed.every(Boolean)
+                return (
+                  <button
+                    onClick={() => setDailyOpen(o => !o)}
+                    style={{
+                      background: dailyOpen ? 'rgba(240,192,64,0.12)' : 'rgba(4,10,18,0.72)',
+                      border: `1px solid ${claimable ? 'rgba(240,192,64,0.55)' : dailyOpen ? 'rgba(240,192,64,0.3)' : 'rgba(255,255,255,0.12)'}`,
+                      borderRadius: 20, padding: '0.28rem 0.55rem',
+                      cursor: 'pointer', touchAction: 'manipulation',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                      position: 'relative',
+                    }}
+                  >
+                    <span className="font-karla font-600 uppercase tracking-[0.1em]"
+                      style={{ fontSize: '0.45rem', color: claimable ? '#f0c040' : allClaimed ? '#4ade80' : '#6a6764', lineHeight: 1 }}>
+                      Daily
+                    </span>
+                    <div style={{ display: 'flex', gap: 3 }}>
+                      {dailyChallenges.map((c, i) => (
+                        <div key={i} style={{
+                          width: 5, height: 5, borderRadius: '50%',
+                          background: dailyClaimed[i] ? '#4ade80' : dailyProgress[i] >= c.target ? '#f0c040' : 'rgba(255,255,255,0.15)',
+                        }} />
+                      ))}
+                    </div>
+                    {claimable && (
+                      <span style={{
+                        position: 'absolute', top: -4, right: -4,
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: '#f0c040', border: '1.5px solid #08121c',
+                      }} />
+                    )}
+                  </button>
+                )
+              })()}
+
+              <button
+                onClick={() => { setCollectionOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
+                style={{
+                  background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
+                  borderRadius: 20, padding: '0.28rem 0.7rem',
+                  cursor: 'pointer', touchAction: 'manipulation',
+                  position: 'relative',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
+                }}
+              >
+                <span className="font-karla font-600 uppercase tracking-[0.1em]"
+                  style={{ fontSize: '0.48rem', color: HABITAT_COLOR[selectedZone] + 'dd', lineHeight: 1 }}>
+                  Collection
                 </span>
-              </span>
-              {uncheckedNewFishIds.size > 0 && (
-                <span style={{
-                  position: 'absolute', top: -4, right: -4,
-                  minWidth: 14, height: 14, borderRadius: 7,
-                  background: '#f87171',
-                  border: '1.5px solid #08121c',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '0.48rem', fontWeight: 700, color: '#fff',
-                  paddingInline: uncheckedNewFishIds.size > 9 ? '0.2rem' : 0,
-                  fontFamily: 'var(--font-karla)',
-                }}>
-                  {uncheckedNewFishIds.size}
+                <span className="font-cinzel font-700"
+                  style={{ fontSize: '0.88rem', color: HABITAT_COLOR[selectedZone], lineHeight: 1 }}>
+                  {caughtFishIds.size}
+                  <span className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }}>
+                    /{allFishSpecies.length}
+                  </span>
                 </span>
-              )}
-            </button>
+                {uncheckedNewFishIds.size > 0 && (
+                  <span style={{
+                    position: 'absolute', top: -4, right: -4,
+                    minWidth: 14, height: 14, borderRadius: 7,
+                    background: '#f87171',
+                    border: '1.5px solid #08121c',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.48rem', fontWeight: 700, color: '#fff',
+                    paddingInline: uncheckedNewFishIds.size > 9 ? '0.2rem' : 0,
+                    fontFamily: 'var(--font-karla)',
+                  }}>
+                    {uncheckedNewFishIds.size}
+                  </span>
+                )}
+              </button>
+            </div>
 
           </div>
 
@@ -2126,56 +2167,6 @@ export default function FishingGame({
             </div>
           </div>
 
-          {/* Daily challenge row */}
-          {(() => {
-            const doneCount = dailyChallenges.filter((c, i) => dailyProgress[i] >= c.target).length
-            const claimable = dailyChallenges.some((c, i) => dailyProgress[i] >= c.target && !dailyClaimed[i])
-            const allClaimed = dailyClaimed.every(Boolean)
-            return (
-              <button
-                onClick={() => setDailyOpen(o => !o)}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  background: dailyOpen ? 'rgba(240,192,64,0.09)' : 'rgba(4,10,18,0.72)',
-                  border: `1px solid ${claimable ? 'rgba(240,192,64,0.45)' : dailyOpen ? 'rgba(240,192,64,0.25)' : 'rgba(255,255,255,0.09)'}`,
-                  borderRadius: 20, padding: '0.28rem 0.65rem', marginBottom: '0.5rem',
-                  cursor: 'pointer', touchAction: 'manipulation', gap: 8,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span className="font-karla font-700 uppercase tracking-[0.1em]"
-                    style={{ fontSize: '0.52rem', color: claimable ? '#f0c040' : '#6a6764' }}>
-                    Daily
-                  </span>
-                  <div style={{ display: 'flex', gap: 3 }}>
-                    {dailyChallenges.map((c, i) => {
-                      const done = dailyProgress[i] >= c.target
-                      const claimed = dailyClaimed[i]
-                      return (
-                        <div key={i} style={{
-                          width: 6, height: 6, borderRadius: '50%',
-                          background: claimed ? '#4ade80' : done ? '#f0c040' : 'rgba(255,255,255,0.12)',
-                        }} />
-                      )
-                    })}
-                  </div>
-                  {claimable && (
-                    <span className="font-karla font-700 uppercase tracking-[0.08em]"
-                      style={{ fontSize: '0.42rem', color: '#f0c040', background: 'rgba(240,192,64,0.15)', border: '1px solid rgba(240,192,64,0.35)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
-                      Claim
-                    </span>
-                  )}
-                  {allClaimed && (
-                    <span className="font-karla font-600"
-                      style={{ fontSize: '0.48rem', color: '#4ade80' }}>All done ✓</span>
-                  )}
-                </div>
-                <span style={{ fontSize: '0.52rem', color: '#3a3835', lineHeight: 1 }}>
-                  {dailyOpen ? '▴' : '▾'}
-                </span>
-              </button>
-            )
-          })()}
 
           {/* Challenge session strip */}
           {activeSession && !sessionDone && sessionSecondsLeft !== null && (
