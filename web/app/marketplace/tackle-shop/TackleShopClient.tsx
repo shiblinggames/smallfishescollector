@@ -231,85 +231,126 @@ export default function TackleShopClient({
 
       {/* ── Bait ── */}
       {section === 'bait' && (
-        <div id="bait" className="flex flex-col gap-2.5 mb-4">
+        <div id="bait" className="flex flex-col gap-3 mb-4">
           {shopBaits.map(bait => {
             const qty = baitMap[bait.type] ?? 0
             const bundleCost = bait.shopCost * bait.bundleSize
             const canAffordBait = doubloons >= bundleCost
             const isBuying = buyingBait === bait.type && isPending
+            const hasFasterBite = bait.waitMult < 1.0
+            const hasCatchBonus = bait.catchZoneBonus > 0
+            const noDrawbacks = bait.waitMult <= 1.0 && hasCatchBonus
 
             return (
-              <div key={bait.type}
-                className="flex items-center gap-4 px-4 py-4 rounded-xl"
-                style={{ background: 'rgba(8,8,6,0.82)', border: `1px solid ${bait.color}40` }}
-              >
-                <div style={{
-                  width: 44, height: 44, borderRadius: 11, flexShrink: 0,
-                  background: `${bait.color}18`, border: `1px solid ${bait.color}40`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {bait.imageUrl
-                    ? <img src={bait.imageUrl} alt={bait.name} style={{ width: 30, height: 30, objectFit: 'contain' }} />
-                    : <div style={{ width: 13, height: 13, borderRadius: 4, background: bait.color }} />
-                  }
-                </div>
+              <div key={bait.type} style={{
+                background: 'rgba(8,8,6,0.88)',
+                border: `1px solid ${bait.color}28`,
+                borderLeft: `3px solid ${bait.color}aa`,
+                borderRadius: 14,
+                padding: '0.9rem 1rem 0.75rem',
+                display: 'flex', flexDirection: 'column', gap: '0.6rem',
+              }}>
 
-                <div className="flex-1 min-w-0">
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>
-                    {bait.name}
-                  </p>
-                  <p className="font-karla font-300" style={{ fontSize: '0.8rem', color: '#6a6764', marginBottom: 4 }}>
-                    {bait.description}
-                  </p>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {bait.catchZoneBonus > 0 && (
-                      <span className="font-karla font-600"
-                        style={{ fontSize: '0.65rem', color: bait.color, background: `${bait.color}14`, border: `1px solid ${bait.color}30`, padding: '0.15rem 0.5rem', borderRadius: '2rem' }}>
-                        +{bait.catchZoneBonus}° catch zone
-                      </span>
-                    )}
-                    {bait.waitMult < 1.0 && (
-                      <span className="font-karla font-600"
-                        style={{ fontSize: '0.65rem', color: bait.color, background: `${bait.color}14`, border: `1px solid ${bait.color}30`, padding: '0.15rem 0.5rem', borderRadius: '2rem' }}>
-                        {Math.round((1 - bait.waitMult) * 100)}% faster bite
-                      </span>
-                    )}
-                    {bait.waitMult > 1.0 && (
-                      <span className="font-karla font-600"
-                        style={{ fontSize: '0.65rem', color: '#f87171', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', padding: '0.15rem 0.5rem', borderRadius: '2rem' }}>
-                        {Math.round((bait.waitMult - 1) * 100)}% slower bite
-                      </span>
-                    )}
+                {/* Top: icon + name + owned badge */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                  <div style={{
+                    width: 52, height: 52, borderRadius: 12, flexShrink: 0,
+                    background: `${bait.color}18`, border: `1px solid ${bait.color}40`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {bait.imageUrl
+                      ? <img src={bait.imageUrl} alt={bait.name} style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                      : <div style={{ width: 16, height: 16, borderRadius: 5, background: bait.color }} />
+                    }
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8', lineHeight: 1.1 }}>
+                        {bait.name}
+                      </p>
+                      {qty > 0 && (
+                        <span className="font-karla font-700" style={{
+                          fontSize: '0.62rem', color: bait.color,
+                          background: `${bait.color}18`, border: `1px solid ${bait.color}38`,
+                          borderRadius: 20, padding: '0.12rem 0.5rem',
+                        }}>×{qty} owned</span>
+                      )}
+                    </div>
+                    {/* Effect chips */}
+                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.45rem' }}>
+                      {hasFasterBite && (
+                        <span className="font-karla font-600" style={{
+                          fontSize: '0.72rem', color: '#e8e4de',
+                          background: `${bait.color}22`, border: `1px solid ${bait.color}48`,
+                          borderRadius: 20, padding: '0.2rem 0.65rem',
+                        }}>{Math.round((1 - bait.waitMult) * 100)}% faster bites</span>
+                      )}
+                      {hasCatchBonus && (
+                        <span className="font-karla font-600" style={{
+                          fontSize: '0.72rem', color: '#e8e4de',
+                          background: `${bait.color}22`, border: `1px solid ${bait.color}48`,
+                          borderRadius: 20, padding: '0.2rem 0.65rem',
+                        }}>+{bait.catchZoneBonus}° catch zone</span>
+                      )}
+                      {noDrawbacks && !hasFasterBite && (
+                        <span className="font-karla font-600" style={{
+                          fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)',
+                          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: 20, padding: '0.2rem 0.65rem',
+                        }}>no speed penalty</span>
+                      )}
+                      {bait.type === 'worm' && (
+                        <span className="font-karla font-600" style={{
+                          fontSize: '0.72rem', color: '#4ade80',
+                          background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.28)',
+                          borderRadius: 20, padding: '0.2rem 0.65rem',
+                        }}>20 free daily</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-2 shrink-0">
-                  <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: qty > 0 ? bait.color : '#4a4845' }}>
-                    ×{qty} owned
-                  </p>
+                {/* Buy row */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  paddingTop: '0.55rem', borderTop: '1px solid rgba(255,255,255,0.06)',
+                }}>
+                  <div>
+                    <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: canAffordBait ? 'rgba(255,255,255,0.55)' : '#4a4845' }}>
+                      {bundleCost.toLocaleString()} ⟡
+                      <span className="font-karla font-400" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.25)', marginLeft: 4 }}>
+                        for {bait.bundleSize}
+                      </span>
+                    </p>
+                    {!canAffordBait && (
+                      <p className="font-karla font-500" style={{ fontSize: '0.62rem', color: '#f87171', marginTop: 2 }}>
+                        {(bundleCost - doubloons).toLocaleString()} ⟡ short
+                      </p>
+                    )}
+                  </div>
                   <button
                     onClick={() => handleBuyBait(bait.type)}
                     disabled={!canAffordBait || isPending}
                     className="font-karla font-700"
                     style={{
-                      fontSize: '0.75rem',
-                      padding: '0.4rem 0.85rem',
-                      borderRadius: 9,
-                      background: canAffordBait ? `${bait.color}16` : 'rgba(255,255,255,0.06)',
-                      border: `1px solid ${canAffordBait ? bait.color + '44' : 'rgba(255,255,255,0.14)'}`,
+                      fontSize: '0.8rem',
+                      padding: '0.5rem 1.1rem',
+                      borderRadius: 10,
+                      background: canAffordBait ? `${bait.color}20` : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${canAffordBait ? bait.color + '55' : 'rgba(255,255,255,0.1)'}`,
                       color: canAffordBait ? bait.color : '#4a4845',
                       cursor: canAffordBait && !isPending ? 'pointer' : 'default',
                       opacity: isBuying ? 0.5 : 1,
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {isBuying ? '…' : `+${bait.bundleSize} · ${bundleCost.toLocaleString()} ⟡`}
+                    {isBuying ? '…' : `Buy ${bait.bundleSize}`}
                   </button>
                 </div>
               </div>
             )
           })}
-          <p className="font-karla font-300 text-center" style={{ fontSize: '0.72rem', color: '#3a3835', marginTop: 4 }}>
+          <p className="font-karla font-400 text-center" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.2)', marginTop: 4 }}>
             Luminous Lure &amp; Golden Lure are earned — not for sale
           </p>
         </div>
