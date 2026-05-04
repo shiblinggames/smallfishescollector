@@ -17,7 +17,7 @@ export interface RouteConfig {
 
 export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
   coastal: {
-    name: 'Coastal Run',
+    name: 'The Inner Sea',
     tagline: 'Familiar waters. Light risk, modest reward.',
     riskLabel: 'Safe',
     color: '#4ade80',
@@ -26,7 +26,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     gemScale: 0.5,
   },
   open: {
-    name: 'Open Seas',
+    name: 'The Crossing',
     tagline: 'Standard voyage. Balanced risk and reward.',
     riskLabel: 'Balanced',
     color: '#f0c040',
@@ -35,7 +35,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     gemScale: 1.0,
   },
   deep: {
-    name: 'The Deep',
+    name: 'The Howling Deep',
     tagline: 'Hostile open water. High risk, high reward.',
     riskLabel: 'Dangerous',
     color: '#c084fc',
