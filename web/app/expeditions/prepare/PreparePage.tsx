@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { startExpedition } from '../actions'
 import { EXPEDITION_ITEMS, RARITY_COLORS, type ZoneKey, type ZoneConfig, type ShipStats, type CrewCard } from '@/lib/expeditions'
+import { getCrewTrait } from '@/lib/crew-traits'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 
@@ -178,6 +179,14 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
                         )}
                       </div>
                       <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764', marginTop: 2 }}>{card.rarity}</p>
+                      {(() => {
+                        const trait = getCrewTrait(card.name, card.rarity)
+                        return trait ? (
+                          <p className="font-karla" style={{ fontSize: '0.48rem', fontStyle: 'italic', color: 'rgba(255,255,255,0.28)', lineHeight: 1.5, marginTop: 4, paddingTop: 4, borderTop: '0.5px solid rgba(255,255,255,0.07)' }}>
+                            {trait}
+                          </p>
+                        ) : null
+                      })()}
                     </div>
                     <div style={{ display: 'flex', gap: '0.875rem', flexShrink: 0 }}>
                       {STAT_COLS.map(s => (
