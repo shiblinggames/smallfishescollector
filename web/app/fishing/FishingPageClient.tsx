@@ -7,6 +7,7 @@ import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { ZONE_MIN_LEVEL } from './zoneData'
 import type { ActiveSession } from '@/app/social/challengeActions'
+import type { DailyChallengeState } from '@/lib/dailyChallenges'
 
 const LAST_ZONE_KEY = 'fishing_last_zone'
 
@@ -24,7 +25,7 @@ export default function FishingPageClient({
   initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
   holdCapacity, shipTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, activeSession, username, zoneRewardsClaimed,
-  initialRingSkin, initialUnlockedRingSkins,
+  initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
 }: {
   hookTier: number
   rodTier: number
@@ -48,6 +49,7 @@ export default function FishingPageClient({
   zoneRewardsClaimed: Record<string, boolean>
   initialRingSkin: string
   initialUnlockedRingSkins: string[]
+  initialDailyChallenge: DailyChallengeState | null
 }) {
   const fishingLevel = getLevelFromXP(initialFishingXP)
 
@@ -107,6 +109,7 @@ export default function FishingPageClient({
       zoneRewardsClaimed={zoneRewardsClaimed}
       initialRingSkin={initialRingSkin}
       initialUnlockedRingSkins={initialUnlockedRingSkins}
+      initialDailyChallenge={initialDailyChallenge}
     />
   )
 }

@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef, useTransition, useMemo } from 'reac
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { claimDailyReward } from './dailyChallengeActions'
+import { getDailyChallenges, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
 import { getRingSkin } from '@/lib/ringSkins'
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import { finishSession, type ActiveSession } from '@/app/social/challengeActions'
@@ -1322,7 +1324,7 @@ export default function FishingGame({
   initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
-  initialRingSkin, initialUnlockedRingSkins,
+  initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
 }: {
   hookTier: number
   rodTier: number
@@ -1347,6 +1349,7 @@ export default function FishingGame({
   zoneRewardsClaimed: Record<string, boolean>
   initialRingSkin: string
   initialUnlockedRingSkins: string[]
+  initialDailyChallenge: DailyChallengeState | null
 }) {
 
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
@@ -1410,6 +1413,14 @@ export default function FishingGame({
   const [podiumNotif, setPodiumNotif] = useState<PodiumNotif | null>(null)
   const podiumPositionsRef = useRef<{ fishingLevel: number | null; perfectStreak: number | null }>({ fishingLevel: null, perfectStreak: null })
   const [, startTransition]         = useTransition()
+
+  // ── Daily challenges ────────────────────────────────────────────────────
+  const dailyChallenges = initialDailyChallenge ? initialDailyChallenge.challenges : getDailyChallenges(new Date().toISOString().slice(0, 10))
+  const [dailyProgress, setDailyProgress] = useState<[number, number, number]>(initialDailyChallenge?.progress ?? [0, 0, 0])
+  const [dailyClaimed, setDailyClaimed] = useState<[boolean, boolean, boolean]>(initialDailyChallenge?.claimed ?? [false, false, false])
+  const [dailyOpen, setDailyOpen] = useState(false)
+  const [dailyJustCompleted, setDailyJustCompleted] = useState<number | null>(null)
+  const [claimingDaily, setClaimingDaily] = useState<number | null>(null)
 
   // ── Random events ───────────────────────────────────────────────────────
   const [activeEvent, setActiveEvent] = useState<{ type: EventType; endsAt: number } | null>(null)
@@ -1767,7 +1778,18 @@ export default function FishingGame({
       if ('error' in res || !res.caught) {
         setMissResult('miss')
       } else {
-        const { fish, baitSaved, isNewSpecies, bountyCompletion, xpGained, newXP } = res
+        const { fish, baitSaved, isNewSpecies, bountyCompletion, xpGained, newXP, dailyProgress: newDailyP } = res
+        if (newDailyP) {
+          setDailyProgress(prev => {
+            for (let i = 0; i < 3; i++) {
+              if (prev[i] < dailyChallenges[i].target && newDailyP[i] >= dailyChallenges[i].target) {
+                setDailyJustCompleted(i)
+                setTimeout(() => setDailyJustCompleted(null), 4000)
+              }
+            }
+            return newDailyP
+          })
+        }
         if (wasPerfect) {
           setPerfectStreak(newStreak)
           if (newStreak > highestPerfectStreak) {
@@ -1882,6 +1904,17 @@ export default function FishingGame({
     setHoldOpen(false)
     setGearOpen(false)
     await doCast()
+  }
+
+  async function handleClaimDaily(index: 0 | 1 | 2) {
+    if (claimingDaily !== null || dailyClaimed[index]) return
+    setClaimingDaily(index)
+    const res = await claimDailyReward(index)
+    setClaimingDaily(null)
+    if ('error' in res) return
+    setDailyClaimed(prev => { const n = [...prev] as [boolean, boolean, boolean]; n[index] = true; return n })
+    setDoubloons(res.doubloons)
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
   }
 
   async function handleEquipRod(tier: number) {
@@ -2092,6 +2125,57 @@ export default function FishingGame({
               </AnimatePresence>
             </div>
           </div>
+
+          {/* Daily challenge row */}
+          {(() => {
+            const doneCount = dailyChallenges.filter((c, i) => dailyProgress[i] >= c.target).length
+            const claimable = dailyChallenges.some((c, i) => dailyProgress[i] >= c.target && !dailyClaimed[i])
+            const allClaimed = dailyClaimed.every(Boolean)
+            return (
+              <button
+                onClick={() => setDailyOpen(o => !o)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: dailyOpen ? 'rgba(240,192,64,0.09)' : 'rgba(4,10,18,0.72)',
+                  border: `1px solid ${claimable ? 'rgba(240,192,64,0.45)' : dailyOpen ? 'rgba(240,192,64,0.25)' : 'rgba(255,255,255,0.09)'}`,
+                  borderRadius: 20, padding: '0.28rem 0.65rem', marginBottom: '0.5rem',
+                  cursor: 'pointer', touchAction: 'manipulation', gap: 8,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="font-karla font-700 uppercase tracking-[0.1em]"
+                    style={{ fontSize: '0.52rem', color: claimable ? '#f0c040' : '#6a6764' }}>
+                    Daily
+                  </span>
+                  <div style={{ display: 'flex', gap: 3 }}>
+                    {dailyChallenges.map((c, i) => {
+                      const done = dailyProgress[i] >= c.target
+                      const claimed = dailyClaimed[i]
+                      return (
+                        <div key={i} style={{
+                          width: 6, height: 6, borderRadius: '50%',
+                          background: claimed ? '#4ade80' : done ? '#f0c040' : 'rgba(255,255,255,0.12)',
+                        }} />
+                      )
+                    })}
+                  </div>
+                  {claimable && (
+                    <span className="font-karla font-700 uppercase tracking-[0.08em]"
+                      style={{ fontSize: '0.42rem', color: '#f0c040', background: 'rgba(240,192,64,0.15)', border: '1px solid rgba(240,192,64,0.35)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                      Claim
+                    </span>
+                  )}
+                  {allClaimed && (
+                    <span className="font-karla font-600"
+                      style={{ fontSize: '0.48rem', color: '#4ade80' }}>All done ✓</span>
+                  )}
+                </div>
+                <span style={{ fontSize: '0.52rem', color: '#3a3835', lineHeight: 1 }}>
+                  {dailyOpen ? '▴' : '▾'}
+                </span>
+              </button>
+            )
+          })()}
 
           {/* Challenge session strip */}
           {activeSession && !sessionDone && sessionSecondsLeft !== null && (
@@ -3073,6 +3157,105 @@ export default function FishingGame({
               <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Buy more bait</span>
               <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#5a5956' }}>Tackle Shop ↗</span>
             </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Daily challenge drawer ── */}
+      <AnimatePresence>
+        {dailyOpen && (
+          <motion.div key="daily-drawer"
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+              background: 'rgba(6,12,20,0.98)',
+              borderTop: '1px solid rgba(255,255,255,0.09)',
+              borderRadius: '18px 18px 0 0',
+              padding: '1.25rem 1rem 2rem',
+              maxHeight: '75vh', overflowY: 'auto', overscrollBehavior: 'contain',
+            }}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                  style={{ fontSize: '0.6rem', color: '#6a6764' }}>Daily Challenges</p>
+                <p className="font-karla font-400 mt-0.5"
+                  style={{ fontSize: '0.58rem', color: '#3a3835' }}>Resets at midnight UTC</p>
+              </div>
+              <button onClick={() => setDailyOpen(false)}
+                style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {dailyChallenges.map((challenge: DailyChallenge, i) => {
+                const progress = dailyProgress[i]
+                const claimed = dailyClaimed[i]
+                const done = progress >= challenge.target
+                const isClaiming = claimingDaily === i
+                const pct = Math.min(progress / challenge.target, 1)
+                const accent = i === 0 ? '#60a5fa' : i === 1 ? '#f0c040' : '#f87171'
+                return (
+                  <div key={i} style={{
+                    background: done ? `${accent}0a` : 'rgba(4,10,18,0.72)',
+                    border: `1px solid ${done ? accent + '35' : 'rgba(255,255,255,0.09)'}`,
+                    borderRadius: 14, padding: '0.9rem 1rem',
+                  }}>
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-karla font-700 uppercase tracking-[0.08em]"
+                            style={{ fontSize: '0.44rem', color: accent + '99' }}>
+                            {i === 0 ? 'Easy' : i === 1 ? 'Medium' : 'Hard'}
+                          </span>
+                          {claimed && (
+                            <span className="font-karla font-600" style={{ fontSize: '0.44rem', color: '#4ade80' }}>✓ Claimed</span>
+                          )}
+                        </div>
+                        <p className="font-karla font-600"
+                          style={{ fontSize: '0.75rem', color: done ? '#f0ede8' : '#9a9488', lineHeight: 1.3 }}>
+                          {challenge.label}
+                        </p>
+                      </div>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: '#f0c040' }}>
+                          +{challenge.reward.toLocaleString()} ⟡
+                        </p>
+                        <p className="font-karla font-400 mt-0.5" style={{ fontSize: '0.52rem', color: '#4a4845' }}>
+                          {progress.toLocaleString()} / {challenge.target.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div style={{ height: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 2, marginBottom: done && !claimed ? '0.65rem' : 0 }}>
+                      <motion.div
+                        animate={{ width: `${pct * 100}%` }}
+                        transition={{ duration: 0.4, ease: 'easeOut' }}
+                        style={{ height: '100%', borderRadius: 2, background: done ? accent : `linear-gradient(90deg, ${accent}80, ${accent})` }}
+                      />
+                    </div>
+
+                    {/* Claim button */}
+                    {done && !claimed && (
+                      <button
+                        onClick={() => handleClaimDaily(i as 0 | 1 | 2)}
+                        disabled={isClaiming}
+                        className="font-karla font-700 uppercase tracking-[0.1em] w-full"
+                        style={{
+                          fontSize: '0.62rem', padding: '0.5rem', borderRadius: 8,
+                          background: `${accent}18`, border: `1px solid ${accent}45`,
+                          color: accent, opacity: isClaiming ? 0.5 : 1,
+                          cursor: isClaiming ? 'default' : 'pointer',
+                        }}
+                      >
+                        {isClaiming ? '…' : `Claim ${challenge.reward.toLocaleString()} ⟡`}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

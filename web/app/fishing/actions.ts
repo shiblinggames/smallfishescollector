@@ -10,6 +10,7 @@ import { recordChallengeScore } from '@/app/social/challengeActions'
 import { getWeekStart } from '@/lib/weekStart'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
 import { getLineForSpeciesCount } from '@/lib/lines'
+import { getDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -161,7 +162,7 @@ export async function reelIn(
   streakBonus = 0,
   jackpotMultiplier = 1,
 ): Promise<
-  | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; newAchievements: string[]; bountyCompletion?: FishingBountyCompletion; xpGained: number; newXP: number }
+  | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; newAchievements: string[]; bountyCompletion?: FishingBountyCompletion; xpGained: number; newXP: number; dailyProgress: [number, number, number] }
   | { caught: false; newAchievements: string[] }
   | { error: string }
 > {
@@ -327,7 +328,38 @@ export async function reelIn(
     }
   }
 
-  return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, newAchievements, bountyCompletion, xpGained, newXP }
+  // Update daily challenge progress
+  const dailyDate = getTodayUTC()
+  const dailyChallenges = getDailyChallenges(dailyDate)
+  const isPerfect = result === 'perfect'
+  const { data: dailyRow } = await admin
+    .from('daily_challenge_progress')
+    .select('p1, p2, p3, claimed_1, claimed_2, claimed_3')
+    .eq('user_id', user.id)
+    .eq('date', dailyDate)
+    .maybeSingle()
+
+  const newP = [
+    Math.min(
+      (dailyRow?.p1 ?? 0) + challengeIncrement(dailyChallenges[0], fish.habitat, fish.bite_rarity, fish.sell_value, catchQty, isPerfect),
+      dailyChallenges[0].target,
+    ),
+    Math.min(
+      (dailyRow?.p2 ?? 0) + challengeIncrement(dailyChallenges[1], fish.habitat, fish.bite_rarity, fish.sell_value, catchQty, isPerfect),
+      dailyChallenges[1].target,
+    ),
+    Math.min(
+      (dailyRow?.p3 ?? 0) + challengeIncrement(dailyChallenges[2], fish.habitat, fish.bite_rarity, fish.sell_value, catchQty, isPerfect),
+      dailyChallenges[2].target,
+    ),
+  ] as [number, number, number]
+
+  await admin.from('daily_challenge_progress').upsert(
+    { user_id: user.id, date: dailyDate, p1: newP[0], p2: newP[1], p3: newP[2] },
+    { onConflict: 'user_id,date' },
+  )
+
+  return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, newAchievements, bountyCompletion, xpGained, newXP, dailyProgress: newP }
 }
 
 // Sell fish from inventory

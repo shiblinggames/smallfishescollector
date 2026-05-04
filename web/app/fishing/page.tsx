@@ -5,6 +5,7 @@ import Nav from '@/components/Nav'
 import FishingPageClient from './FishingPageClient'
 import { getActiveChallengeSession } from '@/app/social/challengeActions'
 import { getShip } from '@/lib/ships'
+import { getDailyChallenge } from './dailyChallengeActions'
 
 export default async function FishingPage() {
   const supabase = await createClient()
@@ -15,6 +16,7 @@ export default async function FishingPage() {
 
   const [
     activeSession,
+    dailyChallenge,
     { data: profile },
     { data: baitInventory },
     { data: fishInventory },
@@ -24,6 +26,7 @@ export default async function FishingPage() {
     { data: collectionRows },
   ] = await Promise.all([
     getActiveChallengeSession(),
+    getDailyChallenge(),
     admin.from('profiles')
       .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, ship_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, ring_skin, unlocked_ring_skins')
       .eq('id', user.id)
@@ -84,6 +87,7 @@ export default async function FishingPage() {
           hasSeenFishingTour={profile?.has_seen_fishing_tour ?? false}
           hasSeenFishingCatchTour={profile?.has_seen_fishing_catch_tour ?? false}
           activeSession={activeSession ?? undefined}
+          initialDailyChallenge={dailyChallenge}
           username={profile?.username ?? ''}
           zoneRewardsClaimed={{
             shallows:    profile?.zone_shallows_rewarded    ?? false,
