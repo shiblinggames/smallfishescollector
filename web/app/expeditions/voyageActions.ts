@@ -81,7 +81,7 @@ export async function sendDailyVoyage(crewVariantIds: number[], route: VoyageRou
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  if (crewVariantIds.length === 0) return { error: 'Select at least one crew member' }
+  if (crewVariantIds.length < 2) return { error: 'A voyage requires at least two crew members' }
 
   const admin = createAdminClient()
 
@@ -113,6 +113,7 @@ export async function sendDailyVoyage(crewVariantIds: number[], route: VoyageRou
     .single()
 
   if (!profile) return { error: 'Profile not found' }
+  if ((profile.ship_tier ?? 0) < 2) return { error: 'Requires a Sloop or better to send a voyage' }
 
   const shipTier = profile.ship_tier ?? 0
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]

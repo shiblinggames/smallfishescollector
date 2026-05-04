@@ -183,7 +183,16 @@ export default function DailyVoyagePanel({
           border: '1px solid rgba(240,192,64,0.18)',
           borderRadius: 16, padding: '1.05rem 1.1rem',
         }}>
-          {raidActive ? (
+          {shipTier < 2 ? (
+            <div>
+              <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#9a8868', lineHeight: 1.5 }}>
+                🔒 Requires a Sloop
+              </p>
+              <p className="font-karla" style={{ fontSize: '0.6rem', color: '#6a5a40', lineHeight: 1.5, marginTop: 4 }}>
+                Upgrade your ship to send voyages. A solo rowboat isn&apos;t going far.
+              </p>
+            </div>
+          ) : raidActive ? (
             <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9a8868', lineHeight: 1.5 }}>
               Your crew is on a raid. Finish the raid before sending them on a voyage.
             </p>
