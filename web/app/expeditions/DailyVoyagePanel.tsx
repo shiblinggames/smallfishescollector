@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { EXPEDITION_SHIP_STATS, RARITY_COLORS, computeTotalCrewStats, type CrewCard } from '@/lib/expeditions'
 import type { VoyageEvent } from '@/lib/voyageEvents'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageEvents'
-import { getRingSkin } from '@/lib/ringSkins'
+import { getRingSkin, type RingSkinId } from '@/lib/ringSkins'
 import { sendDailyVoyage, revealVoyageResults, type DailyVoyage } from './voyageActions'
 
 type PanelState = 'idle' | 'away' | 'returned' | 'done'
@@ -38,6 +38,46 @@ function formatCountdown(ms: number): string {
   const mm = m.toString().padStart(2, '0')
   const ss = s.toString().padStart(2, '0')
   return h > 0 ? `${h}h ${mm}m ${ss}s` : `${mm}m ${ss}s`
+}
+
+const ROUTE_SKINS: Record<VoyageRoute, RingSkinId[]> = {
+  coastal: ['whale_bone'],
+  open:    ['coral_spire', 'navigators_silver'],
+  deep:    ['gilded_compass', 'abyssal_sigil'],
+}
+
+function computeRouteEstimate(
+  stats: { power: number; dodge: number; fortune: number },
+  crewCount: number,
+  route: VoyageRoute,
+) {
+  const rc = ROUTE_CONFIGS[route]
+  const fortuneScale = 1 + stats.fortune / 55
+  const powerScale   = 1 + stats.power   / 60
+  const pDiscovery   = Math.min(1, stats.fortune / 45)
+  const pWin         = Math.min(1, stats.power   / 30)
+  const pDodge       = Math.min(1, stats.dodge   / 28)
+
+  const enc = route === 'deep' ? (crewCount >= 2 ? 5 : 4) : route === 'open' ? 2 : 0
+  const dng = route === 'deep' ? 2 : route === 'open' ? (crewCount >= 2 ? 2 : 1) : 0
+  const dis = 2
+
+  const expected =
+    dis * pDiscovery * 120 * fortuneScale * rc.payoutScale +
+    enc * pWin * 55 * powerScale * rc.payoutScale +
+    0.30 * 0.35 * 35 * rc.payoutScale
+
+  const lootMin = Math.round(expected * 0.4)
+  const lootMax = Math.round(expected * 1.9)
+
+  let crewRiskPct = 0
+  if (crewCount >= 2) {
+    const encRisk = enc * (1 - pWin) * Math.min(1, Math.max(0.10, 0.5 - stats.power / 60) * rc.crewLossScale)
+    const dngRisk = dng * (1 - pDodge) * Math.min(1, 0.18 * rc.crewLossScale)
+    crewRiskPct = Math.round(Math.min(95, (encRisk + dngRisk) * 100))
+  }
+
+  return { lootMin, lootMax, crewRiskPct, skinIds: ROUTE_SKINS[route] }
 }
 
 interface Props {
@@ -191,6 +231,7 @@ export default function DailyVoyagePanel({
                   {(Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map(routeKey => {
                     const rco = ROUTE_CONFIGS[routeKey]
                     const isSelected = selectedRoute === routeKey
+                    const est = stats ? computeRouteEstimate(stats, savedCrew.length, routeKey) : null
                     return (
                       <button
                         key={routeKey}
@@ -201,25 +242,58 @@ export default function DailyVoyagePanel({
                           borderRadius: 9, padding: '0.55rem 0.7rem',
                           cursor: 'pointer', textAlign: 'left',
                           transition: 'background 0.12s, border-color 0.12s',
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem',
                         }}
                       >
-                        <div>
+                        {/* Top row: name + risk label */}
+                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.5rem' }}>
                           <p className="font-cinzel font-700" style={{ fontSize: '0.76rem', color: isSelected ? rco.color : '#c0b8a8', lineHeight: 1.2 }}>
                             {rco.name}
                           </p>
-                          <p className="font-karla" style={{ fontSize: '0.58rem', color: '#8a7860', lineHeight: 1.4, marginTop: 1 }}>
-                            {rco.tagline}
-                          </p>
-                        </div>
-                        <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                          <p className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: isSelected ? rco.color : '#8a7860' }}>
+                          <p className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: isSelected ? rco.color : '#6a6460', flexShrink: 0 }}>
                             {rco.riskLabel}
                           </p>
-                          <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: isSelected ? rco.color : '#8a7860', marginTop: 1 }}>
-                            {rco.payoutScale === 1 ? 'Base ⟡' : `${Math.round(rco.payoutScale * 100)}% ⟡`}
-                          </p>
                         </div>
+
+                        {/* Tagline */}
+                        <p className="font-karla" style={{ fontSize: '0.58rem', color: '#8a7860', lineHeight: 1.4, marginTop: 2 }}>
+                          {rco.tagline}
+                        </p>
+
+                        {/* Estimates row */}
+                        {est && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginTop: '0.45rem', flexWrap: 'wrap' }}>
+                            {/* Loot range */}
+                            <span className="font-karla font-600" style={{ fontSize: '0.60rem', color: isSelected ? '#c8aa6a' : '#7a6848' }}>
+                              ~{est.lootMin}–{est.lootMax} ⟡
+                            </span>
+
+                            {/* Crew risk */}
+                            {savedCrew.length >= 2 && est.crewRiskPct > 0 && (
+                              <span className="font-karla" style={{ fontSize: '0.58rem', color: est.crewRiskPct >= 40 ? '#f87171aa' : '#8a7860' }}>
+                                {est.crewRiskPct}% crew risk
+                              </span>
+                            )}
+
+                            {/* Ring skin drops */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginLeft: 'auto' }}>
+                              {est.skinIds.map(id => {
+                                const skin = getRingSkin(id)
+                                return (
+                                  <div
+                                    key={id}
+                                    title={skin.name}
+                                    style={{
+                                      width: 8, height: 8, borderRadius: '50%',
+                                      background: skin.color,
+                                      opacity: isSelected ? 0.9 : 0.5,
+                                      boxShadow: skin.glow ? `0 0 4px ${skin.color}88` : 'none',
+                                    }}
+                                  />
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </button>
                     )
                   })}
