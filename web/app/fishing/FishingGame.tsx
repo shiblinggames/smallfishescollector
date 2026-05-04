@@ -812,26 +812,57 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
         </motion.div>
       )}
 
-      {/* Glow halo — sits outside overflow:hidden so it isn't clipped */}
-      {rarity >= 2 && (
-        <motion.div
-          animate={isEpicPlus ? { opacity: [0.5, 1, 0.5] } : { opacity: 1 }}
-          transition={isEpicPlus
-            ? { duration: isLegendary ? 1.2 : 1.8, repeat: Infinity, ease: 'easeInOut' }
-            : {}}
-          style={{
-            position: 'absolute', inset: -1, borderRadius: '1rem',
-            boxShadow: glowShadow[rarity],
-            pointerEvents: 'none', zIndex: 0,
-          }}
-        />
-      )}
+      {/* Card + all its effects in one relative container */}
+      <div style={{ position: 'relative' }}>
+
+        {/* Burst rings — epic gets 2, legendary gets 3 */}
+        {isEpicPlus && [0, 0.09, ...(isLegendary ? [0.18] : [])].map((delay, i) => (
+          <motion.div key={i}
+            initial={{ scale: 0.88, opacity: isLegendary ? 0.75 - i * 0.18 : 0.55 - i * 0.15 }}
+            animate={{ scale: isLegendary ? 1.9 - i * 0.18 : 1.55 - i * 0.12, opacity: 0 }}
+            transition={{ duration: isLegendary ? 0.7 : 0.5, ease: 'easeOut', delay: delay + (isLegendary ? 0.12 : 0.04) }}
+            style={{
+              position: 'absolute', inset: 0, borderRadius: '1rem',
+              border: `${isLegendary ? 1.5 - i * 0.3 : 1}px solid ${r.color}${isLegendary ? 'dd' : '99'}`,
+              pointerEvents: 'none', zIndex: 2,
+            }}
+          />
+        ))}
+
+        {/* Legendary color bloom */}
+        {isLegendary && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0.22, 0] }}
+            transition={{ duration: 0.55, delay: 0.1, ease: 'easeOut' }}
+            style={{
+              position: 'absolute', inset: -24, borderRadius: '2rem',
+              background: `radial-gradient(ellipse at 50% 55%, ${r.color}60 0%, transparent 68%)`,
+              pointerEvents: 'none', zIndex: 0,
+            }}
+          />
+        )}
+
+        {/* Glow halo — sits outside overflow:hidden so it isn't clipped */}
+        {rarity >= 2 && (
+          <motion.div
+            animate={isEpicPlus ? { opacity: [0.5, 1, 0.5] } : { opacity: 1 }}
+            transition={isEpicPlus
+              ? { duration: isLegendary ? 1.2 : 1.8, repeat: Infinity, ease: 'easeInOut' }
+              : {}}
+            style={{
+              position: 'absolute', inset: -1, borderRadius: '1rem',
+              boxShadow: glowShadow[rarity],
+              pointerEvents: 'none', zIndex: 0,
+            }}
+          />
+        )}
 
       {/* Card */}
       <motion.div
-        initial={{ opacity: 0, y: isLegendary ? 32 : isEpicPlus ? 24 : 16, scale: isLegendary ? 0.92 : 0.96 }}
+        initial={{ opacity: 0, y: isLegendary ? 40 : isEpicPlus ? 24 : 16, scale: isLegendary ? 0.84 : isEpicPlus ? 0.91 : 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: 'spring', stiffness: isLegendary ? 200 : 280, damping: isLegendary ? 15 : 22 }}
+        transition={{ type: 'spring', stiffness: isLegendary ? 140 : isEpicPlus ? 210 : 280, damping: isLegendary ? 11 : isEpicPlus ? 16 : 22, delay: isLegendary ? 0.1 : 0 }}
         className="rounded-2xl overflow-hidden"
         style={{
           border: `1px solid ${r.color}${borderOpMap[rarity] ?? '55'}`,
