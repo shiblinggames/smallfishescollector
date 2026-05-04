@@ -25,7 +25,7 @@ export default async function FishingPage() {
   ] = await Promise.all([
     getActiveChallengeSession(),
     admin.from('profiles')
-      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, ship_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username')
+      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, ship_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded')
       .eq('id', user.id)
       .single(),
     admin.from('bait_inventory')
@@ -85,6 +85,12 @@ export default async function FishingPage() {
           hasSeenFishingCatchTour={profile?.has_seen_fishing_catch_tour ?? false}
           activeSession={activeSession ?? undefined}
           username={profile?.username ?? ''}
+          zoneRewardsClaimed={{
+            shallows:    profile?.zone_shallows_rewarded    ?? false,
+            open_waters: profile?.zone_open_waters_rewarded ?? false,
+            deep:        profile?.zone_deep_rewarded        ?? false,
+            abyss:       profile?.zone_abyss_rewarded       ?? false,
+          }}
         />
       </main>
     </>

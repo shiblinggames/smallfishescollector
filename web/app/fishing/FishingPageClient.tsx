@@ -44,6 +44,7 @@ export default function FishingPageClient({
   hasSeenFishingCatchTour: boolean
   activeSession?: ActiveSession
   username: string
+  zoneRewardsClaimed: Record<string, boolean>
 }) {
   const fishingLevel = getLevelFromXP(initialFishingXP)
 
@@ -100,6 +101,7 @@ export default function FishingPageClient({
       selectedZone={selectedZone}
       onBack={goBack}
       activeSession={activeSession}
+      zoneRewardsClaimed={zoneRewardsClaimed}
     />
   )
 }

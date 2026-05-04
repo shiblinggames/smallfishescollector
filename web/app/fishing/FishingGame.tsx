@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, type FishSpecies, type FishingBountyCompletion } from './actions'
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import { finishSession, type ActiveSession } from '@/app/social/challengeActions'
 import { equipRod } from '@/app/marketplace/tackle-shop/actions'
@@ -71,6 +71,13 @@ const RARITY: Record<number, { label: string; color: string; hookedText: string 
   3: { label: 'Rare',      color: '#60a5fa', hookedText: "Something strong is pulling!" },
   4: { label: 'Epic',      color: '#c084fc', hookedText: "A big one! Hold tight!" },
   5: { label: 'Legendary', color: '#f59e0b', hookedText: "SOMETHING MASSIVE IS ON THE LINE!" },
+}
+
+const ZONE_REWARD_DOUBLOONS_UI: Record<string, number> = {
+  shallows:    10000,
+  open_waters: 20000,
+  deep:        50000,
+  abyss:       100000,
 }
 
 // ─── Wait messages ───────────────────────────────────────────────────────────
@@ -1218,7 +1225,7 @@ export default function FishingGame({
   allFishSpecies, initialCaughtFishIds,
   initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour,
-  selectedZone: initialZone, onBack, activeSession,
+  selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
 }: {
   hookTier: number
   rodTier: number
@@ -1240,6 +1247,7 @@ export default function FishingGame({
   selectedZone: ZoneKey
   onBack: () => void
   activeSession?: ActiveSession
+  zoneRewardsClaimed: Record<string, boolean>
 }) {
 
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
@@ -1265,6 +1273,9 @@ export default function FishingGame({
   const [collectionOpen, setCollectionOpen] = useState(false)
   const [uncheckedNewFishIds, setUncheckedNewFishIds] = useState<Set<number>>(new Set())
   const [expandedZone, setExpandedZone] = useState<string | null>(null)
+  const [claimedZones, setClaimedZones] = useState<Record<string, boolean>>(zoneRewardsClaimed)
+  const [claimingZone, setClaimingZone] = useState<string | null>(null)
+  const [zoneClaimToast, setZoneClaimToast] = useState<{ zone: string; earned: number } | null>(null)
   const [tappedFishId, setTappedFishId] = useState<number | null>(null)
 
   const [sessionCatches, setSessionCatches] = useState<FishSpecies[]>([])
@@ -1745,6 +1756,18 @@ export default function FishingGame({
       setEquippedRodTier(tier)
       if (!ownedRods.includes(tier)) setOwnedRods(prev => [...prev, tier])
     }
+  }
+
+  async function handleClaimZoneReward(zone: string) {
+    if (claimingZone || claimedZones[zone]) return
+    setClaimingZone(zone)
+    const result = await claimZoneReward(zone)
+    setClaimingZone(null)
+    if ('error' in result) return
+    setClaimedZones(prev => ({ ...prev, [zone]: true }))
+    setDoubloons(result.doubloons)
+    setZoneClaimToast({ zone, earned: result.earned })
+    setTimeout(() => setZoneClaimToast(null), 4000)
   }
 
   // Zone display helpers
@@ -2472,6 +2495,91 @@ export default function FishingGame({
         )}
       </AnimatePresence>
 
+      {/* ── Zone completion celebration ── */}
+      <AnimatePresence>
+        {zoneClaimToast && (() => {
+          const zc = HABITAT_COLOR[zoneClaimToast.zone] ?? '#f59e0b'
+          const zl = HABITAT_LABEL[zoneClaimToast.zone] ?? zoneClaimToast.zone
+          return (
+            <motion.div key="zone-claim-toast"
+              initial={{ opacity: 0, scale: 0.88, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 20 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+              style={{
+                position: 'absolute', inset: 0, zIndex: 40,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(3,8,16,0.82)',
+                backdropFilter: 'blur(6px)',
+              }}
+              onClick={() => setZoneClaimToast(null)}
+            >
+              {/* Burst rings */}
+              {[0, 0.12, 0.24].map((delay, i) => (
+                <motion.div key={i}
+                  initial={{ scale: 0.6, opacity: 0.6 - i * 0.15 }}
+                  animate={{ scale: 2.8 - i * 0.3, opacity: 0 }}
+                  transition={{ duration: 0.9, ease: 'easeOut', delay }}
+                  style={{
+                    position: 'absolute',
+                    width: 180, height: 180,
+                    borderRadius: '50%',
+                    border: `${2 - i * 0.4}px solid ${zc}${['99', '66', '44'][i]}`,
+                    pointerEvents: 'none',
+                  }}
+                />
+              ))}
+              <div style={{
+                background: `linear-gradient(145deg, rgba(6,16,26,0.98) 0%, ${zc}18 100%)`,
+                border: `1px solid ${zc}50`,
+                borderTop: `3px solid ${zc}cc`,
+                borderRadius: 20,
+                padding: '2rem 2.5rem',
+                textAlign: 'center',
+                boxShadow: `0 0 60px ${zc}30, 0 0 120px ${zc}15`,
+                maxWidth: 280,
+              }}>
+                <motion.div
+                  initial={{ scale: 0.5, rotate: -10 }} animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.1 }}
+                  style={{ fontSize: '2.5rem', marginBottom: '0.75rem', lineHeight: 1 }}
+                >
+                  🏆
+                </motion.div>
+                <p className="font-karla font-700 uppercase tracking-[0.18em]"
+                  style={{ fontSize: '0.52rem', color: zc + 'cc', marginBottom: '0.4rem' }}>
+                  Zone Complete
+                </p>
+                <p className="font-cinzel font-700"
+                  style={{ fontSize: '1.4rem', color: zc, textShadow: `0 0 24px ${zc}80`, marginBottom: '0.25rem', lineHeight: 1.1 }}>
+                  {zl}
+                </p>
+                <p className="font-karla font-400"
+                  style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginBottom: '1.25rem' }}>
+                  Every fish in this zone discovered
+                </p>
+                <div style={{
+                  background: 'rgba(240,192,64,0.08)',
+                  border: '1px solid rgba(240,192,64,0.25)',
+                  borderRadius: 12,
+                  padding: '0.6rem 1rem',
+                  marginBottom: '1rem',
+                }}>
+                  <p className="font-karla font-600 uppercase tracking-[0.1em]"
+                    style={{ fontSize: '0.48rem', color: 'rgba(240,192,64,0.5)', marginBottom: 3 }}>Reward</p>
+                  <p className="font-cinzel font-700"
+                    style={{ fontSize: '1.6rem', color: '#f0c040', textShadow: '0 0 20px rgba(240,192,64,0.6)', lineHeight: 1 }}>
+                    +{zoneClaimToast.earned.toLocaleString()} ⟡
+                  </p>
+                </div>
+                <p className="font-karla font-400"
+                  style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.2)' }}>Tap anywhere to close</p>
+              </div>
+            </motion.div>
+          )
+        })()}
+      </AnimatePresence>
+
       {/* ── Collection drawer ── */}
       <AnimatePresence>
         {collectionOpen && (
@@ -2504,7 +2612,9 @@ export default function FishingGame({
               const zoneColor = HABITAT_COLOR[zone]
               const isExpanded = expandedZone === zone
               const pct = zoneSpecies.length > 0 ? discoveredCount / zoneSpecies.length : 0
-              const isComplete = discoveredCount === zoneSpecies.length
+              const isComplete = discoveredCount === zoneSpecies.length && zoneSpecies.length > 0
+              const isClaimed = claimedZones[zone] ?? false
+              const isClaiming = claimingZone === zone
 
               return (
                 <div key={zone} style={{ marginBottom: '0.6rem' }}>
@@ -2550,6 +2660,52 @@ export default function FishingGame({
                       }} />
                     </div>
                   </button>
+
+                  {/* Reward claim strip */}
+                  {isComplete && !isClaimed && (
+                    <motion.button
+                      initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                      onClick={() => handleClaimZoneReward(zone)}
+                      disabled={isClaiming}
+                      className="w-full flex items-center justify-between"
+                      style={{
+                        background: `linear-gradient(90deg, ${zoneColor}20, ${zoneColor}10)`,
+                        border: `1px solid ${zoneColor}50`,
+                        borderTop: 'none',
+                        borderRadius: '0 0 12px 12px',
+                        padding: '0.5rem 0.9rem',
+                        cursor: isClaiming ? 'default' : 'pointer',
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span style={{ fontSize: '0.9rem' }}>🏆</span>
+                        <div className="text-left">
+                          <p className="font-karla font-700 uppercase tracking-[0.1em]"
+                            style={{ fontSize: '0.52rem', color: zoneColor, lineHeight: 1 }}>Zone Complete!</p>
+                          <p className="font-karla font-600"
+                            style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Tap to claim your reward</p>
+                        </div>
+                      </div>
+                      <p className="font-cinzel font-700"
+                        style={{ fontSize: '0.88rem', color: '#f0c040' }}>
+                        {isClaiming ? '…' : `${(ZONE_REWARD_DOUBLOONS_UI[zone] ?? 0).toLocaleString()} ⟡`}
+                      </p>
+                    </motion.button>
+                  )}
+                  {isComplete && isClaimed && (
+                    <div className="flex items-center justify-between"
+                      style={{
+                        background: 'rgba(4,10,18,0.4)',
+                        border: `1px solid ${zoneColor}20`,
+                        borderTop: 'none',
+                        borderRadius: '0 0 12px 12px',
+                        padding: '0.4rem 0.9rem',
+                      }}>
+                      <p className="font-karla font-600"
+                        style={{ fontSize: '0.6rem', color: zoneColor + '80' }}>Reward claimed</p>
+                      <span style={{ fontSize: '0.75rem', color: zoneColor + '80' }}>✓</span>
+                    </div>
+                  )}
 
                   {isExpanded && (
                     <div className="flex flex-col gap-1.5 mb-1"

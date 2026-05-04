@@ -432,3 +432,48 @@ export async function checkLeaderboardPosition(
   return null
 }
 
+const ZONE_REWARD_DOUBLOONS: Record<string, number> = {
+  shallows:    10000,
+  open_waters: 20000,
+  deep:        50000,
+  abyss:       100000,
+}
+const ZONE_REWARD_COL: Record<string, string> = {
+  shallows:    'zone_shallows_rewarded',
+  open_waters: 'zone_open_waters_rewarded',
+  deep:        'zone_deep_rewarded',
+  abyss:       'zone_abyss_rewarded',
+}
+
+export async function claimZoneReward(zone: string): Promise<{ doubloons: number; earned: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const rewardCol = ZONE_REWARD_COL[zone]
+  const earned = ZONE_REWARD_DOUBLOONS[zone]
+  if (!rewardCol || !earned) return { error: 'Invalid zone' }
+
+  const admin = createAdminClient()
+
+  const [{ data: profile }, { data: zoneSpecies }, { count: caughtCount }] = await Promise.all([
+    admin.from('profiles').select(`doubloons, ${rewardCol}`).eq('id', user.id).single(),
+    admin.from('fish_species').select('id').eq('habitat', zone),
+    admin.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
+      .in('fish_id', (await admin.from('fish_species').select('id').eq('habitat', zone)).data?.map((f: { id: number }) => f.id) ?? []),
+  ])
+
+  if (!profile) return { error: 'Profile not found' }
+  if ((profile as Record<string, unknown>)[rewardCol]) return { error: 'Already claimed' }
+
+  const totalInZone = (zoneSpecies ?? []).length
+  if ((caughtCount ?? 0) < totalInZone || totalInZone === 0) return { error: 'Zone not complete' }
+
+  const newDoubloons = (profile.doubloons ?? 0) + earned
+  await Promise.all([
+    admin.from('profiles').update({ doubloons: newDoubloons, [rewardCol]: true }).eq('id', user.id),
+    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: earned, reason: `Zone completion: ${zone}` }),
+  ])
+
+  return { doubloons: newDoubloons, earned }
+}
