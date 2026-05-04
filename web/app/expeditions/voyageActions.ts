@@ -21,6 +21,7 @@ export interface DailyVoyage {
   status: 'pending' | 'revealed'
   events: VoyageEvent[]
   total_doubloons: number
+  total_gems: number
   crew_lost: number[]
   created_at: string
 }
@@ -167,6 +168,7 @@ export async function sendDailyVoyage(crewVariantIds: number[]): Promise<
       status: 'pending',
       events: result.events,
       total_doubloons: result.totalDoubloons,
+      total_gems: result.totalGems,
       crew_lost: result.crewLost,
     })
     .select('*')
@@ -177,7 +179,7 @@ export async function sendDailyVoyage(crewVariantIds: number[]): Promise<
 }
 
 export async function revealVoyageResults(voyageId: number): Promise<
-  { ok: true; earnedDoubloons: number; newDoubloonTotal: number; crewLost: number[] } | { error: string }
+  { ok: true; earnedDoubloons: number; newDoubloonTotal: number; earnedGems: number; newGemTotal: number; crewLost: number[] } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -201,23 +203,24 @@ export async function revealVoyageResults(voyageId: number): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, saved_crew')
+    .select('doubloons, gems, saved_crew')
     .eq('id', user.id)
     .single()
 
   if (!profile) return { error: 'Profile not found' }
 
   const newDoubloons = (profile.doubloons ?? 0) + voyage.total_doubloons
+  const newGems = (profile.gems ?? 0) + voyage.total_gems
   const currentSavedCrew = (profile.saved_crew as number[] | null) ?? []
   const newSavedCrew = currentSavedCrew.filter(id => !voyage.crew_lost.includes(id))
 
   await Promise.all([
-    admin.from('profiles').update({ doubloons: newDoubloons, saved_crew: newSavedCrew }).eq('id', user.id),
+    admin.from('profiles').update({ doubloons: newDoubloons, gems: newGems, saved_crew: newSavedCrew }).eq('id', user.id),
     admin.from('daily_voyages').update({ status: 'revealed' }).eq('id', voyageId),
     ...(voyage.total_doubloons > 0
       ? [admin.from('doubloon_transactions').insert({ user_id: user.id, amount: voyage.total_doubloons, reason: 'Daily crew voyage' })]
       : []),
   ])
 
-  return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, crewLost: voyage.crew_lost }
+  return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, earnedGems: voyage.total_gems, newGemTotal: newGems, crewLost: voyage.crew_lost }
 }

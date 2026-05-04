@@ -113,6 +113,7 @@ export default function DailyVoyagePanel({
       const res = await revealVoyageResults(activeVoyage.id)
       if ('error' in res) { setError(res.error); return }
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+      if (res.earnedGems > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.newGemTotal }))
       setPanelState('done')
       router.refresh()
     })
@@ -265,10 +266,19 @@ export default function DailyVoyagePanel({
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: e.narrative ? '0.25rem' : 0 }}>
                       <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d4c09a', flex: 1 }}>{e.title}</p>
-                      {e.doubloonDelta > 0 && (
-                        <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#f0c040', flexShrink: 0 }}>
-                          +{e.doubloonDelta} ⟡
-                        </p>
+                      {(e.doubloonDelta > 0 || e.gemDelta > 0) && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                          {e.doubloonDelta > 0 && (
+                            <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#f0c040' }}>
+                              +{e.doubloonDelta} ⟡
+                            </p>
+                          )}
+                          {e.gemDelta > 0 && (
+                            <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#a78bfa' }}>
+                              +{e.gemDelta} gem{e.gemDelta !== 1 ? 's' : ''}
+                            </p>
+                          )}
+                        </div>
                       )}
                       {isCrewLoss && (
                         <span className="font-karla font-700" style={{ fontSize: '0.44rem', color: '#f87171', background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.22)', borderRadius: 4, padding: '0.12rem 0.35rem', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
@@ -295,10 +305,19 @@ export default function DailyVoyagePanel({
             {isComplete ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
                 <div>
-                  {activeVoyage.total_doubloons > 0 ? (
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f0c040', lineHeight: 1 }}>
-                      +{activeVoyage.total_doubloons} ⟡
-                    </p>
+                  {activeVoyage.total_doubloons > 0 || activeVoyage.total_gems > 0 ? (
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem' }}>
+                      {activeVoyage.total_doubloons > 0 && (
+                        <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f0c040', lineHeight: 1 }}>
+                          +{activeVoyage.total_doubloons} ⟡
+                        </p>
+                      )}
+                      {activeVoyage.total_gems > 0 && (
+                        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#a78bfa', lineHeight: 1 }}>
+                          +{activeVoyage.total_gems} gems
+                        </p>
+                      )}
+                    </div>
                   ) : (
                     <p className="font-karla" style={{ fontSize: '0.65rem', color: '#4a3c28' }}>
                       Returned empty-handed
@@ -362,10 +381,19 @@ export default function DailyVoyagePanel({
               <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#5a4c38', marginBottom: 4 }}>
                 Voyage complete
               </p>
-              {earned > 0 ? (
-                <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1 }}>
-                  +{earned} ⟡
-                </p>
+              {earned > 0 || activeVoyage.total_gems > 0 ? (
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem' }}>
+                  {earned > 0 && (
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1 }}>
+                      +{earned} ⟡
+                    </p>
+                  )}
+                  {activeVoyage.total_gems > 0 && (
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#a78bfa', lineHeight: 1 }}>
+                      +{activeVoyage.total_gems} gems
+                    </p>
+                  )}
+                </div>
               ) : (
                 <p className="font-karla" style={{ fontSize: '0.7rem', color: '#4a3c28' }}>
                   The crew returned empty-handed.

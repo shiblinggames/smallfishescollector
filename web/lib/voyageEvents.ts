@@ -10,12 +10,14 @@ export interface VoyageEvent {
   narrative: string
   outcome: VoyageEventOutcome
   doubloonDelta: number      // always >= 0 — no doubloon losses
+  gemDelta: number           // always >= 0
   crewVariantLost: number | null
 }
 
 export interface VoyageResult {
   events: VoyageEvent[]
   totalDoubloons: number
+  totalGems: number
   crewLost: number[]  // variantIds permanently lost
 }
 
@@ -32,8 +34,10 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
   const { power, dodge, fortune } = stats
   const crewCount = crew.length
   const captain = crew[0]
-  const fortuneScale = 1 + fortune / 40  // fortune=20 → 1.5×, fortune=40 → 2×
-  const payout = (min: number, max: number) => Math.round(rand(min, max) * fortuneScale)
+  const fortuneScale = 1 + fortune / 55  // fortune=22 → 1.4×, fortune=40 → 1.73×, fortune=55 → 2×
+  const powerScale   = 1 + power   / 60  // power=20  → 1.33×, power=30  → 1.5×
+  const payout = (min: number, max: number, usePower = false) =>
+    Math.round(rand(min, max) * fortuneScale * (usePower ? powerScale : 1))
 
   const fill = (narrative: string, extra?: Record<string, string>) => {
     let s = narrative.replace('{captain}', captain.name)
@@ -42,7 +46,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
   }
 
   // Stat rolls
-  const rollFortune  = () => Math.random() * 25 < fortune        // fortune 10 ≈ 40%
+  const rollFortune  = () => Math.random() * 45 < fortune        // fortune 22 ≈ 50%, fortune 45 = guaranteed
   const rollPower    = () => Math.random() * 30 < power          // power 15 ≈ 50%
   const rollDodge    = () => Math.random() * 28 < dodge          // dodge 12 ≈ 43%
   const rollWeather  = () => Math.random() < 0.30 + shipTier * 0.10  // tier 0=30%, tier 7=100%
@@ -74,11 +78,13 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
     switch (type) {
       case 'discovery': {
         const success = rollFortune()
+        const gemDrop = success && Math.random() * 55 < fortune ? rand(3, 10) : 0
         const template = pick(success ? DISCOVERY_SUCCESS : DISCOVERY_FAIL)
         event = {
           type, outcome: success ? 'success' : 'neutral',
           title: template.title, narrative: fill(template.narrative),
           doubloonDelta: success ? payout(60, 180) : 0,
+          gemDelta: gemDrop,
           crewVariantLost: null,
         }
         break
@@ -89,11 +95,13 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
         if (win) {
           // Crushing win: separate roll — high power makes it more likely
           const crush = Math.random() * 30 < power * 0.6
+          const gemDrop = crush ? rand(5, 15) : (Math.random() * 55 < power ? rand(2, 7) : 0)
           const template = pick(crush ? ENCOUNTER_CRUSH : ENCOUNTER_WIN)
           event = {
             type, outcome: 'success',
             title: template.title, narrative: fill(template.narrative),
-            doubloonDelta: crush ? payout(120, 240) : payout(30, 80),
+            doubloonDelta: crush ? payout(120, 240, true) : payout(30, 80, true),
+            gemDelta: gemDrop,
             crewVariantLost: null,
           }
         } else {
@@ -110,14 +118,14 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
             event = {
               type, outcome: 'failure',
               title: template.title, narrative,
-              doubloonDelta: 0, crewVariantLost: victim.variantId,
+              doubloonDelta: 0, gemDelta: 0, crewVariantLost: victim.variantId,
             }
           } else {
             const template = pick(ENCOUNTER_LOSS)
             event = {
               type, outcome: 'failure',
               title: template.title, narrative: fill(template.narrative),
-              doubloonDelta: 0, crewVariantLost: null,
+              doubloonDelta: 0, gemDelta: 0, crewVariantLost: null,
             }
           }
         }
@@ -131,14 +139,13 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
           event = {
             type, outcome: 'neutral',
             title: template.title, narrative: template.narrative,
-            doubloonDelta: 0, crewVariantLost: null,
+            doubloonDelta: 0, gemDelta: 0, crewVariantLost: null,
           }
         } else {
-          // Failure: 40% crew loss (if crewCount >= 2 and haven't lost one already), else narrative setback
           const canLoseCrew = crewCount >= 2 && crewLost.length === 0
           const loseCrew = canLoseCrew && Math.random() < 0.40
           if (loseCrew) {
-            const victims = crew.slice(1)  // captain (index 0) is safe
+            const victims = crew.slice(1)
             const victim = pick(victims)
             const template = pick(DANGER_CREW_LOSS)
             const narrative = fill(template.narrative, { name: victim.name })
@@ -146,14 +153,14 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
             event = {
               type, outcome: 'failure',
               title: template.title, narrative,
-              doubloonDelta: 0, crewVariantLost: victim.variantId,
+              doubloonDelta: 0, gemDelta: 0, crewVariantLost: victim.variantId,
             }
           } else {
             const template = pick(DANGER_SETBACK)
             event = {
               type, outcome: 'failure',
               title: template.title, narrative: template.narrative,
-              doubloonDelta: 0, crewVariantLost: null,
+              doubloonDelta: 0, gemDelta: 0, crewVariantLost: null,
             }
           }
         }
@@ -167,7 +174,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
           type, outcome: safe ? (Math.random() < 0.35 ? 'success' : 'neutral') : 'neutral',
           title: template.title, narrative: template.narrative,
           doubloonDelta: safe && Math.random() < 0.35 ? payout(20, 50) : 0,
-          crewVariantLost: null,
+          gemDelta: 0, crewVariantLost: null,
         }
         break
       }
@@ -179,7 +186,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
         event = {
           type, outcome: 'neutral',
           title: template.title, narrative: fill(template.narrative),
-          doubloonDelta: 0, crewVariantLost: null,
+          doubloonDelta: 0, gemDelta: 0, crewVariantLost: null,
         }
         break
       }
@@ -189,7 +196,8 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
   }
 
   const totalDoubloons = events.reduce((sum, e) => sum + e.doubloonDelta, 0)
-  return { events, totalDoubloons, crewLost }
+  const totalGems = events.reduce((sum, e) => sum + e.gemDelta, 0)
+  return { events, totalDoubloons, totalGems, crewLost }
 }
 
 // ── Event text pools ──────────────────────────────────────────────────────────
