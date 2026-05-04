@@ -141,19 +141,16 @@ export default function DailyVoyagePanel({
                 Send your crew on a 6-hour voyage. They return with stories — and sometimes something worth keeping.
               </p>
 
-              {/* Crew pills */}
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.65rem' }}>
+              {/* Crew list */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.75rem' }}>
                 {savedCrew.map((c, i) => {
                   const rc = rarityColor(c.rarity)
                   return (
-                    <div key={c.variantId} style={{
-                      background: `${rc}11`,
-                      border: `1px solid ${rc}30`,
-                      borderRadius: 7, padding: '0.28rem 0.55rem',
-                      display: 'flex', alignItems: 'center', gap: '0.3rem',
-                    }}>
-                      {i === 0 && <span style={{ fontSize: '0.58rem' }}>👑</span>}
-                      <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: rc }}>{c.name}</span>
+                    <div key={c.variantId} style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                      <span className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.48rem', color: '#4a3c28', width: 42, flexShrink: 0 }}>
+                        {i === 0 ? 'Captain' : 'Crew'}
+                      </span>
+                      <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: rc }}>{c.name}</span>
                     </div>
                   )
                 })}
@@ -232,12 +229,15 @@ export default function DailyVoyagePanel({
               <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: isComplete ? '#f0e8cc' : '#b0bee0', lineHeight: 1.2, transition: 'color 0.4s' }}>
                 {isComplete ? 'Crew has returned' : 'Voyage underway'}
               </p>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: 5 }}>
                 {awayCrew.map((c, i) => {
                   const rc = rarityColor(c.rarity)
                   return (
-                    <div key={c.variantId} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: rc }}>{c.name}</span>
+                    <div key={c.variantId} style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                      <span className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: '#3a4860', width: 42, flexShrink: 0 }}>
+                        {i === 0 ? 'Captain' : 'Crew'}
+                      </span>
+                      <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: rc }}>{c.name}</span>
                     </div>
                   )
                 })}
