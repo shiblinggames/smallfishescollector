@@ -8,6 +8,8 @@ import { sendDailyVoyage, revealVoyageResults, type DailyVoyage } from './voyage
 
 type PanelState = 'idle' | 'away' | 'returned' | 'done'
 
+const VOYAGE_DURATION_MS = 6 * 60 * 60 * 1000
+
 const EVENT_ICONS: Record<string, string> = {
   discovery: '🗺️',
   encounter: '⚔️',
@@ -66,7 +68,7 @@ export default function DailyVoyagePanel({
   const [error, setError] = useState<string | null>(null)
 
   const returnTime = activeVoyage
-    ? new Date(activeVoyage.created_at).getTime() + 6 * 60 * 60 * 1000
+    ? new Date(activeVoyage.created_at).getTime() + VOYAGE_DURATION_MS
     : null
   const [msRemaining, setMsRemaining] = useState<number>(() =>
     returnTime ? Math.max(0, returnTime - Date.now()) : 0
@@ -104,7 +106,7 @@ export default function DailyVoyagePanel({
     })
   }, [savedCrew])
 
-  const handleReveal = useCallback(() => {
+  const handleClaim = useCallback(() => {
     if (!activeVoyage) return
     setError(null)
     startTransition(async () => {
@@ -195,103 +197,156 @@ export default function DailyVoyagePanel({
     )
   }
 
-  // ── Away: crew at sea ──────────────────────────────────────────────────────
-  if (panelState === 'away') {
-    const awayCrew = activeVoyage
-      ? activeVoyage.crew_variant_ids.map(id => byVariantId.get(id)).filter(Boolean) as CrewCard[]
-      : savedCrew
+  // ── Away / Returned: live activity log ────────────────────────────────────
+  if ((panelState === 'away' || panelState === 'returned') && activeVoyage) {
+    const events = activeVoyage.events as VoyageEvent[]
+    const elapsed = VOYAGE_DURATION_MS - msRemaining
+    const isComplete = msRemaining === 0
+
+    // Event i reveals at (i+1)/total * voyageDuration — evenly spaced, last at voyage end
+    const visibleEvents = events.filter((_, i) =>
+      elapsed >= ((i + 1) / events.length) * VOYAGE_DURATION_MS
+    )
+
+    // Time until next event
+    const nextIdx = visibleEvents.length
+    const msToNext = !isComplete && nextIdx < events.length
+      ? Math.max(0, ((nextIdx + 1) / events.length) * VOYAGE_DURATION_MS - elapsed)
+      : null
+
+    const awayCrew = activeVoyage.crew_variant_ids
+      .map(id => byVariantId.get(id)).filter(Boolean) as CrewCard[]
+
     return (
       <div>
         <div style={{
-          background: 'linear-gradient(135deg, rgba(16,22,36,0.72) 0%, rgba(12,18,30,0.80) 100%)',
-          border: '1px solid rgba(96,132,210,0.18)',
+          background: 'linear-gradient(135deg, rgba(16,22,36,0.80) 0%, rgba(12,18,30,0.88) 100%)',
+          border: `1px solid ${isComplete ? 'rgba(240,192,64,0.35)' : 'rgba(96,132,210,0.20)'}`,
           borderRadius: 16, padding: '1.05rem 1.1rem',
+          transition: 'border-color 0.4s',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
+
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.8rem' }}>
             <div>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#b0bee0', lineHeight: 1.2 }}>
-                Voyage underway
+              <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: isComplete ? '#f0e8cc' : '#b0bee0', lineHeight: 1.2, transition: 'color 0.4s' }}>
+                {isComplete ? 'Crew has returned' : 'Voyage underway'}
               </p>
-              <p className="font-karla" style={{ fontSize: '0.62rem', color: '#4a5870', marginTop: 4 }}>
-                The {shipStats.name} is at sea.
-              </p>
-              {msRemaining > 0 && (
-                <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#6080b0', marginTop: 6, letterSpacing: '0.04em' }}>
-                  {formatCountdown(msRemaining)}
-                </p>
-              )}
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
+                {awayCrew.map((c, i) => {
+                  const rc = rarityColor(c.rarity)
+                  return (
+                    <div key={c.variantId} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      {i === 0 && <span style={{ fontSize: '0.5rem' }}>👑</span>}
+                      <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: rc }}>{c.name}</span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-            <span style={{ fontSize: '1.8rem', flexShrink: 0 }}>⛵</span>
+            <span style={{ fontSize: '1.6rem', flexShrink: 0 }}>{isComplete ? '🏴‍☠️' : '⛵'}</span>
           </div>
 
-          {awayCrew.length > 0 && (
-            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-              {awayCrew.map((c, i) => {
-                const rc = rarityColor(c.rarity)
+          {/* Activity log */}
+          {visibleEvents.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginBottom: '0.8rem' }}>
+              {visibleEvents.map((e, i) => {
+                const isCrewLoss = e.crewVariantLost != null
+                const lostCard = isCrewLoss ? collection.find(c => c.variantId === e.crewVariantLost) : null
+                const s = isCrewLoss
+                  ? OUTCOME_STYLES.failure
+                  : (OUTCOME_STYLES[e.outcome] ?? OUTCOME_STYLES.neutral)
                 return (
-                  <div key={c.variantId} style={{
-                    background: 'rgba(96,132,210,0.07)',
-                    border: '1px solid rgba(96,132,210,0.15)',
-                    borderRadius: 7, padding: '0.25rem 0.5rem',
-                    display: 'flex', alignItems: 'center', gap: '0.3rem',
+                  <div key={i} style={{
+                    background: s.bg,
+                    border: `1px solid ${s.border}`,
+                    borderLeft: `2px solid ${s.color}`,
+                    borderRadius: 8, padding: '0.55rem 0.7rem',
                   }}>
-                    {i === 0 && <span style={{ fontSize: '0.55rem' }}>👑</span>}
-                    <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: rc }}>{c.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: e.narrative ? '0.25rem' : 0 }}>
+                      <span style={{ fontSize: '0.8rem', lineHeight: 1, flexShrink: 0 }}>{EVENT_ICONS[e.type] ?? '•'}</span>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d4c09a', flex: 1 }}>{e.title}</p>
+                      {e.doubloonDelta > 0 && (
+                        <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#f0c040', flexShrink: 0 }}>
+                          +{e.doubloonDelta} ⟡
+                        </p>
+                      )}
+                      {isCrewLoss && (
+                        <span className="font-karla font-700" style={{ fontSize: '0.44rem', color: '#f87171', background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.22)', borderRadius: 4, padding: '0.12rem 0.35rem', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
+                          Crew Lost
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7a6a4a', lineHeight: 1.55 }}>
+                      {e.narrative}
+                    </p>
+                    {isCrewLoss && lostCard && (
+                      <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: '#c06060', marginTop: '0.3rem' }}>
+                        {lostCard.name} — lost at sea.
+                      </p>
+                    )}
                   </div>
                 )
               })}
             </div>
           )}
-        </div>
-      </div>
-    )
-  }
 
-  // ── Returned: ready to reveal ──────────────────────────────────────────────
-  if (panelState === 'returned') {
-    return (
-      <div>
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(28,20,10,0.72) 0%, rgba(18,14,6,0.80) 100%)',
-          border: '1px solid rgba(240,192,64,0.40)',
-          borderRadius: 16, padding: '1.05rem 1.1rem',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '1.8rem', flexShrink: 0 }}>🏴‍☠️</span>
-            <div style={{ flex: 1 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0e8cc', lineHeight: 1.2, marginBottom: 4 }}>
-                Your crew has returned
-              </p>
-              <p className="font-karla" style={{ fontSize: '0.62rem', color: '#857460' }}>
-                The voyage is over. Read the log to find out what happened.
-              </p>
-            </div>
-            <button
-              onClick={handleReveal}
-              disabled={isPending}
-              style={{
-                flexShrink: 0,
-                background: isPending ? 'rgba(240,192,64,0.06)' : 'rgba(240,192,64,0.15)',
-                border: '1px solid rgba(240,192,64,0.38)',
-                borderRadius: 8, padding: '0.5rem 1rem',
-                color: '#f0c040', cursor: isPending ? 'default' : 'pointer',
-                opacity: isPending ? 0.5 : 1,
-              }}
-              className="font-karla font-700 uppercase tracking-[0.1em]"
-            >
-              <span style={{ fontSize: '0.62rem' }}>{isPending ? 'Loading…' : 'Read log →'}</span>
-            </button>
+          {/* Footer: countdown / next-event / claim */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.7rem' }}>
+            {isComplete ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                <div>
+                  {activeVoyage.total_doubloons > 0 ? (
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f0c040', lineHeight: 1 }}>
+                      +{activeVoyage.total_doubloons} ⟡
+                    </p>
+                  ) : (
+                    <p className="font-karla" style={{ fontSize: '0.65rem', color: '#4a3c28' }}>
+                      Returned empty-handed
+                    </p>
+                  )}
+                  {error && <p className="font-karla" style={{ fontSize: '0.6rem', color: '#f87171', marginTop: 4 }}>{error}</p>}
+                </div>
+                <button
+                  onClick={handleClaim}
+                  disabled={isPending}
+                  style={{
+                    flexShrink: 0,
+                    background: isPending ? 'rgba(240,192,64,0.06)' : 'rgba(240,192,64,0.16)',
+                    border: '1px solid rgba(240,192,64,0.40)',
+                    borderRadius: 8, padding: '0.5rem 1.1rem',
+                    color: '#f0c040', cursor: isPending ? 'default' : 'pointer',
+                    opacity: isPending ? 0.5 : 1,
+                  }}
+                  className="font-karla font-700 uppercase tracking-[0.1em]"
+                >
+                  <span style={{ fontSize: '0.62rem' }}>{isPending ? 'Claiming…' : 'Claim Loot →'}</span>
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.5rem' }}>
+                {msToNext !== null ? (
+                  <p className="font-karla" style={{ fontSize: '0.58rem', color: '#3a4860' }}>
+                    Next event in <span style={{ color: '#5070a0', fontWeight: 700 }}>{formatCountdown(msToNext)}</span>
+                  </p>
+                ) : (
+                  <div />
+                )}
+                <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#4a5870', letterSpacing: '0.03em' }}>
+                  {formatCountdown(msRemaining)}
+                </p>
+              </div>
+            )}
           </div>
-          {error && <p className="font-karla" style={{ fontSize: '0.62rem', color: '#f87171', marginTop: '0.5rem' }}>{error}</p>}
+
         </div>
       </div>
     )
   }
 
-  // ── Done: activity log ────────────────────────────────────────────────────
+  // ── Done: reward confirmed ────────────────────────────────────────────────
   if (panelState === 'done' && activeVoyage) {
     const earned = activeVoyage.total_doubloons
-    const events = activeVoyage.events as VoyageEvent[]
     const lostCards = activeVoyage.crew_lost
       .map(id => collection.find(c => c.variantId === id))
       .filter(Boolean) as CrewCard[]
@@ -299,102 +354,29 @@ export default function DailyVoyagePanel({
     return (
       <div>
         <div style={{
-          background: 'linear-gradient(135deg, rgba(18,14,6,0.88) 0%, rgba(14,10,4,0.92) 100%)',
+          background: 'linear-gradient(135deg, rgba(28,20,10,0.72) 0%, rgba(18,14,6,0.80) 100%)',
           border: '1px solid rgba(240,192,64,0.18)',
           borderRadius: 16, padding: '1.05rem 1.1rem',
         }}>
-
-          {/* Reward summary */}
-          <div style={{
-            background: earned > 0 ? 'rgba(240,192,64,0.07)' : 'rgba(255,255,255,0.02)',
-            border: `1px solid ${earned > 0 ? 'rgba(240,192,64,0.22)' : 'rgba(255,255,255,0.06)'}`,
-            borderRadius: 10, padding: '0.75rem 1rem',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            marginBottom: '1rem',
-          }}>
-            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#5a4c38' }}>
-              Voyage complete
-            </p>
-            {earned > 0 ? (
-              <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1 }}>
-                +{earned} ⟡
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: lostCards.length > 0 ? '0.85rem' : 0 }}>
+            <div>
+              <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#5a4c38', marginBottom: 4 }}>
+                Voyage complete
               </p>
-            ) : (
-              <p className="font-karla" style={{ fontSize: '0.66rem', color: '#4a3c28' }}>
-                Returned empty-handed
-              </p>
-            )}
-          </div>
-
-          {/* Activity log */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', marginBottom: lostCards.length > 0 ? '0.85rem' : '0.9rem' }}>
-            {events.map((e, i) => {
-              const isCrewLoss = e.crewVariantLost != null
-              const lostCard = isCrewLoss ? collection.find(c => c.variantId === e.crewVariantLost) : null
-              const s = isCrewLoss
-                ? OUTCOME_STYLES.failure
-                : (OUTCOME_STYLES[e.outcome] ?? OUTCOME_STYLES.neutral)
-              return (
-                <div key={i} style={{
-                  background: s.bg,
-                  border: `1px solid ${s.border}`,
-                  borderLeft: `2px solid ${s.color}`,
-                  borderRadius: 8, padding: '0.6rem 0.75rem',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.3rem' }}>
-                    <span style={{ fontSize: '0.85rem', lineHeight: 1, flexShrink: 0 }}>{EVENT_ICONS[e.type] ?? '•'}</span>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: '#d4c09a', flex: 1 }}>{e.title}</p>
-                    {e.doubloonDelta > 0 && (
-                      <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#f0c040', flexShrink: 0 }}>
-                        +{e.doubloonDelta} ⟡
-                      </p>
-                    )}
-                    {isCrewLoss && (
-                      <span className="font-karla font-700" style={{ fontSize: '0.48rem', color: '#f87171', background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.22)', borderRadius: 4, padding: '0.15rem 0.4rem', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
-                        Crew Lost
-                      </span>
-                    )}
-                  </div>
-                  <p className="font-karla" style={{ fontSize: '0.65rem', color: '#8a7a5a', lineHeight: 1.55 }}>
-                    {e.narrative}
-                  </p>
-                  {isCrewLoss && lostCard && (
-                    <p className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#c06060', marginTop: '0.35rem' }}>
-                      {lostCard.name} — lost at sea.
-                    </p>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Memorial */}
-          {lostCards.length > 0 && (
-            <div style={{
-              background: 'rgba(20,10,10,0.60)',
-              border: '1px solid rgba(180,40,40,0.22)',
-              borderRadius: 8, padding: '0.6rem 0.85rem',
-              marginBottom: '0.85rem',
-              display: 'flex', alignItems: 'center', gap: '0.65rem',
-            }}>
-              <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>💀</span>
-              <div>
-                <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.48rem', color: '#6b2a2a', marginBottom: '0.2rem' }}>
-                  Lost at sea
+              {earned > 0 ? (
+                <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1 }}>
+                  +{earned} ⟡
                 </p>
-                {lostCards.map(c => (
-                  <p key={c.variantId} className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#c06060', lineHeight: 1.3 }}>
-                    {c.name}
-                  </p>
-                ))}
-              </div>
+              ) : (
+                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#4a3c28' }}>
+                  The crew returned empty-handed.
+                </p>
+              )}
             </div>
-          )}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button
               onClick={() => setPanelState('idle')}
               style={{
+                flexShrink: 0,
                 background: 'rgba(240,192,64,0.07)',
                 border: '1px solid rgba(240,192,64,0.16)',
                 borderRadius: 8, padding: '0.38rem 0.85rem',
@@ -405,6 +387,27 @@ export default function DailyVoyagePanel({
               <span style={{ fontSize: '0.58rem' }}>Done</span>
             </button>
           </div>
+
+          {lostCards.length > 0 && (
+            <div style={{
+              background: 'rgba(20,10,10,0.60)',
+              border: '1px solid rgba(180,40,40,0.22)',
+              borderRadius: 8, padding: '0.55rem 0.8rem',
+              display: 'flex', alignItems: 'center', gap: '0.6rem',
+            }}>
+              <span style={{ fontSize: '1rem', flexShrink: 0 }}>💀</span>
+              <div>
+                <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: '#6b2a2a', marginBottom: '0.2rem' }}>
+                  Lost at sea
+                </p>
+                {lostCards.map(c => (
+                  <p key={c.variantId} className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#c06060', lineHeight: 1.3 }}>
+                    {c.name}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
