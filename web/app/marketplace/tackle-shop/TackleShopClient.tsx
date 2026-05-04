@@ -146,7 +146,7 @@ export default function TackleShopClient({
 
   const CATEGORIES: { key: Exclude<Section, null>; label: string; desc: string; color: string; imageUrl?: string }[] = [
     { key: 'bait',  label: 'Bait',  color: '#34d399', desc: 'Consumables used per cast.',           imageUrl: '/worms.png' },
-    { key: 'hook',  label: 'Hooks', color: '#f0c040', desc: 'Widens the catch zone on the dial.' },
+    { key: 'hook',  label: 'Hooks', color: '#f0c040', desc: 'Widens the catch zone on the dial.',  imageUrl: '/models/hooks/steel-hook.png' },
     { key: 'rod',   label: 'Rods',  color: '#b8956a', desc: 'Every rod has a unique ability.',       imageUrl: '/driftwoodrod.png' },
     { key: 'reel',  label: 'Reels', color: '#60a5fa', desc: 'Slows the needle for easier timing.' },
     { key: 'line',  label: 'Line',  color: '#4ade80', desc: 'Shrinks snag zones. Earned by species.' },
