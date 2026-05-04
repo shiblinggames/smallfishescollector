@@ -785,7 +785,7 @@ export default function TackleShopClient({
                 }}
               >
                 <div className="flex items-start gap-3">
-                  <GearIcon color={c} owned={owned} isActive={isActive} label={`T${line.tier}`} />
+                  <LineIcon color={c} owned={owned} isActive={isActive} tier={line.tier} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <p className="font-cinzel font-700 text-base" style={{ color: owned ? '#f0ede8' : '#6a6764' }}>
@@ -918,6 +918,37 @@ function HookIcon({ tier, color, owned, isActive, imageUrl }: { tier: number; co
       ) : (
         icons[tier] ?? icons[0]
       )}
+    </div>
+  )
+}
+
+function LineIcon({ color, owned, isActive, tier }: { color: string; owned: boolean; isActive: boolean; tier: number }) {
+  const sc = owned ? color : '#4a4845'
+  const bg = owned ? `${color}12` : 'rgba(255,255,255,0.06)'
+  const border = owned ? `${color}35` : 'rgba(255,255,255,0.11)'
+  // 2 wraps at tier 0–1, 3 at 2–3, 4 at 4–5
+  const wrapCount = tier <= 1 ? 2 : tier <= 3 ? 3 : 4
+  const bodyY1 = 9, bodyY2 = 15
+  const wraps = Array.from({ length: wrapCount }, (_, i) =>
+    bodyY1 + 1 + (i * (bodyY2 - bodyY1 - 2)) / Math.max(wrapCount - 1, 1)
+  )
+  return (
+    <div
+      className="w-[38px] h-[38px] sm:w-12 sm:h-12 shrink-0 flex items-center justify-center"
+      style={{ borderRadius: 10, background: bg, border: `1px solid ${border}`, boxShadow: isActive ? `0 0 10px ${color}25` : 'none' }}
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        {/* Left flange */}
+        <rect x="2.5" y="5.5" width="3.5" height="13" rx="1.5" fill={sc} opacity={owned ? 0.75 : 0.4} />
+        {/* Right flange */}
+        <rect x="18" y="5.5" width="3.5" height="13" rx="1.5" fill={sc} opacity={owned ? 0.75 : 0.4} />
+        {/* Spool body */}
+        <rect x="6" y={bodyY1} width="12" height={bodyY2 - bodyY1} rx="1" stroke={sc} strokeWidth="1.3" />
+        {/* Wrapped line */}
+        {wraps.map((y, i) => (
+          <line key={i} x1="6.5" y1={y} x2="17.5" y2={y} stroke={sc} strokeWidth="1.2" strokeLinecap="round" />
+        ))}
+      </svg>
     </div>
   )
 }

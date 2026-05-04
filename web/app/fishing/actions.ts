@@ -9,6 +9,7 @@ import { checkAchievements } from '@/lib/checkAchievements'
 import { recordChallengeScore } from '@/app/social/challengeActions'
 import { getWeekStart } from '@/lib/weekStart'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
+import { getLineForSpeciesCount } from '@/lib/lines'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -248,7 +249,7 @@ export async function reelIn(
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
     const unique = count ?? 0
-    const newLineTier = unique >= 45 ? 3 : unique >= 25 ? 2 : unique >= 10 ? 1 : 0
+    const newLineTier = getLineForSpeciesCount(unique).tier
     await admin.from('profiles').update({ line_tier: newLineTier }).eq('id', user.id)
   }
 
