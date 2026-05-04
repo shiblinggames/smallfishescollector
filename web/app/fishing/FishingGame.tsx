@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { getRingSkin } from '@/lib/ringSkins'
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import { finishSession, type ActiveSession } from '@/app/social/challengeActions'
 import { equipRod } from '@/app/marketplace/tackle-shop/actions'
@@ -286,7 +287,7 @@ function getZone(zones: ZoneDef[], deg: number, rotation = 0): ZoneDef {
 // ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 function DialSVG({
-  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0,
+  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0, ringSkin,
 }: {
   zones: ZoneDef[]
   angle: number
@@ -296,6 +297,7 @@ function DialSVG({
   fireLevel?: 0 | 1 | 2
   snapKey?: number
   perfectBurstKey?: number
+  ringSkin?: { stroke: string; glow: string | null }
 }) {
   const needleTipY  = CY - (INNER_R - 8)
   const perfectZone = zones.find(z => z.type === 'perfect')
@@ -321,7 +323,7 @@ function DialSVG({
       position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto',
       filter: fireLevel === 2 ? 'drop-shadow(0 0 14px rgba(251,146,60,0.7)) drop-shadow(0 0 32px rgba(239,68,68,0.35))'
             : fireLevel === 1 ? 'drop-shadow(0 0 12px rgba(251,146,60,0.6)) drop-shadow(0 0 22px rgba(251,146,60,0.25))'
-            : 'none',
+            : (ringSkin?.glow ?? 'none'),
       transition: 'filter 0.4s ease',
     }}>
       <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block', overflow: 'visible' }}>
@@ -332,7 +334,7 @@ function DialSVG({
             <stop offset="100%" stopColor="#050c14" stopOpacity="1" />
           </radialGradient>
         </defs>
-        <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke={fireLevel === 2 ? '#f97316' : fireLevel === 1 ? '#f97316bb' : 'rgba(255,255,255,0.12)'} strokeWidth="1" />
+        <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke={fireLevel === 2 ? '#f97316' : fireLevel === 1 ? '#f97316bb' : (ringSkin?.stroke ?? 'rgba(255,255,255,0.12)')} strokeWidth="1" />
 <g transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
             <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
@@ -1226,6 +1228,7 @@ export default function FishingGame({
   initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
+  initialRingSkin, initialUnlockedRingSkins,
 }: {
   hookTier: number
   rodTier: number
@@ -1248,10 +1251,14 @@ export default function FishingGame({
   onBack: () => void
   activeSession?: ActiveSession
   zoneRewardsClaimed: Record<string, boolean>
+  initialRingSkin: string
+  initialUnlockedRingSkins: string[]
 }) {
 
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
   const [ownedRods, setOwnedRods] = useState(initialOwnedRods)
+  const [equippedRingSkin, setEquippedRingSkin] = useState(initialRingSkin)
+  const [unlockedRingSkins, setUnlockedRingSkins] = useState(initialUnlockedRingSkins)
   const [caughtFishIds, setCaughtFishIds] = useState(() => new Set(initialCaughtFishIds))
   const rod  = getRod(equippedRodTier)
   const reel = getReel(reelTier)
@@ -2111,7 +2118,8 @@ export default function FishingGame({
                     <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}
                       needleColor={needleColor()} zoneOpacityFn={zoneOpacity}
                       fireLevel={perfectStreak >= 3 ? 2 : perfectStreak === 2 ? 1 : 0}
-                      snapKey={snapKey} perfectBurstKey={perfectBurstKey} />
+                      snapKey={snapKey} perfectBurstKey={perfectBurstKey}
+                      ringSkin={getRingSkin(equippedRingSkin)} />
                   </div>
                 </motion.div>
               )}
@@ -2868,6 +2876,12 @@ export default function FishingGame({
               hookTier={hookTier}
               lineTier={lineTier}
               shipTier={shipTier}
+              equippedRingSkin={equippedRingSkin}
+              unlockedRingSkins={unlockedRingSkins}
+              onEquipRingSkin={async (skin) => {
+                setEquippedRingSkin(skin)
+                await equipRingSkin(skin)
+              }}
               onClose={() => setGearOpen(false)}
             />
           </motion.div>

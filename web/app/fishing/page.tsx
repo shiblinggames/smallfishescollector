@@ -25,7 +25,7 @@ export default async function FishingPage() {
   ] = await Promise.all([
     getActiveChallengeSession(),
     admin.from('profiles')
-      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, ship_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded')
+      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, ship_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, ring_skin, unlocked_ring_skins')
       .eq('id', user.id)
       .single(),
     admin.from('bait_inventory')
@@ -91,6 +91,8 @@ export default async function FishingPage() {
             deep:        profile?.zone_deep_rewarded        ?? false,
             abyss:       profile?.zone_abyss_rewarded       ?? false,
           }}
+          initialRingSkin={profile?.ring_skin ?? 'standard'}
+          initialUnlockedRingSkins={(profile?.unlocked_ring_skins as string[] | null) ?? []}
         />
       </main>
     </>

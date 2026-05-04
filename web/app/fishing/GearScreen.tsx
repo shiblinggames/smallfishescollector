@@ -9,9 +9,10 @@ import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
 import { getShip } from '@/lib/ships'
+import { RING_SKINS } from '@/lib/ringSkins'
 
 type BaitItem = { bait_type: string; quantity: number }
-type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'bait'
+type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'bait' | 'special' | 'cosmetic'
 
 function ShopLink({ href, label, color, onClick }: { href: string; label: string; color: string; onClick: () => void }) {
   return (
@@ -68,6 +69,25 @@ function StatCell({ label, value, color, muted }: { label: string; value: string
   )
 }
 
+function SpecialIcon({ color }: { color: string }) {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 3h6l1 5.5-4 2.5-4-2.5z" />
+      <path d="M8 8.5C5.5 11 4 14 4 17a8 8 0 0 0 16 0c0-3-1.5-6-4-8.5" />
+    </svg>
+  )
+}
+
+function CosmeticIcon({ color }: { color: string }) {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round">
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4.5" />
+      <circle cx="12" cy="12" r="1.5" fill={color} stroke="none" />
+    </svg>
+  )
+}
+
 function BaitIcon({ color }: { color: string }) {
   return (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -80,7 +100,7 @@ function BaitIcon({ color }: { color: string }) {
 }
 
 function GearSlot({
-  label, image, icon, itemName, color, onClick, small,
+  label, image, icon, itemName, color, onClick, small, empty,
 }: {
   label: string
   image?: string | null
@@ -89,6 +109,7 @@ function GearSlot({
   color: string
   onClick: () => void
   small?: boolean
+  empty?: boolean
 }) {
   return (
     <button
@@ -113,7 +134,7 @@ function GearSlot({
       </div>
       <div style={{ textAlign: 'center' }}>
         <p className="font-karla font-600 uppercase" style={{ fontSize: '0.62rem', color: color + 'cc', letterSpacing: '0.14em', marginBottom: 1 }}>{label}</p>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d0cdc8', lineHeight: 1.2 }}>{itemName}</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: empty ? '#2e2c2a' : '#d0cdc8', lineHeight: 1.2 }}>{itemName}</p>
       </div>
     </button>
   )
@@ -123,6 +144,7 @@ export default function GearScreen({
   baitInventory, selectedBait, onSelectBait,
   equippedRodTier, ownedRods, onEquipRod,
   reelTier, hookTier, lineTier, shipTier,
+  equippedRingSkin, unlockedRingSkins, onEquipRingSkin,
   onClose,
 }: {
   baitInventory: BaitItem[]
@@ -135,6 +157,9 @@ export default function GearScreen({
   hookTier: number
   lineTier: number
   shipTier: number
+  equippedRingSkin: string
+  unlockedRingSkins: string[]
+  onEquipRingSkin: (skin: string) => void
   onClose: () => void
 }) {
   const [openSlot, setOpenSlot] = useState<SlotKey | null>(null)
@@ -209,18 +234,37 @@ export default function GearScreen({
         </div>
       </div>
 
-      {/* Bait slot */}
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <div style={{ width: '40%' }}>
-          <GearSlot
-            label="Bait"
-            image={bait?.imageUrl ?? null}
-            icon={<BaitIcon color={bait?.color ?? '#94a3b8'} />}
-            itemName={bait?.name ?? 'No Bait'}
-            color={bait?.color ?? '#94a3b8'}
-            onClick={() => setOpenSlot('bait')}
-          />
-        </div>
+      {/* Bottom row: Special | Bait | Cosmetic */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gap: 6 }}>
+        <GearSlot
+          label="Special"
+          icon={<SpecialIcon color="#5a4a7a" />}
+          itemName="None"
+          color="#5a4a7a"
+          onClick={() => setOpenSlot('special')}
+          empty
+        />
+        <GearSlot
+          label="Bait"
+          image={bait?.imageUrl ?? null}
+          icon={<BaitIcon color={bait?.color ?? '#94a3b8'} />}
+          itemName={bait?.name ?? 'No Bait'}
+          color={bait?.color ?? '#94a3b8'}
+          onClick={() => setOpenSlot('bait')}
+        />
+        {(() => {
+          const activeSkin = RING_SKINS.find(s => s.id === equippedRingSkin) ?? RING_SKINS[0]
+          return (
+            <GearSlot
+              label="Cosmetic"
+              icon={<CosmeticIcon color={activeSkin.id === 'standard' ? '#3a6a6a' : activeSkin.color} />}
+              itemName={activeSkin.name}
+              color={activeSkin.id === 'standard' ? '#3a6a6a' : activeSkin.color}
+              onClick={() => setOpenSlot('cosmetic')}
+              empty={activeSkin.id === 'standard'}
+            />
+          )
+        })()}
       </div>
 
       {/* ── Loadout stats ── */}
@@ -384,6 +428,73 @@ export default function GearScreen({
                   <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#4a4845', lineHeight: 1.5 }}>
                     Lines are earned by catching unique species — no purchase needed.
                   </p>
+                </div>
+              )}
+
+              {/* ── Special ── */}
+              {openSlot === 'special' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#8b6fc0' }}>Special Items</p>
+                  <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#6a6764', lineHeight: 1.55 }}>
+                    Special items are consumables earned from voyages. Use them before a session for temporary buffs — things like enchanted bait, fortune charms, or rare lure effects.
+                  </p>
+                  <div style={{ background: 'rgba(139,111,192,0.08)', border: '1px solid rgba(139,111,192,0.18)', borderRadius: 12, padding: '0.75rem 0.9rem' }}>
+                    <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: '#8b6fc0', marginBottom: 5 }}>How to earn</p>
+                    <p className="font-karla font-300" style={{ fontSize: '0.7rem', color: '#6a6764', lineHeight: 1.5 }}>
+                      Send your crew on voyages from the Expeditions page. Riskier routes have a better chance of returning with special items.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Cosmetic ── */}
+              {openSlot === 'cosmetic' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#4a9a9a' }}>Dial Ring Skins</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {RING_SKINS.map(skin => {
+                      const owned = skin.id === 'standard' || unlockedRingSkins.includes(skin.id)
+                      const isEquipped = equippedRingSkin === skin.id
+                      return (
+                        <div key={skin.id} style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '0.55rem 0.7rem', borderRadius: 10,
+                          background: isEquipped ? `${skin.color}12` : 'rgba(4,10,18,0.72)',
+                          border: `1px solid ${isEquipped ? skin.color + '50' : owned ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.04)'}`,
+                          opacity: owned ? 1 : 0.45,
+                        }}>
+                          {/* Ring preview swatch */}
+                          <div style={{
+                            width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                            border: `2px solid ${skin.stroke}`,
+                            background: 'rgba(4,10,20,0.8)',
+                            boxShadow: skin.glow ? skin.glow.replace('drop-shadow', '').replace(/[()]/g, '').trim() : 'none',
+                          }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: owned ? '#f0ede8' : '#3a3835' }}>{skin.name}</p>
+                            <p className="font-karla" style={{ fontSize: '0.56rem', color: owned ? '#5a5856' : '#2e2c2a', marginTop: 1 }}>
+                              {owned ? skin.description : skin.source}
+                            </p>
+                          </div>
+                          {owned
+                            ? isEquipped
+                              ? <span className="font-karla font-700" style={{ fontSize: '0.52rem', color: skin.color, whiteSpace: 'nowrap' }}>✓ On</span>
+                              : <button onClick={() => { onEquipRingSkin(skin.id); setOpenSlot(null) }} className="font-karla font-700"
+                                  style={{ fontSize: '0.55rem', padding: '0.28rem 0.6rem', borderRadius: 7, whiteSpace: 'nowrap',
+                                    background: `${skin.color}16`, border: `1px solid ${skin.color}44`, color: skin.color, cursor: 'pointer' }}>
+                                  Equip
+                                </button>
+                            : <span className="font-karla" style={{ fontSize: '0.5rem', color: '#3a3835', whiteSpace: 'nowrap' }}>Locked</span>
+                          }
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div style={{ background: 'rgba(74,154,154,0.07)', border: '1px solid rgba(74,154,154,0.15)', borderRadius: 10, padding: '0.6rem 0.8rem', marginTop: 2 }}>
+                    <p className="font-karla font-300" style={{ fontSize: '0.65rem', color: '#4a6a6a', lineHeight: 1.5 }}>
+                      Unlock ring skins by completing voyages on the Expeditions page.
+                    </p>
+                  </div>
                 </div>
               )}
 

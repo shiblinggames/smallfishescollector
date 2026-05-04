@@ -483,3 +483,19 @@ export async function claimZoneReward(zone: string): Promise<{ doubloons: number
 
   return { doubloons: newDoubloons, earned }
 }
+
+export async function equipRingSkin(skin: string): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('unlocked_ring_skins').eq('id', user.id).single()
+  if (!profile) return { error: 'Profile not found' }
+
+  const unlocked: string[] = profile.unlocked_ring_skins ?? []
+  if (skin !== 'standard' && !unlocked.includes(skin)) return { error: 'Skin not unlocked' }
+
+  await admin.from('profiles').update({ ring_skin: skin }).eq('id', user.id)
+  return { ok: true }
+}
