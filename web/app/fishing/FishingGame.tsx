@@ -1492,7 +1492,7 @@ export default function FishingGame({
 
     // Consecutive perfect streak
     const newStreak = wasPerfect ? perfectStreak + 1 : 0
-    const streakBonusXP = wasPerfect ? perfectStreak * 5 : 0  // streak 1=0, 2=+5, 3=+10 …
+    const streakBonusXP = wasPerfect ? (perfectStreak + 1) ** 2 * 3 : 0  // streak 1=+3, 2=+12, 3=+27, 5=+75, 10=+300
 
     // Challenge mechanic: non-perfect catch clears the challenge without reward
     const wonChallenge = wasPerfect && challengeActive
