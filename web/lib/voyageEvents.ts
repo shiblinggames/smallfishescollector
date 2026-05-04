@@ -31,6 +31,8 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
   const stats = computeTotalCrewStats(crew)
   const { power, dodge, fortune } = stats
   const crewCount = crew.length
+  const fortuneScale = 1 + fortune / 40  // fortune=20 → 1.5×, fortune=40 → 2×
+  const payout = (min: number, max: number) => Math.round(rand(min, max) * fortuneScale)
 
   // Stat rolls
   const rollFortune  = () => Math.random() * 25 < fortune        // fortune 10 ≈ 40%
@@ -69,7 +71,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
         event = {
           type, outcome: success ? 'success' : 'neutral',
           title: template.title, narrative: template.narrative,
-          doubloonDelta: success ? rand(60, 180) : 0,
+          doubloonDelta: success ? payout(60, 180) : 0,
           crewVariantLost: null,
         }
         break
@@ -81,7 +83,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
         event = {
           type, outcome: win ? 'success' : 'neutral',
           title: template.title, narrative: template.narrative,
-          doubloonDelta: win ? rand(30, 80) : 0,
+          doubloonDelta: win ? payout(30, 80) : 0,
           crewVariantLost: null,
         }
         break
@@ -129,7 +131,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
         event = {
           type, outcome: safe ? (Math.random() < 0.35 ? 'success' : 'neutral') : 'neutral',
           title: template.title, narrative: template.narrative,
-          doubloonDelta: safe && Math.random() < 0.35 ? rand(20, 50) : 0,
+          doubloonDelta: safe && Math.random() < 0.35 ? payout(20, 50) : 0,
           crewVariantLost: null,
         }
         break
