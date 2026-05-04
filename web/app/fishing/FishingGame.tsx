@@ -2599,7 +2599,7 @@ export default function FishingGame({
             <div className="flex items-center justify-between flex-shrink-0"
               style={{ padding: '1.25rem 1.1rem 0.75rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                style={{ fontSize: '0.72rem', color: '#6a6764' }}>Fish Collection</p>
+                style={{ fontSize: '0.82rem', color: '#6a6764' }}>Fish Collection</p>
               <button onClick={() => { setCollectionOpen(false); setExpandedZone(null); setTappedFishId(null) }}
                 style={{ color: '#4a4845', fontSize: '1.2rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
             </div>
@@ -2631,22 +2631,28 @@ export default function FishingGame({
                     }}
                     onClick={() => { setExpandedZone(isExpanded ? null : zone); setTappedFishId(null) }}
                   >
-                    <div className="flex items-center justify-between" style={{ marginBottom: '0.45rem' }}>
+                    <div className="flex items-center justify-between" style={{ marginBottom: '0.5rem' }}>
                       <div>
                         <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                          style={{ fontSize: '0.72rem', color: zoneColor, lineHeight: 1 }}>{HABITAT_LABEL[zone]}</p>
+                          style={{ fontSize: '0.85rem', color: zoneColor, lineHeight: 1 }}>{HABITAT_LABEL[zone]}</p>
                         <p className="font-karla font-400"
-                          style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.28)', marginTop: 3 }}>{HABITAT_TAGLINE[zone]}</p>
+                          style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>{HABITAT_TAGLINE[zone]}</p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-karla font-600"
+                            style={{ fontSize: '0.78rem', color: isComplete ? zoneColor : 'rgba(255,255,255,0.5)' }}>
+                            {discoveredCount}<span style={{ color: 'rgba(255,255,255,0.25)' }}>/{zoneSpecies.length}</span>
+                          </p>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={zoneColor + '80'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                            style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', flexShrink: 0 }}>
+                            <path d="M6 9l6 6 6-6"/>
+                          </svg>
+                        </div>
                         <p className="font-karla font-600"
-                          style={{ fontSize: '0.65rem', color: isComplete ? zoneColor : 'rgba(255,255,255,0.4)' }}>
-                          {discoveredCount}<span style={{ color: 'rgba(255,255,255,0.2)' }}>/{zoneSpecies.length}</span>
+                          style={{ fontSize: '0.58rem', color: isClaimed ? zoneColor + '70' : 'rgba(240,192,64,0.4)' }}>
+                          {isClaimed ? '✓ reward claimed' : `🏆 ${(ZONE_REWARD_DOUBLOONS_UI[zone] ?? 0).toLocaleString()} ⟡ on completion`}
                         </p>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={zoneColor + '80'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                          style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', flexShrink: 0 }}>
-                          <path d="M6 9l6 6 6-6"/>
-                        </svg>
                       </div>
                     </div>
                     <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
@@ -2724,9 +2730,9 @@ export default function FishingGame({
                         if (!discovered) return (
                           <div key={f.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
                             style={{ background: 'rgba(4,10,18,0.35)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: rarityColor + '28', flexShrink: 0 }} />
+                            <span style={{ width: 9, height: 9, borderRadius: '50%', background: rarityColor + '28', flexShrink: 0 }} />
                             <p className="font-karla font-600 flex-1"
-                              style={{ fontSize: '0.75rem', color: '#3a3835', letterSpacing: '0.04em' }}>??? Undiscovered</p>
+                              style={{ fontSize: '0.82rem', color: '#3a3835', letterSpacing: '0.04em' }}>??? Undiscovered</p>
                           </div>
                         )
 
@@ -2744,9 +2750,9 @@ export default function FishingGame({
                                 if (!isTapped) setUncheckedNewFishIds(prev => { const next = new Set(prev); next.delete(f.id); return next })
                               }}
                             >
-                              <FishImg name={f.name} style={{ width: 44, height: 34, objectFit: 'contain', flexShrink: 0 }} />
+                              <FishImg name={f.name} style={{ width: 48, height: 38, objectFit: 'contain', flexShrink: 0 }} />
                               <p className="font-cinzel font-700 flex-1 truncate"
-                                style={{ fontSize: '0.78rem', color: rarityColor }}>{f.name}</p>
+                                style={{ fontSize: '0.88rem', color: rarityColor }}>{f.name}</p>
                               {uncheckedNewFishIds.has(f.id) && (
                                 <span style={{ fontSize: '0.5rem', fontWeight: 700, color: '#f87171', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.3)', padding: '0.1rem 0.4rem', borderRadius: '2rem', flexShrink: 0, fontFamily: 'var(--font-karla)' }}>NEW</span>
                               )}
@@ -2761,15 +2767,15 @@ export default function FishingGame({
                               >
                                 <div className="px-3 pt-2 pb-3 mx-0.5 rounded-b-xl"
                                   style={{ background: `${rarityColor}0a`, border: `1px solid ${rarityColor}25`, borderTop: 'none' }}>
-                                  <FishImg name={f.name} style={{ width: '100%', height: 100, objectFit: 'contain', marginBottom: '0.5rem' }} />
+                                  <FishImg name={f.name} style={{ width: '100%', height: 110, objectFit: 'contain', marginBottom: '0.5rem' }} />
                                   <p className="font-karla font-300 italic mb-2"
-                                    style={{ fontSize: '0.68rem', color: rarityColor + 'aa' }}>{f.scientific_name}</p>
+                                    style={{ fontSize: '0.75rem', color: rarityColor + 'aa' }}>{f.scientific_name}</p>
                                   <p className="font-karla font-400 mb-3"
-                                    style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.55 }}>
+                                    style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.55 }}>
                                     &ldquo;{f.fun_fact}&rdquo;
                                   </p>
                                   <p className="font-cinzel font-700"
-                                    style={{ fontSize: '0.72rem', color: '#f0c040' }}>{f.sell_value.toLocaleString()} ⟡</p>
+                                    style={{ fontSize: '0.82rem', color: '#f0c040' }}>{f.sell_value.toLocaleString()} ⟡</p>
                                 </div>
                               </motion.div>
                             )}
