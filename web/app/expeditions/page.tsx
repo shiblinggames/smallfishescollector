@@ -62,7 +62,6 @@ export default async function ExpeditionsPage() {
       <div style={{ position: 'relative', zIndex: 1 }}>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={doubloons} gems={profile?.gems ?? 0} />
       <div style={{ background: 'rgba(251,191,36,0.08)', borderBottom: '1px solid rgba(251,191,36,0.2)', padding: '0.55rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <span style={{ fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}>🚧</span>
         <div>
           <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#fbbf24' }}>Under Construction</p>
           <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: 'rgba(251,191,36,0.6)', lineHeight: 1.4, marginTop: 2 }}>Expeditions are coming soon. You can explore the page but progress may reset.</p>
@@ -117,13 +116,6 @@ export default async function ExpeditionsPage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{
-                        width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-                        background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.2)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem',
-                      }}>
-                        {ZONES[activeExpedition.zone].icon}
-                      </div>
                       <div>
                         <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: '#f0c040', marginBottom: 2 }}>
                           In Progress

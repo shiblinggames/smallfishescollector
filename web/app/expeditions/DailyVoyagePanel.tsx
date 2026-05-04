@@ -237,14 +237,13 @@ export default function DailyVoyagePanel({
                   const rc = rarityColor(c.rarity)
                   return (
                     <div key={c.variantId} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      {i === 0 && <span style={{ fontSize: '0.5rem' }}>👑</span>}
                       <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: rc }}>{c.name}</span>
                     </div>
                   )
                 })}
               </div>
             </div>
-            <span style={{ fontSize: '1.6rem', flexShrink: 0 }}>{isComplete ? '🏴‍☠️' : '⛵'}</span>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: isComplete ? '#f0c040' : '#6080b0', opacity: 0.7 }} />
           </div>
 
           {/* Activity log */}
@@ -264,7 +263,6 @@ export default function DailyVoyagePanel({
                     borderRadius: 8, padding: '0.55rem 0.7rem',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: e.narrative ? '0.25rem' : 0 }}>
-                      <span style={{ fontSize: '0.8rem', lineHeight: 1, flexShrink: 0 }}>{EVENT_ICONS[e.type] ?? '•'}</span>
                       <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d4c09a', flex: 1 }}>{e.title}</p>
                       {e.doubloonDelta > 0 && (
                         <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#f0c040', flexShrink: 0 }}>
@@ -395,7 +393,6 @@ export default function DailyVoyagePanel({
               borderRadius: 8, padding: '0.55rem 0.8rem',
               display: 'flex', alignItems: 'center', gap: '0.6rem',
             }}>
-              <span style={{ fontSize: '1rem', flexShrink: 0 }}>💀</span>
               <div>
                 <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: '#6b2a2a', marginBottom: '0.2rem' }}>
                   Lost at sea

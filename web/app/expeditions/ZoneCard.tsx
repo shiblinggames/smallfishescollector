@@ -128,11 +128,7 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, doublo
               width: 40, height: 40, borderRadius: 11, flexShrink: 0,
               background: `${theme.color}12`,
               border: `1px solid ${theme.color}25`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.15rem',
-            }}>
-              {config.icon}
-            </div>
+            }} />
             <div>
               <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8', lineHeight: 1.2 }}>
                 {config.name}
@@ -165,7 +161,7 @@ export default function ZoneCard({ zoneKey, config, expedition, shipTier, doublo
               background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.28)',
               borderRadius: 6, padding: '0.25rem 0.5rem',
             }}>
-              🚧 Coming Soon
+              Coming Soon
             </span>
           )}
           {!isUnderConstruction && isActive && (
