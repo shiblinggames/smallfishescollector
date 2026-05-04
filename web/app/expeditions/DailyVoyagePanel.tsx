@@ -268,9 +268,13 @@ export default function DailyVoyagePanel({
                             </span>
 
                             {/* Crew risk */}
-                            {savedCrew.length >= 2 && est.crewRiskPct > 0 && (
-                              <span className="font-karla" style={{ fontSize: '0.58rem', color: est.crewRiskPct >= 40 ? '#f87171aa' : '#8a7860' }}>
-                                {est.crewRiskPct}% crew risk
+                            {savedCrew.length >= 2 ? (
+                              <span className="font-karla" style={{ fontSize: '0.58rem', color: est.crewRiskPct >= 40 ? '#f87171cc' : est.crewRiskPct > 0 ? '#c8906a' : '#6a8a6a' }}>
+                                {est.crewRiskPct === 0 ? 'No crew risk' : `${est.crewRiskPct}% crew risk`}
+                              </span>
+                            ) : (
+                              <span className="font-karla" style={{ fontSize: '0.58rem', color: '#6a6460' }}>
+                                Solo voyage
                               </span>
                             )}
 
