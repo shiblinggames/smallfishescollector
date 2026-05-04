@@ -38,18 +38,18 @@ const ZONE_DIFFICULTY: Record<string, number> = {
   abyss:       4,
 }
 
-const ZONE_CONDITIONS: Record<string, string[]> = {
-  shallows:    ['No reversals', 'Widest window'],
-  open_waters: ['Rare reversals', 'Moderate window'],
-  deep:        ['Frequent reversals', 'Tight window'],
-  abyss:       ['Constant reversals', 'Narrowest window'],
+const ZONE_DIFFICULTY_LABEL: Record<string, string> = {
+  shallows:    'Beginner Friendly',
+  open_waters: 'Moderate',
+  deep:        'Challenging',
+  abyss:       'Expert Only',
 }
 
-const ZONE_STATS: Record<string, { topFish: string; topSell: number; legendaryChance: string; sellRange: string }> = {
-  shallows:    { topFish: 'Arapaima',               topSell: 360,  legendaryChance: '1%',  sellRange: '10–360' },
-  open_waters: { topFish: 'Atlantic Bluefin Tuna',  topSell: 500,  legendaryChance: '1%',  sellRange: '20–500' },
-  deep:        { topFish: 'Giant Squid',             topSell: 680,  legendaryChance: '1%',  sellRange: '40–680' },
-  abyss:       { topFish: 'Coelacanth',              topSell: 1380, legendaryChance: '2%',  sellRange: '75–1,380' },
+const ZONE_STATS: Record<string, { topSell: number }> = {
+  shallows:    { topSell: 360  },
+  open_waters: { topSell: 500  },
+  deep:        { topSell: 680  },
+  abyss:       { topSell: 1380 },
 }
 
 const HOW_IT_WORKS = [
@@ -200,7 +200,7 @@ export default function ZoneLanding({
               const accessible = fishingLevel >= minLevel
               const color = HABITAT_COLOR[zone]
               const difficulty = ZONE_DIFFICULTY[zone]
-              const conditions = ZONE_CONDITIONS[zone]
+              const diffLabel = ZONE_DIFFICULTY_LABEL[zone]
               const stats = ZONE_STATS[zone]
               const isRecommended = accessible && ZONES.filter(z => fishingLevel >= (ZONE_MIN_LEVEL[z] ?? 1)).slice(-1)[0] === zone
 
@@ -274,26 +274,16 @@ export default function ZoneLanding({
                   </div>
 
                   {accessible && (<>
-                    {/* Stats row */}
+                    {/* Tags row */}
                     <div style={{ borderTop: `1px solid ${color}1a`, padding: '0.55rem 1rem', display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                      <span className="font-karla font-600 uppercase tracking-[0.08em]"
-                        style={{ fontSize: '0.5rem', color: `${color}cc`, background: `${color}18`, border: `1px solid ${color}30`, padding: '0.2rem 0.55rem', borderRadius: '2rem' }}>
-                        {stats.sellRange} ⟡
+                      <span className="font-karla font-600"
+                        style={{ fontSize: '0.52rem', color: `${color}cc`, background: `${color}18`, border: `1px solid ${color}30`, padding: '0.2rem 0.6rem', borderRadius: '2rem' }}>
+                        {diffLabel}
                       </span>
-                      <span className="font-karla font-600 uppercase tracking-[0.08em]"
-                        style={{ fontSize: '0.5rem', color: 'rgba(245,158,11,0.8)', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.22)', padding: '0.2rem 0.55rem', borderRadius: '2rem' }}>
-                        Legendary {stats.legendaryChance}
-                      </span>
-                      {conditions.map(c => (
-                        <span key={c} className="font-karla font-500 uppercase tracking-[0.06em]"
-                          style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', padding: '0.2rem 0.55rem', borderRadius: '2rem' }}>
-                          {c}
-                        </span>
-                      ))}
                     </div>
 
                     {/* Top catch — no spoilers, just the value */}
-                    <div style={{ padding: '0.45rem 1rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <div style={{ padding: '0.3rem 1rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       <span className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.28)' }}>Top catch worth up to</span>
                       <span className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: '#f59e0b' }}>{stats.topSell.toLocaleString()} ⟡</span>
                     </div>
