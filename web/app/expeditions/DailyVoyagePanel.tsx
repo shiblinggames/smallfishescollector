@@ -112,6 +112,7 @@ export default function DailyVoyagePanel({
     startTransition(async () => {
       const res = await revealVoyageResults(activeVoyage.id)
       if ('error' in res) { setError(res.error); return }
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
       setPanelState('done')
       router.refresh()
     })

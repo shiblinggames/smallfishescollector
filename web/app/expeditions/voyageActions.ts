@@ -177,7 +177,7 @@ export async function sendDailyVoyage(crewVariantIds: number[]): Promise<
 }
 
 export async function revealVoyageResults(voyageId: number): Promise<
-  { ok: true; earnedDoubloons: number; crewLost: number[] } | { error: string }
+  { ok: true; earnedDoubloons: number; newDoubloonTotal: number; crewLost: number[] } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -219,5 +219,5 @@ export async function revealVoyageResults(voyageId: number): Promise<
       : []),
   ])
 
-  return { ok: true, earnedDoubloons: voyage.total_doubloons, crewLost: voyage.crew_lost }
+  return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, crewLost: voyage.crew_lost }
 }
