@@ -1,6 +1,21 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const PROTECTED = [
+  '/fishing',
+  '/collection',
+  '/expeditions',
+  '/marketplace',
+  '/packs',
+  '/profile',
+  '/tavern',
+  '/achievements',
+  '/leaderboard',
+  '/shipyard',
+  '/social',
+  '/redeem',
+]
+
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -27,15 +42,13 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const protectedPaths = ['/redeem', '/packs', '/collection']
-  const isProtected = protectedPaths.some((p) =>
-    request.nextUrl.pathname.startsWith(p)
-  )
+  const path = request.nextUrl.pathname
+  const isProtected = PROTECTED.some(p => path === p || path.startsWith(p + '/'))
 
   if (isProtected && !user) {
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/login'
-    loginUrl.searchParams.set('next', request.nextUrl.pathname)
+    loginUrl.searchParams.set('next', path)
     return NextResponse.redirect(loginUrl)
   }
 
@@ -43,5 +56,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/redeem', '/packs', '/collection'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|fish/|public/).*)',
+  ],
 }
