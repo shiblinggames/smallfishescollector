@@ -181,7 +181,7 @@ function getZone(zones: ZoneDef[], deg: number, rotation = 0): ZoneDef {
 // ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 function DialSVG({
-  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0,
+  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0,
 }: {
   zones: ZoneDef[]
   angle: number
@@ -190,6 +190,7 @@ function DialSVG({
   zoneOpacityFn: (z: ZoneDef) => number
   fireLevel?: 0 | 1 | 2
   snapKey?: number
+  perfectBurstKey?: number
 }) {
   const needleTipY  = CY - (INNER_R - 8)
   const perfectZone = zones.find(z => z.type === 'perfect')
@@ -278,6 +279,28 @@ function DialSVG({
           transition={{ duration: 0.32, ease: 'easeOut' }}
           style={{ transformOrigin: `${CX}px ${CY}px` }}
         />
+
+        {/* Perfect zone burst — arc flash + expanding ring on tap */}
+        {perfectBurstKey > 0 && perfectZone && (
+          <g key={perfectBurstKey} transform={`rotate(${rotation}, ${CX}, ${CY})`}>
+            <motion.path
+              d={arcPath(perfectZone.from, perfectZone.to)}
+              fill="#fde68a"
+              initial={{ fillOpacity: 0.85 }}
+              animate={{ fillOpacity: 0 }}
+              transition={{ duration: 0.38, ease: 'easeOut' }}
+            />
+          </g>
+        )}
+        {perfectBurstKey > 0 && (
+          <motion.circle key={`pbr-${perfectBurstKey}`}
+            cx={CX} cy={CY} r={OUTER_R + 4}
+            fill="none" stroke="#fde68a" strokeWidth="5"
+            initial={{ strokeOpacity: 0.8 }}
+            animate={{ strokeOpacity: 0, r: OUTER_R + 22 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+          />
+        )}
 
         {/* Fire effects — glowing rings only */}
         {fireLevel >= 1 && (
@@ -1143,6 +1166,7 @@ export default function FishingGame({
   const catchTourShownRef = useRef(false)
   const [bountyNotif, setBountyNotif] = useState<FishingBountyCompletion | null>(null)
   const [perfectFlash, setPerfectFlash] = useState(false)
+  const [perfectBurstKey, setPerfectBurstKey] = useState(0)
   const [retryFlash, setRetryFlash] = useState(false)
   const [missResult, setMissResult] = useState<ZoneType | null>(null)
   const [fishingXP, setFishingXP]   = useState(initialFishingXP)
@@ -1437,6 +1461,7 @@ export default function FishingGame({
     // Catch/perfect: freeze needle, wait for server before showing result
     const wasPerfect = zone.type === 'perfect'
     if (wasPerfect) {
+      setPerfectBurstKey(k => k + 1)
       setPerfectFlash(true)
       if ('vibrate' in navigator) navigator.vibrate([40, 60, 80])
     }
@@ -1944,7 +1969,7 @@ export default function FishingGame({
                     <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}
                       needleColor={needleColor()} zoneOpacityFn={zoneOpacity}
                       fireLevel={perfectStreak >= 3 ? 2 : perfectStreak === 2 ? 1 : 0}
-                      snapKey={snapKey} />
+                      snapKey={snapKey} perfectBurstKey={perfectBurstKey} />
                   </div>
                 </motion.div>
               )}
@@ -2565,19 +2590,11 @@ export default function FishingGame({
             >
               <p className="font-cinzel font-700 uppercase tracking-[0.28em]"
                 style={{
-                  fontSize: '2.1rem', color: '#f59e0b',
-                  textShadow: '0 0 30px rgba(245,158,11,1), 0 0 70px rgba(245,158,11,0.6), 0 0 120px rgba(245,158,11,0.25)',
+                  fontSize: '2.6rem', color: '#fff',
+                  textShadow: '0 0 18px #fff, 0 0 40px rgba(245,158,11,1), 0 0 80px rgba(245,158,11,0.75), 0 0 140px rgba(245,158,11,0.35)',
                 }}>
                 Perfect!
               </p>
-              <motion.p
-                className="font-karla font-600 uppercase tracking-[0.2em]"
-                initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.22, duration: 0.2 }}
-                style={{ fontSize: '0.68rem', color: 'rgba(253,230,138,0.85)', marginTop: '0.3rem',
-                  letterSpacing: '0.22em' }}>
-                ✦ &nbsp; Flawless reel &nbsp; ✦
-              </motion.p>
             </motion.div>
           </motion.div>
         )}
