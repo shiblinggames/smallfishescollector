@@ -26,14 +26,14 @@ export async function redeemCode(code: string): Promise<{ success: boolean; mess
   if (row.redeemed_by) return { success: false, message: 'This code has already been redeemed.' }
 
   // Update only if redeemed_by is still null — prevents race condition
-  const { count, error: claimErr } = await admin
+  const { data: claimed, error: claimErr } = await admin
     .from('redemption_codes')
     .update({ redeemed_by: user.id, redeemed_at: new Date().toISOString() })
     .eq('id', row.id)
     .is('redeemed_by', null)
-    .select('id', { count: 'exact', head: true })
+    .select('id')
 
-  if (claimErr || count === 0) return { success: false, message: 'This code has already been redeemed.' }
+  if (claimErr || !claimed || claimed.length === 0) return { success: false, message: 'This code has already been redeemed.' }
 
   // Atomic increment — no read-modify-write race
   await admin.rpc('increment_packs', { user_id: user.id, amount: row.packs_granted })
