@@ -1270,6 +1270,7 @@ export default function FishingGame({
   const [doubloons, setDoubloons]   = useState(initialDoubloons)
   const [holdOpen, setHoldOpen]         = useState(false)
   const [gearOpen, setGearOpen]         = useState(false)
+  const [baitOpen, setBaitOpen]         = useState(false)
   const [collectionOpen, setCollectionOpen] = useState(false)
   const [uncheckedNewFishIds, setUncheckedNewFishIds] = useState<Set<number>>(new Set())
   const [expandedZone, setExpandedZone] = useState<string | null>(null)
@@ -2324,14 +2325,14 @@ export default function FishingGame({
 
                 {/* Gear */}
                 <button
-                  onClick={() => { setGearOpen(o => !o); setHoldOpen(false) }}
+                  onClick={() => { setGearOpen(o => !o); setHoldOpen(false); setBaitOpen(false) }}
                   style={{
                     ...tile,
                     background: gearOpen ? 'rgba(240,192,64,0.10)' : 'rgba(4,10,18,0.72)',
                     border: `1px solid ${gearOpen ? 'rgba(240,192,64,0.32)' : 'rgba(255,255,255,0.09)'}`,
                   }}
                 >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: 'rgba(255,255,255,0.25)' }}>Gear</p>
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.45)' }}>Gear</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#d4c09a', lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
                     {rod.name}
                   </p>
@@ -2342,14 +2343,14 @@ export default function FishingGame({
 
                 {/* Bait */}
                 <button
-                  onClick={() => { setGearOpen(o => !o); setHoldOpen(false) }}
+                  onClick={() => { setBaitOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
                   style={{
                     ...tile,
-                    background: gearOpen ? `${baitAccent}10` : 'rgba(4,10,18,0.72)',
-                    border: `1px solid ${gearOpen ? baitAccent + '38' : outOfBait ? 'rgba(248,113,113,0.25)' : 'rgba(255,255,255,0.09)'}`,
+                    background: baitOpen ? `${baitAccent}10` : 'rgba(4,10,18,0.72)',
+                    border: `1px solid ${baitOpen ? baitAccent + '38' : outOfBait ? 'rgba(248,113,113,0.25)' : 'rgba(255,255,255,0.09)'}`,
                   }}
                 >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: 'rgba(255,255,255,0.25)' }}>Bait</p>
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.45)' }}>Bait</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: outOfBait ? '#f87171' : baitAccent, lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
                     {selectedBaitDef?.name ?? '—'}
                   </p>
@@ -2360,7 +2361,7 @@ export default function FishingGame({
 
                 {/* Hold */}
                 <button
-                  onClick={() => { setHoldOpen(o => !o); setGearOpen(false) }}
+                  onClick={() => { setHoldOpen(o => !o); setGearOpen(false); setBaitOpen(false) }}
                   style={{
                     ...tile,
                     background: holdOpen
@@ -2371,7 +2372,7 @@ export default function FishingGame({
                       : holdFull ? 'rgba(248,113,113,0.35)' : holdCritical ? 'rgba(251,146,60,0.28)' : holdWarning ? 'rgba(251,191,36,0.20)' : 'rgba(255,255,255,0.09)'}`,
                   }}
                 >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: 'rgba(255,255,255,0.25)' }}>Hold</p>
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.45)' }}>Hold</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', lineHeight: 1, color: holdTotalCount > 0 ? holdAccent : '#3a3835' }}>
                     {holdTotalCount}<span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.18)', fontWeight: 400 }}> /{holdCapacity}</span>
                   </p>
@@ -2382,14 +2383,14 @@ export default function FishingGame({
 
                 {/* Sell */}
                 <button
-                  onClick={() => { setHoldOpen(o => !o); setGearOpen(false) }}
+                  onClick={() => { setHoldOpen(o => !o); setGearOpen(false); setBaitOpen(false) }}
                   style={{
                     ...tile,
                     background: holdOpen ? 'rgba(240,192,64,0.08)' : 'rgba(4,10,18,0.72)',
                     border: `1px solid ${holdOpen ? 'rgba(240,192,64,0.28)' : 'rgba(255,255,255,0.09)'}`,
                   }}
                 >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: 'rgba(255,255,255,0.25)' }}>Sell</p>
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.45)' }}>Sell</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', lineHeight: 1, color: holdTotalValue > 0 ? '#f0c040' : '#3a3835' }}>
                     {holdTotalValue > 0 ? `${holdTotalValue.toLocaleString()} ⟡` : '—'}
                   </p>
@@ -2465,7 +2466,7 @@ export default function FishingGame({
 
       {/* ── Onboarding tour ── */}
       <AnimatePresence>
-        {tourStep !== null && !collectionOpen && !gearOpen && !holdOpen && (
+        {tourStep !== null && !collectionOpen && !gearOpen && !baitOpen && !holdOpen && (
           <>
             <motion.div
               key="tour-backdrop"
@@ -2868,6 +2869,42 @@ export default function FishingGame({
               shipTier={shipTier}
               onClose={() => setGearOpen(false)}
             />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Bait panel ── */}
+      <AnimatePresence>
+        {baitOpen && (
+          <motion.div key="bait-panel"
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+              background: 'rgba(6,12,20,0.98)',
+              borderTop: '1px solid rgba(255,255,255,0.09)',
+              borderRadius: '18px 18px 0 0',
+              padding: '1.25rem 1rem 2rem',
+              maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                style={{ fontSize: '0.6rem', color: '#6a6764' }}>Bait</p>
+              <button onClick={() => setBaitOpen(false)}
+                style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+            </div>
+            <BaitSelector
+              baitInventory={baitInventory}
+              selectedBait={selectedBait}
+              onSelect={(type) => { setSelectedBait(type); setBaitOpen(false) }}
+            />
+            <Link href="/marketplace/tackle-shop#bait" onClick={() => setBaitOpen(false)}
+              className="flex items-center justify-between px-3 py-2.5 rounded-xl mt-3"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}>
+              <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Buy more bait</span>
+              <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#5a5956' }}>Tackle Shop ↗</span>
+            </Link>
           </motion.div>
         )}
       </AnimatePresence>
