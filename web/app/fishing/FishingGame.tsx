@@ -1951,12 +1951,11 @@ export default function FishingGame({
 
                   {/* Status pill — centred in the dial space, each state animates independently */}
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <AnimatePresence mode="wait">
 
                       {phase === 'casting' && castAnimDone && (
                         <motion.div key="waiting-pill"
                           initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.15 }}
+                          transition={{ duration: 0.15 }}
                           style={{
                             position: 'relative',
                             background: 'rgba(4,10,18,0.52)',
@@ -1986,7 +1985,6 @@ export default function FishingGame({
                         return (
                           <motion.div key="hooked-pill"
                             initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
                             transition={{ type: 'spring', stiffness: 380, damping: 22 }}
                             style={{
                               position: 'relative',
