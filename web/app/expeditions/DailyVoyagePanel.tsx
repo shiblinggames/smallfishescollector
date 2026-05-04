@@ -304,6 +304,24 @@ export default function DailyVoyagePanel({
                 </div>
               </div>
 
+              {/* High crew risk warning */}
+              {(() => {
+                const est = selectedRoute && stats ? computeRouteEstimate(stats, savedCrew.length, selectedRoute) : null
+                if (!est || savedCrew.length < 2 || est.crewRiskPct <= 50) return null
+                return (
+                  <div style={{
+                    background: 'rgba(248,113,113,0.07)',
+                    border: '1px solid rgba(248,113,113,0.25)',
+                    borderRadius: 9, padding: '0.55rem 0.7rem',
+                    marginBottom: '0.6rem',
+                  }}>
+                    <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#f87171', lineHeight: 1.5 }}>
+                      ⚠ {est.crewRiskPct}% chance a crew member is lost permanently on this voyage.
+                    </p>
+                  </div>
+                )
+              })()}
+
               {error && (
                 <p className="font-karla" style={{ fontSize: '0.62rem', color: '#f87171', marginBottom: '0.5rem' }}>{error}</p>
               )}
