@@ -181,14 +181,14 @@ function getZone(zones: ZoneDef[], deg: number, rotation = 0): ZoneDef {
 // ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 function DialSVG({
-  zones, angle, rotation = 0, needleColor, zoneOpacityFn, onFire = false, snapKey = 0,
+  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0,
 }: {
   zones: ZoneDef[]
   angle: number
   rotation?: number
   needleColor: string
   zoneOpacityFn: (z: ZoneDef) => number
-  onFire?: boolean
+  fireLevel?: 0 | 1 | 2
   snapKey?: number
 }) {
   const needleTipY  = CY - (INNER_R - 8)
@@ -213,7 +213,9 @@ function DialSVG({
   return (
     <div style={{
       position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto',
-      filter: onFire ? 'drop-shadow(0 0 14px rgba(251,146,60,0.7)) drop-shadow(0 0 32px rgba(239,68,68,0.35))' : 'none',
+      filter: fireLevel === 2 ? 'drop-shadow(0 0 14px rgba(251,146,60,0.7)) drop-shadow(0 0 32px rgba(239,68,68,0.35))'
+            : fireLevel === 1 ? 'drop-shadow(0 0 7px rgba(251,146,60,0.35))'
+            : 'none',
       transition: 'filter 0.4s ease',
     }}>
       <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block', overflow: 'visible' }}>
@@ -224,7 +226,7 @@ function DialSVG({
             <stop offset="100%" stopColor="#050c14" stopOpacity="1" />
           </radialGradient>
         </defs>
-        <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke={onFire ? '#f97316' : 'rgba(255,255,255,0.12)'} strokeWidth="1" />
+        <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke={fireLevel === 2 ? '#f97316' : fireLevel === 1 ? '#f9731680' : 'rgba(255,255,255,0.12)'} strokeWidth="1" />
 <g transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
             <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
@@ -278,17 +280,18 @@ function DialSVG({
         />
 
         {/* Fire effects — glowing rings only */}
-        {onFire && (
-          <>
-            <motion.circle cx={CX} cy={CY} r={OUTER_R + 9} fill="none" stroke="#f97316" strokeWidth="10"
-              animate={{ strokeOpacity: [0.1, 0.28, 0.1] }}
-              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-            />
-            <motion.circle cx={CX} cy={CY} r={OUTER_R + 4} fill="none" stroke="#fbbf24" strokeWidth="2.5"
-              animate={{ strokeOpacity: [0.3, 0.65, 0.3] }}
-              transition={{ duration: 1.0, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
-            />
-          </>
+        {fireLevel >= 1 && (
+          <motion.circle cx={CX} cy={CY} r={OUTER_R + 4} fill="none" stroke="#fbbf24"
+            strokeWidth={fireLevel === 2 ? 2.5 : 1.5}
+            animate={{ strokeOpacity: fireLevel === 2 ? [0.3, 0.65, 0.3] : [0.12, 0.32, 0.12] }}
+            transition={{ duration: 1.0, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
+          />
+        )}
+        {fireLevel === 2 && (
+          <motion.circle cx={CX} cy={CY} r={OUTER_R + 9} fill="none" stroke="#f97316" strokeWidth="10"
+            animate={{ strokeOpacity: [0.1, 0.28, 0.1] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+          />
         )}
       </svg>
     </div>
@@ -1939,7 +1942,8 @@ export default function FishingGame({
                       </motion.div>
                     )}
                     <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}
-                      needleColor={needleColor()} zoneOpacityFn={zoneOpacity} onFire={perfectStreak >= 3}
+                      needleColor={needleColor()} zoneOpacityFn={zoneOpacity}
+                      fireLevel={perfectStreak >= 3 ? 2 : perfectStreak === 2 ? 1 : 0}
                       snapKey={snapKey} />
                   </div>
                 </motion.div>
