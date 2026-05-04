@@ -359,7 +359,7 @@ export default function TackleShopClient({
                   }}
                 >
                   <div className="flex items-start gap-3 sm:gap-5">
-                    <HookIcon tier={hook.tier} color={c} owned={owned} isActive={isActive} />
+                    <HookIcon tier={hook.tier} color={c} owned={owned} isActive={isActive} imageUrl={hook.imageUrl} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <p className="font-cinzel font-700 text-sm sm:text-base" style={{ color: owned ? '#f0ede8' : '#6a6764' }}>
@@ -374,9 +374,15 @@ export default function TackleShopClient({
                       </div>
                       <p className="font-karla font-300 text-[#6a6764] text-sm sm:text-base">{hook.description}</p>
 
-                      {owned && hook.tier > 0 && (
+                      {hook.tier > 0 && (
                         <span className="font-karla font-600 inline-block mt-1.5"
-                          style={{ fontSize: '0.65rem', color: `${c}bb`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.12rem 0.5rem', borderRadius: '2rem' }}>
+                          style={{
+                            fontSize: '0.65rem',
+                            color: owned ? `${c}bb` : '#4a4845',
+                            background: owned ? `${c}14` : 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${owned ? `${c}30` : 'rgba(255,255,255,0.1)'}`,
+                            padding: '0.12rem 0.5rem', borderRadius: '2rem',
+                          }}>
                           +{hook.tier * 3}° catch zone
                         </span>
                       )}
@@ -795,7 +801,7 @@ export default function TackleShopClient({
   )
 }
 
-function HookIcon({ tier, color, owned, isActive }: { tier: number; color: string; owned: boolean; isActive: boolean }) {
+function HookIcon({ tier, color, owned, isActive, imageUrl }: { tier: number; color: string; owned: boolean; isActive: boolean; imageUrl?: string }) {
   const stroke = owned ? color : '#4a4845'
   const fill   = owned ? color : '#4a4845'
   const bg     = owned ? `${color}12` : 'rgba(255,255,255,0.06)'
@@ -873,7 +879,18 @@ function HookIcon({ tier, color, owned, isActive }: { tier: number; color: strin
         boxShadow: isActive ? `0 0 10px ${color}25` : 'none',
       }}
     >
-      {icons[tier] ?? icons[0]}
+      {imageUrl ? (
+        <img
+          src={imageUrl} alt=""
+          style={{
+            width: '100%', height: '100%', objectFit: 'contain',
+            opacity: owned ? 1 : 0.28,
+            filter: owned ? `drop-shadow(0 0 5px ${color}70)` : 'grayscale(80%)',
+          }}
+        />
+      ) : (
+        icons[tier] ?? icons[0]
+      )}
     </div>
   )
 }
