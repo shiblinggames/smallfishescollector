@@ -23,7 +23,7 @@ export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
   holdCapacity, shipTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
-  hasSeenFishingTour, hasSeenFishingCatchTour, activeSession, username,
+  hasSeenFishingTour, hasSeenFishingCatchTour, activeSession, username, zoneRewardsClaimed,
 }: {
   hookTier: number
   rodTier: number
