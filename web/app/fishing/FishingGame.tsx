@@ -1970,96 +1970,100 @@ export default function FishingGame({
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <AnimatePresence mode="wait">
 
-              {/* ── IDLE / CASTING / HOOKED — single persistent element, updates in place ── */}
-              {(phase === 'idle' || phase === 'casting' || phase === 'hooked') && (
-                <motion.div key="pre-catch"
+              {/* ── IDLE / CASTING ── */}
+              {(phase === 'idle' || phase === 'casting') && (
+                <motion.div key="pre-cast"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
 
-
-                  {/* Status pill — centred in the dial space, each state animates independently */}
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
 
-                      {phase === 'casting' && castAnimDone && (
-                        <motion.div key="waiting-pill"
-                          initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.15 }}
-                          style={{
-                            position: 'relative',
-                            background: 'rgba(4,10,18,0.52)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: 20,
-                            padding: '1.1rem 1.75rem',
-                            textAlign: 'center',
-                          }}>
-                          <p className="font-karla font-600" style={{ fontSize: '1rem', color: '#e8e4de' }}>
-                            {waitMessage}
-                          </p>
-                          <div style={{
-                            position: 'absolute', bottom: -7, left: '50%',
-                            transform: 'translateX(-50%) rotate(45deg)',
-                            width: 12, height: 12,
-                            background: 'rgba(4,10,18,0.52)',
-                            borderRight: '1px solid rgba(255,255,255,0.08)',
-                            borderBottom: '1px solid rgba(255,255,255,0.08)',
-                          }} />
-                        </motion.div>
-                      )}
-
-                      {phase === 'hooked' && hookedFish && (() => {
-                        const r = RARITY[hookedFish.biteRarity] ?? RARITY[1]
-                        const isLegendary = hookedFish.biteRarity === 5
-                        const isEpicPlus  = hookedFish.biteRarity >= 4
-                        return (
-                          <motion.div key="hooked-pill"
-                            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                            transition={{ type: 'spring', stiffness: 380, damping: 22 }}
-                            style={{
-                              position: 'relative',
-                              background: 'rgba(4,10,18,0.52)',
-                              border: `1px solid ${r.color}40`,
-                              borderRadius: 20,
-                              padding: '1.1rem 1.75rem',
-                              textAlign: 'center',
-                              boxShadow: `0 0 32px ${r.color}28`,
-                            }}
-                          >
-                            <motion.p
-                              className="font-karla font-700"
-                              animate={isLegendary
-                                ? { scale: [1, 1.04, 1], opacity: [1, 0.82, 1] }
-                                : isEpicPlus ? { opacity: [1, 0.85, 1] } : {}
-                              }
-                              transition={isLegendary || isEpicPlus
-                                ? { duration: 0.8, repeat: Infinity, ease: 'easeInOut' }
-                                : {}
-                              }
-                              style={{
-                                fontSize: isLegendary ? '1.1rem' : isEpicPlus ? '1rem' : '0.95rem',
-                                color: r.color,
-                                textShadow: `0 0 20px ${r.color}80`,
-                                letterSpacing: isLegendary ? '0.04em' : 'normal',
-                              }}
-                            >
-                              {r.hookedText}
-                            </motion.p>
-                            <div style={{
-                              position: 'absolute', bottom: -7, left: '50%',
-                              transform: 'translateX(-50%) rotate(45deg)',
-                              width: 12, height: 12,
-                              background: 'rgba(4,10,18,0.52)',
-                              borderRight: `1px solid ${r.color}40`,
-                              borderBottom: `1px solid ${r.color}40`,
-                            }} />
-                          </motion.div>
-                        )
-                      })()}
+                    {phase === 'casting' && castAnimDone && (
+                      <motion.div key="waiting-pill"
+                        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.15 }}
+                        style={{
+                          position: 'relative',
+                          background: 'rgba(4,10,18,0.52)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: 20,
+                          padding: '1.1rem 1.75rem',
+                          textAlign: 'center',
+                        }}>
+                        <p className="font-karla font-600" style={{ fontSize: '1rem', color: '#e8e4de' }}>
+                          {waitMessage}
+                        </p>
+                        <div style={{
+                          position: 'absolute', bottom: -7, left: '50%',
+                          transform: 'translateX(-50%) rotate(45deg)',
+                          width: 12, height: 12,
+                          background: 'rgba(4,10,18,0.52)',
+                          borderRight: '1px solid rgba(255,255,255,0.08)',
+                          borderBottom: '1px solid rgba(255,255,255,0.08)',
+                        }} />
+                      </motion.div>
+                    )}
 
                   </div>
 
                 </motion.div>
               )}
+
+              {/* ── HOOKED — own key so it exits cleanly before catching enters ── */}
+              {phase === 'hooked' && hookedFish && (() => {
+                const r = RARITY[hookedFish.biteRarity] ?? RARITY[1]
+                const isLegendary = hookedFish.biteRarity === 5
+                const isEpicPlus  = hookedFish.biteRarity >= 4
+                return (
+                  <motion.div key="hooked"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <motion.div
+                      initial={{ scale: 0.95 }} animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+                      style={{
+                        position: 'relative',
+                        background: 'rgba(4,10,18,0.52)',
+                        border: `1px solid ${r.color}40`,
+                        borderRadius: 20,
+                        padding: '1.1rem 1.75rem',
+                        textAlign: 'center',
+                        boxShadow: `0 0 32px ${r.color}28`,
+                      }}
+                    >
+                      <motion.p
+                        className="font-karla font-700"
+                        animate={isLegendary
+                          ? { scale: [1, 1.04, 1], opacity: [1, 0.82, 1] }
+                          : isEpicPlus ? { opacity: [1, 0.85, 1] } : {}
+                        }
+                        transition={isLegendary || isEpicPlus
+                          ? { duration: 0.8, repeat: Infinity, ease: 'easeInOut' }
+                          : {}
+                        }
+                        style={{
+                          fontSize: isLegendary ? '1.1rem' : isEpicPlus ? '1rem' : '0.95rem',
+                          color: r.color,
+                          textShadow: `0 0 20px ${r.color}80`,
+                          letterSpacing: isLegendary ? '0.04em' : 'normal',
+                        }}
+                      >
+                        {r.hookedText}
+                      </motion.p>
+                      <div style={{
+                        position: 'absolute', bottom: -7, left: '50%',
+                        transform: 'translateX(-50%) rotate(45deg)',
+                        width: 12, height: 12,
+                        background: 'rgba(4,10,18,0.52)',
+                        borderRight: `1px solid ${r.color}40`,
+                        borderBottom: `1px solid ${r.color}40`,
+                      }} />
+                    </motion.div>
+                  </motion.div>
+                )
+              })()}
 
               {/* ── CATCHING / REELING ── */}
               {(phase === 'catching' || phase === 'reeling') && hookedFish && (
