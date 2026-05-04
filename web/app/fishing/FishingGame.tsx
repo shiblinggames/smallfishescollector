@@ -1648,7 +1648,7 @@ export default function FishingGame({
           if (newStreak > highestPerfectStreak) {
             setHighestPerfectStreak(newStreak)
             setNewStreakRecord(newStreak)
-            startTransition(() => { saveHighestPerfectStreak(newStreak) })
+            startTransition(() => { saveHighestPerfectStreak(newStreak, selectedZone) })
             checkLeaderboardPosition('perfectStreak').then(r => {
               const cur = r?.position ?? null
               if (cur === 1 && podiumPositionsRef.current.perfectStreak !== 1) setPodiumNotif({ category: 'Perfect Streak', position: 1 })

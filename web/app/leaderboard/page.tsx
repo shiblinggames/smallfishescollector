@@ -16,6 +16,22 @@ async function fetchBoard(admin: ReturnType<typeof createAdminClient>, view: str
   }
 }
 
+async function fetchPerfectStreakBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
+  const [{ data: top }, { data: me }] = await Promise.all([
+    admin.from('leaderboard_perfect_streak')
+      .select('user_id, username, score, zone')
+      .order('score', { ascending: false })
+      .order('zone_rank', { ascending: false })
+      .order('created_at', { ascending: true })
+      .limit(50),
+    admin.from('leaderboard_perfect_streak').select('score').eq('user_id', userId).single(),
+  ])
+  return {
+    top: (top ?? []) as LeaderboardEntry[],
+    myScore: (me as any)?.score ?? 0,
+  }
+}
+
 export default async function LeaderboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -26,7 +42,7 @@ export default async function LeaderboardPage() {
   const [profile, fishingData, perfectStreakData, fishSlotsData] = await Promise.all([
     admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     fetchBoard(admin, 'leaderboard_fishing', user.id),
-    fetchBoard(admin, 'leaderboard_perfect_streak', user.id),
+    fetchPerfectStreakBoard(admin, user.id),
     fetchBoard(admin, 'leaderboard_fish_slots', user.id),
   ])
 

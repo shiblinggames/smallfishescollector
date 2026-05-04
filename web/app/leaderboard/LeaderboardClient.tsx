@@ -8,6 +8,7 @@ export interface LeaderboardEntry {
   user_id: string
   username: string
   score: number
+  zone?: string | null
 }
 
 interface MyScores {
@@ -56,6 +57,29 @@ function Avatar({ username, size = 36 }: { username: string; size?: number }) {
   )
 }
 
+const ZONE_LABELS: Record<string, { label: string; color: string }> = {
+  abyss:      { label: 'Abyss',       color: '#8b5cf6' },
+  deep:       { label: 'Deep',        color: '#3b82f6' },
+  openWaters: { label: 'Open Waters', color: '#22d3ee' },
+  shallows:   { label: 'Shallows',    color: '#6ee7b7' },
+}
+
+function ZoneBadge({ zone }: { zone: string | null | undefined }) {
+  if (!zone) return null
+  const z = ZONE_LABELS[zone]
+  if (!z) return null
+  return (
+    <span style={{
+      fontSize: '0.45rem', padding: '1px 5px', borderRadius: 4,
+      background: z.color + '22', border: `1px solid ${z.color}55`,
+      color: z.color, fontFamily: 'var(--font-karla)', fontWeight: 600,
+      letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap',
+    }}>
+      {z.label}
+    </span>
+  )
+}
+
 interface SectionProps {
   label: string
   accent: string
@@ -64,9 +88,10 @@ interface SectionProps {
   data: LeaderboardEntry[]
   myScore: number
   currentUserId: string
+  showZone?: boolean
 }
 
-function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, currentUserId }: SectionProps) {
+function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, currentUserId, showZone }: SectionProps) {
   const top3 = data.slice(0, 3)
   const rest = data.slice(3)
   const myRank = data.findIndex(e => e.user_id === currentUserId) + 1
@@ -104,10 +129,13 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
               >
                 <span style={{ fontSize: rank === 1 ? '1.3rem' : '1.1rem', lineHeight: 1, flexShrink: 0 }}>{medal}</span>
                 <Avatar username={entry.username} size={rank === 1 ? 36 : 28} />
-                <p className="flex-1 font-karla font-700 truncate" style={{ fontSize: rank === 1 ? '0.88rem' : '0.8rem', color: isMe ? '#f0ede8' : '#c8c8c2' }}>
-                  {entry.username}
-                  {isMe && <span style={{ color: accent, fontSize: '0.55rem', marginLeft: 6 }}>you</span>}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-karla font-700 truncate" style={{ fontSize: rank === 1 ? '0.88rem' : '0.8rem', color: isMe ? '#f0ede8' : '#c8c8c2' }}>
+                    {entry.username}
+                    {isMe && <span style={{ color: accent, fontSize: '0.55rem', marginLeft: 6 }}>you</span>}
+                  </p>
+                  {showZone && <ZoneBadge zone={entry.zone} />}
+                </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <p className="font-cinzel font-700" style={{ fontSize: rank === 1 ? '0.95rem' : '0.78rem', color: rankColor }}>
                     {unit(entry.score)}
@@ -148,10 +176,13 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
                   {rank}
                 </span>
                 <Avatar username={entry.username} size={28} />
-                <p className="flex-1 font-karla font-600 truncate" style={{ fontSize: '0.8rem', color: isMe ? '#f0ede8' : '#a0a09a' }}>
-                  {entry.username}
-                  {isMe && <span style={{ color: accent, fontSize: '0.55rem', marginLeft: 6 }}>you</span>}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-karla font-600 truncate" style={{ fontSize: '0.8rem', color: isMe ? '#f0ede8' : '#a0a09a' }}>
+                    {entry.username}
+                    {isMe && <span style={{ color: accent, fontSize: '0.55rem', marginLeft: 6 }}>you</span>}
+                  </p>
+                  {showZone && <ZoneBadge zone={entry.zone} />}
+                </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <p className="font-cinzel font-600" style={{ fontSize: '0.75rem', color: isMe ? accent : '#6a6764' }}>
                     {unit(entry.score)}
@@ -250,6 +281,7 @@ export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, m
           data={perfectStreak}
           myScore={myScores.perfectStreak}
           currentUserId={currentUserId}
+          showZone
         />
       )}
       {activeTab === 'fishSlots' && (
