@@ -2,11 +2,13 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkRateLimit } from '@/lib/rateLimit'
 
 export async function redeemCode(code: string): Promise<{ success: boolean; message: string; packsGranted?: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, message: 'Not logged in.' }
+  if (!await checkRateLimit(`redeem:${user.id}`, 5, 300)) return { success: false, message: 'Too many attempts. Try again in a few minutes.' }
 
   const normalized = code.trim().toUpperCase()
   if (!normalized) return { success: false, message: 'Enter a code.' }

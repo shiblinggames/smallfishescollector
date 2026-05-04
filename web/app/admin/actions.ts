@@ -1,30 +1,13 @@
 'use server'
 
-import { cookies } from 'next/headers'
 import crypto from 'crypto'
+import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-function adminHash() {
-  return crypto.createHash('sha256').update(process.env.ADMIN_PASSWORD ?? '').digest('hex')
-}
-
 async function assertAuthed() {
-  const jar = await cookies()
-  if (jar.get('admin_auth')?.value !== adminHash()) throw new Error('Unauthorized')
-}
-
-export async function adminLogin(_: unknown, formData: FormData): Promise<{ ok: boolean }> {
-  const password = formData.get('password') as string
-  if (password !== process.env.ADMIN_PASSWORD) return { ok: false }
-  const jar = await cookies()
-  jar.set('admin_auth', adminHash(), {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'strict',
-    maxAge: 60 * 60 * 8,
-    path: '/',
-  })
-  return { ok: true }
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || user.email !== process.env.ADMIN_EMAIL) throw new Error('Unauthorized')
 }
 
 export async function generateTokens(

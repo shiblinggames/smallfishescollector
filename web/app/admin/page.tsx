@@ -1,15 +1,14 @@
-import { cookies } from 'next/headers'
-import crypto from 'crypto'
-import AdminLogin from './AdminLogin'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import AdminDashboard from './AdminDashboard'
 
-function adminHash() {
-  return crypto.createHash('sha256').update(process.env.ADMIN_PASSWORD ?? '').digest('hex')
-}
-
 export default async function AdminPage() {
-  const jar = await cookies()
-  const authed = jar.get('admin_auth')?.value === adminHash()
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user || user.email !== process.env.ADMIN_EMAIL) {
+    redirect('/login?next=/admin')
+  }
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-14">
@@ -19,7 +18,7 @@ export default async function AdminPage() {
             style={{ fontSize: 'clamp(1.8rem, 4vw, 2.8rem)' }}>
           Claim Links.
         </h1>
-        {authed ? <AdminDashboard /> : <AdminLogin />}
+        <AdminDashboard />
       </div>
     </main>
   )

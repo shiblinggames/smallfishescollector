@@ -7,6 +7,7 @@ import { rarityFromVariant } from '@/lib/variants'
 import { revalidatePath } from 'next/cache'
 import type { CardVariant, DrawnCard } from '@/lib/types'
 import { checkAchievements } from '@/lib/checkAchievements'
+import { checkRateLimit } from '@/lib/rateLimit'
 
 const PACK_GEM_COSTS: Record<number, number> = { 1: 100, 10: 900 }
 
@@ -15,6 +16,7 @@ export async function buyPacksWithGems(count: 1 | 10): Promise<{ packsAvailable:
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
+  if (!await checkRateLimit(`buy-packs:${user.id}`, 15, 60)) return { error: 'Too many requests. Slow down.' }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
@@ -67,6 +69,7 @@ export async function openPack(): Promise<OpenPackResponse> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
+  if (!await checkRateLimit(`open-pack:${user.id}`, 30, 60)) return { error: 'Too many requests. Slow down.' }
 
   const admin = createAdminClient()
 
