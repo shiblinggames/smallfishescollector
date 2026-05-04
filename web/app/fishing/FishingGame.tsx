@@ -2323,7 +2323,7 @@ export default function FishingGame({
                   : 'Standard'
 
             const tile: React.CSSProperties = {
-              flex: 1, height: 74, borderRadius: 16,
+              flex: 1, height: 60, borderRadius: 12,
               display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center',
               gap: 2, padding: '0 0.65rem', minWidth: 0,
               cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
@@ -2341,11 +2341,11 @@ export default function FishingGame({
                     border: `1px solid ${gearOpen ? 'rgba(240,192,64,0.32)' : 'rgba(255,255,255,0.09)'}`,
                   }}
                 >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.45)' }}>Gear</p>
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)' }}>Gear</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#d4c09a', lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
                     {rod.name}
                   </p>
-                  <p className="font-karla" style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.22)', lineHeight: 1 }}>
+                  <p className="font-karla" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.42)', lineHeight: 1 }}>
                     Hk{hookTier} · Re{reelTier} · Ln{lineTier}
                   </p>
                 </button>
@@ -2359,11 +2359,11 @@ export default function FishingGame({
                     border: `1px solid ${baitOpen ? baitAccent + '38' : outOfBait ? 'rgba(248,113,113,0.25)' : 'rgba(255,255,255,0.09)'}`,
                   }}
                 >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.45)' }}>Bait</p>
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)' }}>Bait</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: outOfBait ? '#f87171' : baitAccent, lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
                     {selectedBaitDef?.name ?? '—'}
                   </p>
-                  <p className="font-karla" style={{ fontSize: '0.48rem', color: outOfBait ? 'rgba(248,113,113,0.55)' : 'rgba(255,255,255,0.22)', lineHeight: 1 }}>
+                  <p className="font-karla" style={{ fontSize: '0.52rem', color: outOfBait ? 'rgba(248,113,113,0.75)' : 'rgba(255,255,255,0.42)', lineHeight: 1 }}>
                     {outOfBait ? 'Out of bait' : `×${selectedBaitQty} · ${baitStat}`}
                   </p>
                 </button>
@@ -2381,11 +2381,11 @@ export default function FishingGame({
                       : holdFull ? 'rgba(248,113,113,0.35)' : holdCritical ? 'rgba(251,146,60,0.28)' : holdWarning ? 'rgba(251,191,36,0.20)' : 'rgba(255,255,255,0.09)'}`,
                   }}
                 >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.45)' }}>Hold</p>
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)' }}>Hold</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', lineHeight: 1, color: holdTotalCount > 0 ? holdAccent : '#3a3835' }}>
                     {holdTotalCount}<span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.18)', fontWeight: 400 }}> /{holdCapacity}</span>
                   </p>
-                  <p className="font-karla" style={{ fontSize: '0.48rem', lineHeight: 1, color: holdFull ? '#f87171aa' : holdCritical ? '#fb923caa' : holdTotalCount > 0 ? 'rgba(255,255,255,0.22)' : '#2a2825' }}>
+                  <p className="font-karla" style={{ fontSize: '0.52rem', lineHeight: 1, color: holdFull ? '#f87171cc' : holdCritical ? '#fb923ccc' : holdTotalCount > 0 ? 'rgba(255,255,255,0.42)' : '#3a3835' }}>
                     {holdFull ? 'Full' : holdCritical ? 'Almost full' : holdWarning ? 'Getting full' : holdTotalCount > 0 ? 'fish in hold' : 'empty'}
                   </p>
                 </button>
@@ -2399,11 +2399,11 @@ export default function FishingGame({
                     border: `1px solid ${sellOpen ? 'rgba(240,192,64,0.28)' : 'rgba(255,255,255,0.09)'}`,
                   }}
                 >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.45)' }}>Sell</p>
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)' }}>Sell</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', lineHeight: 1, color: holdTotalValue > 0 ? '#f0c040' : '#3a3835' }}>
                     {holdTotalValue > 0 ? `${holdTotalValue.toLocaleString()} ⟡` : '—'}
                   </p>
-                  <p className="font-karla" style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.22)', lineHeight: 1 }}>
+                  <p className="font-karla" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.42)', lineHeight: 1 }}>
                     quick sell · market
                   </p>
                 </button>
