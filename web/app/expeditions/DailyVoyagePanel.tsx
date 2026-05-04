@@ -124,22 +124,11 @@ export default function DailyVoyagePanel({
     }
   }, [activeVoyage, revealIndex])
 
-  // ── Section label ──────────────────────────────────────────────────────────
-  const sectionLabel = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.65rem' }}>
-      <span style={{ fontSize: '0.75rem' }}>⚓</span>
-      <p className="font-karla font-700 uppercase tracking-[0.13em]" style={{ fontSize: '0.52rem', color: '#6b5c44' }}>
-        Daily Crew Voyage
-      </p>
-    </div>
-  )
-
   // ── Idle: send voyage ──────────────────────────────────────────────────────
   if (panelState === 'idle') {
     const hasCrew = savedCrew.length > 0
     return (
-      <div style={{ marginBottom: '1.25rem' }}>
-        {sectionLabel}
+      <div>
         <div style={{
           background: 'linear-gradient(135deg, rgba(28,20,10,0.72) 0%, rgba(18,14,6,0.80) 100%)',
           border: '1px solid rgba(240,192,64,0.18)',
@@ -217,8 +206,7 @@ export default function DailyVoyagePanel({
       ? activeVoyage.crew_variant_ids.map(id => byVariantId.get(id)).filter(Boolean) as CrewCard[]
       : savedCrew
     return (
-      <div style={{ marginBottom: '1.25rem' }}>
-        {sectionLabel}
+      <div>
         <div style={{
           background: 'linear-gradient(135deg, rgba(16,22,36,0.72) 0%, rgba(12,18,30,0.80) 100%)',
           border: '1px solid rgba(96,132,210,0.18)',
@@ -267,8 +255,7 @@ export default function DailyVoyagePanel({
   // ── Returned: ready to reveal ──────────────────────────────────────────────
   if (panelState === 'returned') {
     return (
-      <div style={{ marginBottom: '1.25rem' }}>
-        {sectionLabel}
+      <div>
         <div style={{
           background: 'linear-gradient(135deg, rgba(28,20,10,0.72) 0%, rgba(18,14,6,0.80) 100%)',
           border: '1px solid rgba(240,192,64,0.40)',
@@ -320,8 +307,7 @@ export default function DailyVoyagePanel({
       : null
 
     return (
-      <div style={{ marginBottom: '1.25rem' }}>
-        {sectionLabel}
+      <div>
         <div style={{
           background: 'linear-gradient(135deg, rgba(18,14,6,0.88) 0%, rgba(14,10,4,0.92) 100%)',
           border: '1px solid rgba(240,192,64,0.18)',
@@ -436,8 +422,7 @@ export default function DailyVoyagePanel({
       .filter(Boolean) as CrewCard[]
 
     return (
-      <div style={{ marginBottom: '1.25rem' }}>
-        {sectionLabel}
+      <div>
         <div style={{
           background: 'linear-gradient(135deg, rgba(28,20,10,0.72) 0%, rgba(18,14,6,0.80) 100%)',
           border: '1px solid rgba(240,192,64,0.18)',

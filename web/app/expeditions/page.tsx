@@ -78,78 +78,98 @@ export default async function ExpeditionsPage() {
             savedCrewVariantIds={savedCrewVariantIds}
           />
 
-          {/* Daily crew voyage */}
-          <DailyVoyagePanel
-            savedCrewVariantIds={savedCrewVariantIds}
-            collection={collection}
-            shipTier={shipTier}
-            todayVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.todayVoyage}
-            readyVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.readyVoyage}
-          />
-
-          {/* Resume banner */}
-          {activeExpedition && (
-            <Link
-              href={`/expeditions/voyage?id=${activeExpedition.id}`}
-              style={{ textDecoration: 'none', display: 'block', marginBottom: '1.25rem' }}
-            >
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(240,192,64,0.10) 0%, rgba(240,160,40,0.05) 100%)',
-                border: '1px solid rgba(240,192,64,0.28)',
-                borderRadius: 14,
-                padding: '1rem 1.1rem',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                    background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.2)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '1rem',
-                  }}>
-                    {ZONES[activeExpedition.zone].icon}
-                  </div>
-                  <div>
-                    <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: '#f0c040', marginBottom: 2 }}>
-                      Voyage in Progress
-                    </p>
-                    <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.9rem' }}>
-                      {ZONES[activeExpedition.zone].name}
-                    </p>
-                    <p className="font-karla" style={{ fontSize: '0.65rem', color: '#a0906a', marginTop: 1 }}>
-                      Node {activeExpedition.current_node + 1} of {ZONES[activeExpedition.zone].nodes.length}
-                    </p>
-                  </div>
-                </div>
-                <div style={{
-                  flexShrink: 0,
-                  background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.25)',
-                  borderRadius: 8, padding: '0.45rem 0.8rem',
-                  fontSize: '0.6rem', color: '#f0c040',
-                }} className="font-karla font-700 uppercase tracking-[0.1em]">
-                  Resume →
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {/* Zone cards */}
-          <div className="flex flex-col gap-3 pb-16">
-            {ZONE_ORDER.map(zoneKey => {
-              const expedition = recentExpeditions.find(e => e.zone === zoneKey && e.status === 'active') ?? null
-              return (
-                <ZoneCard
-                  key={zoneKey}
-                  zoneKey={zoneKey}
-                  config={ZONES[zoneKey]}
-                  expedition={expedition}
-                  shipTier={shipTier}
-                  doubloons={doubloons}
-                />
-              )
-            })}
+          {/* ── Voyage card ── */}
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.55rem' }}>
+              <span style={{ fontSize: '0.7rem' }}>⛵</span>
+              <p className="font-karla font-700 uppercase tracking-[0.13em]" style={{ fontSize: '0.52rem', color: '#6b5c44' }}>Voyage</p>
+            </div>
+            <DailyVoyagePanel
+              savedCrewVariantIds={savedCrewVariantIds}
+              collection={collection}
+              shipTier={shipTier}
+              todayVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.todayVoyage}
+              readyVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.readyVoyage}
+            />
           </div>
 
+          {/* ── Expeditions card ── */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.55rem' }}>
+              <span style={{ fontSize: '0.7rem' }}>🗺️</span>
+              <p className="font-karla font-700 uppercase tracking-[0.13em]" style={{ fontSize: '0.52rem', color: '#6b5c44' }}>Expeditions</p>
+            </div>
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(20,14,6,0.80) 0%, rgba(14,10,4,0.88) 100%)',
+              border: '1px solid rgba(240,192,64,0.14)',
+              borderRadius: 16, padding: '0.85rem',
+              display: 'flex', flexDirection: 'column', gap: '0.65rem',
+            }}>
+
+              {/* Resume banner */}
+              {activeExpedition && (
+                <Link
+                  href={`/expeditions/voyage?id=${activeExpedition.id}`}
+                  style={{ textDecoration: 'none', display: 'block' }}
+                >
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(240,192,64,0.10) 0%, rgba(240,160,40,0.05) 100%)',
+                    border: '1px solid rgba(240,192,64,0.28)',
+                    borderRadius: 12,
+                    padding: '0.85rem 1rem',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{
+                        width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+                        background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.2)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem',
+                      }}>
+                        {ZONES[activeExpedition.zone].icon}
+                      </div>
+                      <div>
+                        <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: '#f0c040', marginBottom: 2 }}>
+                          In Progress
+                        </p>
+                        <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.88rem' }}>
+                          {ZONES[activeExpedition.zone].name}
+                        </p>
+                        <p className="font-karla" style={{ fontSize: '0.62rem', color: '#a0906a', marginTop: 1 }}>
+                          Node {activeExpedition.current_node + 1} of {ZONES[activeExpedition.zone].nodes.length}
+                        </p>
+                      </div>
+                    </div>
+                    <div style={{
+                      flexShrink: 0,
+                      background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.25)',
+                      borderRadius: 8, padding: '0.4rem 0.75rem',
+                      fontSize: '0.6rem', color: '#f0c040',
+                    }} className="font-karla font-700 uppercase tracking-[0.1em]">
+                      Resume →
+                    </div>
+                  </div>
+                </Link>
+              )}
+
+              {/* Zone cards */}
+              {ZONE_ORDER.map(zoneKey => {
+                const expedition = recentExpeditions.find(e => e.zone === zoneKey && e.status === 'active') ?? null
+                return (
+                  <ZoneCard
+                    key={zoneKey}
+                    zoneKey={zoneKey}
+                    config={ZONES[zoneKey]}
+                    expedition={expedition}
+                    shipTier={shipTier}
+                    doubloons={doubloons}
+                  />
+                )
+              })}
+
+            </div>
+          </div>
+
+          <div className="pb-16" />
         </div>
       </main>
       </div>
