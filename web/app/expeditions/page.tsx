@@ -81,7 +81,7 @@ export default async function ExpeditionsPage() {
 
           {/* ── Voyage card ── */}
           <div style={{ marginBottom: '1rem' }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Voyage</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Voyages</p>
             <DailyVoyagePanel
               savedCrewVariantIds={savedCrewVariantIds}
               collection={collection}

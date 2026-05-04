@@ -3,6 +3,47 @@ import { computeTotalCrewStats } from './expeditions'
 
 export type VoyageEventType = 'discovery' | 'encounter' | 'danger' | 'weather' | 'peaceful'
 export type VoyageEventOutcome = 'success' | 'failure' | 'neutral'
+export type VoyageRoute = 'coastal' | 'open' | 'deep'
+
+export interface RouteConfig {
+  name: string
+  tagline: string
+  riskLabel: string
+  color: string
+  payoutScale: number
+  crewLossScale: number
+  gemScale: number
+}
+
+export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
+  coastal: {
+    name: 'Coastal Run',
+    tagline: 'Familiar waters. Light risk, modest reward.',
+    riskLabel: 'Safe',
+    color: '#4ade80',
+    payoutScale: 0.70,
+    crewLossScale: 0,
+    gemScale: 0.5,
+  },
+  open: {
+    name: 'Open Seas',
+    tagline: 'Standard voyage. Balanced risk and reward.',
+    riskLabel: 'Balanced',
+    color: '#f0c040',
+    payoutScale: 1.0,
+    crewLossScale: 1.0,
+    gemScale: 1.0,
+  },
+  deep: {
+    name: 'The Deep',
+    tagline: 'Hostile open water. High risk, high reward.',
+    riskLabel: 'Dangerous',
+    color: '#c084fc',
+    payoutScale: 1.5,
+    crewLossScale: 1.6,
+    gemScale: 1.5,
+  },
+}
 
 export interface VoyageEvent {
   type: VoyageEventType
@@ -29,7 +70,8 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
-export function generateVoyageEvents(crew: CrewCard[], shipTier: number): VoyageResult {
+export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: VoyageRoute = 'open'): VoyageResult {
+  const rc = ROUTE_CONFIGS[route]
   const stats = computeTotalCrewStats(crew)
   const { power, dodge, fortune } = stats
   const crewCount = crew.length
@@ -37,7 +79,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
   const fortuneScale = 1 + fortune / 55  // fortune=22 → 1.4×, fortune=40 → 1.73×, fortune=55 → 2×
   const powerScale   = 1 + power   / 60  // power=20  → 1.33×, power=30  → 1.5×
   const payout = (min: number, max: number, usePower = false) =>
-    Math.round(rand(min, max) * fortuneScale * (usePower ? powerScale : 1))
+    Math.round(rand(min, max) * fortuneScale * (usePower ? powerScale : 1) * rc.payoutScale)
 
   const fill = (narrative: string, extra?: Record<string, string>) => {
     let s = narrative.replace('{captain}', captain.name)
@@ -54,17 +96,21 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
   const events: VoyageEvent[] = []
   const crewLost: number[] = []
 
-  // Fixed sequence: shuffle some variety in but always cover all types
-  const sequence: VoyageEventType[] = [
-    'peaceful',
-    'discovery',
-    'encounter',
-    'danger',
-    'discovery',
-    'encounter',
-    'weather',
-    ...(crewCount >= 2 ? ['danger' as VoyageEventType] : []),
-  ]
+  // Route-specific event sequence
+  const sequence: VoyageEventType[] =
+    route === 'coastal'
+      ? ['peaceful', 'discovery', 'discovery', 'weather', 'peaceful']
+      : route === 'deep'
+      ? [
+          'discovery', 'encounter', 'danger', 'encounter',
+          'discovery', 'encounter', 'danger', 'encounter', 'weather',
+          ...(crewCount >= 2 ? ['encounter' as VoyageEventType] : []),
+        ]
+      : [
+          'peaceful', 'discovery', 'encounter', 'danger',
+          'discovery', 'encounter', 'weather',
+          ...(crewCount >= 2 ? ['danger' as VoyageEventType] : []),
+        ]
 
   // Light shuffle — swap adjacent pairs randomly
   for (let i = sequence.length - 1; i > 1; i--) {
@@ -78,7 +124,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
     switch (type) {
       case 'discovery': {
         const success = rollFortune()
-        const gemDrop = success && Math.random() * 55 < fortune ? rand(3, 10) : 0
+        const gemDrop = success && Math.random() * 55 < fortune ? Math.round(rand(3, 10) * rc.gemScale) : 0
         const template = pick(success ? DISCOVERY_SUCCESS : DISCOVERY_FAIL)
         event = {
           type, outcome: success ? 'success' : 'neutral',
@@ -95,7 +141,9 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
         if (win) {
           // Crushing win: separate roll — high power makes it more likely
           const crush = Math.random() * 30 < power * 0.6
-          const gemDrop = crush ? rand(5, 15) : (Math.random() * 55 < power ? rand(2, 7) : 0)
+          const gemDrop = crush
+            ? Math.round(rand(5, 15) * rc.gemScale)
+            : (Math.random() * 55 < power ? Math.round(rand(2, 7) * rc.gemScale) : 0)
           const template = pick(crush ? ENCOUNTER_CRUSH : ENCOUNTER_WIN)
           event = {
             type, outcome: 'success',
@@ -107,7 +155,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
         } else {
           // Loss: low power risks crew loss — chance fades to 0 at power 15+
           const canLoseCrew = crewCount >= 2 && crewLost.length === 0
-          const crewLossChance = canLoseCrew ? Math.max(0, 0.6 - power / 25) : 0
+          const crewLossChance = canLoseCrew ? Math.max(0, 0.6 - power / 25) * rc.crewLossScale : 0
           const loseCrew = crewLossChance > 0 && Math.random() < crewLossChance
           if (loseCrew) {
             const victims = crew.slice(1)
@@ -143,7 +191,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number): Voyage
           }
         } else {
           const canLoseCrew = crewCount >= 2 && crewLost.length === 0
-          const loseCrew = canLoseCrew && Math.random() < 0.40
+          const loseCrew = canLoseCrew && Math.random() < 0.40 * rc.crewLossScale
           if (loseCrew) {
             const victims = crew.slice(1)
             const victim = pick(victims)

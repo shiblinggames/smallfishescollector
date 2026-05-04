@@ -4,6 +4,7 @@ import { useState, useTransition, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { EXPEDITION_SHIP_STATS, RARITY_COLORS, computeTotalCrewStats, type CrewCard } from '@/lib/expeditions'
 import type { VoyageEvent } from '@/lib/voyageEvents'
+import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageEvents'
 import { sendDailyVoyage, revealVoyageResults, type DailyVoyage } from './voyageActions'
 
 type PanelState = 'idle' | 'away' | 'returned' | 'done'
@@ -66,6 +67,7 @@ export default function DailyVoyagePanel({
   const [panelState, setPanelState] = useState<PanelState>(initialState)
   const [activeVoyage, setActiveVoyage] = useState<DailyVoyage | null>(readyVoyage ?? todayVoyage)
   const [error, setError] = useState<string | null>(null)
+  const [selectedRoute, setSelectedRoute] = useState<VoyageRoute | null>(null)
 
   const returnTime = activeVoyage
     ? new Date(activeVoyage.created_at).getTime() + VOYAGE_DURATION_MS
@@ -96,15 +98,15 @@ export default function DailyVoyagePanel({
   const stats = savedCrew.length > 0 ? computeTotalCrewStats(savedCrew) : null
 
   const handleSend = useCallback(() => {
-    if (savedCrew.length === 0) return
+    if (savedCrew.length === 0 || !selectedRoute) return
     setError(null)
     startTransition(async () => {
-      const res = await sendDailyVoyage(savedCrew.map(c => c.variantId))
+      const res = await sendDailyVoyage(savedCrew.map(c => c.variantId), selectedRoute)
       if ('error' in res) { setError(res.error); return }
       setActiveVoyage(res.voyage)
       setPanelState('away')
     })
-  }, [savedCrew])
+  }, [savedCrew, selectedRoute])
 
   const handleClaim = useCallback(() => {
     if (!activeVoyage) return
@@ -170,20 +172,64 @@ export default function DailyVoyagePanel({
                 </div>
               )}
 
+              {/* Route selection */}
+              <div style={{ marginBottom: '0.85rem' }}>
+                <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.46rem', color: '#4a3c28', marginBottom: '0.45rem' }}>
+                  Choose a route
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  {(Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map(routeKey => {
+                    const rco = ROUTE_CONFIGS[routeKey]
+                    const isSelected = selectedRoute === routeKey
+                    return (
+                      <button
+                        key={routeKey}
+                        onClick={() => setSelectedRoute(routeKey)}
+                        style={{
+                          background: isSelected ? `${rco.color}14` : 'rgba(255,255,255,0.02)',
+                          border: `1px solid ${isSelected ? rco.color + '44' : 'rgba(255,255,255,0.06)'}`,
+                          borderRadius: 9, padding: '0.55rem 0.7rem',
+                          cursor: 'pointer', textAlign: 'left',
+                          transition: 'background 0.12s, border-color 0.12s',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem',
+                        }}
+                      >
+                        <div>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.76rem', color: isSelected ? rco.color : '#8a8275', lineHeight: 1.2 }}>
+                            {rco.name}
+                          </p>
+                          <p className="font-karla" style={{ fontSize: '0.58rem', color: '#5a4c38', lineHeight: 1.4, marginTop: 1 }}>
+                            {rco.tagline}
+                          </p>
+                        </div>
+                        <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                          <p className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: isSelected ? rco.color : '#4a3c28' }}>
+                            {rco.riskLabel}
+                          </p>
+                          <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: isSelected ? rco.color : '#4a3c28', marginTop: 1 }}>
+                            {rco.payoutScale === 1 ? 'Base ⟡' : `${Math.round(rco.payoutScale * 100)}% ⟡`}
+                          </p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
               {error && (
                 <p className="font-karla" style={{ fontSize: '0.62rem', color: '#f87171', marginBottom: '0.5rem' }}>{error}</p>
               )}
               <button
                 onClick={handleSend}
-                disabled={isPending}
+                disabled={isPending || !selectedRoute}
                 style={{
                   width: '100%',
-                  background: isPending ? 'rgba(240,192,64,0.08)' : 'rgba(240,192,64,0.18)',
-                  border: '1px solid rgba(240,192,64,0.45)',
+                  background: isPending || !selectedRoute ? 'rgba(240,192,64,0.05)' : 'rgba(240,192,64,0.18)',
+                  border: `1px solid ${selectedRoute ? 'rgba(240,192,64,0.45)' : 'rgba(240,192,64,0.15)'}`,
                   borderRadius: 10, padding: '0.65rem 1rem',
-                  color: isPending ? 'rgba(240,192,64,0.4)' : '#f0c040',
-                  cursor: isPending ? 'default' : 'pointer',
-                  transition: 'opacity 0.15s',
+                  color: isPending || !selectedRoute ? 'rgba(240,192,64,0.25)' : '#f0c040',
+                  cursor: isPending || !selectedRoute ? 'default' : 'pointer',
+                  transition: 'all 0.15s',
                 }}
                 className="font-cinzel font-700 uppercase tracking-[0.12em]"
               >
@@ -231,6 +277,14 @@ export default function DailyVoyagePanel({
               <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: isComplete ? '#f0e8cc' : '#b0bee0', lineHeight: 1.2, transition: 'color 0.4s' }}>
                 {isComplete ? 'Crew has returned' : 'Voyage underway'}
               </p>
+              {activeVoyage.route && (() => {
+                const routeCfg = ROUTE_CONFIGS[activeVoyage.route as VoyageRoute]
+                return routeCfg ? (
+                  <p className="font-karla" style={{ fontSize: '0.56rem', color: routeCfg.color, marginTop: 2, opacity: 0.65 }}>
+                    {routeCfg.name}
+                  </p>
+                ) : null
+              })()}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: 5 }}>
                 {awayCrew.map((c, i) => {
                   const rc = rarityColor(c.rarity)

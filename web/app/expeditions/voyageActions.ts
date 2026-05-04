@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { EXPEDITION_SHIP_STATS, applyVariantBoosts } from '@/lib/expeditions'
 import { RARITY_TIERS } from '@/lib/variants'
-import { generateVoyageEvents, type VoyageEvent } from '@/lib/voyageEvents'
+import { generateVoyageEvents, type VoyageEvent, type VoyageRoute } from '@/lib/voyageEvents'
 import type { CrewCard } from '@/lib/expeditions'
 
 function today(): string {
@@ -18,6 +18,7 @@ export interface DailyVoyage {
   voyage_date: string
   crew_variant_ids: number[]
   ship_tier: number
+  route: VoyageRoute
   status: 'pending' | 'revealed'
   events: VoyageEvent[]
   total_doubloons: number
@@ -69,7 +70,7 @@ type CollectionRow = {
   }
 }
 
-export async function sendDailyVoyage(crewVariantIds: number[]): Promise<
+export async function sendDailyVoyage(crewVariantIds: number[], route: VoyageRoute = 'open'): Promise<
   { ok: true; voyage: DailyVoyage } | { error: string }
 > {
   const supabase = await createClient()
@@ -156,7 +157,7 @@ export async function sendDailyVoyage(crewVariantIds: number[]): Promise<
 
   if (crew.length === 0) return { error: 'Could not find crew in your collection' }
 
-  const result = generateVoyageEvents(crew, shipTier)
+  const result = generateVoyageEvents(crew, shipTier, route)
 
   const { data: voyage, error } = await admin
     .from('daily_voyages')
@@ -165,6 +166,7 @@ export async function sendDailyVoyage(crewVariantIds: number[]): Promise<
       voyage_date: today(),
       crew_variant_ids: crewVariantIds,
       ship_tier: shipTier,
+      route,
       status: 'pending',
       events: result.events,
       total_doubloons: result.totalDoubloons,
