@@ -167,7 +167,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
         } else {
           // Loss: low power risks crew loss — chance fades to 0 at power 15+
           const canLoseCrew = crewCount >= 2 && crewLost.length === 0
-          const crewLossChance = canLoseCrew ? Math.max(0, 0.6 - power / 25) * rc.crewLossScale : 0
+          const crewLossChance = canLoseCrew ? Math.max(0.10, 0.5 - power / 60) * rc.crewLossScale : 0
           const loseCrew = crewLossChance > 0 && Math.random() < crewLossChance
           if (loseCrew) {
             const victims = crew.slice(1)
@@ -203,7 +203,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
           }
         } else {
           const canLoseCrew = crewCount >= 2 && crewLost.length === 0
-          const loseCrew = canLoseCrew && Math.random() < 0.40 * rc.crewLossScale
+          const loseCrew = canLoseCrew && Math.random() < 0.18 * rc.crewLossScale
           if (loseCrew) {
             const victims = crew.slice(1)
             const victim = pick(victims)
