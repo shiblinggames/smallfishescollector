@@ -2294,71 +2294,119 @@ export default function FishingGame({
             </AnimatePresence>
           </div>
 
-          {/* ── Bottom buttons — Bait + Fish Hold ── */}
-          <div className="flex gap-3" style={{ paddingTop: '0.75rem' }}>
+          {/* ── Bottom buttons — Gear & Bait + Fish Hold ── */}
+          {(() => {
+            const holdPct = holdCapacity > 0 ? holdTotalCount / holdCapacity : 0
+            const holdFull = holdTotalCount >= holdCapacity
+            const holdCritical = !holdFull && holdPct >= 0.9
+            const holdWarning  = !holdFull && !holdCritical && holdPct >= 0.75
+            const holdAccent = holdFull ? '#f87171' : holdCritical ? '#fb923c' : holdWarning ? '#fbbf24' : '#f0c040'
+            const holdBg = holdOpen
+              ? `${holdAccent}10`
+              : holdFull ? 'rgba(248,113,113,0.06)' : holdCritical ? 'rgba(251,146,60,0.05)' : 'rgba(4,10,18,0.72)'
+            const holdBorder = holdOpen
+              ? `${holdAccent}50`
+              : holdFull ? 'rgba(248,113,113,0.35)' : holdCritical ? 'rgba(251,146,60,0.28)' : holdWarning ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.09)'
+            const baitAccent = selectedBaitDef?.color ?? '#94a3b8'
+            const baitStat = selectedBaitQty === 0
+              ? 'Out of bait'
+              : (selectedBaitDef?.catchZoneBonus ?? 0) > 0
+                ? `+${selectedBaitDef!.catchZoneBonus}° catch zone`
+                : (selectedBaitDef?.waitMult ?? 1) < 1.0
+                  ? `${Math.round((1 - selectedBaitDef!.waitMult) * 100)}% faster bites`
+                  : (selectedBaitDef?.waitMult ?? 1) > 1.0
+                    ? `${Math.round((selectedBaitDef!.waitMult - 1) * 100)}% slower bites`
+                    : 'Standard bait'
+            return (
+              <div className="flex gap-2.5" style={{ paddingTop: '0.75rem' }}>
 
-            {/* Gear button */}
-            <button
-              onClick={() => { setGearOpen(o => !o); setHoldOpen(false) }}
-              style={{
-                flex: 1, height: 80, borderRadius: 20,
-                background: gearOpen ? `${selectedBaitDef?.color ?? '#fff'}10` : 'rgba(4,10,18,0.72)',
-                border: `1px solid ${gearOpen ? (selectedBaitDef?.color ?? 'rgba(255,255,255,0.2)') + '45' : 'rgba(255,255,255,0.09)'}`,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
-                cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
-              }}
-            >
-              <div className="flex items-center gap-1">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#a09890" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                </svg>
-                <p className="font-cinzel font-700 uppercase tracking-[0.08em]"
-                  style={{ fontSize: '0.72rem', color: '#e8e3dc' }}>Equip Gear</p>
-              </div>
-              <p className="font-cinzel font-700"
-                style={{ fontSize: '0.92rem', color: selectedBaitDef?.color ?? '#f0ede8' }}>
-                {selectedBaitDef?.name ?? '—'}{selectedBaitQty > 0 ? ` ×${selectedBaitQty}` : ''}
-              </p>
-              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: selectedBaitQty === 0 ? '#f87171' : 'rgba(255,255,255,0.45)' }}>
-                {selectedBaitQty === 0
-                  ? 'No bait'
-                  : selectedBaitDef?.catchZoneBonus ?? 0 > 0
-                    ? `+${selectedBaitDef!.catchZoneBonus}° catch zone`
-                    : (selectedBaitDef?.waitMult ?? 1) < 1.0
-                      ? `${Math.round((1 - selectedBaitDef!.waitMult) * 100)}% faster bite`
-                      : (selectedBaitDef?.waitMult ?? 1) > 1.0
-                        ? `${Math.round((selectedBaitDef!.waitMult - 1) * 100)}% slower bite`
-                        : rod.name}
-              </p>
-            </button>
+                {/* Gear & Bait */}
+                <button
+                  onClick={() => { setGearOpen(o => !o); setHoldOpen(false) }}
+                  style={{
+                    flex: 1, height: 86, borderRadius: 20,
+                    background: gearOpen ? `${baitAccent}12` : 'rgba(4,10,18,0.72)',
+                    border: `1px solid ${gearOpen ? baitAccent + '50' : 'rgba(255,255,255,0.09)'}`,
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center',
+                    gap: 3, padding: '0 1rem',
+                    cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
+                  }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 4L6 16M6 16l4-1-1 4M18 4l1 4-4-1"/>
+                      <circle cx="9" cy="19" r="1.5" fill="rgba(255,255,255,0.3)" stroke="none"/>
+                    </svg>
+                    <p className="font-karla font-700 uppercase tracking-[0.12em]"
+                      style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)' }}>Gear & Bait</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-cinzel font-700"
+                      style={{ fontSize: '0.95rem', color: selectedBaitQty === 0 ? '#f87171' : baitAccent, lineHeight: 1 }}>
+                      {selectedBaitDef?.name ?? '—'}
+                    </p>
+                    {selectedBaitQty > 0 && (
+                      <span className="font-karla font-700"
+                        style={{
+                          fontSize: '0.6rem', color: baitAccent,
+                          background: baitAccent + '18', border: `1px solid ${baitAccent}35`,
+                          borderRadius: 20, padding: '0.1rem 0.4rem', lineHeight: 1.4,
+                        }}>
+                        ×{selectedBaitQty}
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-karla font-500"
+                    style={{ fontSize: '0.62rem', color: selectedBaitQty === 0 ? '#f87171' : 'rgba(255,255,255,0.35)', lineHeight: 1 }}>
+                    {baitStat}
+                  </p>
+                </button>
 
-            {/* Fish Hold button */}
-            <button
-              onClick={() => { setHoldOpen(o => !o); setGearOpen(false) }}
-              style={{
-                flex: 1, height: 80, borderRadius: 20,
-                background: holdOpen ? 'rgba(240,192,64,0.08)' : 'rgba(4,10,18,0.72)',
-                border: `1px solid ${holdOpen ? 'rgba(240,192,64,0.35)' : 'rgba(255,255,255,0.09)'}`,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
-                cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
-              }}
-            >
-              <div className="flex items-center gap-1">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#a09890" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="8"/><path d="M12 8v4l2 2"/><path d="M8 3l1.5 2M16 3l-1.5 2"/>
-                </svg>
-                <p className="font-cinzel font-700 uppercase tracking-[0.08em]"
-                  style={{ fontSize: '0.72rem', color: '#e8e3dc' }}>Sell Fish</p>
+                {/* Fish Hold */}
+                <button
+                  onClick={() => { setHoldOpen(o => !o); setGearOpen(false) }}
+                  style={{
+                    flex: 1, height: 86, borderRadius: 20,
+                    background: holdBg,
+                    border: `1px solid ${holdBorder}`,
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center',
+                    gap: 3, padding: '0 1rem',
+                    cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.2s',
+                  }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
+                    </svg>
+                    <p className="font-karla font-700 uppercase tracking-[0.12em]"
+                      style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)' }}>Fish Hold</p>
+                    {(holdFull || holdCritical) && (
+                      <span className="font-karla font-700 uppercase"
+                        style={{
+                          fontSize: '0.48rem', color: holdAccent,
+                          background: holdAccent + '18', border: `1px solid ${holdAccent}40`,
+                          borderRadius: 20, padding: '0.1rem 0.4rem', lineHeight: 1.4,
+                        }}>
+                        {holdFull ? 'Full' : 'Almost full'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-cinzel font-700"
+                      style={{ fontSize: '0.95rem', color: holdTotalCount > 0 ? holdAccent : '#3a3835', lineHeight: 1 }}>
+                      {holdTotalCount}
+                      <span className="font-karla font-400" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)' }}> / {holdCapacity}</span>
+                    </p>
+                  </div>
+                  <p className="font-karla font-500"
+                    style={{ fontSize: '0.62rem', color: holdTotalCount > 0 ? 'rgba(255,255,255,0.35)' : '#3a3835', lineHeight: 1 }}>
+                    {holdTotalCount > 0 ? `${holdTotalValue.toLocaleString()} ⟡ · tap to sell` : 'Nothing caught yet'}
+                  </p>
+                </button>
+
               </div>
-              <p className="font-cinzel font-700"
-                style={{ fontSize: '0.88rem', color: holdTotalCount >= holdCapacity ? '#f87171' : holdTotalCount > 0 ? '#f0ede8' : '#4a4845' }}>
-                {holdTotalCount} <span style={{ fontSize: '0.65rem', color: '#6a6764' }}>/ {holdCapacity}</span>
-              </p>
-              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: holdTotalCount > 0 ? '#f0c040' : '#3a3835' }}>
-                {holdTotalCount > 0 ? `${holdTotalValue.toLocaleString()} ⟡ · sell →` : 'No fish yet'}
-              </p>
-            </button>
-          </div>
+            )
+          })()}
 
         </div>
 
