@@ -285,3 +285,19 @@ export async function revealVoyageResults(voyageId: number): Promise<
 
   return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, earnedGems: voyage.total_gems, newGemTotal: newGems, crewLost: voyage.crew_lost, newRingSkins, earnedBait }
 }
+
+export async function fetchVoyageCaptainsLog(voyageId: number): Promise<{ log: string | null } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('daily_voyages')
+    .select('captains_log')
+    .eq('id', voyageId)
+    .eq('user_id', user.id)
+    .single()
+
+  return { log: (data?.captains_log as string | null) ?? null }
+}

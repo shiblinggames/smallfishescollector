@@ -7,7 +7,7 @@ import type { VoyageEvent } from '@/lib/voyageEvents'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageEvents'
 import { getRingSkin, type RingSkinId } from '@/lib/ringSkins'
 import { getBait } from '@/lib/bait'
-import { sendDailyVoyage, revealVoyageResults, type DailyVoyage } from './voyageActions'
+import { sendDailyVoyage, revealVoyageResults, fetchVoyageCaptainsLog, type DailyVoyage } from './voyageActions'
 
 type PanelState = 'idle' | 'away' | 'returned' | 'done'
 
@@ -118,6 +118,7 @@ export default function DailyVoyagePanel({
   const [selectedRoute, setSelectedRoute] = useState<VoyageRoute | null>(null)
   const [claimedRingSkins, setClaimedRingSkins] = useState<string[]>([])
   const [claimedBait, setClaimedBait] = useState<{ type: string; qty: number }[]>([])
+  const [captainsLog, setCaptainsLog] = useState<string | null>(null)
   const [liveCrewIds, setLiveCrewIds] = useState<number[]>(savedCrewVariantIds)
 
   useEffect(() => {
@@ -125,6 +126,24 @@ export default function DailyVoyagePanel({
     window.addEventListener('crew-changed', handler)
     return () => window.removeEventListener('crew-changed', handler)
   }, [])
+
+  // Poll for captain's log after claiming — it's generated async so may take a few seconds
+  useEffect(() => {
+    if (panelState !== 'done' || !activeVoyage || captainsLog) return
+    let attempts = 0
+    const poll = async () => {
+      if (attempts >= 5) return
+      attempts++
+      const res = await fetchVoyageCaptainsLog(activeVoyage.id)
+      if ('log' in res && res.log) {
+        setCaptainsLog(res.log)
+      } else {
+        setTimeout(poll, 3000)
+      }
+    }
+    const id = setTimeout(poll, 2000)
+    return () => clearTimeout(id)
+  }, [panelState, activeVoyage, captainsLog])
 
   const returnTime = activeVoyage
     ? new Date(activeVoyage.created_at).getTime() + VOYAGE_DURATION_MS
@@ -679,12 +698,34 @@ export default function DailyVoyagePanel({
             </div>
           )}
 
+          {/* Captain's log */}
+          <div style={{
+            background: 'rgba(16,12,6,0.55)',
+            border: '1px solid rgba(160,140,90,0.18)',
+            borderRadius: 8, padding: '0.65rem 0.8rem',
+            marginTop: claimedRingSkins.length > 0 || claimedBait.length > 0 ? '0.55rem' : 0,
+          }}>
+            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#7a6848', marginBottom: '0.35rem' }}>
+              Captain&apos;s Log
+            </p>
+            {captainsLog ? (
+              <p className="font-karla" style={{ fontSize: '0.64rem', color: '#c8b890', lineHeight: 1.7, fontStyle: 'italic' }}>
+                &ldquo;{captainsLog}&rdquo;
+              </p>
+            ) : (
+              <p className="font-karla" style={{ fontSize: '0.60rem', color: '#4a4030', lineHeight: 1.5, fontStyle: 'italic' }}>
+                The captain is still writing…
+              </p>
+            )}
+          </div>
+
           {lostCards.length > 0 && (
             <div style={{
               background: 'rgba(20,10,10,0.60)',
               border: '1px solid rgba(180,40,40,0.22)',
               borderRadius: 8, padding: '0.55rem 0.8rem',
               display: 'flex', alignItems: 'center', gap: '0.6rem',
+              marginTop: '0.55rem',
             }}>
               <div>
                 <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: '#9a4848', marginBottom: '0.2rem' }}>
