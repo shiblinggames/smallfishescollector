@@ -80,10 +80,7 @@ export default async function ExpeditionsPage() {
 
           {/* ── Voyage card ── */}
           <div style={{ marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.55rem' }}>
-              <span style={{ fontSize: '0.7rem' }}>⛵</span>
-              <p className="font-karla font-700 uppercase tracking-[0.13em]" style={{ fontSize: '0.52rem', color: '#6b5c44' }}>Voyage</p>
-            </div>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Voyage</p>
             <DailyVoyagePanel
               savedCrewVariantIds={savedCrewVariantIds}
               collection={collection}
@@ -95,10 +92,7 @@ export default async function ExpeditionsPage() {
 
           {/* ── Raids card ── */}
           <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.55rem' }}>
-              <span style={{ fontSize: '0.7rem' }}>⚔️</span>
-              <p className="font-karla font-700 uppercase tracking-[0.13em]" style={{ fontSize: '0.52rem', color: '#6b5c44' }}>Raids</p>
-            </div>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Raids</p>
             <div style={{
               background: 'linear-gradient(135deg, rgba(20,14,6,0.80) 0%, rgba(14,10,4,0.88) 100%)',
               border: '1px solid rgba(240,192,64,0.14)',
