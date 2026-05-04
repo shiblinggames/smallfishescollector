@@ -2004,7 +2004,7 @@ export default function FishingGame({
 
                   {catchResult ? (
                     <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} xpGained={catchResult.xpGained} doubleCatch={catchResult.doubleCatch} gemEarned={catchResult.gemEarned} perfectStreak={catchResult.perfectStreak} streakBonusXP={catchResult.streakBonusXP} jackpotMultiplier={catchResult.jackpotMultiplier} />
-                  ) : (
+                  ) : missResult ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
                       <p className="font-cinzel font-700 mb-1"
                         style={{ fontSize: '1rem', color: missResult === 'penalty' ? '#f87171' : '#64748b' }}>
@@ -2016,7 +2016,7 @@ export default function FishingGame({
                         </p>
                       )}
                     </motion.div>
-                  )}
+                  ) : null}
 
                 </motion.div>
               )}
