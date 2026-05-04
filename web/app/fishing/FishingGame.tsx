@@ -692,35 +692,38 @@ function BaitSelector({ baitInventory, selectedBait, onSelect }: {
             onClick={() => onSelect(bait.type)}
             style={{
               display: 'flex', alignItems: 'center', gap: 10,
-              padding: '0.6rem 0.75rem', borderRadius: 12, width: '100%',
+              padding: '0.55rem 0.7rem', borderRadius: 10, width: '100%',
               background: isSelected ? `${c}12` : 'rgba(4,10,18,0.72)',
               border: `1px solid ${isSelected ? c + '50' : 'rgba(255,255,255,0.09)'}`,
               cursor: 'pointer', transition: 'border-color 0.12s',
             }}
           >
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0, opacity: qty > 0 ? 1 : 0.3 }} />
+            {bait.imageUrl
+              ? <img src={bait.imageUrl} alt={bait.name} style={{ width: 22, height: 22, objectFit: 'contain', opacity: qty > 0 ? 1 : 0.3, flexShrink: 0 }} />
+              : <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0, opacity: qty > 0 ? 1 : 0.3 }} />
+            }
             <div style={{ flex: 1, textAlign: 'left' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: qty > 0 ? '#f0ede8' : '#4a4845' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: qty > 0 ? '#f0ede8' : '#4a4845' }}>
                 {bait.name}
               </p>
-              <div style={{ display: 'flex', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 3, marginTop: 2, flexWrap: 'wrap' }}>
                 {bait.catchZoneBonus > 0 && (
-                  <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: `${c}cc`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
-                    +{bait.catchZoneBonus}° catch zone
+                  <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${c}cc`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                    +{bait.catchZoneBonus}° zone
                   </span>
                 )}
                 {bait.waitMult < 1.0 && (
-                  <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: `${c}cc`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
-                    {Math.round((1 - bait.waitMult) * 100)}% faster bite
+                  <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${c}cc`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                    {Math.round((1 - bait.waitMult) * 100)}% faster
                   </span>
                 )}
                 {bait.waitMult > 1.0 && (
-                  <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: 'rgba(248,113,113,0.8)', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
-                    {Math.round((bait.waitMult - 1) * 100)}% slower bite
+                  <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(248,113,113,0.8)', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                    {Math.round((bait.waitMult - 1) * 100)}% slower
                   </span>
                 )}
                 {!bait.catchZoneBonus && bait.waitMult === 1.0 && (
-                  <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: '#4a4845', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                  <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
                     No bonus
                   </span>
                 )}
