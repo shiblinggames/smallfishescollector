@@ -29,6 +29,7 @@ export const BAITS: BaitDef[] = [
     name: 'Minnow',
     description: 'Fish bite 20% faster. A solid upgrade over worms.',
     color: '#60a5fa',
+    imageUrl: '/minnow.png',
     waitMult: 0.80,
     catchZoneBonus: 0,
     acquisition: ['shop'],
