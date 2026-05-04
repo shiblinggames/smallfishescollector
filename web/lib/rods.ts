@@ -72,6 +72,7 @@ export const RODS: RodDef[] = [
     description: 'A well-balanced deep-sea rod. Good speed and a wider catch zone.',
     color: '#38bdf8', rarityBonus: 0, biteIntervalMs: 2800, catchZoneBonus: 8,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    imageUrl: '/navigatorrod.png',
   },
   {
     tier: 8, name: 'Carbon Rod', cost: 60000,
@@ -102,6 +103,7 @@ export const RODS: RodDef[] = [
     description: "Stubborn rod. When you miss, sometimes it refuses to let go.",
     color: '#fb923c', rarityBonus: 0, biteIntervalMs: 3200, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0.25, snagImmune: false, perfectZoneBonus: 0,
+    imageUrl: '/secondwindrod.png',
   },
   {
     tier: 13, name: "Millionaire's Rod", cost: 175000,
