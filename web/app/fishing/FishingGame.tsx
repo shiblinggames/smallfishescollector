@@ -1064,6 +1064,27 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   )
 }
 
+// ─── Drawer helpers ──────────────────────────────────────────────────────────
+
+function DrawerHandle() {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '0.55rem 0 0.1rem', flexShrink: 0, cursor: 'grab' }}>
+      <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)' }} />
+    </div>
+  )
+}
+
+function drawerDragProps(onClose: () => void) {
+  return {
+    drag: 'y' as const,
+    dragConstraints: { top: 0 },
+    dragElastic: { top: 0, bottom: 0.35 },
+    onDragEnd: (_: unknown, info: { offset: { y: number }; velocity: { y: number } }) => {
+      if (info.offset.y > 80 || info.velocity.y > 400) onClose()
+    },
+  }
+}
+
 // ─── EventParticles ──────────────────────────────────────────────────────────
 
 function EventParticles({ color }: { color: string }) {
@@ -2866,6 +2887,7 @@ export default function FishingGame({
           <motion.div key="collection-drawer"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            {...drawerDragProps(() => { setCollectionOpen(false); setExpandedZone(null); setTappedFishId(null) })}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
               background: 'rgba(6,12,20,0.98)',
@@ -2875,6 +2897,7 @@ export default function FishingGame({
               display: 'flex', flexDirection: 'column',
             }}
           >
+            <DrawerHandle />
             {/* Sticky header */}
             <div className="flex items-center justify-between flex-shrink-0"
               style={{ padding: '1.25rem 1.1rem 0.75rem' }}>
@@ -3078,16 +3101,18 @@ export default function FishingGame({
           <motion.div key="gear-drawer"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            {...drawerDragProps(() => setGearOpen(false))}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
               background: 'rgba(6,12,20,0.98)',
               borderTop: '1px solid rgba(255,255,255,0.09)',
               borderRadius: '18px 18px 0 0',
-              padding: '1.25rem 1rem 2rem',
+              padding: '0 1rem 2rem',
               maxHeight: '82vh', overflowY: 'auto', overscrollBehavior: 'contain',
             }}
           >
-            <div className="flex items-center justify-between mb-4">
+            <DrawerHandle />
+            <div className="flex items-center justify-between mb-4" style={{ paddingTop: '0.75rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
                 style={{ fontSize: '0.6rem', color: '#6a6764' }}>Gear</p>
               <button onClick={() => setGearOpen(false)}
@@ -3122,16 +3147,18 @@ export default function FishingGame({
           <motion.div key="bait-panel"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            {...drawerDragProps(() => setBaitOpen(false))}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
               background: 'rgba(6,12,20,0.98)',
               borderTop: '1px solid rgba(255,255,255,0.09)',
               borderRadius: '18px 18px 0 0',
-              padding: '1.25rem 1rem 2rem',
+              padding: '0 1rem 2rem',
               maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
             }}
           >
-            <div className="flex items-center justify-between mb-4">
+            <DrawerHandle />
+            <div className="flex items-center justify-between mb-4" style={{ paddingTop: '0.75rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
                 style={{ fontSize: '0.6rem', color: '#6a6764' }}>Bait</p>
               <button onClick={() => setBaitOpen(false)}
@@ -3158,16 +3185,18 @@ export default function FishingGame({
           <motion.div key="daily-drawer"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            {...drawerDragProps(() => setDailyOpen(false))}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
               background: 'rgba(6,12,20,0.98)',
               borderTop: '1px solid rgba(255,255,255,0.09)',
               borderRadius: '18px 18px 0 0',
-              padding: '1.25rem 1rem 2rem',
+              padding: '0 1rem 2rem',
               maxHeight: '75vh', overflowY: 'auto', overscrollBehavior: 'contain',
             }}
           >
-            <div className="flex items-center justify-between mb-5">
+            <DrawerHandle />
+            <div className="flex items-center justify-between mb-5" style={{ paddingTop: '0.75rem' }}>
               <div>
                 <p className="font-karla font-700 uppercase tracking-[0.14em]"
                   style={{ fontSize: '0.72rem', color: '#c8c4bc' }}>Daily Challenges</p>
@@ -3257,16 +3286,18 @@ export default function FishingGame({
           <motion.div key="sell-panel"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            {...drawerDragProps(() => setSellOpen(false))}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
               background: 'rgba(6,12,20,0.98)',
               borderTop: '1px solid rgba(255,255,255,0.09)',
               borderRadius: '18px 18px 0 0',
-              padding: '1.25rem 1rem 2rem',
+              padding: '0 1rem 2rem',
               maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
             }}
           >
-            <div className="flex items-center justify-between mb-5">
+            <DrawerHandle />
+            <div className="flex items-center justify-between mb-5" style={{ paddingTop: '0.75rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
                 style={{ fontSize: '0.6rem', color: '#6a6764' }}>Sell</p>
               <button onClick={() => setSellOpen(false)}
@@ -3532,17 +3563,19 @@ export default function FishingGame({
           <motion.div key="hold-drawer"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            {...drawerDragProps(() => setHoldOpen(false))}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
               background: 'rgba(6,12,20,0.98)',
               borderTop: '1px solid rgba(255,255,255,0.09)',
               borderRadius: '18px 18px 0 0',
-              padding: '1.25rem 1rem 2rem',
+              padding: '0 1rem 2rem',
               maxHeight: '72vh', overflowY: 'auto', overscrollBehavior: 'contain',
             }}
           >
+            <DrawerHandle />
             {/* Header */}
-            <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between mb-4" style={{ paddingTop: '0.75rem' }}>
               <div>
                 <p className="font-karla font-700 uppercase tracking-[0.14em]"
                   style={{ fontSize: '0.72rem', color: '#9a9488', marginBottom: 3 }}>Fish Hold</p>
