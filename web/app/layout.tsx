@@ -26,7 +26,7 @@ const karla = Karla({
 })
 
 export const metadata: Metadata = {
-  title: 'Small Fishes: Seas the Booty — Digital Collectibles',
+  title: 'Small Fishes: Seas the Booty — Online Game',
   description: 'Redeem your pack code and collect all 36 digital fish cards.',
 }
 
