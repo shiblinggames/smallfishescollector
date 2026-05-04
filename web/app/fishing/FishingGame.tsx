@@ -313,7 +313,7 @@ function DialSVG({
     <div style={{
       position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto',
       filter: fireLevel === 2 ? 'drop-shadow(0 0 14px rgba(251,146,60,0.7)) drop-shadow(0 0 32px rgba(239,68,68,0.35))'
-            : fireLevel === 1 ? 'drop-shadow(0 0 7px rgba(251,146,60,0.35))'
+            : fireLevel === 1 ? 'drop-shadow(0 0 12px rgba(251,146,60,0.6)) drop-shadow(0 0 22px rgba(251,146,60,0.25))'
             : 'none',
       transition: 'filter 0.4s ease',
     }}>
@@ -325,7 +325,7 @@ function DialSVG({
             <stop offset="100%" stopColor="#050c14" stopOpacity="1" />
           </radialGradient>
         </defs>
-        <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke={fireLevel === 2 ? '#f97316' : fireLevel === 1 ? '#f9731680' : 'rgba(255,255,255,0.12)'} strokeWidth="1" />
+        <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke={fireLevel === 2 ? '#f97316' : fireLevel === 1 ? '#f97316bb' : 'rgba(255,255,255,0.12)'} strokeWidth="1" />
 <g transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
             <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
@@ -403,8 +403,8 @@ function DialSVG({
         {/* Fire effects — glowing rings only */}
         {fireLevel >= 1 && (
           <motion.circle cx={CX} cy={CY} r={OUTER_R + 4} fill="none" stroke="#fbbf24"
-            strokeWidth={fireLevel === 2 ? 2.5 : 1.5}
-            animate={{ strokeOpacity: fireLevel === 2 ? [0.3, 0.65, 0.3] : [0.12, 0.32, 0.12] }}
+            strokeWidth={fireLevel === 2 ? 2.5 : 2}
+            animate={{ strokeOpacity: fireLevel === 2 ? [0.3, 0.65, 0.3] : [0.25, 0.55, 0.25] }}
             transition={{ duration: 1.0, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
           />
         )}
