@@ -457,14 +457,20 @@ export async function claimZoneReward(zone: string): Promise<{ doubloons: number
   const admin = createAdminClient()
 
   const [{ data: profile }, { data: zoneSpecies }, { count: caughtCount }] = await Promise.all([
-    admin.from('profiles').select(`doubloons, ${rewardCol}`).eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded').eq('id', user.id).single(),
     admin.from('fish_species').select('id').eq('habitat', zone),
     admin.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
       .in('fish_id', (await admin.from('fish_species').select('id').eq('habitat', zone)).data?.map((f: { id: number }) => f.id) ?? []),
   ])
 
   if (!profile) return { error: 'Profile not found' }
-  if ((profile as Record<string, unknown>)[rewardCol]) return { error: 'Already claimed' }
+  const alreadyClaimed = {
+    shallows:    profile.zone_shallows_rewarded,
+    open_waters: profile.zone_open_waters_rewarded,
+    deep:        profile.zone_deep_rewarded,
+    abyss:       profile.zone_abyss_rewarded,
+  }
+  if (alreadyClaimed[zone as keyof typeof alreadyClaimed]) return { error: 'Already claimed' }
 
   const totalInZone = (zoneSpecies ?? []).length
   if ((caughtCount ?? 0) < totalInZone || totalInZone === 0) return { error: 'Zone not complete' }
