@@ -227,6 +227,9 @@ export async function revealVoyageResults(voyageId: number): Promise<
   await Promise.all([
     admin.from('profiles').update({ doubloons: newDoubloons, gems: newGems, saved_crew: newSavedCrew, unlocked_ring_skins: updatedSkins }).eq('id', user.id),
     admin.from('daily_voyages').update({ status: 'revealed' }).eq('id', voyageId),
+    ...(voyage.crew_lost.length > 0
+      ? [admin.from('user_collection').delete().eq('user_id', user.id).in('card_variant_id', voyage.crew_lost)]
+      : []),
     ...(voyage.total_doubloons > 0
       ? [admin.from('doubloon_transactions').insert({ user_id: user.id, amount: voyage.total_doubloons, reason: 'Daily crew voyage' })]
       : []),
