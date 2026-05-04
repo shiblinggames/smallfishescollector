@@ -213,7 +213,7 @@ function DialSVG({
   return (
     <div style={{
       position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto',
-      filter: onFire ? 'drop-shadow(0 0 10px rgba(251,146,60,0.5)) drop-shadow(0 0 22px rgba(239,68,68,0.2))' : 'none',
+      filter: onFire ? 'drop-shadow(0 0 14px rgba(251,146,60,0.7)) drop-shadow(0 0 32px rgba(239,68,68,0.35))' : 'none',
       transition: 'filter 0.4s ease',
     }}>
       <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block', overflow: 'visible' }}>
@@ -277,55 +277,19 @@ function DialSVG({
           style={{ transformOrigin: `${CX}px ${CY}px` }}
         />
 
-        {/* Fire effects */}
-        {onFire && (() => {
-          const fp = (deg: number, w: number, h: number, lean: number) => {
-            const base = OUTER_R + 7
-            const bl = polar(base, deg - w), br = polar(base, deg + w)
-            const tip = polar(base + h, deg + lean)
-            const cl = polar(base + h * 0.55, deg - w * 1.35 + lean * 0.25)
-            const cr = polar(base + h * 0.55, deg + w * 1.35 + lean * 0.75)
-            return `M ${bl.x.toFixed(1)} ${bl.y.toFixed(1)} Q ${cl.x.toFixed(1)} ${cl.y.toFixed(1)} ${tip.x.toFixed(1)} ${tip.y.toFixed(1)} Q ${cr.x.toFixed(1)} ${cr.y.toFixed(1)} ${br.x.toFixed(1)} ${br.y.toFixed(1)} Z`
-          }
-          const wobbles = [-3,2.5,-1.5,4,-2,3.5,-4,1,2,-1,3,-2,0.5,-3.5,2,-0.5]
-          const flames = Array.from({ length: 16 }, (_, i) => ({
-            deg: (360 / 16) * i + wobbles[i],
-            lean: (i % 2 === 0 ? -1 : 1) * (1.5 + (i % 4) * 1.2),
-            w: 3.5 + (i % 5) * 1.0,
-            h: 14 + (i % 7) * 3,
-          }))
-          return (
-            <>
-              <defs>
-                <radialGradient id="fireGrad" cx={CX} cy={CY} r={OUTER_R + 52} gradientUnits="userSpaceOnUse">
-                  <stop offset="70%" stopColor="#fde68a" stopOpacity="1"/>
-                  <stop offset="84%" stopColor="#f97316" stopOpacity="0.85"/>
-                  <stop offset="96%" stopColor="#dc2626" stopOpacity="0.5"/>
-                  <stop offset="100%" stopColor="#7f1d1d" stopOpacity="0"/>
-                </radialGradient>
-              </defs>
-              {/* Glow ring */}
-              <motion.circle cx={CX} cy={CY} r={OUTER_R + 8} fill="none" stroke="#f97316" strokeWidth="8"
-                animate={{ strokeOpacity: [0.06, 0.18, 0.06] }}
-                transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-              />
-              {/* Bright base ring */}
-              <motion.circle cx={CX} cy={CY} r={OUTER_R + 4} fill="none" stroke="#fbbf24" strokeWidth="2.5"
-                animate={{ strokeOpacity: [0.25, 0.55, 0.25] }}
-                transition={{ duration: 1.0, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
-              />
-              {/* Flame tongues */}
-              {flames.map((f, i) => (
-                <motion.path key={i}
-                  d={fp(f.deg, f.w, f.h, f.lean)}
-                  fill="url(#fireGrad)"
-                  animate={{ opacity: [0.35, 0.65, 0.4, 0.6, 0.3] }}
-                  transition={{ duration: 0.6 + (i % 7) * 0.09, repeat: Infinity, delay: i * 0.06, ease: 'easeInOut' }}
-                />
-              ))}
-            </>
-          )
-        })()}
+        {/* Fire effects — glowing rings only */}
+        {onFire && (
+          <>
+            <motion.circle cx={CX} cy={CY} r={OUTER_R + 9} fill="none" stroke="#f97316" strokeWidth="10"
+              animate={{ strokeOpacity: [0.1, 0.28, 0.1] }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <motion.circle cx={CX} cy={CY} r={OUTER_R + 4} fill="none" stroke="#fbbf24" strokeWidth="2.5"
+              animate={{ strokeOpacity: [0.3, 0.65, 0.3] }}
+              transition={{ duration: 1.0, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
+            />
+          </>
+        )}
       </svg>
     </div>
   )
@@ -1959,22 +1923,25 @@ export default function FishingGame({
                     </motion.p>
                   )}
 
-                  {perfectStreak >= 3 && (
-                    <motion.div className="text-center mb-1"
-                      initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-                    >
-                      <motion.span className="font-cinzel font-700"
-                        style={{ fontSize: '0.95rem', color: '#f97316', textShadow: '0 0 16px rgba(249,115,22,0.8)', letterSpacing: '0.04em' }}
-                        animate={{ opacity: [0.75, 1, 0.75] }}
-                        transition={{ duration: 0.6, repeat: Infinity }}
+                  <div style={{ position: 'relative' }}>
+                    {perfectStreak >= 3 && (
+                      <motion.div
+                        style={{ position: 'absolute', top: -28, left: 0, right: 0, textAlign: 'center', pointerEvents: 'none' }}
+                        initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
                       >
-                        🔥 {perfectStreak} perfect streak
-                      </motion.span>
-                    </motion.div>
-                  )}
-                  <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}
-                    needleColor={needleColor()} zoneOpacityFn={zoneOpacity} onFire={perfectStreak >= 3}
-                    snapKey={snapKey} />
+                        <motion.span className="font-cinzel font-700"
+                          style={{ fontSize: '0.95rem', color: '#f97316', textShadow: '0 0 16px rgba(249,115,22,0.8)', letterSpacing: '0.04em' }}
+                          animate={{ opacity: [0.75, 1, 0.75] }}
+                          transition={{ duration: 0.6, repeat: Infinity }}
+                        >
+                          🔥 {perfectStreak} perfect streak
+                        </motion.span>
+                      </motion.div>
+                    )}
+                    <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}
+                      needleColor={needleColor()} zoneOpacityFn={zoneOpacity} onFire={perfectStreak >= 3}
+                      snapKey={snapKey} />
+                  </div>
                 </motion.div>
               )}
 
