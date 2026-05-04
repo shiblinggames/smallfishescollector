@@ -2024,7 +2024,6 @@ export default function FishingGame({
                         )
                       })()}
 
-                    </AnimatePresence>
                   </div>
 
                 </motion.div>
@@ -2504,32 +2503,63 @@ export default function FishingGame({
               const discoveredCount = zoneSpecies.filter(f => caughtFishIds.has(f.id)).length
               const zoneColor = HABITAT_COLOR[zone]
               const isExpanded = expandedZone === zone
+              const pct = zoneSpecies.length > 0 ? discoveredCount / zoneSpecies.length : 0
+              const isComplete = discoveredCount === zoneSpecies.length
 
               return (
-                <div key={zone} className="mb-1">
+                <div key={zone} style={{ marginBottom: '0.6rem' }}>
                   <button
-                    className="w-full flex items-center justify-between py-2.5"
+                    className="w-full text-left"
+                    style={{
+                      background: `linear-gradient(135deg, rgba(6,16,26,0.97) 0%, ${zoneColor}12 100%)`,
+                      border: `1px solid ${zoneColor}28`,
+                      borderLeft: `3px solid ${zoneColor}bb`,
+                      borderRadius: isExpanded ? '12px 12px 0 0' : 12,
+                      padding: '0.75rem 0.9rem 0.65rem',
+                      cursor: 'pointer',
+                      transition: 'border-radius 0.15s',
+                    }}
                     onClick={() => { setExpandedZone(isExpanded ? null : zone); setTappedFishId(null) }}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div style={{ width: 3, height: 16, background: zoneColor, borderRadius: 2 }} />
-                      <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                        style={{ fontSize: '0.72rem', color: zoneColor }}>{HABITAT_LABEL[zone]}</p>
+                    <div className="flex items-center justify-between" style={{ marginBottom: '0.45rem' }}>
+                      <div>
+                        <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                          style={{ fontSize: '0.72rem', color: zoneColor, lineHeight: 1 }}>{HABITAT_LABEL[zone]}</p>
+                        <p className="font-karla font-400"
+                          style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.28)', marginTop: 3 }}>{HABITAT_TAGLINE[zone]}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-karla font-600"
+                          style={{ fontSize: '0.65rem', color: isComplete ? zoneColor : 'rgba(255,255,255,0.4)' }}>
+                          {discoveredCount}<span style={{ color: 'rgba(255,255,255,0.2)' }}>/{zoneSpecies.length}</span>
+                        </p>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={zoneColor + '80'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                          style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', flexShrink: 0 }}>
+                          <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2.5">
-                      <p className="font-karla font-600"
-                        style={{ fontSize: '0.68rem', color: discoveredCount === zoneSpecies.length ? zoneColor : '#6a6764' }}>
-                        {discoveredCount} / {zoneSpecies.length} found
-                      </p>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                        style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', flexShrink: 0 }}>
-                        <path d="M6 9l6 6 6-6"/>
-                      </svg>
+                    <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${pct * 100}%`,
+                        background: isComplete ? zoneColor : `linear-gradient(90deg, ${zoneColor}88, ${zoneColor})`,
+                        borderRadius: 2,
+                        transition: 'width 0.4s ease',
+                        boxShadow: pct > 0 ? `0 0 6px ${zoneColor}60` : 'none',
+                      }} />
                     </div>
                   </button>
 
                   {isExpanded && (
-                    <div className="flex flex-col gap-1.5 mt-1 mb-3">
+                    <div className="flex flex-col gap-1.5 mb-1"
+                      style={{
+                        background: `${zoneColor}08`,
+                        border: `1px solid ${zoneColor}20`,
+                        borderTop: 'none',
+                        borderRadius: '0 0 12px 12px',
+                        padding: '0.5rem 0.5rem 0.6rem',
+                      }}>
                       {zoneSpecies.map(f => {
                         const discovered = caughtFishIds.has(f.id)
                         const isTapped = tappedFishId === f.id
