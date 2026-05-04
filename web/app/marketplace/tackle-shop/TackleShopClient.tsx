@@ -700,7 +700,7 @@ export default function TackleShopClient({
                 }}
               >
                 <div className="flex items-start gap-3">
-                  <GearIcon color={c} owned={owned} isActive={isActive} label={`T${reel.tier}`} />
+                  <ReelIcon color={c} owned={owned} isActive={isActive} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <p className="font-cinzel font-700 text-sm" style={{ color: owned ? '#f0ede8' : '#6a6764' }}>
@@ -948,6 +948,32 @@ function LineIcon({ color, owned, isActive, tier }: { color: string; owned: bool
         {wraps.map((y, i) => (
           <line key={i} x1="6.5" y1={y} x2="17.5" y2={y} stroke={sc} strokeWidth="1.2" strokeLinecap="round" />
         ))}
+      </svg>
+    </div>
+  )
+}
+
+function ReelIcon({ color, owned, isActive }: { color: string; owned: boolean; isActive: boolean }) {
+  const sc = owned ? color : '#4a4845'
+  const bg = owned ? `${color}12` : 'rgba(255,255,255,0.06)'
+  const border = owned ? `${color}35` : 'rgba(255,255,255,0.11)'
+  const op = owned ? 1 : 0.45
+  return (
+    <div
+      className="w-[38px] h-[38px] sm:w-12 sm:h-12 shrink-0 flex items-center justify-center"
+      style={{ borderRadius: 10, background: bg, border: `1px solid ${border}`, boxShadow: isActive ? `0 0 10px ${color}25` : 'none' }}
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        {/* Reel body */}
+        <circle cx="10" cy="12" r="7.5" stroke={sc} strokeWidth="1.3" opacity={op * 0.9} />
+        {/* Inner spool */}
+        <circle cx="10" cy="12" r="4.5" stroke={sc} strokeWidth="1" fill={sc} fillOpacity={owned ? 0.1 : 0.04} opacity={op * 0.8} />
+        {/* Center hub */}
+        <circle cx="10" cy="12" r="1.8" fill={sc} opacity={op * 0.85} />
+        {/* Handle arm */}
+        <line x1="17.5" y1="12" x2="21.5" y2="9.5" stroke={sc} strokeWidth="1.6" strokeLinecap="round" opacity={op} />
+        {/* Handle knob */}
+        <circle cx="21.5" cy="9.5" r="1.5" fill={sc} opacity={op * 0.85} />
       </svg>
     </div>
   )
