@@ -2052,7 +2052,7 @@ export default function FishingGame({
                 key={activeEvent.type}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 transition={{ duration: 2 }}
-                style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}
+                style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none' }}
               >
                 <div style={{ position: 'absolute', inset: 0, background: def.tint, mixBlendMode: 'screen' }} />
                 <motion.div
