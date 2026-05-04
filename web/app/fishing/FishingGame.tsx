@@ -1269,6 +1269,7 @@ export default function FishingGame({
   const [inventory, setInventory]   = useState<InventoryItem[]>(initialInventory)
   const [doubloons, setDoubloons]   = useState(initialDoubloons)
   const [holdOpen, setHoldOpen]         = useState(false)
+  const [sellOpen, setSellOpen]         = useState(false)
   const [gearOpen, setGearOpen]         = useState(false)
   const [baitOpen, setBaitOpen]         = useState(false)
   const [collectionOpen, setCollectionOpen] = useState(false)
@@ -2325,7 +2326,7 @@ export default function FishingGame({
 
                 {/* Gear */}
                 <button
-                  onClick={() => { setGearOpen(o => !o); setHoldOpen(false); setBaitOpen(false) }}
+                  onClick={() => { setGearOpen(o => !o); setHoldOpen(false); setBaitOpen(false); setSellOpen(false) }}
                   style={{
                     ...tile,
                     background: gearOpen ? 'rgba(240,192,64,0.10)' : 'rgba(4,10,18,0.72)',
@@ -2343,7 +2344,7 @@ export default function FishingGame({
 
                 {/* Bait */}
                 <button
-                  onClick={() => { setBaitOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
+                  onClick={() => { setBaitOpen(o => !o); setGearOpen(false); setHoldOpen(false); setSellOpen(false) }}
                   style={{
                     ...tile,
                     background: baitOpen ? `${baitAccent}10` : 'rgba(4,10,18,0.72)',
@@ -2361,7 +2362,7 @@ export default function FishingGame({
 
                 {/* Hold */}
                 <button
-                  onClick={() => { setHoldOpen(o => !o); setGearOpen(false); setBaitOpen(false) }}
+                  onClick={() => { setHoldOpen(o => !o); setGearOpen(false); setBaitOpen(false); setSellOpen(false) }}
                   style={{
                     ...tile,
                     background: holdOpen
@@ -2383,11 +2384,11 @@ export default function FishingGame({
 
                 {/* Sell */}
                 <button
-                  onClick={() => { setHoldOpen(o => !o); setGearOpen(false); setBaitOpen(false) }}
+                  onClick={() => { setSellOpen(o => !o); setHoldOpen(false); setGearOpen(false); setBaitOpen(false) }}
                   style={{
                     ...tile,
-                    background: holdOpen ? 'rgba(240,192,64,0.08)' : 'rgba(4,10,18,0.72)',
-                    border: `1px solid ${holdOpen ? 'rgba(240,192,64,0.28)' : 'rgba(255,255,255,0.09)'}`,
+                    background: sellOpen ? 'rgba(240,192,64,0.08)' : 'rgba(4,10,18,0.72)',
+                    border: `1px solid ${sellOpen ? 'rgba(240,192,64,0.28)' : 'rgba(255,255,255,0.09)'}`,
                   }}
                 >
                   <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.45)' }}>Sell</p>
@@ -2466,7 +2467,7 @@ export default function FishingGame({
 
       {/* ── Onboarding tour ── */}
       <AnimatePresence>
-        {tourStep !== null && !collectionOpen && !gearOpen && !baitOpen && !holdOpen && (
+        {tourStep !== null && !collectionOpen && !gearOpen && !baitOpen && !holdOpen && !sellOpen && (
           <>
             <motion.div
               key="tour-backdrop"
@@ -2905,6 +2906,83 @@ export default function FishingGame({
               <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Buy more bait</span>
               <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#5a5956' }}>Tackle Shop ↗</span>
             </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Sell panel ── */}
+      <AnimatePresence>
+        {sellOpen && (
+          <motion.div key="sell-panel"
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+              background: 'rgba(6,12,20,0.98)',
+              borderTop: '1px solid rgba(255,255,255,0.09)',
+              borderRadius: '18px 18px 0 0',
+              padding: '1.25rem 1rem 2rem',
+              maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
+            }}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                style={{ fontSize: '0.6rem', color: '#6a6764' }}>Sell</p>
+              <button onClick={() => setSellOpen(false)}
+                style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+            </div>
+
+            {inventory.length === 0 ? (
+              <p className="font-karla font-300 text-center py-6" style={{ fontSize: '0.8rem', color: '#4a4845' }}>
+                Nothing to sell yet.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {/* Fish Market */}
+                <Link href="/tavern/market" onClick={() => setSellOpen(false)} style={{ textDecoration: 'none' }}>
+                  <div style={{
+                    background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.3)',
+                    borderRadius: 16, padding: '1rem 1.1rem',
+                    boxShadow: '0 0 20px rgba(56,189,248,0.06)',
+                  }}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#38bdf8' }}>Fish Market</p>
+                      <span style={{ fontSize: '0.85rem', color: '#38bdf8' }}>→</span>
+                    </div>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', lineHeight: 1 }}>
+                      {holdBaseValue.toLocaleString()} ⟡
+                    </p>
+                    <p className="font-karla font-400 mt-1.5" style={{ fontSize: '0.68rem', color: '#38bdf8aa' }}>
+                      Est. market price · live prices update hourly
+                    </p>
+                  </div>
+                </Link>
+
+                {/* Quick Sell */}
+                <div style={{
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 16, padding: '1rem 1.1rem',
+                }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#a0a09a', marginBottom: 6 }}>Quick Sell</p>
+                  <p className="font-cinzel font-600" style={{ fontSize: '1.4rem', color: '#f0ede8', lineHeight: 1 }}>
+                    {holdTotalValue.toLocaleString()} ⟡
+                  </p>
+                  <p className="font-karla font-400 mt-1.5" style={{ fontSize: '0.68rem', color: '#9a9488' }}>
+                    65% of base value · you lose{' '}
+                    <span style={{ color: '#f87171' }}>{Math.floor(holdBaseValue * 0.35).toLocaleString()} ⟡</span>
+                  </p>
+                  <button
+                    onClick={async () => { for (const item of inventory) await handleSell(item.fish_id, item.quantity) }}
+                    disabled={!!sellPending}
+                    className="font-karla font-600 uppercase tracking-[0.1em] w-full"
+                    style={{ fontSize: '0.65rem', padding: '0.65rem', borderRadius: 10, marginTop: 12,
+                      background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
+                      color: '#a0a09a', opacity: sellPending ? 0.5 : 1, cursor: sellPending ? 'default' : 'pointer' }}>
+                    {sellPending ? 'Selling…' : 'Sell All at Discount'}
+                  </button>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

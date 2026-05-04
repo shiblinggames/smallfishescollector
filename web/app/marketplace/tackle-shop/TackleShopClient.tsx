@@ -303,7 +303,7 @@ export default function TackleShopClient({
 
                 {/* Buy buttons — ×5 and ×25 */}
                 <div style={{ display: 'flex', gap: '0.35rem', marginTop: 2 }}>
-                  {([5, 25] as const).map(buyQty => {
+                  {([10, 25] as const).map(buyQty => {
                     const cost       = bait.shopCost * buyQty
                     const canAfford  = doubloons >= cost
                     const isBuying   = buyingBait === `${bait.type}-${buyQty}` && isPending
