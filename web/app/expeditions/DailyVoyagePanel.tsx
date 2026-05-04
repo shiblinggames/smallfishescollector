@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { EXPEDITION_SHIP_STATS, RARITY_COLORS, computeTotalCrewStats, type CrewCard } from '@/lib/expeditions'
 import type { VoyageEvent } from '@/lib/voyageEvents'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageEvents'
+import { getRingSkin } from '@/lib/ringSkins'
 import { sendDailyVoyage, revealVoyageResults, type DailyVoyage } from './voyageActions'
 
 type PanelState = 'idle' | 'away' | 'returned' | 'done'
@@ -68,6 +69,7 @@ export default function DailyVoyagePanel({
   const [activeVoyage, setActiveVoyage] = useState<DailyVoyage | null>(readyVoyage ?? todayVoyage)
   const [error, setError] = useState<string | null>(null)
   const [selectedRoute, setSelectedRoute] = useState<VoyageRoute | null>(null)
+  const [claimedRingSkins, setClaimedRingSkins] = useState<string[]>([])
 
   const returnTime = activeVoyage
     ? new Date(activeVoyage.created_at).getTime() + VOYAGE_DURATION_MS
@@ -116,6 +118,7 @@ export default function DailyVoyagePanel({
       if ('error' in res) { setError(res.error); return }
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
       if (res.earnedGems > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.newGemTotal }))
+      setClaimedRingSkins(res.newRingSkins)
       setPanelState('done')
       router.refresh()
     })
@@ -348,6 +351,17 @@ export default function DailyVoyagePanel({
                         {lostCard.name} — lost at sea.
                       </p>
                     )}
+                    {e.ringSkinDrop && (() => {
+                      const skin = getRingSkin(e.ringSkinDrop)
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.3rem' }}>
+                          <div style={{ width: 10, height: 10, borderRadius: '50%', border: `1.5px solid ${skin.stroke}`, flexShrink: 0 }} />
+                          <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: skin.color }}>
+                            Ring skin found: {skin.name}
+                          </p>
+                        </div>
+                      )
+                    })()}
                   </div>
                 )
               })}
@@ -468,6 +482,29 @@ export default function DailyVoyagePanel({
               <span style={{ fontSize: '0.58rem' }}>Done</span>
             </button>
           </div>
+
+          {claimedRingSkins.length > 0 && (
+            <div style={{
+              background: 'rgba(74,154,154,0.07)',
+              border: '1px solid rgba(74,154,154,0.22)',
+              borderRadius: 8, padding: '0.55rem 0.8rem',
+            }}>
+              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4a9a9a', marginBottom: '0.3rem' }}>
+                New cosmetic{claimedRingSkins.length > 1 ? 's' : ''} unlocked
+              </p>
+              {claimedRingSkins.map(id => {
+                const skin = getRingSkin(id)
+                return (
+                  <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', border: `1.5px solid ${skin.stroke}`, flexShrink: 0 }} />
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: skin.color, lineHeight: 1.3 }}>
+                      {skin.name}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          )}
 
           {lostCards.length > 0 && (
             <div style={{

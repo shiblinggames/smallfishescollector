@@ -181,7 +181,7 @@ export async function sendDailyVoyage(crewVariantIds: number[], route: VoyageRou
 }
 
 export async function revealVoyageResults(voyageId: number): Promise<
-  { ok: true; earnedDoubloons: number; newDoubloonTotal: number; earnedGems: number; newGemTotal: number; crewLost: number[] } | { error: string }
+  { ok: true; earnedDoubloons: number; newDoubloonTotal: number; earnedGems: number; newGemTotal: number; crewLost: number[]; newRingSkins: string[] } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -205,7 +205,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, gems, saved_crew')
+    .select('doubloons, gems, saved_crew, unlocked_ring_skins')
     .eq('id', user.id)
     .single()
 
@@ -216,13 +216,21 @@ export async function revealVoyageResults(voyageId: number): Promise<
   const currentSavedCrew = (profile.saved_crew as number[] | null) ?? []
   const newSavedCrew = currentSavedCrew.filter(id => !voyage.crew_lost.includes(id))
 
+  // Collect ring skin drops, filter out already-owned
+  const allDropped = voyage.events
+    .map((e: { ringSkinDrop?: string | null }) => e.ringSkinDrop)
+    .filter((s): s is string => !!s)
+  const currentSkins = (profile.unlocked_ring_skins as string[] | null) ?? []
+  const newRingSkins = allDropped.filter(s => !currentSkins.includes(s))
+  const updatedSkins = newRingSkins.length > 0 ? [...new Set([...currentSkins, ...allDropped])] : currentSkins
+
   await Promise.all([
-    admin.from('profiles').update({ doubloons: newDoubloons, gems: newGems, saved_crew: newSavedCrew }).eq('id', user.id),
+    admin.from('profiles').update({ doubloons: newDoubloons, gems: newGems, saved_crew: newSavedCrew, unlocked_ring_skins: updatedSkins }).eq('id', user.id),
     admin.from('daily_voyages').update({ status: 'revealed' }).eq('id', voyageId),
     ...(voyage.total_doubloons > 0
       ? [admin.from('doubloon_transactions').insert({ user_id: user.id, amount: voyage.total_doubloons, reason: 'Daily crew voyage' })]
       : []),
   ])
 
-  return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, earnedGems: voyage.total_gems, newGemTotal: newGems, crewLost: voyage.crew_lost }
+  return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, earnedGems: voyage.total_gems, newGemTotal: newGems, crewLost: voyage.crew_lost, newRingSkins }
 }
