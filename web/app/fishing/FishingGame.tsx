@@ -2078,14 +2078,14 @@ export default function FishingGame({
                     }}
                   >
                     <span className="font-karla font-600 uppercase tracking-[0.1em]"
-                      style={{ fontSize: '0.45rem', color: claimable ? '#f0c040' : allClaimed ? '#4ade80' : '#6a6764', lineHeight: 1 }}>
+                      style={{ fontSize: '0.5rem', color: claimable ? '#f0c040' : allClaimed ? '#4ade80' : '#c8c4bc', lineHeight: 1 }}>
                       Daily
                     </span>
                     <div style={{ display: 'flex', gap: 3 }}>
                       {dailyChallenges.map((c, i) => (
                         <div key={i} style={{
-                          width: 5, height: 5, borderRadius: '50%',
-                          background: dailyClaimed[i] ? '#4ade80' : dailyProgress[i] >= c.target ? '#f0c040' : 'rgba(255,255,255,0.15)',
+                          width: 6, height: 6, borderRadius: '50%',
+                          background: dailyClaimed[i] ? '#4ade80' : dailyProgress[i] >= c.target ? '#f0c040' : 'rgba(255,255,255,0.28)',
                         }} />
                       ))}
                     </div>
@@ -3170,12 +3170,12 @@ export default function FishingGame({
             <div className="flex items-center justify-between mb-5">
               <div>
                 <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                  style={{ fontSize: '0.6rem', color: '#6a6764' }}>Daily Challenges</p>
+                  style={{ fontSize: '0.72rem', color: '#c8c4bc' }}>Daily Challenges</p>
                 <p className="font-karla font-400 mt-0.5"
-                  style={{ fontSize: '0.58rem', color: '#3a3835' }}>Resets at midnight UTC</p>
+                  style={{ fontSize: '0.65rem', color: '#6a6764' }}>Resets at midnight UTC</p>
               </div>
               <button onClick={() => setDailyOpen(false)}
-                style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+                style={{ color: '#9a9488', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
             </div>
 
             <div className="flex flex-col gap-3">
@@ -3188,38 +3188,38 @@ export default function FishingGame({
                 const accent = i === 0 ? '#60a5fa' : i === 1 ? '#f0c040' : '#f87171'
                 return (
                   <div key={i} style={{
-                    background: done ? `${accent}0a` : 'rgba(4,10,18,0.72)',
-                    border: `1px solid ${done ? accent + '35' : 'rgba(255,255,255,0.09)'}`,
+                    background: done ? `${accent}0d` : 'rgba(4,10,18,0.72)',
+                    border: `1px solid ${done ? accent + '45' : 'rgba(255,255,255,0.12)'}`,
                     borderRadius: 14, padding: '0.9rem 1rem',
                   }}>
                     <div className="flex items-start justify-between gap-3 mb-2">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
+                        <div className="flex items-center gap-2 mb-1">
                           <span className="font-karla font-700 uppercase tracking-[0.08em]"
-                            style={{ fontSize: '0.44rem', color: accent + '99' }}>
+                            style={{ fontSize: '0.6rem', color: accent }}>
                             {i === 0 ? 'Easy' : i === 1 ? 'Medium' : 'Hard'}
                           </span>
                           {claimed && (
-                            <span className="font-karla font-600" style={{ fontSize: '0.44rem', color: '#4ade80' }}>✓ Claimed</span>
+                            <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4ade80' }}>✓ Claimed</span>
                           )}
                         </div>
                         <p className="font-karla font-600"
-                          style={{ fontSize: '0.75rem', color: done ? '#f0ede8' : '#9a9488', lineHeight: 1.3 }}>
+                          style={{ fontSize: '0.85rem', color: done ? '#f0ede8' : '#c8c4bc', lineHeight: 1.35 }}>
                           {challenge.label}
                         </p>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: '#f0c040' }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0c040' }}>
                           +{challenge.reward.toLocaleString()} ⟡
                         </p>
-                        <p className="font-karla font-400 mt-0.5" style={{ fontSize: '0.52rem', color: '#4a4845' }}>
+                        <p className="font-karla font-400 mt-0.5" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
                           {progress.toLocaleString()} / {challenge.target.toLocaleString()}
                         </p>
                       </div>
                     </div>
 
                     {/* Progress bar */}
-                    <div style={{ height: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 2, marginBottom: done && !claimed ? '0.65rem' : 0 }}>
+                    <div style={{ height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, marginBottom: done && !claimed ? '0.65rem' : 0 }}>
                       <motion.div
                         animate={{ width: `${pct * 100}%` }}
                         transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -3234,8 +3234,8 @@ export default function FishingGame({
                         disabled={isClaiming}
                         className="font-karla font-700 uppercase tracking-[0.1em] w-full"
                         style={{
-                          fontSize: '0.62rem', padding: '0.5rem', borderRadius: 8,
-                          background: `${accent}18`, border: `1px solid ${accent}45`,
+                          fontSize: '0.72rem', padding: '0.55rem', borderRadius: 8,
+                          background: `${accent}20`, border: `1px solid ${accent}55`,
                           color: accent, opacity: isClaiming ? 0.5 : 1,
                           cursor: isClaiming ? 'default' : 'pointer',
                         }}
