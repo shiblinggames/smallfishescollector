@@ -1,10 +1,12 @@
 'use server'
 
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { EXPEDITION_SHIP_STATS, applyVariantBoosts } from '@/lib/expeditions'
 import { RARITY_TIERS } from '@/lib/variants'
 import { generateVoyageEvents, type VoyageEvent, type VoyageRoute } from '@/lib/voyageEvents'
+import { generateAndSaveVoyageLog, type VoyageCrewMember } from '@/lib/captains-log'
 import type { CrewCard } from '@/lib/expeditions'
 
 function today(): string {
@@ -25,6 +27,8 @@ export interface DailyVoyage {
   total_gems: number
   crew_lost: number[]
   created_at: string
+  captains_log: string | null
+  log_generated_at: string | null
 }
 
 export async function getDailyVoyageState(): Promise<{
@@ -244,6 +248,39 @@ export async function revealVoyageResults(voyageId: number): Promise<
       admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: type, p_qty: qty })
     ),
   ])
+
+  // Schedule captain's log generation after response is sent
+  const voyageForLog = voyage
+  after(async () => {
+    const logAdmin = createAdminClient()
+    // Resolve crew names + rarities from variant IDs
+    const { data: variantRows } = await logAdmin
+      .from('card_variants')
+      .select('id, variant_name, drop_weight, cards(name)')
+      .in('id', voyageForLog.crew_variant_ids)
+
+    const crewMembers: VoyageCrewMember[] = (voyageForLog.crew_variant_ids).map(vid => {
+      const row = (variantRows ?? []).find((r: { id: number }) => r.id === vid) as
+        { id: number; variant_name: string; drop_weight: number; cards: { name: string } } | undefined
+      if (!row) return null
+      const rarity = RARITY_TIERS.find(t => t.variants.includes(row.variant_name))?.name ?? 'Common'
+      return { variantId: vid, name: row.cards.name, rarity }
+    }).filter((c): c is VoyageCrewMember => c !== null)
+
+    const crewLostNames = crewMembers
+      .filter(c => voyageForLog.crew_lost.includes(c.variantId))
+      .map(c => c.name)
+
+    await generateAndSaveVoyageLog({
+      voyageId: voyageForLog.id,
+      route: voyageForLog.route,
+      crew: crewMembers,
+      events: voyageForLog.events,
+      totalDoubloons: voyageForLog.total_doubloons,
+      totalGems: voyageForLog.total_gems,
+      crewLostNames,
+    })
+  })
 
   return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, earnedGems: voyage.total_gems, newGemTotal: newGems, crewLost: voyage.crew_lost, newRingSkins, earnedBait }
 }

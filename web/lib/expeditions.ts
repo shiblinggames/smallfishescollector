@@ -98,8 +98,6 @@ export interface Expedition {
   expedition_date: string
   started_at: string
   completed_at: string | null
-  captains_log: string | null
-  log_generated_at: string | null
 }
 
 // ── Ship stats ────────────────────────────────────────────────────────────────

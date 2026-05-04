@@ -56,11 +56,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       ? admin.from('crew').select('follower_id').eq('follower_id', user.id).eq('following_id', profile.id).single()
       : Promise.resolve({ data: null }),
 
-    admin.from('expeditions')
-      .select('id, zone, status, hull_damage, ship_tier, loot, events, crew_loadout, completed_at, captains_log')
+    admin.from('daily_voyages')
+      .select('id, route, status, total_doubloons, total_gems, crew_lost, created_at, captains_log')
       .eq('user_id', profile.id)
-      .in('status', ['completed', 'failed'])
-      .order('completed_at', { ascending: false })
+      .eq('status', 'revealed')
+      .order('created_at', { ascending: false })
       .limit(10),
   ])
 

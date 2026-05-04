@@ -3,12 +3,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
-import { after } from 'next/server'
 import {
   ZONES, EXPEDITION_SHIP_STATS, ENEMIES, EXPEDITION_ITEMS, computeTotalCrewStats,
   type Expedition, type ZoneLoot,
 } from '@/lib/expeditions'
-import { generateAndSaveCaptainsLog } from '@/lib/captains-log'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 
@@ -66,22 +64,6 @@ async function claimRewardInline(
         reason: `Expedition reward: ${zone.name}`,
       }),
     ])
-    // Generate captain's log after response (fallback: claimZoneReward already schedules this in the normal flow)
-    const inlineEvents = expedition.events ?? []
-    after(async () => {
-      await generateAndSaveCaptainsLog({
-        expeditionId: expedition.id,
-        zone: expedition.zone,
-        shipTier: expedition.ship_tier,
-        outcome: 'completed',
-        nodesCompleted: inlineEvents.filter(e => e.outcome === 'win' || e.outcome === 'event' || e.outcome === 'shop').length,
-        hullDamage: expedition.hull_damage ?? 0,
-        crew: expedition.crew_loadout ?? [],
-        combatLog: [],
-        events: inlineEvents,
-        lootDoubloons: doubloons,
-      })
-    })
   }
 
   return loot

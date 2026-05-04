@@ -1,10 +1,8 @@
 'use server'
 
-import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { RARITY_TIERS } from '@/lib/variants'
-import { generateAndSaveCaptainsLog } from '@/lib/captains-log'
 import {
   ZONES, EXPEDITION_SHIP_STATS, ENEMIES, EXPEDITION_ITEMS, RUN_ITEMS,
   CORAL_RUN_EVENTS, CORAL_RUN_SHOP,
@@ -291,22 +289,6 @@ export async function takeCombatAction(
     if (expeditionFailed) {
       newStatus = 'failed'
       newCombatState = null
-      const combatLog = exp.combat_state?.log ?? []
-      const failedNodeResults = [...nodeResults]
-      after(async () => {
-        await generateAndSaveCaptainsLog({
-          expeditionId,
-          zone: exp.zone,
-          shipTier: exp.ship_tier,
-          outcome: 'failed',
-          nodesCompleted: failedNodeResults.filter(e => e.outcome === 'win' || e.outcome === 'event' || e.outcome === 'shop').length,
-          hullDamage: newHullDamage,
-          crew: exp.crew_loadout ?? [],
-          combatLog,
-          events: failedNodeResults,
-          lootDoubloons: 0,
-        })
-      })
     } else {
       newCurrentNode = exp.current_node + 1
       newCombatState = null
@@ -687,22 +669,6 @@ export async function claimZoneReward(
     }).eq('id', expeditionId),
   ])
 
-  const completedEvents = exp.events ?? []
-  after(async () => {
-    await generateAndSaveCaptainsLog({
-      expeditionId,
-      zone: exp.zone,
-      shipTier: exp.ship_tier,
-      outcome: 'completed',
-      nodesCompleted: completedEvents.filter(e => e.outcome === 'win' || e.outcome === 'event' || e.outcome === 'shop').length,
-      hullDamage: exp.hull_damage ?? 0,
-      crew: exp.crew_loadout ?? [],
-      combatLog: [],
-      events: completedEvents,
-      lootDoubloons: doubloons,
-    })
-  })
-
   return loot
 }
 
@@ -804,39 +770,16 @@ export async function abandonExpedition(
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
-
-  const { data: expRow } = await admin
-    .from('expeditions')
-    .select('*')
-    .eq('id', expeditionId)
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .single()
-
-  if (!expRow) return { error: 'Expedition not found or already ended' }
-
-  await admin
+  const { data } = await admin
     .from('expeditions')
     .update({ status: 'failed', completed_at: new Date().toISOString() })
     .eq('id', expeditionId)
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .select('id')
+    .single()
 
-  const exp = expRow as Expedition
-  const abandonedEvents = exp.events ?? []
-  after(async () => {
-    await generateAndSaveCaptainsLog({
-      expeditionId,
-      zone: exp.zone,
-      shipTier: exp.ship_tier,
-      outcome: 'failed',
-      nodesCompleted: abandonedEvents.filter(e => e.outcome === 'win' || e.outcome === 'event' || e.outcome === 'shop').length,
-      hullDamage: exp.hull_damage ?? 0,
-      crew: exp.crew_loadout ?? [],
-      combatLog: [],
-      events: abandonedEvents,
-      lootDoubloons: 0,
-    })
-  })
-
+  if (!data) return { error: 'Expedition not found or already ended' }
   return { ok: true }
 }
 

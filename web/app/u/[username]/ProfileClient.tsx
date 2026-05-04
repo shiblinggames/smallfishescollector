@@ -10,7 +10,7 @@ import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { getShip } from '@/lib/ships'
-import { ZONES } from '@/lib/expeditions'
+import { ROUTE_CONFIGS } from '@/lib/voyageEvents'
 
 interface CardVariant {
   id: number
@@ -23,13 +23,12 @@ interface CardVariant {
 
 export interface VoyageEntry {
   id: number
-  zone: string
-  status: 'completed' | 'failed'
-  hull_damage: number
-  ship_tier: number
-  loot: { doubloons: number; itemDropped: string | null } | null
-  events: { outcome: string }[]
-  completed_at: string | null
+  route: string
+  status: 'revealed'
+  total_doubloons: number
+  total_gems: number
+  crew_lost: number[]
+  created_at: string
   captains_log: string | null
 }
 
@@ -390,13 +389,9 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
           <SectionLabel>Voyages</SectionLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {voyages.map(v => {
-              const zone = ZONES[v.zone as keyof typeof ZONES]
-              const isComplete = v.status === 'completed'
-              const nodesWon = (v.events ?? []).filter(e => e.outcome === 'win' || e.outcome === 'event' || e.outcome === 'shop').length
-              const totalNodes = zone?.nodes.length ?? 0
-              const date = v.completed_at
-                ? new Date(v.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                : '—'
+              const routeConfig = ROUTE_CONFIGS[v.route as keyof typeof ROUTE_CONFIGS]
+              const crewLostCount = (v.crew_lost ?? []).length
+              const date = new Date(v.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
               const preview = v.captains_log
                 ? (v.captains_log.split(/(?<=[.!?])\s/)[0] ?? v.captains_log)
                 : null
@@ -407,7 +402,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                   key={v.id}
                   style={{
                     background: 'rgba(4,10,20,0.7)',
-                    border: `1px solid ${isComplete ? 'rgba(240,192,64,0.12)' : 'rgba(248,113,113,0.1)'}`,
+                    border: '1px solid rgba(255,255,255,0.07)',
                     borderRadius: 12,
                     overflow: 'hidden',
                   }}
@@ -416,22 +411,27 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                     onClick={() => setExpandedVoyage(isExpanded ? null : v.id)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '0.75rem 0.875rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
                   >
-                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>{zone?.icon ?? '⚓'}</span>
+                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚓</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#f0ede8' }}>{zone?.name ?? v.zone}</p>
-                        <span style={{
-                          fontSize: '0.42rem', padding: '0.1rem 0.35rem', borderRadius: '2rem',
-                          background: isComplete ? 'rgba(74,222,128,0.08)' : 'rgba(248,113,113,0.08)',
-                          border: `1px solid ${isComplete ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.15)'}`,
-                          color: isComplete ? '#4ade80' : '#f87171',
-                          fontFamily: 'var(--font-karla)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.1em',
-                        }}>
-                          {isComplete ? 'Complete' : 'Failed'}
-                        </span>
+                        <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#f0ede8' }}>
+                          {routeConfig?.name ?? v.route}
+                        </p>
+                        {crewLostCount > 0 && (
+                          <span style={{
+                            fontSize: '0.42rem', padding: '0.1rem 0.35rem', borderRadius: '2rem',
+                            background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)',
+                            color: '#f87171', fontFamily: 'var(--font-karla)', fontWeight: 600,
+                            textTransform: 'uppercase' as const, letterSpacing: '0.1em',
+                          }}>
+                            {crewLostCount} lost
+                          </span>
+                        )}
                       </div>
                       <p className="font-karla" style={{ fontSize: '0.55rem', color: '#4a4845', marginTop: 2 }}>
-                        {date} · {nodesWon}/{totalNodes} nodes{isComplete && v.loot ? ` · +${v.loot.doubloons.toLocaleString()} ⟡` : ''}
+                        {date}
+                        {v.total_doubloons > 0 ? ` · +${v.total_doubloons.toLocaleString()} ⟡` : ''}
+                        {v.total_gems > 0 ? ` · +${v.total_gems} 💎` : ''}
                       </p>
                       {preview && !isExpanded && (
                         <p className="font-karla" style={{ fontSize: '0.55rem', fontStyle: 'italic', color: 'rgba(255,255,255,0.28)', marginTop: 4, lineHeight: 1.5 }}>
@@ -460,7 +460,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
 
                   {isExpanded && !v.captains_log && (
                     <div style={{ padding: '0.5rem 0.875rem 0.875rem', borderTop: '0.5px solid rgba(255,255,255,0.05)' }}>
-                      <p className="font-karla" style={{ fontSize: '0.58rem', fontStyle: 'italic', color: '#4a4845' }}>Log not yet recorded.</p>
+                      <p className="font-karla" style={{ fontSize: '0.58rem', fontStyle: 'italic', color: '#4a4845' }}>Log not yet written.</p>
                     </div>
                   )}
                 </div>
