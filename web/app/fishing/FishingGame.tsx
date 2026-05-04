@@ -706,58 +706,50 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             ))}
             <motion.div
               key={perfectStreak}
-              initial={{ opacity: 0, y: -10, scale: isCombo ? 0.88 : 0.97 }}
+              initial={{ opacity: 0, y: -8, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 400, damping: isCombo ? 18 : 22 }}
-              className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl"
+              transition={{ type: 'spring', stiffness: 400, damping: 22 }}
               style={{
-                background: isOnFire ? 'rgba(20,8,2,0.92)' : 'rgba(8,4,0,0.88)',
-                border: `1px solid rgba(${accentRgb},${borderAlpha})`,
+                background: isOnFire ? 'rgba(20,6,0,0.92)' : 'rgba(6,4,0,0.88)',
+                border: `1px solid rgba(${accentRgb},0.35)`,
+                borderLeft: `3px solid rgba(${accentRgb},0.85)`,
+                borderRadius: 12,
                 boxShadow: glow,
+                padding: '0.6rem 0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
               }}
             >
-              {isOnFire
-                ? <img src="/models/hooks/gold-hook.png" alt="" style={{ width: `${iconSize * 14}px`, height: `${iconSize * 14}px`, objectFit: 'contain', filter: 'sepia(1) saturate(3) hue-rotate(-20deg)' }} />
-                : <span style={{ fontSize: `${iconSize}rem`, color: accent }}>✦</span>
-              }
-              <div style={{ textAlign: 'center' }}>
-                <div className="flex items-center justify-center gap-1.5">
-                  <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
-                    style={{ fontSize: `${titleSize}rem`, color: accent, textShadow: glow }}>
-                    {isIgnition ? 'On Fire!' : isOnFire ? 'On Fire' : 'Perfect Catch'}
-                  </p>
-                  {isCombo && (
-                    <p className="font-cinzel font-700"
-                      style={{ fontSize: `${titleSize + 0.06}rem`, color: accent, textShadow: glow }}>
-                      ×{perfectStreak}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
+              <div>
+                <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                  style={{ fontSize: '0.48rem', color: `rgba(${accentRgb},0.6)`, marginBottom: 4 }}>
+                  {isIgnition ? '🔥 On Fire!' : isOnFire ? 'On Fire' : 'Perfect Catch'}
+                </p>
+                <div className="flex items-center gap-3 flex-wrap">
                   {basePerfectBonus > 0 && (
-                    <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#86efac' }}>
-                      +{basePerfectBonus} bonus XP
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#86efac' }}>
+                      +{basePerfectBonus} XP
                     </p>
                   )}
                   {streakBonusXP > 0 && (
-                    <>
-                      <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)' }}>·</span>
-                      <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: accent }}>
-                        +{streakBonusXP} streak XP
-                      </p>
-                    </>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: accent }}>
+                      +{streakBonusXP} streak
+                    </p>
                   )}
-                  <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)' }}>·</span>
-                  <p className="font-karla font-700"
-                    style={{ fontSize: '0.62rem', color: baitSaved ? '#86efac' : 'rgba(255,255,255,0.3)' }}>
-                    {baitSaved ? 'Bait returned' : 'Bait used'}
-                  </p>
+                  {baitSaved && (
+                    <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#86efac' }}>
+                      Bait returned
+                    </p>
+                  )}
                 </div>
               </div>
-              {isOnFire
-                ? <img src="/models/hooks/gold-hook.png" alt="" style={{ width: `${iconSize * 14}px`, height: `${iconSize * 14}px`, objectFit: 'contain', filter: 'sepia(1) saturate(3) hue-rotate(-20deg)', transform: 'scaleX(-1)' }} />
-                : <span style={{ fontSize: `${iconSize}rem`, color: accent }}>✦</span>
-              }
+              {isCombo && (
+                <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: accent, textShadow: glow, lineHeight: 1, flexShrink: 0 }}>
+                  ×{perfectStreak}
+                </p>
+              )}
             </motion.div>
           </div>
         )
