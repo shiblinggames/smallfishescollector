@@ -10,6 +10,7 @@ import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { getShip } from '@/lib/ships'
+import { ZONES } from '@/lib/expeditions'
 
 interface CardVariant {
   id: number
@@ -18,6 +19,18 @@ interface CardVariant {
   art_effect: ArtEffect
   drop_weight: number
   cards: { name: string; filename: string }
+}
+
+export interface VoyageEntry {
+  id: number
+  zone: string
+  status: 'completed' | 'failed'
+  hull_damage: number
+  ship_tier: number
+  loot: { doubloons: number; itemDropped: string | null } | null
+  events: { outcome: string }[]
+  completed_at: string | null
+  captains_log: string | null
 }
 
 interface Stats {
@@ -41,6 +54,7 @@ interface Props {
   stats: Stats
   gear: Gear
   rarestFish: { id: number; name: string; bite_rarity: number }[]
+  voyages?: VoyageEntry[]
   isPremium?: boolean
   isOwnProfile?: boolean
   isInCrew?: boolean
@@ -183,10 +197,11 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   )
 }
 
-export default function ProfileClient({ username, showcaseVariants, stats, gear, rarestFish, isPremium, isOwnProfile, isInCrew: initialIsInCrew }: Props) {
+export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, isPremium, isOwnProfile, isInCrew: initialIsInCrew }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
+  const [expandedVoyage, setExpandedVoyage] = useState<number | null>(null)
 
   const fishingLevel = getLevelFromXP(stats.fishingXP)
   const color = avatarColor(username)
@@ -368,6 +383,92 @@ export default function ProfileClient({ username, showcaseVariants, stats, gear,
 
         </div>
       </div>
+
+      {/* ── Voyages ── */}
+      {voyages && voyages.length > 0 && (
+        <div>
+          <SectionLabel>Voyages</SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {voyages.map(v => {
+              const zone = ZONES[v.zone as keyof typeof ZONES]
+              const isComplete = v.status === 'completed'
+              const nodesWon = (v.events ?? []).filter(e => e.outcome === 'win' || e.outcome === 'event' || e.outcome === 'shop').length
+              const totalNodes = zone?.nodes.length ?? 0
+              const date = v.completed_at
+                ? new Date(v.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : '—'
+              const preview = v.captains_log
+                ? (v.captains_log.split(/(?<=[.!?])\s/)[0] ?? v.captains_log)
+                : null
+              const isExpanded = expandedVoyage === v.id
+
+              return (
+                <div
+                  key={v.id}
+                  style={{
+                    background: 'rgba(4,10,20,0.7)',
+                    border: `1px solid ${isComplete ? 'rgba(240,192,64,0.12)' : 'rgba(248,113,113,0.1)'}`,
+                    borderRadius: 12,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <button
+                    onClick={() => setExpandedVoyage(isExpanded ? null : v.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '0.75rem 0.875rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                  >
+                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>{zone?.icon ?? '⚓'}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#f0ede8' }}>{zone?.name ?? v.zone}</p>
+                        <span style={{
+                          fontSize: '0.42rem', padding: '0.1rem 0.35rem', borderRadius: '2rem',
+                          background: isComplete ? 'rgba(74,222,128,0.08)' : 'rgba(248,113,113,0.08)',
+                          border: `1px solid ${isComplete ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.15)'}`,
+                          color: isComplete ? '#4ade80' : '#f87171',
+                          fontFamily: 'var(--font-karla)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.1em',
+                        }}>
+                          {isComplete ? 'Complete' : 'Failed'}
+                        </span>
+                      </div>
+                      <p className="font-karla" style={{ fontSize: '0.55rem', color: '#4a4845', marginTop: 2 }}>
+                        {date} · {nodesWon}/{totalNodes} nodes{isComplete && v.loot ? ` · +${v.loot.doubloons.toLocaleString()} ⟡` : ''}
+                      </p>
+                      {preview && !isExpanded && (
+                        <p className="font-karla" style={{ fontSize: '0.55rem', fontStyle: 'italic', color: 'rgba(255,255,255,0.28)', marginTop: 4, lineHeight: 1.5 }}>
+                          {preview}
+                        </p>
+                      )}
+                    </div>
+                    <svg
+                      width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round"
+                      style={{ flexShrink: 0, transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+                    >
+                      <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                  </button>
+
+                  {isExpanded && v.captains_log && (
+                    <div style={{ padding: '0 0.875rem 0.875rem', borderTop: '0.5px solid rgba(255,255,255,0.05)' }}>
+                      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.42rem', color: 'rgba(180,120,30,0.5)', marginBottom: '0.5rem', paddingTop: '0.625rem' }}>
+                        Captain&apos;s Log
+                      </p>
+                      <p className="font-karla" style={{ fontSize: '0.65rem', lineHeight: 1.75, color: 'rgba(255,255,255,0.55)', fontStyle: 'italic' }}>
+                        {v.captains_log}
+                      </p>
+                    </div>
+                  )}
+
+                  {isExpanded && !v.captains_log && (
+                    <div style={{ padding: '0.5rem 0.875rem 0.875rem', borderTop: '0.5px solid rgba(255,255,255,0.05)' }}>
+                      <p className="font-karla" style={{ fontSize: '0.58rem', fontStyle: 'italic', color: '#4a4845' }}>Log not yet recorded.</p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
     </div>
   )

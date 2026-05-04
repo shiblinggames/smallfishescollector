@@ -28,6 +28,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     rarestFishData,
     navProfileData,
     crewRowData,
+    voyagesData,
   ] = await Promise.all([
     showcaseIds.length > 0
       ? admin.from('card_variants')
@@ -54,6 +55,13 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     user && user.id !== profile.id
       ? admin.from('crew').select('follower_id').eq('follower_id', user.id).eq('following_id', profile.id).single()
       : Promise.resolve({ data: null }),
+
+    admin.from('expeditions')
+      .select('id, zone, status, hull_damage, ship_tier, loot, events, crew_loadout, completed_at, captains_log')
+      .eq('user_id', profile.id)
+      .in('status', ['completed', 'failed'])
+      .order('completed_at', { ascending: false })
+      .limit(10),
   ])
 
   // Build showcase variants
@@ -91,6 +99,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         <ProfileClient
           username={profile.username}
           showcaseVariants={showcaseVariants}
+          voyages={(voyagesData.data ?? []) as import('./ProfileClient').VoyageEntry[]}
           isPremium={
             !!profile.is_premium &&
             !!profile.premium_expires_at &&

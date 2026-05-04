@@ -1,5 +1,6 @@
 import { anthropic } from './anthropic'
 import { getCrewTrait } from './crew-traits'
+import { createAdminClient } from './supabase/admin'
 import type { CrewCard, CombatRoundLog, NodeResult, ZoneKey } from './expeditions'
 import { ZONES, EXPEDITION_SHIP_STATS, ENEMIES } from './expeditions'
 
@@ -121,4 +122,17 @@ Return ONLY the log entry. No title. No label. Just the prose.`
 
   const block = response.content[0]
   return block.type === 'text' ? block.text.trim() : ''
+}
+
+export async function generateAndSaveCaptainsLog(input: ExpeditionLogInput): Promise<void> {
+  try {
+    const log = await generateCaptainsLog(input)
+    const admin = createAdminClient()
+    await admin.from('expeditions').update({
+      captains_log: log,
+      log_generated_at: new Date().toISOString(),
+    }).eq('id', input.expeditionId)
+  } catch (err) {
+    console.error('Captain log generation failed:', err)
+  }
 }

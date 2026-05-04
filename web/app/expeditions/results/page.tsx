@@ -3,11 +3,12 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
+import { after } from 'next/server'
 import {
   ZONES, EXPEDITION_SHIP_STATS, ENEMIES, EXPEDITION_ITEMS, computeTotalCrewStats,
   type Expedition, type ZoneLoot,
 } from '@/lib/expeditions'
-import { generateCaptainsLog } from '@/lib/captains-log'
+import { generateAndSaveCaptainsLog } from '@/lib/captains-log'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 
@@ -65,6 +66,22 @@ async function claimRewardInline(
         reason: `Expedition reward: ${zone.name}`,
       }),
     ])
+    // Generate captain's log after response (fallback: claimZoneReward already schedules this in the normal flow)
+    const inlineEvents = expedition.events ?? []
+    after(async () => {
+      await generateAndSaveCaptainsLog({
+        expeditionId: expedition.id,
+        zone: expedition.zone,
+        shipTier: expedition.ship_tier,
+        outcome: 'completed',
+        nodesCompleted: inlineEvents.filter(e => e.outcome === 'win' || e.outcome === 'event' || e.outcome === 'shop').length,
+        hullDamage: expedition.hull_damage ?? 0,
+        crew: expedition.crew_loadout ?? [],
+        combatLog: [],
+        events: inlineEvents,
+        lootDoubloons: doubloons,
+      })
+    })
   }
 
   return loot
@@ -102,32 +119,6 @@ export default async function ExpeditionsResultsPage({
       expedition = { ...expedition, status: 'completed', loot }
     } else {
       redirect(`/expeditions/voyage?id=${expeditionId}`)
-    }
-  }
-
-  // Generate captain's log on first visit to results (covers all terminal states)
-  if (!expedition.captains_log) {
-    try {
-      const combatLog = expedition.combat_state?.log ?? []
-      const log = await generateCaptainsLog({
-        expeditionId: expedition.id,
-        zone: expedition.zone,
-        shipTier: expedition.ship_tier,
-        outcome: expedition.status === 'completed' ? 'completed' : 'failed',
-        nodesCompleted: expedition.events?.filter(e => e.outcome === 'win' || e.outcome === 'event' || e.outcome === 'shop').length ?? 0,
-        hullDamage: expedition.hull_damage ?? 0,
-        crew: expedition.crew_loadout ?? [],
-        combatLog,
-        events: expedition.events ?? [],
-        lootDoubloons: expedition.loot?.doubloons ?? 0,
-      })
-      await admin.from('expeditions').update({
-        captains_log: log,
-        log_generated_at: new Date().toISOString(),
-      }).eq('id', expedition.id)
-      expedition = { ...expedition, captains_log: log }
-    } catch {
-      // Log generation never blocks results display
     }
   }
 
@@ -309,24 +300,6 @@ export default async function ExpeditionsResultsPage({
                   </div>
                 </div>
               ))}
-            </div>
-          )}
-
-          {/* Captain's log */}
-          {expedition.captains_log && (
-            <div style={{
-              marginBottom: '1.25rem',
-              padding: '1.25rem',
-              background: 'rgba(180,120,30,0.05)',
-              border: '0.5px solid rgba(180,120,30,0.18)',
-              borderRadius: 14,
-            }}>
-              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: 'rgba(180,120,30,0.55)', marginBottom: '0.625rem' }}>
-                Captain&apos;s Log
-              </p>
-              <p className="font-karla" style={{ fontSize: '0.72rem', lineHeight: 1.75, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', margin: 0 }}>
-                {expedition.captains_log}
-              </p>
             </div>
           )}
 
