@@ -171,25 +171,25 @@ export default function DailyVoyagePanel({
                 </div>
               )}
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                {error
-                  ? <p className="font-karla" style={{ fontSize: '0.62rem', color: '#f87171' }}>{error}</p>
-                  : <div />}
-                <button
-                  onClick={handleSend}
-                  disabled={isPending}
-                  style={{
-                    background: isPending ? 'rgba(240,192,64,0.05)' : 'rgba(240,192,64,0.13)',
-                    border: '1px solid rgba(240,192,64,0.28)',
-                    borderRadius: 8, padding: '0.45rem 1rem',
-                    color: '#f0c040', cursor: isPending ? 'default' : 'pointer',
-                    opacity: isPending ? 0.5 : 1, transition: 'opacity 0.15s',
-                  }}
-                  className="font-karla font-700 uppercase tracking-[0.1em]"
-                >
-                  <span style={{ fontSize: '0.62rem' }}>{isPending ? 'Sending…' : 'Set Sail →'}</span>
-                </button>
-              </div>
+              {error && (
+                <p className="font-karla" style={{ fontSize: '0.62rem', color: '#f87171', marginBottom: '0.5rem' }}>{error}</p>
+              )}
+              <button
+                onClick={handleSend}
+                disabled={isPending}
+                style={{
+                  width: '100%',
+                  background: isPending ? 'rgba(240,192,64,0.08)' : 'rgba(240,192,64,0.18)',
+                  border: '1px solid rgba(240,192,64,0.45)',
+                  borderRadius: 10, padding: '0.65rem 1rem',
+                  color: isPending ? 'rgba(240,192,64,0.4)' : '#f0c040',
+                  cursor: isPending ? 'default' : 'pointer',
+                  transition: 'opacity 0.15s',
+                }}
+                className="font-cinzel font-700 uppercase tracking-[0.12em]"
+              >
+                <span style={{ fontSize: '0.72rem' }}>{isPending ? 'Sending…' : 'Set Sail'}</span>
+              </button>
             </>
           )}
         </div>
