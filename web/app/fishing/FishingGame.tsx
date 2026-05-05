@@ -1614,7 +1614,7 @@ export default function FishingGame({
         }
         const scaledBlackout = zoneDiff.blackoutChance * (hookedFish.catchDifficulty / 5)
         if (Math.random() < scaledBlackout && blackoutTimerRef.current === null) {
-          const duration = 280 + Math.random() * 320
+          const duration = 500 + Math.random() * 600
           setBlackoutOpacity(0.72)
           blackoutTimerRef.current = setTimeout(() => {
             setBlackoutOpacity(0)
