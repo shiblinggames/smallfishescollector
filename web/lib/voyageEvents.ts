@@ -409,7 +409,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
     events.push(event)
   }
 
-  const totalDoubloons = events.reduce((sum, e) => sum + e.doubloonDelta, 0)
+  const totalDoubloons = rc.baseDoubloons + events.reduce((sum, e) => sum + e.doubloonDelta, 0)
   const totalGems = events.reduce((sum, e) => sum + e.gemDelta, 0)
   const ringSkinDrops = events.map(e => e.ringSkinDrop).filter((s): s is string => s !== null)
   const baitDropMap = new Map<string, number>()

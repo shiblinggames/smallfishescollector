@@ -10,6 +10,7 @@ export interface RouteConfig {
   payoutScale: number
   crewLossScale: number
   gemScale: number
+  baseDoubloons: number
 }
 
 export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
@@ -21,6 +22,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     payoutScale: 0.70,
     crewLossScale: 0,
     gemScale: 0.5,
+    baseDoubloons: 50,
   },
   open: {
     name: 'The Crossing',
@@ -30,6 +32,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     payoutScale: 1.0,
     crewLossScale: 1.0,
     gemScale: 1.0,
+    baseDoubloons: 120,
   },
   deep: {
     name: 'The Howling Deep',
@@ -39,6 +42,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     payoutScale: 1.5,
     crewLossScale: 1.6,
     gemScale: 1.5,
+    baseDoubloons: 200,
   },
 }
 
