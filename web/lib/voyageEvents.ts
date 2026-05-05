@@ -175,12 +175,11 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
             baitDrop,
           }
         } else {
-          const canLoseCrew = crewCount >= 2 && crewLost.length === 0
-          const crewLossChance = canLoseCrew ? Math.max(0.10, 0.5 - power / 60) * rc.crewLossScale : 0
+          const availableEncounter = crew.slice(1).filter(c => !crewLost.includes(c.variantId))
+          const crewLossChance = availableEncounter.length > 0 ? Math.max(0.10, 0.5 - power / 60) * rc.crewLossScale : 0
           const loseCrew = crewLossChance > 0 && Math.random() < crewLossChance
           if (loseCrew) {
-            const victims = crew.slice(1)
-            const victim = pick(victims)
+            const victim = pick(availableEncounter)
             const template = pick(ENCOUNTER_CREW_LOSS)
             const narrative = fill(template.narrative, { name: victim.name })
             crewLost.push(victim.variantId)
@@ -211,11 +210,10 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
             doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, ringSkinDrop: null, baitDrop: null,
           }
         } else {
-          const canLoseCrew = crewCount >= 2 && crewLost.length === 0
-          const loseCrew = canLoseCrew && Math.random() < 0.18 * rc.crewLossScale
+          const availableDanger = crew.slice(1).filter(c => !crewLost.includes(c.variantId))
+          const loseCrew = availableDanger.length > 0 && Math.random() < 0.18 * rc.crewLossScale
           if (loseCrew) {
-            const victims = crew.slice(1)
-            const victim = pick(victims)
+            const victim = pick(availableDanger)
             const template = pick(DANGER_CREW_LOSS)
             const narrative = fill(template.narrative, { name: victim.name })
             crewLost.push(victim.variantId)
