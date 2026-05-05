@@ -8,6 +8,7 @@ import { RARITY_TIERS } from '@/lib/variants'
 import { generateVoyageEvents, type VoyageEvent, type VoyageRoute } from '@/lib/voyageEvents'
 import { generateAndSaveVoyageLog, type VoyageCrewMember } from '@/lib/captains-log'
 import type { CrewCard } from '@/lib/expeditions'
+import { voyageXP, getLevelFromXP } from '@/lib/expeditionLevel'
 
 function today(): string {
   return new Date().toISOString().split('T')[0]
@@ -186,7 +187,7 @@ export async function sendDailyVoyage(crewVariantIds: number[], route: VoyageRou
 }
 
 export async function revealVoyageResults(voyageId: number): Promise<
-  { ok: true; earnedDoubloons: number; newDoubloonTotal: number; earnedGems: number; newGemTotal: number; crewLost: number[]; newRingSkins: string[]; earnedBait: { type: string; qty: number }[] } | { error: string }
+  { ok: true; earnedDoubloons: number; newDoubloonTotal: number; earnedGems: number; newGemTotal: number; crewLost: number[]; newRingSkins: string[]; earnedBait: { type: string; qty: number }[]; xpEarned: number; newExpeditionXP: number; oldExpeditionLevel: number; newExpeditionLevel: number } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -210,7 +211,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, gems, saved_crew, unlocked_ring_skins')
+    .select('doubloons, gems, saved_crew, unlocked_ring_skins, expedition_xp')
     .eq('id', user.id)
     .single()
 
@@ -218,6 +219,12 @@ export async function revealVoyageResults(voyageId: number): Promise<
 
   const newDoubloons = (profile.doubloons ?? 0) + voyage.total_doubloons
   const newGems = (profile.gems ?? 0) + voyage.total_gems
+
+  const xpEarned = voyageXP(voyage.route, voyage.crew_variant_ids.length, voyage.events as { type: string; outcome: string; crewVariantLost?: number | null }[])
+  const oldExpeditionXP = profile.expedition_xp ?? 0
+  const newExpeditionXP = oldExpeditionXP + xpEarned
+  const oldExpeditionLevel = getLevelFromXP(oldExpeditionXP)
+  const newExpeditionLevel = getLevelFromXP(newExpeditionXP)
   const currentSavedCrew = (profile.saved_crew as number[] | null) ?? []
   const newSavedCrew = currentSavedCrew.filter(id => !voyage.crew_lost.includes(id))
 
@@ -237,7 +244,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
   const earnedBait = Array.from(baitDropMap.entries()).map(([type, qty]) => ({ type, qty }))
 
   await Promise.all([
-    admin.from('profiles').update({ doubloons: newDoubloons, gems: newGems, saved_crew: newSavedCrew, unlocked_ring_skins: updatedSkins }).eq('id', user.id),
+    admin.from('profiles').update({ doubloons: newDoubloons, gems: newGems, saved_crew: newSavedCrew, unlocked_ring_skins: updatedSkins, expedition_xp: newExpeditionXP }).eq('id', user.id),
     admin.from('daily_voyages').update({ status: 'revealed' }).eq('id', voyageId),
     ...(voyage.crew_lost.length > 0
       ? [admin.from('user_collection').delete().eq('user_id', user.id).in('card_variant_id', voyage.crew_lost)]
@@ -283,7 +290,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
     })
   })
 
-  return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, earnedGems: voyage.total_gems, newGemTotal: newGems, crewLost: voyage.crew_lost, newRingSkins, earnedBait }
+  return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, earnedGems: voyage.total_gems, newGemTotal: newGems, crewLost: voyage.crew_lost, newRingSkins, earnedBait, xpEarned, newExpeditionXP, oldExpeditionLevel, newExpeditionLevel }
 }
 
 export async function fetchVoyageCaptainsLog(voyageId: number): Promise<{ log: string | null } | { error: string }> {

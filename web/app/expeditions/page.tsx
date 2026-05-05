@@ -10,6 +10,7 @@ import DailyVoyagePanel from './DailyVoyagePanel'
 import VoyageHistory from './VoyageHistory'
 import { getCollectionForCrew } from './actions'
 import { getDailyVoyageState } from './voyageActions'
+import { getXPProgress } from '@/lib/expeditionLevel'
 
 export default async function ExpeditionsPage() {
   const supabase = await createClient()
@@ -20,7 +21,7 @@ export default async function ExpeditionsPage() {
 
   const [{ data: profile }, { data: expeditionRows }, collection, dailyVoyageState, { data: voyageHistoryRows }] = await Promise.all([
     admin.from('profiles')
-      .select('packs_available, doubloons, ship_tier, gems, saved_crew, ship_name')
+      .select('packs_available, doubloons, ship_tier, gems, saved_crew, ship_name, expedition_xp')
       .eq('id', user.id)
       .single(),
     admin.from('expeditions')
@@ -44,6 +45,7 @@ export default async function ExpeditionsPage() {
   const recentExpeditions = (expeditionRows ?? []) as Expedition[]
   const savedCrewVariantIds: number[] = (profile?.saved_crew as number[] | null) ?? []
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
+  const expeditionXPProgress = getXPProgress(profile?.expedition_xp ?? 0)
 
   const activeExpedition = recentExpeditions.find(e => e.status === 'active') ?? null
   const hasPendingVoyage = !('error' in dailyVoyageState) && dailyVoyageState.todayVoyage !== null
@@ -82,6 +84,39 @@ export default async function ExpeditionsPage() {
             shipName={profile?.ship_name ?? null}
           />
 
+          {/* ── Expedition level bar ── */}
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{
+              background: 'rgba(6,8,12,0.82)', border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 12, padding: '0.7rem 1rem',
+              display: 'flex', alignItems: 'center', gap: '0.85rem',
+            }}>
+              <div style={{ flexShrink: 0, textAlign: 'center' }}>
+                <p className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#5a6a8a', marginBottom: 2 }}>Navigator</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#7090c0', lineHeight: 1 }}>{expeditionXPProgress.level}</p>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.5rem', color: '#4a5a7a' }}>Expedition Level</p>
+                  {expeditionXPProgress.level < 100 && (
+                    <p className="font-karla" style={{ fontSize: '0.5rem', color: '#3a4a5a' }}>
+                      {expeditionXPProgress.xpInLevel} / {expeditionXPProgress.xpForLevel} XP
+                    </p>
+                  )}
+                </div>
+                <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: 4,
+                    width: `${expeditionXPProgress.progress * 100}%`,
+                    background: 'linear-gradient(90deg, #4a6090 0%, #7090c0 100%)',
+                    boxShadow: '0 0 8px rgba(112,144,192,0.5)',
+                    transition: 'width 0.4s ease',
+                  }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* ── Voyage card ── */}
           <div style={{ marginBottom: '1rem' }}>
             <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Voyages</p>
@@ -91,6 +126,7 @@ export default async function ExpeditionsPage() {
               shipTier={shipTier}
               todayVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.todayVoyage}
               readyVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.readyVoyage}
+              expeditionXP={profile?.expedition_xp ?? 0}
               raidActive={hasActiveRaid}
             />
             <VoyageHistory voyages={(voyageHistoryRows ?? []) as import('./VoyageHistory').VoyageHistoryEntry[]} />

@@ -8,6 +8,7 @@ import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageEvents'
 import { getRingSkin, type RingSkinId } from '@/lib/ringSkins'
 import { getBait } from '@/lib/bait'
 import { sendDailyVoyage, revealVoyageResults, fetchVoyageCaptainsLog, type DailyVoyage } from './voyageActions'
+import { getLevelFromXP } from '@/lib/expeditionLevel'
 
 type PanelState = 'idle' | 'away' | 'returned' | 'done'
 
@@ -108,6 +109,7 @@ interface Props {
   todayVoyage: DailyVoyage | null
   readyVoyage: DailyVoyage | null
   raidActive?: boolean
+  expeditionXP?: number
 }
 
 export default function DailyVoyagePanel({
@@ -117,6 +119,7 @@ export default function DailyVoyagePanel({
   todayVoyage,
   readyVoyage,
   raidActive = false,
+  expeditionXP = 0,
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -136,6 +139,8 @@ export default function DailyVoyagePanel({
   const [liveCrewIds, setLiveCrewIds] = useState<number[]>(savedCrewVariantIds)
   const [expandedDropKey, setExpandedDropKey] = useState<string | null>(null)
   const [infoOpen, setInfoOpen] = useState(false)
+  const [xpEarned, setXpEarned] = useState(0)
+  const [levelUp, setLevelUp] = useState<{ from: number; to: number } | null>(null)
 
   useEffect(() => {
     const handler = (e: Event) => setLiveCrewIds((e as CustomEvent<number[]>).detail)
@@ -210,6 +215,8 @@ export default function DailyVoyagePanel({
       if (res.earnedGems > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.newGemTotal }))
       setClaimedRingSkins(res.newRingSkins)
       setClaimedBait(res.earnedBait)
+      setXpEarned(res.xpEarned)
+      if (res.newExpeditionLevel > res.oldExpeditionLevel) setLevelUp({ from: res.oldExpeditionLevel, to: res.newExpeditionLevel })
       setPanelState('done')
       router.refresh()
     })
@@ -833,12 +840,39 @@ export default function DailyVoyagePanel({
             </div>
           )}
 
+          {/* XP earned */}
+          {xpEarned > 0 && (() => {
+            const newXP = expeditionXP + xpEarned
+            const currentLevel = getLevelFromXP(newXP)
+            return (
+              <div style={{
+                background: 'rgba(70,90,140,0.10)', border: '1px solid rgba(112,144,192,0.22)',
+                borderRadius: 8, padding: '0.6rem 0.8rem',
+                marginTop: '0.55rem',
+                display: 'flex', alignItems: 'center', gap: '0.6rem',
+              }}>
+                <div style={{ flexShrink: 0, textAlign: 'center' }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#7090c0', lineHeight: 1 }}>{currentLevel}</p>
+                  <p className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.42rem', color: '#4a5a7a', marginTop: 1 }}>Nav</p>
+                </div>
+                <div style={{ flex: 1 }}>
+                  {levelUp && (
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#7090c0', marginBottom: 3 }}>
+                      Level up! {levelUp.from} → {levelUp.to}
+                    </p>
+                  )}
+                  <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#5a7aaa' }}>+{xpEarned} expedition XP</p>
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Captain's log */}
           <div style={{
             background: 'rgba(16,12,6,0.55)',
             border: '1px solid rgba(160,140,90,0.18)',
             borderRadius: 8, padding: '0.65rem 0.8rem',
-            marginTop: claimedRingSkins.length > 0 || claimedBait.length > 0 ? '0.55rem' : 0,
+            marginTop: '0.55rem',
           }}>
             <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#7a6848', marginBottom: '0.35rem' }}>
               Captain&apos;s Log
