@@ -148,7 +148,7 @@ export default function TackleShopClient({
     { key: 'bait',  label: 'Bait',  color: '#34d399', desc: 'Consumables used per cast.',           imageUrl: '/worms.png' },
     { key: 'hook',  label: 'Hooks', color: '#f0c040', desc: 'Widens the catch zone on the dial.',  imageUrl: '/models/hooks/steel-hook.png' },
     { key: 'rod',   label: 'Rods',  color: '#b8956a', desc: 'Every rod has a unique ability.',       imageUrl: '/driftwoodrod.png' },
-    { key: 'reel',  label: 'Reels', color: '#60a5fa', desc: 'Slows the needle for easier timing.' },
+    { key: 'reel',  label: 'Reels', color: '#60a5fa', desc: 'Slows the needle for easier timing.',   imageUrl: '/basicreel.png' },
     { key: 'line',  label: 'Line',  color: '#4ade80', desc: 'Shrinks snag zones. Earned by species.' },
   ]
 
@@ -713,7 +713,7 @@ export default function TackleShopClient({
                 }}
               >
                 <div className="flex items-start gap-3">
-                  <ReelIcon color={c} owned={owned} isActive={isActive} />
+                  <ReelIcon color={c} owned={owned} isActive={isActive} imageUrl={reel.imageUrl} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <p className="font-cinzel font-700 text-sm" style={{ color: owned ? '#f0ede8' : '#6a6764' }}>
@@ -968,7 +968,7 @@ function LineIcon({ color, owned, isActive, tier }: { color: string; owned: bool
   )
 }
 
-function ReelIcon({ color, owned, isActive }: { color: string; owned: boolean; isActive: boolean }) {
+function ReelIcon({ color, owned, isActive, imageUrl }: { color: string; owned: boolean; isActive: boolean; imageUrl?: string }) {
   const sc = owned ? color : '#4a4845'
   const bg = owned ? `${color}12` : 'rgba(255,255,255,0.06)'
   const border = owned ? `${color}35` : 'rgba(255,255,255,0.11)'
@@ -978,18 +978,18 @@ function ReelIcon({ color, owned, isActive }: { color: string; owned: boolean; i
       className="w-[38px] h-[38px] sm:w-12 sm:h-12 shrink-0 flex items-center justify-center"
       style={{ borderRadius: 10, background: bg, border: `1px solid ${border}`, boxShadow: isActive ? `0 0 10px ${color}25` : 'none' }}
     >
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        {/* Reel body */}
-        <circle cx="10" cy="12" r="7.5" stroke={sc} strokeWidth="1.3" opacity={op * 0.9} />
-        {/* Inner spool */}
-        <circle cx="10" cy="12" r="4.5" stroke={sc} strokeWidth="1" fill={sc} fillOpacity={owned ? 0.1 : 0.04} opacity={op * 0.8} />
-        {/* Center hub */}
-        <circle cx="10" cy="12" r="1.8" fill={sc} opacity={op * 0.85} />
-        {/* Handle arm */}
-        <line x1="17.5" y1="12" x2="21.5" y2="9.5" stroke={sc} strokeWidth="1.6" strokeLinecap="round" opacity={op} />
-        {/* Handle knob */}
-        <circle cx="21.5" cy="9.5" r="1.5" fill={sc} opacity={op * 0.85} />
-      </svg>
+      {imageUrl
+        ? <img src={imageUrl} alt="" style={{ width: 28, height: 28, objectFit: 'contain', opacity: op, filter: `drop-shadow(0 1px 4px ${color}55)` }} />
+        : (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <circle cx="10" cy="12" r="7.5" stroke={sc} strokeWidth="1.3" opacity={op * 0.9} />
+            <circle cx="10" cy="12" r="4.5" stroke={sc} strokeWidth="1" fill={sc} fillOpacity={owned ? 0.1 : 0.04} opacity={op * 0.8} />
+            <circle cx="10" cy="12" r="1.8" fill={sc} opacity={op * 0.85} />
+            <line x1="17.5" y1="12" x2="21.5" y2="9.5" stroke={sc} strokeWidth="1.6" strokeLinecap="round" opacity={op} />
+            <circle cx="21.5" cy="9.5" r="1.5" fill={sc} opacity={op * 0.85} />
+          </svg>
+        )
+      }
     </div>
   )
 }
