@@ -1470,11 +1470,13 @@ export default function FishingGame({
   const [angle, setAngle]           = useState(270)
   const [zoneRotation, setZoneRotation] = useState(0)
   const [retryKey, setRetryKey]     = useState(0)
+  const [blackoutOpacity, setBlackoutOpacity] = useState(0)
   const angleRef        = useRef(270)
   const speedRef        = useRef(0)
   const dirRef          = useRef(1)
   const phaseRef        = useRef<Phase>('idle')
   const animRef         = useRef<number | null>(null)
+  const blackoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastTimeRef     = useRef(0)
   const elapsedMsRef    = useRef(0)
   const nextChgMsRef    = useRef(0)
@@ -1610,13 +1612,26 @@ export default function FishingGame({
           const dist = Math.min(Math.abs(catchCenter - needle), 360 - Math.abs(catchCenter - needle))
           if (dist <= 55) dirRef.current *= -1
         }
+        const scaledBlackout = zoneDiff.blackoutChance * (hookedFish.catchDifficulty / 5)
+        if (Math.random() < scaledBlackout && blackoutTimerRef.current === null) {
+          const duration = 280 + Math.random() * 320
+          setBlackoutOpacity(0.86)
+          blackoutTimerRef.current = setTimeout(() => {
+            setBlackoutOpacity(0)
+            blackoutTimerRef.current = null
+          }, duration)
+        }
         nextChgMsRef.current = elapsedMsRef.current + (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
       }
       setAngle(angleRef.current)
       animRef.current = requestAnimationFrame(tick)
     }
     animRef.current = requestAnimationFrame(tick)
-    return () => { if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null } }
+    return () => {
+      if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
+      if (blackoutTimerRef.current) { clearTimeout(blackoutTimerRef.current); blackoutTimerRef.current = null }
+      setBlackoutOpacity(0)
+    }
   // retryKey increments on Second Wind retry to restart animation with fresh randomization
   }, [phase, hookedFish, reel.needleSpeedMultiplier, retryKey])
 
@@ -2353,6 +2368,13 @@ export default function FishingGame({
                   )}
 
                   <div style={{ position: 'relative' }}>
+                    <div style={{
+                      position: 'absolute', inset: 0, zIndex: 10, borderRadius: '50%',
+                      background: '#000',
+                      opacity: blackoutOpacity,
+                      pointerEvents: 'none',
+                      transition: blackoutOpacity > 0 ? 'opacity 0.1s ease-in' : 'opacity 0.4s ease-out',
+                    }} />
                     {perfectStreak >= 3 && (
                       <motion.div
                         style={{ position: 'absolute', top: -28, left: 0, right: 0, textAlign: 'center', pointerEvents: 'none' }}
