@@ -64,7 +64,10 @@ const ROUTE_NODES: Record<VoyageRoute, { x: number; y: number }> = {
   deep:    { x: 28, y: 43 },
 }
 
-type DropEntry = { kind: 'skin'; id: RingSkinId; rate: string } | { kind: 'bait'; type: string; rate: string }
+type DropEntry =
+  | { kind: 'skin';    id: RingSkinId; rate: string }
+  | { kind: 'bait';    type: string;   rate: string }
+  | { kind: 'special'; id: 'tide_turner'; rate: string }
 
 const ROUTE_DROPS: Record<VoyageRoute, DropEntry[]> = {
   coastal: [
@@ -76,6 +79,7 @@ const ROUTE_DROPS: Record<VoyageRoute, DropEntry[]> = {
     { kind: 'bait', type: 'luminous',        rate: '~10%' },
   ],
   deep: [
+    { kind: 'special', id: 'tide_turner',    rate: '~2%' },
     { kind: 'skin', id: 'gilded_compass',    rate: '~8%' },
     { kind: 'skin', id: 'abyssal_sigil',     rate: '~3%' },
     { kind: 'bait', type: 'luminous',        rate: '~25%' },
@@ -382,13 +386,13 @@ export default function DailyVoyagePanel({
                     return (
                       <button
                         key={routeKey}
-                        onClick={() => !locked && setSelectedRoute(isSelected ? null : routeKey)}
+                        onClick={() => setSelectedRoute(isSelected ? null : routeKey)}
                         style={{
                           position: 'absolute',
                           left: `${node.x}%`, top: `${node.y}%`,
                           transform: 'translate(-50%, -50%)',
                           background: 'none', border: 'none',
-                          cursor: locked ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           padding: 0, zIndex: 3,
                         }}
                       >
@@ -438,9 +442,13 @@ export default function DailyVoyagePanel({
                 })()}
 
                 {/* Overlay panel — fades up from the bottom when a route is selected */}
-                {selectedRoute && stats && (() => {
+                {selectedRoute && (() => {
+                  const expeditionLevel = getLevelFromXP(expeditionXP)
+                  const ROUTE_MIN_LEVELS_OVL: Record<VoyageRoute, number> = { coastal: 1, open: 5, deep: 15 }
+                  const minLevel = ROUTE_MIN_LEVELS_OVL[selectedRoute]
+                  const routeLocked = expeditionLevel < minLevel
                   const rco = ROUTE_CONFIGS[selectedRoute]
-                  const est = computeRouteEstimate(stats, savedCrew.length, selectedRoute)
+                  const est = stats ? computeRouteEstimate(stats, savedCrew.length, selectedRoute) : null
                   return (
                     <div style={{
                       position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -478,7 +486,7 @@ export default function DailyVoyagePanel({
                       </p>
 
                       {/* Recommended crew score */}
-                      {(() => {
+                      {stats && (() => {
                         const REC: Record<string, number> = { coastal: 20, open: 45, deep: 75 }
                         const rec = REC[selectedRoute] ?? 0
                         const crewScore = stats.power + stats.dodge + Math.round(stats.fortune * 0.5)
@@ -496,6 +504,7 @@ export default function DailyVoyagePanel({
                       })()}
 
                       {/* Estimates */}
+                      {est && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
                         <span className="font-karla font-700" style={{ fontSize: '0.84rem', color: '#c8aa6a' }}>
                           Est. payout: ~{est.lootMin}–{est.lootMax} ⟡
@@ -511,11 +520,12 @@ export default function DailyVoyagePanel({
                           <span className="font-karla" style={{ fontSize: '0.80rem', color: '#c87a4a' }}>Need 1 more crew</span>
                         )}
                       </div>
+                      )}
 
                       {/* Est. voyage duration */}
-                      {(() => {
-                        const expeditionLevel = getLevelFromXP(expeditionXP)
-                        const estMs = computeVoyageDurationMs(expeditionLevel, stats.dodge)
+                      {stats && (() => {
+                        const expLevel = getLevelFromXP(expeditionXP)
+                        const estMs = computeVoyageDurationMs(expLevel, stats.dodge)
                         const isBase = estMs >= BASE_VOYAGE_MS * 0.99
                         return (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
@@ -533,7 +543,7 @@ export default function DailyVoyagePanel({
                       })()}
 
                       {/* Crew risk warning */}
-                      {savedCrew.length >= 2 && est.crewRiskPct > 50 && (
+                      {est && savedCrew.length >= 2 && est.crewRiskPct > 50 && (
                         <div style={{ background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 7, padding: '0.4rem 0.6rem', marginBottom: '0.5rem' }}>
                           <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#f87171', lineHeight: 1.5 }}>
                             ⚠ {est.crewRiskPct}% chance a crew member is lost permanently.
@@ -542,58 +552,64 @@ export default function DailyVoyagePanel({
                       )}
 
                       {/* Drops */}
-                      {est.drops.length > 0 && (
-                        <div style={{ borderTop: `0.5px solid ${rco.color}22`, paddingTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.32rem', marginBottom: '0.65rem' }}>
-                          <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.60rem', color: '#5a5248' }}>
-                            possible drops
-                          </span>
-                          {est.drops.map(drop => {
-                            const dropKey = drop.kind === 'skin' ? drop.id : drop.type
-                            const def    = drop.kind === 'skin' ? getRingSkin(drop.id) : getBait(drop.type)
-                            const color  = def.color
-                            const name   = def.name
-                            const label  = drop.kind === 'skin' ? 'Ring cosmetic' : 'Fishing bait'
-                            const detail = drop.kind === 'skin'
-                              ? def.description
-                              : (() => {
-                                  const b = def as import('@/lib/bait').BaitDef
-                                  const parts: string[] = []
-                                  if (b.waitMult < 1) parts.push(`${Math.round((1 - b.waitMult) * 100)}% faster bite`)
-                                  if (b.catchZoneBonus > 0) parts.push(`+${b.catchZoneBonus}° catch zone`)
-                                  return parts.join(' · ')
-                                })()
-                            const isExpanded = expandedDropKey === dropKey
-                            return (
-                              <div key={dropKey}>
-                                <button
-                                  onClick={() => setExpandedDropKey(isExpanded ? null : dropKey)}
-                                  style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.45rem' }}
-                                >
-                                  <span style={{
-                                    display: 'inline-block', width: 8, height: 8,
-                                    borderRadius: drop.kind === 'skin' ? '50%' : '2px',
-                                    background: color, flexShrink: 0,
-                                    boxShadow: `0 0 4px ${color}88`,
-                                  }} />
-                                  <span className="font-karla font-700" style={{ fontSize: '0.80rem', color, flex: 1 }}>{name}</span>
-                                  <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#a89878' }}>{drop.rate}</span>
-                                  <span style={{ fontSize: '0.52rem', color: '#5a4a30', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>▼</span>
-                                </button>
-                                {isExpanded && (
-                                  <div style={{ paddingLeft: '1.1rem', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                    <span className="font-karla uppercase tracking-[0.05em]" style={{ fontSize: '0.58rem', color: `${color}99`, background: `${color}18`, borderRadius: 3, padding: '0.08rem 0.28rem' }}>
-                                      {label}
-                                    </span>
-                                    <span className="font-karla" style={{ fontSize: '0.70rem', color: '#6a5a40', lineHeight: 1.3 }}>
-                                      {detail}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
+                      {(() => {
+                        const drops = est?.drops ?? ROUTE_DROPS[selectedRoute]
+                        if (!drops.length) return null
+                        return (
+                          <div style={{ borderTop: `0.5px solid ${rco.color}22`, paddingTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.32rem', marginBottom: '0.65rem' }}>
+                            <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.60rem', color: '#5a5248' }}>
+                              possible drops
+                            </span>
+                            {drops.map(drop => {
+                              const isTideTurner = drop.kind === 'special' && drop.id === 'tide_turner'
+                              const dropKey = drop.kind === 'skin' ? drop.id : drop.kind === 'bait' ? drop.type : drop.id
+                              const color   = isTideTurner ? '#a78bfa' : drop.kind === 'skin' ? getRingSkin(drop.id).color : getBait((drop as { type: string }).type).color
+                              const name    = isTideTurner ? 'Tide Turner' : drop.kind === 'skin' ? getRingSkin(drop.id).name : getBait((drop as { type: string }).type).name
+                              const label   = isTideTurner ? 'Special item · Permanent' : drop.kind === 'skin' ? 'Ring cosmetic' : 'Fishing bait'
+                              const detail  = isTideTurner
+                                ? 'Skip a hooked fish during the catch phase without breaking your perfect streak. Grants 3 skips per day.'
+                                : drop.kind === 'skin'
+                                  ? getRingSkin(drop.id).description
+                                  : (() => {
+                                      const b = getBait((drop as { type: string }).type) as import('@/lib/bait').BaitDef
+                                      const parts: string[] = []
+                                      if (b.waitMult < 1) parts.push(`${Math.round((1 - b.waitMult) * 100)}% faster bite`)
+                                      if (b.catchZoneBonus > 0) parts.push(`+${b.catchZoneBonus}° catch zone`)
+                                      return parts.join(' · ')
+                                    })()
+                              const isExpanded = expandedDropKey === dropKey
+                              return (
+                                <div key={dropKey}>
+                                  <button
+                                    onClick={() => setExpandedDropKey(isExpanded ? null : dropKey)}
+                                    style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.45rem' }}
+                                  >
+                                    <span style={{
+                                      display: 'inline-block', width: 8, height: 8,
+                                      borderRadius: drop.kind === 'bait' ? '2px' : '50%',
+                                      background: color, flexShrink: 0,
+                                      boxShadow: `0 0 4px ${color}88`,
+                                    }} />
+                                    <span className="font-karla font-700" style={{ fontSize: '0.80rem', color, flex: 1 }}>{name}</span>
+                                    <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#a89878' }}>{drop.rate}</span>
+                                    <span style={{ fontSize: '0.52rem', color: '#5a4a30', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>▼</span>
+                                  </button>
+                                  {isExpanded && (
+                                    <div style={{ paddingLeft: '1.1rem', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                      <span className="font-karla uppercase tracking-[0.05em]" style={{ fontSize: '0.58rem', color: `${color}99`, background: `${color}18`, borderRadius: 3, padding: '0.08rem 0.28rem' }}>
+                                        {label}
+                                      </span>
+                                      <span className="font-karla" style={{ fontSize: '0.70rem', color: '#6a5a40', lineHeight: 1.3 }}>
+                                        {detail}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )
+                      })()}
 
                       {/* Error */}
                       {error && (
@@ -601,27 +617,39 @@ export default function DailyVoyagePanel({
                       )}
                       </div>{/* end scrollable content */}
 
-                      {/* Set Sail — always visible at bottom */}
+                      {/* Set Sail / Lock — always visible at bottom */}
                       <div style={{ padding: '0.4rem 0.9rem 0.75rem', flexShrink: 0 }}>
-                        <button
-                          onClick={handleSend}
-                          disabled={isPending || savedCrew.length < 2}
-                          style={{
-                            width: '100%',
-                            background: isPending || savedCrew.length < 2
-                              ? 'rgba(80,100,160,0.08)'
-                              : `linear-gradient(135deg, ${rco.color}33 0%, ${rco.color}18 100%)`,
-                            border: `1px solid ${savedCrew.length >= 2 ? rco.color + '66' : 'rgba(255,255,255,0.08)'}`,
-                            borderRadius: 8, padding: '0.45rem 1rem',
-                            color: isPending || savedCrew.length < 2 ? 'rgba(255,255,255,0.18)' : rco.color,
-                            cursor: isPending || savedCrew.length < 2 ? 'default' : 'pointer',
-                            transition: 'all 0.15s',
-                            boxShadow: savedCrew.length >= 2 && !isPending ? `0 0 12px ${rco.color}22` : 'none',
-                          }}
-                          className="font-cinzel font-700 uppercase tracking-[0.12em]"
-                        >
-                          <span style={{ fontSize: '0.78rem' }}>{isPending ? 'Sending…' : 'Set Sail'}</span>
-                        </button>
+                        {routeLocked ? (
+                          <div style={{
+                            width: '100%', background: 'rgba(160,120,60,0.06)',
+                            border: '1px solid rgba(160,120,60,0.22)', borderRadius: 8,
+                            padding: '0.45rem 1rem', textAlign: 'center',
+                          }}>
+                            <span className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.78rem', color: '#a08858' }}>
+                              🔒 Unlocks at Expedition Lv {minLevel}
+                            </span>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={handleSend}
+                            disabled={isPending || savedCrew.length < 2}
+                            style={{
+                              width: '100%',
+                              background: isPending || savedCrew.length < 2
+                                ? 'rgba(80,100,160,0.08)'
+                                : `linear-gradient(135deg, ${rco.color}33 0%, ${rco.color}18 100%)`,
+                              border: `1px solid ${savedCrew.length >= 2 ? rco.color + '66' : 'rgba(255,255,255,0.08)'}`,
+                              borderRadius: 8, padding: '0.45rem 1rem',
+                              color: isPending || savedCrew.length < 2 ? 'rgba(255,255,255,0.18)' : rco.color,
+                              cursor: isPending || savedCrew.length < 2 ? 'default' : 'pointer',
+                              transition: 'all 0.15s',
+                              boxShadow: savedCrew.length >= 2 && !isPending ? `0 0 12px ${rco.color}22` : 'none',
+                            }}
+                            className="font-cinzel font-700 uppercase tracking-[0.12em]"
+                          >
+                            <span style={{ fontSize: '0.78rem' }}>{isPending ? 'Sending…' : 'Set Sail'}</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   )
