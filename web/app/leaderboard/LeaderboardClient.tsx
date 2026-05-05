@@ -233,8 +233,8 @@ export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, e
       <div
         className="flex mb-8"
         style={{
-          background: 'rgba(255,255,255,0.05)',
-          border: '1px solid rgba(255,255,255,0.1)',
+          background: 'rgba(6,6,4,0.85)',
+          border: '1px solid rgba(255,255,255,0.14)',
           borderRadius: 14,
           padding: 4,
           gap: 4,
@@ -246,16 +246,16 @@ export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, e
             <button
               key={t.key}
               onClick={() => setActiveTab(t.key)}
-              className="flex-1 font-karla font-700 uppercase tracking-[0.1em] transition-all"
+              className="flex-1 font-karla font-700 uppercase tracking-[0.08em] transition-all"
               style={{
-                padding: '0.65rem 0.5rem',
+                padding: '0.7rem 0.5rem',
                 borderRadius: 10,
-                fontSize: '0.6rem',
-                background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
-                border: `1px solid ${isActive ? 'rgba(255,255,255,0.18)' : 'transparent'}`,
-                color: isActive ? t.accent : '#9a9488',
+                fontSize: '0.58rem',
+                background: isActive ? `${t.accent}22` : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${isActive ? `${t.accent}55` : 'rgba(255,255,255,0.08)'}`,
+                color: isActive ? t.accent : '#7a7870',
                 cursor: 'pointer',
-                boxShadow: isActive ? '0 1px 6px rgba(0,0,0,0.4)' : 'none',
+                boxShadow: isActive ? `0 0 12px ${t.accent}22` : 'none',
               }}
             >
               {t.label}
