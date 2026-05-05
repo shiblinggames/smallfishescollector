@@ -134,6 +134,7 @@ export default function DailyVoyagePanel({
   const [claimedBait, setClaimedBait] = useState<{ type: string; qty: number }[]>([])
   const [captainsLog, setCaptainsLog] = useState<string | null>(null)
   const [liveCrewIds, setLiveCrewIds] = useState<number[]>(savedCrewVariantIds)
+  const [expandedDropKey, setExpandedDropKey] = useState<string | null>(null)
 
   useEffect(() => {
     const handler = (e: Event) => setLiveCrewIds((e as CustomEvent<number[]>).detail)
@@ -376,7 +377,7 @@ export default function DailyVoyagePanel({
                       {/* Estimates */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
                         <span className="font-karla font-700" style={{ fontSize: '0.84rem', color: '#c8aa6a' }}>
-                          ~{est.lootMin}–{est.lootMax} ⟡
+                          Est. payout: ~{est.lootMin}–{est.lootMax} ⟡
                         </span>
                         {savedCrew.length >= 2 ? (
                           <span className="font-karla" style={{ fontSize: '0.80rem', color: est.crewRiskPct >= 40 ? '#f87171cc' : est.crewRiskPct > 0 ? '#c8906a' : '#6a8a6a' }}>
@@ -403,6 +404,7 @@ export default function DailyVoyagePanel({
                             possible drops
                           </span>
                           {est.drops.map(drop => {
+                            const dropKey = drop.kind === 'skin' ? drop.id : drop.type
                             const def    = drop.kind === 'skin' ? getRingSkin(drop.id) : getBait(drop.type)
                             const color  = def.color
                             const name   = def.name
@@ -416,20 +418,25 @@ export default function DailyVoyagePanel({
                                   if (b.catchZoneBonus > 0) parts.push(`+${b.catchZoneBonus}° catch zone`)
                                   return parts.join(' · ')
                                 })()
+                            const isExpanded = expandedDropKey === dropKey
                             return (
-                              <div key={drop.kind === 'skin' ? drop.id : drop.type} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.45rem' }}>
-                                <span style={{
-                                  display: 'inline-block', width: 8, height: 8, marginTop: '0.22rem',
-                                  borderRadius: drop.kind === 'skin' ? '50%' : '2px',
-                                  background: color, flexShrink: 0,
-                                  boxShadow: `0 0 4px ${color}88`,
-                                }} />
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
-                                    <span className="font-karla font-700" style={{ fontSize: '0.80rem', color }}>{name}</span>
-                                    <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#a89878' }}>{drop.rate}</span>
-                                  </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.08rem' }}>
+                              <div key={dropKey}>
+                                <button
+                                  onClick={() => setExpandedDropKey(isExpanded ? null : dropKey)}
+                                  style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.45rem' }}
+                                >
+                                  <span style={{
+                                    display: 'inline-block', width: 8, height: 8,
+                                    borderRadius: drop.kind === 'skin' ? '50%' : '2px',
+                                    background: color, flexShrink: 0,
+                                    boxShadow: `0 0 4px ${color}88`,
+                                  }} />
+                                  <span className="font-karla font-700" style={{ fontSize: '0.80rem', color, flex: 1 }}>{name}</span>
+                                  <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#a89878' }}>{drop.rate}</span>
+                                  <span style={{ fontSize: '0.52rem', color: '#5a4a30', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>▼</span>
+                                </button>
+                                {isExpanded && (
+                                  <div style={{ paddingLeft: '1.1rem', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                                     <span className="font-karla uppercase tracking-[0.05em]" style={{ fontSize: '0.58rem', color: `${color}99`, background: `${color}18`, borderRadius: 3, padding: '0.08rem 0.28rem' }}>
                                       {label}
                                     </span>
@@ -437,7 +444,7 @@ export default function DailyVoyagePanel({
                                       {detail}
                                     </span>
                                   </div>
-                                </div>
+                                )}
                               </div>
                             )
                           })}
