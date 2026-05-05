@@ -154,7 +154,7 @@ export default function ZoneLanding({
                 style={{ fontSize: '1.1rem', color: '#f0ede8' }}>
                 Level {fishingLevel}
               </p>
-              <p className="font-karla font-400" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)' }}>
+              <p className="font-karla font-400" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.75)' }}>
                 Choose your zone
               </p>
             </div>
@@ -179,16 +179,16 @@ export default function ZoneLanding({
           <div className="flex gap-2 mb-4">
             <div style={{ flex: 1, background: 'rgba(2,6,12,0.75)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1 }}>{fishingXP.toLocaleString()}</p>
-              <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.44rem', color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>Total XP</p>
+              <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>Total XP</p>
             </div>
             <div style={{ flex: 1, background: 'rgba(2,6,12,0.75)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#60a5fa', lineHeight: 1 }}>{uniqueSpeciesCaught}</p>
-              <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.44rem', color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>Species Found</p>
+              <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>Species Found</p>
             </div>
             {highestPerfectStreak > 0 && (
               <div style={{ flex: 1, background: 'rgba(2,6,12,0.75)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#fb923c', lineHeight: 1 }}>{highestPerfectStreak}×</p>
-                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.44rem', color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>Best Streak</p>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>Best Streak</p>
               </div>
             )}
           </div>
@@ -234,7 +234,7 @@ export default function ZoneLanding({
                           {isRecommended && (
                             <span className="font-karla font-700 uppercase tracking-[0.1em]"
                               style={{
-                                fontSize: '0.42rem', color: color,
+                                fontSize: '0.58rem', color: color,
                                 background: `${color}1a`, border: `1px solid ${color}44`,
                                 padding: '0.18rem 0.5rem', borderRadius: '2rem', flexShrink: 0,
                               }}>
@@ -243,7 +243,7 @@ export default function ZoneLanding({
                           )}
                         </div>
                         <p className="font-karla font-300 italic mt-0.5"
-                          style={{ fontSize: '0.7rem', color: accessible ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)' }}>
+                          style={{ fontSize: '0.76rem', color: accessible ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.25)' }}>
                           {HABITAT_TAGLINE[zone]}
                         </p>
                       </div>
@@ -261,7 +261,7 @@ export default function ZoneLanding({
                         {!accessible && (
                           <span className="font-karla font-700 uppercase tracking-[0.1em]"
                             style={{
-                              fontSize: '0.5rem', color: '#5a5956',
+                              fontSize: '0.65rem', color: '#7a7976',
                               background: 'rgba(255,255,255,0.06)',
                               border: '1px solid rgba(255,255,255,0.12)',
                               padding: '0.22rem 0.55rem', borderRadius: '2rem',
@@ -277,15 +277,15 @@ export default function ZoneLanding({
                     {/* Tags row */}
                     <div style={{ borderTop: `1px solid ${color}1a`, padding: '0.55rem 1rem', display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
                       <span className="font-karla font-600"
-                        style={{ fontSize: '0.52rem', color: `${color}cc`, background: `${color}18`, border: `1px solid ${color}30`, padding: '0.2rem 0.6rem', borderRadius: '2rem' }}>
+                        style={{ fontSize: '0.68rem', color: `${color}dd`, background: `${color}18`, border: `1px solid ${color}30`, padding: '0.2rem 0.6rem', borderRadius: '2rem' }}>
                         {diffLabel}
                       </span>
                     </div>
 
                     {/* Top catch — no spoilers, just the value */}
                     <div style={{ padding: '0.3rem 1rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.28)' }}>Top catch worth up to</span>
-                      <span className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: '#f59e0b' }}>{stats.topSell.toLocaleString()} ⟡</span>
+                      <span className="font-karla font-400" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)' }}>Top catch worth up to</span>
+                      <span className="font-cinzel font-700" style={{ fontSize: '0.76rem', color: '#f59e0b' }}>{stats.topSell.toLocaleString()} ⟡</span>
                     </div>
                   </>)}
                 </motion.div>
