@@ -355,6 +355,10 @@ body {
   pointer-events: none;
 }
 
+/* ── Expeditions page zoom ── */
+.expeditions-content        { zoom: 1.35; }
+@media (min-width: 640px)   { .expeditions-content { zoom: 1.4; } }
+
 /* ── Pack card responsive size ── */
 .pack-card-size { width: 100%; aspect-ratio: 5 / 7; }
 @media (min-width: 640px) { .pack-card-size { width: 260px; height: 364px; aspect-ratio: auto; } }
