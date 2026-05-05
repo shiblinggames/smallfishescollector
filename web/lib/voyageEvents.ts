@@ -395,7 +395,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
         const pool = crewCount === 1 ? PEACEFUL_SOLO : PEACEFUL_CREW
         const template = pick(pool)
         const peacefulNarrative = fill(template.narrative)
-        const captainPeacefulTrait = getCrewTrait(captain)
+        const captainPeacefulTrait = Math.random() < 0.45 ? getCrewTrait(captain) : null
         event = {
           type, outcome: 'neutral',
           title: template.title,
