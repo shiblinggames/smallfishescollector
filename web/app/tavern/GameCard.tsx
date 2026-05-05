@@ -43,25 +43,12 @@ export default function GameCard({ href, eyebrow, title, statusText, icon, compl
       {/* Left: text content */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="flex items-center gap-2 mb-2">
-          <div style={{
-            width: 28, height: 28,
-            background: `${accent}10`,
-            border: `1px solid ${accent}22`,
-            borderRadius: 8,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-            color: accent,
-          }}>
-            {icon}
-          </div>
           <p className="font-karla font-600 uppercase tracking-[0.12em]"
             style={{ fontSize: '0.56rem', color: accent + 'cc', flex: 1 }}>
             {eyebrow}
           </p>
           {done && (
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-              <path d="M20 6L9 17l-5-5"/>
-            </svg>
+            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#4ade80', whiteSpace: 'nowrap' }}>✓ Done</span>
           )}
         </div>
 

@@ -104,7 +104,7 @@ export default async function TavernPage() {
             info={[]}
             icon={<CoinIcon />}
             completed={allClaimed}
-            art="/worms.png"
+            art="/dailybonus.png"
             accent="#f0c040"
           />
           <GameCard
@@ -116,7 +116,7 @@ export default async function TavernPage() {
             icon={<FishIcon />}
             completed={fotdDone}
             streak={profile?.fotd_streak ?? 0}
-            art={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/Blue_Marlin.png`}
+            art={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/Hammerhead_Shark.png`}
             accent="#60a5fa"
           />
         </div>
@@ -155,7 +155,7 @@ export default async function TavernPage() {
             info={[]}
             icon={<AnchorIcon />}
             completed={crownCapReached}
-            art="/barnacle_pete.png"
+            art="/crownandanchor.png"
             accent="#fb923c"
           />
           <GameCard
@@ -166,7 +166,7 @@ export default async function TavernPage() {
             info={[]}
             icon={<SlotsIcon />}
             completed={slotsCapReached}
-            art={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/Catfish.png`}
+            art="/fishslots.png"
             accent="#a78bfa"
           />
         </div>
