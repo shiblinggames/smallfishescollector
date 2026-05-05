@@ -234,7 +234,7 @@ export default function GearScreen({
         </Link>
 
         <div style={{ gridColumn: '3', gridRow: '1' }}>
-          <GearSlot label="Reel" icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} onClick={() => setOpenSlot('reel')} />
+          <GearSlot label="Reel" image={reel.imageUrl ?? null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} onClick={() => setOpenSlot('reel')} />
         </div>
         <div style={{ gridColumn: '3', gridRow: '2' }}>
           <GearSlot label="Line" icon={<LineIcon color={line.color} />} itemName={line.name} color={line.color} onClick={() => setOpenSlot('line')} />
