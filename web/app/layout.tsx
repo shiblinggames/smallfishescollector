@@ -3,7 +3,6 @@ import { Cinzel, Karla, Pirata_One } from 'next/font/google'
 import './globals.css'
 import PageTransition from '@/components/PageTransition'
 import ClientBackground from '@/components/ClientBackground'
-import InstallPrompt from '@/components/InstallPrompt'
 import MobileTabBar from '@/components/MobileTabBar'
 
 const cinzel = Cinzel({
@@ -46,8 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PageTransition>
           {children}
         </PageTransition>
-        <InstallPrompt />
-        <MobileTabBar />
+<MobileTabBar />
         <footer className="sm:pb-10 pt-6 text-center">
           <p className="font-karla font-300 text-[#3a3835]" style={{ fontSize: '0.65rem' }}>
             &copy; {new Date().getFullYear()} Shibling Games LLC

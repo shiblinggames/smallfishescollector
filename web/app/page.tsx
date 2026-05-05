@@ -53,19 +53,8 @@ export default async function HomePage() {
         </p>
 
         {/* CTAs */}
-        <div className="flex gap-3 justify-center mb-6">
+        <div className="flex gap-3 justify-center mb-12">
           <Link href="/login" className="btn-ghost">Play Now</Link>
-        </div>
-
-        {/* Install callout */}
-        <div className="sm:hidden flex items-center justify-center gap-2 mb-12">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5a9aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2v13M8 11l4 4 4-4"/>
-            <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
-          </svg>
-          <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#5a7a8a', lineHeight: 1.6 }}>
-            Best played as an app — in Safari, tap <span style={{ color: '#7aaabb' }}>···</span> → Share → Add to Home Screen
-          </p>
         </div>
 
         {/* Footer links */}
