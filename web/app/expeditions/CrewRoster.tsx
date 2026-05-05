@@ -5,7 +5,7 @@ import type { ShipStats } from '@/lib/expeditions'
 import { RARITY_COLORS } from '@/lib/expeditions'
 import { saveCrew } from './actions'
 import { renameShip } from '@/app/shipyard/actions'
-import { getXPProgress } from '@/lib/expeditionLevel'
+import { getXPProgress, getNavigatorTitle } from '@/lib/expeditionLevel'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 
@@ -156,18 +156,21 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
             <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#8a8784' }}>
               {slots.filter(Boolean).length}/{shipStats.crewSlots} crew
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <div style={{ width: 52, height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', borderRadius: 3,
-                  width: `${xpProgress.progress * 100}%`,
-                  background: 'linear-gradient(90deg, #4a6090 0%, #7090c0 100%)',
-                  boxShadow: '0 0 5px rgba(112,144,192,0.5)',
-                }} />
-              </div>
-              <p className="font-karla font-700" style={{ fontSize: '0.52rem', color: '#5a7aaa' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#7090c0' }}>
                 Lv {xpProgress.level}
               </p>
+              <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#5a7aaa', fontStyle: 'italic' }}>
+                {getNavigatorTitle(xpProgress.level)}
+              </p>
+            </div>
+            <div style={{ width: 72, height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: 3,
+                width: `${xpProgress.progress * 100}%`,
+                background: 'linear-gradient(90deg, #4a6090 0%, #7090c0 100%)',
+                boxShadow: '0 0 5px rgba(112,144,192,0.5)',
+              }} />
             </div>
           </div>
         </div>
