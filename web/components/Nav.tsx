@@ -340,7 +340,8 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
       </nav>
 
       {/* Mobile top strip */}
-      <div className="sm:hidden border-b border-[rgba(255,255,255,0.15)] px-4 py-2 flex justify-between items-center z-50" style={{ background: navBg(tint), position: 'sticky', top: 0 }} ref={menuRef}>
+      <div className="sm:hidden" style={{ height: 44 }} />
+      <div className="sm:hidden border-b border-[rgba(255,255,255,0.15)] px-4 py-2 flex justify-between items-center" style={{ background: navBg(tint), position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50 }} ref={menuRef}>
         <Link href="/" className="flex items-center gap-1.5 font-cinzel font-700 text-[#f0ede8] tracking-wide text-xs uppercase">
           Small Fishes
           <span style={{ fontSize: '0.44rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.25)', color: '#f0c040', borderRadius: 4, padding: '0.15rem 0.35rem', letterSpacing: '0.12em', lineHeight: 1.4, fontFamily: 'inherit' }}>
