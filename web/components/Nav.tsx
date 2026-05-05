@@ -18,6 +18,11 @@ function navBg(tint: string | undefined) {
   return tint ? `linear-gradient(${tint}, ${tint}), black` : 'black'
 }
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
+
 export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailable?: number; doubloons?: number; gems?: number }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -30,6 +35,9 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   })
   const [achievementsBadge, setAchievementsBadge] = useState(false)
   const [showInstallEntry, setShowInstallEntry] = useState(false)
+  const [isIOS, setIsIOS] = useState(false)
+  const [showIOSHint, setShowIOSHint] = useState(false)
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [displayDoubloons, setDisplayDoubloons] = useState(doubloons)
   const [displayGems, setDisplayGems] = useState(gems)
   const [displayPacks, setDisplayPacks] = useState(packsAvailable)
@@ -64,7 +72,16 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
     const standalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       ('standalone' in window.navigator && (window.navigator as { standalone?: boolean }).standalone === true)
-    if (!standalone) setShowInstallEntry(true)
+    if (standalone) return
+    setShowInstallEntry(true)
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window)
+    setIsIOS(ios)
+    function handlePrompt(e: Event) {
+      e.preventDefault()
+      setDeferredPrompt(e as BeforeInstallPromptEvent)
+    }
+    window.addEventListener('beforeinstallprompt', handlePrompt)
+    return () => window.removeEventListener('beforeinstallprompt', handlePrompt)
   }, [])
 
   useEffect(() => {
@@ -366,6 +383,43 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
               boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
             }}
           >
+            {showInstallEntry && (
+              <button
+                onClick={() => {
+                  setMenuOpen(false)
+                  if (isIOS) {
+                    setShowIOSHint(true)
+                  } else if (deferredPrompt) {
+                    deferredPrompt.prompt()
+                    deferredPrompt.userChoice.then(() => setDeferredPrompt(null))
+                  }
+                }}
+                className="w-full flex items-center gap-3"
+                style={{
+                  padding: '0.85rem 1.25rem',
+                  background: 'rgba(14,116,144,0.12)',
+                  border: 'none',
+                  borderBottom: '1px solid rgba(14,116,144,0.22)',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{
+                  width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                  background: 'rgba(14,116,144,0.18)',
+                  border: '1px solid rgba(14,116,144,0.35)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5ab4c8" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2v13M8 11l4 4 4-4"/>
+                    <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+                  </svg>
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.74rem', color: '#7abbc8' }}>Install App</p>
+                  <p className="font-karla" style={{ fontSize: '0.6rem', color: '#4a7a88', marginTop: 2 }}>Play full-screen, no browser bar</p>
+                </div>
+              </button>
+            )}
             {mobileMenuLinks.map(({ href, label, icon, badge }) => {
               const active = pathname === href || pathname.startsWith(href + '/')
               return (
@@ -385,22 +439,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
                 </Link>
               )
             })}
-            {showInstallEntry && (
-              <button
-                onClick={() => {
-                  setMenuOpen(false)
-                  window.dispatchEvent(new CustomEvent('pwa-install-request'))
-                }}
-                className="w-full flex items-center gap-3 px-5 py-3.5"
-                style={{ color: '#a0a09a', background: 'none', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.09)', cursor: 'pointer' }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2v13M8 11l4 4 4-4"/>
-                  <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
-                </svg>
-                <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem' }}>Install App</span>
-              </button>
-            )}
             <button
               onClick={signOut}
               className="w-full flex items-center gap-3 px-5 py-3.5"
@@ -418,6 +456,27 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
       </div>
 
       <AnnouncementBanner />
+
+      {/* iOS install hint */}
+      {showIOSHint && (
+        <div
+          style={{
+            position: 'fixed', bottom: 80, left: 16, right: 16, zIndex: 70,
+            background: '#111110',
+            border: '1px solid rgba(14,116,144,0.40)',
+            borderRadius: 16, padding: '1rem 1.1rem',
+            boxShadow: '0 4px 40px rgba(0,0,0,0.8)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.55rem' }}>
+            <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#f0ede8' }}>Add to Home Screen</p>
+            <button onClick={() => setShowIOSHint(false)} style={{ background: 'none', border: 'none', color: '#4a4845', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: 0, marginTop: 1 }}>✕</button>
+          </div>
+          <p className="font-karla" style={{ fontSize: '0.74rem', color: '#6a8a90', lineHeight: 1.7 }}>
+            In Safari, tap the <strong style={{ color: '#a0c4cc' }}>Share</strong> button at the bottom of the screen, then tap <strong style={{ color: '#a0c4cc' }}>Add to Home Screen</strong>.
+          </p>
+        </div>
+      )}
 
     </>
   )
