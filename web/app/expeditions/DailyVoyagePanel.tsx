@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useCallback, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { EXPEDITION_SHIP_STATS, RARITY_COLORS, computeTotalCrewStats, type CrewCard } from '@/lib/expeditions'
 import type { VoyageEvent } from '@/lib/voyageRoutes'
@@ -961,24 +962,72 @@ export default function DailyVoyagePanel({
           )}
 
           {claimedTideTurner && (
-            <div style={{
-              background: 'rgba(139,111,192,0.08)',
-              border: '1px solid rgba(139,111,192,0.30)',
-              borderRadius: 8, padding: '0.55rem 0.8rem',
-            }}>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#8b6fc0', marginBottom: '0.3rem' }}>
-                Special item found
+            <motion.div
+              initial={{ opacity: 0, scale: 0.88, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 280, damping: 20, delay: 0.15 }}
+              style={{
+                position: 'relative', overflow: 'hidden',
+                background: 'linear-gradient(135deg, rgba(109,40,217,0.22) 0%, rgba(139,92,246,0.12) 60%, rgba(76,29,149,0.18) 100%)',
+                border: '1px solid rgba(167,139,250,0.5)',
+                borderRadius: 16,
+                padding: '1.1rem 1.1rem 1rem',
+                boxShadow: '0 0 32px rgba(139,92,246,0.25), inset 0 1px 0 rgba(255,255,255,0.07)',
+              }}
+            >
+              {/* Background glow orb */}
+              <div style={{
+                position: 'absolute', top: -30, right: -20,
+                width: 120, height: 120, borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(139,92,246,0.35) 0%, transparent 70%)',
+                pointerEvents: 'none',
+              }} />
+
+              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: '#c4b5fd', marginBottom: '0.65rem', letterSpacing: '0.2em' }}>
+                ✦ Rare find ✦
               </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b6fc0', flexShrink: 0 }} />
-                <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: '#a78bfa', lineHeight: 1.3 }}>
-                  Tide Turner
-                </p>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <motion.img
+                  src="/tideturner.png"
+                  alt="Tide Turner"
+                  initial={{ scale: 0.6, opacity: 0, rotate: -8 }}
+                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 16, delay: 0.3 }}
+                  style={{
+                    width: 64, height: 64, objectFit: 'contain', flexShrink: 0,
+                    filter: 'drop-shadow(0 0 16px rgba(167,139,250,0.8)) drop-shadow(0 0 32px rgba(139,92,246,0.5))',
+                  }}
+                />
+                <div style={{ flex: 1 }}>
+                  <motion.p
+                    className="font-cinzel font-700"
+                    initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 }}
+                    style={{ fontSize: '1.05rem', color: '#e9d5ff', lineHeight: 1.1, marginBottom: 4, textShadow: '0 0 20px rgba(167,139,250,0.6)' }}
+                  >
+                    Tide Turner
+                  </motion.p>
+                  <motion.p
+                    className="font-karla font-300"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    transition={{ delay: 0.55 }}
+                    style={{ fontSize: '0.7rem', color: '#a78bfa', lineHeight: 1.45 }}
+                  >
+                    Skip a hooked fish during the catch phase without breaking your perfect streak. Grants 3 skips per day.
+                  </motion.p>
+                  <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    transition={{ delay: 0.7 }}
+                    style={{ marginTop: 6 }}
+                  >
+                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: '#7c3aed', background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)', borderRadius: 4, padding: '0.15rem 0.45rem' }}>
+                      Permanent · Equip from gear
+                    </span>
+                  </motion.div>
+                </div>
               </div>
-              <p className="font-karla font-300" style={{ fontSize: '0.6rem', color: '#6a5a8a', marginTop: 3, lineHeight: 1.4 }}>
-                3 skips per day — skip a hooked fish without breaking your perfect streak.
-              </p>
-            </div>
+            </motion.div>
           )}
 
           {/* XP earned */}
