@@ -166,7 +166,8 @@ export default function ChartBoard({
       )}
 
       {/* Grid */}
-      <div style={{ width: '100%' }}>
+      <div style={{ width: '100%', perspective: '600px' }}>
+        <div style={{ transform: 'rotateX(12deg)', transformOrigin: 'top center', transformStyle: 'preserve-3d' }}>
         <p className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{
           fontSize: '0.62rem', color: '#c8a840', textAlign: 'center', marginBottom: 4,
         }}>⚓ Destination</p>
@@ -286,6 +287,7 @@ export default function ChartBoard({
         <p className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{
           fontSize: '0.62rem', color: '#7a8870', textAlign: 'center', marginTop: 4,
         }}>Start</p>
+        </div>
       </div>
 
       {movesAvailable === 0 && !completed && (
