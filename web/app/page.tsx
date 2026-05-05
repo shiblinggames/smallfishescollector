@@ -23,7 +23,7 @@ export default async function HomePage() {
       <div className="text-center relative z-10" style={{ maxWidth: 480, width: '100%' }}>
 
         {/* Title */}
-        <p className="font-karla font-600 uppercase tracking-[0.22em] mb-4" style={{ fontSize: '0.58rem', color: '#7ab8cc' }}>
+        <p className="font-karla font-600 uppercase tracking-[0.22em] mb-4" style={{ fontSize: '0.78rem', color: '#7ab8cc' }}>
           Shibling Games
         </p>
         <span className="font-karla font-700 uppercase tracking-[0.18em] inline-block mb-4 px-3 py-1" style={{
@@ -65,22 +65,22 @@ export default async function HomePage() {
           <div className="flex justify-center gap-5">
             <a href="https://www.instagram.com/shiblinggames/" target="_blank" rel="noopener noreferrer"
                className="font-karla font-600 uppercase tracking-[0.12em] transition-colors"
-               style={{ fontSize: '0.62rem', color: '#6a8a9a' }}
+               style={{ fontSize: '0.82rem', color: '#8ab8cc' }}
             >
               Instagram
             </a>
             <a href="https://www.tiktok.com/@shiblinggames" target="_blank" rel="noopener noreferrer"
                className="font-karla font-600 uppercase tracking-[0.12em] transition-colors"
-               style={{ fontSize: '0.62rem', color: '#6a8a9a' }}
+               style={{ fontSize: '0.82rem', color: '#8ab8cc' }}
             >
               TikTok
             </a>
           </div>
           <div className="flex justify-center gap-4">
-            <Link href="/privacy" className="font-karla font-300 transition-colors" style={{ fontSize: '0.62rem', color: '#4a6a7a' }}>
+            <Link href="/privacy" className="font-karla font-400 transition-colors" style={{ fontSize: '0.78rem', color: '#6a8a9a' }}>
               Privacy Policy
             </Link>
-            <Link href="/terms" className="font-karla font-300 transition-colors" style={{ fontSize: '0.62rem', color: '#4a6a7a' }}>
+            <Link href="/terms" className="font-karla font-400 transition-colors" style={{ fontSize: '0.78rem', color: '#6a8a9a' }}>
               Terms of Service
             </Link>
           </div>
