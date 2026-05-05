@@ -5,6 +5,7 @@ import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { addCrewMember, removeCrewMember } from '@/app/social/actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
 import { getHook } from '@/lib/hooks'
 import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
@@ -36,6 +37,7 @@ interface Stats {
   packsOpened: number
   uniqueSpecies: number
   fishingXP: number
+  expeditionXP: number
   highestPerfectStreak: number
 }
 
@@ -382,6 +384,41 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
 
         </div>
       </div>
+
+      {/* ── Expeditions ── */}
+      {stats.expeditionXP > 0 && (() => {
+        const expLevel = getExpeditionLevel(stats.expeditionXP)
+        const title = getNavigatorTitle(expLevel)
+        return (
+          <div>
+            <SectionLabel>Expeditions</SectionLabel>
+            <div style={{
+              background: 'rgba(16,28,52,0.75)',
+              border: '1px solid rgba(112,144,192,0.22)',
+              borderRadius: 14, padding: '1rem 1.1rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+                  background: 'rgba(112,144,192,0.12)',
+                  border: '1px solid rgba(112,144,192,0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1.1rem',
+                }}>⚓</div>
+                <div>
+                  <p className="font-karla font-600 uppercase" style={{ fontSize: '0.46rem', color: '#7090c0', letterSpacing: '0.14em', marginBottom: 3 }}>Navigator Rank</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.0rem', color: '#a8c4e8', lineHeight: 1 }}>{title}</p>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#7090c0', lineHeight: 1 }}>Lv {expLevel}</p>
+                <p className="font-karla font-400" style={{ fontSize: '0.46rem', color: '#4a6080', marginTop: 3 }}>{stats.expeditionXP.toLocaleString()} XP</p>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Voyages ── */}
       {voyages && voyages.length > 0 && (

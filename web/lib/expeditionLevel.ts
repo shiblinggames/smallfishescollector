@@ -38,6 +38,22 @@ export function getXPProgress(xp: number): {
   return { level, progress: xpInLevel / xpForLevel, xpInLevel, xpForLevel }
 }
 
+// ── Navigator titles ─────────────────────────────────────────────────────────
+
+const TITLES: { minLevel: number; title: string }[] = [
+  { minLevel: 100, title: 'Legendary Seafarer' },
+  { minLevel: 75,  title: 'Admiral'            },
+  { minLevel: 50,  title: 'Commodore'          },
+  { minLevel: 30,  title: 'Sea Captain'        },
+  { minLevel: 15,  title: 'Navigator'          },
+  { minLevel: 5,   title: 'First Mate'         },
+  { minLevel: 1,   title: 'Deckhand'           },
+]
+
+export function getNavigatorTitle(level: number): string {
+  return TITLES.find(t => level >= t.minLevel)?.title ?? 'Deckhand'
+}
+
 // ── XP awarded per voyage ────────────────────────────────────────────────────
 
 // Base XP for completing the route at all

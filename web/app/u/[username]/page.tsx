@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import Nav from '@/components/Nav'
 import ProfileClient from './ProfileClient'
 import { notFound } from 'next/navigation'
+import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
@@ -12,7 +13,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
     admin.from('profiles')
-      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, highest_perfect_streak')
+      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, highest_perfect_streak')
       .ilike('username', username)
       .single(),
   ])
@@ -109,6 +110,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             packsOpened: packCount ?? 0,
             uniqueSpecies: uniqueSpecies ?? 0,
             fishingXP: profile.fishing_xp ?? 0,
+            expeditionXP: profile.expedition_xp ?? 0,
             highestPerfectStreak: profile.highest_perfect_streak ?? 0,
           }}
           gear={{

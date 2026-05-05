@@ -5,6 +5,7 @@ import Nav from '@/components/Nav'
 import ProfileClient from './ProfileClient'
 import { getShip } from '@/lib/ships'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 
 export default async function ProfilePage() {
@@ -20,7 +21,7 @@ export default async function ProfilePage() {
     { data: ownedRows },
   ] = await Promise.all([
     supabase.from('profiles')
-      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, ship_tier')
+      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier')
       .eq('id', user.id)
       .single(),
     admin.from('fish_collection')
@@ -54,6 +55,8 @@ export default async function ProfilePage() {
 
   const ship = getShip(profile?.ship_tier ?? 0)
   const level = getLevelFromXP(profile?.fishing_xp ?? 0)
+  const expeditionLevel = getExpeditionLevel(profile?.expedition_xp ?? 0)
+  const navigatorTitle = getNavigatorTitle(expeditionLevel)
   const isPremium =
     !!profile?.is_premium &&
     !!profile?.premium_expires_at &&
@@ -75,6 +78,8 @@ export default async function ProfilePage() {
           pickerCards={pickerCards}
           isPremium={isPremium}
           level={level}
+          expeditionLevel={expeditionLevel}
+          navigatorTitle={navigatorTitle}
           uniqueSpecies={uniqueSpecies ?? 0}
           shipName={ship.name}
           shipColor={ship.color}

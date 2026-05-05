@@ -26,6 +26,8 @@ interface Props {
   pickerCards: PickerCard[]
   isPremium: boolean
   level: number
+  expeditionLevel: number
+  navigatorTitle: string
   uniqueSpecies: number
   shipName: string
   shipColor: string
@@ -47,6 +49,8 @@ export default function ProfileClient({
   pickerCards,
   isPremium,
   level,
+  expeditionLevel,
+  navigatorTitle,
   uniqueSpecies,
   shipName,
   shipColor,
@@ -220,7 +224,7 @@ export default function ProfileClient({
       </div>
 
       {/* ── Stats ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: '0.75rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 6 }}>
         {[
           { value: String(level), label: 'Fishing Level', color: '#60a5fa' },
           { value: String(uniqueSpecies), label: 'Species Found', color: '#34d399' },
@@ -243,6 +247,27 @@ export default function ProfileClient({
             </p>
           </div>
         ))}
+      </div>
+
+      {/* ── Navigator title ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: 'rgba(16,28,52,0.75)',
+        border: '1px solid rgba(112,144,192,0.22)',
+        borderRadius: 14, padding: '0.75rem 1rem',
+        marginBottom: '0.75rem',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>⚓</span>
+          <div>
+            <p className="font-karla font-600 uppercase" style={{ fontSize: '0.48rem', color: '#7090c0', letterSpacing: '0.14em', marginBottom: 2 }}>Navigator Rank</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#a8c4e8', lineHeight: 1 }}>{navigatorTitle}</p>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#7090c0', lineHeight: 1 }}>Lv {expeditionLevel}</p>
+          <p className="font-karla font-400" style={{ fontSize: '0.48rem', color: '#4a6080', marginTop: 2 }}>expedition</p>
+        </div>
       </div>
 
       {/* ── Showcase ── */}
