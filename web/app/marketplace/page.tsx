@@ -195,7 +195,7 @@ function DestCard({
         <div style={{
           position: 'absolute', right: -20, top: '50%', transform: 'translateY(-50%)',
           width: 200, height: 200, borderRadius: '50%',
-          background: `radial-gradient(ellipse, ${accent}18 0%, transparent 70%)`,
+          background: `radial-gradient(ellipse, ${accent}0a 0%, transparent 70%)`,
           pointerEvents: 'none',
         }} />
       )}
@@ -210,7 +210,7 @@ function DestCard({
             top: '50%',
             transform: 'translateY(-50%)',
             objectFit: 'contain',
-            filter: `drop-shadow(0 4px 20px ${accent}55)`,
+            filter: `drop-shadow(0 2px 10px ${accent}28)`,
             opacity: 0.92,
             pointerEvents: 'none',
             ...artStyle,
