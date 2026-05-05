@@ -47,6 +47,7 @@ interface Gear {
   reelTier: number
   lineTier: number
   shipTier: number
+  shipName: string | null
 }
 
 interface Props {
@@ -375,8 +376,8 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
               }}>
                 <img src={ship.imageUrl} alt={ship.name} style={{ width: 44, height: 36, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${ship.color}44)` }} />
                 <div>
-                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: ship.color + '88', marginBottom: 3 }}>Ship</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: ship.color }}>{ship.name}</p>
+                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: ship.color + '88', marginBottom: 3 }}>{ship.name}</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: ship.color }}>{gear.shipName ?? ship.name}</p>
                 </div>
               </div>
             </div>
