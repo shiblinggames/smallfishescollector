@@ -41,6 +41,13 @@ function formatCountdown(ms: number): string {
   return h > 0 ? `${h}h ${mm}m ${ss}s` : `${mm}m ${ss}s`
 }
 
+// Percentage positions on voyagemap.png — tweak to reposition nodes
+const ROUTE_NODES: Record<VoyageRoute, { x: number; y: number }> = {
+  coastal: { x: 20, y: 17 },
+  open:    { x: 63, y: 37 },
+  deep:    { x: 28, y: 43 },
+}
+
 type DropEntry = { kind: 'skin'; id: RingSkinId; rate: string } | { kind: 'bait'; type: string; rate: string }
 
 const ROUTE_DROPS: Record<VoyageRoute, DropEntry[]> = {
@@ -266,137 +273,164 @@ export default function DailyVoyagePanel({
                 </div>
               )}
 
-              {/* Route selection */}
-              <div style={{ marginBottom: '0.85rem' }}>
-                <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.46rem', color: '#7a6848', marginBottom: '0.45rem' }}>
-                  Choose a route
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  {(Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map(routeKey => {
-                    const rco = ROUTE_CONFIGS[routeKey]
-                    const isSelected = selectedRoute === routeKey
-                    const est = stats ? computeRouteEstimate(stats, savedCrew.length, routeKey) : null
-                    return (
-                      <button
-                        key={routeKey}
-                        onClick={() => setSelectedRoute(routeKey)}
-                        style={{
-                          background: isSelected ? `${rco.color}14` : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${isSelected ? rco.color + '55' : 'rgba(255,255,255,0.10)'}`,
-                          borderRadius: 9, padding: '0.55rem 0.7rem',
-                          cursor: 'pointer', textAlign: 'left',
-                          transition: 'background 0.12s, border-color 0.12s',
-                        }}
-                      >
-                        {/* Top row: name + risk label */}
-                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.5rem' }}>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.76rem', color: isSelected ? rco.color : '#c0b8a8', lineHeight: 1.2 }}>
-                            {rco.name}
-                          </p>
-                          <p className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: isSelected ? rco.color : '#6a6460', flexShrink: 0 }}>
-                            {rco.riskLabel}
-                          </p>
-                        </div>
+              {/* ── Voyage map ── */}
+              <div style={{ position: 'relative', width: '100%', borderRadius: 10, overflow: 'hidden', marginBottom: '0.75rem' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/voyagemap.png" alt="Voyage map" style={{ width: '100%', display: 'block' }} />
 
-                        {/* Tagline */}
-                        <p className="font-karla" style={{ fontSize: '0.58rem', color: '#8a7860', lineHeight: 1.4, marginTop: 2 }}>
-                          {rco.tagline}
-                        </p>
-
-                        {/* Estimates row */}
-                        {est && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginTop: '0.45rem', flexWrap: 'wrap' }}>
-                            {/* Loot range */}
-                            <span className="font-karla font-600" style={{ fontSize: '0.60rem', color: isSelected ? '#c8aa6a' : '#7a6848' }}>
-                              ~{est.lootMin}–{est.lootMax} ⟡
-                            </span>
-
-                            {/* Crew risk */}
-                            {savedCrew.length >= 2 ? (
-                              <span className="font-karla" style={{ fontSize: '0.58rem', color: est.crewRiskPct >= 40 ? '#f87171cc' : est.crewRiskPct > 0 ? '#c8906a' : '#6a8a6a' }}>
-                                {est.crewRiskPct === 0 ? 'No crew risk' : `${est.crewRiskPct}% crew risk`}
-                              </span>
-                            ) : (
-                              <span className="font-karla" style={{ fontSize: '0.58rem', color: '#c87a4a' }}>
-                                Need 1 more crew
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Drops: ring skins + lures, unified */}
-                        {est && est.drops.length > 0 && (
-                          <div style={{ marginTop: '0.55rem', borderTop: '0.5px solid rgba(255,255,255,0.06)', paddingTop: '0.45rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                            <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.42rem', color: '#5a5248' }}>
-                              possible drops
-                            </span>
-                            {est.drops.map(drop => {
-                              const def    = drop.kind === 'skin' ? getRingSkin(drop.id) : getBait(drop.type)
-                              const color  = def.color
-                              const name   = def.name
-                              const label  = drop.kind === 'skin' ? 'Ring cosmetic' : 'Fishing bait'
-                              const detail = drop.kind === 'skin'
-                                ? def.description
-                                : (() => {
-                                    const b = def as import('@/lib/bait').BaitDef
-                                    const parts: string[] = []
-                                    if (b.waitMult < 1) parts.push(`${Math.round((1 - b.waitMult) * 100)}% faster bite`)
-                                    if (b.catchZoneBonus > 0) parts.push(`+${b.catchZoneBonus}° catch zone`)
-                                    return parts.join(' · ')
-                                  })()
-                              return (
-                                <div key={drop.kind === 'skin' ? drop.id : drop.type} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.45rem' }}>
-                                  <span style={{
-                                    display: 'inline-block', width: 7, height: 7, marginTop: '0.18rem',
-                                    borderRadius: drop.kind === 'skin' ? '50%' : '2px',
-                                    background: color,
-                                    opacity: isSelected ? 0.9 : 0.5,
-                                    boxShadow: `0 0 4px ${color}88`,
-                                    flexShrink: 0,
-                                  }} />
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
-                                      <span className="font-karla font-700" style={{ fontSize: '0.60rem', color: isSelected ? color : `${color}bb` }}>
-                                        {name}
-                                      </span>
-                                      <span className="font-karla font-700" style={{ fontSize: '0.50rem', color: isSelected ? '#a89878' : '#5a5248' }}>
-                                        {drop.rate}
-                                      </span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.08rem' }}>
-                                      <span className="font-karla uppercase tracking-[0.05em]" style={{ fontSize: '0.40rem', color: isSelected ? `${color}99` : '#4a4038', background: `${color}18`, borderRadius: 3, padding: '0.08rem 0.28rem' }}>
-                                        {label}
-                                      </span>
-                                      <span className="font-karla" style={{ fontSize: '0.52rem', color: '#6a5a40', lineHeight: 1.3 }}>
-                                        {detail}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
+                {/* Clickable route nodes */}
+                {(Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map(routeKey => {
+                  const rco = ROUTE_CONFIGS[routeKey]
+                  const node = ROUTE_NODES[routeKey]
+                  const isSelected = selectedRoute === routeKey
+                  return (
+                    <button
+                      key={routeKey}
+                      onClick={() => setSelectedRoute(isSelected ? null : routeKey)}
+                      style={{
+                        position: 'absolute',
+                        left: `${node.x}%`, top: `${node.y}%`,
+                        transform: 'translate(-50%, -50%)',
+                        background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                        zIndex: 2,
+                      }}
+                    >
+                      {/* Pulse ring — only on unselected nodes */}
+                      {!isSelected && (
+                        <span className="animate-ping" style={{
+                          position: 'absolute', inset: -5, borderRadius: '50%',
+                          background: rco.color, opacity: 0.30, display: 'block',
+                        }} />
+                      )}
+                      {/* Dot */}
+                      <span style={{
+                        display: 'block',
+                        width: isSelected ? 22 : 16, height: isSelected ? 22 : 16,
+                        borderRadius: '50%',
+                        background: isSelected ? rco.color : `${rco.color}cc`,
+                        border: isSelected ? '2.5px solid rgba(255,255,255,0.95)' : '2px solid rgba(255,255,255,0.55)',
+                        boxShadow: isSelected
+                          ? `0 0 0 4px ${rco.color}44, 0 0 14px ${rco.color}`
+                          : `0 0 7px ${rco.color}99`,
+                        transition: 'all 0.15s',
+                        position: 'relative',
+                      }} />
+                      {/* Label */}
+                      <span style={{
+                        position: 'absolute', top: '100%', left: '50%',
+                        transform: 'translateX(-50%)', marginTop: 5,
+                        whiteSpace: 'nowrap', pointerEvents: 'none',
+                        background: 'rgba(6,4,2,0.85)', borderRadius: 4,
+                        padding: '0.1rem 0.35rem',
+                        border: isSelected ? `1px solid ${rco.color}55` : '1px solid transparent',
+                      }}>
+                        <span className="font-karla font-700" style={{ fontSize: '0.46rem', color: isSelected ? rco.color : '#b0a080' }}>
+                          {rco.name}
+                        </span>
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
 
-              {/* High crew risk warning */}
-              {(() => {
-                const est = selectedRoute && stats ? computeRouteEstimate(stats, savedCrew.length, selectedRoute) : null
-                if (!est || savedCrew.length < 2 || est.crewRiskPct <= 50) return null
+              {/* Route detail panel — shown when a node is selected */}
+              {selectedRoute && stats && (() => {
+                const rco = ROUTE_CONFIGS[selectedRoute]
+                const est = computeRouteEstimate(stats, savedCrew.length, selectedRoute)
                 return (
                   <div style={{
-                    background: 'rgba(248,113,113,0.07)',
-                    border: '1px solid rgba(248,113,113,0.25)',
-                    borderRadius: 9, padding: '0.55rem 0.7rem',
-                    marginBottom: '0.6rem',
+                    background: `linear-gradient(135deg, ${rco.color}0e 0%, rgba(10,8,4,0.60) 100%)`,
+                    border: `1px solid ${rco.color}44`,
+                    borderRadius: 10, padding: '0.75rem 0.85rem',
+                    marginBottom: '0.75rem',
                   }}>
-                    <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#f87171', lineHeight: 1.5 }}>
-                      ⚠ {est.crewRiskPct}% chance a crew member is lost permanently on this voyage.
+                    {/* Header */}
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: rco.color, lineHeight: 1.2 }}>
+                        {rco.name}
+                      </p>
+                      <span className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: `${rco.color}bb` }}>
+                        {rco.riskLabel}
+                      </span>
+                    </div>
+                    <p className="font-karla" style={{ fontSize: '0.58rem', color: '#8a7860', lineHeight: 1.4, marginBottom: '0.5rem' }}>
+                      {rco.tagline}
                     </p>
+
+                    {/* Estimates */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '0.55rem' }}>
+                      <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#c8aa6a' }}>
+                        ~{est.lootMin}–{est.lootMax} ⟡
+                      </span>
+                      {savedCrew.length >= 2 ? (
+                        <span className="font-karla" style={{ fontSize: '0.60rem', color: est.crewRiskPct >= 40 ? '#f87171cc' : est.crewRiskPct > 0 ? '#c8906a' : '#6a8a6a' }}>
+                          {est.crewRiskPct === 0 ? 'No crew risk' : `${est.crewRiskPct}% crew risk`}
+                        </span>
+                      ) : (
+                        <span className="font-karla" style={{ fontSize: '0.60rem', color: '#c87a4a' }}>Need 1 more crew</span>
+                      )}
+                    </div>
+
+                    {/* High crew risk warning */}
+                    {savedCrew.length >= 2 && est.crewRiskPct > 50 && (
+                      <div style={{ background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 7, padding: '0.45rem 0.6rem', marginBottom: '0.55rem' }}>
+                        <p className="font-karla font-600" style={{ fontSize: '0.60rem', color: '#f87171', lineHeight: 1.5 }}>
+                          ⚠ {est.crewRiskPct}% chance a crew member is lost permanently.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Drops */}
+                    {est.drops.length > 0 && (
+                      <div style={{ borderTop: `0.5px solid ${rco.color}22`, paddingTop: '0.45rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.42rem', color: '#5a5248' }}>
+                          possible drops
+                        </span>
+                        {est.drops.map(drop => {
+                          const def    = drop.kind === 'skin' ? getRingSkin(drop.id) : getBait(drop.type)
+                          const color  = def.color
+                          const name   = def.name
+                          const label  = drop.kind === 'skin' ? 'Ring cosmetic' : 'Fishing bait'
+                          const detail = drop.kind === 'skin'
+                            ? def.description
+                            : (() => {
+                                const b = def as import('@/lib/bait').BaitDef
+                                const parts: string[] = []
+                                if (b.waitMult < 1) parts.push(`${Math.round((1 - b.waitMult) * 100)}% faster bite`)
+                                if (b.catchZoneBonus > 0) parts.push(`+${b.catchZoneBonus}° catch zone`)
+                                return parts.join(' · ')
+                              })()
+                          return (
+                            <div key={drop.kind === 'skin' ? drop.id : drop.type} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.45rem' }}>
+                              <span style={{
+                                display: 'inline-block', width: 7, height: 7, marginTop: '0.18rem',
+                                borderRadius: drop.kind === 'skin' ? '50%' : '2px',
+                                background: color, flexShrink: 0,
+                                boxShadow: `0 0 4px ${color}88`,
+                              }} />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
+                                  <span className="font-karla font-700" style={{ fontSize: '0.60rem', color }}>
+                                    {name}
+                                  </span>
+                                  <span className="font-karla font-700" style={{ fontSize: '0.50rem', color: '#a89878' }}>
+                                    {drop.rate}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.08rem' }}>
+                                  <span className="font-karla uppercase tracking-[0.05em]" style={{ fontSize: '0.40rem', color: `${color}99`, background: `${color}18`, borderRadius: 3, padding: '0.08rem 0.28rem' }}>
+                                    {label}
+                                  </span>
+                                  <span className="font-karla" style={{ fontSize: '0.52rem', color: '#6a5a40', lineHeight: 1.3 }}>
+                                    {detail}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )
               })()}
