@@ -354,60 +354,69 @@ export default function DailyVoyagePanel({
                 <img src="/voyagemap.png" alt="Voyage map" style={{ width: '100%', display: 'block' }} />
 
                 {/* Clickable route nodes */}
-                {(Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map(routeKey => {
-                  const rco = ROUTE_CONFIGS[routeKey]
-                  const node = ROUTE_NODES[routeKey]
-                  const isSelected = selectedRoute === routeKey
-                  return (
-                    <button
-                      key={routeKey}
-                      onClick={() => setSelectedRoute(isSelected ? null : routeKey)}
-                      style={{
-                        position: 'absolute',
-                        left: `${node.x}%`, top: `${node.y}%`,
-                        transform: 'translate(-50%, -50%)',
-                        background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                        zIndex: 3,
-                      }}
-                    >
-                      {!isSelected && (
-                        <span className="animate-ping" style={{
-                          position: 'absolute', inset: -5, borderRadius: '50%',
-                          background: rco.color, opacity: 0.30, display: 'block',
+                {(() => {
+                  const expeditionLevel = getLevelFromXP(expeditionXP)
+                  const ROUTE_MIN_LEVELS: Record<VoyageRoute, number> = { coastal: 1, open: 5, deep: 15 }
+                  const REC_SCORES: Record<VoyageRoute, number> = { coastal: 20, open: 45, deep: 75 }
+                  return (Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map(routeKey => {
+                    const rco = ROUTE_CONFIGS[routeKey]
+                    const node = ROUTE_NODES[routeKey]
+                    const isSelected = selectedRoute === routeKey
+                    const minLevel = ROUTE_MIN_LEVELS[routeKey]
+                    const locked = expeditionLevel < minLevel
+                    return (
+                      <button
+                        key={routeKey}
+                        onClick={() => !locked && setSelectedRoute(isSelected ? null : routeKey)}
+                        style={{
+                          position: 'absolute',
+                          left: `${node.x}%`, top: `${node.y}%`,
+                          transform: 'translate(-50%, -50%)',
+                          background: 'none', border: 'none',
+                          cursor: locked ? 'default' : 'pointer',
+                          padding: 0, zIndex: 3,
+                          opacity: locked ? 0.45 : 1,
+                        }}
+                      >
+                        {!isSelected && !locked && (
+                          <span className="animate-ping" style={{
+                            position: 'absolute', inset: -5, borderRadius: '50%',
+                            background: rco.color, opacity: 0.30, display: 'block',
+                          }} />
+                        )}
+                        <span style={{
+                          display: 'block',
+                          width: isSelected ? 22 : 16, height: isSelected ? 22 : 16,
+                          borderRadius: '50%',
+                          background: locked ? 'rgba(80,70,60,0.6)' : isSelected ? rco.color : `${rco.color}cc`,
+                          border: isSelected ? '2.5px solid rgba(255,255,255,0.95)' : '2px solid rgba(255,255,255,0.55)',
+                          boxShadow: locked ? 'none' : isSelected
+                            ? `0 0 0 4px ${rco.color}44, 0 0 14px ${rco.color}`
+                            : `0 0 7px ${rco.color}99`,
+                          transition: 'all 0.15s',
+                          position: 'relative',
                         }} />
-                      )}
-                      <span style={{
-                        display: 'block',
-                        width: isSelected ? 22 : 16, height: isSelected ? 22 : 16,
-                        borderRadius: '50%',
-                        background: isSelected ? rco.color : `${rco.color}cc`,
-                        border: isSelected ? '2.5px solid rgba(255,255,255,0.95)' : '2px solid rgba(255,255,255,0.55)',
-                        boxShadow: isSelected
-                          ? `0 0 0 4px ${rco.color}44, 0 0 14px ${rco.color}`
-                          : `0 0 7px ${rco.color}99`,
-                        transition: 'all 0.15s',
-                        position: 'relative',
-                      }} />
-                      <span style={{
-                        position: 'absolute', top: '100%', left: '50%',
-                        transform: 'translateX(-50%)', marginTop: 6,
-                        whiteSpace: 'nowrap', pointerEvents: 'none',
-                        background: isSelected ? 'rgba(4,2,0,0.92)' : 'rgba(4,2,0,0.80)',
-                        borderRadius: 6,
-                        padding: '0.12rem 0.3rem 0.1rem',
-                        border: `1px solid ${isSelected ? rco.color + '66' : 'rgba(255,255,255,0.12)'}`,
-                        boxShadow: isSelected ? `0 0 10px ${rco.color}33` : 'none',
-                      }}>
-                        <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: isSelected ? rco.color : '#d4c8a8', display: 'block', lineHeight: 1.2 }}>
-                          {rco.name}
+                        <span style={{
+                          position: 'absolute', top: '100%', left: '50%',
+                          transform: 'translateX(-50%)', marginTop: 6,
+                          whiteSpace: 'nowrap', pointerEvents: 'none',
+                          background: isSelected ? 'rgba(4,2,0,0.92)' : 'rgba(4,2,0,0.80)',
+                          borderRadius: 6,
+                          padding: '0.12rem 0.3rem 0.1rem',
+                          border: `1px solid ${isSelected ? rco.color + '66' : 'rgba(255,255,255,0.12)'}`,
+                          boxShadow: isSelected ? `0 0 10px ${rco.color}33` : 'none',
+                        }}>
+                          <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: isSelected ? rco.color : '#d4c8a8', display: 'block', lineHeight: 1.2 }}>
+                            {rco.name}
+                          </span>
+                          <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: locked ? '#6a5040' : isSelected ? `${rco.color}bb` : '#6a5a40', display: 'block', textAlign: 'center', marginTop: 1 }}>
+                            {locked ? `🔒 Lv ${minLevel}` : `${REC_SCORES[routeKey]}+ score`}
+                          </span>
                         </span>
-                        <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: isSelected ? `${rco.color}bb` : '#6a5a40', display: 'block', textAlign: 'center', marginTop: 1 }}>
-                          {({ coastal: 20, open: 45, deep: 75 } as Record<string, number>)[routeKey]}+ score
-                        </span>
-                      </span>
-                    </button>
-                  )
-                })}
+                      </button>
+                    )
+                  })
+                })()}
 
                 {/* Overlay panel — fades up from the bottom when a route is selected */}
                 {selectedRoute && stats && (() => {
