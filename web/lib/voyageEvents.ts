@@ -91,9 +91,9 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
     return s
   }
 
-  // Stat rolls
-  const rollFortune  = () => Math.random() * 45 < fortune        // fortune 22 ≈ 50%, fortune 45 = guaranteed
-  const rollPower    = () => Math.random() * 30 < power          // power 15 ≈ 50%
+  // Stat rolls — power capped at 80% max so encounters are never guaranteed wins
+  const rollFortune  = () => Math.random() * 45 < fortune        // fortune 22 ≈ 49%, fortune 45 = guaranteed
+  const rollPower    = () => Math.random() < Math.min(0.80, power / 55)  // power 28 ≈ 50%, hard cap 80%
   const rollDodge    = () => Math.random() * 28 < dodge          // dodge 12 ≈ 43%
   const rollWeather  = () => Math.random() < 0.30 + shipTier * 0.10  // tier 0=30%, tier 7=100%
 
@@ -128,7 +128,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
     switch (type) {
       case 'discovery': {
         const success = rollFortune()
-        const gemDrop = success && Math.random() * 55 < fortune ? Math.round(rand(3, 10) * rc.gemScale) : 0
+        const gemDrop = success && Math.random() * 55 < fortune ? Math.round(rand(1, 3) * rc.gemScale) : 0
         const skinPool: Record<VoyageRoute, string> = { coastal: 'whale_bone', open: 'coral_spire', deep: 'gilded_compass' }
         const skinDrop = success && Math.random() < 0.05 ? skinPool[route] : null
         const baitDrop = success && route === 'deep' && Math.random() < 0.04 ? 'luminous' : null
@@ -136,7 +136,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
         event = {
           type, outcome: success ? 'success' : 'neutral',
           title: template.title, narrative: fill(template.narrative),
-          doubloonDelta: success ? payout(60, 180) : 0,
+          doubloonDelta: success ? payout(50, 140) : 0,
           gemDelta: gemDrop,
           crewVariantLost: null,
           ringSkinDrop: skinDrop,
@@ -148,10 +148,10 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
       case 'encounter': {
         const win = rollPower()
         if (win) {
-          const crush = Math.random() * 30 < power * 0.6
+          const crush = Math.random() < Math.min(0.40, power / 100)
           const gemDrop = crush
-            ? Math.round(rand(5, 15) * rc.gemScale)
-            : (Math.random() * 55 < power ? Math.round(rand(2, 7) * rc.gemScale) : 0)
+            ? Math.round(rand(2, 5) * rc.gemScale)
+            : (Math.random() * 55 < power ? Math.round(rand(1, 3) * rc.gemScale) : 0)
           const crushSkinDrop = crush
             ? (route === 'open' && Math.random() < 0.05 ? 'navigators_silver'
               : route === 'deep' && Math.random() < 0.04 ? 'abyssal_sigil'
@@ -168,7 +168,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
           event = {
             type, outcome: 'success',
             title: template.title, narrative: fill(template.narrative),
-            doubloonDelta: crush ? payout(120, 240, true) : payout(30, 80, true),
+            doubloonDelta: crush ? payout(80, 160, true) : payout(20, 55, true),
             gemDelta: gemDrop,
             crewVariantLost: null,
             ringSkinDrop: crushSkinDrop,
