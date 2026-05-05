@@ -291,7 +291,7 @@ export default function DailyVoyagePanel({
                       {([
                         ['🗺️', 'Pick a route', 'Tap a location on the map. Riskier routes pay more — but your crew might not make it back.'],
                         ['⏳', 'They sail for 6 hours', 'Events unfold along the way. Check back to watch the story as it happens.'],
-                        ['💰', 'Claim your loot', 'When they return, collect doubloons, gems, and rare drops. One voyage per day.'],
+                        ['💰', 'Claim your loot', 'When they return, collect doubloons, gems, and rare drops.'],
                         ['☠️', 'Crew can die', 'On dangerous routes, crew members can be lost at sea — permanently. Choose wisely.'],
                       ] as [string, string, string][]).map(([icon, title, desc]) => (
                         <div key={title} style={{ display: 'flex', gap: '0.75rem' }}>
