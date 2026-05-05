@@ -46,7 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </PageTransition>
 <MobileTabBar />
-        <footer className="sm:pb-10 pt-6 text-center">
+        <footer className="sm:pb-4 pt-3 text-center">
           <p className="font-karla font-300 text-[#3a3835]" style={{ fontSize: '0.65rem' }}>
             &copy; {new Date().getFullYear()} Shibling Games LLC
           </p>
