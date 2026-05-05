@@ -37,6 +37,7 @@ export default function MobileTabBar() {
   const bg = tint ? `linear-gradient(${tint}, ${tint}), black` : 'black'
 
   const [tavernBadge, setTavernBadge] = useState(0)
+  const [voyageBadge, setVoyageBadge] = useState(false)
 
   useEffect(() => {
     setTavernBadge(parseInt(localStorage.getItem('tavernBadge') ?? '0', 10) || 0)
@@ -46,6 +47,26 @@ export default function MobileTabBar() {
     window.addEventListener('tavern-daily-completed', onCompleted)
     return () => window.removeEventListener('tavern-daily-completed', onCompleted)
   }, [])
+
+  useEffect(() => {
+    const { createClient } = require('@/lib/supabase/client')
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }: { data: { user: { id: string } | null } }) => {
+      if (!user) return
+      supabase
+        .from('daily_voyages')
+        .select('created_at, duration_ms')
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .then(({ data }: { data: { created_at: string; duration_ms: number | null }[] | null }) => {
+          const now = Date.now()
+          const hasReady = (data ?? []).some(
+            r => new Date(r.created_at).getTime() + (r.duration_ms ?? 7200000) <= now
+          )
+          setVoyageBadge(hasReady)
+        })
+    })
+  }, [pathname])
 
   return (
     <div
@@ -62,7 +83,8 @@ export default function MobileTabBar() {
     >
       {LINKS.map(({ href, label, icon }) => {
         const active = pathname === href || pathname.startsWith(href + '/')
-        const badge = href === '/tavern' && tavernBadge > 0 ? tavernBadge : null
+        const badge = href === '/tavern' && tavernBadge > 0 ? tavernBadge
+          : href === '/expeditions' && voyageBadge ? true : null
         return (
           <Link
             key={href}
@@ -79,9 +101,11 @@ export default function MobileTabBar() {
             </motion.div>
             <span className="text-[0.58rem] font-karla font-600 uppercase tracking-[0.10em]">{label}</span>
             {badge && (
-              <span className="absolute top-2 right-[calc(50%-18px)] bg-[#f0c040] text-black text-[0.5rem] font-karla font-700 rounded-full w-4 h-4 flex items-center justify-center leading-none">
-                {badge > 99 ? '99+' : badge}
-              </span>
+              typeof badge === 'number'
+                ? <span className="absolute top-2 right-[calc(50%-18px)] bg-[#f0c040] text-black text-[0.5rem] font-karla font-700 rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                : <span className="absolute top-2 right-[calc(50%-10px)] bg-[#f0c040] rounded-full w-2 h-2" />
             )}
           </Link>
         )

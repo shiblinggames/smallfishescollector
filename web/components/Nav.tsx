@@ -34,6 +34,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
     return parseInt(localStorage.getItem('tavernBadge') ?? '0', 10) || 0
   })
   const [achievementsBadge, setAchievementsBadge] = useState(false)
+  const [voyageBadge, setVoyageBadge] = useState(false)
   const [showInstallEntry, setShowInstallEntry] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
   const [isChromeIOS, setIsChromeIOS] = useState(false)
@@ -53,7 +54,8 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         supabase.from('quiz_answers').select('date').order('date', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('daily_fish_attempts').select('solved, guesses, date').order('date', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('user_achievements').select('unlocked_at').eq('user_id', user.id).order('unlocked_at', { ascending: false }).limit(1).maybeSingle(),
-      ]).then(([{ data: profile }, { data: quiz }, { data: fotd }, { data: latestAchievement }]) => {
+        supabase.from('daily_voyages').select('created_at, duration_ms').eq('user_id', user.id).eq('status', 'pending'),
+      ]).then(([{ data: profile }, { data: quiz }, { data: fotd }, { data: latestAchievement }, { data: voyages }]) => {
         const bonusDone = profile?.last_daily_claim === today
         const quizDone = quiz?.date === today
         const fotdDone = fotd?.date === today && (fotd.solved || (fotd.guesses?.length ?? 0) >= 4)
@@ -63,6 +65,12 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         const lastViewed = profile?.last_viewed_achievements_at
         const latestUnlocked = latestAchievement?.unlocked_at
         setAchievementsBadge(!!latestUnlocked && (!lastViewed || latestUnlocked > lastViewed))
+        const now = Date.now()
+        const hasReadyVoyage = (voyages ?? []).some(
+          (r: { created_at: string; duration_ms: number | null }) =>
+            new Date(r.created_at).getTime() + (r.duration_ms ?? 7200000) <= now
+        )
+        setVoyageBadge(hasReadyVoyage)
       }).catch(() => {})
     })
   }, [])
@@ -168,7 +176,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
-    { href: '/expeditions', label: 'Expeditions', badge: null,
+    { href: '/expeditions', label: 'Expeditions', badge: voyageBadge || null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 17c2 4 16 4 18 0"/><path d="M4 17L6 12l13 0 2 5"/>
@@ -251,7 +259,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
-    { href: '/expeditions', label: 'Expeditions', badge: null,
+    { href: '/expeditions', label: 'Expeditions', badge: voyageBadge || null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 17c2 4 16 4 18 0"/><path d="M4 17L6 12l13 0 2 5"/>
