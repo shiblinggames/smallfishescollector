@@ -51,7 +51,7 @@ export default async function HomePage() {
 
         {/* Description */}
         <p className="font-karla font-300 mb-10 mx-auto" style={{ fontSize: '0.88rem', color: '#a8b8c8', lineHeight: 1.8, maxWidth: 360 }}>
-          Fish the depths. Open packs. Build your collection.
+          Fish the depths. Build your collection.
           Set sail on expeditions and rise through the ranks.
         </p>
 
