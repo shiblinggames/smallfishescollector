@@ -2656,9 +2656,6 @@ export default function FishingGame({
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#d4c09a', lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
                     {rod.name}
                   </p>
-                  <p className="font-karla" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.42)', lineHeight: 1 }}>
-                    Hk{hookTier} · Re{reelTier} · Ln{lineTier}
-                  </p>
                 </button>
 
                 {/* Bait */}
@@ -2673,9 +2670,6 @@ export default function FishingGame({
                   <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)' }}>Bait</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: outOfBait ? '#f87171' : baitAccent, lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
                     {selectedBaitDef?.name ?? '—'}
-                  </p>
-                  <p className="font-karla" style={{ fontSize: '0.52rem', color: outOfBait ? 'rgba(248,113,113,0.75)' : 'rgba(255,255,255,0.42)', lineHeight: 1 }}>
-                    {outOfBait ? 'Out of bait' : `×${selectedBaitQty} · ${baitStat}`}
                   </p>
                 </button>
 
@@ -2696,9 +2690,6 @@ export default function FishingGame({
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', lineHeight: 1, color: holdTotalCount > 0 ? holdAccent : '#3a3835' }}>
                     {holdTotalCount}<span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.18)', fontWeight: 400 }}> /{holdCapacity}</span>
                   </p>
-                  <p className="font-karla" style={{ fontSize: '0.52rem', lineHeight: 1, color: holdFull ? '#f87171cc' : holdCritical ? '#fb923ccc' : holdTotalCount > 0 ? 'rgba(255,255,255,0.42)' : '#3a3835' }}>
-                    {holdFull ? 'Full' : holdCritical ? 'Almost full' : holdWarning ? 'Getting full' : holdTotalCount > 0 ? 'fish in hold' : 'empty'}
-                  </p>
                 </button>
 
                 {/* Sell */}
@@ -2713,9 +2704,6 @@ export default function FishingGame({
                   <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)' }}>Sell</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', lineHeight: 1, color: holdTotalValue > 0 ? '#f0c040' : '#3a3835' }}>
                     {holdTotalValue > 0 ? `${holdTotalValue.toLocaleString()} ⟡` : '—'}
-                  </p>
-                  <p className="font-karla" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.42)', lineHeight: 1 }}>
-                    quick sell · market
                   </p>
                 </button>
 
