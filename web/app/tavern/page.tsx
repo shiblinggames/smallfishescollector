@@ -5,7 +5,7 @@ import Nav from '@/components/Nav'
 import Link from 'next/link'
 import { getDailyWagered, getSlotsDailyWagered } from './actions'
 import { DAILY_CAP, SLOTS_DAILY_CAP } from './constants'
-import { getWeeklyBounties } from '@/app/packs/bountyActions'
+import { getChartState } from '@/app/charting/chartActions'
 import GameCard from './GameCard'
 import RecruitCard from './RecruitCard'
 import WelcomeModal from './WelcomeModal'
@@ -18,12 +18,12 @@ export default async function TavernPage() {
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const [{ data: profile }, { data: fotdAttempt }, dailyWagered, slotsDailyWagered, bounties] = await Promise.all([
+  const [{ data: profile }, { data: fotdAttempt }, dailyWagered, slotsDailyWagered, chartState] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome, gems').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
     getSlotsDailyWagered(),
-    getWeeklyBounties(),
+    getChartState(),
   ])
 
   const isPremium =
@@ -39,11 +39,10 @@ export default async function TavernPage() {
   const fotdDone = !!fotdAttempt && (fotdAttempt.solved || (fotdAttempt.guesses?.length ?? 0) >= 4)
   const crownCapReached = dailyWagered >= DAILY_CAP
   const slotsCapReached = slotsDailyWagered >= SLOTS_DAILY_CAP
-  const bountyProgress = bounties?.progress
-  const bountyCount = bountyProgress ? Object.values(bountyProgress).filter(Boolean).length : 0
-  const bountyClaimed = bounties?.claimed
-  const bountyClaimedCount = bountyClaimed ? Object.values(bountyClaimed).filter(Boolean).length : 0
-  const bountyAllDone = bountyCount === 4
+  const hasContest = chartState && !('error' in chartState)
+  const chartCompleted = hasContest && !!chartState.progress.completed_at
+  const chartTilesCharted = hasContest ? chartState.progress.path_index : 0
+  const chartPathLength = hasContest ? chartState.pathLength : 0
 
 
   const bartenderLines = [
@@ -66,10 +65,6 @@ export default async function TavernPage() {
     "Rowboat fills up fast if you're fishing the abyss. You'll be running to market every five minutes.",
     "Man-o-War holds three hundred and fifty fish. Sailors have been known to disappear for days on one of those.",
     "Running low on hold space? Head to market before your next cast. Learned that the hard way.",
-    // Bounties
-    "There's a bounty out on a deep water fish this week. Nobody's landed it yet.",
-    "The abyss bounty's still up for grabs. Five hundred doubloons and a pack for whoever lands it.",
-    "Bounty board's fresh this week. Someone always clears the shallows one first. Easy money.",
     // Crown & Anchor
     "Careful with the dice today. Saw a sailor lose four rounds straight on the anchor. Bad luck going around.",
     "Crown and Anchor's been running hot this week. Or maybe it's just the dice. Who knows.",
@@ -130,27 +125,26 @@ export default async function TavernPage() {
           />
         </div>
 
-        {bounties && (
+        {hasContest && (
           <div className="px-6 max-w-4xl mx-auto mb-6" style={{ position: 'relative', zIndex: 1 }}>
-            <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-2" style={{ fontSize: '0.6rem' }}>Weekly</p>
+            <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-2" style={{ fontSize: '0.6rem' }}>Contest</p>
             <GameCard
-              href="/tavern/bounties"
-              eyebrow="Weekly"
-              title="Bounty"
+              href="/charting"
+              eyebrow="Contest"
+              title="Chart the Course"
               statusText={
-                bountyClaimedCount === 4 ? 'All claimed ✓' :
-                bountyAllDone ? 'All caught — claim rewards' :
-                bountyCount > 0 ? `${bountyCount} / 4 caught` :
-                'New targets this week'
+                chartCompleted ? 'Voyage complete ✓' :
+                chartTilesCharted > 0 ? `${chartTilesCharted} / ${chartPathLength} tiles charted` :
+                'Chart a path from sea to shore'
               }
               info={[
-                `Shallows — ${bounties.shallows.name} · 50 ⟡`,
-                `Open Waters — ${bounties.openWaters.name} · 150 ⟡`,
-                `Deep — ${bounties.deep.name} · 300 ⟡`,
-                `Abyss — ${bounties.abyss.name} · 500 ⟡ + 1 pack`,
+                'Guess the hidden path tile by tile',
+                'Earn moves from fishing and navigator levels',
+                '2,000 ⟡ bonus past row 5 · 5,000 ⟡ past row 10',
+                'Top 3 finishers earn a special cosmetic',
               ]}
-              icon={<BountyIcon />}
-              completed={bountyClaimedCount === 4}
+              icon={<ChartIcon />}
+              completed={chartCompleted}
               variant="featured"
             />
           </div>
@@ -248,12 +242,14 @@ function HookIcon() {
   )
 }
 
-function BountyIcon() {
+function ChartIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4"/>
-      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-      <path d="M9 8l1.5 1.5L13 7"/>
+      <path d="M3 17c2 4 16 4 18 0"/>
+      <path d="M4 17L6 11h12l2 6"/>
+      <line x1="12" y1="11" x2="12" y2="4"/>
+      <path d="M8 4h8"/>
+      <line x1="12" y1="4" x2="12" y2="2"/>
     </svg>
   )
 }
