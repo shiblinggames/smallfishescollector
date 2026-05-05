@@ -36,6 +36,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   const [achievementsBadge, setAchievementsBadge] = useState(false)
   const [showInstallEntry, setShowInstallEntry] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
+  const [isChromeIOS, setIsChromeIOS] = useState(false)
   const [showIOSHint, setShowIOSHint] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [displayDoubloons, setDisplayDoubloons] = useState(doubloons)
@@ -75,7 +76,9 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
     if (standalone) return
     setShowInstallEntry(true)
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window)
+    const chromeIOS = ios && /CriOS/.test(navigator.userAgent)
     setIsIOS(ios)
+    setIsChromeIOS(chromeIOS)
     function handlePrompt(e: Event) {
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
@@ -473,7 +476,10 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
             <button onClick={() => setShowIOSHint(false)} style={{ background: 'none', border: 'none', color: '#4a4845', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: 0, marginTop: 1 }}>✕</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.1rem' }}>
-            {([
+            {(isChromeIOS ? [
+              ['···', 'Tap the three dots — top right corner'],
+              ['Add to Home Screen', 'Tap Add to Home Screen'],
+            ] : [
               ['···', 'Tap the three dots — bottom right corner'],
               ['Share', 'Tap Share'],
               ['View More', 'Tap View More'],
