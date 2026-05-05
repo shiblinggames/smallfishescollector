@@ -79,6 +79,7 @@ export default async function MarketplacePage() {
                 <DestCard
                   accent="#fb923c"
                   art="/models/man-o-war.png"
+                  artWidth={145}
                   eyebrow="Ship · Hold · Crew"
                   title="Shipyard"
                   description="A bigger ship means a bigger haul. Upgrade your vessel for more hold capacity, crew slots, and expedition power."
@@ -112,6 +113,7 @@ export default async function MarketplacePage() {
                 <DestCard
                   accent="#a78bfa"
                   art="/physicalboardgame.png"
+                  artWidth={145}
                   eyebrow="Physical board game"
                   title="Seas the Booty"
                   description="A strategy card game for 2–6 players featuring the same art. Every purchase includes 20 digital packs."
@@ -162,11 +164,12 @@ function Tag({ label, color }: { label: string; color: string }) {
 }
 
 function DestCard({
-  accent, art, artStyle, eyebrow, title, description, tags, badge, extra,
+  accent, art, artStyle, artWidth, eyebrow, title, description, tags, badge, extra,
 }: {
   accent: string
   art: string | null
   artStyle?: React.CSSProperties
+  artWidth?: number
   eyebrow: React.ReactNode
   title: string
   description: string
@@ -214,7 +217,7 @@ function DestCard({
       {/* Right: image container */}
       {art && (
         <div style={{
-          flexShrink: 0, width: 110,
+          flexShrink: 0, width: artWidth ?? 110,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           position: 'relative',
         }}>
