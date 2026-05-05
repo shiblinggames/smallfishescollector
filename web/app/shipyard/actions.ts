@@ -41,3 +41,18 @@ export async function buyShip(): Promise<{ shipTier: number; doubloons: number }
   revalidatePath('/marketplace/shipyard')
   return { shipTier: nextTier, doubloons: newDoubloons }
 }
+
+export async function renameShip(name: string): Promise<{ ok: true } | { error: string }> {
+  const trimmed = name.trim().slice(0, 32)
+  if (!trimmed) return { error: 'Name cannot be empty' }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  await admin.from('profiles').update({ ship_name: trimmed }).eq('id', user.id)
+
+  revalidatePath('/marketplace/shipyard')
+  return { ok: true }
+}

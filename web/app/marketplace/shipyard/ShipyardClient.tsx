@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from 'react'
 import { SHIPS } from '@/lib/ships'
-import { buyShip } from '@/app/shipyard/actions'
+import { buyShip, renameShip } from '@/app/shipyard/actions'
 import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 
-export default function ShipyardClient({ shipTier: initialTier, doubloons: initialDoubloons }: { shipTier: number; doubloons: number }) {
+export default function ShipyardClient({ shipTier: initialTier, doubloons: initialDoubloons, shipName: initialShipName }: { shipTier: number; doubloons: number; shipName: string | null }) {
   const [shipTier, setShipTier] = useState(initialTier)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
+  const [shipName, setShipName] = useState(initialShipName)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [selectedTier, setSelectedTier] = useState<number | null>(null)
@@ -23,6 +24,13 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
         setDoubloons(result.doubloons)
         setSelectedTier(result.shipTier)
       }
+    })
+  }
+
+  function handleRename(name: string) {
+    startTransition(async () => {
+      const result = await renameShip(name)
+      if (!('error' in result)) setShipName(name.trim().slice(0, 32))
     })
   }
 
@@ -114,7 +122,9 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
           shipTier={shipTier}
           doubloons={doubloons}
           isPending={isPending}
+          shipName={shipName}
           onBuy={handleBuyShip}
+          onRename={handleRename}
           onClose={() => setSelectedTier(null)}
         />
       )}
@@ -123,13 +133,15 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
 }
 
 function ShipDetailModal({
-  tier, shipTier, doubloons, isPending, onBuy, onClose,
+  tier, shipTier, doubloons, isPending, shipName, onBuy, onRename, onClose,
 }: {
   tier: number
   shipTier: number
   doubloons: number
   isPending: boolean
+  shipName: string | null
   onBuy: () => void
+  onRename: (name: string) => void
   onClose: () => void
 }) {
   const ship = SHIPS[tier]
@@ -139,6 +151,13 @@ function ShipDetailModal({
   const isActive = tier === shipTier
   const isNext = tier === shipTier + 1
   const canAfford = doubloons >= ship.cost
+  const [editing, setEditing] = useState(false)
+  const [nameInput, setNameInput] = useState(shipName ?? '')
+
+  function submitRename() {
+    if (nameInput.trim()) onRename(nameInput)
+    setEditing(false)
+  }
 
   return (
     <div
@@ -169,7 +188,43 @@ function ShipDetailModal({
             </button>
           </div>
           {isActive && (
-            <p className="font-karla font-600 uppercase tracking-[0.1em] text-center mt-3" style={{ fontSize: '0.7rem', color: c }}>✓ Active Ship</p>
+            <div className="mt-3">
+              <p className="font-karla font-600 uppercase tracking-[0.1em] text-center" style={{ fontSize: '0.7rem', color: c }}>✓ Active Ship</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: 8 }}>
+                {editing ? (
+                  <>
+                    <input
+                      autoFocus
+                      value={nameInput}
+                      onChange={e => setNameInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') submitRename(); if (e.key === 'Escape') setEditing(false) }}
+                      maxLength={32}
+                      placeholder={ship.name}
+                      style={{
+                        background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)',
+                        borderRadius: 7, padding: '0.35rem 0.6rem',
+                        color: '#f0ede8', fontSize: '0.82rem', fontFamily: 'inherit',
+                        outline: 'none', width: 180, textAlign: 'center',
+                      }}
+                    />
+                    <button onClick={submitRename} style={{ background: 'rgba(240,192,64,0.15)', border: '1px solid rgba(240,192,64,0.35)', borderRadius: 6, padding: '0.3rem 0.65rem', color: '#f0c040', cursor: 'pointer', fontSize: '0.72rem' }}
+                      className="font-karla font-700">Save</button>
+                    <button onClick={() => setEditing(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5a5248', fontSize: '0.72rem' }}
+                      className="font-karla">Cancel</button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => { setNameInput(shipName ?? ''); setEditing(true) }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem 0.4rem' }}
+                  >
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#c8b890' }}>
+                      {shipName ?? ship.name}
+                    </span>
+                    <span style={{ fontSize: '0.65rem', color: '#5a4a30' }}>✎</span>
+                  </button>
+                )}
+              </div>
+            </div>
           )}
           {owned && !isActive && (
             <p className="font-karla font-300 uppercase tracking-[0.1em] text-center mt-3" style={{ fontSize: '0.7rem', color: '#4ade80' }}>✓ Owned</p>
