@@ -323,10 +323,10 @@ export default function DailyVoyagePanel({
                         border: `1px solid ${isSelected ? rco.color + '66' : 'rgba(255,255,255,0.12)'}`,
                         boxShadow: isSelected ? `0 0 10px ${rco.color}33` : 'none',
                       }}>
-                        <span className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: isSelected ? rco.color : '#d4c8a8', display: 'block', lineHeight: 1.2 }}>
+                        <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: isSelected ? rco.color : '#d4c8a8', display: 'block', lineHeight: 1.2 }}>
                           {rco.name}
                         </span>
-                        <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.40rem', color: isSelected ? `${rco.color}bb` : '#6a5a40', display: 'block', textAlign: 'center', marginTop: 1 }}>
+                        <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: isSelected ? `${rco.color}bb` : '#6a5a40', display: 'block', textAlign: 'center', marginTop: 1 }}>
                           {rco.riskLabel}
                         </span>
                       </span>
@@ -348,36 +348,49 @@ export default function DailyVoyagePanel({
                       overflowY: 'auto',
                     }}>
                       {/* Header */}
-                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: rco.color, lineHeight: 1.2 }}>
-                          {rco.name}
-                        </p>
-                        <span className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: `${rco.color}bb` }}>
-                          {rco.riskLabel}
-                        </span>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.2rem', gap: '0.5rem' }}>
+                        <div>
+                          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: rco.color, lineHeight: 1.2 }}>
+                            {rco.name}
+                          </p>
+                          <span className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.62rem', color: `${rco.color}bb` }}>
+                            {rco.riskLabel}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => setSelectedRoute(null)}
+                          style={{
+                            flexShrink: 0, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)',
+                            borderRadius: 6, width: 26, height: 26, cursor: 'pointer',
+                            color: '#a09070', fontSize: '0.8rem', lineHeight: 1,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            marginTop: 2,
+                          }}
+                          aria-label="Close"
+                        >✕</button>
                       </div>
-                      <p className="font-karla" style={{ fontSize: '0.58rem', color: '#8a7860', lineHeight: 1.4, marginBottom: '0.5rem' }}>
+                      <p className="font-karla" style={{ fontSize: '0.78rem', color: '#8a7860', lineHeight: 1.4, marginBottom: '0.5rem' }}>
                         {rco.tagline}
                       </p>
 
                       {/* Estimates */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-                        <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#c8aa6a' }}>
+                        <span className="font-karla font-700" style={{ fontSize: '0.84rem', color: '#c8aa6a' }}>
                           ~{est.lootMin}–{est.lootMax} ⟡
                         </span>
                         {savedCrew.length >= 2 ? (
-                          <span className="font-karla" style={{ fontSize: '0.60rem', color: est.crewRiskPct >= 40 ? '#f87171cc' : est.crewRiskPct > 0 ? '#c8906a' : '#6a8a6a' }}>
+                          <span className="font-karla" style={{ fontSize: '0.80rem', color: est.crewRiskPct >= 40 ? '#f87171cc' : est.crewRiskPct > 0 ? '#c8906a' : '#6a8a6a' }}>
                             {est.crewRiskPct === 0 ? 'No crew risk' : `${est.crewRiskPct}% crew risk`}
                           </span>
                         ) : (
-                          <span className="font-karla" style={{ fontSize: '0.60rem', color: '#c87a4a' }}>Need 1 more crew</span>
+                          <span className="font-karla" style={{ fontSize: '0.80rem', color: '#c87a4a' }}>Need 1 more crew</span>
                         )}
                       </div>
 
                       {/* Crew risk warning */}
                       {savedCrew.length >= 2 && est.crewRiskPct > 50 && (
                         <div style={{ background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 7, padding: '0.4rem 0.6rem', marginBottom: '0.5rem' }}>
-                          <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#f87171', lineHeight: 1.5 }}>
+                          <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#f87171', lineHeight: 1.5 }}>
                             ⚠ {est.crewRiskPct}% chance a crew member is lost permanently.
                           </p>
                         </div>
@@ -386,7 +399,7 @@ export default function DailyVoyagePanel({
                       {/* Drops */}
                       {est.drops.length > 0 && (
                         <div style={{ borderTop: `0.5px solid ${rco.color}22`, paddingTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.32rem', marginBottom: '0.65rem' }}>
-                          <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.42rem', color: '#5a5248' }}>
+                          <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.60rem', color: '#5a5248' }}>
                             possible drops
                           </span>
                           {est.drops.map(drop => {
@@ -406,21 +419,21 @@ export default function DailyVoyagePanel({
                             return (
                               <div key={drop.kind === 'skin' ? drop.id : drop.type} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.45rem' }}>
                                 <span style={{
-                                  display: 'inline-block', width: 7, height: 7, marginTop: '0.18rem',
+                                  display: 'inline-block', width: 8, height: 8, marginTop: '0.22rem',
                                   borderRadius: drop.kind === 'skin' ? '50%' : '2px',
                                   background: color, flexShrink: 0,
                                   boxShadow: `0 0 4px ${color}88`,
                                 }} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
-                                    <span className="font-karla font-700" style={{ fontSize: '0.60rem', color }}>{name}</span>
-                                    <span className="font-karla font-700" style={{ fontSize: '0.50rem', color: '#a89878' }}>{drop.rate}</span>
+                                    <span className="font-karla font-700" style={{ fontSize: '0.80rem', color }}>{name}</span>
+                                    <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#a89878' }}>{drop.rate}</span>
                                   </div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.08rem' }}>
-                                    <span className="font-karla uppercase tracking-[0.05em]" style={{ fontSize: '0.40rem', color: `${color}99`, background: `${color}18`, borderRadius: 3, padding: '0.08rem 0.28rem' }}>
+                                    <span className="font-karla uppercase tracking-[0.05em]" style={{ fontSize: '0.58rem', color: `${color}99`, background: `${color}18`, borderRadius: 3, padding: '0.08rem 0.28rem' }}>
                                       {label}
                                     </span>
-                                    <span className="font-karla" style={{ fontSize: '0.52rem', color: '#6a5a40', lineHeight: 1.3 }}>
+                                    <span className="font-karla" style={{ fontSize: '0.70rem', color: '#6a5a40', lineHeight: 1.3 }}>
                                       {detail}
                                     </span>
                                   </div>
@@ -433,7 +446,7 @@ export default function DailyVoyagePanel({
 
                       {/* Error */}
                       {error && (
-                        <p className="font-karla" style={{ fontSize: '0.60rem', color: '#f87171', marginBottom: '0.45rem' }}>{error}</p>
+                        <p className="font-karla" style={{ fontSize: '0.78rem', color: '#f87171', marginBottom: '0.45rem' }}>{error}</p>
                       )}
 
                       {/* Set Sail */}
@@ -451,7 +464,7 @@ export default function DailyVoyagePanel({
                         }}
                         className="font-cinzel font-700 uppercase tracking-[0.12em]"
                       >
-                        <span style={{ fontSize: '0.72rem' }}>{isPending ? 'Sending…' : 'Set Sail'}</span>
+                        <span style={{ fontSize: '0.92rem' }}>{isPending ? 'Sending…' : 'Set Sail'}</span>
                       </button>
                     </div>
                   )
