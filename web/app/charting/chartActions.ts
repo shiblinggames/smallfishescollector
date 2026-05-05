@@ -201,8 +201,8 @@ export async function makeChartGuess(
   let bonusDoubloons = 0
   if (correct) {
     const newTileRow = path[newPathIndex][0]
-    if (newTileRow >= 5 && !(currentMilestones & 1)) { newMilestones |= 1; bonusDoubloons += 2000 }
-    if (newTileRow >= 10 && !(currentMilestones & 2)) { newMilestones |= 2; bonusDoubloons += 5000 }
+    if (newTileRow > 5 && !(currentMilestones & 1)) { newMilestones |= 1; bonusDoubloons += 2000 }
+    if (newTileRow > 10 && !(currentMilestones & 2)) { newMilestones |= 2; bonusDoubloons += 5000 }
   }
 
   const updateTasks = [
