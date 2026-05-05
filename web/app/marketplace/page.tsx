@@ -37,7 +37,6 @@ export default async function MarketplacePage() {
               <DestCard
                 accent="#38bdf8"
                 art={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/Blue_Marlin.png`}
-                artStyle={{ height: 145, right: -10 }}
                 eyebrow={<>
                   <span style={{
                     display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
@@ -69,7 +68,6 @@ export default async function MarketplacePage() {
                 <DestCard
                   accent="#22d3ee"
                   art="/legendaryrod.png"
-                  artStyle={{ height: 160, right: -10 }}
                   eyebrow="Hooks · Rods · Reels · Bait"
                   title="Tackle Shop"
                   description="Every piece of gear changes how you fish. Rods have unique abilities, reels slow the needle, hooks widen your catch zone."
@@ -81,7 +79,6 @@ export default async function MarketplacePage() {
                 <DestCard
                   accent="#fb923c"
                   art="/models/man-o-war.png"
-                  artStyle={{ height: 150, right: -12 }}
                   eyebrow="Ship · Hold · Crew"
                   title="Shipyard"
                   description="A bigger ship means a bigger haul. Upgrade your vessel for more hold capacity, crew slots, and expedition power."
@@ -101,7 +98,6 @@ export default async function MarketplacePage() {
                 <DestCard
                   accent="#f0c040"
                   art="/goldenlure.png"
-                  artStyle={{ height: 130, right: 8 }}
                   eyebrow={isPremium ? 'Active membership' : 'Support us'}
                   title={isPremium ? "You're a Member" : 'Membership'}
                   description={isPremium ? "Thanks for your support. Your daily perks are active." : "Support the game and get daily perks — a free pack, bonus doubloons, and no market fees."}
@@ -116,7 +112,6 @@ export default async function MarketplacePage() {
                 <DestCard
                   accent="#a78bfa"
                   art="/physicalboardgame.png"
-                  artStyle={{ height: 140, right: -8 }}
                   eyebrow="Physical board game"
                   title="Seas the Booty"
                   description="A strategy card game for 2–6 players featuring the same art. Every purchase includes 20 digital packs."
@@ -179,59 +174,21 @@ function DestCard({
   badge?: string
   extra?: React.ReactNode
 }) {
-  const bg = `rgba(6,12,20,0.92)`
   return (
     <div style={{
       position: 'relative', overflow: 'hidden',
-      background: bg,
+      background: `rgba(6,12,20,0.92)`,
       border: `1px solid ${accent}30`,
       borderTop: `1px solid ${accent}55`,
       borderRadius: 20,
       padding: '1.3rem 1.4rem 1.25rem',
-      transition: 'border-color 0.15s',
+      display: 'flex', alignItems: 'stretch', gap: '1rem',
     }}>
-      {/* Radial glow behind art */}
-      {art && (
-        <div style={{
-          position: 'absolute', right: -20, top: '50%', transform: 'translateY(-50%)',
-          width: 200, height: 200, borderRadius: '50%',
-          background: `radial-gradient(ellipse, ${accent}0a 0%, transparent 70%)`,
-          pointerEvents: 'none',
-        }} />
-      )}
-
-      {/* Art image */}
-      {art && (
-        <img
-          src={art}
-          alt=""
-          style={{
-            position: 'absolute',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            objectFit: 'contain',
-            filter: `drop-shadow(0 2px 10px ${accent}28)`,
-            opacity: 0.92,
-            pointerEvents: 'none',
-            ...artStyle,
-          }}
-        />
-      )}
-
-      {/* Gradient fade so text stays readable over art */}
-      {art && (
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: `linear-gradient(to right, ${bg} 45%, ${bg}cc 62%, transparent 82%)`,
-          pointerEvents: 'none',
-        }} />
-      )}
-
       {/* Extra decorative layer (e.g. sparkline) */}
       {extra}
 
-      {/* Content */}
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: art ? '64%' : '100%' }}>
+      {/* Left: text content */}
+      <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.4rem' }}>
           <p className="font-karla font-600 uppercase tracking-[0.12em]"
             style={{ fontSize: '0.58rem', color: accent + 'dd', lineHeight: 1 }}>
@@ -249,11 +206,32 @@ function DestCard({
           {title}
         </p>
 
-        <p className="font-karla font-400" style={{ fontSize: '0.76rem', color: '#b0ada8', lineHeight: 1.55, marginBottom: '0.7rem' }}>
+        <p className="font-karla font-400" style={{ fontSize: '0.76rem', color: '#b0ada8', lineHeight: 1.55 }}>
           {description}
         </p>
-
       </div>
+
+      {/* Right: image container */}
+      {art && (
+        <div style={{
+          flexShrink: 0, width: 110,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          position: 'relative',
+        }}>
+          <img
+            src={art}
+            alt=""
+            style={{
+              maxWidth: '100%',
+              maxHeight: 130,
+              objectFit: 'contain',
+              filter: `drop-shadow(0 2px 10px ${accent}28)`,
+              opacity: 0.92,
+              ...artStyle,
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }
