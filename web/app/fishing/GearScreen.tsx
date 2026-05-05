@@ -538,13 +538,16 @@ export default function GearScreen({
                           border: `1px solid ${isEquipped ? skin.color + '50' : owned ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.04)'}`,
                           opacity: owned ? 1 : 0.45,
                         }}>
-                          {/* Ring preview swatch */}
-                          <div style={{
-                            width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-                            border: `2px solid ${skin.stroke}`,
-                            background: 'rgba(4,10,20,0.8)',
-                            boxShadow: skin.glow ? skin.glow.replace('drop-shadow', '').replace(/[()]/g, '').trim() : 'none',
-                          }} />
+                          {/* Ring preview */}
+                          {skin.imageUrl
+                            ? <img src={skin.imageUrl} alt={skin.name} style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0, opacity: owned ? 1 : 0.3 }} />
+                            : <div style={{
+                                width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                                border: `2px solid ${skin.stroke}`,
+                                background: 'rgba(4,10,20,0.8)',
+                                boxShadow: skin.glow ? skin.glow.replace('drop-shadow', '').replace(/[()]/g, '').trim() : 'none',
+                              }} />
+                          }
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: owned ? '#f0ede8' : '#3a3835' }}>{skin.name}</p>
                             <p className="font-karla" style={{ fontSize: '0.56rem', color: owned ? '#5a5856' : '#2e2c2a', marginTop: 1 }}>

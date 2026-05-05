@@ -8,6 +8,7 @@ export interface RingSkinDef {
   color: string
   description: string
   source: string
+  imageUrl?: string
 }
 
 export const RING_SKINS: RingSkinDef[] = [
@@ -37,6 +38,7 @@ export const RING_SKINS: RingSkinDef[] = [
     color: '#d4c9a8',
     description: 'Carved from whale bone. Old and salt-worn.',
     source: 'Voyage: Coastal Run',
+    imageUrl: '/whalebone.png',
   },
   {
     id: 'coral_spire',
@@ -46,6 +48,7 @@ export const RING_SKINS: RingSkinDef[] = [
     color: '#e05a38',
     description: 'Deep sea coral, still warm to the touch.',
     source: 'Voyage: Open Seas',
+    imageUrl: '/coralspire.png',
   },
   {
     id: 'abyssal_sigil',
@@ -64,6 +67,7 @@ export const RING_SKINS: RingSkinDef[] = [
     color: '#c0c8d8',
     description: "Pure silver, polished bright. A navigator's instrument.",
     source: 'Voyage: Open Seas',
+    imageUrl: '/navigatorssilver.png',
   },
 ]
 

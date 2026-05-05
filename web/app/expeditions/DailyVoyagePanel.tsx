@@ -551,7 +551,7 @@ export default function DailyVoyagePanel({
                               const dropKey = drop.kind === 'skin' ? drop.id : drop.kind === 'bait' ? drop.type : drop.id
                               const color   = specialDef ? specialDef.color : drop.kind === 'skin' ? getRingSkin(drop.id).color : getBait((drop as { type: string }).type).color
                               const name    = specialDef ? specialDef.name : drop.kind === 'skin' ? getRingSkin(drop.id).name : getBait((drop as { type: string }).type).name
-                              const image   = specialDef?.image ?? (drop.kind === 'bait' ? getBait((drop as { type: string }).type).imageUrl ?? null : null)
+                              const image   = specialDef?.image ?? (drop.kind === 'skin' ? getRingSkin(drop.id).imageUrl ?? null : drop.kind === 'bait' ? getBait((drop as { type: string }).type).imageUrl ?? null : null)
                               const label   = specialDef ? `Special item · ${specialDef.effectLabel}` : drop.kind === 'skin' ? 'Ring cosmetic' : 'Fishing bait'
                               const detail  = specialDef
                                 ? specialDef.description
@@ -766,7 +766,10 @@ export default function DailyVoyagePanel({
                       const skin = getRingSkin(e.ringSkinDrop)
                       return (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.3rem' }}>
-                          <div style={{ width: 10, height: 10, borderRadius: '50%', border: `1.5px solid ${skin.stroke}`, flexShrink: 0 }} />
+                          {skin.imageUrl
+                            ? <img src={skin.imageUrl} alt={skin.name} style={{ width: 16, height: 16, objectFit: 'contain', flexShrink: 0 }} />
+                            : <div style={{ width: 10, height: 10, borderRadius: '50%', border: `1.5px solid ${skin.stroke}`, flexShrink: 0 }} />
+                          }
                           <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: skin.color }}>
                             Ring skin found: {skin.name}
                           </p>
@@ -915,7 +918,10 @@ export default function DailyVoyagePanel({
                 const skin = getRingSkin(id)
                 return (
                   <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', border: `1.5px solid ${skin.stroke}`, flexShrink: 0 }} />
+                    {skin.imageUrl
+                      ? <img src={skin.imageUrl} alt={skin.name} style={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }} />
+                      : <div style={{ width: 10, height: 10, borderRadius: '50%', border: `1.5px solid ${skin.stroke}`, flexShrink: 0 }} />
+                    }
                     <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: skin.color, lineHeight: 1.3 }}>
                       {skin.name}
                     </p>
