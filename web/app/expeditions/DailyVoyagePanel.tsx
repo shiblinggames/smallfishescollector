@@ -315,14 +315,19 @@ export default function DailyVoyagePanel({
                       }} />
                       <span style={{
                         position: 'absolute', top: '100%', left: '50%',
-                        transform: 'translateX(-50%)', marginTop: 5,
+                        transform: 'translateX(-50%)', marginTop: 6,
                         whiteSpace: 'nowrap', pointerEvents: 'none',
-                        background: 'rgba(6,4,2,0.85)', borderRadius: 4,
-                        padding: '0.1rem 0.35rem',
-                        border: isSelected ? `1px solid ${rco.color}55` : '1px solid transparent',
+                        background: isSelected ? 'rgba(4,2,0,0.92)' : 'rgba(4,2,0,0.80)',
+                        borderRadius: 6,
+                        padding: '0.22rem 0.55rem 0.18rem',
+                        border: `1px solid ${isSelected ? rco.color + '66' : 'rgba(255,255,255,0.12)'}`,
+                        boxShadow: isSelected ? `0 0 10px ${rco.color}33` : 'none',
                       }}>
-                        <span className="font-karla font-700" style={{ fontSize: '0.46rem', color: isSelected ? rco.color : '#b0a080' }}>
+                        <span className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: isSelected ? rco.color : '#d4c8a8', display: 'block', lineHeight: 1.2 }}>
                           {rco.name}
+                        </span>
+                        <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.40rem', color: isSelected ? `${rco.color}bb` : '#6a5a40', display: 'block', textAlign: 'center', marginTop: 1 }}>
+                          {rco.riskLabel}
                         </span>
                       </span>
                     </button>
