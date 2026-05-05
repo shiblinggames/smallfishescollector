@@ -41,16 +41,23 @@ function formatCountdown(ms: number): string {
   return h > 0 ? `${h}h ${mm}m ${ss}s` : `${mm}m ${ss}s`
 }
 
-const ROUTE_SKINS: Record<VoyageRoute, RingSkinId[]> = {
-  coastal: ['whale_bone'],
-  open:    ['coral_spire', 'navigators_silver'],
-  deep:    ['gilded_compass', 'abyssal_sigil'],
-}
+type DropEntry = { kind: 'skin'; id: RingSkinId; rate: string } | { kind: 'bait'; type: string; rate: string }
 
-const ROUTE_LURE_DROPS: Record<VoyageRoute, { type: string; rate: string }[]> = {
-  coastal: [],
-  open:    [{ type: 'luminous', rate: '~10%' }],
-  deep:    [{ type: 'luminous', rate: '~25%' }, { type: 'golden', rate: '~5%' }],
+const ROUTE_DROPS: Record<VoyageRoute, DropEntry[]> = {
+  coastal: [
+    { kind: 'skin', id: 'whale_bone',        rate: '~5%' },
+  ],
+  open: [
+    { kind: 'skin', id: 'coral_spire',       rate: '~5%' },
+    { kind: 'skin', id: 'navigators_silver', rate: '~2%' },
+    { kind: 'bait', type: 'luminous',        rate: '~10%' },
+  ],
+  deep: [
+    { kind: 'skin', id: 'gilded_compass',    rate: '~8%' },
+    { kind: 'skin', id: 'abyssal_sigil',     rate: '~3%' },
+    { kind: 'bait', type: 'luminous',        rate: '~25%' },
+    { kind: 'bait', type: 'golden',          rate: '~5%' },
+  ],
 }
 
 function computeRouteEstimate(
@@ -84,7 +91,7 @@ function computeRouteEstimate(
     crewRiskPct = Math.round(Math.min(95, (encRisk + dngRisk) * 100))
   }
 
-  return { lootMin, lootMax, crewRiskPct, skinIds: ROUTE_SKINS[route], lureDrops: ROUTE_LURE_DROPS[route] }
+  return { lootMin, lootMax, crewRiskPct, drops: ROUTE_DROPS[route] }
 }
 
 interface Props {
@@ -314,46 +321,29 @@ export default function DailyVoyagePanel({
                                 Need 1 more crew
                               </span>
                             )}
-
-                            {/* Ring skin drops */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginLeft: 'auto' }}>
-                              {est.skinIds.map(id => {
-                                const skin = getRingSkin(id)
-                                return (
-                                  <div
-                                    key={id}
-                                    title={skin.name}
-                                    style={{
-                                      width: 8, height: 8, borderRadius: '50%',
-                                      background: skin.color,
-                                      opacity: isSelected ? 0.9 : 0.5,
-                                      boxShadow: skin.glow ? `0 0 4px ${skin.color}88` : 'none',
-                                    }}
-                                  />
-                                )
-                              })}
-                            </div>
                           </div>
                         )}
 
-                        {/* Lure drops */}
-                        {est && est.lureDrops.length > 0 && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+                        {/* Drops: ring skins + lures, unified */}
+                        {est && est.drops.length > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
                             <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.42rem', color: '#5a5248' }}>
                               drops
                             </span>
-                            {est.lureDrops.map(({ type, rate }) => {
-                              const bait = getBait(type)
+                            {est.drops.map(drop => {
+                              const color = drop.kind === 'skin' ? getRingSkin(drop.id).color : getBait(drop.type).color
+                              const name  = drop.kind === 'skin' ? getRingSkin(drop.id).name  : getBait(drop.type).name
                               return (
-                                <span key={type} className="font-karla" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.54rem', color: isSelected ? bait.color : `${bait.color}99` }}>
+                                <span key={drop.kind === 'skin' ? drop.id : drop.type} className="font-karla" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.54rem', color: isSelected ? color : `${color}99` }}>
                                   <span style={{
-                                    display: 'inline-block', width: 6, height: 6, borderRadius: '2px',
-                                    background: bait.color,
+                                    display: 'inline-block', width: 6, height: 6,
+                                    borderRadius: drop.kind === 'skin' ? '50%' : '2px',
+                                    background: color,
                                     opacity: isSelected ? 0.9 : 0.55,
-                                    boxShadow: `0 0 3px ${bait.color}88`,
+                                    boxShadow: `0 0 3px ${color}88`,
                                     flexShrink: 0,
                                   }} />
-                                  {bait.name} <span style={{ color: isSelected ? '#a89878' : '#5a5248' }}>{rate}</span>
+                                  {name} <span style={{ color: isSelected ? '#a89878' : '#5a5248' }}>{drop.rate}</span>
                                 </span>
                               )
                             })}
