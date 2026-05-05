@@ -31,7 +31,7 @@ export async function generateVoyageLog(input: VoyageLogInput): Promise<string> 
 
   const eventLines = input.events.map(e => {
     const icon = e.outcome === 'success' ? '✓' : e.outcome === 'failure' ? '✗' : '~'
-    return `${icon} ${e.title} (${e.type}) — ${e.narrative}`
+    return `${icon} ${e.title} (${e.type}, ${e.outcome})`
   }).join('\n')
 
   const hasCatfish = input.crew.some(c => c.name === 'Catfish')
@@ -49,57 +49,43 @@ export async function generateVoyageLog(input: VoyageLogInput): Promise<string> 
     ? `Crew lost: ${input.crewLostNames.join(', ')}`
     : 'All crew returned'
 
-  const prompt = `You write captain's log entries for a pirate fish game called Seas the Booty.
-All characters are anthropomorphized fish pirates. The world has four factions:
-The Saltwater Brotherhood (ruthless pirates), The Gilded Net (merchant guild, not always honest),
-The Deepwatch (mysterious enforcers), The Drifters (nomadic, no allegiance).
-Named figures: Valdris (giant Moray Eel, Brotherhood captain), Barnacle Pete (Pufferfish smuggler).
+  const prompt = `Captain's log entries for Seas the Booty — a pirate fish game. All characters are anthropomorphized fish pirates.
+Factions: Saltwater Brotherhood (ruthless), Gilded Net (merchant, dishonest), Deepwatch (enforcers), Drifters (nomadic).
+Valdris: giant Moray Eel, Brotherhood captain. Barnacle Pete: Pufferfish smuggler.
 
-The captain stays at port and sends a crew on a long voyage. Write a captain's log entry recorded after the crew returned.
-3 to 5 sentences. First person. Past tense.
-Written as if scrawled in a journal the night the crew came home.
+The captain waits at port. Write the log entry the night the crew returned. 2 sentences. 3 maximum only if someone died or something extraordinary happened. First person, past tense.
 
-VOYAGE DATA:
-Route: ${routeConfig.name} (${routeConfig.tagline})
-Loot returned: ${lootLine}
+VOYAGE:
+Route: ${routeConfig.name}
+Loot: ${lootLine}
 ${crewLostLine}
 
-CREW SENT:
+CREW (name, rarity, personality):
 ${crewLines}
 
-WHAT HAPPENED AT SEA:
-${eventLines || 'Nothing reported'}
+EVENTS (title, outcome):
+${eventLines || 'Uneventful'}
 ${abyssNote}
 
-TONE RULES — follow exactly:
-- Terse and atmospheric. The world is dangerous and indifferent.
-- The captain wasn't there — they sent the crew and waited. Write from that remove.
-- Reference crew by name when notable. Their trait should feel consistent with their actions — don't quote it, let it color the writing.
-- If crew was lost, state it plainly. Don't mourn. Record.
-- Don't describe game mechanics. Write what it felt like.
-- The last sentence should land. Make it mean something.
-- Vary length and drama — a quiet coastal run gets a short entry, a brutal deep crossing gets weight.
-- NEVER use: "Unfortunately", "Sadly", "We tried our best", "lesson learned", "all in all".
+RULES:
+- Short. Every word earns its place.
+- Let crew personality color how you mention them — don't explain the trait, just write them that way.
+- The captain wasn't there. Write from that remove.
+- If crew died, state it plainly. No mourning.
+- End on something that lands.
+- NEVER: "Unfortunately", "Sadly", "lesson learned", "all in all", "it was".
 
-REFERENCE EXAMPLES (match this tone exactly):
+EXAMPLES:
+"Bass came back with 340 doubloons and something he wouldn't name. I didn't ask."
+"Sent Eel and Krill into the Howling Deep. One came back. Eel."
+"The Crossing pushed them — Brotherhood contact mid-route, weather behind it. Hammerhead held. 620 doubloons. Good crew."
+"They didn't come back. The ship did."
 
-Example 1 — crew loss on deep crossing:
-"Sent them into the Howling Deep at dawn. They came back at midnight with 780 doubloons and one fewer face at the table. Lionfish didn't make it past the third encounter — the report doesn't specify what happened and nobody's going to push. The rest ate. I counted the coin. We don't talk about the Howling Deep."
-
-Example 2 — clean coastal run:
-"Easy crossing. The Inner Sea was calm and the crew moved through it without incident. Bass brought back 340 doubloons and a ring nobody recognized. I didn't ask where it came from."
-
-Example 3 — rough open voyage, no loss:
-"The Crossing tried to take them. A Brotherhood intercept at midpoint, weather coming in behind it. Hammerhead held the line long enough for the others to push through. They came back intact, if not clean. 620 doubloons. Good crew."
-
-Example 4 — total wipeout (all crew lost):
-"They didn't come back. The ship did. I don't know what that means and I'm not sure I want to."
-
-Return ONLY the log entry. No title. No label. Just the prose.`
+Return ONLY the log entry. No quotes around it. No title.`
 
   const response = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 300,
+    max_tokens: 160,
     messages: [{ role: 'user', content: prompt }],
   })
 
