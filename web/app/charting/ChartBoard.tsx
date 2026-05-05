@@ -166,8 +166,8 @@ export default function ChartBoard({
       )}
 
       {/* Grid */}
-      <div style={{ width: '100%', perspective: '600px' }}>
-        <div style={{ transform: 'rotateX(12deg)', transformOrigin: 'top center', transformStyle: 'preserve-3d' }}>
+      <div style={{ width: '100%', perspective: '600px', overflowX: 'hidden' }}>
+        <div style={{ transform: 'rotateX(12deg)', transformOrigin: 'top center' }}>
         <p className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{
           fontSize: '0.62rem', color: '#c8a840', textAlign: 'center', marginBottom: 4,
         }}>⚓ Destination</p>
