@@ -68,7 +68,7 @@ export default async function MarketplacePage() {
                 <DestCard
                   accent="#22d3ee"
                   art="/legendaryrod.png"
-                  artStyle={{ height: 160, right: -10, bottom: -8 }}
+                  artStyle={{ height: 160, right: -10 }}
                   eyebrow="Hooks · Rods · Reels · Bait"
                   title="Tackle Shop"
                   description="Every piece of gear changes how you fish. Rods have unique abilities, reels slow the needle, hooks widen your catch zone."
@@ -80,7 +80,7 @@ export default async function MarketplacePage() {
                 <DestCard
                   accent="#fb923c"
                   art="/models/man-o-war.png"
-                  artStyle={{ height: 150, right: -12, bottom: -6 }}
+                  artStyle={{ height: 150, right: -12 }}
                   eyebrow="Ship · Hold · Crew"
                   title="Shipyard"
                   description="A bigger ship means a bigger haul. Upgrade your vessel for more hold capacity, crew slots, and expedition power."
@@ -100,7 +100,7 @@ export default async function MarketplacePage() {
                 <DestCard
                   accent="#f0c040"
                   art="/goldenlure.png"
-                  artStyle={{ height: 130, right: 8, bottom: -4 }}
+                  artStyle={{ height: 130, right: 8 }}
                   eyebrow={isPremium ? 'Active membership' : 'Support us'}
                   title={isPremium ? "You're a Member" : 'Membership'}
                   description={isPremium ? "Thanks for your support. Your daily perks are active." : "Support the game and get daily perks — a free pack, bonus doubloons, and no market fees."}
@@ -115,7 +115,7 @@ export default async function MarketplacePage() {
                 <DestCard
                   accent="#a78bfa"
                   art="/packopening.png"
-                  artStyle={{ height: 140, right: -8, bottom: -6 }}
+                  artStyle={{ height: 140, right: -8 }}
                   eyebrow="Physical board game"
                   title="Seas the Booty"
                   description="A strategy card game for 2–6 players featuring the same art. Every purchase includes 20 digital packs."
@@ -206,6 +206,8 @@ function DestCard({
           alt=""
           style={{
             position: 'absolute',
+            top: '50%',
+            transform: 'translateY(-50%)',
             objectFit: 'contain',
             filter: `drop-shadow(0 4px 20px ${accent}55)`,
             opacity: 0.92,
