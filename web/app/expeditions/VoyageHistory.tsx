@@ -48,36 +48,36 @@ function VoyageRow({ v, defaultOpen }: { v: VoyageHistoryEntry; defaultOpen: boo
         <div style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: rc?.color ?? '#7a6848' }} />
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#c8b890', lineHeight: 1.2 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#c8b890', lineHeight: 1.2 }}>
             {rc?.name ?? v.route}
           </p>
-          <p className="font-karla" style={{ fontSize: '0.52rem', color: '#6a5a40', marginTop: 1 }}>
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#6a5a40', marginTop: 1 }}>
             {formatDate(v.created_at)}
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', flexShrink: 0 }}>
           {v.total_doubloons > 0 && (
-            <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#c8a840' }}>+{v.total_doubloons} ⟡</span>
+            <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#c8a840' }}>+{v.total_doubloons} ⟡</span>
           )}
           {v.total_gems > 0 && (
-            <span className="font-karla font-700" style={{ fontSize: '0.60rem', color: '#a78bfa' }}>+{v.total_gems}💎</span>
+            <span className="font-karla font-700" style={{ fontSize: '0.75rem', color: '#a78bfa' }}>+{v.total_gems}💎</span>
           )}
           {v.crew_lost.length > 0 && (
-            <span className="font-karla font-700" style={{ fontSize: '0.52rem', color: '#f87171', background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.20)', borderRadius: 4, padding: '0.1rem 0.3rem' }}>
+            <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#f87171', background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.20)', borderRadius: 4, padding: '0.1rem 0.3rem' }}>
               -{v.crew_lost.length} crew
             </span>
           )}
         </div>
 
         {hasLog && (
-          <span style={{ fontSize: '0.5rem', color: '#5a4a30', flexShrink: 0, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▼</span>
+          <span style={{ fontSize: '0.6rem', color: '#5a4a30', flexShrink: 0, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▼</span>
         )}
       </button>
 
       {isOpen && hasLog && (
-        <div style={{ borderTop: '1px solid rgba(160,140,90,0.12)', padding: '0.6rem 0.75rem', background: 'rgba(8,6,2,0.40)' }}>
-          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#b8a878', lineHeight: 1.75, fontStyle: 'italic' }}>
+        <div style={{ borderTop: '1px solid rgba(160,140,90,0.12)', padding: '0.75rem 0.875rem', background: 'rgba(8,6,2,0.40)' }}>
+          <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b8a878', lineHeight: 1.8, fontStyle: 'italic' }}>
             &ldquo;{v.captains_log}&rdquo;
           </p>
         </div>
@@ -95,7 +95,7 @@ export default function VoyageHistory({ voyages }: Props) {
 
   return (
     <div style={{ marginTop: '0.85rem' }}>
-      <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.48rem', color: '#7a6848', marginBottom: '0.5rem' }}>
+      <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.68rem', color: '#7a6848', marginBottom: '0.6rem' }}>
         Recent Voyages
       </p>
 
@@ -109,10 +109,10 @@ export default function VoyageHistory({ voyages }: Props) {
             onClick={() => setOlderOpen(o => !o)}
             style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'none', border: 'none', padding: '0.35rem 0', cursor: 'pointer' }}
           >
-            <span className="font-karla" style={{ fontSize: '0.52rem', color: '#5a4a30' }}>
+            <span className="font-karla" style={{ fontSize: '0.68rem', color: '#5a4a30' }}>
               {olderOpen ? 'Hide' : `Show ${older.length} older`}
             </span>
-            <span style={{ fontSize: '0.44rem', color: '#5a4a30', transform: olderOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▼</span>
+            <span style={{ fontSize: '0.58rem', color: '#5a4a30', transform: olderOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▼</span>
           </button>
 
           {olderOpen && (
