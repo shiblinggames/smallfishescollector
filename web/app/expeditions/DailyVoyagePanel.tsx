@@ -74,18 +74,17 @@ type DropEntry =
 const ROUTE_DROPS: Record<VoyageRoute, DropEntry[]> = {
   coastal: [
     { kind: 'skin', id: 'whale_bone',        rate: '~5%' },
+    { kind: 'bait', type: 'luminous',        rate: '~5%' },
   ],
   open: [
-    { kind: 'skin', id: 'coral_spire',       rate: '~5%' },
-    { kind: 'skin', id: 'navigators_silver', rate: '~2%' },
     { kind: 'bait', type: 'luminous',        rate: '~10%' },
+    { kind: 'bait', type: 'golden',          rate: '~5%' },
+    { kind: 'skin', id: 'navigators_silver', rate: '~2%' },
   ],
   deep: [
     { kind: 'special', id: 'tide_turner',    rate: '~2%' },
-    { kind: 'skin', id: 'gilded_compass',    rate: '~8%' },
-    { kind: 'skin', id: 'abyssal_sigil',     rate: '~3%' },
-    { kind: 'bait', type: 'luminous',        rate: '~25%' },
-    { kind: 'bait', type: 'golden',          rate: '~5%' },
+    { kind: 'skin',    id: 'coral_spire',    rate: '~5%' },
+    { kind: 'bait',    type: 'golden',       rate: '~8%' },
   ],
 }
 
@@ -462,14 +461,14 @@ export default function DailyVoyagePanel({
                       {/* Scrollable content */}
                       <div style={{ overflowY: 'auto', flex: 1, padding: '2.5rem 0.9rem 0.5rem' }}>
                       {/* Header */}
-                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.2rem', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.5rem', gap: '0.5rem' }}>
                         <div>
                           <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: rco.color, lineHeight: 1.2 }}>
                             {rco.name}
                           </p>
-                          <span className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.62rem', color: `${rco.color}bb` }}>
-                            {({ coastal: 20, open: 45, deep: 75 } as Record<string, number>)[selectedRoute]}+ score
-                          </span>
+                          <p className="font-karla" style={{ fontSize: '0.76rem', color: '#8a7860', lineHeight: 1.4, marginTop: 3 }}>
+                            {rco.tagline}
+                          </p>
                         </div>
                         <button
                           onClick={() => setSelectedRoute(null)}
@@ -483,75 +482,60 @@ export default function DailyVoyagePanel({
                           aria-label="Close"
                         >✕</button>
                       </div>
-                      <p className="font-karla" style={{ fontSize: '0.78rem', color: '#8a7860', lineHeight: 1.4, marginBottom: '0.65rem' }}>
-                        {rco.tagline}
-                      </p>
 
-                      {/* Recommended crew score */}
+                      {/* Stats row */}
                       {stats && (() => {
                         const REC: Record<string, number> = { coastal: 20, open: 45, deep: 75 }
                         const rec = REC[selectedRoute] ?? 0
                         const crewScore = stats.power + stats.dodge + Math.round(stats.fortune * 0.5)
                         const met = crewScore >= rec
                         const close = !met && crewScore >= rec * 0.75
-                        const color = met ? '#4ade80' : close ? '#f0c040' : '#f87171'
-                        return (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.65rem' }}>
-                            <span style={{ fontSize: '0.9rem', lineHeight: 1 }}>{met ? '✓' : '⚠'}</span>
-                            <span className="font-karla font-600" style={{ fontSize: '0.8rem', color }}>
-                              {met ? `Your score of ${crewScore} meets the recommended ${rec}+` : `Recommended score: ${rec}+ (yours: ${crewScore})`}
-                            </span>
-                          </div>
-                        )
-                      })()}
-
-                      {/* Estimates */}
-                      {est && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
-                        <span className="font-karla font-700" style={{ fontSize: '0.84rem', color: '#c8aa6a' }}>
-                          Est. payout: ~{est.lootMin}–{est.lootMax} ⟡
-                        </span>
-                        <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#5a7aaa' }}>
-                          ~{est.xpMin}–{est.xpMax} XP
-                        </span>
-                        {savedCrew.length >= 2 ? (
-                          <span className="font-karla" style={{ fontSize: '0.80rem', color: est.crewRiskPct >= 40 ? '#f87171cc' : est.crewRiskPct > 0 ? '#c8906a' : '#6a8a6a' }}>
-                            {est.crewRiskPct === 0 ? 'No crew risk' : `${est.crewRiskPct}% crew risk`}
-                          </span>
-                        ) : (
-                          <span className="font-karla" style={{ fontSize: '0.80rem', color: '#c87a4a' }}>Need 1 more crew</span>
-                        )}
-                      </div>
-                      )}
-
-                      {/* Est. voyage duration */}
-                      {stats && (() => {
+                        const scoreColor = met ? '#4ade80' : close ? '#f0c040' : '#f87171'
                         const expLevel = getLevelFromXP(expeditionXP)
                         const estMs = computeVoyageDurationMs(expLevel, stats.dodge)
-                        const isBase = estMs >= BASE_VOYAGE_MS * 0.99
+                        const riskColor = est && est.crewRiskPct >= 50 ? '#f87171' : est && est.crewRiskPct > 20 ? '#f0c040' : '#6a8a6a'
                         return (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-                            <span style={{ fontSize: '0.72rem', lineHeight: 1 }}>⏳</span>
-                            <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: isBase ? '#7a6848' : '#60a5fa' }}>
-                              Est. voyage time: {formatDuration(estMs)}
-                            </span>
-                            {!isBase && (
-                              <span className="font-karla" style={{ fontSize: '0.62rem', color: '#4a5a7a' }}>
-                                (base 6h)
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.6rem' }}>
+                            {/* Score */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span style={{ fontSize: '0.8rem', lineHeight: 1, color: scoreColor }}>{met ? '✓' : '⚠'}</span>
+                              <span className="font-karla font-600" style={{ fontSize: '0.76rem', color: scoreColor }}>
+                                {met
+                                  ? `Score ${crewScore} — you're ready`
+                                  : `Score ${crewScore} of ${rec}+ recommended`}
                               </span>
+                            </div>
+                            {/* Payout + time */}
+                            {est && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                <span className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#c8aa6a' }}>
+                                  ~{est.lootMin}–{est.lootMax} ⟡
+                                </span>
+                                <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.7rem' }}>·</span>
+                                <span className="font-karla" style={{ fontSize: '0.76rem', color: '#5a7aaa' }}>
+                                  {est.xpMin}–{est.xpMax} XP
+                                </span>
+                                <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.7rem' }}>·</span>
+                                <span className="font-karla" style={{ fontSize: '0.76rem', color: '#7a6848' }}>
+                                  ⏳ {formatDuration(estMs)}
+                                </span>
+                              </div>
+                            )}
+                            {/* Crew risk / crew count */}
+                            {savedCrew.length < 2 ? (
+                              <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#c87a4a' }}>
+                                ⚠ Need at least 2 crew to set sail
+                              </span>
+                            ) : est && est.crewRiskPct > 0 ? (
+                              <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: riskColor }}>
+                                {est.crewRiskPct >= 50 ? '☠' : '⚠'} {est.crewRiskPct}% chance crew is lost permanently
+                              </span>
+                            ) : (
+                              <span className="font-karla" style={{ fontSize: '0.74rem', color: '#5a7a5a' }}>No crew risk</span>
                             )}
                           </div>
                         )
                       })()}
-
-                      {/* Crew risk warning */}
-                      {est && savedCrew.length >= 2 && est.crewRiskPct > 50 && (
-                        <div style={{ background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 7, padding: '0.4rem 0.6rem', marginBottom: '0.5rem' }}>
-                          <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#f87171', lineHeight: 1.5 }}>
-                            ⚠ {est.crewRiskPct}% chance a crew member is lost permanently.
-                          </p>
-                        </div>
-                      )}
 
                       {/* Drops */}
                       {(() => {

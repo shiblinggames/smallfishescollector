@@ -262,9 +262,12 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
       case 'discovery': {
         const success = rollFortune()
         const gemDrop = success && Math.random() * 55 < fortune ? Math.round(rand(1, 3) * rc.gemScale) : 0
-        const skinPool: Record<VoyageRoute, string> = { coastal: 'whale_bone', open: 'coral_spire', deep: 'gilded_compass' }
-        const skinDrop = success && Math.random() < 0.05 ? skinPool[route] : null
-        const baitDrop = success && route === 'deep' && Math.random() < 0.04 ? 'luminous' : null
+        const skinPool: Partial<Record<VoyageRoute, string>> = { coastal: 'whale_bone', deep: 'coral_spire' }
+        const skinDrop = success && Math.random() < 0.05 ? (skinPool[route] ?? null) : null
+        const baitDrop = !success ? null
+          : route === 'coastal' && Math.random() < 0.07 ? 'luminous'
+          : route === 'deep'    && Math.random() < 0.04 ? 'luminous'
+          : null
         const template = pick(success ? DISCOVERY_SUCCESS : DISCOVERY_FAIL)
         const discoveryNarrative = fill(template.narrative)
         const captainDiscoveryTrait = success && Math.random() < 0.60 ? getCrewTrait(captain) : null
@@ -288,18 +291,15 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
           const gemDrop = crush
             ? Math.round(rand(2, 5) * rc.gemScale)
             : (Math.random() * 55 < power ? Math.round(rand(1, 3) * rc.gemScale) : 0)
-          const crushSkinDrop = crush
-            ? (route === 'open' && Math.random() < 0.05 ? 'navigators_silver'
-              : route === 'deep' && Math.random() < 0.04 ? 'abyssal_sigil'
-              : route === 'deep' && Math.random() < 0.05 ? 'gilded_compass'
-              : null)
-            : null
-          // Lure drops: Luminous on win/crush (open+deep), Golden only on deep crush
+          const crushSkinDrop = crush && route === 'open' && Math.random() < 0.05 ? 'navigators_silver' : null
           const baitDrop = crush
-            ? (route === 'deep' && Math.random() < 0.05 ? 'golden'
+            ? (route === 'deep' && Math.random() < 0.12 ? 'golden'
+              : route === 'open' && Math.random() < 0.10 ? 'golden'
               : route !== 'coastal' && Math.random() < 0.12 ? 'luminous'
               : null)
-            : (route !== 'coastal' && Math.random() < 0.07 ? 'luminous' : null)
+            : (route === 'deep' && Math.random() < 0.04 ? 'golden'
+              : route !== 'coastal' && Math.random() < 0.07 ? 'luminous'
+              : null)
           const template = pick(crush ? ENCOUNTER_CRUSH : ENCOUNTER_WIN)
           const encounterNarrative = fill(template.narrative)
           const captainEncounterTrait = crush
