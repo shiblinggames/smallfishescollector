@@ -83,7 +83,7 @@ export async function getChartState(): Promise<ChartState | { error: string }> {
 
   const fishingLevel = getLevelFromXP(profile?.fishing_xp ?? 0)
   const expeditionLevel = getExpeditionLevel(profile?.expedition_xp ?? 0)
-  const movesAvailable = Math.max(0, fishingLevel + expeditionLevel - (progress?.moves_used ?? 0))
+  const movesAvailable = Math.max(0, Math.floor(fishingLevel / 2) + expeditionLevel - (progress?.moves_used ?? 0))
 
   const { data: finisherRows } = await admin
     .from('chart_progress')
@@ -140,7 +140,7 @@ export async function makeChartGuess(
 
   const fishingLevel = getLevelFromXP(profile?.fishing_xp ?? 0)
   const expeditionLevel = getExpeditionLevel(profile?.expedition_xp ?? 0)
-  const totalLevels = fishingLevel + expeditionLevel
+  const totalLevels = Math.floor(fishingLevel / 2) + expeditionLevel
 
   let { data: progress } = await admin
     .from('chart_progress').select('*')
