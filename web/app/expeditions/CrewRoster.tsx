@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import type { ShipStats } from '@/lib/expeditions'
 import { RARITY_COLORS } from '@/lib/expeditions'
 import { saveCrew } from './actions'
@@ -59,6 +59,15 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
   const [shipName, setShipName] = useState(initialShipName)
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState(initialShipName ?? '')
+
+  useEffect(() => {
+    if (sheetOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [sheetOpen])
 
   function submitRename() {
     const trimmed = nameInput.trim().slice(0, 32)
@@ -400,7 +409,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
               })}
             </div>
 
-            <div style={{ overflowY: 'auto', flex: 1, padding: '1rem 1.25rem 2rem' }}>
+            <div style={{ overflowY: 'auto', flex: 1, padding: '1rem 1.25rem 2rem', overscrollBehavior: 'contain' }}>
               {collection.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
                   <p className="font-karla" style={{ fontSize: '0.78rem', color: '#4a4845' }}>No cards yet. Open some packs first!</p>
