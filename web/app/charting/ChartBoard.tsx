@@ -114,7 +114,7 @@ export default function ChartBoard({
       <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', marginBottom: '0.25rem' }}>
         {contest.name}
       </p>
-      <p className="font-karla" style={{ fontSize: '0.84rem', color: '#6a6050', marginBottom: '1.25rem' }}>
+      <p className="font-karla" style={{ fontSize: '0.84rem', color: '#9a9080', marginBottom: '1.25rem' }}>
         Chart a path from sea to shore. Move up, left, or right. Every guess costs one move.
       </p>
 
@@ -128,7 +128,7 @@ export default function ChartBoard({
           <p className="font-karla font-700" style={{ fontSize: '0.88rem', color: movesAvailable > 0 ? '#f0ede8' : '#4a4845' }}>
             {movesAvailable} {movesAvailable === 1 ? 'move' : 'moves'} available
           </p>
-          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#4a4028', marginTop: 1 }}>
+          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#7a7060', marginTop: 1 }}>
             Gain fishing or navigator levels to earn more
           </p>
         </div>
@@ -140,7 +140,7 @@ export default function ChartBoard({
               <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#c8a840' }}>
                 {pathIndex} / {pathLength - 1}
               </p>
-              <p className="font-karla" style={{ fontSize: '0.68rem', color: '#4a4028', marginTop: 1 }}>tiles charted</p>
+              <p className="font-karla" style={{ fontSize: '0.68rem', color: '#7a7060', marginTop: 1 }}>tiles charted</p>
             </>
           )}
         </div>
@@ -264,12 +264,12 @@ export default function ChartBoard({
         </div>
 
         <p className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{
-          fontSize: '0.62rem', color: '#4a5840', textAlign: 'center', marginTop: 4,
+          fontSize: '0.62rem', color: '#7a8870', textAlign: 'center', marginTop: 4,
         }}>Start</p>
       </div>
 
       {movesAvailable === 0 && !completed && (
-        <p className="font-karla" style={{ fontSize: '0.72rem', color: '#5a5040', textAlign: 'center', marginTop: '0.75rem' }}>
+        <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8070', textAlign: 'center', marginTop: '0.75rem' }}>
           No moves — gain a fishing or navigator level to continue
         </p>
       )}
@@ -294,9 +294,9 @@ export default function ChartBoard({
                 <span style={{ fontSize: '1rem', flexShrink: 0 }}>{MEDAL[i]}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p className="font-karla font-700 truncate" style={{ fontSize: '0.82rem', color: '#f0c040' }}>{f.username}</p>
-                  <p className="font-karla" style={{ fontSize: '0.58rem', color: '#6a5a40' }}>{formatDate(f.completed_at)}</p>
+                  <p className="font-karla" style={{ fontSize: '0.58rem', color: '#8a7a60' }}>{formatDate(f.completed_at)}</p>
                 </div>
-                <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#8a7860' }}>{f.moves_used} moves</p>
+                <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#a09070' }}>{f.moves_used} moves</p>
               </div>
             ))}
           </div>
