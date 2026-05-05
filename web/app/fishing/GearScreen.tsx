@@ -527,8 +527,9 @@ export default function GearScreen({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#4a9a9a' }}>Dial Ring Skins</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {RING_SKINS.map(skin => {
-                      const owned = skin.id === 'standard' || unlockedRingSkins.includes(skin.id)
+                    {RING_SKINS.filter(s => !['gilded_compass', 'abyssal_sigil'].includes(s.id)).map(skin => {
+                      const isNone = skin.id === 'standard'
+                      const owned = isNone || unlockedRingSkins.includes(skin.id)
                       const isEquipped = equippedRingSkin === skin.id
                       return (
                         <div key={skin.id} style={{
@@ -539,19 +540,23 @@ export default function GearScreen({
                           opacity: owned ? 1 : 0.45,
                         }}>
                           {/* Ring preview */}
-                          {skin.imageUrl
-                            ? <img src={skin.imageUrl} alt={skin.name} style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0, opacity: owned ? 1 : 0.3 }} />
-                            : <div style={{
-                                width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-                                border: `2px solid ${skin.stroke}`,
-                                background: 'rgba(4,10,20,0.8)',
-                                boxShadow: skin.glow ? skin.glow.replace('drop-shadow', '').replace(/[()]/g, '').trim() : 'none',
-                              }} />
+                          {isNone
+                            ? <div style={{ width: 24, height: 24, flexShrink: 0 }} />
+                            : skin.imageUrl
+                              ? <img src={skin.imageUrl} alt={skin.name} style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0, opacity: owned ? 1 : 0.3 }} />
+                              : <div style={{
+                                  width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                                  border: `2px solid ${skin.stroke}`,
+                                  background: 'rgba(4,10,20,0.8)',
+                                  boxShadow: skin.glow ? skin.glow.replace('drop-shadow', '').replace(/[()]/g, '').trim() : 'none',
+                                }} />
                           }
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: owned ? '#f0ede8' : '#3a3835' }}>{skin.name}</p>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: owned ? '#f0ede8' : '#3a3835' }}>
+                              {isNone ? 'None' : skin.name}
+                            </p>
                             <p className="font-karla" style={{ fontSize: '0.56rem', color: owned ? '#5a5856' : '#2e2c2a', marginTop: 1 }}>
-                              {owned ? skin.description : skin.source}
+                              {isNone ? 'Default dial ring' : owned ? skin.description : skin.source}
                             </p>
                           </div>
                           {owned
