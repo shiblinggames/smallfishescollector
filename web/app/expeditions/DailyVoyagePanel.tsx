@@ -373,7 +373,6 @@ export default function DailyVoyagePanel({
                           background: 'none', border: 'none',
                           cursor: locked ? 'default' : 'pointer',
                           padding: 0, zIndex: 3,
-                          opacity: locked ? 0.45 : 1,
                         }}
                       >
                         {!isSelected && !locked && (
@@ -383,32 +382,37 @@ export default function DailyVoyagePanel({
                           }} />
                         )}
                         <span style={{
-                          display: 'block',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
                           width: isSelected ? 22 : 16, height: isSelected ? 22 : 16,
                           borderRadius: '50%',
-                          background: locked ? 'rgba(80,70,60,0.6)' : isSelected ? rco.color : `${rco.color}cc`,
-                          border: isSelected ? '2.5px solid rgba(255,255,255,0.95)' : '2px solid rgba(255,255,255,0.55)',
+                          background: locked ? 'rgba(30,22,14,0.85)' : isSelected ? rco.color : `${rco.color}cc`,
+                          border: locked ? '2px solid rgba(160,120,60,0.45)' : isSelected ? '2.5px solid rgba(255,255,255,0.95)' : '2px solid rgba(255,255,255,0.55)',
                           boxShadow: locked ? 'none' : isSelected
                             ? `0 0 0 4px ${rco.color}44, 0 0 14px ${rco.color}`
                             : `0 0 7px ${rco.color}99`,
                           transition: 'all 0.15s',
                           position: 'relative',
-                        }} />
+                          fontSize: locked ? '0.44rem' : undefined,
+                        }}>
+                          {locked && '🔒'}
+                        </span>
                         <span style={{
                           position: 'absolute', top: '100%', left: '50%',
                           transform: 'translateX(-50%)', marginTop: 6,
                           whiteSpace: 'nowrap', pointerEvents: 'none',
-                          background: isSelected ? 'rgba(4,2,0,0.92)' : 'rgba(4,2,0,0.80)',
+                          background: locked ? 'rgba(8,4,2,0.92)' : isSelected ? 'rgba(4,2,0,0.92)' : 'rgba(4,2,0,0.80)',
                           borderRadius: 6,
                           padding: '0.12rem 0.3rem 0.1rem',
-                          border: `1px solid ${isSelected ? rco.color + '66' : 'rgba(255,255,255,0.12)'}`,
+                          border: locked
+                            ? '1px solid rgba(160,120,60,0.35)'
+                            : `1px solid ${isSelected ? rco.color + '66' : 'rgba(255,255,255,0.12)'}`,
                           boxShadow: isSelected ? `0 0 10px ${rco.color}33` : 'none',
                         }}>
-                          <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: isSelected ? rco.color : '#d4c8a8', display: 'block', lineHeight: 1.2 }}>
+                          <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: locked ? '#a08858' : isSelected ? rco.color : '#d4c8a8', display: 'block', lineHeight: 1.2 }}>
                             {rco.name}
                           </span>
-                          <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: locked ? '#6a5040' : isSelected ? `${rco.color}bb` : '#6a5a40', display: 'block', textAlign: 'center', marginTop: 1 }}>
-                            {locked ? `🔒 Lv ${minLevel}` : `${REC_SCORES[routeKey]}+ score`}
+                          <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: locked ? '#c8a060' : isSelected ? `${rco.color}bb` : '#6a5a40', display: 'block', textAlign: 'center', marginTop: 1, fontWeight: locked ? 700 : undefined }}>
+                            {locked ? `Unlock at Lv ${minLevel}` : `${REC_SCORES[routeKey]}+ score`}
                           </span>
                         </span>
                       </button>
