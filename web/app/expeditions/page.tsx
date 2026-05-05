@@ -8,6 +8,7 @@ import ZoneCard from './ZoneCard'
 import CrewRoster from './CrewRoster'
 import DailyVoyagePanel from './DailyVoyagePanel'
 import VoyageHistory from './VoyageHistory'
+import ExpeditionsTour from './ExpeditionsTour'
 import { getCollectionForCrew } from './actions'
 import { getDailyVoyageState } from './voyageActions'
 
@@ -70,6 +71,7 @@ export default async function ExpeditionsPage() {
       <div style={{ position: 'relative', zIndex: 1 }}>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={doubloons} gems={profile?.gems ?? 0} />
 
+      <ExpeditionsTour />
       <main className="min-h-screen pb-24 sm:pb-0">
 
         <div className="px-5 max-w-lg mx-auto expeditions-content" style={{ paddingTop: '1rem' }}>
