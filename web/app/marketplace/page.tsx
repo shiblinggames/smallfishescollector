@@ -234,7 +234,7 @@ function DestCard({
       <div style={{ position: 'relative', zIndex: 1, maxWidth: art ? '64%' : '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.4rem' }}>
           <p className="font-karla font-600 uppercase tracking-[0.12em]"
-            style={{ fontSize: '0.54rem', color: accent + 'aa', lineHeight: 1 }}>
+            style={{ fontSize: '0.58rem', color: accent + 'dd', lineHeight: 1 }}>
             {eyebrow}
           </p>
           {badge && (
@@ -245,11 +245,11 @@ function DestCard({
           )}
         </div>
 
-        <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1.15, marginBottom: '0.45rem' }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#ffffff', lineHeight: 1.15, marginBottom: '0.5rem' }}>
           {title}
         </p>
 
-        <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#7a7875', lineHeight: 1.55, marginBottom: '0.7rem' }}>
+        <p className="font-karla font-400" style={{ fontSize: '0.76rem', color: '#b0ada8', lineHeight: 1.55, marginBottom: '0.7rem' }}>
           {description}
         </p>
 
