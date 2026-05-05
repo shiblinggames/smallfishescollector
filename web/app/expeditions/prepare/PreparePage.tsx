@@ -27,7 +27,7 @@ interface Props {
 
 const STAT_COLS = [
   { key: 'power'   as const, label: 'PWR', color: '#f87171' },
-  { key: 'dodge'   as const, label: 'DGE', color: '#60a5fa' },
+  { key: 'dodge'   as const, label: 'NAV', color: '#60a5fa' },
   { key: 'fortune' as const, label: 'FTN', color: '#f0c040' },
 ]
 
@@ -129,7 +129,7 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
               </p>
             </div>
             <div style={{ textAlign: 'left' }}>
-              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4a4845', marginBottom: 2 }}>Dodge</p>
+              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4a4845', marginBottom: 2 }}>Nav</p>
               <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: assignedCount > 0 ? '#60a5fa' : '#3a3835' }}>
                 {assignedCount > 0 ? `${dodgeTotal}%` : '—'}
               </p>
@@ -250,7 +250,7 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
           <div style={{ display: 'flex', justifyContent: 'space-around' }}>
             {[
               { label: 'Total Power',   val: totalPower,   color: '#f87171' },
-              { label: 'Total Dodge',   val: totalDodge,   color: '#60a5fa' },
+              { label: 'Total Nav',     val: totalDodge,   color: '#60a5fa' },
               { label: 'Total Fortune', val: totalFortune, color: '#f0c040' },
             ].map(s => (
               <div key={s.label} style={{ textAlign: 'center' }}>

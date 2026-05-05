@@ -273,7 +273,7 @@ export default async function ExpeditionsResultsPage({
                     <p className="font-karla" style={{ fontSize: '0.58rem', color: '#6a6764' }}>{card.rarity}</p>
                   </div>
                   <div className="flex gap-3 flex-shrink-0">
-                    {[{ label: 'PWR', val: card.power, color: '#f87171' }, { label: 'DGE', val: card.dodge, color: '#60a5fa' }, { label: 'FTN', val: card.fortune, color: '#f0c040' }].map(s => (
+                    {[{ label: 'PWR', val: card.power, color: '#f87171' }, { label: 'NAV', val: card.dodge, color: '#60a5fa' }, { label: 'FTN', val: card.fortune, color: '#f0c040' }].map(s => (
                       <div key={s.label} style={{ textAlign: 'center' }}>
                         <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.color }}>{s.val}</p>
                         <p className="font-karla" style={{ fontSize: '0.44rem', color: '#4a4845' }}>{s.label}</p>

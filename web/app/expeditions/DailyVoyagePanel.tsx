@@ -12,7 +12,22 @@ import { getLevelFromXP } from '@/lib/expeditionLevel'
 
 type PanelState = 'idle' | 'away' | 'returned' | 'done'
 
-const VOYAGE_DURATION_MS = 6 * 60 * 60 * 1000
+const BASE_VOYAGE_MS = 6 * 60 * 60 * 1000
+
+function computeVoyageDurationMs(expeditionLevel: number, totalNav: number): number {
+  const levelReductionMs = 90 * Math.pow(expeditionLevel / 100, 2) * 60 * 1000
+  const navReductionMs = Math.min(90 * 60 * 1000, 90 * Math.pow(totalNav / 75, 2) * 60 * 1000)
+  return Math.max(BASE_VOYAGE_MS * 0.5, BASE_VOYAGE_MS - levelReductionMs - navReductionMs)
+}
+
+function formatDuration(ms: number): string {
+  const totalMin = Math.round(ms / 60000)
+  const h = Math.floor(totalMin / 60)
+  const m = totalMin % 60
+  if (h > 0 && m > 0) return `${h}h ${m}m`
+  if (h > 0) return `${h}h`
+  return `${m}m`
+}
 
 const EVENT_ICONS: Record<string, string> = {
   discovery: '🗺️',
@@ -174,7 +189,7 @@ export default function DailyVoyagePanel({
   }, [panelState, activeVoyage, captainsLog])
 
   const returnTime = activeVoyage
-    ? new Date(activeVoyage.created_at).getTime() + VOYAGE_DURATION_MS
+    ? new Date(activeVoyage.created_at).getTime() + (activeVoyage.duration_ms ?? BASE_VOYAGE_MS)
     : null
   const [msRemaining, setMsRemaining] = useState<number>(() =>
     returnTime ? Math.max(0, returnTime - Date.now()) : 0
@@ -260,7 +275,7 @@ export default function DailyVoyagePanel({
             <>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.85rem' }}>
                 <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a09070', lineHeight: 1.5, flex: 1 }}>
-                  Send your crew on a 6-hour voyage. They return with stories — and sometimes something worth keeping.
+                  Send your crew on a voyage. They return with stories — and sometimes something worth keeping. Higher Nav and expedition level reduce the time.
                 </p>
                 <button
                   onClick={() => setInfoOpen(true)}
@@ -304,7 +319,7 @@ export default function DailyVoyagePanel({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                       {([
                         ['🗺️', 'Pick a route', 'Tap a location on the map. Riskier routes pay more — but your crew might not make it back.'],
-                        ['⏳', 'They sail for 6 hours', 'Events unfold along the way. Check back to watch the story as it happens.'],
+                        ['⏳', 'They sail (up to 6 hours)', 'Events unfold along the way. Higher Nav and expedition level reduce voyage time. Check back to watch the story.'],
                         ['💰', 'Claim your loot', 'When they return, collect doubloons, gems, and rare drops.'],
                         ['☠️', 'Crew can die', 'On dangerous routes, crew members can be lost at sea — permanently. Choose wisely.'],
                       ] as [string, string, string][]).map(([icon, title, desc]) => (
@@ -479,7 +494,7 @@ export default function DailyVoyagePanel({
                       })()}
 
                       {/* Estimates */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
                         <span className="font-karla font-700" style={{ fontSize: '0.84rem', color: '#c8aa6a' }}>
                           Est. payout: ~{est.lootMin}–{est.lootMax} ⟡
                         </span>
@@ -494,6 +509,26 @@ export default function DailyVoyagePanel({
                           <span className="font-karla" style={{ fontSize: '0.80rem', color: '#c87a4a' }}>Need 1 more crew</span>
                         )}
                       </div>
+
+                      {/* Est. voyage duration */}
+                      {(() => {
+                        const expeditionLevel = getLevelFromXP(expeditionXP)
+                        const estMs = computeVoyageDurationMs(expeditionLevel, stats.dodge)
+                        const isBase = estMs >= BASE_VOYAGE_MS * 0.99
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                            <span style={{ fontSize: '0.72rem', lineHeight: 1 }}>⏳</span>
+                            <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: isBase ? '#7a6848' : '#60a5fa' }}>
+                              Est. voyage time: {formatDuration(estMs)}
+                            </span>
+                            {!isBase && (
+                              <span className="font-karla" style={{ fontSize: '0.62rem', color: '#4a5a7a' }}>
+                                (base 6h)
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })()}
 
                       {/* Crew risk warning */}
                       {savedCrew.length >= 2 && est.crewRiskPct > 50 && (
@@ -600,18 +635,19 @@ export default function DailyVoyagePanel({
   // ── Away / Returned: live activity log ────────────────────────────────────
   if ((panelState === 'away' || panelState === 'returned') && activeVoyage) {
     const events = activeVoyage.events as VoyageEvent[]
-    const elapsed = VOYAGE_DURATION_MS - msRemaining
+    const voyageDurationMs = activeVoyage.duration_ms ?? BASE_VOYAGE_MS
+    const elapsed = voyageDurationMs - msRemaining
     const isComplete = msRemaining === 0
 
     // Event i reveals at (i+1)/total * voyageDuration — evenly spaced, last at voyage end
     const visibleEvents = events.filter((_, i) =>
-      elapsed >= ((i + 1) / events.length) * VOYAGE_DURATION_MS
+      elapsed >= ((i + 1) / events.length) * voyageDurationMs
     )
 
     // Time until next event
     const nextIdx = visibleEvents.length
     const msToNext = !isComplete && nextIdx < events.length
-      ? Math.max(0, ((nextIdx + 1) / events.length) * VOYAGE_DURATION_MS - elapsed)
+      ? Math.max(0, ((nextIdx + 1) / events.length) * voyageDurationMs - elapsed)
       : null
 
     const awayCrew = activeVoyage.crew_variant_ids

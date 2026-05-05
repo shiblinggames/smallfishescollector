@@ -26,7 +26,7 @@ type CollectionCard = {
 
 const STAT_COLS = [
   { key: 'power'   as const, label: 'Power',   sub: 'Combat & raids',    color: '#f87171' },
-  { key: 'dodge'   as const, label: 'Dodge',   sub: 'Crew survival',     color: '#60a5fa' },
+  { key: 'dodge'   as const, label: 'Nav',     sub: 'Navigation',        color: '#60a5fa' },
   { key: 'fortune' as const, label: 'Fortune', sub: 'Loot & rewards',    color: '#f0c040' },
 ]
 

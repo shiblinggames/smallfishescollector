@@ -14,7 +14,13 @@ function today(): string {
   return new Date().toISOString().split('T')[0]
 }
 
-const VOYAGE_DURATION_MS = 6 * 60 * 60 * 1000 // 6 hours
+const BASE_VOYAGE_MS = 6 * 60 * 60 * 1000 // 6 hours baseline
+
+function computeVoyageDuration(expeditionLevel: number, totalNav: number): number {
+  const levelReductionMs = 90 * Math.pow(expeditionLevel / 100, 2) * 60 * 1000
+  const navReductionMs = Math.min(90 * 60 * 1000, 90 * Math.pow(totalNav / 75, 2) * 60 * 1000)
+  return Math.max(BASE_VOYAGE_MS * 0.5, BASE_VOYAGE_MS - levelReductionMs - navReductionMs)
+}
 
 export interface DailyVoyage {
   id: number
@@ -30,6 +36,7 @@ export interface DailyVoyage {
   created_at: string
   captains_log: string | null
   log_generated_at: string | null
+  duration_ms?: number | null
 }
 
 export async function getDailyVoyageState(): Promise<{
@@ -52,8 +59,8 @@ export async function getDailyVoyageState(): Promise<{
   const now = Date.now()
   const pending = rows.filter(r => r.status === 'pending')
 
-  const activeVoyage = pending.find(r => new Date(r.created_at).getTime() + VOYAGE_DURATION_MS > now) ?? null
-  const readyVoyage  = pending.find(r => new Date(r.created_at).getTime() + VOYAGE_DURATION_MS <= now) ?? null
+  const activeVoyage = pending.find(r => new Date(r.created_at).getTime() + ((r as DailyVoyage).duration_ms ?? BASE_VOYAGE_MS) > now) ?? null
+  const readyVoyage  = pending.find(r => new Date(r.created_at).getTime() + ((r as DailyVoyage).duration_ms ?? BASE_VOYAGE_MS) <= now) ?? null
 
   return { todayVoyage: activeVoyage, readyVoyage }
 }
@@ -106,10 +113,10 @@ export async function sendDailyVoyage(crewVariantIds: number[], route: VoyageRou
 
   if (activeRaid) return { error: 'Finish your raid before sending a voyage' }
 
-  // Load profile for ship tier
+  // Load profile for ship tier and expedition level
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier')
+    .select('ship_tier, expedition_xp')
     .eq('id', user.id)
     .single()
 
@@ -165,6 +172,10 @@ export async function sendDailyVoyage(crewVariantIds: number[], route: VoyageRou
 
   const result = generateVoyageEvents(crew, shipTier, route)
 
+  const expeditionLevel = getLevelFromXP(profile.expedition_xp ?? 0)
+  const totalNav = crew.reduce((s, c, i) => s + Math.round(c.dodge * (i === 0 ? 1 : 0.8)), 0)
+  const duration_ms = computeVoyageDuration(expeditionLevel, totalNav)
+
   const { data: voyage, error } = await admin
     .from('daily_voyages')
     .insert({
@@ -178,6 +189,7 @@ export async function sendDailyVoyage(crewVariantIds: number[], route: VoyageRou
       total_doubloons: result.totalDoubloons,
       total_gems: result.totalGems,
       crew_lost: result.crewLost,
+      duration_ms,
     })
     .select('*')
     .single()
@@ -205,7 +217,8 @@ export async function revealVoyageResults(voyageId: number): Promise<
   if (!voyageRow) return { error: 'Voyage not found' }
   if (voyageRow.status === 'revealed') return { error: 'Already revealed' }
   const sentAt = new Date(voyageRow.created_at as string).getTime()
-  if (Date.now() < sentAt + VOYAGE_DURATION_MS) return { error: 'Your crew has not returned yet' }
+  const voyageDurationMs = (voyageRow.duration_ms as number | null) ?? BASE_VOYAGE_MS
+  if (Date.now() < sentAt + voyageDurationMs) return { error: 'Your crew has not returned yet' }
 
   const voyage = voyageRow as DailyVoyage
 

@@ -631,7 +631,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
           {/* Ship stats */}
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.25rem', marginTop: '0.05rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.1rem' }}>
             <StatTile label="DMG" value={dmgRange} color="#f87171" />
-            <StatTile label="DGE" value={`+${dodgeBonus}%`} color="#60a5fa" />
+            <StatTile label="NAV" value={`+${dodgeBonus}%`} color="#60a5fa" />
             <StatTile label="CRIT" value={`${Math.min(Math.floor(crew.fortune / 2), 50)}%`} color="#f0c040" />
             <StatTile label="ARM" value={effectiveArmor} color="#4ade80" />
           </div>
@@ -697,7 +697,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.25rem', marginTop: '0.05rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.1rem' }}>
               <StatTile label="DMG" value={`1–${enemy.damage}`} color="#f87171" />
-              <StatTile label="DGE" value={`${Math.min(enemy.dodge * 5, 70)}%`} color="#60a5fa" />
+              <StatTile label="NAV" value={`${Math.min(enemy.dodge * 5, 70)}%`} color="#60a5fa" />
               <StatTile label="CRIT" value={`${Math.min(enemy.fortune * 4, 60)}%`} color="#f0c040" />
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem' }}>
@@ -727,7 +727,7 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
           {([
             { action: 'reload'     as const, icon: '⚙',  label: 'Reload',  sublabel: '+1 charge',            color: '#60a5fa', dim: false },
             { action: 'fire'       as const, icon: '💥', label: 'Fire',    sublabel: '×1 dmg  ·  1 charge',  color: '#f87171', dim: !canLightFire },
-            { action: 'defend'     as const, icon: '🛡',  label: 'Defend',  sublabel: `+${dodgeBonus}% dodge`, color: '#4ade80', dim: false },
+            { action: 'defend'     as const, icon: '🛡',  label: 'Defend',  sublabel: `+${dodgeBonus}% nav`,   color: '#4ade80', dim: false },
             { action: 'fire_heavy' as const, icon: '🔥', label: 'Volley',  sublabel: '×2 dmg  ·  3 charges', color: '#f0c040', dim: !canHeavyFire },
           ] as const).map(btn => {
             const enabled = !buttonsDisabled && !btn.dim
@@ -1098,7 +1098,7 @@ function CrewSheet({ expedition, ship, crew, maxDurability, currentDurability, r
             <div className="flex gap-5">
               {[
                 { label: 'Power',   val: crew.power + buffPower,   color: '#f87171' },
-                { label: 'Dodge',   val: crew.dodge + buffDodge,   color: '#60a5fa' },
+                { label: 'Nav',     val: crew.dodge + buffDodge,   color: '#60a5fa' },
                 { label: 'Fortune', val: crew.fortune,              color: '#f0c040' },
               ].map(s => (
                 <div key={s.label}>
@@ -1130,7 +1130,7 @@ function CrewSheet({ expedition, ship, crew, maxDurability, currentDurability, r
                       <p className="font-karla" style={{ fontSize: '0.55rem', color: RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764' }}>{card.rarity}</p>
                     </div>
                     <div className="flex gap-3">
-                      {[{ v: card.power, c: '#f87171', l: 'PWR' }, { v: card.dodge, c: '#60a5fa', l: 'DGE' }, { v: card.fortune, c: '#f0c040', l: 'FTN' }].map(s => (
+                      {[{ v: card.power, c: '#f87171', l: 'PWR' }, { v: card.dodge, c: '#60a5fa', l: 'NAV' }, { v: card.fortune, c: '#f0c040', l: 'FTN' }].map(s => (
                         <div key={s.l} style={{ textAlign: 'center' }}>
                           <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.c }}>{s.v}</p>
                           <p className="font-karla" style={{ fontSize: '0.42rem', color: '#4a4845' }}>{s.l}</p>
