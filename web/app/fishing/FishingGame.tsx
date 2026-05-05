@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, useTideTurnerSkip, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, useTideTurnerSkip, type FishSpecies, type FishingBountyCompletion } from './actions'
 import { claimDailyReward } from './dailyChallengeActions'
 import { getDailyChallenges, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
 import { getRingSkin } from '@/lib/ringSkins'
@@ -1349,7 +1349,7 @@ export default function FishingGame({
   hasSeenFishingTour, hasSeenFishingCatchTour,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
-  hasTideTurner, initialTideTurnerSkipsLeft,
+  hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial,
 }: {
   hookTier: number
   rodTier: number
@@ -1377,6 +1377,7 @@ export default function FishingGame({
   initialDailyChallenge: DailyChallengeState | null
   hasTideTurner: boolean
   initialTideTurnerSkipsLeft: number
+  initialEquippedSpecial: string | null
 }) {
 
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
@@ -1426,6 +1427,7 @@ export default function FishingGame({
   const [reelRippleKey, setReelRippleKey] = useState(0)
   const [newStreakRecord, setNewStreakRecord] = useState<number | null>(null)
   const [tideTurnerSkipsLeft, setTideTurnerSkipsLeft] = useState(initialTideTurnerSkipsLeft)
+  const [equippedSpecial, setEquippedSpecial] = useState<string | null>(initialEquippedSpecial)
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
   const catchTourShownRef = useRef(false)
@@ -1646,7 +1648,7 @@ export default function FishingGame({
   }
 
   function handleTideTurnerSkip() {
-    if (!hasTideTurner || tideTurnerSkipsLeft <= 0 || phase !== 'catching') return
+    if (equippedSpecial !== 'tide_turner' || tideTurnerSkipsLeft <= 0 || phase !== 'catching') return
     setHookedFish(null)
     setPhase('idle')
     startTransition(async () => {
@@ -2412,7 +2414,7 @@ export default function FishingGame({
                       snapKey={snapKey} perfectBurstKey={perfectBurstKey}
                       ringSkin={getRingSkin(equippedRingSkin)} />
                   </div>
-                  {hasTideTurner && tideTurnerSkipsLeft > 0 && phase === 'catching' && (
+                  {equippedSpecial === 'tide_turner' && tideTurnerSkipsLeft > 0 && phase === 'catching' && (
                     <button
                       onClick={handleTideTurnerSkip}
                       style={{
@@ -3197,6 +3199,11 @@ export default function FishingGame({
               }}
               hasTideTurner={hasTideTurner}
               tideTurnerSkipsLeft={tideTurnerSkipsLeft}
+              equippedSpecial={equippedSpecial}
+              onEquipSpecial={async (itemId) => {
+                setEquippedSpecial(itemId)
+                await equipSpecialItem(itemId)
+              }}
               onClose={() => setGearOpen(false)}
             />
           </motion.div>

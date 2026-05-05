@@ -551,6 +551,16 @@ export async function useTideTurnerSkip(): Promise<{ ok: true; skipsLeft: number
   return { ok: true, skipsLeft: 3 - newUsed }
 }
 
+export async function equipSpecialItem(itemId: string | null): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  await admin.from('profiles').update({ equipped_special: itemId }).eq('id', user.id)
+  return { ok: true }
+}
+
 export async function equipRingSkin(skin: string): Promise<{ ok: true } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

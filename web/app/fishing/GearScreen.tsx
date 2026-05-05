@@ -10,6 +10,7 @@ import { getLine } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
 import { getShip } from '@/lib/ships'
 import { RING_SKINS } from '@/lib/ringSkins'
+import { SPECIAL_ITEMS } from '@/lib/specialItems'
 
 type BaitItem = { bait_type: string; quantity: number }
 type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'bait' | 'special' | 'cosmetic'
@@ -146,6 +147,7 @@ export default function GearScreen({
   reelTier, hookTier, lineTier, shipTier,
   equippedRingSkin, unlockedRingSkins, onEquipRingSkin,
   hasTideTurner, tideTurnerSkipsLeft,
+  equippedSpecial, onEquipSpecial,
   onClose,
 }: {
   baitInventory: BaitItem[]
@@ -163,6 +165,8 @@ export default function GearScreen({
   onEquipRingSkin: (skin: string) => void
   hasTideTurner: boolean
   tideTurnerSkipsLeft: number
+  equippedSpecial: string | null
+  onEquipSpecial: (itemId: string | null) => void
   onClose: () => void
 }) {
   const [openSlot, setOpenSlot] = useState<SlotKey | null>(null)
@@ -239,14 +243,19 @@ export default function GearScreen({
 
       {/* Bottom row: Special | Bait | Cosmetic */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gap: 6 }}>
-        <GearSlot
-          label="Special"
-          icon={<SpecialIcon color={hasTideTurner ? '#a78bfa' : '#5a4a7a'} />}
-          itemName={hasTideTurner ? 'Tide Turner' : 'None'}
-          color={hasTideTurner ? '#a78bfa' : '#5a4a7a'}
-          onClick={() => setOpenSlot('special')}
-          empty={!hasTideTurner}
-        />
+        {(() => {
+          const equippedDef = SPECIAL_ITEMS.find(s => s.id === equippedSpecial)
+          return (
+            <GearSlot
+              label="Special"
+              icon={<SpecialIcon color={equippedDef ? equippedDef.color : '#5a4a7a'} />}
+              itemName={equippedDef ? equippedDef.name : 'None'}
+              color={equippedDef ? equippedDef.color : '#5a4a7a'}
+              onClick={() => setOpenSlot('special')}
+              empty={!equippedDef}
+            />
+          )
+        })()}
         <GearSlot
           label="Bait"
           image={bait?.imageUrl ?? null}
@@ -437,30 +446,64 @@ export default function GearScreen({
               {/* ── Special ── */}
               {openSlot === 'special' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#a78bfa' }}>Tide Turner</p>
-                  {hasTideTurner ? (
-                    <>
-                      <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#b0a8c4', lineHeight: 1.55 }}>
-                        Skip a hooked fish without breaking your perfect streak. Your bait is returned. Resets daily.
-                      </p>
-                      <div style={{ background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.28)', borderRadius: 12, padding: '0.75rem 0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: '#a78bfa' }}>Skips remaining today</p>
-                        <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: tideTurnerSkipsLeft > 0 ? '#a78bfa' : '#4a4845', lineHeight: 1 }}>{tideTurnerSkipsLeft} / 3</p>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#5a5560', lineHeight: 1.55 }}>
-                        A permanent item that lets you skip a hooked fish without breaking your perfect streak. Your bait is returned. Grants 3 skips per day.
-                      </p>
-                      <div style={{ background: 'rgba(139,111,192,0.06)', border: '1px solid rgba(139,111,192,0.15)', borderRadius: 12, padding: '0.75rem 0.9rem' }}>
-                        <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: '#6a5a8a', marginBottom: 5 }}>How to obtain</p>
-                        <p className="font-karla font-300" style={{ fontSize: '0.7rem', color: '#5a5560', lineHeight: 1.5 }}>
-                          Rare drop from The Howling Deep voyage expedition. Not available for purchase.
-                        </p>
-                      </div>
-                    </>
-                  )}
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#8b6fc0' }}>Special Items</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {SPECIAL_ITEMS.map(item => {
+                      const owned = item.id === 'tide_turner' ? hasTideTurner : false
+                      const isEquipped = equippedSpecial === item.id
+                      return (
+                        <div key={item.id} style={{
+                          background: isEquipped ? `${item.color}10` : 'rgba(255,255,255,0.03)',
+                          border: `1px solid ${isEquipped ? item.color + '50' : owned ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)'}`,
+                          borderRadius: 14,
+                          padding: '0.75rem 0.9rem',
+                          opacity: owned ? 1 : 0.5,
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: owned ? 6 : 4 }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, display: 'inline-block', flexShrink: 0, boxShadow: `0 0 6px ${item.color}88` }} />
+                                <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: owned ? item.color : '#4a4845', lineHeight: 1 }}>{item.name}</p>
+                                <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: `${item.color}88`, background: `${item.color}14`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>{item.effectLabel}</span>
+                              </div>
+                              <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: owned ? '#7a7268' : '#4a4845', lineHeight: 1.45 }}>{item.description}</p>
+                            </div>
+                            {owned && (
+                              <button
+                                onClick={() => onEquipSpecial(isEquipped ? null : item.id)}
+                                style={{
+                                  flexShrink: 0,
+                                  background: isEquipped ? `${item.color}22` : 'rgba(255,255,255,0.06)',
+                                  border: `1px solid ${isEquipped ? item.color + '60' : 'rgba(255,255,255,0.12)'}`,
+                                  borderRadius: 8,
+                                  padding: '0.3rem 0.65rem',
+                                  cursor: 'pointer',
+                                  color: isEquipped ? item.color : '#6a6460',
+                                  fontSize: '0.62rem',
+                                  fontFamily: 'inherit',
+                                  marginTop: 2,
+                                }}
+                                className="font-karla font-700 uppercase tracking-[0.08em]"
+                              >
+                                {isEquipped ? 'Unequip' : 'Equip'}
+                              </button>
+                            )}
+                          </div>
+                          {owned && item.id === 'tide_turner' && (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, paddingTop: 6, borderTop: `1px solid ${item.color}18` }}>
+                              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.54rem', color: `${item.color}88` }}>Skips today</p>
+                              <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: tideTurnerSkipsLeft > 0 ? item.color : '#4a4845', lineHeight: 1 }}>{tideTurnerSkipsLeft} / 3</p>
+                            </div>
+                          )}
+                          {!owned && (
+                            <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#3a3835', marginTop: 2 }}>
+                              From: {item.obtainedFrom}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
 

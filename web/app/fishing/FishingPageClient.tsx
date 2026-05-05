@@ -25,7 +25,7 @@ export default function FishingPageClient({
   initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
   holdCapacity, shipTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, activeSession, username, zoneRewardsClaimed,
-  initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft,
+  initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial,
 }: {
   hookTier: number
   rodTier: number
@@ -52,6 +52,7 @@ export default function FishingPageClient({
   initialDailyChallenge: DailyChallengeState | null
   hasTideTurner: boolean
   initialTideTurnerSkipsLeft: number
+  initialEquippedSpecial: string | null
 }) {
   const fishingLevel = getLevelFromXP(initialFishingXP)
 
@@ -114,6 +115,7 @@ export default function FishingPageClient({
       initialDailyChallenge={initialDailyChallenge}
       hasTideTurner={hasTideTurner}
       initialTideTurnerSkipsLeft={initialTideTurnerSkipsLeft}
+      initialEquippedSpecial={initialEquippedSpecial}
     />
   )
 }

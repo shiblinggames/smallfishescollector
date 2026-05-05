@@ -28,7 +28,7 @@ export default async function FishingPage() {
     getActiveChallengeSession(),
     getDailyChallenge(),
     admin.from('profiles')
-      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, ship_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, ring_skin, unlocked_ring_skins, has_tide_turner, tide_turner_used, tide_turner_date')
+      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, ship_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, ring_skin, unlocked_ring_skins, has_tide_turner, tide_turner_used, tide_turner_date, equipped_special')
       .eq('id', user.id)
       .single(),
     admin.from('bait_inventory')
@@ -104,6 +104,7 @@ export default async function FishingPage() {
           initialUnlockedRingSkins={(profile?.unlocked_ring_skins as string[] | null) ?? []}
           hasTideTurner={hasTideTurner}
           initialTideTurnerSkipsLeft={tideTurnerSkipsLeft}
+          initialEquippedSpecial={(profile?.equipped_special as string | null) ?? null}
         />
       </main>
     </>
