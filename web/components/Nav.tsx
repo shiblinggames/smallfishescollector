@@ -387,11 +387,11 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
               <button
                 onClick={() => {
                   setMenuOpen(false)
-                  if (isIOS) {
-                    setShowIOSHint(true)
-                  } else if (deferredPrompt) {
+                  if (deferredPrompt) {
                     deferredPrompt.prompt()
                     deferredPrompt.userChoice.then(() => setDeferredPrompt(null))
+                  } else if (isIOS) {
+                    setShowIOSHint(true)
                   }
                 }}
                 className="w-full flex items-center gap-3"
