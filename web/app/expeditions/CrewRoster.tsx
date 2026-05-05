@@ -25,9 +25,9 @@ type CollectionCard = {
 }
 
 const STAT_COLS = [
-  { key: 'power'   as const, label: 'Power',   sub: 'Combat & raids',    color: '#f87171' },
-  { key: 'dodge'   as const, label: 'Nav',     sub: 'Navigation',        color: '#60a5fa' },
-  { key: 'fortune' as const, label: 'Fortune', sub: 'Loot & rewards',    color: '#f0c040' },
+  { key: 'power'   as const, label: 'Power',   short: 'PWR', sub: 'Combat & raids',  color: '#f87171' },
+  { key: 'dodge'   as const, label: 'Nav',     short: 'NAV', sub: 'Navigation',      color: '#60a5fa' },
+  { key: 'fortune' as const, label: 'Fortune', short: 'FTN', sub: 'Loot & rewards',  color: '#f0c040' },
 ]
 
 interface Props {
@@ -349,9 +349,17 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
                   <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8a8480', lineHeight: 1.5 }}>Your captain leads the voyage and uses their full stats. The captain <span style={{ color: '#c8aa6a' }}>always returns</span> — they can never be lost at sea.</p>
                     <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6460', lineHeight: 1.5 }}>Crew members contribute 80% of their stats and <span style={{ color: '#f87171' }}>can be lost permanently</span> on dangerous routes.</p>
+                    <p className="font-karla" style={{ fontSize: '0.56rem', color: '#4a4845', lineHeight: 1.4, marginTop: 2 }}>
+                      <span style={{ color: '#f87171' }}>PWR</span> Combat &amp; raids · <span style={{ color: '#60a5fa' }}>NAV</span> Navigation &amp; voyage time · <span style={{ color: '#f0c040' }}>FTN</span> Loot &amp; rewards
+                    </p>
                   </div>
                 ) : pickerSlot !== null ? (
-                  <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6460', lineHeight: 1.5, marginTop: 6 }}>Crew contribute 80% of their stats. On risky voyages, they can be <span style={{ color: '#f87171' }}>lost at sea permanently</span>.</p>
+                  <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6460', lineHeight: 1.5 }}>Crew contribute 80% of their stats. On risky voyages, they can be <span style={{ color: '#f87171' }}>lost at sea permanently</span>.</p>
+                    <p className="font-karla" style={{ fontSize: '0.56rem', color: '#4a4845', lineHeight: 1.4 }}>
+                      <span style={{ color: '#f87171' }}>PWR</span> Combat &amp; raids · <span style={{ color: '#60a5fa' }}>NAV</span> Navigation &amp; voyage time · <span style={{ color: '#f0c040' }}>FTN</span> Loot &amp; rewards
+                    </p>
+                  </div>
                 ) : null}
               </div>
               <button
@@ -388,12 +396,12 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
                         <div style={{ padding: '0.3rem 0.4rem 0.35rem', background: 'rgba(4,5,8,0.92)' }}>
-                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.52rem', color: '#f0ede8', lineHeight: 1.2, marginBottom: 4 }}>{card.name}</p>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.22rem', marginTop: 2 }}>
+                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.52rem', color: '#f0ede8', lineHeight: 1.2, marginBottom: 5 }}>{card.name}</p>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             {STAT_COLS.map(s => (
-                              <div key={s.key} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                                <p style={{ fontSize: '0.44rem', color: '#6a6764', lineHeight: 1 }}>{s.sub}</p>
-                                <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: s.color, lineHeight: 1 }}>{card[s.key]}</p>
+                              <div key={s.key} style={{ textAlign: 'center' }}>
+                                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.color, lineHeight: 1 }}>{card[s.key]}</p>
+                                <p style={{ fontSize: '0.38rem', color: '#5a5858', lineHeight: 1, marginTop: 2 }}>{s.short}</p>
                               </div>
                             ))}
                           </div>
