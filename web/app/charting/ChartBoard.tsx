@@ -114,7 +114,7 @@ export default function ChartBoard({
       <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', marginBottom: '0.25rem' }}>
         {contest.name}
       </p>
-      <p className="font-karla" style={{ fontSize: '0.75rem', color: '#6a6050', marginBottom: '1.25rem' }}>
+      <p className="font-karla" style={{ fontSize: '0.84rem', color: '#6a6050', marginBottom: '1.25rem' }}>
         Chart a path from sea to shore. Move up, left, or right. Every guess costs one move.
       </p>
 
@@ -128,7 +128,7 @@ export default function ChartBoard({
           <p className="font-karla font-700" style={{ fontSize: '0.88rem', color: movesAvailable > 0 ? '#f0ede8' : '#4a4845' }}>
             {movesAvailable} {movesAvailable === 1 ? 'move' : 'moves'} available
           </p>
-          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#4a4028', marginTop: 1 }}>
+          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#4a4028', marginTop: 1 }}>
             Gain fishing or navigator levels to earn more
           </p>
         </div>
@@ -140,7 +140,7 @@ export default function ChartBoard({
               <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#c8a840' }}>
                 {pathIndex} / {pathLength - 1}
               </p>
-              <p className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4028', marginTop: 1 }}>tiles charted</p>
+              <p className="font-karla" style={{ fontSize: '0.68rem', color: '#4a4028', marginTop: 1 }}>tiles charted</p>
             </>
           )}
         </div>
@@ -160,7 +160,7 @@ export default function ChartBoard({
       {/* Grid */}
       <div style={{ width: '100%' }}>
         <p className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{
-          fontSize: '0.44rem', color: '#c8a840', textAlign: 'center', marginBottom: 4,
+          fontSize: '0.62rem', color: '#c8a840', textAlign: 'center', marginBottom: 4,
         }}>⚓ Destination</p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: GAP, width: '100%' }}>
@@ -264,7 +264,7 @@ export default function ChartBoard({
         </div>
 
         <p className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{
-          fontSize: '0.44rem', color: '#4a5840', textAlign: 'center', marginTop: 4,
+          fontSize: '0.62rem', color: '#4a5840', textAlign: 'center', marginTop: 4,
         }}>Start</p>
       </div>
 
