@@ -1,9 +1,18 @@
+import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import Nav from '@/components/Nav'
 import ProfileClient from './ProfileClient'
 import { notFound } from 'next/navigation'
 import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
+
+export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
+  const { username } = await params
+  return {
+    title: `${username} — Small Fishes`,
+    alternates: { canonical: `/u/${username}` },
+  }
+}
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
