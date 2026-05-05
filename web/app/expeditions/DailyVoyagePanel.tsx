@@ -551,7 +551,7 @@ export default function DailyVoyagePanel({
                               const dropKey = drop.kind === 'skin' ? drop.id : drop.kind === 'bait' ? drop.type : drop.id
                               const color   = specialDef ? specialDef.color : drop.kind === 'skin' ? getRingSkin(drop.id).color : getBait((drop as { type: string }).type).color
                               const name    = specialDef ? specialDef.name : drop.kind === 'skin' ? getRingSkin(drop.id).name : getBait((drop as { type: string }).type).name
-                              const image   = specialDef?.image ?? null
+                              const image   = specialDef?.image ?? (drop.kind === 'bait' ? getBait((drop as { type: string }).type).imageUrl ?? null : null)
                               const label   = specialDef ? `Special item · ${specialDef.effectLabel}` : drop.kind === 'skin' ? 'Ring cosmetic' : 'Fishing bait'
                               const detail  = specialDef
                                 ? specialDef.description
