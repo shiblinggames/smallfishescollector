@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { makeChartGuess, claimChartReward, CHART_SHIP_COLORS } from './chartActions'
+import { makeChartGuess, claimChartReward } from './chartActions'
+
+const CHART_SHIP_COLORS = ['#f0c040', '#d04040', '#4080c0', '#30b870', '#706080', '#e8e0d0', '#9060c0', '#c07040']
 import type { ChartContest, ChartProgress, ChartGuess, ChartLeaderEntry } from './chartActions'
 
 interface Props {

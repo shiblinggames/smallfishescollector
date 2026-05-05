@@ -232,4 +232,3 @@ export async function claimChartReward(
   return { success: true }
 }
 
-export { VALID_COLORS as CHART_SHIP_COLORS }
