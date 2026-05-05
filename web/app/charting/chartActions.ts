@@ -39,6 +39,7 @@ export type ChartState = {
   pathLength: number
   startTile: [number, number]
   finishers: ChartFinisher[]
+  completionPosition: number | null
 }
 
 export async function getChartState(): Promise<ChartState | { error: string }> {
@@ -106,6 +107,17 @@ export async function getChartState(): Promise<ChartState | { error: string }> {
     }))
   }
 
+  let completionPosition: number | null = null
+  if (progress?.completed_at) {
+    const { count } = await admin
+      .from('chart_progress')
+      .select('id', { count: 'exact', head: true })
+      .eq('contest_id', contest.id)
+      .not('completed_at', 'is', null)
+      .lte('completed_at', progress.completed_at)
+    completionPosition = (count ?? 0) <= 3 ? (count ?? 0) : null
+  }
+
   return {
     contest: { id: contest.id, name: contest.name, grid_cols: contest.grid_cols, grid_rows: contest.grid_rows },
     progress: progress ?? { path_index: 0, moves_used: 0, completed_at: null, ship_color: null },
@@ -114,6 +126,7 @@ export async function getChartState(): Promise<ChartState | { error: string }> {
     pathLength: path.length,
     startTile: path[0],
     finishers,
+    completionPosition,
   }
 }
 
@@ -121,7 +134,7 @@ export async function makeChartGuess(
   contestId: number,
   row: number,
   col: number,
-): Promise<{ correct: boolean; movesLeft: number; completed: boolean; newPathIndex: number } | { error: string }> {
+): Promise<{ correct: boolean; movesLeft: number; completed: boolean; newPathIndex: number; completionPosition: number | null; bonusDoubloons: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
@@ -136,7 +149,7 @@ export async function makeChartGuess(
   const path = contest.path as [number, number][]
 
   const { data: profile } = await admin
-    .from('profiles').select('fishing_xp, expedition_xp').eq('id', user.id).single()
+    .from('profiles').select('fishing_xp, expedition_xp, doubloons').eq('id', user.id).single()
 
   const fishingLevel = getLevelFromXP(profile?.fishing_xp ?? 0)
   const expeditionLevel = getExpeditionLevel(profile?.expedition_xp ?? 0)
@@ -182,42 +195,41 @@ export async function makeChartGuess(
   const newPathIndex = correct ? currentPathIndex + 1 : currentPathIndex
   const completed = correct && newPathIndex === path.length - 1
 
-  await Promise.all([
+  // Milestone rewards: row 5 = 2000 doubloons (bit 0), row 10 = 5000 doubloons (bit 1)
+  const currentMilestones: number = progress.milestones_awarded ?? 0
+  let newMilestones = currentMilestones
+  let bonusDoubloons = 0
+  if (correct) {
+    const newTileRow = path[newPathIndex][0]
+    if (newTileRow >= 5 && !(currentMilestones & 1)) { newMilestones |= 1; bonusDoubloons += 2000 }
+    if (newTileRow >= 10 && !(currentMilestones & 2)) { newMilestones |= 2; bonusDoubloons += 5000 }
+  }
+
+  const updateTasks: Promise<unknown>[] = [
     admin.from('chart_guesses').insert({ user_id: user.id, contest_id: contestId, row, col, correct }),
     admin.from('chart_progress').update({
       moves_used: newMovesUsed,
       path_index: newPathIndex,
+      milestones_awarded: newMilestones,
       ...(completed ? { completed_at: new Date().toISOString() } : {}),
     }).eq('user_id', user.id).eq('contest_id', contestId),
-  ])
+  ]
+  if (bonusDoubloons > 0) {
+    updateTasks.push(
+      admin.from('profiles').update({ doubloons: (profile?.doubloons ?? 0) + bonusDoubloons }).eq('id', user.id)
+    )
+  }
+  await Promise.all(updateTasks)
 
-  return { correct, movesLeft: Math.max(0, totalLevels - newMovesUsed), completed, newPathIndex }
-}
+  let completionPosition: number | null = null
+  if (completed) {
+    const { count } = await admin
+      .from('chart_progress')
+      .select('id', { count: 'exact', head: true })
+      .eq('contest_id', contestId)
+      .not('completed_at', 'is', null)
+    completionPosition = (count ?? 0) <= 3 ? (count ?? 0) : null
+  }
 
-const VALID_COLORS = ['#f0c040', '#d04040', '#4080c0', '#30b870', '#706080', '#e8e0d0', '#9060c0', '#c07040']
-
-export async function claimChartReward(
-  contestId: number,
-  shipColor: string,
-): Promise<{ success: true } | { error: string }> {
-  if (!VALID_COLORS.includes(shipColor)) return { error: 'Invalid color' }
-
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-
-  const admin = createAdminClient()
-
-  const { data: progress } = await admin
-    .from('chart_progress').select('completed_at')
-    .eq('user_id', user.id).eq('contest_id', contestId).single()
-
-  if (!progress?.completed_at) return { error: 'Not completed' }
-
-  await Promise.all([
-    admin.from('chart_progress').update({ ship_color: shipColor }).eq('user_id', user.id).eq('contest_id', contestId),
-    admin.from('profiles').update({ ship_color: shipColor }).eq('id', user.id),
-  ])
-
-  return { success: true }
+  return { correct, movesLeft: Math.max(0, totalLevels - newMovesUsed), completed, newPathIndex, completionPosition, bonusDoubloons }
 }

@@ -58,6 +58,7 @@ export default async function ChartingPage() {
                 startTile={state.startTile}
                 finishers={state.finishers}
                 shipTier={profile?.ship_tier ?? 0}
+                completionPosition={state.completionPosition}
               />
             )}
           </div>
