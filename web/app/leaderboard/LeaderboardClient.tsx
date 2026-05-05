@@ -250,10 +250,10 @@ export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, e
               style={{
                 padding: '0.7rem 0.5rem',
                 borderRadius: 10,
-                fontSize: '0.58rem',
+                fontSize: '0.68rem',
                 background: isActive ? `${t.accent}22` : 'rgba(255,255,255,0.04)',
                 border: `1px solid ${isActive ? `${t.accent}55` : 'rgba(255,255,255,0.08)'}`,
-                color: isActive ? t.accent : '#7a7870',
+                color: isActive ? t.accent : '#b0aea8',
                 cursor: 'pointer',
                 boxShadow: isActive ? `0 0 12px ${t.accent}22` : 'none',
               }}
