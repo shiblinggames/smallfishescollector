@@ -20,7 +20,7 @@ export default async function ExpeditionsPage() {
 
   const [{ data: profile }, { data: expeditionRows }, collection, dailyVoyageState, { data: voyageHistoryRows }] = await Promise.all([
     admin.from('profiles')
-      .select('packs_available, doubloons, ship_tier, gems, saved_crew')
+      .select('packs_available, doubloons, ship_tier, gems, saved_crew, ship_name')
       .eq('id', user.id)
       .single(),
     admin.from('expeditions')
@@ -79,6 +79,7 @@ export default async function ExpeditionsPage() {
             shipTier={shipTier}
             collection={collection}
             savedCrewVariantIds={savedCrewVariantIds}
+            shipName={profile?.ship_name ?? null}
           />
 
           {/* ── Voyage card ── */}

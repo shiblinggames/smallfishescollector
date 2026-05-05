@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import type { ShipStats } from '@/lib/expeditions'
 import { RARITY_COLORS } from '@/lib/expeditions'
 import { saveCrew } from './actions'
+import { renameShip } from '@/app/shipyard/actions'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 
@@ -33,9 +34,10 @@ interface Props {
   shipTier: number
   collection: CollectionCard[]
   savedCrewVariantIds: number[]
+  shipName: string | null
 }
 
-export default function CrewRoster({ shipStats, collection, savedCrewVariantIds }: Props) {
+export default function CrewRoster({ shipStats, collection, savedCrewVariantIds, shipName: initialShipName }: Props) {
   const [slots, setSlots] = useState<(CollectionCard | null)[]>(() => {
     const arr: (CollectionCard | null)[] = Array(shipStats.crewSlots).fill(null)
     savedCrewVariantIds.forEach((vid, i) => {
@@ -50,6 +52,17 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [showBreakdown, setShowBreakdown] = useState(false)
   const [, startTransition] = useTransition()
+  const [shipName, setShipName] = useState(initialShipName)
+  const [editingName, setEditingName] = useState(false)
+  const [nameInput, setNameInput] = useState(initialShipName ?? '')
+
+  function submitRename() {
+    const trimmed = nameInput.trim().slice(0, 32)
+    if (!trimmed) { setEditingName(false); return }
+    setShipName(trimmed)
+    setEditingName(false)
+    startTransition(async () => { await renameShip(trimmed) })
+  }
 
   const assignedVariantIds = new Set(slots.filter(Boolean).map(c => c!.variantId))
 
@@ -104,12 +117,39 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds 
           padding: '0.65rem 1rem',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={shipStats.image} alt="" style={{ width: 22, height: 22, objectFit: 'contain', opacity: 0.75 }} />
-            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#c0bdb8' }}>{shipStats.name}</p>
+            <img src={shipStats.image} alt="" style={{ width: 22, height: 22, objectFit: 'contain', opacity: 0.75, flexShrink: 0 }} />
+            {editingName ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flex: 1, minWidth: 0 }}>
+                <input
+                  autoFocus
+                  value={nameInput}
+                  onChange={e => setNameInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') submitRename(); if (e.key === 'Escape') setEditingName(false) }}
+                  maxLength={32}
+                  placeholder={shipStats.name}
+                  style={{
+                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)',
+                    borderRadius: 6, padding: '0.2rem 0.45rem',
+                    color: '#f0ede8', fontSize: '0.78rem', fontFamily: 'inherit',
+                    outline: 'none', flex: 1, minWidth: 0,
+                  }}
+                />
+                <button onClick={submitRename} style={{ background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.3)', borderRadius: 5, padding: '0.18rem 0.5rem', color: '#f0c040', cursor: 'pointer', fontSize: '0.62rem', flexShrink: 0 }} className="font-karla font-700">Save</button>
+                <button onClick={() => setEditingName(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5a5248', fontSize: '0.62rem', flexShrink: 0 }} className="font-karla">✕</button>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setNameInput(shipName ?? ''); setEditingName(true) }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0, minWidth: 0 }}
+              >
+                <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#c0bdb8' }}>{shipName ?? shipStats.name}</p>
+                <span style={{ fontSize: '0.6rem', color: '#4a3a28', flexShrink: 0 }}>✎</span>
+              </button>
+            )}
           </div>
-          <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#8a8784' }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#8a8784', flexShrink: 0 }}>
             {slots.filter(Boolean).length}/{shipStats.crewSlots} crew
           </p>
         </div>
