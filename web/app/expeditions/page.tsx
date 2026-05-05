@@ -71,7 +71,7 @@ export default async function ExpeditionsPage() {
 
       <main className="min-h-screen pb-24 sm:pb-0">
 
-        <div className="px-5 max-w-lg mx-auto sm:[zoom:1.4]" style={{ paddingTop: '1rem' }}>
+        <div className="px-5 max-w-lg mx-auto [zoom:1.25] sm:[zoom:1.4]" style={{ paddingTop: '1rem' }}>
 
           {/* Crew roster */}
           <CrewRoster
