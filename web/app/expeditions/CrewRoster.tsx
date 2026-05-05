@@ -345,9 +345,14 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
                 <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>
                   {pickerSlot !== null ? (pickerSlot === 0 ? 'Assign Captain' : 'Assign Crew') : 'Crew Roster'}
                 </p>
-                {pickerSlot === 0 && (
-                  <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: '#6a6764', marginTop: 4 }}>Captain gets full stats · others ×0.8</p>
-                )}
+                {pickerSlot === 0 ? (
+                  <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8a8480', lineHeight: 1.5 }}>Your captain leads the voyage and uses their full stats. The captain <span style={{ color: '#c8aa6a' }}>always returns</span> — they can never be lost at sea.</p>
+                    <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6460', lineHeight: 1.5 }}>Crew members contribute 80% of their stats and <span style={{ color: '#f87171' }}>can be lost permanently</span> on dangerous routes.</p>
+                  </div>
+                ) : pickerSlot !== null ? (
+                  <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6460', lineHeight: 1.5, marginTop: 6 }}>Crew contribute 80% of their stats. On risky voyages, they can be <span style={{ color: '#f87171' }}>lost at sea permanently</span>.</p>
+                ) : null}
               </div>
               <button
                 onClick={closeSheet}
@@ -384,11 +389,11 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
                         <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
                         <div style={{ padding: '0.3rem 0.4rem 0.35rem', background: 'rgba(4,5,8,0.92)' }}>
                           <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.52rem', color: '#f0ede8', lineHeight: 1.2, marginBottom: 4 }}>{card.name}</p>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.22rem', marginTop: 2 }}>
                             {STAT_COLS.map(s => (
-                              <div key={s.key} style={{ textAlign: 'center', flex: 1 }}>
+                              <div key={s.key} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                                <p style={{ fontSize: '0.44rem', color: '#6a6764', lineHeight: 1 }}>{s.sub}</p>
                                 <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: s.color, lineHeight: 1 }}>{card[s.key]}</p>
-                                <p style={{ fontSize: '0.38rem', color: '#5a5856', lineHeight: 1, marginTop: 2 }}>{s.label.slice(0,3).toUpperCase()}</p>
                               </div>
                             ))}
                           </div>
