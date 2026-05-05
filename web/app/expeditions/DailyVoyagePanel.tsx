@@ -424,11 +424,12 @@ export default function DailyVoyagePanel({
                     <div style={{
                       position: 'absolute', bottom: 0, left: 0, right: 0,
                       background: 'linear-gradient(to bottom, transparent 0%, rgba(6,4,2,0.97) 18%)',
-                      padding: '2.5rem 0.9rem 0.85rem',
                       zIndex: 4,
                       maxHeight: '72%',
-                      overflowY: 'auto',
+                      display: 'flex', flexDirection: 'column',
                     }}>
+                      {/* Scrollable content */}
+                      <div style={{ overflowY: 'auto', flex: 1, padding: '2.5rem 0.9rem 0.5rem' }}>
                       {/* Header */}
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.2rem', gap: '0.5rem' }}>
                         <div>
@@ -557,24 +558,30 @@ export default function DailyVoyagePanel({
                       {error && (
                         <p className="font-karla" style={{ fontSize: '0.78rem', color: '#f87171', marginBottom: '0.45rem' }}>{error}</p>
                       )}
+                      </div>{/* end scrollable content */}
 
-                      {/* Set Sail */}
-                      <button
-                        onClick={handleSend}
-                        disabled={isPending || savedCrew.length < 2}
-                        style={{
-                          width: '100%',
-                          background: isPending || savedCrew.length < 2 ? 'rgba(240,192,64,0.05)' : 'rgba(240,192,64,0.18)',
-                          border: `1px solid ${savedCrew.length >= 2 ? 'rgba(240,192,64,0.45)' : 'rgba(240,192,64,0.15)'}`,
-                          borderRadius: 10, padding: '0.6rem 1rem',
-                          color: isPending || savedCrew.length < 2 ? 'rgba(240,192,64,0.30)' : '#f0c040',
-                          cursor: isPending || savedCrew.length < 2 ? 'default' : 'pointer',
-                          transition: 'all 0.15s',
-                        }}
-                        className="font-cinzel font-700 uppercase tracking-[0.12em]"
-                      >
-                        <span style={{ fontSize: '0.92rem' }}>{isPending ? 'Sending…' : 'Set Sail'}</span>
-                      </button>
+                      {/* Set Sail — always visible at bottom */}
+                      <div style={{ padding: '0.4rem 0.9rem 0.75rem', flexShrink: 0 }}>
+                        <button
+                          onClick={handleSend}
+                          disabled={isPending || savedCrew.length < 2}
+                          style={{
+                            width: '100%',
+                            background: isPending || savedCrew.length < 2
+                              ? 'rgba(80,100,160,0.08)'
+                              : `linear-gradient(135deg, ${rco.color}33 0%, ${rco.color}18 100%)`,
+                            border: `1px solid ${savedCrew.length >= 2 ? rco.color + '66' : 'rgba(255,255,255,0.08)'}`,
+                            borderRadius: 8, padding: '0.45rem 1rem',
+                            color: isPending || savedCrew.length < 2 ? 'rgba(255,255,255,0.18)' : rco.color,
+                            cursor: isPending || savedCrew.length < 2 ? 'default' : 'pointer',
+                            transition: 'all 0.15s',
+                            boxShadow: savedCrew.length >= 2 && !isPending ? `0 0 12px ${rco.color}22` : 'none',
+                          }}
+                          className="font-cinzel font-700 uppercase tracking-[0.12em]"
+                        >
+                          <span style={{ fontSize: '0.78rem' }}>{isPending ? 'Sending…' : 'Set Sail'}</span>
+                        </button>
+                      </div>
                     </div>
                   )
                 })()}
