@@ -100,65 +100,17 @@ export default async function ExpeditionsPage() {
             <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Raids</p>
             <div style={{
               background: 'linear-gradient(135deg, rgba(20,14,6,0.80) 0%, rgba(14,10,4,0.88) 100%)',
-              border: '1px solid rgba(240,192,64,0.14)',
-              borderRadius: 16, padding: '0.85rem',
-              display: 'flex', flexDirection: 'column', gap: '0.65rem',
+              border: '1px solid rgba(240,192,64,0.10)',
+              borderRadius: 16, padding: '1.1rem 1rem',
+              display: 'flex', alignItems: 'center', gap: '0.75rem',
             }}>
-
-              {/* Resume banner */}
-              {activeExpedition && (
-                <Link
-                  href={`/expeditions/voyage?id=${activeExpedition.id}`}
-                  style={{ textDecoration: 'none', display: 'block' }}
-                >
-                  <div style={{
-                    background: 'linear-gradient(135deg, rgba(240,192,64,0.10) 0%, rgba(240,160,40,0.05) 100%)',
-                    border: '1px solid rgba(240,192,64,0.28)',
-                    borderRadius: 12,
-                    padding: '0.85rem 1rem',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div>
-                        <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: '#f0c040', marginBottom: 2 }}>
-                          In Progress
-                        </p>
-                        <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '0.88rem' }}>
-                          {ZONES[activeExpedition.zone].name}
-                        </p>
-                        <p className="font-karla" style={{ fontSize: '0.62rem', color: '#a0906a', marginTop: 1 }}>
-                          Node {activeExpedition.current_node + 1} of {ZONES[activeExpedition.zone].nodes.length}
-                        </p>
-                      </div>
-                    </div>
-                    <div style={{
-                      flexShrink: 0,
-                      background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.25)',
-                      borderRadius: 8, padding: '0.4rem 0.75rem',
-                      fontSize: '0.6rem', color: '#f0c040',
-                    }} className="font-karla font-700 uppercase tracking-[0.1em]">
-                      Resume →
-                    </div>
-                  </div>
-                </Link>
-              )}
-
-              {/* Zone cards */}
-              {ZONE_ORDER.map(zoneKey => {
-                const expedition = recentExpeditions.find(e => e.zone === zoneKey && e.status === 'active') ?? null
-                return (
-                  <ZoneCard
-                    key={zoneKey}
-                    zoneKey={zoneKey}
-                    config={ZONES[zoneKey]}
-                    expedition={expedition}
-                    shipTier={shipTier}
-                    doubloons={doubloons}
-                    voyageLocked={hasPendingVoyage}
-                  />
-                )
-              })}
-
+              <span style={{ fontSize: '1.2rem' }}>🔒</span>
+              <div>
+                <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#7a6848' }}>Coming soon</p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#4a3a28', lineHeight: 1.5, marginTop: 2 }}>
+                  Raids are still being built. Check back soon.
+                </p>
+              </div>
             </div>
           </div>
 
