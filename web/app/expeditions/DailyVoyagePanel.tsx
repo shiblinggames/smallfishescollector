@@ -326,25 +326,53 @@ export default function DailyVoyagePanel({
 
                         {/* Drops: ring skins + lures, unified */}
                         {est && est.drops.length > 0 && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                          <div style={{ marginTop: '0.55rem', borderTop: '0.5px solid rgba(255,255,255,0.06)', paddingTop: '0.45rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                             <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.42rem', color: '#5a5248' }}>
-                              drops
+                              possible drops
                             </span>
                             {est.drops.map(drop => {
-                              const color = drop.kind === 'skin' ? getRingSkin(drop.id).color : getBait(drop.type).color
-                              const name  = drop.kind === 'skin' ? getRingSkin(drop.id).name  : getBait(drop.type).name
+                              const def    = drop.kind === 'skin' ? getRingSkin(drop.id) : getBait(drop.type)
+                              const color  = def.color
+                              const name   = def.name
+                              const label  = drop.kind === 'skin' ? 'Ring cosmetic' : 'Fishing bait'
+                              const detail = drop.kind === 'skin'
+                                ? def.description
+                                : (() => {
+                                    const b = def as import('@/lib/bait').BaitDef
+                                    const parts: string[] = []
+                                    if (b.waitMult < 1) parts.push(`${Math.round((1 - b.waitMult) * 100)}% faster bite`)
+                                    if (b.catchZoneBonus > 0) parts.push(`+${b.catchZoneBonus}° catch zone`)
+                                    return parts.join(' · ')
+                                  })()
                               return (
-                                <span key={drop.kind === 'skin' ? drop.id : drop.type} className="font-karla" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.54rem', color: isSelected ? color : `${color}99` }}>
+                                <div key={drop.kind === 'skin' ? drop.id : drop.type} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.45rem' }}>
                                   <span style={{
-                                    display: 'inline-block', width: 6, height: 6,
+                                    display: 'inline-block', width: 7, height: 7, marginTop: '0.18rem',
                                     borderRadius: drop.kind === 'skin' ? '50%' : '2px',
                                     background: color,
-                                    opacity: isSelected ? 0.9 : 0.55,
-                                    boxShadow: `0 0 3px ${color}88`,
+                                    opacity: isSelected ? 0.9 : 0.5,
+                                    boxShadow: `0 0 4px ${color}88`,
                                     flexShrink: 0,
                                   }} />
-                                  {name} <span style={{ color: isSelected ? '#a89878' : '#5a5248' }}>{drop.rate}</span>
-                                </span>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
+                                      <span className="font-karla font-700" style={{ fontSize: '0.60rem', color: isSelected ? color : `${color}bb` }}>
+                                        {name}
+                                      </span>
+                                      <span className="font-karla font-700" style={{ fontSize: '0.50rem', color: isSelected ? '#a89878' : '#5a5248' }}>
+                                        {drop.rate}
+                                      </span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.08rem' }}>
+                                      <span className="font-karla uppercase tracking-[0.05em]" style={{ fontSize: '0.40rem', color: isSelected ? `${color}99` : '#4a4038', background: `${color}18`, borderRadius: 3, padding: '0.08rem 0.28rem' }}>
+                                        {label}
+                                      </span>
+                                      <span className="font-karla" style={{ fontSize: '0.52rem', color: '#6a5a40', lineHeight: 1.3 }}>
+                                        {detail}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
                               )
                             })}
                           </div>
