@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, useTideTurnerSkip, type FishSpecies, type FishingBountyCompletion } from './actions'
 import { claimDailyReward } from './dailyChallengeActions'
 import { getDailyChallenges, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
 import { getRingSkin } from '@/lib/ringSkins'
@@ -1349,6 +1349,7 @@ export default function FishingGame({
   hasSeenFishingTour, hasSeenFishingCatchTour,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
+  hasTideTurner, initialTideTurnerSkipsLeft,
 }: {
   hookTier: number
   rodTier: number
@@ -1374,6 +1375,8 @@ export default function FishingGame({
   initialRingSkin: string
   initialUnlockedRingSkins: string[]
   initialDailyChallenge: DailyChallengeState | null
+  hasTideTurner: boolean
+  initialTideTurnerSkipsLeft: number
 }) {
 
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
@@ -1422,6 +1425,7 @@ export default function FishingGame({
   const [castRippleKey, setCastRippleKey] = useState(0)
   const [reelRippleKey, setReelRippleKey] = useState(0)
   const [newStreakRecord, setNewStreakRecord] = useState<number | null>(null)
+  const [tideTurnerSkipsLeft, setTideTurnerSkipsLeft] = useState(initialTideTurnerSkipsLeft)
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
   const catchTourShownRef = useRef(false)
@@ -1639,6 +1643,19 @@ export default function FishingGame({
     setBaitInventory(prev => prev.map(b =>
       b.bait_type === type ? { ...b, quantity: Math.max(0, b.quantity - qty) } : b
     ))
+  }
+
+  function handleTideTurnerSkip() {
+    if (!hasTideTurner || tideTurnerSkipsLeft <= 0 || phase !== 'hooked') return
+    setBaitInventory(prev => prev.map(b =>
+      b.bait_type === selectedBait ? { ...b, quantity: b.quantity + 1 } : b
+    ))
+    setHookedFish(null)
+    setPhase('idle')
+    startTransition(async () => {
+      const res = await useTideTurnerSkip()
+      if ('ok' in res) setTideTurnerSkipsLeft(res.skipsLeft)
+    })
   }
 
   function totalBait() {
@@ -2282,7 +2299,7 @@ export default function FishingGame({
                   <motion.div key="hooked"
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                     <motion.div
                       initial={{ scale: 0.95 }} animate={{ scale: 1 }}
                       transition={{ type: 'spring', stiffness: 380, damping: 22 }}
@@ -2324,6 +2341,27 @@ export default function FishingGame({
                         borderBottom: `1px solid ${r.color}40`,
                       }} />
                     </motion.div>
+                    {hasTideTurner && tideTurnerSkipsLeft > 0 && (
+                      <motion.button
+                        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.25 }}
+                        onClick={handleTideTurnerSkip}
+                        style={{
+                          marginTop: 14,
+                          background: 'rgba(139,111,192,0.14)',
+                          border: '1px solid rgba(139,111,192,0.35)',
+                          borderRadius: 12,
+                          padding: '0.42rem 1rem',
+                          cursor: 'pointer',
+                          color: '#a78bfa',
+                          fontSize: '0.72rem',
+                          fontFamily: 'inherit',
+                        }}
+                        className="font-karla font-600"
+                      >
+                        Skip — {tideTurnerSkipsLeft} left today
+                      </motion.button>
+                    )}
                   </motion.div>
                 )
               })()}
@@ -3162,6 +3200,8 @@ export default function FishingGame({
                 setEquippedRingSkin(skin)
                 await equipRingSkin(skin)
               }}
+              hasTideTurner={hasTideTurner}
+              tideTurnerSkipsLeft={tideTurnerSkipsLeft}
               onClose={() => setGearOpen(false)}
             />
           </motion.div>

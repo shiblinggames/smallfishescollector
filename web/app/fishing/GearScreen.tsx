@@ -145,6 +145,7 @@ export default function GearScreen({
   equippedRodTier, ownedRods, onEquipRod,
   reelTier, hookTier, lineTier, shipTier,
   equippedRingSkin, unlockedRingSkins, onEquipRingSkin,
+  hasTideTurner, tideTurnerSkipsLeft,
   onClose,
 }: {
   baitInventory: BaitItem[]
@@ -160,6 +161,8 @@ export default function GearScreen({
   equippedRingSkin: string
   unlockedRingSkins: string[]
   onEquipRingSkin: (skin: string) => void
+  hasTideTurner: boolean
+  tideTurnerSkipsLeft: number
   onClose: () => void
 }) {
   const [openSlot, setOpenSlot] = useState<SlotKey | null>(null)
@@ -238,11 +241,11 @@ export default function GearScreen({
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gap: 6 }}>
         <GearSlot
           label="Special"
-          icon={<SpecialIcon color="#5a4a7a" />}
-          itemName="None"
-          color="#5a4a7a"
+          icon={<SpecialIcon color={hasTideTurner ? '#a78bfa' : '#5a4a7a'} />}
+          itemName={hasTideTurner ? 'Tide Turner' : 'None'}
+          color={hasTideTurner ? '#a78bfa' : '#5a4a7a'}
           onClick={() => setOpenSlot('special')}
-          empty
+          empty={!hasTideTurner}
         />
         <GearSlot
           label="Bait"
@@ -434,16 +437,30 @@ export default function GearScreen({
               {/* ── Special ── */}
               {openSlot === 'special' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#8b6fc0' }}>Special Items</p>
-                  <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#6a6764', lineHeight: 1.55 }}>
-                    Special items are consumables earned from voyages. Use them before a session for temporary buffs — things like enchanted bait, fortune charms, or rare lure effects.
-                  </p>
-                  <div style={{ background: 'rgba(139,111,192,0.08)', border: '1px solid rgba(139,111,192,0.18)', borderRadius: 12, padding: '0.75rem 0.9rem' }}>
-                    <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: '#8b6fc0', marginBottom: 5 }}>How to earn</p>
-                    <p className="font-karla font-300" style={{ fontSize: '0.7rem', color: '#6a6764', lineHeight: 1.5 }}>
-                      Send your crew on voyages from the Expeditions page. Riskier routes have a better chance of returning with special items.
-                    </p>
-                  </div>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#a78bfa' }}>Tide Turner</p>
+                  {hasTideTurner ? (
+                    <>
+                      <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#b0a8c4', lineHeight: 1.55 }}>
+                        Skip a hooked fish without breaking your perfect streak. Your bait is returned. Resets daily.
+                      </p>
+                      <div style={{ background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.28)', borderRadius: 12, padding: '0.75rem 0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: '#a78bfa' }}>Skips remaining today</p>
+                        <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: tideTurnerSkipsLeft > 0 ? '#a78bfa' : '#4a4845', lineHeight: 1 }}>{tideTurnerSkipsLeft} / 3</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#5a5560', lineHeight: 1.55 }}>
+                        A permanent item that lets you skip a hooked fish without breaking your perfect streak. Your bait is returned. Grants 3 skips per day.
+                      </p>
+                      <div style={{ background: 'rgba(139,111,192,0.06)', border: '1px solid rgba(139,111,192,0.15)', borderRadius: 12, padding: '0.75rem 0.9rem' }}>
+                        <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: '#6a5a8a', marginBottom: 5 }}>How to obtain</p>
+                        <p className="font-karla font-300" style={{ fontSize: '0.7rem', color: '#5a5560', lineHeight: 1.5 }}>
+                          Rare drop from The Howling Deep voyage expedition. Not available for purchase.
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 

@@ -28,7 +28,7 @@ export default async function FishingPage() {
     getActiveChallengeSession(),
     getDailyChallenge(),
     admin.from('profiles')
-      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, ship_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, ring_skin, unlocked_ring_skins')
+      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, ship_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, ring_skin, unlocked_ring_skins, has_tide_turner, tide_turner_used, tide_turner_date')
       .eq('id', user.id)
       .single(),
     admin.from('bait_inventory')
@@ -55,6 +55,11 @@ export default async function FishingPage() {
   const ownedRods = (rodRows ?? []).map((r: { rod_tier: number }) => r.rod_tier)
   const caughtFishIds = (collectionRows ?? []).map((r: { fish_id: number }) => r.fish_id)
   const holdCapacity = getShip(profile?.ship_tier ?? 0).holdCapacity
+
+  const todayStr = new Date().toISOString().split('T')[0]
+  const hasTideTurner = profile?.has_tide_turner ?? false
+  const usedToday = hasTideTurner && profile?.tide_turner_date === todayStr ? (profile.tide_turner_used ?? 0) : 0
+  const tideTurnerSkipsLeft = hasTideTurner ? Math.max(0, 3 - usedToday) : 0
 
   return (
     <>
@@ -97,6 +102,8 @@ export default async function FishingPage() {
           }}
           initialRingSkin={profile?.ring_skin ?? 'standard'}
           initialUnlockedRingSkins={(profile?.unlocked_ring_skins as string[] | null) ?? []}
+          hasTideTurner={hasTideTurner}
+          initialTideTurnerSkipsLeft={tideTurnerSkipsLeft}
         />
       </main>
     </>

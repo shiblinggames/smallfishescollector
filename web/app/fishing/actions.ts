@@ -520,6 +520,30 @@ export async function claimZoneReward(zone: string): Promise<{ doubloons: number
   return { doubloons: newDoubloons, earned }
 }
 
+export async function useTideTurnerSkip(): Promise<{ ok: true; skipsLeft: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('has_tide_turner, tide_turner_used, tide_turner_date')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile) return { error: 'Profile not found' }
+  if (!profile.has_tide_turner) return { error: 'No Tide Turner' }
+
+  const todayStr = today()
+  const usedToday = profile.tide_turner_date === todayStr ? (profile.tide_turner_used ?? 0) : 0
+  if (usedToday >= 3) return { error: 'No skips remaining today' }
+
+  const newUsed = usedToday + 1
+  await admin.from('profiles').update({ tide_turner_used: newUsed, tide_turner_date: todayStr }).eq('id', user.id)
+  return { ok: true, skipsLeft: 3 - newUsed }
+}
+
 export async function equipRingSkin(skin: string): Promise<{ ok: true } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

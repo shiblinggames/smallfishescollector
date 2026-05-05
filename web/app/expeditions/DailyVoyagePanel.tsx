@@ -157,6 +157,7 @@ export default function DailyVoyagePanel({
   const [selectedRoute, setSelectedRoute] = useState<VoyageRoute | null>(null)
   const [claimedRingSkins, setClaimedRingSkins] = useState<string[]>([])
   const [claimedBait, setClaimedBait] = useState<{ type: string; qty: number }[]>([])
+  const [claimedTideTurner, setClaimedTideTurner] = useState(false)
   const [captainsLog, setCaptainsLog] = useState<string | null>(null)
   const [liveCrewIds, setLiveCrewIds] = useState<number[]>(savedCrewVariantIds)
   const [expandedDropKey, setExpandedDropKey] = useState<string | null>(null)
@@ -237,6 +238,7 @@ export default function DailyVoyagePanel({
       if (res.earnedGems > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.newGemTotal }))
       setClaimedRingSkins(res.newRingSkins)
       setClaimedBait(res.earnedBait)
+      if (res.newTideTurner) setClaimedTideTurner(true)
       setXpEarned(res.xpEarned)
       if (res.newExpeditionLevel > res.oldExpeditionLevel) setLevelUp({ from: res.oldExpeditionLevel, to: res.newExpeditionLevel })
       setPanelState('done')
@@ -927,6 +929,27 @@ export default function DailyVoyagePanel({
                   </p>
                 </div>
               ))}
+            </div>
+          )}
+
+          {claimedTideTurner && (
+            <div style={{
+              background: 'rgba(139,111,192,0.08)',
+              border: '1px solid rgba(139,111,192,0.30)',
+              borderRadius: 8, padding: '0.55rem 0.8rem',
+            }}>
+              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#8b6fc0', marginBottom: '0.3rem' }}>
+                Special item found
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b6fc0', flexShrink: 0 }} />
+                <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: '#a78bfa', lineHeight: 1.3 }}>
+                  Tide Turner
+                </p>
+              </div>
+              <p className="font-karla font-300" style={{ fontSize: '0.6rem', color: '#6a5a8a', marginTop: 3, lineHeight: 1.4 }}>
+                3 skips per day — skip a hooked fish without breaking your perfect streak.
+              </p>
             </div>
           )}
 

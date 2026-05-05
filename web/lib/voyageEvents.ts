@@ -196,6 +196,7 @@ export interface VoyageResult {
   crewLost: number[]  // variantIds permanently lost
   ringSkinDrops: string[]
   baitDrops: { type: string; qty: number }[]
+  tideTurnerDrop: boolean
 }
 
 function rand(min: number, max: number): number {
@@ -417,7 +418,8 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
     if (e.baitDrop) baitDropMap.set(e.baitDrop, (baitDropMap.get(e.baitDrop) ?? 0) + 1)
   }
   const baitDrops = Array.from(baitDropMap.entries()).map(([type, qty]) => ({ type, qty }))
-  return { events, totalDoubloons, totalGems, crewLost, ringSkinDrops, baitDrops }
+  const tideTurnerDrop = route === 'deep' && Math.random() < 0.02
+  return { events, totalDoubloons, totalGems, crewLost, ringSkinDrops, baitDrops, tideTurnerDrop }
 }
 
 // ── Event text pools ──────────────────────────────────────────────────────────
