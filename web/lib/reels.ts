@@ -55,6 +55,7 @@ export const REELS: ReelDef[] = [
     tier: 7, name: "Kraken's Grip", cost: 70000,
     description: 'Forged to hold something ancient. The needle drifts, almost lazy.',
     color: '#f87171', needleSpeedMultiplier: 0.48,
+    imageUrl: '/krakensgrip.png',
   },
   {
     tier: 8, name: "Tidecaller's Reel", cost: 150000,
