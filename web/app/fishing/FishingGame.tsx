@@ -1615,7 +1615,7 @@ export default function FishingGame({
         const scaledBlackout = zoneDiff.blackoutChance * (hookedFish.catchDifficulty / 5)
         if (Math.random() < scaledBlackout && blackoutTimerRef.current === null) {
           const duration = 280 + Math.random() * 320
-          setBlackoutOpacity(0.86)
+          setBlackoutOpacity(0.72)
           blackoutTimerRef.current = setTimeout(() => {
             setBlackoutOpacity(0)
             blackoutTimerRef.current = null
@@ -2369,11 +2369,13 @@ export default function FishingGame({
 
                   <div style={{ position: 'relative' }}>
                     <div style={{
-                      position: 'absolute', inset: 0, zIndex: 10, borderRadius: '50%',
+                      position: 'absolute', zIndex: 10, borderRadius: '50%',
+                      width: '87.27%', aspectRatio: '1',
+                      top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
                       background: '#000',
                       opacity: blackoutOpacity,
                       pointerEvents: 'none',
-                      transition: blackoutOpacity > 0 ? 'opacity 0.1s ease-in' : 'opacity 0.4s ease-out',
+                      transition: blackoutOpacity > 0 ? 'opacity 0.25s ease-in' : 'opacity 0.6s ease-out',
                     }} />
                     {perfectStreak >= 3 && (
                       <motion.div
