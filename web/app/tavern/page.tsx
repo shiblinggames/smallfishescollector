@@ -95,33 +95,29 @@ export default async function TavernPage() {
         <div className="px-6 max-w-4xl mx-auto mb-2" style={{ position: 'relative', zIndex: 1 }}>
           <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>Today</p>
         </div>
-        <div className="px-6 grid grid-cols-2 lg:grid-cols-3 gap-3 pb-6 max-w-4xl mx-auto" style={{ position: 'relative', zIndex: 1 }}>
+        <div className="px-6 flex flex-col gap-3 pb-6 max-w-4xl mx-auto" style={{ position: 'relative', zIndex: 1 }}>
           <GameCard
             href="/tavern/daily-bonus"
             eyebrow="Daily"
-            title="Bonus"
+            title="Daily Bonus"
             statusText={allClaimed ? 'Come back tomorrow' : `${baseAmount} ⟡ available`}
-            info={[
-              `${baseAmount} ⟡ base daily bonus`,
-              isPremium ? '1 free pack daily (Member)' : 'Upgrade to Member for a free daily pack',
-            ]}
+            info={[]}
             icon={<CoinIcon />}
             completed={allClaimed}
+            art="/worms.png"
+            accent="#f0c040"
           />
           <GameCard
             href="/tavern/fish-of-the-day"
             eyebrow="Daily"
             title="Fish of the Day"
             statusText={fotdDone ? 'Come back tomorrow' : 'Guess the mystery fish'}
-            info={[
-              'Four clues, four guesses — one fish',
-              'Each wrong guess reveals the next clue',
-              '100 ⟡ for 1st guess · 75 · 50 · 25 ⟡',
-              'New fish every day',
-            ]}
+            info={[]}
             icon={<FishIcon />}
             completed={fotdDone}
             streak={profile?.fotd_streak ?? 0}
+            art={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/Blue_Marlin.png`}
+            accent="#60a5fa"
           />
         </div>
 
@@ -137,15 +133,12 @@ export default async function TavernPage() {
                 chartTilesCharted > 0 ? `${chartTilesCharted} / ${chartPathLength} tiles charted` :
                 'Chart a path from sea to shore'
               }
-              info={[
-                'Guess the hidden path tile by tile',
-                'Earn moves from fishing and navigator levels',
-                '2,000 ⟡ bonus past row 5 · 5,000 ⟡ past row 10',
-                'Top 3 finishers earn a special cosmetic',
-              ]}
+              info={[]}
               icon={<ChartIcon />}
               completed={chartCompleted}
               variant="featured"
+              art="/voyagemap.png"
+              accent="#f0c040"
             />
           </div>
         )}
@@ -153,33 +146,28 @@ export default async function TavernPage() {
         <div className="px-6 max-w-4xl mx-auto mb-2 mt-4" style={{ position: 'relative', zIndex: 1 }}>
           <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>Games</p>
         </div>
-        <div className="px-6 grid grid-cols-2 gap-3 pb-6 max-w-4xl mx-auto" style={{ position: 'relative', zIndex: 1 }}>
+        <div className="px-6 flex flex-col gap-3 pb-6 max-w-4xl mx-auto" style={{ position: 'relative', zIndex: 1 }}>
           <GameCard
             href="/tavern/crown-and-anchor"
             eyebrow="Game"
             title="Crown & Anchor"
             statusText={crownCapReached ? 'Daily limit reached' : 'Roll dice, match your symbol'}
-            info={[
-              'Pick a symbol and place your wager',
-              '1 match → 1× · 2 matches → 2× · 3 → 3×',
-              '5,000 ⟡ daily wagering limit',
-            ]}
+            info={[]}
             icon={<AnchorIcon />}
             completed={crownCapReached}
+            art="/barnacle_pete.png"
+            accent="#fb923c"
           />
           <GameCard
             href="/tavern/slots"
             eyebrow="Game"
             title="Fish Slots"
             statusText={slotsCapReached ? 'Daily limit reached' : 'Match three fish to win'}
-            info={[
-              'Sardine × 3 → 2× · Marlin × 3 → 10×',
-              'Blue Whale × 3 → 50× · Catfish × 3 → 200×',
-              'Three anchors → free bonus spin',
-              '5,000 ⟡ daily wagering limit',
-            ]}
+            info={[]}
             icon={<SlotsIcon />}
             completed={slotsCapReached}
+            art={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/Catfish.png`}
+            accent="#a78bfa"
           />
         </div>
 
