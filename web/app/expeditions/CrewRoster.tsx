@@ -258,39 +258,33 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
         {/* Stats */}
         {hasCrew && (
           <div style={{ padding: '1rem 1rem 0.85rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-              {STAT_COLS.map(s => (
-                <div key={s.key} style={{ textAlign: 'center' }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: s.color, lineHeight: 1 }}>
-                    {totals[s.key]}
-                  </p>
-                  <p className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.52rem', color: '#c0bdb8', marginTop: 4 }}>
-                    {s.label}
-                  </p>
-                  <p className="font-karla" style={{ fontSize: '0.48rem', color: '#8a8784', marginTop: 2 }}>
-                    {s.sub}
-                  </p>
-                </div>
-              ))}
-            </div>
 
-            {/* Breakdown toggle */}
+            {/* Crew Score — single number, tap to expand */}
             <button
               onClick={() => setShowBreakdown(b => !b)}
-              className="font-karla font-600"
               style={{
-                width: '100%', marginTop: '0.9rem', paddingTop: '0.65rem',
-                background: 'none', border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)',
-                cursor: 'pointer', fontSize: '0.48rem', color: '#8a8784',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem',
+                width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}
             >
-              <span>{showBreakdown ? '▲' : '▼'}</span>
-              <span>{showBreakdown ? 'Hide breakdown' : 'Show breakdown'}</span>
+              <div style={{ textAlign: 'left' }}>
+                <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#6a6764', marginBottom: 4 }}>Crew Score</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '2.6rem', color: '#f0ede8', lineHeight: 1 }}>
+                  {totalPower + totalDodge + totalFortune}
+                </p>
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: 6 }}>
+                  {STAT_COLS.map(s => (
+                    <span key={s.key} className="font-karla font-600" style={{ fontSize: '0.65rem', color: s.color }}>
+                      {s.label.slice(0, 3)} {totals[s.key]}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <span style={{ fontSize: '0.65rem', color: '#4a4845', transition: 'transform 0.15s', display: 'inline-block', transform: showBreakdown ? 'rotate(180deg)' : 'none' }}>▼</span>
             </button>
 
             {showBreakdown && (
-              <div style={{ marginTop: '0.65rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <div style={{ marginTop: '0.85rem', paddingTop: '0.65rem', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                 <div style={{ display: 'flex', paddingBottom: '0.3rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   <p className="font-karla font-600 uppercase" style={{ fontSize: '0.38rem', color: '#6a6764', flex: 1 }}>Crew</p>
                   {STAT_COLS.map(s => (
