@@ -242,7 +242,7 @@ export default function DailyVoyagePanel({
             </p>
           ) : (
             <>
-              <p className="font-karla" style={{ fontSize: '0.66rem', color: '#a09070', lineHeight: 1.5, marginBottom: '0.85rem' }}>
+              <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a09070', lineHeight: 1.5, marginBottom: '0.85rem' }}>
                 Send your crew on a 6-hour voyage. They return with stories — and sometimes something worth keeping.
               </p>
 
@@ -266,8 +266,8 @@ export default function DailyVoyagePanel({
                 <div style={{ display: 'flex', gap: '1.1rem', marginBottom: '0.9rem' }}>
                   {([['PWR', stats.power], ['DGE', stats.dodge], ['FTN', stats.fortune]] as [string, number][]).map(([label, val]) => (
                     <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem' }}>
-                      <span className="font-karla" style={{ fontSize: '0.56rem', color: '#8a7860', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
-                      <span className="font-karla font-700" style={{ fontSize: '0.75rem', color: '#c8aa6a' }}>{val}</span>
+                      <span className="font-karla" style={{ fontSize: '0.72rem', color: '#8a7860', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
+                      <span className="font-karla font-700" style={{ fontSize: '0.95rem', color: '#c8aa6a' }}>{val}</span>
                     </div>
                   ))}
                 </div>
