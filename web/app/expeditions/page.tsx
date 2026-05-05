@@ -7,6 +7,7 @@ import { ZONES, ZONE_ORDER, EXPEDITION_SHIP_STATS, type Expedition } from '@/lib
 import ZoneCard from './ZoneCard'
 import CrewRoster from './CrewRoster'
 import DailyVoyagePanel from './DailyVoyagePanel'
+import VoyageHistory from './VoyageHistory'
 import { getCollectionForCrew } from './actions'
 import { getDailyVoyageState } from './voyageActions'
 
@@ -17,7 +18,7 @@ export default async function ExpeditionsPage() {
 
   const admin = createAdminClient()
 
-  const [{ data: profile }, { data: expeditionRows }, collection, dailyVoyageState] = await Promise.all([
+  const [{ data: profile }, { data: expeditionRows }, collection, dailyVoyageState, { data: voyageHistoryRows }] = await Promise.all([
     admin.from('profiles')
       .select('packs_available, doubloons, ship_tier, gems, saved_crew')
       .eq('id', user.id)
@@ -30,6 +31,12 @@ export default async function ExpeditionsPage() {
       .limit(20),
     getCollectionForCrew(),
     getDailyVoyageState(),
+    admin.from('daily_voyages')
+      .select('id, route, total_doubloons, total_gems, crew_lost, created_at, captains_log')
+      .eq('user_id', user.id)
+      .eq('status', 'revealed')
+      .order('created_at', { ascending: false })
+      .limit(8),
   ])
 
   const shipTier = profile?.ship_tier ?? 0
@@ -85,6 +92,7 @@ export default async function ExpeditionsPage() {
               readyVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.readyVoyage}
               raidActive={hasActiveRaid}
             />
+            <VoyageHistory voyages={(voyageHistoryRows ?? []) as import('./VoyageHistory').VoyageHistoryEntry[]} />
           </div>
 
           {/* ── Raids card ── */}
