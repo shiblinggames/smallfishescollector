@@ -282,7 +282,8 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   return (
     <>
       {/* Desktop top bar */}
-      <nav className="hidden sm:flex border-b border-[rgba(255,255,255,0.15)] px-6 py-4 items-center justify-between" style={{ background: navBg(tint) }}>
+      <div className="hidden sm:block" style={{ height: 64 }} />
+      <nav className="hidden sm:flex border-b border-[rgba(255,255,255,0.15)] px-6 py-4 items-center justify-between" style={{ background: navBg(tint), position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50 }}>
         <Link href="/" className="flex items-center gap-2 font-cinzel font-700 text-[#f0ede8] tracking-wide text-sm uppercase">
           Small Fishes
           <span style={{ fontSize: '0.48rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.25)', color: '#f0c040', borderRadius: 4, padding: '0.15rem 0.4rem', letterSpacing: '0.12em', lineHeight: 1.4, fontFamily: 'inherit' }}>
