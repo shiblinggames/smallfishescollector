@@ -117,7 +117,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
         {/* Ship header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0.65rem 1rem',
+          padding: '0',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
