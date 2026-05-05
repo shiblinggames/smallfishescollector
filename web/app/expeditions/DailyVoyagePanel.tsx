@@ -292,17 +292,15 @@ export default function DailyVoyagePanel({
                         left: `${node.x}%`, top: `${node.y}%`,
                         transform: 'translate(-50%, -50%)',
                         background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                        zIndex: 2,
+                        zIndex: 3,
                       }}
                     >
-                      {/* Pulse ring — only on unselected nodes */}
                       {!isSelected && (
                         <span className="animate-ping" style={{
                           position: 'absolute', inset: -5, borderRadius: '50%',
                           background: rco.color, opacity: 0.30, display: 'block',
                         }} />
                       )}
-                      {/* Dot */}
                       <span style={{
                         display: 'block',
                         width: isSelected ? 22 : 16, height: isSelected ? 22 : 16,
@@ -315,7 +313,6 @@ export default function DailyVoyagePanel({
                         transition: 'all 0.15s',
                         position: 'relative',
                       }} />
-                      {/* Label */}
                       <span style={{
                         position: 'absolute', top: '100%', left: '50%',
                         transform: 'translateX(-50%)', marginTop: 5,
@@ -331,129 +328,130 @@ export default function DailyVoyagePanel({
                     </button>
                   )
                 })}
-              </div>
 
-              {/* Route detail panel — shown when a node is selected */}
-              {selectedRoute && stats && (() => {
-                const rco = ROUTE_CONFIGS[selectedRoute]
-                const est = computeRouteEstimate(stats, savedCrew.length, selectedRoute)
-                return (
-                  <div style={{
-                    background: `linear-gradient(135deg, ${rco.color}0e 0%, rgba(10,8,4,0.60) 100%)`,
-                    border: `1px solid ${rco.color}44`,
-                    borderRadius: 10, padding: '0.75rem 0.85rem',
-                    marginBottom: '0.75rem',
-                  }}>
-                    {/* Header */}
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: rco.color, lineHeight: 1.2 }}>
-                        {rco.name}
-                      </p>
-                      <span className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: `${rco.color}bb` }}>
-                        {rco.riskLabel}
-                      </span>
-                    </div>
-                    <p className="font-karla" style={{ fontSize: '0.58rem', color: '#8a7860', lineHeight: 1.4, marginBottom: '0.5rem' }}>
-                      {rco.tagline}
-                    </p>
-
-                    {/* Estimates */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '0.55rem' }}>
-                      <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#c8aa6a' }}>
-                        ~{est.lootMin}–{est.lootMax} ⟡
-                      </span>
-                      {savedCrew.length >= 2 ? (
-                        <span className="font-karla" style={{ fontSize: '0.60rem', color: est.crewRiskPct >= 40 ? '#f87171cc' : est.crewRiskPct > 0 ? '#c8906a' : '#6a8a6a' }}>
-                          {est.crewRiskPct === 0 ? 'No crew risk' : `${est.crewRiskPct}% crew risk`}
-                        </span>
-                      ) : (
-                        <span className="font-karla" style={{ fontSize: '0.60rem', color: '#c87a4a' }}>Need 1 more crew</span>
-                      )}
-                    </div>
-
-                    {/* High crew risk warning */}
-                    {savedCrew.length >= 2 && est.crewRiskPct > 50 && (
-                      <div style={{ background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 7, padding: '0.45rem 0.6rem', marginBottom: '0.55rem' }}>
-                        <p className="font-karla font-600" style={{ fontSize: '0.60rem', color: '#f87171', lineHeight: 1.5 }}>
-                          ⚠ {est.crewRiskPct}% chance a crew member is lost permanently.
+                {/* Overlay panel — fades up from the bottom when a route is selected */}
+                {selectedRoute && stats && (() => {
+                  const rco = ROUTE_CONFIGS[selectedRoute]
+                  const est = computeRouteEstimate(stats, savedCrew.length, selectedRoute)
+                  return (
+                    <div style={{
+                      position: 'absolute', bottom: 0, left: 0, right: 0,
+                      background: 'linear-gradient(to bottom, transparent 0%, rgba(6,4,2,0.97) 18%)',
+                      padding: '2.5rem 0.9rem 0.85rem',
+                      zIndex: 2,
+                      maxHeight: '72%',
+                      overflowY: 'auto',
+                    }}>
+                      {/* Header */}
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: rco.color, lineHeight: 1.2 }}>
+                          {rco.name}
                         </p>
-                      </div>
-                    )}
-
-                    {/* Drops */}
-                    {est.drops.length > 0 && (
-                      <div style={{ borderTop: `0.5px solid ${rco.color}22`, paddingTop: '0.45rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.42rem', color: '#5a5248' }}>
-                          possible drops
+                        <span className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: `${rco.color}bb` }}>
+                          {rco.riskLabel}
                         </span>
-                        {est.drops.map(drop => {
-                          const def    = drop.kind === 'skin' ? getRingSkin(drop.id) : getBait(drop.type)
-                          const color  = def.color
-                          const name   = def.name
-                          const label  = drop.kind === 'skin' ? 'Ring cosmetic' : 'Fishing bait'
-                          const detail = drop.kind === 'skin'
-                            ? def.description
-                            : (() => {
-                                const b = def as import('@/lib/bait').BaitDef
-                                const parts: string[] = []
-                                if (b.waitMult < 1) parts.push(`${Math.round((1 - b.waitMult) * 100)}% faster bite`)
-                                if (b.catchZoneBonus > 0) parts.push(`+${b.catchZoneBonus}° catch zone`)
-                                return parts.join(' · ')
-                              })()
-                          return (
-                            <div key={drop.kind === 'skin' ? drop.id : drop.type} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.45rem' }}>
-                              <span style={{
-                                display: 'inline-block', width: 7, height: 7, marginTop: '0.18rem',
-                                borderRadius: drop.kind === 'skin' ? '50%' : '2px',
-                                background: color, flexShrink: 0,
-                                boxShadow: `0 0 4px ${color}88`,
-                              }} />
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
-                                  <span className="font-karla font-700" style={{ fontSize: '0.60rem', color }}>
-                                    {name}
-                                  </span>
-                                  <span className="font-karla font-700" style={{ fontSize: '0.50rem', color: '#a89878' }}>
-                                    {drop.rate}
-                                  </span>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.08rem' }}>
-                                  <span className="font-karla uppercase tracking-[0.05em]" style={{ fontSize: '0.40rem', color: `${color}99`, background: `${color}18`, borderRadius: 3, padding: '0.08rem 0.28rem' }}>
-                                    {label}
-                                  </span>
-                                  <span className="font-karla" style={{ fontSize: '0.52rem', color: '#6a5a40', lineHeight: 1.3 }}>
-                                    {detail}
-                                  </span>
+                      </div>
+                      <p className="font-karla" style={{ fontSize: '0.58rem', color: '#8a7860', lineHeight: 1.4, marginBottom: '0.5rem' }}>
+                        {rco.tagline}
+                      </p>
+
+                      {/* Estimates */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                        <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#c8aa6a' }}>
+                          ~{est.lootMin}–{est.lootMax} ⟡
+                        </span>
+                        {savedCrew.length >= 2 ? (
+                          <span className="font-karla" style={{ fontSize: '0.60rem', color: est.crewRiskPct >= 40 ? '#f87171cc' : est.crewRiskPct > 0 ? '#c8906a' : '#6a8a6a' }}>
+                            {est.crewRiskPct === 0 ? 'No crew risk' : `${est.crewRiskPct}% crew risk`}
+                          </span>
+                        ) : (
+                          <span className="font-karla" style={{ fontSize: '0.60rem', color: '#c87a4a' }}>Need 1 more crew</span>
+                        )}
+                      </div>
+
+                      {/* Crew risk warning */}
+                      {savedCrew.length >= 2 && est.crewRiskPct > 50 && (
+                        <div style={{ background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 7, padding: '0.4rem 0.6rem', marginBottom: '0.5rem' }}>
+                          <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#f87171', lineHeight: 1.5 }}>
+                            ⚠ {est.crewRiskPct}% chance a crew member is lost permanently.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Drops */}
+                      {est.drops.length > 0 && (
+                        <div style={{ borderTop: `0.5px solid ${rco.color}22`, paddingTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.32rem', marginBottom: '0.65rem' }}>
+                          <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.42rem', color: '#5a5248' }}>
+                            possible drops
+                          </span>
+                          {est.drops.map(drop => {
+                            const def    = drop.kind === 'skin' ? getRingSkin(drop.id) : getBait(drop.type)
+                            const color  = def.color
+                            const name   = def.name
+                            const label  = drop.kind === 'skin' ? 'Ring cosmetic' : 'Fishing bait'
+                            const detail = drop.kind === 'skin'
+                              ? def.description
+                              : (() => {
+                                  const b = def as import('@/lib/bait').BaitDef
+                                  const parts: string[] = []
+                                  if (b.waitMult < 1) parts.push(`${Math.round((1 - b.waitMult) * 100)}% faster bite`)
+                                  if (b.catchZoneBonus > 0) parts.push(`+${b.catchZoneBonus}° catch zone`)
+                                  return parts.join(' · ')
+                                })()
+                            return (
+                              <div key={drop.kind === 'skin' ? drop.id : drop.type} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.45rem' }}>
+                                <span style={{
+                                  display: 'inline-block', width: 7, height: 7, marginTop: '0.18rem',
+                                  borderRadius: drop.kind === 'skin' ? '50%' : '2px',
+                                  background: color, flexShrink: 0,
+                                  boxShadow: `0 0 4px ${color}88`,
+                                }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
+                                    <span className="font-karla font-700" style={{ fontSize: '0.60rem', color }}>{name}</span>
+                                    <span className="font-karla font-700" style={{ fontSize: '0.50rem', color: '#a89878' }}>{drop.rate}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.08rem' }}>
+                                    <span className="font-karla uppercase tracking-[0.05em]" style={{ fontSize: '0.40rem', color: `${color}99`, background: `${color}18`, borderRadius: 3, padding: '0.08rem 0.28rem' }}>
+                                      {label}
+                                    </span>
+                                    <span className="font-karla" style={{ fontSize: '0.52rem', color: '#6a5a40', lineHeight: 1.3 }}>
+                                      {detail}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )
-              })()}
+                            )
+                          })}
+                        </div>
+                      )}
 
-              {error && (
-                <p className="font-karla" style={{ fontSize: '0.62rem', color: '#f87171', marginBottom: '0.5rem' }}>{error}</p>
-              )}
-              <button
-                onClick={handleSend}
-                disabled={isPending || !selectedRoute}
-                style={{
-                  width: '100%',
-                  background: isPending || !selectedRoute ? 'rgba(240,192,64,0.05)' : 'rgba(240,192,64,0.18)',
-                  border: `1px solid ${selectedRoute ? 'rgba(240,192,64,0.45)' : 'rgba(240,192,64,0.15)'}`,
-                  borderRadius: 10, padding: '0.65rem 1rem',
-                  color: isPending || !selectedRoute ? 'rgba(240,192,64,0.25)' : '#f0c040',
-                  cursor: isPending || !selectedRoute ? 'default' : 'pointer',
-                  transition: 'all 0.15s',
-                }}
-                className="font-cinzel font-700 uppercase tracking-[0.12em]"
-              >
-                <span style={{ fontSize: '0.72rem' }}>{isPending ? 'Sending…' : 'Set Sail'}</span>
-              </button>
+                      {/* Error */}
+                      {error && (
+                        <p className="font-karla" style={{ fontSize: '0.60rem', color: '#f87171', marginBottom: '0.45rem' }}>{error}</p>
+                      )}
+
+                      {/* Set Sail */}
+                      <button
+                        onClick={handleSend}
+                        disabled={isPending || savedCrew.length < 2}
+                        style={{
+                          width: '100%',
+                          background: isPending || savedCrew.length < 2 ? 'rgba(240,192,64,0.05)' : 'rgba(240,192,64,0.18)',
+                          border: `1px solid ${savedCrew.length >= 2 ? 'rgba(240,192,64,0.45)' : 'rgba(240,192,64,0.15)'}`,
+                          borderRadius: 10, padding: '0.6rem 1rem',
+                          color: isPending || savedCrew.length < 2 ? 'rgba(240,192,64,0.30)' : '#f0c040',
+                          cursor: isPending || savedCrew.length < 2 ? 'default' : 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                        className="font-cinzel font-700 uppercase tracking-[0.12em]"
+                      >
+                        <span style={{ fontSize: '0.72rem' }}>{isPending ? 'Sending…' : 'Set Sail'}</span>
+                      </button>
+                    </div>
+                  )
+                })()}
+              </div>
             </>
           )}
         </div>
