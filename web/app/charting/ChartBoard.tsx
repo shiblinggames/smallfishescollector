@@ -1,13 +1,16 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import { useState, useTransition } from 'react'
 import { makeChartGuess, claimChartReward } from './chartActions'
 import type { ChartContest, ChartProgress, ChartGuess, ChartFinisher } from './chartActions'
 import { getShip } from '@/lib/ships'
 
 const SHIP_COLORS = ['#f0c040', '#d04040', '#4080c0', '#30b870', '#706080', '#e8e0d0', '#9060c0', '#c07040']
 const MEDAL = ['🥇', '🥈', '🥉']
-const GAP = 2
+const GAP = 2         // px gap between tiles
+const EXTEND = 1      // px connectors extend past tile edge into gap
+const LINE_COLOR = 'rgba(56,210,130,0.9)'
+const LINE_W = 2      // px line width
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
@@ -38,37 +41,51 @@ export default function ChartBoard({
   const [isPending, startTransition] = useTransition()
   const ship = getShip(shipTier)
 
-  // Track which tiles were already revealed on load — these skip the flip animation
-  const initialRevealedRef = useRef(new Set([
-    `${startTile[0]}_${startTile[1]}`,
-    ...initialGuesses.map(g => `${g.row}_${g.col}`),
-  ]))
-
   const { grid_cols: cols, grid_rows: rows } = contest
 
-  // Current position: last correct guess, or the start tile
   const correctGuesses = guesses.filter(g => g.correct)
   const currentTile: [number, number] = correctGuesses.length > 0
     ? [correctGuesses[correctGuesses.length - 1].row, correctGuesses[correctGuesses.length - 1].col]
     : startTile
 
-  const [curRow, curCol] = currentTile
-  const guessedKeys = new Set(guesses.map(g => `${g.row}_${g.col}`))
+  // Full visited chain: start tile + each correct guess in order
+  const visitedTiles: [number, number][] = [
+    startTile,
+    ...correctGuesses.map(g => [g.row, g.col] as [number, number]),
+  ]
 
-  // Selectable: up / left / right from current, not already guessed, in bounds
+  const [curRow, curCol] = currentTile
+  const correctGuessKeys = new Set(correctGuesses.map(g => `${g.row}_${g.col}`))
+
   const selectable: Set<string> = new Set(
     (!completed && !isPending && movesAvailable > 0)
       ? ([[curRow + 1, curCol], [curRow, curCol - 1], [curRow, curCol + 1]] as [number, number][])
-          .filter(([r, c]) => r >= 0 && r < rows && c >= 0 && c < cols && !guessedKeys.has(`${r}_${c}`))
+          .filter(([r, c]) => r >= 0 && r < rows && c >= 0 && c < cols && !correctGuessKeys.has(`${r}_${c}`))
           .map(([r, c]) => `${r}_${c}`)
       : []
   )
 
-  function tileState(row: number, col: number): 'current' | 'start' | 'visited' | 'wrong' | 'hidden' {
+  // For a visited tile, return which directions the path line extends
+  function getConnections(row: number, col: number) {
+    const idx = visitedTiles.findIndex(([r, c]) => r === row && c === col)
+    if (idx === -1) return null
+    const neighbors = [
+      idx > 0 ? visitedTiles[idx - 1] : null,
+      idx < visitedTiles.length - 1 ? visitedTiles[idx + 1] : null,
+    ].filter((n): n is [number, number] => n !== null)
+    return {
+      up:    neighbors.some(([r, c]) => r === row + 1 && c === col),
+      down:  neighbors.some(([r, c]) => r === row - 1 && c === col),
+      left:  neighbors.some(([r, c]) => r === row && c === col - 1),
+      right: neighbors.some(([r, c]) => r === row && c === col + 1),
+    }
+  }
+
+  function tileState(row: number, col: number) {
     if (row === currentTile[0] && col === currentTile[1]) return 'current'
-    if (row === startTile[0] && col === startTile[1]) return 'start'
-    const g = guesses.find(g => g.row === row && g.col === col)
-    if (g) return g.correct ? 'visited' : 'wrong'
+    if (guesses.some(g => g.row === row && g.col === col && g.correct)) return 'visited'
+    if (guesses.some(g => g.row === row && g.col === col && !g.correct)) return 'wrong'
+    if (row === startTile[0] && col === startTile[1]) return 'visited'
     return 'hidden'
   }
 
@@ -94,12 +111,11 @@ export default function ChartBoard({
 
   return (
     <div>
-      {/* Header */}
       <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', marginBottom: '0.25rem' }}>
         {contest.name}
       </p>
       <p className="font-karla" style={{ fontSize: '0.75rem', color: '#6a6050', marginBottom: '1.25rem' }}>
-        Chart a path from sea to shore. Every guess costs one move. Move up, left, or right.
+        Chart a path from sea to shore. Move up, left, or right. Every guess costs one move.
       </p>
 
       {/* Stats bar */}
@@ -130,7 +146,6 @@ export default function ChartBoard({
         </div>
       </div>
 
-      {/* Claimed color banner */}
       {claimedColor && !showColorPicker && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '0.75rem',
@@ -146,9 +161,7 @@ export default function ChartBoard({
       <div style={{ width: '100%' }}>
         <p className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{
           fontSize: '0.44rem', color: '#c8a840', textAlign: 'center', marginBottom: 4,
-        }}>
-          ⚓ Destination
-        </p>
+        }}>⚓ Destination</p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: GAP, width: '100%' }}>
           {Array.from({ length: rows }, (_, i) => rows - 1 - i).map(row => (
@@ -157,61 +170,92 @@ export default function ChartBoard({
                 const key = `${row}_${col}`
                 const state = tileState(row, col)
                 const isSelectable = selectable.has(key)
-                const isRevealed = state !== 'hidden'
-                const isGreen = state === 'current' || state === 'visited' || state === 'start'
-                const initiallyRevealed = initialRevealedRef.current.has(key)
+                const isGreen = state === 'current' || state === 'visited'
+                const isRed = state === 'wrong'
+                const conn = isGreen ? getConnections(row, col) : null
 
                 return (
                   <div
                     key={col}
                     onClick={isSelectable ? () => handleSelect(row, col) : undefined}
-                    style={{ aspectRatio: '1', perspective: '200px', cursor: isSelectable ? 'pointer' : 'default' }}
+                    style={{ aspectRatio: '1', position: 'relative', cursor: isSelectable ? 'pointer' : 'default' }}
                   >
+                    {/* Tile face — border-only color changes */}
                     <div style={{
-                      width: '100%', height: '100%', position: 'relative',
-                      transformStyle: 'preserve-3d',
-                      transition: initiallyRevealed ? 'none' : 'transform 0.38s cubic-bezier(0.4,0,0.2,1)',
-                      transform: isRevealed ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                      position: 'absolute', inset: 0,
+                      borderRadius: 4,
+                      background: 'rgba(10,14,24,0.92)',
+                      border: isGreen
+                        ? `${LINE_W}px solid rgba(50,210,120,${state === 'current' ? '1' : '0.65'})`
+                        : isRed
+                        ? `${LINE_W}px solid rgba(210,55,70,0.65)`
+                        : isSelectable
+                        ? '1.5px solid rgba(240,192,64,0.65)'
+                        : '1px solid rgba(255,255,255,0.07)',
+                      boxShadow: isGreen
+                        ? `0 0 ${state === 'current' ? '8' : '5'}px rgba(50,210,120,${state === 'current' ? '0.35' : '0.2'})`
+                        : isRed
+                        ? '0 0 5px rgba(210,55,70,0.2)'
+                        : isSelectable
+                        ? '0 0 8px rgba(240,192,64,0.2)'
+                        : 'none',
+                      transition: 'border-color 0.25s, box-shadow 0.25s',
+                      zIndex: 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      overflow: 'hidden',
                     }}>
-                      {/* Front — hidden */}
-                      <div style={{
-                        position: 'absolute', inset: 0, borderRadius: 4,
-                        backfaceVisibility: 'hidden',
-                        background: isSelectable ? 'rgba(240,192,64,0.14)' : 'rgba(10,14,24,0.92)',
-                        border: isSelectable
-                          ? '1.5px solid rgba(240,192,64,0.65)'
-                          : '1px solid rgba(255,255,255,0.07)',
-                        boxShadow: isSelectable ? '0 0 8px rgba(240,192,64,0.2)' : 'none',
-                        transition: 'background 0.15s, border 0.15s',
-                      }} />
-                      {/* Back — revealed */}
-                      <div style={{
-                        position: 'absolute', inset: 0, borderRadius: 4,
-                        backfaceVisibility: 'hidden',
-                        transform: 'rotateY(180deg)',
-                        background: isGreen
-                          ? 'linear-gradient(135deg,rgba(22,160,90,0.92),rgba(14,120,65,0.96))'
-                          : 'linear-gradient(135deg,rgba(190,40,55,0.92),rgba(150,28,42,0.96))',
-                        border: isGreen
-                          ? '1px solid rgba(50,200,120,0.5)'
-                          : '1px solid rgba(220,65,82,0.5)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        overflow: 'hidden',
-                      }}>
-                        {state === 'current' ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={ship.imageUrl ?? ''}
-                            alt={ship.name}
-                            style={{ width: '72%', height: '72%', objectFit: 'contain' }}
-                          />
-                        ) : isGreen ? (
-                          <span style={{ fontSize: '0.7em', color: 'rgba(255,255,255,0.75)' }}>✓</span>
-                        ) : (
-                          <span style={{ fontSize: '0.7em', color: 'rgba(255,255,255,0.75)' }}>✗</span>
-                        )}
-                      </div>
+                      {state === 'current' && ship.imageUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={ship.imageUrl}
+                          alt={ship.name}
+                          style={{ width: '68%', height: '68%', objectFit: 'contain', position: 'relative', zIndex: 2 }}
+                        />
+                      )}
                     </div>
+
+                    {/* Path line connectors — extend EXTEND px past tile edge to bridge the gap */}
+                    {conn && (
+                      <>
+                        {conn.up && (
+                          <div style={{
+                            position: 'absolute', left: '50%', top: -EXTEND,
+                            height: `calc(50% + ${EXTEND}px)`, width: LINE_W,
+                            background: LINE_COLOR, transform: 'translateX(-50%)', zIndex: 2,
+                          }} />
+                        )}
+                        {conn.down && (
+                          <div style={{
+                            position: 'absolute', left: '50%', bottom: -EXTEND,
+                            height: `calc(50% + ${EXTEND}px)`, width: LINE_W,
+                            background: LINE_COLOR, transform: 'translateX(-50%)', zIndex: 2,
+                          }} />
+                        )}
+                        {conn.left && (
+                          <div style={{
+                            position: 'absolute', top: '50%', left: -EXTEND,
+                            width: `calc(50% + ${EXTEND}px)`, height: LINE_W,
+                            background: LINE_COLOR, transform: 'translateY(-50%)', zIndex: 2,
+                          }} />
+                        )}
+                        {conn.right && (
+                          <div style={{
+                            position: 'absolute', top: '50%', right: -EXTEND,
+                            width: `calc(50% + ${EXTEND}px)`, height: LINE_W,
+                            background: LINE_COLOR, transform: 'translateY(-50%)', zIndex: 2,
+                          }} />
+                        )}
+                        {/* Node dot at centre — hidden behind ship on current tile */}
+                        {state !== 'current' && (
+                          <div style={{
+                            position: 'absolute', top: '50%', left: '50%',
+                            width: 4, height: 4, borderRadius: '50%',
+                            background: LINE_COLOR,
+                            transform: 'translate(-50%, -50%)', zIndex: 3,
+                          }} />
+                        )}
+                      </>
+                    )}
                   </div>
                 )
               })}
@@ -221,9 +265,7 @@ export default function ChartBoard({
 
         <p className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{
           fontSize: '0.44rem', color: '#4a5840', textAlign: 'center', marginTop: 4,
-        }}>
-          Start
-        </p>
+        }}>Start</p>
       </div>
 
       {movesAvailable === 0 && !completed && (
@@ -251,14 +293,10 @@ export default function ChartBoard({
               }}>
                 <span style={{ fontSize: '1rem', flexShrink: 0 }}>{MEDAL[i]}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p className="font-karla font-700 truncate" style={{ fontSize: '0.82rem', color: '#f0c040' }}>
-                    {f.username}
-                  </p>
+                  <p className="font-karla font-700 truncate" style={{ fontSize: '0.82rem', color: '#f0c040' }}>{f.username}</p>
                   <p className="font-karla" style={{ fontSize: '0.58rem', color: '#6a5a40' }}>{formatDate(f.completed_at)}</p>
                 </div>
-                <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#8a7860' }}>
-                  {f.moves_used} moves
-                </p>
+                <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#8a7860' }}>{f.moves_used} moves</p>
               </div>
             ))}
           </div>

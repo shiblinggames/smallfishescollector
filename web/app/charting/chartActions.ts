@@ -172,8 +172,8 @@ export async function makeChartGuess(
   const { data: existing } = await admin
     .from('chart_guesses').select('id')
     .eq('user_id', user.id).eq('contest_id', contestId)
-    .eq('row', row).eq('col', col).maybeSingle()
-  if (existing) return { error: 'Already guessed' }
+    .eq('row', row).eq('col', col).eq('correct', true).maybeSingle()
+  if (existing) return { error: 'Already on correct path' }
 
   const [nextRow, nextCol] = path[currentPathIndex + 1]
   const correct = row === nextRow && col === nextCol
