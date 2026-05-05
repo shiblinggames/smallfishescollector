@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'
 
 export interface LeaderboardEntry {
   user_id: string
@@ -15,22 +16,25 @@ interface MyScores {
   fishing: number
   perfectStreak: number
   fishSlots: number
+  expedition: number
 }
 
 interface Props {
   fishing: LeaderboardEntry[]
   perfectStreak: LeaderboardEntry[]
   fishSlots: LeaderboardEntry[]
+  expedition: LeaderboardEntry[]
   myScores: MyScores
   currentUserId: string
 }
 
-type TabKey = 'fishingLevel' | 'perfectStreak' | 'fishSlots'
+type TabKey = 'fishingLevel' | 'perfectStreak' | 'fishSlots' | 'expedition'
 
 const TABS: { key: TabKey; label: string; accent: string }[] = [
-  { key: 'fishingLevel',  label: 'Fishing Level',  accent: '#f0c040' },
-  { key: 'perfectStreak', label: 'Perfect Streak', accent: '#fb923c' },
-  { key: 'fishSlots',     label: 'Fish Slots',     accent: '#34d399' },
+  { key: 'fishingLevel',  label: 'Fishing Level',     accent: '#f0c040' },
+  { key: 'perfectStreak', label: 'Perfect Streak',    accent: '#fb923c' },
+  { key: 'fishSlots',     label: 'Fish Slots',        accent: '#34d399' },
+  { key: 'expedition',    label: 'Navigator Level',   accent: '#7090c0' },
 ]
 
 
@@ -219,7 +223,7 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
   )
 }
 
-export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, myScores, currentUserId }: Props) {
+export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, expedition, myScores, currentUserId }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>('fishingLevel')
 
   return (
@@ -292,6 +296,17 @@ export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, m
           subUnit={() => 'single spin'}
           data={fishSlots}
           myScore={myScores.fishSlots}
+          currentUserId={currentUserId}
+        />
+      )}
+      {activeTab === 'expedition' && (
+        <LeaderboardSection
+          label="Navigator Level"
+          accent="#7090c0"
+          unit={n => `Lv ${getExpeditionLevel(n)}`}
+          subUnit={n => `${n.toLocaleString()} XP`}
+          data={expedition}
+          myScore={myScores.expedition}
           currentUserId={currentUserId}
         />
       )}

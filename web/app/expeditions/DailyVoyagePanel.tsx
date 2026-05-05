@@ -99,7 +99,14 @@ function computeRouteEstimate(
     crewRiskPct = Math.round(Math.min(95, (encRisk + dngRisk) * 100))
   }
 
-  return { lootMin, lootMax, crewRiskPct, drops: ROUTE_DROPS[route] }
+  // XP estimate — same event counts, best/worst case outcomes
+  const XP_BASE: Record<VoyageRoute, number> = { coastal: 150, open: 280, deep: 450 }
+  const xpBase      = XP_BASE[route]
+  const xpCrewBonus = crewCount * 60
+  const xpMin = xpBase + xpCrewBonus + enc * 25 + dng * 15 + dis * 20
+  const xpMax = xpBase + xpCrewBonus + enc * 90 + dng * 70 + dis * 60
+
+  return { lootMin, lootMax, crewRiskPct, drops: ROUTE_DROPS[route], xpMin, xpMax }
 }
 
 interface Props {
@@ -445,6 +452,9 @@ export default function DailyVoyagePanel({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
                         <span className="font-karla font-700" style={{ fontSize: '0.84rem', color: '#c8aa6a' }}>
                           Est. payout: ~{est.lootMin}–{est.lootMax} ⟡
+                        </span>
+                        <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#5a7aaa' }}>
+                          ~{est.xpMin}–{est.xpMax} XP
                         </span>
                         {savedCrew.length >= 2 ? (
                           <span className="font-karla" style={{ fontSize: '0.80rem', color: est.crewRiskPct >= 40 ? '#f87171cc' : est.crewRiskPct > 0 ? '#c8906a' : '#6a8a6a' }}>
