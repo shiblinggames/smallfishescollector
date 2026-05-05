@@ -46,7 +46,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     admin.from('fish_collection').select('fish_id', { count: 'exact', head: true }).eq('user_id', profile.id),
 
     admin.from('fish_collection')
-      .select('fish_species(id, name, bite_rarity)')
+      .select('fish_species(id, name, bite_rarity, habitat)')
       .eq('user_id', profile.id)
       .order('fish_species(bite_rarity)', { ascending: false })
       .limit(3),
@@ -85,7 +85,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const rarestFish = ((rarestFishData.data ?? []) as any[])
     .map(r => r.fish_species)
     .filter(Boolean)
-    .slice(0, 3) as { id: number; name: string; bite_rarity: number }[]
+    .slice(0, 3) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
 
   const navProfile = navProfileData.data
 

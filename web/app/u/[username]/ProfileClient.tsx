@@ -55,7 +55,7 @@ interface Props {
   showcaseVariants: unknown[]
   stats: Stats
   gear: Gear
-  rarestFish: { id: number; name: string; bite_rarity: number }[]
+  rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
   voyages?: VoyageEntry[]
   isPremium?: boolean
   isOwnProfile?: boolean
@@ -71,21 +71,6 @@ const RARITY_COLOR: Record<number, string> = {
 }
 const RARITY_LABEL: Record<number, string> = {
   1: 'Common', 2: 'Uncommon', 3: 'Rare', 4: 'Epic', 5: 'Legendary',
-}
-
-const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
-function avatarColor(str: string) {
-  let h = 0
-  for (const c of str) h = c.charCodeAt(0) + ((h << 5) - h)
-  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#6a6764', marginBottom: 12 }}>
-      {children}
-    </p>
-  )
 }
 
 const CARD_W = 140
@@ -124,7 +109,6 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
         </div>
       )}
 
-      {/* 3D stage — touch-swipeable */}
       <div
         style={{ position: 'relative', height: 210, perspective: '800px', overflow: 'visible' }}
         onTouchStart={e => { touchStartX.current = e.touches[0].clientX }}
@@ -169,7 +153,6 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
         })}
       </div>
 
-      {/* Card name + nav */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginTop: 10 }}>
         <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0ede8', minHeight: '1.2em' }}>
           {activeCard?.cards.name}
@@ -204,9 +187,11 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
   const [expandedVoyage, setExpandedVoyage] = useState<number | null>(null)
+  const [showAllVoyages, setShowAllVoyages] = useState(false)
 
   const fishingLevel = getLevelFromXP(stats.fishingXP)
-  const color = avatarColor(username)
+  const expLevel = getExpeditionLevel(stats.expeditionXP)
+  const expTitle = getNavigatorTitle(expLevel)
 
   const rod  = getRod(gear.rodTier)
   const reel = getReel(gear.reelTier)
@@ -221,27 +206,16 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
     })
   }
 
+  const visibleVoyages = showAllVoyages ? (voyages ?? []) : (voyages ?? []).slice(0, 1)
+  const hiddenCount = (voyages?.length ?? 0) - 1
+
   return (
     <div className="flex flex-col px-5 max-w-sm mx-auto" style={{ gap: 28 }}>
 
       {/* ── Header ── */}
-      <div className="flex flex-col items-center gap-3 pt-2">
-        {/* Avatar */}
-        <div style={{
-          width: 72, height: 72, borderRadius: '50%',
-          background: `radial-gradient(circle at 38% 35%, ${color}ee 0%, ${color}55 100%)`,
-          border: `2px solid ${color}55`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <span className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: '#f0ede8' }}>
-            {username.slice(0, 1).toUpperCase()}
-          </span>
-        </div>
+      <div className="flex flex-col items-center gap-2 pt-2">
+        <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.4rem' }}>{username}</p>
 
-        {/* Name */}
-        <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.3rem' }}>{username}</p>
-
-        {/* Badges + action */}
         <div className="flex items-center gap-2 flex-wrap justify-center">
           {isPremium && (
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.28)' }}>
@@ -249,6 +223,14 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
               <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#f0c040' }}>Member</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)' }}>
+            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#60a5fa' }}>Fishing Lv {fishingLevel}</span>
+          </div>
+          {stats.expeditionXP > 0 && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'rgba(112,144,192,0.08)', border: '1px solid rgba(112,144,192,0.2)' }}>
+              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#7090c0' }}>{expTitle} · Lv {expLevel}</span>
             </div>
           )}
           {!isOwnProfile && (
@@ -269,6 +251,37 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
         </div>
       </div>
 
+      {/* ── Ship Hero ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+        <div style={{
+          background: `radial-gradient(ellipse at 50% 70%, ${ship.color}18 0%, transparent 70%)`,
+          padding: '20px 0 8px',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 10,
+        }}>
+          <img
+            src={ship.imageUrl}
+            alt={ship.name}
+            style={{
+              width: 180, height: 140,
+              objectFit: 'contain',
+              filter: `drop-shadow(0 4px 24px ${ship.color}55)`,
+            }}
+          />
+          <div style={{ textAlign: 'center' }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: ship.color, lineHeight: 1.2 }}>
+              {gear.shipName ?? ship.name}
+            </p>
+            <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.46rem', color: ship.color + '66', marginTop: 4 }}>
+              {ship.name}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* ── Crew ── */}
       {(variants.length > 0 || stats.packsOpened > 0) && (
         <div>
@@ -284,149 +297,121 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
         </div>
       )}
 
-      {/* ── Fishing ── */}
+      {/* ── Equipment ── */}
       <div>
-        <SectionLabel>Fishing</SectionLabel>
+        <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#6a6764', marginBottom: 12 }}>Equipment</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-          {/* Stats row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+          {/* Rod + Hook — large images */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {[
-              { value: `Lv ${fishingLevel}`, label: 'Level' },
-              { value: stats.uniqueSpecies.toLocaleString(), label: 'Species' },
-              { value: stats.highestPerfectStreak > 0 ? `${stats.highestPerfectStreak}×` : '—', label: 'Best Streak' },
-            ].map(({ value, label }) => (
+              { label: 'Rod',  color: rod.color,  name: rod.name,  img: rod.imageUrl ?? null },
+              { label: 'Hook', color: hook.color, name: hook.name, img: hook.imageUrl ?? null },
+            ].map(({ label, color, name, img }) => (
               <div key={label} style={{
-                background: 'rgba(4,10,20,0.7)', border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 12, padding: '0.75rem 0.5rem', textAlign: 'center',
+                background: `linear-gradient(160deg, ${color}0a 0%, rgba(4,10,20,0.85) 60%)`,
+                border: `1px solid ${color}30`,
+                borderRadius: 16, padding: '1rem 0.75rem',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
               }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1 }}>{value}</p>
-                <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.42rem', color: '#4a4845', marginTop: 5 }}>{label}</p>
+                <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {img
+                    ? <img src={img} alt={label} style={{ maxWidth: 64, maxHeight: 64, objectFit: 'contain', filter: `drop-shadow(0 2px 12px ${color}66)` }} />
+                    : <div style={{ width: 20, height: 20, borderRadius: '50%', background: color, opacity: 0.5, boxShadow: `0 0 12px ${color}66` }} />
+                  }
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: color + '88', marginBottom: 4 }}>{label}</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: '#d0cdc8', lineHeight: 1.2 }}>{name}</p>
+                </div>
               </div>
             ))}
           </div>
 
-          {/* Rarest Catches */}
-          {rarestFish.length > 0 && (
-            <div style={{ marginTop: 4 }}>
-              <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#6a6764', marginBottom: 8 }}>Rarest Catches</p>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rarestFish.length}, 1fr)`, gap: 8 }}>
-                {rarestFish.map(fish => {
-                  const c = RARITY_COLOR[fish.bite_rarity]
-                  return (
-                    <div key={fish.id} style={{
-                      background: `${c}0a`, border: `1px solid ${c}35`,
-                      borderRadius: 12, padding: '0.75rem 0.5rem',
-                      textAlign: 'center', boxShadow: `0 0 16px ${c}18`,
-                    }}>
-                      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 6 }}>
-                        <img
-                          src={fishImageUrl(fish.name)}
-                          alt={fish.name}
-                          style={{ maxWidth: 52, maxHeight: 52, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${c}55)` }}
-                          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                        />
-                      </div>
-                      <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#f0ede8', marginBottom: 5, lineHeight: 1.2 }}>{fish.name}</p>
-                      <span style={{
-                        fontSize: '0.45rem', padding: '0.12rem 0.4rem', borderRadius: '2rem',
-                        background: `${c}14`, border: `1px solid ${c}35`, color: c,
-                        fontFamily: 'var(--font-karla)', fontWeight: 600,
-                        textTransform: 'uppercase', letterSpacing: '0.1em',
-                      }}>
-                        {RARITY_LABEL[fish.bite_rarity] ?? 'Unknown'}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Equipment */}
-          <div style={{ marginTop: 4 }}>
-            <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#6a6764', marginBottom: 8 }}>Equipment</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-                {[
-                  { label: 'Rod',  color: rod.color,  name: rod.name,  img: '/rod.png' },
-                  { label: 'Hook', color: hook.color, name: hook.name, img: hook.imageUrl ?? null },
-                  { label: 'Reel', color: reel.color, name: reel.name, img: null },
-                  { label: 'Line', color: line.color, name: line.name, img: null },
-                ].map(({ label, color, name, img }) => (
-                  <div key={label} style={{
-                    background: 'rgba(4,10,20,0.7)', border: `1px solid ${color}30`,
-                    borderRadius: 10, padding: '0.55rem 0.4rem', textAlign: 'center',
-                  }}>
-                    <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 5 }}>
-                      {img
-                        ? <img src={img} alt={label} style={{ width: 24, height: 24, objectFit: 'contain', filter: `drop-shadow(0 1px 4px ${color}55)` }} />
-                        : <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, opacity: 0.6 }} />
-                      }
-                    </div>
-                    <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.4rem', color: color + '88', marginBottom: 2 }}>{label}</p>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.52rem', color: '#a0a09a', lineHeight: 1.2 }}>{name}</p>
-                  </div>
-                ))}
-              </div>
-              <div style={{
-                background: 'rgba(4,10,20,0.7)', border: `1px solid ${ship.color}30`,
-                borderRadius: 10, padding: '0.65rem 1rem',
-                display: 'flex', alignItems: 'center', gap: 12,
+          {/* Reel + Line — compact since no images */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {[
+              { label: 'Reel', color: reel.color, name: reel.name },
+              { label: 'Line', color: line.color, name: line.name },
+            ].map(({ label, color, name }) => (
+              <div key={label} style={{
+                background: 'rgba(4,10,20,0.7)', border: `1px solid ${color}25`,
+                borderRadius: 12, padding: '0.65rem 0.75rem',
+                display: 'flex', alignItems: 'center', gap: 10,
               }}>
-                <img src={ship.imageUrl} alt={ship.name} style={{ width: 44, height: 36, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${ship.color}44)` }} />
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0, opacity: 0.7, boxShadow: `0 0 8px ${color}66` }} />
                 <div>
-                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: ship.color + '88', marginBottom: 3 }}>{ship.name}</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: ship.color }}>{gear.shipName ?? ship.name}</p>
+                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.38rem', color: color + '77', marginBottom: 2 }}>{label}</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.55rem', color: '#a0a09a', lineHeight: 1.2 }}>{name}</p>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
 
         </div>
       </div>
 
-      {/* ── Expeditions ── */}
-      {stats.expeditionXP > 0 && (() => {
-        const expLevel = getExpeditionLevel(stats.expeditionXP)
-        const title = getNavigatorTitle(expLevel)
-        return (
-          <div>
-            <SectionLabel>Expeditions</SectionLabel>
-            <div style={{
-              background: 'rgba(16,28,52,0.75)',
-              border: '1px solid rgba(112,144,192,0.22)',
-              borderRadius: 14, padding: '1rem 1.1rem',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{
-                  width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-                  background: 'rgba(112,144,192,0.12)',
-                  border: '1px solid rgba(112,144,192,0.3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '1.1rem',
-                }}>⚓</div>
-                <div>
-                  <p className="font-karla font-600 uppercase" style={{ fontSize: '0.46rem', color: '#7090c0', letterSpacing: '0.14em', marginBottom: 3 }}>Navigator Rank</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.0rem', color: '#a8c4e8', lineHeight: 1 }}>{title}</p>
+      {/* ── Rarest Catches ── */}
+      {rarestFish.length > 0 && (
+        <div>
+          <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#6a6764', marginBottom: 12 }}>Rarest Catches</p>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rarestFish.length}, 1fr)`, gap: 8 }}>
+            {rarestFish.map(fish => {
+              const c = RARITY_COLOR[fish.bite_rarity]
+              return (
+                <div key={fish.id} style={{
+                  background: `${c}0a`, border: `1px solid ${c}35`,
+                  borderRadius: 12, padding: '0.75rem 0.5rem',
+                  textAlign: 'center', boxShadow: `0 0 16px ${c}18`,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                }}>
+                  <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img
+                      src={fishImageUrl(fish.name)}
+                      alt={fish.name}
+                      style={{ maxWidth: 52, maxHeight: 52, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${c}55)` }}
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    />
+                  </div>
+                  <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#f0ede8', lineHeight: 1.2 }}>{fish.name}</p>
+                  <span style={{
+                    fontSize: '0.45rem', padding: '0.12rem 0.4rem', borderRadius: '2rem',
+                    background: `${c}14`, border: `1px solid ${c}35`, color: c,
+                    fontFamily: 'var(--font-karla)', fontWeight: 600,
+                    textTransform: 'uppercase', letterSpacing: '0.1em',
+                  }}>
+                    {RARITY_LABEL[fish.bite_rarity] ?? 'Unknown'}
+                  </span>
+                  {fish.habitat && (
+                    <span style={{
+                      fontSize: '0.42rem', padding: '0.1rem 0.35rem', borderRadius: '2rem',
+                      background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+                      color: 'rgba(255,255,255,0.35)',
+                      fontFamily: 'var(--font-karla)', fontWeight: 600,
+                      textTransform: 'uppercase', letterSpacing: '0.08em',
+                    }}>
+                      {fish.habitat}
+                    </span>
+                  )}
                 </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#7090c0', lineHeight: 1 }}>Lv {expLevel}</p>
-                <p className="font-karla font-400" style={{ fontSize: '0.46rem', color: '#4a6080', marginTop: 3 }}>{stats.expeditionXP.toLocaleString()} XP</p>
-              </div>
-            </div>
+              )
+            })}
           </div>
-        )
-      })()}
+          {stats.uniqueSpecies > 0 && (
+            <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.46rem', color: '#4a4845', marginTop: 10, textAlign: 'center' }}>
+              {stats.uniqueSpecies.toLocaleString()} species caught
+              {stats.highestPerfectStreak > 0 ? ` · ${stats.highestPerfectStreak}× best streak` : ''}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ── Voyages ── */}
       {voyages && voyages.length > 0 && (
         <div>
-          <SectionLabel>Voyages</SectionLabel>
+          <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#6a6764', marginBottom: 12 }}>Voyages</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {voyages.map(v => {
+            {visibleVoyages.map(v => {
               const routeConfig = ROUTE_CONFIGS[v.route as keyof typeof ROUTE_CONFIGS]
               const crewLostCount = (v.crew_lost ?? []).length
               const date = new Date(v.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -504,6 +489,23 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                 </div>
               )
             })}
+
+            {hiddenCount > 0 && (
+              <button
+                onClick={() => setShowAllVoyages(v => !v)}
+                style={{
+                  background: 'none', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10,
+                  padding: '0.6rem', cursor: 'pointer', width: '100%',
+                  color: '#4a4845', fontFamily: 'var(--font-karla)', fontWeight: 600,
+                  fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.1em',
+                  transition: 'color 0.2s, border-color 0.2s',
+                }}
+                onMouseEnter={e => { (e.target as HTMLButtonElement).style.color = '#8a8785'; (e.target as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.14)' }}
+                onMouseLeave={e => { (e.target as HTMLButtonElement).style.color = '#4a4845'; (e.target as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.07)' }}
+              >
+                {showAllVoyages ? 'Show less' : `Show ${hiddenCount} more voyage${hiddenCount !== 1 ? 's' : ''}`}
+              </button>
+            )}
           </div>
         </div>
       )}
