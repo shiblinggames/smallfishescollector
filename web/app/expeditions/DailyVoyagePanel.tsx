@@ -343,7 +343,7 @@ export default function DailyVoyagePanel({
                       position: 'absolute', bottom: 0, left: 0, right: 0,
                       background: 'linear-gradient(to bottom, transparent 0%, rgba(6,4,2,0.97) 18%)',
                       padding: '2.5rem 0.9rem 0.85rem',
-                      zIndex: 2,
+                      zIndex: 4,
                       maxHeight: '72%',
                       overflowY: 'auto',
                     }}>
