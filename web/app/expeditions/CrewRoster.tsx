@@ -264,7 +264,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
               onClick={() => setShowBreakdown(b => !b)}
               style={{
                 width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem',
               }}
             >
               <div style={{ textAlign: 'left' }}>
@@ -280,7 +280,15 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
                   ))}
                 </div>
               </div>
-              <span style={{ fontSize: '0.65rem', color: '#4a4845', transition: 'transform 0.15s', display: 'inline-block', transform: showBreakdown ? 'rotate(180deg)' : 'none' }}>▼</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', paddingTop: '0.15rem', flex: 1, minWidth: 0 }}>
+                {STAT_COLS.map(s => (
+                  <div key={s.key} style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
+                    <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', color: s.color, flexShrink: 0 }}>{s.label.slice(0,3)}</span>
+                    <span className="font-karla" style={{ fontSize: '0.56rem', color: '#5a5654', lineHeight: 1.3 }}>{s.sub}</span>
+                  </div>
+                ))}
+                <span style={{ fontSize: '0.62rem', color: '#4a4845', transition: 'transform 0.15s', display: 'inline-block', transform: showBreakdown ? 'rotate(180deg)' : 'none', marginTop: 2 }}>▼</span>
+              </div>
             </button>
 
             {showBreakdown && (
