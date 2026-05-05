@@ -135,6 +135,7 @@ export default function DailyVoyagePanel({
   const [captainsLog, setCaptainsLog] = useState<string | null>(null)
   const [liveCrewIds, setLiveCrewIds] = useState<number[]>(savedCrewVariantIds)
   const [expandedDropKey, setExpandedDropKey] = useState<string | null>(null)
+  const [infoOpen, setInfoOpen] = useState(false)
 
   useEffect(() => {
     const handler = (e: Event) => setLiveCrewIds((e as CustomEvent<number[]>).detail)
@@ -243,9 +244,68 @@ export default function DailyVoyagePanel({
             </p>
           ) : (
             <>
-              <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a09070', lineHeight: 1.5, marginBottom: '0.85rem' }}>
-                Send your crew on a 6-hour voyage. They return with stories — and sometimes something worth keeping.
-              </p>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.85rem' }}>
+                <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a09070', lineHeight: 1.5, flex: 1 }}>
+                  Send your crew on a 6-hour voyage. They return with stories — and sometimes something worth keeping.
+                </p>
+                <button
+                  onClick={() => setInfoOpen(true)}
+                  style={{
+                    flexShrink: 0, marginTop: 2,
+                    width: 22, height: 22, borderRadius: '50%',
+                    background: 'rgba(200,170,100,0.10)', border: '1px solid rgba(200,170,100,0.25)',
+                    color: '#a08860', fontSize: '0.72rem', fontWeight: 700,
+                    cursor: 'pointer', lineHeight: 1,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  aria-label="How voyages work"
+                >?</button>
+              </div>
+
+              {/* Info modal */}
+              {infoOpen && (
+                <div
+                  onClick={() => setInfoOpen(false)}
+                  style={{
+                    position: 'fixed', inset: 0, zIndex: 50,
+                    background: 'rgba(0,0,0,0.72)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '1.5rem',
+                  }}
+                >
+                  <div
+                    onClick={e => e.stopPropagation()}
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(22,16,8,0.98) 0%, rgba(14,10,4,0.99) 100%)',
+                      border: '1px solid rgba(200,170,100,0.22)',
+                      borderRadius: 16, padding: '1.4rem 1.3rem',
+                      maxWidth: 360, width: '100%',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#c8aa6a' }}>How Voyages Work</p>
+                      <button onClick={() => setInfoOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6a5a40', fontSize: '1rem', lineHeight: 1 }}>✕</button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                      {([
+                        ['🗺️', 'Pick a route', 'Tap a location on the map. Riskier routes pay more — but your crew might not make it back.'],
+                        ['⏳', 'They sail for 6 hours', 'Events unfold along the way. Check back to watch the story as it happens.'],
+                        ['💰', 'Claim your loot', 'When they return, collect doubloons, gems, and rare drops. One voyage per day.'],
+                        ['☠️', 'Crew can die', 'On dangerous routes, crew members can be lost at sea — permanently. Choose wisely.'],
+                      ] as [string, string, string][]).map(([icon, title, desc]) => (
+                        <div key={title} style={{ display: 'flex', gap: '0.75rem' }}>
+                          <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: 1 }}>{icon}</span>
+                          <div>
+                            <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#d4c8a0', marginBottom: '0.2rem' }}>{title}</p>
+                            <p className="font-karla" style={{ fontSize: '0.76rem', color: '#7a6a50', lineHeight: 1.5 }}>{desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Crew list */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.75rem' }}>
