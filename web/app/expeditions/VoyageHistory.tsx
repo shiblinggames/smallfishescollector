@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageEvents'
+import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
 
 export interface VoyageHistoryEntry {
   id: number

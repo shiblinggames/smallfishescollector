@@ -11,7 +11,7 @@ import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { getShip } from '@/lib/ships'
-import { ROUTE_CONFIGS } from '@/lib/voyageEvents'
+import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
 
 interface CardVariant {
   id: number
