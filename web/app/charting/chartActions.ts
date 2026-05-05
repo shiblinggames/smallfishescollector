@@ -205,7 +205,7 @@ export async function makeChartGuess(
     if (newTileRow >= 10 && !(currentMilestones & 2)) { newMilestones |= 2; bonusDoubloons += 5000 }
   }
 
-  const updateTasks: Promise<unknown>[] = [
+  const updateTasks = [
     admin.from('chart_guesses').insert({ user_id: user.id, contest_id: contestId, row, col, correct }),
     admin.from('chart_progress').update({
       moves_used: newMovesUsed,
@@ -213,12 +213,10 @@ export async function makeChartGuess(
       milestones_awarded: newMilestones,
       ...(completed ? { completed_at: new Date().toISOString() } : {}),
     }).eq('user_id', user.id).eq('contest_id', contestId),
+    ...(bonusDoubloons > 0
+      ? [admin.from('profiles').update({ doubloons: (profile?.doubloons ?? 0) + bonusDoubloons }).eq('id', user.id)]
+      : []),
   ]
-  if (bonusDoubloons > 0) {
-    updateTasks.push(
-      admin.from('profiles').update({ doubloons: (profile?.doubloons ?? 0) + bonusDoubloons }).eq('id', user.id)
-    )
-  }
   await Promise.all(updateTasks)
 
   let completionPosition: number | null = null
