@@ -677,9 +677,17 @@ export default function DailyVoyagePanel({
                         </span>
                       )}
                     </div>
-                    <p className="font-karla" style={{ fontSize: '0.62rem', color: '#a09070', lineHeight: 1.55 }}>
-                      {e.narrative}
-                    </p>
+                    {e.narrative.split('\n\n').map((para, pi) => (
+                      <p key={pi} className="font-karla" style={{
+                        fontSize: '0.62rem',
+                        color: pi === 0 ? '#a09070' : '#7a6a50',
+                        lineHeight: 1.55,
+                        fontStyle: pi > 0 ? 'italic' : 'normal',
+                        marginTop: pi > 0 ? '0.3rem' : 0,
+                      }}>
+                        {para}
+                      </p>
+                    ))}
                     {isCrewLoss && lostCard && (
                       <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: '#c06060', marginTop: '0.3rem' }}>
                         {lostCard.name} — lost at sea.
