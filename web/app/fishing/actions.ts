@@ -198,9 +198,10 @@ export async function reelIn(
     return { caught: false, newAchievements }
   }
 
-  const [{ data: fish }, { data: profile }] = await Promise.all([
+  const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, ship_tier').eq('id', user.id).single(),
+    admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
   if (!fish || !profile) return { error: 'Data not found' }
@@ -228,8 +229,12 @@ export async function reelIn(
     }).eq('user_id', user.id).eq('fish_id', fishId)
   }
 
-  // Upsert sellable inventory
-  const catchQty = doubleCatch ? 2 : jackpotMultiplier
+  // Upsert sellable inventory — cap at hold capacity
+  const holdCapacity = getShip(profile.ship_tier ?? 0).holdCapacity
+  const currentHoldCount = (holdRows ?? []).reduce((s: number, r: { quantity: number }) => s + (r.quantity ?? 0), 0)
+  const desired = doubleCatch ? 2 : jackpotMultiplier
+  const catchQty = Math.min(desired, Math.max(0, holdCapacity - currentHoldCount))
+
   const { data: invRow } = await admin
     .from('fish_inventory')
     .select('quantity')
@@ -237,12 +242,14 @@ export async function reelIn(
     .eq('fish_id', fishId)
     .single()
 
-  if (invRow) {
-    await admin.from('fish_inventory')
-      .update({ quantity: invRow.quantity + catchQty })
-      .eq('user_id', user.id).eq('fish_id', fishId)
-  } else {
-    await admin.from('fish_inventory').insert({ user_id: user.id, fish_id: fishId, quantity: catchQty })
+  if (catchQty > 0) {
+    if (invRow) {
+      await admin.from('fish_inventory')
+        .update({ quantity: invRow.quantity + catchQty })
+        .eq('user_id', user.id).eq('fish_id', fishId)
+    } else {
+      await admin.from('fish_inventory').insert({ user_id: user.id, fish_id: fishId, quantity: catchQty })
+    }
   }
 
   // Auto-upgrade line tier on new species unlock

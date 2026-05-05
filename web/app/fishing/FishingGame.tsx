@@ -1646,10 +1646,7 @@ export default function FishingGame({
   }
 
   function handleTideTurnerSkip() {
-    if (!hasTideTurner || tideTurnerSkipsLeft <= 0 || phase !== 'hooked') return
-    setBaitInventory(prev => prev.map(b =>
-      b.bait_type === selectedBait ? { ...b, quantity: b.quantity + 1 } : b
-    ))
+    if (!hasTideTurner || tideTurnerSkipsLeft <= 0 || phase !== 'catching') return
     setHookedFish(null)
     setPhase('idle')
     startTransition(async () => {
@@ -1859,9 +1856,12 @@ export default function FishingGame({
             }).catch(() => {})
           }
         }
-        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge, perfectStreak: newStreak, streakBonusXP, jackpotMultiplier: jackpotMultiplier > 1 ? jackpotMultiplier : undefined })
+        const currentHoldCount = inventory.reduce((s, i) => s + i.quantity, 0)
+        const desiredQty = doubleCatch ? 2 : jackpotMultiplier
+        const actualQty = Math.min(desiredQty, Math.max(0, holdCapacity - currentHoldCount))
+        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge, perfectStreak: newStreak, streakBonusXP, jackpotMultiplier: actualQty > 1 ? actualQty : undefined })
         if (isNewSpecies) { setCaughtFishIds(prev => new Set([...prev, fish.id])); setUncheckedNewFishIds(prev => new Set([...prev, fish.id])) }
-        const catchCount = doubleCatch ? 2 : jackpotMultiplier
+        const catchCount = actualQty
         const newCatches = [...sessionCatches, ...Array(catchCount).fill(fish)]
         const newPerfects = sessionPerfects + (wasPerfect ? 1 : 0)
         const newNewSpecies = sessionNewSpecies + (isNewSpecies ? 1 : 0)
@@ -1907,16 +1907,14 @@ export default function FishingGame({
             podiumPositionsRef.current.fishingLevel = cur
           }).catch(() => {})
         }
-        setInventory(prev => {
-          const existing = prev.find(i => i.fish_id === fish.id)
-          const addQty = doubleCatch ? 2 : jackpotMultiplier
-          const next = existing
-            ? prev.map(i => i.fish_id === fish.id ? { ...i, quantity: i.quantity + addQty } : i)
-            : [...prev, { fish_id: fish.id, quantity: addQty, fish_species: fish }]
-          const prevCount = prev.reduce((s, i) => s + i.quantity, 0)
-          const newCount  = next.reduce((s, i) => s + i.quantity, 0)
-          return next
-        })
+        if (actualQty > 0) {
+          setInventory(prev => {
+            const existing = prev.find(i => i.fish_id === fish.id)
+            return existing
+              ? prev.map(i => i.fish_id === fish.id ? { ...i, quantity: i.quantity + actualQty } : i)
+              : [...prev, { fish_id: fish.id, quantity: actualQty, fish_species: fish }]
+          })
+        }
         if (baitSaved) {
           setBaitInventory(prev => prev.map(b =>
             b.bait_type === selectedBaitRef.current ? { ...b, quantity: b.quantity + 1 } : b
@@ -2299,7 +2297,7 @@ export default function FishingGame({
                   <motion.div key="hooked"
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <motion.div
                       initial={{ scale: 0.95 }} animate={{ scale: 1 }}
                       transition={{ type: 'spring', stiffness: 380, damping: 22 }}
@@ -2341,27 +2339,6 @@ export default function FishingGame({
                         borderBottom: `1px solid ${r.color}40`,
                       }} />
                     </motion.div>
-                    {hasTideTurner && tideTurnerSkipsLeft > 0 && (
-                      <motion.button
-                        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.25 }}
-                        onClick={handleTideTurnerSkip}
-                        style={{
-                          marginTop: 14,
-                          background: 'rgba(139,111,192,0.14)',
-                          border: '1px solid rgba(139,111,192,0.35)',
-                          borderRadius: 12,
-                          padding: '0.42rem 1rem',
-                          cursor: 'pointer',
-                          color: '#a78bfa',
-                          fontSize: '0.72rem',
-                          fontFamily: 'inherit',
-                        }}
-                        className="font-karla font-600"
-                      >
-                        Skip — {tideTurnerSkipsLeft} left today
-                      </motion.button>
-                    )}
                   </motion.div>
                 )
               })()}
@@ -2435,6 +2412,24 @@ export default function FishingGame({
                       snapKey={snapKey} perfectBurstKey={perfectBurstKey}
                       ringSkin={getRingSkin(equippedRingSkin)} />
                   </div>
+                  {hasTideTurner && tideTurnerSkipsLeft > 0 && phase === 'catching' && (
+                    <button
+                      onClick={handleTideTurnerSkip}
+                      style={{
+                        background: 'rgba(139,111,192,0.12)',
+                        border: '1px solid rgba(139,111,192,0.3)',
+                        borderRadius: 12,
+                        padding: '0.38rem 0.9rem',
+                        cursor: 'pointer',
+                        color: '#a78bfa',
+                        fontSize: '0.68rem',
+                        fontFamily: 'inherit',
+                      }}
+                      className="font-karla font-600"
+                    >
+                      Skip — {tideTurnerSkipsLeft} left today
+                    </button>
+                  )}
                 </motion.div>
               )}
 
