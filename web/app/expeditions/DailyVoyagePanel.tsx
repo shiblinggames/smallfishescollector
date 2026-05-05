@@ -402,7 +402,7 @@ export default function DailyVoyagePanel({
                           {rco.name}
                         </span>
                         <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: isSelected ? `${rco.color}bb` : '#6a5a40', display: 'block', textAlign: 'center', marginTop: 1 }}>
-                          {rco.riskLabel}
+                          {({ coastal: 20, open: 45, deep: 75 } as Record<string, number>)[routeKey]}+ score
                         </span>
                       </span>
                     </button>
@@ -429,7 +429,7 @@ export default function DailyVoyagePanel({
                             {rco.name}
                           </p>
                           <span className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.62rem', color: `${rco.color}bb` }}>
-                            {rco.riskLabel}
+                            {({ coastal: 20, open: 45, deep: 75 } as Record<string, number>)[selectedRoute]}+ score
                           </span>
                         </div>
                         <button
