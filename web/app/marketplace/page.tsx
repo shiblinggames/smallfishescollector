@@ -253,9 +253,6 @@ function DestCard({
           {description}
         </p>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-          {tags.map(t => <Tag key={t} label={t} color={accent} />)}
-        </div>
       </div>
     </div>
   )
