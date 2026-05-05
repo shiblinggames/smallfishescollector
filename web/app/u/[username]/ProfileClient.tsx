@@ -12,6 +12,7 @@ import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { getShip } from '@/lib/ships'
 import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
+import { SPECIAL_ITEMS } from '@/lib/specialItems'
 
 interface CardVariant {
   id: number
@@ -56,6 +57,7 @@ interface Props {
   stats: Stats
   gear: Gear
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
+  ownedSpecialIds?: string[]
   voyages?: VoyageEntry[]
   isPremium?: boolean
   isOwnProfile?: boolean
@@ -90,6 +92,14 @@ function cardTransform(off: number): { tx: number; tz: number; ry: number; scale
   return            { tx: sign * 148, tz: -45, ry: -sign * 36,  scale: 0.60, brightness: 0.35, zIdx: 2  }
 }
 
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.7rem', color: '#8a8782', marginBottom: 14 }}>
+      {children}
+    </p>
+  )
+}
+
 function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   const [active, setActive] = useState(0)
   const total = variants.length
@@ -99,16 +109,9 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   function next() { setActive(i => (i + 1) % total) }
 
   const activeCard = variants[active]
-  const isActiveCaptain = active === 0
 
   return (
     <div>
-      {isActiveCaptain && (
-        <div style={{ textAlign: 'center', marginBottom: 8 }}>
-          <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#f0c04066' }}>⚓ Captain</span>
-        </div>
-      )}
-
       <div
         style={{ position: 'relative', height: 210, perspective: '800px', overflow: 'visible' }}
         onTouchStart={e => { touchStartX.current = e.touches[0].clientX }}
@@ -159,7 +162,7 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
         </p>
         {total > 1 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button onClick={prev} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5a5755', fontSize: '1.1rem', lineHeight: 1, padding: '0 2px' }}>‹</button>
+            <button onClick={prev} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a7775', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>‹</button>
             <div style={{ display: 'flex', gap: 5 }}>
               {variants.map((_, i) => (
                 <button
@@ -167,14 +170,14 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
                   onClick={() => setActive(i)}
                   style={{
                     width: i === active ? 18 : 6, height: 6, borderRadius: 3,
-                    background: i === active ? '#f0c040' : 'rgba(255,255,255,0.14)',
+                    background: i === active ? '#f0c040' : 'rgba(255,255,255,0.2)',
                     border: 'none', cursor: 'pointer', padding: 0,
                     transition: 'width 0.22s, background 0.22s',
                   }}
                 />
               ))}
             </div>
-            <button onClick={next} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5a5755', fontSize: '1.1rem', lineHeight: 1, padding: '0 2px' }}>›</button>
+            <button onClick={next} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a7775', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>›</button>
           </div>
         )}
       </div>
@@ -182,7 +185,7 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   )
 }
 
-export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, isPremium, isOwnProfile, isInCrew: initialIsInCrew }: Props) {
+export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, ownedSpecialIds = [], isPremium, isOwnProfile, isInCrew: initialIsInCrew }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
@@ -199,6 +202,8 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
   const line = getLine(gear.lineTier)
   const ship = getShip(gear.shipTier)
 
+  const ownedSpecials = SPECIAL_ITEMS.filter(s => ownedSpecialIds.includes(s.id))
+
   function toggleCrew() {
     startCrewTransition(async () => {
       if (inCrew) { await removeCrewMember(username); setInCrew(false) }
@@ -210,39 +215,39 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
   const hiddenCount = (voyages?.length ?? 0) - 1
 
   return (
-    <div className="flex flex-col px-5 max-w-sm mx-auto" style={{ gap: 28 }}>
+    <div className="flex flex-col max-w-4xl mx-auto px-5" style={{ gap: 0, paddingBottom: 48 }}>
 
       {/* ── Header ── */}
-      <div className="flex flex-col items-center gap-2 pt-2">
-        <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.4rem' }}>{username}</p>
+      <div className="flex flex-col items-center gap-3 pt-2 pb-8">
+        <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem' }}>{username}</p>
 
         <div className="flex items-center gap-2 flex-wrap justify-center">
           {isPremium && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.28)' }}>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.28)' }}>
               <svg width="9" height="9" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
-              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#f0c040' }}>Member</span>
+              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#f0c040' }}>Member</span>
             </div>
           )}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)' }}>
-            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#60a5fa' }}>Fishing Lv {fishingLevel}</span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.25)' }}>
+            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#60a5fa' }}>Fishing Lv {fishingLevel}</span>
           </div>
           {stats.expeditionXP > 0 && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'rgba(112,144,192,0.08)', border: '1px solid rgba(112,144,192,0.2)' }}>
-              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#7090c0' }}>{expTitle} · Lv {expLevel}</span>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(112,144,192,0.08)', border: '1px solid rgba(112,144,192,0.25)' }}>
+              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#7090c0' }}>{expTitle} · Lv {expLevel}</span>
             </div>
           )}
           {!isOwnProfile && (
             <button
               onClick={toggleCrew}
               disabled={crewPending}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-karla font-700 uppercase tracking-[0.12em] transition-all disabled:opacity-40"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-karla font-700 uppercase tracking-[0.12em] transition-all disabled:opacity-40"
               style={{
-                fontSize: '0.55rem',
+                fontSize: '0.65rem',
                 background: inCrew ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.08)',
-                border: `1px solid ${inCrew ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.14)'}`,
-                color: inCrew ? '#4ade80' : '#a0a09a',
+                border: `1px solid ${inCrew ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.18)'}`,
+                color: inCrew ? '#4ade80' : '#c0bdb8',
               }}
             >
               {crewPending ? '…' : inCrew ? '✓ Friends' : '+ Add Friend'}
@@ -251,264 +256,305 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
         </div>
       </div>
 
-      {/* ── Ship Hero ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          background: `radial-gradient(ellipse at 50% 70%, ${ship.color}18 0%, transparent 70%)`,
-          padding: '20px 0 8px',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 10,
-        }}>
-          <img
-            src={ship.imageUrl}
-            alt={ship.name}
-            style={{
-              width: 180, height: 140,
-              objectFit: 'contain',
-              filter: `drop-shadow(0 4px 24px ${ship.color}55)`,
-            }}
-          />
-          <div style={{ textAlign: 'center' }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: ship.color, lineHeight: 1.2 }}>
-              {gear.shipName ?? ship.name}
-            </p>
-            <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.46rem', color: ship.color + '66', marginTop: 4 }}>
-              {ship.name}
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* ── 2-col body on desktop ── */}
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-8 md:gap-10 items-start">
 
-      {/* ── Crew ── */}
-      {(variants.length > 0 || stats.packsOpened > 0) && (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Crew</p>
-            {stats.packsOpened > 0 && (
-              <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.48rem', color: '#4a4845' }}>
-                {stats.packsOpened.toLocaleString()} packs opened
+        {/* ── LEFT: Ship + Crew ── */}
+        <div className="flex flex-col" style={{ gap: 28 }}>
+
+          {/* Ship Hero */}
+          <div style={{
+            background: `radial-gradient(ellipse at 50% 65%, ${ship.color}1c 0%, transparent 68%)`,
+            border: `1px solid ${ship.color}20`,
+            borderRadius: 20,
+            padding: '24px 16px 16px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+          }}>
+            <img
+              src={ship.imageUrl}
+              alt={ship.name}
+              style={{
+                width: 200, height: 155,
+                objectFit: 'contain',
+                filter: `drop-shadow(0 4px 28px ${ship.color}60)`,
+              }}
+            />
+            <div style={{ textAlign: 'center' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: ship.color, lineHeight: 1.2 }}>
+                {gear.shipName ?? ship.name}
               </p>
-            )}
+              <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: ship.color + '70', marginTop: 5 }}>
+                {ship.name}
+              </p>
+            </div>
           </div>
-          {variants.length > 0 && <CrewCarousel variants={variants} />}
-        </div>
-      )}
 
-      {/* ── Equipment ── */}
-      <div>
-        <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#6a6764', marginBottom: 12 }}>Equipment</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-
-          {/* Rod + Hook — large images */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {[
-              { label: 'Rod',  color: rod.color,  name: rod.name,  img: rod.imageUrl ?? null },
-              { label: 'Hook', color: hook.color, name: hook.name, img: hook.imageUrl ?? null },
-            ].map(({ label, color, name, img }) => (
-              <div key={label} style={{
-                background: `linear-gradient(160deg, ${color}0a 0%, rgba(4,10,20,0.85) 60%)`,
-                border: `1px solid ${color}30`,
-                borderRadius: 16, padding: '1rem 0.75rem',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-              }}>
-                <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {img
-                    ? <img src={img} alt={label} style={{ maxWidth: 64, maxHeight: 64, objectFit: 'contain', filter: `drop-shadow(0 2px 12px ${color}66)` }} />
-                    : <div style={{ width: 20, height: 20, borderRadius: '50%', background: color, opacity: 0.5, boxShadow: `0 0 12px ${color}66` }} />
-                  }
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.42rem', color: color + '88', marginBottom: 4 }}>{label}</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: '#d0cdc8', lineHeight: 1.2 }}>{name}</p>
-                </div>
+          {/* Crew */}
+          {(variants.length > 0 || stats.packsOpened > 0) && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <SectionLabel>Crew</SectionLabel>
+                {stats.packsOpened > 0 && (
+                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#6a6764', marginBottom: 14 }}>
+                    {stats.packsOpened.toLocaleString()} packs opened
+                  </p>
+                )}
               </div>
-            ))}
-          </div>
-
-          {/* Reel + Line — compact since no images */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {[
-              { label: 'Reel', color: reel.color, name: reel.name },
-              { label: 'Line', color: line.color, name: line.name },
-            ].map(({ label, color, name }) => (
-              <div key={label} style={{
-                background: 'rgba(4,10,20,0.7)', border: `1px solid ${color}25`,
-                borderRadius: 12, padding: '0.65rem 0.75rem',
-                display: 'flex', alignItems: 'center', gap: 10,
-              }}>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0, opacity: 0.7, boxShadow: `0 0 8px ${color}66` }} />
-                <div>
-                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.38rem', color: color + '77', marginBottom: 2 }}>{label}</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.55rem', color: '#a0a09a', lineHeight: 1.2 }}>{name}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </div>
-      </div>
-
-      {/* ── Rarest Catches ── */}
-      {rarestFish.length > 0 && (
-        <div>
-          <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#6a6764', marginBottom: 12 }}>Rarest Catches</p>
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rarestFish.length}, 1fr)`, gap: 8 }}>
-            {rarestFish.map(fish => {
-              const c = RARITY_COLOR[fish.bite_rarity]
-              return (
-                <div key={fish.id} style={{
-                  background: `${c}0a`, border: `1px solid ${c}35`,
-                  borderRadius: 12, padding: '0.75rem 0.5rem',
-                  textAlign: 'center', boxShadow: `0 0 16px ${c}18`,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                }}>
-                  <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <img
-                      src={fishImageUrl(fish.name)}
-                      alt={fish.name}
-                      style={{ maxWidth: 52, maxHeight: 52, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${c}55)` }}
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                    />
-                  </div>
-                  <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#f0ede8', lineHeight: 1.2 }}>{fish.name}</p>
-                  <span style={{
-                    fontSize: '0.45rem', padding: '0.12rem 0.4rem', borderRadius: '2rem',
-                    background: `${c}14`, border: `1px solid ${c}35`, color: c,
-                    fontFamily: 'var(--font-karla)', fontWeight: 600,
-                    textTransform: 'uppercase', letterSpacing: '0.1em',
-                  }}>
-                    {RARITY_LABEL[fish.bite_rarity] ?? 'Unknown'}
-                  </span>
-                  {fish.habitat && (
-                    <span style={{
-                      fontSize: '0.42rem', padding: '0.1rem 0.35rem', borderRadius: '2rem',
-                      background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-                      color: 'rgba(255,255,255,0.35)',
-                      fontFamily: 'var(--font-karla)', fontWeight: 600,
-                      textTransform: 'uppercase', letterSpacing: '0.08em',
-                    }}>
-                      {fish.habitat}
-                    </span>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-          {stats.uniqueSpecies > 0 && (
-            <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.46rem', color: '#4a4845', marginTop: 10, textAlign: 'center' }}>
-              {stats.uniqueSpecies.toLocaleString()} species caught
-              {stats.highestPerfectStreak > 0 ? ` · ${stats.highestPerfectStreak}× best streak` : ''}
-            </p>
+              {variants.length > 0 && <CrewCarousel variants={variants} />}
+            </div>
           )}
+
         </div>
-      )}
 
-      {/* ── Voyages ── */}
-      {voyages && voyages.length > 0 && (
-        <div>
-          <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#6a6764', marginBottom: 12 }}>Voyages</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {visibleVoyages.map(v => {
-              const routeConfig = ROUTE_CONFIGS[v.route as keyof typeof ROUTE_CONFIGS]
-              const crewLostCount = (v.crew_lost ?? []).length
-              const date = new Date(v.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-              const preview = v.captains_log
-                ? (v.captains_log.split(/(?<=[.!?])\s/)[0] ?? v.captains_log)
-                : null
-              const isExpanded = expandedVoyage === v.id
+        {/* ── RIGHT: Equipment + Catches + Voyages ── */}
+        <div className="flex flex-col" style={{ gap: 28 }}>
 
-              return (
-                <div
-                  key={v.id}
-                  style={{
-                    background: 'rgba(4,10,20,0.7)',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                    borderRadius: 12,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <button
-                    onClick={() => setExpandedVoyage(isExpanded ? null : v.id)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '0.75rem 0.875rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                  >
-                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚓</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#f0ede8' }}>
-                          {routeConfig?.name ?? v.route}
-                        </p>
-                        {crewLostCount > 0 && (
-                          <span style={{
-                            fontSize: '0.42rem', padding: '0.1rem 0.35rem', borderRadius: '2rem',
-                            background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)',
-                            color: '#f87171', fontFamily: 'var(--font-karla)', fontWeight: 600,
-                            textTransform: 'uppercase' as const, letterSpacing: '0.1em',
-                          }}>
-                            {crewLostCount} lost
-                          </span>
-                        )}
+          {/* Equipment */}
+          <div>
+            <SectionLabel>Equipment</SectionLabel>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+              {/* Rod + Hook */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {[
+                  { label: 'Rod',  color: rod.color,  name: rod.name,  img: rod.imageUrl ?? null },
+                  { label: 'Hook', color: hook.color, name: hook.name, img: hook.imageUrl ?? null },
+                ].map(({ label, color, name, img }) => (
+                  <div key={label} style={{
+                    background: `linear-gradient(160deg, ${color}0d 0%, rgba(4,10,20,0.85) 60%)`,
+                    border: `1px solid ${color}35`,
+                    borderRadius: 16, padding: '1rem 0.75rem',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+                  }}>
+                    <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {img
+                        ? <img src={img} alt={label} style={{ maxWidth: 64, maxHeight: 64, objectFit: 'contain', filter: `drop-shadow(0 2px 12px ${color}66)` }} />
+                        : <div style={{ width: 20, height: 20, borderRadius: '50%', background: color, opacity: 0.6, boxShadow: `0 0 12px ${color}66` }} />
+                      }
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: color + 'aa', marginBottom: 4 }}>{label}</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: '#d8d5d0', lineHeight: 1.2 }}>{name}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Reel + Line */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {[
+                  { label: 'Reel', color: reel.color, name: reel.name },
+                  { label: 'Line', color: line.color, name: line.name },
+                ].map(({ label, color, name }) => (
+                  <div key={label} style={{
+                    background: 'rgba(4,10,20,0.7)', border: `1px solid ${color}28`,
+                    borderRadius: 12, padding: '0.7rem 0.85rem',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                  }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0, opacity: 0.8, boxShadow: `0 0 8px ${color}66` }} />
+                    <div>
+                      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: color + '99', marginBottom: 3 }}>{label}</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: '#b8b5b0', lineHeight: 1.2 }}>{name}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Special Items */}
+              {ownedSpecials.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a6fa0', marginBottom: 2 }}>Special Items</p>
+                  {ownedSpecials.map(item => (
+                    <div key={item.id} style={{
+                      background: `linear-gradient(130deg, ${item.color}12 0%, rgba(4,10,20,0.88) 55%)`,
+                      border: `1px solid ${item.color}40`,
+                      borderRadius: 14,
+                      padding: '0.85rem 1rem',
+                      display: 'flex', alignItems: 'center', gap: 14,
+                      boxShadow: `0 0 20px ${item.color}14`,
+                    }}>
+                      {item.image
+                        ? <img src={item.image} alt={item.name} style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 0 10px ${item.color}88)` }} />
+                        : <div style={{ width: 44, height: 44, borderRadius: 10, background: item.color + '22', border: `1px solid ${item.color}44`, flexShrink: 0 }} />
+                      }
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: item.color, lineHeight: 1.2, marginBottom: 4 }}>{item.name}</p>
+                        <p className="font-karla" style={{ fontSize: '0.65rem', color: '#a8a5a0', lineHeight: 1.5 }}>{item.description}</p>
+                        <span style={{
+                          display: 'inline-block', marginTop: 6,
+                          fontSize: '0.58rem', padding: '0.15rem 0.5rem', borderRadius: '2rem',
+                          background: item.color + '18', border: `1px solid ${item.color}40`, color: item.color,
+                          fontFamily: 'var(--font-karla)', fontWeight: 700,
+                          textTransform: 'uppercase', letterSpacing: '0.1em',
+                        }}>
+                          {item.effectLabel}
+                        </span>
                       </div>
-                      <p className="font-karla" style={{ fontSize: '0.55rem', color: '#4a4845', marginTop: 2 }}>
-                        {date}
-                        {v.total_doubloons > 0 ? ` · +${v.total_doubloons.toLocaleString()} ⟡` : ''}
-                        {v.total_gems > 0 ? ` · +${v.total_gems} 💎` : ''}
-                      </p>
-                      {preview && !isExpanded && (
-                        <p className="font-karla" style={{ fontSize: '0.55rem', fontStyle: 'italic', color: 'rgba(255,255,255,0.28)', marginTop: 4, lineHeight: 1.5 }}>
-                          {preview}
-                        </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+            </div>
+          </div>
+
+          {/* Rarest Catches */}
+          {rarestFish.length > 0 && (
+            <div>
+              <SectionLabel>Rarest Catches</SectionLabel>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rarestFish.length}, 1fr)`, gap: 8 }}>
+                {rarestFish.map(fish => {
+                  const c = RARITY_COLOR[fish.bite_rarity]
+                  return (
+                    <div key={fish.id} style={{
+                      background: `${c}0a`, border: `1px solid ${c}38`,
+                      borderRadius: 12, padding: '0.85rem 0.6rem',
+                      textAlign: 'center', boxShadow: `0 0 18px ${c}18`,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                    }}>
+                      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img
+                          src={fishImageUrl(fish.name)}
+                          alt={fish.name}
+                          style={{ maxWidth: 52, maxHeight: 52, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${c}55)` }}
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                        />
+                      </div>
+                      <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#f0ede8', lineHeight: 1.2 }}>{fish.name}</p>
+                      <span style={{
+                        fontSize: '0.55rem', padding: '0.15rem 0.45rem', borderRadius: '2rem',
+                        background: `${c}14`, border: `1px solid ${c}38`, color: c,
+                        fontFamily: 'var(--font-karla)', fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: '0.1em',
+                      }}>
+                        {RARITY_LABEL[fish.bite_rarity] ?? 'Unknown'}
+                      </span>
+                      {fish.habitat && (
+                        <span style={{
+                          fontSize: '0.55rem', padding: '0.12rem 0.4rem', borderRadius: '2rem',
+                          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)',
+                          color: 'rgba(255,255,255,0.5)',
+                          fontFamily: 'var(--font-karla)', fontWeight: 600,
+                          textTransform: 'uppercase', letterSpacing: '0.08em',
+                        }}>
+                          {fish.habitat}
+                        </span>
                       )}
                     </div>
-                    <svg
-                      width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round"
-                      style={{ flexShrink: 0, transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+                  )
+                })}
+              </div>
+              {stats.uniqueSpecies > 0 && (
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#6a6764', marginTop: 10, textAlign: 'center' }}>
+                  {stats.uniqueSpecies.toLocaleString()} species caught
+                  {stats.highestPerfectStreak > 0 ? ` · ${stats.highestPerfectStreak}× best streak` : ''}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Voyages */}
+          {voyages && voyages.length > 0 && (
+            <div>
+              <SectionLabel>Voyages</SectionLabel>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {visibleVoyages.map(v => {
+                  const routeConfig = ROUTE_CONFIGS[v.route as keyof typeof ROUTE_CONFIGS]
+                  const crewLostCount = (v.crew_lost ?? []).length
+                  const date = new Date(v.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                  const preview = v.captains_log
+                    ? (v.captains_log.split(/(?<=[.!?])\s/)[0] ?? v.captains_log)
+                    : null
+                  const isExpanded = expandedVoyage === v.id
+
+                  return (
+                    <div
+                      key={v.id}
+                      style={{
+                        background: 'rgba(4,10,20,0.7)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 12, overflow: 'hidden',
+                      }}
                     >
-                      <path d="M6 9l6 6 6-6"/>
-                    </svg>
+                      <button
+                        onClick={() => setExpandedVoyage(isExpanded ? null : v.id)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '0.85rem 1rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                      >
+                        <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚓</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <p className="font-karla font-700" style={{ fontSize: '0.75rem', color: '#f0ede8' }}>
+                              {routeConfig?.name ?? v.route}
+                            </p>
+                            {crewLostCount > 0 && (
+                              <span style={{
+                                fontSize: '0.55rem', padding: '0.12rem 0.4rem', borderRadius: '2rem',
+                                background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)',
+                                color: '#f87171', fontFamily: 'var(--font-karla)', fontWeight: 700,
+                                textTransform: 'uppercase' as const, letterSpacing: '0.1em',
+                              }}>
+                                {crewLostCount} lost
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7a7572', marginTop: 3 }}>
+                            {date}
+                            {v.total_doubloons > 0 ? ` · +${v.total_doubloons.toLocaleString()} ⟡` : ''}
+                            {v.total_gems > 0 ? ` · +${v.total_gems} 💎` : ''}
+                          </p>
+                          {preview && !isExpanded && (
+                            <p className="font-karla" style={{ fontSize: '0.62rem', fontStyle: 'italic', color: 'rgba(255,255,255,0.32)', marginTop: 4, lineHeight: 1.5 }}>
+                              {preview}
+                            </p>
+                          )}
+                        </div>
+                        <svg
+                          width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6a6764" strokeWidth="2.5" strokeLinecap="round"
+                          style={{ flexShrink: 0, transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+                        >
+                          <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                      </button>
+
+                      {isExpanded && v.captains_log && (
+                        <div style={{ padding: '0 1rem 1rem', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+                          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: 'rgba(180,120,30,0.6)', marginBottom: '0.5rem', paddingTop: '0.75rem' }}>
+                            Captain&apos;s Log
+                          </p>
+                          <p className="font-karla" style={{ fontSize: '0.7rem', lineHeight: 1.75, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
+                            {v.captains_log}
+                          </p>
+                        </div>
+                      )}
+
+                      {isExpanded && !v.captains_log && (
+                        <div style={{ padding: '0.5rem 1rem 1rem', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+                          <p className="font-karla" style={{ fontSize: '0.65rem', fontStyle: 'italic', color: '#6a6764' }}>Log not yet written.</p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {hiddenCount > 0 && (
+                  <button
+                    onClick={() => setShowAllVoyages(v => !v)}
+                    style={{
+                      background: 'none', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10,
+                      padding: '0.7rem', cursor: 'pointer', width: '100%',
+                      color: '#7a7572', fontFamily: 'var(--font-karla)', fontWeight: 700,
+                      fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.1em',
+                    }}
+                  >
+                    {showAllVoyages ? 'Show less' : `Show ${hiddenCount} more voyage${hiddenCount !== 1 ? 's' : ''}`}
                   </button>
+                )}
+              </div>
+            </div>
+          )}
 
-                  {isExpanded && v.captains_log && (
-                    <div style={{ padding: '0 0.875rem 0.875rem', borderTop: '0.5px solid rgba(255,255,255,0.05)' }}>
-                      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.42rem', color: 'rgba(180,120,30,0.5)', marginBottom: '0.5rem', paddingTop: '0.625rem' }}>
-                        Captain&apos;s Log
-                      </p>
-                      <p className="font-karla" style={{ fontSize: '0.65rem', lineHeight: 1.75, color: 'rgba(255,255,255,0.55)', fontStyle: 'italic' }}>
-                        {v.captains_log}
-                      </p>
-                    </div>
-                  )}
-
-                  {isExpanded && !v.captains_log && (
-                    <div style={{ padding: '0.5rem 0.875rem 0.875rem', borderTop: '0.5px solid rgba(255,255,255,0.05)' }}>
-                      <p className="font-karla" style={{ fontSize: '0.58rem', fontStyle: 'italic', color: '#4a4845' }}>Log not yet written.</p>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-
-            {hiddenCount > 0 && (
-              <button
-                onClick={() => setShowAllVoyages(v => !v)}
-                style={{
-                  background: 'none', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10,
-                  padding: '0.6rem', cursor: 'pointer', width: '100%',
-                  color: '#4a4845', fontFamily: 'var(--font-karla)', fontWeight: 600,
-                  fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.1em',
-                  transition: 'color 0.2s, border-color 0.2s',
-                }}
-                onMouseEnter={e => { (e.target as HTMLButtonElement).style.color = '#8a8785'; (e.target as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.14)' }}
-                onMouseLeave={e => { (e.target as HTMLButtonElement).style.color = '#4a4845'; (e.target as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.07)' }}
-              >
-                {showAllVoyages ? 'Show less' : `Show ${hiddenCount} more voyage${hiddenCount !== 1 ? 's' : ''}`}
-              </button>
-            )}
-          </div>
         </div>
-      )}
+      </div>
 
     </div>
   )
