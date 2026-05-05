@@ -122,7 +122,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={shipStats.image} alt="" style={{ width: 22, height: 22, objectFit: 'contain', opacity: 0.75, flexShrink: 0 }} />
+            <img src={shipStats.image} alt="" style={{ width: 36, height: 36, objectFit: 'contain', opacity: 0.85, flexShrink: 0 }} />
             {editingName ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flex: 1, minWidth: 0 }}>
                 <input
@@ -147,7 +147,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
                 onClick={() => { setNameInput(shipName ?? ''); setEditingName(true) }}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0, minWidth: 0 }}
               >
-                <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#c0bdb8' }}>{shipName ?? shipStats.name}</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#e0ddd8' }}>{shipName ?? shipStats.name}</p>
                 <span style={{ fontSize: '0.6rem', color: '#4a3a28', flexShrink: 0 }}>✎</span>
               </button>
             )}
