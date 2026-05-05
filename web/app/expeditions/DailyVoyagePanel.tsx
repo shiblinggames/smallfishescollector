@@ -319,7 +319,7 @@ export default function DailyVoyagePanel({
                         whiteSpace: 'nowrap', pointerEvents: 'none',
                         background: isSelected ? 'rgba(4,2,0,0.92)' : 'rgba(4,2,0,0.80)',
                         borderRadius: 6,
-                        padding: '0.22rem 0.55rem 0.18rem',
+                        padding: '0.12rem 0.3rem 0.1rem',
                         border: `1px solid ${isSelected ? rco.color + '66' : 'rgba(255,255,255,0.12)'}`,
                         boxShadow: isSelected ? `0 0 10px ${rco.color}33` : 'none',
                       }}>
