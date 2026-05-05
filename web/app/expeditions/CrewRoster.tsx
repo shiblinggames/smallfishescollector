@@ -54,6 +54,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
   const [pickerSlot, setPickerSlot] = useState<number | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [showBreakdown, setShowBreakdown] = useState(false)
+  const [sortBy, setSortBy] = useState<'power' | 'dodge' | 'fortune' | null>(null)
   const [, startTransition] = useTransition()
   const [shipName, setShipName] = useState(initialShipName)
   const [editingName, setEditingName] = useState(false)
@@ -69,7 +70,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
 
   const assignedVariantIds = new Set(slots.filter(Boolean).map(c => c!.variantId))
 
-  function openPickerForSlot(i: number) { setPickerSlot(i); setSheetOpen(true) }
+  function openPickerForSlot(i: number) { setPickerSlot(i); setSheetOpen(true); setSortBy(null) }
   function closeSheet() { setSheetOpen(false); setPickerSlot(null) }
 
   function assignCard(card: CollectionCard) {
@@ -98,6 +99,9 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
   const pickerCards = pickerSlot !== null
     ? collection.filter(c => !assignedVariantIds.has(c.variantId) || slots[pickerSlot]?.variantId === c.variantId)
     : collection
+  const sortedPickerCards = sortBy
+    ? [...pickerCards].sort((a, b) => b[sortBy] - a[sortBy])
+    : pickerCards
 
   const totalPower   = slots.reduce((s, c, i) => s + (c ? Math.round(c.power   * (i === 0 ? 1 : 0.8)) : 0), 0)
   const totalDodge   = slots.reduce((s, c, i) => s + (c ? Math.round(c.dodge   * (i === 0 ? 1 : 0.8)) : 0), 0)
@@ -327,13 +331,13 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
       {sheetOpen && (
         <div
           onClick={closeSheet}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 60, paddingTop: '3rem' }}
         >
           <div
             onClick={e => e.stopPropagation()}
             style={{
               background: '#0d0d0c', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 520, maxHeight: '82vh',
+              borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 520, maxHeight: '100%',
               display: 'flex', flexDirection: 'column',
             }}
           >
@@ -372,6 +376,30 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
               </button>
             </div>
 
+            {/* Sort bar */}
+            <div style={{ padding: '0.5rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+              <span className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845' }}>Sort:</span>
+              {STAT_COLS.map(s => {
+                const active = sortBy === s.key
+                return (
+                  <button
+                    key={s.key}
+                    onClick={() => setSortBy(active ? null : s.key)}
+                    className="font-karla font-700"
+                    style={{
+                      fontSize: '0.6rem', padding: '0.22rem 0.6rem', borderRadius: 999,
+                      background: active ? `${s.color}22` : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${active ? s.color + '66' : 'rgba(255,255,255,0.1)'}`,
+                      color: active ? s.color : '#5a5858',
+                      cursor: 'pointer', transition: 'all 0.12s',
+                    }}
+                  >
+                    {s.short}
+                  </button>
+                )
+              })}
+            </div>
+
             <div style={{ overflowY: 'auto', flex: 1, padding: '1rem 1.25rem 2rem' }}>
               {collection.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
@@ -379,7 +407,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
-                  {pickerCards.map(card => {
+                  {sortedPickerCards.map(card => {
                     const inCrew = assignedVariantIds.has(card.variantId) && slots[pickerSlot ?? -1]?.variantId !== card.variantId
                     const canPick = pickerSlot !== null && !inCrew
                     const rc = RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764'
