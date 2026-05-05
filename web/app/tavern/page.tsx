@@ -93,7 +93,7 @@ export default async function TavernPage() {
         </div>
 
         <div className="px-6 max-w-4xl mx-auto mb-2" style={{ position: 'relative', zIndex: 1 }}>
-          <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>Today</p>
+          <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784]" style={{ fontSize: '0.72rem' }}>Today</p>
         </div>
         <div className="px-6 flex flex-col gap-3 pb-6 max-w-4xl mx-auto" style={{ position: 'relative', zIndex: 1 }}>
           <GameCard
@@ -123,7 +123,7 @@ export default async function TavernPage() {
 
         {hasContest && (
           <div className="px-6 max-w-4xl mx-auto mb-6" style={{ position: 'relative', zIndex: 1 }}>
-            <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-2" style={{ fontSize: '0.6rem' }}>Contest</p>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-2" style={{ fontSize: '0.72rem' }}>Contest</p>
             <GameCard
               href="/charting"
               eyebrow="Contest"
@@ -144,7 +144,7 @@ export default async function TavernPage() {
         )}
 
         <div className="px-6 max-w-4xl mx-auto mb-2 mt-4" style={{ position: 'relative', zIndex: 1 }}>
-          <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>Games</p>
+          <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784]" style={{ fontSize: '0.72rem' }}>Games</p>
         </div>
         <div className="px-6 flex flex-col gap-3 pb-6 max-w-4xl mx-auto" style={{ position: 'relative', zIndex: 1 }}>
           <GameCard

@@ -144,8 +144,8 @@ export default async function MarketplacePage() {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-karla font-700 uppercase tracking-[0.16em]"
-      style={{ fontSize: '0.6rem', color: '#4a4845', marginBottom: '0.65rem', paddingLeft: 2 }}>
+    <p className="font-karla font-700 uppercase tracking-[0.14em]"
+      style={{ fontSize: '0.72rem', color: '#8a8784', marginBottom: '0.75rem', paddingLeft: 2 }}>
       {children}
     </p>
   )
