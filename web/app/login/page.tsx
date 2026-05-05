@@ -4,15 +4,18 @@ import LoginForm from './LoginForm'
 export default function LoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-14 relative overflow-hidden">
-      {/* Ocean depth atmosphere */}
-      <div className="absolute inset-0 pointer-events-none" style={{
-        background: 'radial-gradient(ellipse 90% 50% at 50% 0%, rgba(14,116,144,0.22) 0%, transparent 65%)',
+      {/* Background */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/loginbackground.jpeg" alt="" aria-hidden style={{
+        position: 'fixed', inset: 0, width: '100%', height: '100%',
+        objectFit: 'cover', objectPosition: 'top center', zIndex: 0, pointerEvents: 'none',
       }} />
-      <div className="absolute inset-0 pointer-events-none" style={{
-        background: 'radial-gradient(ellipse 60% 30% at 50% 100%, rgba(14,60,100,0.12) 0%, transparent 70%)',
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 1, pointerEvents: 'none',
+        background: 'linear-gradient(to bottom, rgba(0,5,20,0.35) 0%, rgba(0,5,20,0.55) 60%, rgba(0,5,20,0.75) 100%)',
       }} />
 
-      <div className="w-full max-w-sm relative z-10">
+      <div className="w-full max-w-sm relative" style={{ zIndex: 10 }}>
         {/* Header */}
         <div className="text-center mb-10">
           <span className="font-karla font-700 uppercase tracking-[0.18em] inline-block mb-4 px-3 py-1" style={{
@@ -29,7 +32,7 @@ export default function LoginPage() {
             className="font-cinzel font-900 text-[#f0ede8] leading-[0.9] tracking-[-0.01em] mb-3"
             style={{
               fontSize: 'clamp(2.6rem, 9vw, 3.4rem)',
-              textShadow: '0 0 40px rgba(14,116,144,0.5), 0 0 100px rgba(14,116,144,0.2)',
+              textShadow: '0 2px 40px rgba(14,80,120,0.8), 0 0 80px rgba(14,116,144,0.4)',
             }}
           >
             Small Fishes
