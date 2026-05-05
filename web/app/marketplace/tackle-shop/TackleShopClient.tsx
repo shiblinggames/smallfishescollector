@@ -156,51 +156,61 @@ export default function TackleShopClient({
   if (section === null) {
     return (
       <div className="px-4 sm:px-6 max-w-sm sm:max-w-2xl mx-auto pb-16">
-        <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-4" style={{ fontSize: '0.65rem' }}>
+        <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-4" style={{ fontSize: '0.72rem' }}>
           Tackle Shop
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {CATEGORIES.map(({ key, label, desc, color, imageUrl }) => (
             <div
               key={key}
               onClick={() => { setSection(key); setError(null) }}
               style={{
-                background: 'rgba(8,8,6,0.82)',
-                border: `1px solid ${color}40`,
-                borderRadius: 12,
-                padding: '0.7rem 0.65rem',
+                background: 'rgba(6,12,20,0.92)',
+                border: `1px solid ${color}30`,
+                borderTop: `1px solid ${color}55`,
+                borderRadius: 20,
+                padding: '1.3rem 1.4rem 1.25rem',
                 cursor: 'pointer',
                 display: 'flex',
-                flexDirection: 'column',
-                gap: 6,
-                transition: 'box-shadow 0.2s ease',
+                alignItems: 'stretch',
+                gap: '1rem',
+                transition: 'border-color 0.15s',
               }}
             >
-              {/* Image */}
-              <div style={{ width: '100%', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6%' }}>
-                {imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+              {/* Left: text */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p className="font-karla font-600 uppercase tracking-[0.12em]"
+                  style={{ fontSize: '0.56rem', color: color + 'cc', marginBottom: '0.4rem' }}>
+                  Tackle Shop
+                </p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#ffffff', lineHeight: 1.2, marginBottom: '0.4rem' }}>
+                  {label}
+                </p>
+                <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: '#b0ada8', lineHeight: 1.5 }}>
+                  {desc}
+                </p>
+              </div>
+
+              {/* Right: image */}
+              {imageUrl && (
+                <div style={{
+                  flexShrink: 0, width: 100,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={imageUrl}
                     alt={label}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: 110,
+                      objectFit: 'contain',
+                      filter: `drop-shadow(0 2px 10px ${color}28)`,
+                      opacity: 0.92,
+                    }}
                   />
-                ) : (
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${color}22`, border: `1px solid ${color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 14, height: 14, borderRadius: '50%', background: color, opacity: 0.7 }} />
-                  </div>
-                )}
-              </div>
-
-              {/* Name */}
-              <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8', lineHeight: 1.2 }}>
-                {label}
-              </p>
-
-              {/* Description */}
-              <p className="font-karla font-300" style={{ fontSize: '0.65rem', color: '#6a6764', lineHeight: 1.4 }}>
-                {desc}
-              </p>
+                </div>
+              )}
             </div>
           ))}
         </div>
