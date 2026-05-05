@@ -270,7 +270,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
               <div style={{ textAlign: 'left' }}>
                 <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#6a6764', marginBottom: 4 }}>Crew Score</p>
                 <p className="font-cinzel font-700" style={{ fontSize: '2.6rem', color: '#f0ede8', lineHeight: 1 }}>
-                  {totalPower + totalDodge + totalFortune}
+                  {totalPower + totalDodge + Math.round(totalFortune * 0.5)}
                 </p>
                 <div style={{ display: 'flex', gap: '0.75rem', marginTop: 6 }}>
                   {STAT_COLS.map(s => (

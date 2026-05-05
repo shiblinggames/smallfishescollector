@@ -444,9 +444,27 @@ export default function DailyVoyagePanel({
                           aria-label="Close"
                         >✕</button>
                       </div>
-                      <p className="font-karla" style={{ fontSize: '0.78rem', color: '#8a7860', lineHeight: 1.4, marginBottom: '0.5rem' }}>
+                      <p className="font-karla" style={{ fontSize: '0.78rem', color: '#8a7860', lineHeight: 1.4, marginBottom: '0.65rem' }}>
                         {rco.tagline}
                       </p>
+
+                      {/* Recommended crew score */}
+                      {(() => {
+                        const REC: Record<string, number> = { coastal: 20, open: 45, deep: 75 }
+                        const rec = REC[selectedRoute] ?? 0
+                        const crewScore = stats.power + stats.dodge + Math.round(stats.fortune * 0.5)
+                        const met = crewScore >= rec
+                        const close = !met && crewScore >= rec * 0.75
+                        const color = met ? '#4ade80' : close ? '#f0c040' : '#f87171'
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.65rem' }}>
+                            <span style={{ fontSize: '0.9rem', lineHeight: 1 }}>{met ? '✓' : '⚠'}</span>
+                            <span className="font-karla font-600" style={{ fontSize: '0.8rem', color }}>
+                              {met ? `Your score of ${crewScore} meets the recommended ${rec}+` : `Recommended score: ${rec}+ (yours: ${crewScore})`}
+                            </span>
+                          </div>
+                        )
+                      })()}
 
                       {/* Estimates */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
