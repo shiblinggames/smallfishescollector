@@ -137,7 +137,7 @@ export default async function TavernPage() {
               icon={<ChartIcon />}
               completed={chartCompleted}
               variant="featured"
-              art="/voyagemap.png"
+              art="/chartthecourse.png"
               accent="#f0c040"
             />
           </div>
