@@ -104,8 +104,8 @@ function computeRouteEstimate(
     enc * pWin * 55 * powerScale * rc.payoutScale +
     0.30 * 0.35 * 35 * rc.payoutScale
 
-  const lootMin = Math.round(expected * 0.4)
-  const lootMax = Math.round(expected * 1.9)
+  const lootMin = Math.round(rc.baseDoubloons + expected * 0.4)
+  const lootMax = Math.round(rc.baseDoubloons + expected * 1.9)
 
   let crewRiskPct = 0
   if (crewCount >= 2) {
