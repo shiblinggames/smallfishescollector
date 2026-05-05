@@ -472,9 +472,26 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
             <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#f0ede8' }}>Add to Home Screen</p>
             <button onClick={() => setShowIOSHint(false)} style={{ background: 'none', border: 'none', color: '#4a4845', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: 0, marginTop: 1 }}>✕</button>
           </div>
-          <p className="font-karla" style={{ fontSize: '0.74rem', color: '#6a8a90', lineHeight: 1.7 }}>
-            In Safari, tap the <strong style={{ color: '#a0c4cc' }}>Share</strong> button at the bottom of the screen, then tap <strong style={{ color: '#a0c4cc' }}>Add to Home Screen</strong>.
-          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.1rem' }}>
+            {([
+              ['···', 'Tap the three dots — bottom right corner'],
+              ['Share', 'Tap Share'],
+              ['View More', 'Tap View More'],
+              ['Add to Home Screen', 'Tap Add to Home Screen'],
+            ] as [string, string][]).map(([label, desc], i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <span className="font-karla font-700" style={{
+                  fontSize: '0.58rem', color: '#0a0a0a',
+                  background: '#a0c4cc', borderRadius: 4,
+                  padding: '0.12rem 0.45rem', flexShrink: 0, minWidth: 28, textAlign: 'center',
+                }}>{i + 1}</span>
+                <div>
+                  <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#c0d8dc' }}>{label}</span>
+                  <span className="font-karla" style={{ fontSize: '0.68rem', color: '#4a7a88' }}> — {desc}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
