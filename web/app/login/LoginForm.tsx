@@ -62,10 +62,10 @@ export default function LoginForm() {
         <button
           type="button"
           onClick={() => setShowEmail(true)}
-          className="font-karla font-300 transition-colors"
-          style={{ fontSize: '0.72rem', color: '#4a4845', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#a0a09a')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#4a4845')}
+          className="font-karla font-400 transition-colors"
+          style={{ fontSize: '0.88rem', color: '#7a8a94', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#b0c0ca')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#7a8a94')}
         >
           or sign in with email
         </button>
