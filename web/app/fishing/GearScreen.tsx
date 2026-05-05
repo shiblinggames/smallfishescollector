@@ -248,6 +248,7 @@ export default function GearScreen({
           return (
             <GearSlot
               label="Special"
+              image={equippedDef?.image ?? null}
               icon={<SpecialIcon color={equippedDef ? equippedDef.color : '#5a4a7a'} />}
               itemName={equippedDef ? equippedDef.name : 'None'}
               color={equippedDef ? equippedDef.color : '#5a4a7a'}
@@ -460,13 +461,27 @@ export default function GearScreen({
                           opacity: owned ? 1 : 0.5,
                         }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: owned ? 6 : 4 }}>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, display: 'inline-block', flexShrink: 0, boxShadow: `0 0 6px ${item.color}88` }} />
-                                <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: owned ? item.color : '#4a4845', lineHeight: 1 }}>{item.name}</p>
-                                <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: `${item.color}88`, background: `${item.color}14`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>{item.effectLabel}</span>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flex: 1 }}>
+                              {item.image && (
+                                <img
+                                  src={item.image}
+                                  alt={item.name}
+                                  style={{
+                                    width: 44, height: 44, objectFit: 'contain', flexShrink: 0,
+                                    filter: owned
+                                      ? `drop-shadow(0 2px 8px ${item.color}55)`
+                                      : 'grayscale(1) brightness(0.4)',
+                                    borderRadius: 8,
+                                  }}
+                                />
+                              )}
+                              <div style={{ flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                                  <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: owned ? item.color : '#4a4845', lineHeight: 1 }}>{item.name}</p>
+                                  <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: `${item.color}88`, background: `${item.color}14`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>{item.effectLabel}</span>
+                                </div>
+                                <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: owned ? '#7a7268' : '#4a4845', lineHeight: 1.45 }}>{item.description}</p>
                               </div>
-                              <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: owned ? '#7a7268' : '#4a4845', lineHeight: 1.45 }}>{item.description}</p>
                             </div>
                             {owned && (
                               <button

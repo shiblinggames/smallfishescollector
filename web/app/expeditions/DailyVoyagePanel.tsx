@@ -7,6 +7,7 @@ import type { VoyageEvent } from '@/lib/voyageRoutes'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
 import { getRingSkin, type RingSkinId } from '@/lib/ringSkins'
 import { getBait } from '@/lib/bait'
+import { getSpecialItem } from '@/lib/specialItems'
 import { sendDailyVoyage, revealVoyageResults, fetchVoyageCaptainsLog, type DailyVoyage } from './voyageActions'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 
@@ -561,13 +562,14 @@ export default function DailyVoyagePanel({
                               possible drops
                             </span>
                             {drops.map(drop => {
-                              const isTideTurner = drop.kind === 'special' && drop.id === 'tide_turner'
+                              const specialDef = drop.kind === 'special' ? getSpecialItem(drop.id) : null
                               const dropKey = drop.kind === 'skin' ? drop.id : drop.kind === 'bait' ? drop.type : drop.id
-                              const color   = isTideTurner ? '#a78bfa' : drop.kind === 'skin' ? getRingSkin(drop.id).color : getBait((drop as { type: string }).type).color
-                              const name    = isTideTurner ? 'Tide Turner' : drop.kind === 'skin' ? getRingSkin(drop.id).name : getBait((drop as { type: string }).type).name
-                              const label   = isTideTurner ? 'Special item · Permanent' : drop.kind === 'skin' ? 'Ring cosmetic' : 'Fishing bait'
-                              const detail  = isTideTurner
-                                ? 'Skip a hooked fish during the catch phase without breaking your perfect streak. Grants 3 skips per day.'
+                              const color   = specialDef ? specialDef.color : drop.kind === 'skin' ? getRingSkin(drop.id).color : getBait((drop as { type: string }).type).color
+                              const name    = specialDef ? specialDef.name : drop.kind === 'skin' ? getRingSkin(drop.id).name : getBait((drop as { type: string }).type).name
+                              const image   = specialDef?.image ?? null
+                              const label   = specialDef ? `Special item · ${specialDef.effectLabel}` : drop.kind === 'skin' ? 'Ring cosmetic' : 'Fishing bait'
+                              const detail  = specialDef
+                                ? specialDef.description
                                 : drop.kind === 'skin'
                                   ? getRingSkin(drop.id).description
                                   : (() => {
@@ -584,18 +586,16 @@ export default function DailyVoyagePanel({
                                     onClick={() => setExpandedDropKey(isExpanded ? null : dropKey)}
                                     style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.45rem' }}
                                   >
-                                    <span style={{
-                                      display: 'inline-block', width: 8, height: 8,
-                                      borderRadius: drop.kind === 'bait' ? '2px' : '50%',
-                                      background: color, flexShrink: 0,
-                                      boxShadow: `0 0 4px ${color}88`,
-                                    }} />
+                                    {image
+                                      ? <img src={image} alt={name} style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 1px 4px ${color}66)` }} />
+                                      : <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: drop.kind === 'bait' ? '2px' : '50%', background: color, flexShrink: 0, boxShadow: `0 0 4px ${color}88` }} />
+                                    }
                                     <span className="font-karla font-700" style={{ fontSize: '0.80rem', color, flex: 1 }}>{name}</span>
                                     <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#a89878' }}>{drop.rate}</span>
                                     <span style={{ fontSize: '0.52rem', color: '#5a4a30', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>▼</span>
                                   </button>
                                   {isExpanded && (
-                                    <div style={{ paddingLeft: '1.1rem', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                    <div style={{ paddingLeft: image ? '1.8rem' : '1.1rem', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                                       <span className="font-karla uppercase tracking-[0.05em]" style={{ fontSize: '0.58rem', color: `${color}99`, background: `${color}18`, borderRadius: 3, padding: '0.08rem 0.28rem' }}>
                                         {label}
                                       </span>
