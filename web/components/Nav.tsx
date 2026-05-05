@@ -189,6 +189,17 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   ]
 
   const mobileMenuLinks = [
+    { href: '/chart', label: 'Chart the Course', badge: false,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 17c2 4 16 4 18 0"/>
+          <path d="M4 17L6 11h12l2 6"/>
+          <line x1="12" y1="11" x2="12" y2="4"/>
+          <path d="M8 4h8"/>
+          <line x1="12" y1="4" x2="12" y2="2"/>
+        </svg>
+      )
+    },
     { href: '/profile', label: 'Profile', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -266,6 +277,17 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
           <rect x="2" y="14" width="5" height="7" rx="1"/>
           <rect x="9.5" y="9" width="5" height="12" rx="1"/>
           <rect x="17" y="4" width="5" height="17" rx="1"/>
+        </svg>
+      )
+    },
+    { href: '/chart', label: 'Chart the Course', badge: null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 17c2 4 16 4 18 0"/>
+          <path d="M4 17L6 11h12l2 6"/>
+          <line x1="12" y1="11" x2="12" y2="4"/>
+          <path d="M8 4h8"/>
+          <line x1="12" y1="4" x2="12" y2="2"/>
         </svg>
       )
     },
