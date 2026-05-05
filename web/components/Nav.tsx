@@ -189,7 +189,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   ]
 
   const mobileMenuLinks = [
-    { href: '/chart', label: 'Chart the Course', badge: false,
+    { href: '/charting', label: 'Chart the Course', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 17c2 4 16 4 18 0"/>
@@ -280,7 +280,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
-    { href: '/chart', label: 'Chart the Course', badge: null,
+    { href: '/charting', label: 'Chart the Course', badge: null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 17c2 4 16 4 18 0"/>

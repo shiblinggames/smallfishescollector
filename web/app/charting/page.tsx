@@ -5,14 +5,14 @@ import Nav from '@/components/Nav'
 import { getChartState } from './chartActions'
 import ChartBoard from './ChartBoard'
 
-export default async function ChartPage() {
+export default async function ChartingPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
   const admin = createAdminClient()
   const [{ data: profile }, state] = await Promise.all([
-    admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
+    admin.from('profiles').select('packs_available, doubloons, gems, ship_tier').eq('id', user.id).single(),
     getChartState(),
   ])
 
@@ -27,12 +27,16 @@ export default async function ChartPage() {
         />
         <div style={{
           position: 'absolute', inset: 0,
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0.92) 100%)',
+          background: 'linear-gradient(to bottom,rgba(0,0,0,0.55) 0%,rgba(0,0,0,0.75) 50%,rgba(0,0,0,0.92) 100%)',
         }} />
       </div>
 
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
+        <Nav
+          packsAvailable={profile?.packs_available ?? 0}
+          doubloons={profile?.doubloons ?? 0}
+          gems={profile?.gems ?? 0}
+        />
         <main className="min-h-screen pb-24 sm:pb-0">
           <div className="px-5 max-w-lg mx-auto" style={{ paddingTop: '1rem' }}>
             {'error' in state ? (
@@ -50,7 +54,10 @@ export default async function ChartPage() {
                 progress={state.progress}
                 initialGuesses={state.guesses}
                 initialMovesAvailable={state.movesAvailable}
-                leaderboard={state.leaderboard}
+                pathLength={state.pathLength}
+                startTile={state.startTile}
+                finishers={state.finishers}
+                shipTier={profile?.ship_tier ?? 0}
               />
             )}
           </div>
