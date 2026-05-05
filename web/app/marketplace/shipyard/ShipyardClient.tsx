@@ -118,7 +118,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
                 boxShadow: isActive ? `0 0 24px ${c}28` : 'none',
                 borderRadius: 16,
                 padding: '0.9rem 0.75rem 0.8rem',
-                opacity: locked ? 0.45 : 1,
+                opacity: 1,
                 cursor: locked ? 'default' : 'pointer',
                 display: 'flex',
                 flexDirection: 'column',
@@ -136,7 +136,9 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
                     width: '85%', height: '100%', objectFit: 'contain',
                     filter: owned
                       ? `drop-shadow(0 4px 14px ${c}40)`
-                      : 'grayscale(1) brightness(0.35)',
+                      : locked
+                        ? 'grayscale(1) brightness(0.25)'
+                        : 'grayscale(0.6) brightness(0.55)',
                   }}
                 />
               </div>
@@ -158,26 +160,26 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
                 </p>
               )}
               {locked && (
-                <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#3a3835', marginBottom: 8 }}>🔒 Locked</span>
+                <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#5a5755', marginBottom: 8 }}>🔒 Upgrade to unlock</span>
               )}
 
               {/* Key stats */}
               <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
                 <div style={{
-                  flex: 1, background: owned ? `${c}0d` : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${owned ? `${c}22` : 'rgba(255,255,255,0.06)'}`,
+                  flex: 1, background: owned ? `${c}0d` : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${owned ? `${c}22` : 'rgba(255,255,255,0.09)'}`,
                   borderRadius: 8, padding: '0.45rem 0.3rem', textAlign: 'center',
                 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? c : '#3a3835', lineHeight: 1 }}>{ship.holdCapacity}</p>
-                  <p className="font-karla font-600 uppercase" style={{ fontSize: '0.42rem', color: owned ? '#6a6764' : '#2a2825', letterSpacing: '0.08em', marginTop: 3 }}>Hold</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? c : '#6a6764', lineHeight: 1 }}>{ship.holdCapacity}</p>
+                  <p className="font-karla font-600 uppercase" style={{ fontSize: '0.42rem', color: owned ? '#6a6764' : '#4a4845', letterSpacing: '0.08em', marginTop: 3 }}>Hold</p>
                 </div>
                 <div style={{
-                  flex: 1, background: owned ? `${c}0d` : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${owned ? `${c}22` : 'rgba(255,255,255,0.06)'}`,
+                  flex: 1, background: owned ? `${c}0d` : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${owned ? `${c}22` : 'rgba(255,255,255,0.09)'}`,
                   borderRadius: 8, padding: '0.45rem 0.3rem', textAlign: 'center',
                 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? c : '#3a3835', lineHeight: 1 }}>{stats?.crewSlots ?? 1}</p>
-                  <p className="font-karla font-600 uppercase" style={{ fontSize: '0.42rem', color: owned ? '#6a6764' : '#2a2825', letterSpacing: '0.08em', marginTop: 3 }}>Crew</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? c : '#6a6764', lineHeight: 1 }}>{stats?.crewSlots ?? 1}</p>
+                  <p className="font-karla font-600 uppercase" style={{ fontSize: '0.42rem', color: owned ? '#6a6764' : '#4a4845', letterSpacing: '0.08em', marginTop: 3 }}>Crew</p>
                 </div>
               </div>
             </div>

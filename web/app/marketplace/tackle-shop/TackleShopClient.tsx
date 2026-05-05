@@ -385,7 +385,7 @@ export default function TackleShopClient({
                     border: `1px solid ${owned ? `${c}55` : isPreviewing ? `${c}30` : isNext && canAffordHook ? `${c}40` : 'rgba(255,255,255,0.14)'}`,
                     boxShadow: isActive ? `0 0 16px ${c}18` : isPreviewing ? `0 0 10px ${c}10` : isNext && canAffordHook ? `0 0 12px ${c}12` : 'none',
                     borderRadius: 12,
-                    opacity: locked ? 0.3 : isPending && isNext ? 0.6 : 1,
+                    opacity: isPending && isNext ? 0.6 : 1,
                     cursor: 'pointer',
                     transition: 'box-shadow 0.2s ease, opacity 0.15s ease',
                   }}
@@ -402,6 +402,9 @@ export default function TackleShopClient({
                         )}
                         {owned && !isActive && (
                           <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80]" style={{ fontSize: '0.65rem' }}>Owned</span>
+                        )}
+                        {locked && (
+                          <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#5a5755' }}>🔒 Locked</span>
                         )}
                       </div>
                       <p className="font-karla font-300 text-[#6a6764] text-sm sm:text-base">{hook.description}</p>
@@ -704,7 +707,7 @@ export default function TackleShopClient({
                   border: `1px solid ${owned ? `${c}55` : isNext && canAffordReel ? `${c}40` : 'rgba(255,255,255,0.14)'}`,
                   boxShadow: isActive ? `0 0 16px ${c}18` : isNext && canAffordReel ? `0 0 12px ${c}12` : 'none',
                   borderRadius: 12,
-                  opacity: locked ? 0.3 : isPending && isNext ? 0.6 : 1,
+                  opacity: isPending && isNext ? 0.6 : 1,
                   cursor: isNext && canAffordReel ? 'pointer' : 'default',
                   transition: 'box-shadow 0.2s ease, opacity 0.15s ease',
                 }}
@@ -721,6 +724,9 @@ export default function TackleShopClient({
                       )}
                       {owned && !isActive && (
                         <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80]" style={{ fontSize: '0.65rem' }}>Owned</span>
+                      )}
+                      {locked && (
+                        <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#5a5755' }}>🔒 Locked</span>
                       )}
                     </div>
                     <p className="font-karla font-300 text-[#6a6764] text-sm">{reel.description}</p>
@@ -791,7 +797,6 @@ export default function TackleShopClient({
                   border: `1px solid ${owned ? `${c}55` : 'rgba(255,255,255,0.14)'}`,
                   boxShadow: isActive ? `0 0 16px ${c}18` : 'none',
                   borderRadius: 12,
-                  opacity: owned ? 1 : 0.45,
                 }}
               >
                 <div className="flex items-start gap-3">
