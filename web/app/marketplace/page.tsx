@@ -36,7 +36,8 @@ export default async function MarketplacePage() {
             <Link href="/tavern/market" style={{ textDecoration: 'none', display: 'block' }}>
               <DestCard
                 accent="#38bdf8"
-                art={null}
+                art={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/Blue_Marlin.png`}
+                artStyle={{ height: 145, right: -10 }}
                 eyebrow={<>
                   <span style={{
                     display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
