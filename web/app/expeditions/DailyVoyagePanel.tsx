@@ -100,11 +100,11 @@ function computeRouteEstimate(
   }
 
   // XP estimate — same event counts, best/worst case outcomes
-  const XP_BASE: Record<VoyageRoute, number> = { coastal: 150, open: 280, deep: 450 }
+  const XP_BASE: Record<VoyageRoute, number> = { coastal: 30, open: 55, deep: 90 }
   const xpBase      = XP_BASE[route]
-  const xpCrewBonus = crewCount * 60
-  const xpMin = xpBase + xpCrewBonus + enc * 25 + dng * 15 + dis * 20
-  const xpMax = xpBase + xpCrewBonus + enc * 90 + dng * 70 + dis * 60
+  const xpCrewBonus = crewCount * 12
+  const xpMin = xpBase + xpCrewBonus + enc * 5  + dng * 3  + dis * 4
+  const xpMax = xpBase + xpCrewBonus + enc * 18 + dng * 14 + dis * 12
 
   return { lootMin, lootMax, crewRiskPct, drops: ROUTE_DROPS[route], xpMin, xpMax }
 }

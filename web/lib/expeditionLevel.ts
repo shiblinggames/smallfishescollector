@@ -58,21 +58,21 @@ export function getNavigatorTitle(level: number): string {
 
 // Base XP for completing the route at all
 const ROUTE_BASE_XP: Record<string, number> = {
-  coastal: 150,
-  open:    280,
-  deep:    450,
+  coastal: 30,
+  open:    55,
+  deep:    90,
 }
 
 // XP per crew member (more crew = more XP, rewards building a full roster)
-const XP_PER_CREW = 60
+const XP_PER_CREW = 12
 
 // XP per event, by type × outcome
 const EVENT_XP: Record<string, Record<string, number>> = {
-  encounter: { success: 90, failure: 25, neutral: 40 },
-  discovery: { success: 60, failure: 20, neutral: 40 },
-  danger:    { success: 70, failure: 15, neutral: 30 },
-  weather:   { success: 30, failure: 15, neutral: 20 },
-  peaceful:  { success: 20, failure: 20, neutral: 20 },
+  encounter: { success: 18, failure: 5,  neutral: 8  },
+  discovery: { success: 12, failure: 4,  neutral: 8  },
+  danger:    { success: 14, failure: 3,  neutral: 6  },
+  weather:   { success: 6,  failure: 3,  neutral: 4  },
+  peaceful:  { success: 4,  failure: 4,  neutral: 4  },
 }
 
 export function voyageXP(
