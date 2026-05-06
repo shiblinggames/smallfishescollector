@@ -774,8 +774,8 @@ export default function CannonGame({
           animation: dodgeShake ? 'dodge-slide 0.5s ease' : 'none',
           transition: 'border-color 0.2s',
         }}>
-          <div style={{ position: 'relative', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src={shipImageUrl} alt={shipName} style={{ width: '100%', height: 72, objectFit: 'contain', objectPosition: 'center' }} />
+          <div style={{ position: 'relative', height: 110, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+            <img src={shipImageUrl} alt={shipName} style={{ width: '100%', height: 110, objectFit: 'contain', objectPosition: 'bottom' }} />
             {pHitsplat.key > 0 && <Hitsplat key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} animKey={pHitsplat.key} />}
             {showDodgeVFX && (
               <>
@@ -787,34 +787,6 @@ export default function CannonGame({
           </div>
           <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.6rem', color: '#f0ede8', lineHeight: 1.2 }}>{shipName}</p>
           <HPBar current={playerHP} max={playerHPMax} color="#60a5fa" />
-
-          {/* Player cannon charges */}
-          <div style={{
-            marginTop: 4,
-            background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.15)',
-            borderRadius: 8, padding: '0.4rem 0.35rem',
-          }}>
-            <p className="font-karla font-700 text-center" style={{ fontSize: '0.48rem', color: '#a07820', letterSpacing: '0.12em', marginBottom: 6 }}>CANNON</p>
-            <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-              {[0, 1, 2].map(i => (
-                <motion.div key={i}
-                  animate={{ scale: i === charges - 1 ? [1, 1.4, 1] : 1 }}
-                  transition={{ duration: 0.2 }}
-                  style={{
-                    width: 18, height: 18, borderRadius: '50%',
-                    background: i < charges ? '#f0c040' : 'rgba(255,255,255,0.07)',
-                    boxShadow: i < charges ? '0 0 8px #f0c04099, 0 0 16px #f0c04044' : 'none',
-                    border: `2px solid ${i < charges ? '#f0c040' : 'rgba(255,255,255,0.1)'}`,
-                  }} />
-              ))}
-            </div>
-            <p className="font-karla font-700 text-center"
-              style={{ fontSize: '0.5rem', color: '#f0c040', marginTop: 5, letterSpacing: '0.1em',
-                textShadow: isVolleyReady ? '0 0 8px #f0c040' : 'none',
-                opacity: isVolleyReady ? 1 : 0, transition: 'opacity 0.2s' }}>
-              VOLLEY
-            </p>
-          </div>
 
           {/* Damage range */}
           <div style={{ marginTop: 2, borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 6 }}>
@@ -974,7 +946,31 @@ export default function CannonGame({
       {/* ── Fire bar ─────────────────────────────────────────────────────────── */}
       <div style={{ width: '100%' }}>
         <div className="flex items-center justify-between px-1 mb-1.5">
-          <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#9a9488', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Cannon</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            {[0, 1, 2].map(i => (
+              <motion.div key={i}
+                animate={{ scale: i === charges - 1 && charges > 0 ? [1, 1.45, 1] : 1 }}
+                transition={{ duration: 0.18 }}
+                style={{
+                  width: 10, height: 10, borderRadius: '50%',
+                  background: i < charges ? '#60a5fa' : 'rgba(255,255,255,0.08)',
+                  boxShadow: i < charges ? '0 0 7px rgba(96,165,250,0.75)' : 'none',
+                  border: `1.5px solid ${i < charges ? '#60a5fa' : 'rgba(255,255,255,0.1)'}`,
+                  transition: 'background 0.15s, box-shadow 0.15s, border-color 0.15s',
+                }}
+              />
+            ))}
+            <AnimatePresence>
+              {isVolleyReady && (
+                <motion.span
+                  initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -4 }}
+                  className="font-karla font-700"
+                  style={{ fontSize: '0.52rem', color: '#f0c040', letterSpacing: '0.1em', marginLeft: 2, textShadow: '0 0 8px #f0c04099' }}>
+                  VOLLEY
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </div>
           {(phase === 'playing' || phase === 'clear') && (
             <span className="font-karla font-600" style={{
               fontSize: '0.62rem', letterSpacing: '0.06em',
