@@ -288,7 +288,7 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
                   <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
                     {/* Voyage Score */}
                     <div style={{ textAlign: 'left' }}>
-                      <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#6a6764', marginBottom: 4 }}>Voyage Score</p>
+                      <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a9488', marginBottom: 4 }}>Voyage Score</p>
                       <p className="font-cinzel font-700" style={{ fontSize: '2.6rem', color: '#f0ede8', lineHeight: 1 }}>
                         {voyageScore}
                       </p>
@@ -297,9 +297,12 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
                     <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.07)', marginTop: 2 }} />
                     {/* Raid Score */}
                     <div style={{ textAlign: 'left' }}>
-                      <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#6a6764', marginBottom: 4 }}>Raid Score</p>
-                      <p className="font-cinzel font-700" style={{ fontSize: '2.6rem', color: '#f97316', lineHeight: 1 }}>
+                      <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a9488', marginBottom: 4 }}>Raid Score</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '2.6rem', color: '#f0ede8', lineHeight: 1 }}>
                         {raidScore}
+                      </p>
+                      <p className="font-karla font-600" style={{ fontSize: '0.6rem', marginTop: 5, color: raidScore >= 50 ? '#4ade80' : '#6a6764' }}>
+                        {raidScore >= 50 ? '✓ Ready for Pete' : 'Rec. 50+ for Pete'}
                       </p>
                     </div>
                   </div>
