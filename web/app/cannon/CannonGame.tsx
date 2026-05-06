@@ -30,17 +30,17 @@ const BROADSIDE_ENEMIES: Record<string, BroadsideEnemy> = {
   sniper: {
     id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 5, maxDmg: 22,
     actionMs: 4000,
-    pattern: ['reload', 'reload', 'reload', 'fire'],
+    pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
   },
   corsair: {
     id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 8, maxDmg: 14,
     actionMs: 2000,
-    pattern: ['reload', 'fire', 'reload', 'fire'],
+    pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
   },
   pete: {
     id: 'pete', name: 'Barnacle Pete', hpBase: 55, minDmg: 10, maxDmg: 20,
     actionMs: 2800,
-    pattern: ['reload', 'reload', 'fire', 'reload', 'fire'],
+    pattern: ['reload', 'reload', 'dodge', 'fire', 'reload', 'fire'],
   },
 }
 const BROADSIDE_SEQUENCE = ['brute', 'brute', 'sniper', 'sniper', 'corsair', 'corsair']
@@ -75,6 +75,7 @@ const SPEED_BASE     = 0.006
 const SPEED_INC      = 0.0008
 const CANNON_MISS_CD = 2400
 const DODGE_MISS_CD  = 1800
+const ENEMY_DODGE_MS = 1400
 
 const BASE_SHOT_DAMAGE: Record<string, number> = { critical: 10, hit: 5, graze: 2, miss: 0 }
 const SHOT_LABEL:  Record<string, string> = { critical: 'Critical!', hit: 'Hit!', graze: 'Graze', miss: 'Miss' }
@@ -252,7 +253,8 @@ export default function CannonGame({
   const [enemyHP, setEnemyHP]           = useState(0)
   const [enemyHPMax, setEnemyHPMax]     = useState(0)
   const [enemyName, setEnemyName]       = useState('Reef Raider')
-  const [enemyCharges, setEnemyCharges] = useState(0)
+  const [enemyCharges, setEnemyCharges]   = useState(0)
+  const [enemyDodging, setEnemyDodging]   = useState(false)
   const [enemyActionPct, setEnemyActionPct] = useState(1)
   const [charges, setCharges]           = useState(1)
   const [canFire, setCanFire]           = useState(true)
@@ -295,9 +297,11 @@ export default function CannonGame({
   const dodgeLockedRef        = useRef(false)
   const roundEndingRef        = useRef(false)
   const rafRef                = useRef(0)
-  const enemyChargesRef       = useRef(0)
-  const enemyPatternIdxRef    = useRef(0)
-  const enemyActionElapsedRef = useRef(0)
+  const enemyChargesRef        = useRef(0)
+  const enemyDodgingRef        = useRef(false)
+  const enemyDodgeTimeoutRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const enemyPatternIdxRef     = useRef(0)
+  const enemyActionElapsedRef  = useRef(0)
   const dodgeStateRef         = useRef<DodgeState>('none')
   const dodgeElapsedRef       = useRef(0)
   const pendingDamageRef      = useRef(0)
@@ -308,11 +312,14 @@ export default function CannonGame({
     enemyHPRef.current          = hp
     enemyHPMaxRef.current       = hp
     enemyChargesRef.current     = 0
+    enemyDodgingRef.current     = false
+    if (enemyDodgeTimeoutRef.current) { clearTimeout(enemyDodgeTimeoutRef.current); enemyDodgeTimeoutRef.current = null }
     enemyPatternIdxRef.current  = 0
     enemyActionElapsedRef.current = 0
     setEnemyHP(hp); setEnemyHPMax(hp)
     setEnemyName(e.name)
     setEnemyCharges(0)
+    setEnemyDodging(false)
     setEnemyActionPct(1)
     setIsBoss(isBossRound(round))
   }, [])
@@ -410,6 +417,14 @@ export default function CannonGame({
               enemyChargesRef.current++
               setEnemyCharges(enemyChargesRef.current)
             }
+          } else if (action === 'dodge') {
+            enemyDodgingRef.current = true
+            setEnemyDodging(true)
+            if (enemyDodgeTimeoutRef.current) clearTimeout(enemyDodgeTimeoutRef.current)
+            enemyDodgeTimeoutRef.current = setTimeout(() => {
+              enemyDodgingRef.current = false
+              setEnemyDodging(false)
+            }, ENEMY_DODGE_MS)
           } else if (action === 'fire') {
             if (enemyChargesRef.current > 0) {
               enemyChargesRef.current--
@@ -464,16 +479,19 @@ export default function CannonGame({
       setIsVolleyShot(isVolley)
       setTimeout(() => setShowCannonShot(false), 600)
 
-      enemyHPRef.current = Math.max(0, enemyHPRef.current - dmg)
+      const blocked = enemyDodgingRef.current && res !== 'critical'
+      const effectiveDmg = blocked ? 0 : dmg
+
+      enemyHPRef.current = Math.max(0, enemyHPRef.current - effectiveDmg)
       setEnemyHP(enemyHPRef.current)
       setEHitsplat(p => ({
         key: p.key + 1,
-        text: res === 'critical' ? `⚡ ${dmg}` : `-${dmg}`,
-        color: res === 'critical' ? '#fbbf24' : '#f87171',
+        text: blocked ? 'Blocked!' : res === 'critical' ? `⚡ ${dmg}` : `-${dmg}`,
+        color: blocked ? '#38bdf8' : res === 'critical' ? '#fbbf24' : '#f87171',
         big: res === 'critical',
       }))
 
-      if (enemyHPRef.current <= 0) {
+      if (!blocked && enemyHPRef.current <= 0) {
         streakRef.current++
         setStreak(streakRef.current)
         const earned = killGold(roundRef.current, fortuneMult, isVolley)
@@ -654,9 +672,20 @@ export default function CannonGame({
         }}>
           <div className="flex items-center justify-between">
             <span className="font-karla font-400" style={{ fontSize: '0.44rem', color: '#4a4845' }}>Round {roundDisplay}</span>
-            {isBoss && (
-              <span className="font-karla font-700" style={{ fontSize: '0.44rem', color: '#f97316', background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.35)', borderRadius: 4, padding: '1px 5px', letterSpacing: '0.08em' }}>BOSS</span>
-            )}
+            <div className="flex items-center gap-1">
+              {enemyDodging && (
+                <motion.span
+                  animate={{ opacity: [1, 0.4, 1] }}
+                  transition={{ duration: 0.6, repeat: Infinity }}
+                  className="font-karla font-700"
+                  style={{ fontSize: '0.44rem', color: '#38bdf8', background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.4)', borderRadius: 4, padding: '1px 5px', letterSpacing: '0.08em' }}>
+                  EVADING
+                </motion.span>
+              )}
+              {isBoss && (
+                <span className="font-karla font-700" style={{ fontSize: '0.44rem', color: '#f97316', background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.35)', borderRadius: 4, padding: '1px 5px', letterSpacing: '0.08em' }}>BOSS</span>
+              )}
+            </div>
           </div>
           <div style={{ position: 'relative', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
             <img src={shipImageUrl} alt="enemy" style={{
