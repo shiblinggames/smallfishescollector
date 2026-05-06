@@ -15,16 +15,18 @@ const PARRY_SPEED_BASE = 0.009
 const PARRY_SPEED_INC  = 0.001
 const ENEMY_FIRE_MS    = 3200
 const ENEMY_FIRE_DEC   = 120
-const PARRY_WINDOW_MS  = 2200
-const PARRY_WINDOW_DEC = 40
+const PARRY_WINDOW_MS  = 550   // tight baseline — NAV widens this
+const PARRY_WINDOW_DEC = 12
 const ENEMY_HP_BASE    = 2
+const CANNON_MISS_CD   = 2400  // ms locked after a clean miss
+const PARRY_MISS_CD    = 2600  // ms exposed after missing the parry zone
 
 // ── Zone geometry ─────────────────────────────────────────────────────────────
 
 function getFireZones(round: number, critBonus = 0) {
-  const hitW  = Math.max(0.07, 0.13  - round * 0.007)
-  const critW = Math.min(0.14, Math.max(0.03, 0.065 - round * 0.004 + critBonus))
-  return { grazeL: 0.5 - hitW - 0.18, hitL: 0.5 - hitW, critL: 0.5 - critW, critR: 0.5 + critW, hitR: 0.5 + hitW, grazeR: 0.5 + hitW + 0.18 }
+  const hitW  = Math.max(0.045, 0.08  - round * 0.005)
+  const critW = Math.min(0.08,  Math.max(0.015, 0.032 - round * 0.002 + critBonus))
+  return { grazeL: 0.5 - hitW - 0.14, hitL: 0.5 - hitW, critL: 0.5 - critW, critR: 0.5 + critW, hitR: 0.5 + hitW, grazeR: 0.5 + hitW + 0.14 }
 }
 
 function getShotResult(pos: number, round: number, critBonus = 0): ShotResult {
@@ -36,8 +38,8 @@ function getShotResult(pos: number, round: number, critBonus = 0): ShotResult {
 }
 
 function getParryZones(round: number) {
-  const fullW = Math.max(0.07, 0.13 - round * 0.005)
-  const halfW = Math.max(0.09, 0.20 - round * 0.004)
+  const fullW = Math.max(0.04, 0.07  - round * 0.003)
+  const halfW = Math.max(0.05, 0.10  - round * 0.003)
   return { halfL: 0.5 - fullW - halfW, fullL: 0.5 - fullW, fullR: 0.5 + fullW, halfR: 0.5 + fullW + halfW }
 }
 
@@ -167,7 +169,7 @@ export default function CannonGame({
 }) {
   // Derived bonuses
   const critBonus     = totalPower / 800        // wider crit zone
-  const parryBonus    = totalDodge * 8          // +ms parry window per NAV point
+  const parryBonus    = totalDodge * 4          // +ms parry window per NAV point (tight baseline)
   const fortuneMult   = 1 + totalFortune / 150  // gold multiplier
 
   const [phase, setPhase]                 = useState<GamePhase>('idle')
@@ -186,6 +188,8 @@ export default function CannonGame({
   const [playerHit, setPlayerHit]         = useState(false)
   const [roundDisplay, setRoundDisplay]   = useState(1)
   const [isClaiming, setIsClaiming]       = useState(false)
+  const [cannonJammed, setCannonJammed]   = useState(false)
+  const [parryLocked, setParryLocked]     = useState(false)
 
   const fireIndicatorRef  = useRef<HTMLDivElement>(null)
   const fireFlashRef      = useRef<HTMLDivElement>(null)
@@ -204,6 +208,7 @@ export default function CannonGame({
   const enemyHPMaxRef   = useRef(ENEMY_HP_BASE)
   const phaseRef        = useRef<GamePhase>('idle')
   const canFireRef      = useRef(true)
+  const parryLockedRef  = useRef(false)
   const rafRef          = useRef(0)
   const fireIntervalRef = useRef(ENEMY_FIRE_MS)
   const fireElapsedRef  = useRef(0)
@@ -223,6 +228,7 @@ export default function CannonGame({
     enemyHPRef.current      = ENEMY_HP_BASE
     enemyHPMaxRef.current   = ENEMY_HP_BASE
     canFireRef.current      = true
+    parryLockedRef.current  = false
     fireIntervalRef.current = ENEMY_FIRE_MS
     fireElapsedRef.current  = 0
     parryStateRef.current   = 'none'
@@ -231,6 +237,7 @@ export default function CannonGame({
     setPhase('playing')
     setPlayerHP(playerHPMax); setEnemyHP(ENEMY_HP_BASE); setEnemyHPMax(ENEMY_HP_BASE)
     setStreak(0); setPot(0); setLastEarned(0)
+    setCannonJammed(false); setParryLocked(false)
     setShotResult(null); setParryState('none'); setParryFeedback(null)
     setEnemyFirePct(1); setRoundDisplay(1)
   }, [playerHPMax])
@@ -330,13 +337,11 @@ export default function CannonGame({
         streakRef.current++
         setStreak(streakRef.current)
 
-        // Award gold for this kill
         const earned = killGold(roundRef.current, fortuneMult)
         potRef.current += earned
         setPot(potRef.current)
         setLastEarned(earned)
 
-        // Advance to next round
         roundRef.current++
         setRoundDisplay(roundRef.current + 1)
         const newMax = ENEMY_HP_BASE + Math.floor(roundRef.current / 2)
@@ -347,17 +352,27 @@ export default function CannonGame({
         setEnemyHP(newMax); setEnemyHPMax(newMax)
         setEnemyFirePct(1); setParryState('none')
 
-        // Pause for round-clear choice
         phaseRef.current = 'clear'
         setTimeout(() => setPhase('clear'), 320)
         return
       }
     }
-    setTimeout(() => { canFireRef.current = true; setShotResult(null) }, 550)
+
+    if (res === 'miss') {
+      // Jammed — can't fire for a few seconds
+      setCannonJammed(true)
+      setTimeout(() => {
+        canFireRef.current = true
+        setShotResult(null)
+        setCannonJammed(false)
+      }, CANNON_MISS_CD)
+    } else {
+      setTimeout(() => { canFireRef.current = true; setShotResult(null) }, 550)
+    }
   }, [critBonus, fortuneMult])
 
   const parry = useCallback(() => {
-    if (parryStateRef.current !== 'incoming') return
+    if (parryStateRef.current !== 'incoming' || parryLockedRef.current) return
     const res = getParryResult(parryPosRef.current, roundRef.current)
     parryStateRef.current = res === 'full' ? 'success' : 'half'
     setParryFeedback(res)
@@ -369,6 +384,10 @@ export default function CannonGame({
       setPlayerHP(playerHPRef.current)
       setPlayerHit(true)
       setTimeout(() => setPlayerHit(false), 450)
+      // Exposed — parry locked for a few seconds
+      parryLockedRef.current = true
+      setParryLocked(true)
+      setTimeout(() => { parryLockedRef.current = false; setParryLocked(false) }, PARRY_MISS_CD)
       if (playerHPRef.current <= 0) {
         phaseRef.current = 'dead'
         setBest(prev => Math.max(prev, streakRef.current))
@@ -545,38 +564,68 @@ export default function CannonGame({
       {/* Action buttons */}
       <div style={{ display: 'flex', gap: 12, width: '100%', maxWidth: 360 }}>
         <motion.button
-          onPointerDown={phase === 'playing' ? fire : phase === 'idle' ? startGame : undefined}
-          whileTap={{ scale: 0.95 }}
+          onPointerDown={phase === 'playing' && !cannonJammed ? fire : phase === 'idle' ? startGame : undefined}
+          whileTap={!cannonJammed ? { scale: 0.95 } : {}}
           className="font-karla font-700"
           style={{
             flex: 1, padding: '13px 0',
-            background: phase === 'playing' ? 'rgba(239,68,68,0.15)' : 'rgba(56,189,248,0.15)',
-            border: `1px solid ${phase === 'playing' ? 'rgba(239,68,68,0.4)' : 'rgba(56,189,248,0.4)'}`,
-            borderRadius: 14, cursor: phase === 'clear' ? 'default' : 'pointer',
-            color: phase === 'playing' ? '#ef4444' : '#38bdf8',
-            fontSize: '1rem', letterSpacing: '0.06em',
-            opacity: phase === 'clear' ? 0 : 1,
+            background: cannonJammed        ? 'rgba(251,146,60,0.1)'
+                      : phase === 'playing' ? 'rgba(239,68,68,0.15)'
+                      :                       'rgba(56,189,248,0.15)',
+            border: `1px solid ${
+              cannonJammed        ? 'rgba(251,146,60,0.3)'
+              : phase === 'playing' ? 'rgba(239,68,68,0.4)'
+              :                       'rgba(56,189,248,0.4)'
+            }`,
+            borderRadius: 14,
+            cursor: (phase === 'clear' || cannonJammed) ? 'default' : 'pointer',
+            color: cannonJammed        ? '#f97316'
+                 : phase === 'playing' ? '#ef4444'
+                 :                       '#38bdf8',
+            fontSize: cannonJammed ? '0.78rem' : '1rem',
+            letterSpacing: '0.06em',
+            opacity: phase === 'clear' ? 0 : cannonJammed ? 0.7 : 1,
             pointerEvents: phase === 'clear' ? 'none' : 'auto',
-            transition: 'opacity 0.15s',
+            transition: 'all 0.15s',
           }}>
-          {phase === 'idle' ? 'Open Fire' : phase === 'dead' ? 'Try Again' : 'FIRE'}
+          {phase === 'idle'    ? 'Open Fire'
+         : cannonJammed        ? 'Jammed…'
+         : phase === 'playing' ? 'FIRE'
+         :                       'Try Again'}
         </motion.button>
 
         {phase === 'playing' && (
-          <motion.button onPointerDown={parry} whileTap={{ scale: 0.95 }}
-            animate={isIncoming ? { boxShadow: ['0 0 0px #38bdf800', '0 0 16px #38bdf8aa', '0 0 8px #38bdf866'] } : {}}
-            transition={isIncoming ? { duration: 0.4, repeat: Infinity } : {}}
+          <motion.button
+            onPointerDown={!parryLocked ? parry : undefined}
+            whileTap={!parryLocked ? { scale: 0.95 } : {}}
+            animate={
+              parryLocked   ? { boxShadow: ['0 0 0px #ef444400', '0 0 10px #ef444455', '0 0 0px #ef444400'] }
+              : isIncoming  ? { boxShadow: ['0 0 0px #38bdf800', '0 0 16px #38bdf8aa', '0 0 8px #38bdf866'] }
+              : {}
+            }
+            transition={{ duration: 0.5, repeat: Infinity }}
             className="font-karla font-700"
             style={{
               flex: 1, padding: '13px 0',
-              background: isIncoming ? 'rgba(56,189,248,0.2)' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${isIncoming ? 'rgba(56,189,248,0.65)' : 'rgba(255,255,255,0.1)'}`,
-              borderRadius: 14, cursor: isIncoming ? 'pointer' : 'default',
-              color: isIncoming ? '#38bdf8' : 'rgba(255,255,255,0.18)',
-              fontSize: '1rem', letterSpacing: '0.06em',
+              background: parryLocked  ? 'rgba(239,68,68,0.08)'
+                        : isIncoming   ? 'rgba(56,189,248,0.2)'
+                        :                'rgba(255,255,255,0.04)',
+              border: `1px solid ${
+                parryLocked  ? 'rgba(239,68,68,0.3)'
+                : isIncoming ? 'rgba(56,189,248,0.65)'
+                :              'rgba(255,255,255,0.1)'
+              }`,
+              borderRadius: 14,
+              cursor: (isIncoming && !parryLocked) ? 'pointer' : 'default',
+              color: parryLocked  ? '#ef4444'
+                   : isIncoming   ? '#38bdf8'
+                   :                'rgba(255,255,255,0.18)',
+              fontSize: parryLocked ? '0.78rem' : '1rem',
+              letterSpacing: '0.06em',
+              opacity: parryLocked ? 0.65 : 1,
               transition: 'background 0.15s, border 0.15s, color 0.15s',
             }}>
-            PARRY
+            {parryLocked ? 'Exposed…' : 'PARRY'}
           </motion.button>
         )}
       </div>
