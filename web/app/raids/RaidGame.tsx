@@ -26,11 +26,10 @@ const RARITY_COLOR: Record<RaidLootItem['rarity'], string> = {
   legendary: '#f0c040',
 }
 const BARNACLE_PETE_LOOT: RaidLootItem[] = [
-  { id: 'doubloons_300', label: '+300 ⟡',       image: '/smallpile.png',   emoji: '🪙', rarity: 'common',   weight: 35 },
+  { id: 'doubloons_300', label: '+300 ⟡',       image: '/smallpile.png',   emoji: '🪙', rarity: 'common',   weight: 50 },
   { id: 'doubloons_600', label: '+600 ⟡',       image: '/dailybonus.png',  emoji: '💰', rarity: 'uncommon', weight: 25 },
-  { id: 'gems_3',        label: '3 Gems',        image: null, emoji: '💎', rarity: 'uncommon', weight: 20 },
-  { id: 'gems_5',        label: '5 Gems',        image: null, emoji: '💎', rarity: 'rare',     weight: 12 },
-  { id: 'pack',          label: '1 Pack',        image: '/cardbacknew.png', emoji: '📦', rarity: 'rare',     weight: 10 },
+  { id: 'gems_25',       label: '25 Gems',       image: null, emoji: '💎', rarity: 'rare',     weight: 15 },
+  { id: 'pack',          label: '1 Pack',        image: '/cardbacknew.png', emoji: '📦', rarity: 'rare',     weight: 5  },
   { id: 'corsair_black', label: 'Corsair Black', image: null, emoji: '🚢', rarity: 'epic',     weight: 5  },
 ]
 function rollLootIndex(): number {

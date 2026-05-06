@@ -94,8 +94,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; packs?: number; shipSkin?: string }> = {
   doubloons_300:  { doubloons: 300 },
   doubloons_600:  { doubloons: 600 },
-  gems_3:         { gems: 3 },
-  gems_5:         { gems: 5 },
+  gems_25:        { gems: 25 },
   pack:           { packs: 1 },
   corsair_black:  { shipSkin: 'corsair_black' },
 }
