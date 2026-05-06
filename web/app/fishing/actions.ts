@@ -44,7 +44,7 @@ const ZONE_WAIT_BASE: Record<string, [number, number]> = {
   open_waters: [5000,  20000],
   deep:        [8000,  35000],
   abyss:       [12000, 45000],
-  ancient_deep: [15000, 60000],
+  ancient_deep: [45000, 120000],
 }
 function fishWaitMs(catchScore: number, habitat: string, baitType: string, fishingLevel: number): number {
   const [zMin, zMax] = ZONE_WAIT_BASE[habitat] ?? [5000, 20000]
