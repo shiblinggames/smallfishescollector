@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 
 const RAID_LEVEL_REQUIREMENT = 20
+const PETE_PORTRAIT = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/barnacle_pete.png'
 
 interface Props {
   navLevel: number
@@ -52,9 +53,11 @@ export default function RaidCard({ navLevel }: Props) {
               width: 40, height: 40, borderRadius: 11, flexShrink: 0,
               background: 'rgba(249,115,22,0.12)',
               border: '1px solid rgba(249,115,22,0.25)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.15rem',
-            }}>☠️</div>
+              overflow: 'hidden',
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={PETE_PORTRAIT} alt="Barnacle Pete" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
             <div>
               <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8', lineHeight: 1.2 }}>
                 The Corsair&apos;s Reckoning
