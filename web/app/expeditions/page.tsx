@@ -20,7 +20,7 @@ export default async function ExpeditionsPage() {
 
   const [{ data: profile }, { data: expeditionRows }, collection, dailyVoyageState, { data: voyageHistoryRows }] = await Promise.all([
     admin.from('profiles')
-      .select('packs_available, doubloons, ship_tier, gems, saved_crew, ship_name, expedition_xp, equipped_ship_skin, ship_skins')
+      .select('packs_available, doubloons, ship_tier, gems, saved_crew, ship_name, expedition_xp, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items')
       .eq('id', user.id)
       .single(),
     admin.from('expeditions')
@@ -84,6 +84,8 @@ export default async function ExpeditionsPage() {
             shipSkins={(profile?.ship_skins as string[] | null) ?? []}
             collection={collection}
             savedCrewVariantIds={savedCrewVariantIds}
+            ownedRaidItems={(profile?.raid_items as string[] | null) ?? []}
+            equippedRaidItems={(profile?.equipped_raid_items as string[] | null) ?? []}
           />
 
           {/* ── Voyage card ── */}

@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { ShipStats } from '@/lib/expeditions'
 import { RARITY_COLORS } from '@/lib/expeditions'
 import { SHIP_SKINS } from '@/lib/shipSkins'
-import { saveCrew, equipShipSkin } from './actions'
+import { saveCrew, equipShipSkin, saveEquippedRaidItems } from './actions'
+import { RAID_ITEMS, getRaidItem } from '@/lib/raidItems'
 import { renameShip } from '@/app/shipyard/actions'
 import { getXPProgress, getNavigatorTitle } from '@/lib/expeditionLevel'
 
@@ -29,6 +30,14 @@ const STAT_COLS = [
   { key: 'fortune' as const, short: 'FTN', color: '#f0c040' },
 ]
 
+const RARITY_ITEM_COLOR: Record<string, string> = {
+  common:    '#9ca3af',
+  uncommon:  '#4ade80',
+  rare:      '#60a5fa',
+  epic:      '#a78bfa',
+  legendary: '#f0c040',
+}
+
 interface Props {
   shipStats: ShipStats
   shipName: string | null
@@ -37,6 +46,8 @@ interface Props {
   shipSkins: string[]
   collection: CollectionCard[]
   savedCrewVariantIds: number[]
+  ownedRaidItems: string[]
+  equippedRaidItems: string[]
 }
 
 function DrawerHandle() {
@@ -62,6 +73,7 @@ export default function ShipHero({
   shipStats, shipName: initialShipName, expeditionXP,
   equippedShipSkin: initialEquippedSkin, shipSkins: ownedSkins,
   collection, savedCrewVariantIds,
+  ownedRaidItems, equippedRaidItems: initialEquippedRaidItems,
 }: Props) {
   const xpProgress = getXPProgress(expeditionXP)
 
@@ -79,6 +91,9 @@ export default function ShipHero({
 
   // Skin state
   const [equippedSkin, setEquippedSkin] = useState(initialEquippedSkin)
+
+  // Raid item state
+  const [equippedItems, setEquippedItems] = useState<string[]>(initialEquippedRaidItems)
 
   // Ship name state
   const [shipName, setShipName] = useState(initialShipName)
@@ -144,6 +159,21 @@ export default function ShipHero({
   function handleEquipSkin(skinId: string | null) {
     setEquippedSkin(skinId)
     startTransition(async () => { await equipShipSkin(skinId) })
+  }
+
+  // Raid item equip/unequip
+  function handleEquipRaidItem(itemId: string) {
+    if (equippedItems.includes(itemId)) return
+    if (equippedItems.length >= 3) return
+    const next = [...equippedItems, itemId]
+    setEquippedItems(next)
+    startTransition(async () => { await saveEquippedRaidItems(next) })
+  }
+
+  function handleUnequipRaidItem(itemId: string) {
+    const next = equippedItems.filter(i => i !== itemId)
+    setEquippedItems(next)
+    startTransition(async () => { await saveEquippedRaidItems(next) })
   }
 
   // Scores — computed live from slots
@@ -416,9 +446,79 @@ export default function ShipHero({
 
               {/* ── Items ── */}
               <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Items</p>
-              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '1.1rem 1rem', textAlign: 'center' }}>
-                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#4a4845' }}>Item slots coming soon.</p>
-                <p className="font-karla" style={{ fontSize: '0.6rem', color: '#3a3835', marginTop: 3 }}>Special items drop from raid bosses.</p>
+              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden', marginBottom: '1.5rem' }}>
+                {/* Equip slots */}
+                <div style={{ padding: '1rem', borderBottom: ownedRaidItems.length > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                  <p className="font-karla" style={{ fontSize: '0.56rem', color: '#5a5248', marginBottom: '0.6rem' }}>Equip up to 3 — effects apply in raids</p>
+                  <div style={{ display: 'flex', gap: '0.7rem' }}>
+                    {[0, 1, 2].map(i => {
+                      const itemId  = equippedItems[i]
+                      const itemDef = itemId ? getRaidItem(itemId) : null
+                      const color   = itemDef ? RARITY_ITEM_COLOR[itemDef.rarity] : null
+                      return (
+                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+                          {itemDef ? (
+                            <>
+                              <button
+                                onClick={() => handleUnequipRaidItem(itemId!)}
+                                style={{ position: 'relative', width: 64, height: 64, borderRadius: 12, background: `${color}11`, border: `1.5px solid ${color}55`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer', padding: 0, overflow: 'hidden' }}
+                              >
+                                {itemDef.image ? (
+                                  /* eslint-disable-next-line @next/next/no-img-element */
+                                  <img src={itemDef.image} alt={itemDef.name} style={{ width: 38, height: 38, objectFit: 'contain' }} />
+                                ) : (
+                                  <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>{itemDef.emoji}</span>
+                                )}
+                                <div style={{ position: 'absolute', top: 3, right: 3, width: 14, height: 14, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                                </div>
+                              </button>
+                              <p className="font-karla font-600 truncate text-center" style={{ fontSize: '0.48rem', color: color ?? '#8a8784', maxWidth: 64, lineHeight: 1.2 }}>{itemDef.name}</p>
+                            </>
+                          ) : (
+                            <div style={{ width: 64, height: 64, borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1.5px dashed rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Owned items */}
+                {ownedRaidItems.length > 0 ? (
+                  <div style={{ padding: '0.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {ownedRaidItems.map(itemId => {
+                      const def      = getRaidItem(itemId)
+                      if (!def) return null
+                      const color    = RARITY_ITEM_COLOR[def.rarity]
+                      const equipped = equippedItems.includes(itemId)
+                      const full     = equippedItems.length >= 3 && !equipped
+                      return (
+                        <button
+                          key={itemId}
+                          onClick={equipped ? () => handleUnequipRaidItem(itemId) : full ? undefined : () => handleEquipRaidItem(itemId)}
+                          disabled={full}
+                          style={{ background: equipped ? `${color}0d` : 'rgba(255,255,255,0.02)', border: `1.5px solid ${equipped ? color + '55' : 'rgba(255,255,255,0.07)'}`, borderRadius: 10, padding: '0.6rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: full ? 'default' : 'pointer', opacity: full ? 0.4 : 1, width: '100%', textAlign: 'left' }}
+                        >
+                          <span style={{ fontSize: '1.4rem', lineHeight: 1, flexShrink: 0 }}>{def.emoji}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: equipped ? color : '#e0ddd8', marginBottom: 2 }}>{def.name}</p>
+                            <p className="font-karla" style={{ fontSize: '0.58rem', color: '#5a5248' }}>{def.description}</p>
+                          </div>
+                          <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: equipped ? color : '#4a4845', flexShrink: 0 }}>
+                            {equipped ? 'Equipped' : 'Equip'}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ padding: '0.75rem 1rem' }}>
+                    <p className="font-karla" style={{ fontSize: '0.62rem', color: '#3a3835' }}>No items yet. Items drop from raid bosses.</p>
+                  </div>
+                )}
               </div>
               </div>{/* end scrollable */}
             </motion.div>

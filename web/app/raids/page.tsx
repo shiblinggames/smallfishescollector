@@ -36,6 +36,7 @@ export default async function RaidPage() {
             crewMembers={stats.crewMembers}
             equippedShipSkin={stats.equippedShipSkin}
             shipSkins={stats.shipSkins}
+            equippedItems={stats.equippedRaidItems}
           />
         </div>
       </main>

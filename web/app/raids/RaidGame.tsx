@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { claimRaidLoot } from './actions'
 import { getShipSkin } from '@/lib/shipSkins'
+import { getActiveEffects } from '@/lib/raidItems'
 
 type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
@@ -30,7 +31,8 @@ const BARNACLE_PETE_LOOT: RaidLootItem[] = [
   { id: 'doubloons_600', label: '+600 ⟡',       image: '/dailybonus.png',  emoji: '💰', rarity: 'uncommon', weight: 25 },
   { id: 'gems_25',       label: '25 Gems',       image: null, emoji: '💎', rarity: 'rare',     weight: 15 },
   { id: 'pack',          label: '1 Pack',        image: '/cardbacknew.png', emoji: '📦', rarity: 'rare',     weight: 5  },
-  { id: 'corsair_black', label: 'Corsair Black', image: null, emoji: '🚢', rarity: 'epic',     weight: 5  },
+  { id: 'corsair_black',  label: 'Corsair Black',  image: null, emoji: '🚢', rarity: 'epic',  weight: 5  },
+  { id: 'corsair_cannon', label: 'Corsair Cannon', image: null, emoji: '💣', rarity: 'rare',  weight: 3  },
 ]
 function rollLootIndex(): number {
   const total = BARNACLE_PETE_LOOT.reduce((s, i) => s + i.weight, 0)
@@ -319,7 +321,7 @@ interface RaidCrewMember {
   fortune: number
 }
 
-export default function RaidGame({ equippedShipSkin, shipSkins,
+export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
   shipImageUrl, shipName, playerHPMax, shipMinDamage, shipSpeed,
   totalPower, totalDodge, totalFortune, crewCount, crewMembers,
 }: {
@@ -335,6 +337,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins,
   crewMembers: RaidCrewMember[]
   equippedShipSkin: string | null
   shipSkins: string[]
+  equippedItems: string[]
 }) {
   const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
   const shipFilter        = shipSkinDef?.filter ?? 'none'
@@ -712,7 +715,10 @@ export default function RaidGame({ equippedShipSkin, shipSkins,
     if (res === 'miss') setCannonJammed(true)
 
     const dmgMult = isVolley ? 2 : 1
-    const dmg = rollShotDamage(res, shipMinDamage, totalPower) * dmgMult
+    const bossMult = isBossRound(roundRef.current)
+      ? getActiveEffects(equippedItems).filter(e => e.type === 'boss_damage_mult').reduce((acc, e) => acc * e.value, 1)
+      : 1
+    const dmg = rollShotDamage(res, shipMinDamage, totalPower) * dmgMult * bossMult
 
     if (dmg > 0) {
       setShowCannonShot(true)

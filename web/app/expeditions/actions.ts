@@ -748,6 +748,17 @@ export async function saveCrew(variantIds: number[]): Promise<void> {
   await admin.from('profiles').update({ saved_crew: variantIds }).eq('id', user.id)
 }
 
+export async function saveEquippedRaidItems(itemIds: string[]): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('raid_items').eq('id', user.id).single()
+  const owned = (profile?.raid_items as string[] | null) ?? []
+  const valid = itemIds.filter(id => owned.includes(id)).slice(0, 3)
+  await admin.from('profiles').update({ equipped_raid_items: valid }).eq('id', user.id)
+}
+
 export async function equipShipSkin(skinId: string | null): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
