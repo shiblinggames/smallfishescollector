@@ -773,7 +773,7 @@ export default function CannonGame({
   const actionBarColor     = enemyActionPct > 0.4 ? '#a78bfa' : enemyActionPct > 0.15 ? '#fbbf24' : '#ef4444'
 
   return (
-    <div className="flex flex-col items-center gap-4 select-none" style={{ userSelect: 'none' }}>
+    <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
 
       {/* ── Round / status header ─────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingBottom: 2, visibility: phase === 'idle' ? 'hidden' : 'visible' }}>
@@ -930,9 +930,12 @@ export default function CannonGame({
 
       {/* ── Dodge prime indicator — always in DOM to prevent layout shift ─── */}
       <div style={{
-        width: '100%', borderRadius: 12, padding: '0.45rem 0.65rem',
-        background: 'rgba(10,30,50,0.75)', border: '1px solid rgba(56,189,248,0.45)',
-        opacity: dodgePrimed ? 1 : 0, pointerEvents: 'none', transition: 'opacity 0.15s',
+        width: '100%', borderRadius: 12,
+        padding: dodgePrimed ? '0.45rem 0.65rem' : '0',
+        maxHeight: dodgePrimed ? 60 : 0,
+        overflow: 'hidden',
+        background: 'rgba(10,30,50,0.75)', border: dodgePrimed ? '1px solid rgba(56,189,248,0.45)' : 'none',
+        opacity: dodgePrimed ? 1 : 0, pointerEvents: 'none', transition: 'opacity 0.15s, max-height 0.15s, padding 0.15s',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: '#38bdf8', letterSpacing: '0.1em', textShadow: '0 1px 6px rgba(0,0,0,0.95)' }}>⚡ DODGE PRIMED</span>
@@ -949,7 +952,7 @@ export default function CannonGame({
       </div>
 
       {/* ── Feedback ─────────────────────────────────────────────────────────── */}
-      <div style={{ height: 22 }}>
+      <div style={{ height: 18 }}>
         <AnimatePresence mode="wait">
           {shotResult && (
             <motion.p key={shotResult} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
