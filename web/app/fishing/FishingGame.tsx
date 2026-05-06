@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, useTideTurnerSkip, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { castLine, reelIn, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, useTideTurnerSkip, prestigeZone, type FishSpecies, type FishingBountyCompletion } from './actions'
 import { claimDailyReward } from './dailyChallengeActions'
 import { getDailyChallenges, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
 import { getRingSkin } from '@/lib/ringSkins'
@@ -96,6 +96,13 @@ const ZONE_REWARD_DOUBLOONS_UI: Record<string, number> = {
   open_waters: 20000,
   deep:        50000,
   abyss:       100000,
+}
+
+function toRoman(n: number): string {
+  const vals: [number, string][] = [[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']]
+  let result = ''
+  for (const [v, s] of vals) { while (n >= v) { result += s; n -= v } }
+  return result
 }
 
 // ─── Wait messages ───────────────────────────────────────────────────────────
@@ -1350,6 +1357,7 @@ export default function FishingGame({
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook,
+  initialPrestigeLevels,
 }: {
   hookTier: number
   rodTier: number
@@ -1379,6 +1387,7 @@ export default function FishingGame({
   initialTideTurnerSkipsLeft: number
   initialEquippedSpecial: string | null
   hasPhantomHook: boolean
+  initialPrestigeLevels: Record<string, number>
 }) {
 
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
@@ -1411,6 +1420,9 @@ export default function FishingGame({
   const [claimedZones, setClaimedZones] = useState<Record<string, boolean>>(zoneRewardsClaimed)
   const [claimingZone, setClaimingZone] = useState<string | null>(null)
   const [zoneClaimToast, setZoneClaimToast] = useState<{ zone: string; earned: number } | null>(null)
+  const [prestigeLevels, setPrestigeLevels] = useState<Record<string, number>>(initialPrestigeLevels)
+  const [prestigingZone, setPrestigingZone] = useState<string | null>(null)
+  const [confirmPrestigeZone, setConfirmPrestigeZone] = useState<string | null>(null)
   const [tappedFishId, setTappedFishId] = useState<number | null>(null)
 
   const [sessionCatches, setSessionCatches] = useState<FishSpecies[]>([])
@@ -1982,6 +1994,19 @@ export default function FishingGame({
       setEquippedRodTier(tier)
       if (!ownedRods.includes(tier)) setOwnedRods(prev => [...prev, tier])
     }
+  }
+
+  async function handlePrestige(zone: string) {
+    if (prestigingZone) return
+    setPrestigingZone(zone)
+    const result = await prestigeZone(zone)
+    setPrestigingZone(null)
+    if ('error' in result) { setConfirmPrestigeZone(null); return }
+    const zoneIds = new Set(allFishSpecies.filter(f => f.habitat === zone).map(f => f.id))
+    setCaughtFishIds(prev => { const next = new Set(prev); zoneIds.forEach(id => next.delete(id)); return next })
+    setClaimedZones(prev => ({ ...prev, [zone]: false }))
+    setPrestigeLevels(prev => ({ ...prev, [zone]: result.prestigeLevel }))
+    setConfirmPrestigeZone(null)
   }
 
   async function handleClaimZoneReward(zone: string) {
@@ -2997,8 +3022,17 @@ export default function FishingGame({
                   >
                     <div className="flex items-center justify-between" style={{ marginBottom: '0.5rem' }}>
                       <div>
-                        <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                          style={{ fontSize: '0.85rem', color: zoneColor, lineHeight: 1 }}>{HABITAT_LABEL[zone]}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                            style={{ fontSize: '0.85rem', color: zoneColor, lineHeight: 1 }}>{HABITAT_LABEL[zone]}</p>
+                          {(prestigeLevels[zone] ?? 0) > 0 && (
+                            <span className="font-cinzel font-700" style={{
+                              fontSize: '0.55rem', color: zoneColor,
+                              background: zoneColor + '22', border: `1px solid ${zoneColor}55`,
+                              borderRadius: 4, padding: '1px 5px', letterSpacing: '0.05em',
+                            }}>{toRoman(prestigeLevels[zone])}</span>
+                          )}
+                        </div>
                         <p className="font-karla font-400"
                           style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>{HABITAT_TAGLINE[zone]}</p>
                       </div>
@@ -3063,17 +3097,44 @@ export default function FishingGame({
                     </motion.button>
                   )}
                   {isComplete && isClaimed && (
-                    <div className="flex items-center justify-between"
-                      style={{
-                        background: 'rgba(4,10,18,0.4)',
-                        border: `1px solid ${zoneColor}20`,
-                        borderTop: 'none',
-                        borderRadius: '0 0 12px 12px',
-                        padding: '0.4rem 0.9rem',
-                      }}>
-                      <p className="font-karla font-600"
-                        style={{ fontSize: '0.6rem', color: zoneColor + '80' }}>Reward claimed</p>
-                      <span style={{ fontSize: '0.75rem', color: zoneColor + '80' }}>✓</span>
+                    <div style={{
+                      background: 'rgba(4,10,18,0.5)',
+                      border: `1px solid ${zoneColor}22`,
+                      borderTop: 'none',
+                      borderRadius: '0 0 12px 12px',
+                      padding: '0.45rem 0.9rem',
+                    }}>
+                      {confirmPrestigeZone === zone ? (
+                        <div>
+                          <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', marginBottom: '0.35rem' }}>
+                            Reset your {HABITAT_LABEL[zone]} catch log for Prestige {toRoman((prestigeLevels[zone] ?? 0) + 1)}? You'll re-earn the +{((prestigeLevels[zone] ?? 0) + 1) * 5}% sell bonus.
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setConfirmPrestigeZone(null)}
+                              className="font-karla font-600 uppercase tracking-[0.1em]"
+                              style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.35)', padding: '0.25rem 0.6rem', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6 }}
+                            >Cancel</button>
+                            <button
+                              onClick={() => handlePrestige(zone)}
+                              disabled={prestigingZone === zone}
+                              className="font-karla font-700 uppercase tracking-[0.1em]"
+                              style={{ fontSize: '0.55rem', color: zoneColor, padding: '0.25rem 0.7rem', background: zoneColor + '20', border: `1px solid ${zoneColor}55`, borderRadius: 6 }}
+                            >{prestigingZone === zone ? '…' : 'Confirm Prestige'}</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: zoneColor + '80' }}>
+                            Reward claimed {(prestigeLevels[zone] ?? 0) > 0 ? `· Prestige ${toRoman(prestigeLevels[zone])}` : ''}
+                          </p>
+                          <button
+                            onClick={e => { e.stopPropagation(); setConfirmPrestigeZone(zone) }}
+                            className="font-karla font-700 uppercase tracking-[0.1em]"
+                            style={{ fontSize: '0.52rem', color: zoneColor, background: zoneColor + '18', border: `1px solid ${zoneColor}44`, borderRadius: 6, padding: '0.2rem 0.6rem' }}
+                          >Prestige {toRoman((prestigeLevels[zone] ?? 0) + 1)}</button>
+                        </div>
+                      )}
                     </div>
                   )}
 

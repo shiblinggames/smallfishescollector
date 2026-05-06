@@ -416,13 +416,16 @@ export async function sellFish(
   const [{ data: invRow }, { data: fish }, { data: profile }] = await Promise.all([
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', fishId).single(),
     admin.from('fish_species').select('sell_value').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, prestige_levels').eq('id', user.id).single(),
   ])
 
   if (!invRow || !fish || !profile) return { error: 'Data not found' }
   if (invRow.quantity < quantity) return { error: 'Not enough fish' }
 
-  const earned = Math.floor(fish.sell_value * (fullPrice ? 1.0 : 0.65)) * quantity
+  const prestigeLevels = (profile.prestige_levels as Record<string, number> | null) ?? {}
+  const totalPrestige = Object.values(prestigeLevels).reduce((s, v) => s + v, 0)
+  const prestigeMult = 1 + totalPrestige * 0.05
+  const earned = Math.floor(fish.sell_value * (fullPrice ? 1.0 : 0.65) * prestigeMult) * quantity
   const newDoubloons = (profile.doubloons ?? 0) + earned
 
   await Promise.all([
@@ -555,6 +558,44 @@ export async function claimZoneReward(zone: string): Promise<{ doubloons: number
   ])
 
   return { doubloons: newDoubloons, earned }
+}
+
+export async function prestigeZone(zone: string): Promise<{ prestigeLevel: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const rewardCol = ZONE_REWARD_COL[zone]
+  if (!rewardCol) return { error: 'Invalid zone' }
+
+  const admin = createAdminClient()
+
+  const { data: zoneSpeciesRows } = await admin.from('fish_species').select('id').eq('habitat', zone)
+  const zoneIds = (zoneSpeciesRows ?? []).map((f: { id: number }) => f.id)
+  if (zoneIds.length === 0) return { error: 'Invalid zone' }
+
+  const { data: profile } = await admin
+    .from('profiles')
+    .select(`prestige_levels, ${rewardCol}`)
+    .eq('id', user.id).single()
+  if (!profile) return { error: 'Profile not found' }
+  if (!profile[rewardCol]) return { error: 'Claim completion reward first' }
+
+  const { count: caughtCount } = await admin
+    .from('fish_collection').select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id).in('fish_id', zoneIds)
+  if ((caughtCount ?? 0) < zoneIds.length) return { error: 'Zone not complete' }
+
+  const currentLevels = (profile.prestige_levels as Record<string, number> | null) ?? {}
+  const newLevel = (currentLevels[zone] ?? 0) + 1
+  const newLevels = { ...currentLevels, [zone]: newLevel }
+
+  await Promise.all([
+    admin.from('fish_collection').delete().eq('user_id', user.id).in('fish_id', zoneIds),
+    admin.from('profiles').update({ prestige_levels: newLevels, [rewardCol]: false }).eq('id', user.id),
+  ])
+
+  return { prestigeLevel: newLevel }
 }
 
 export async function useTideTurnerSkip(): Promise<{ ok: true; skipsLeft: number } | { error: string }> {
