@@ -21,7 +21,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'corsair_cannon',
     name: 'Corsair Cannon',
     description: '+25% damage to raid bosses.',
-    image: null,
+    image: '/corsaircannon.png',
     emoji: '💣',
     rarity: 'rare',
     effects: [{ type: 'boss_damage_mult', value: 1.25 }],
