@@ -365,7 +365,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
         <div className="flip-card-inner w-full h-full">
           <div className="flip-card-front w-full h-full overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/cardbacknew.png" alt="" className="w-full h-full object-cover" />
+            <img src="/cardbacknew.png" alt="" className="w-full h-full object-cover" draggable={false} onContextMenu={(e) => e.preventDefault()} />
           </div>
           <div className="flip-card-back w-full h-full bg-black">
             <FishCard name={card.name} filename={card.filename} borderStyle={card.borderStyle} artEffect={card.artEffect} variantName={card.variantName} dropWeight={card.dropWeight} stats={{ power: card.power, dodge: card.dodge, fortune: card.fortune }} fill />
@@ -391,8 +391,9 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
         <div
           ref={(el) => { cardRefs.current[i] = el }}
           className={`flip-card pack-card-size select-none ${flipped[i] ? 'flipped' : loading ? '' : 'cursor-pointer'} ${glowClasses[i] ?? ''} ${peekGlows[i] ?? ''}`}
-          style={{ opacity: mythicFeatured !== null && mythicFeatured !== i ? 0.2 : 1, transition: 'opacity 0.3s ease' }}
+          style={{ opacity: mythicFeatured !== null && mythicFeatured !== i ? 0.2 : 1, transition: 'opacity 0.3s ease', WebkitTouchCallout: 'none' }}
           onClick={() => flipCard(i)}
+          onContextMenu={(e) => e.preventDefault()}
           onMouseMove={(e) => handleMouseMove(e, i)}
           onMouseLeave={(e) => { handleMouseLeave(e, i); handlePointerUp(i) }}
           onPointerDown={() => handlePointerDown(i)}
