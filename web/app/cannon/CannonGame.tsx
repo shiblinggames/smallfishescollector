@@ -112,12 +112,14 @@ function getTimeTier(secs: number): { mult: number; label: string; color: string
 
 // ── Zone geometry ─────────────────────────────────────────────────────────────
 
+const GRAZE_W = 0.038
+
 function getFireZones(round: number, zoneCenter = 0.5) {
-  const hitW  = Math.max(0.045, 0.08  - round * 0.005)
+  const hitW  = Math.max(0.03, 0.06  - round * 0.004)
   const critW = 0.007
   return {
-    grazeL: zoneCenter - hitW - 0.05, hitL: zoneCenter - hitW, critL: zoneCenter - critW,
-    critR: zoneCenter + critW, hitR: zoneCenter + hitW, grazeR: zoneCenter + hitW + 0.05,
+    grazeL: zoneCenter - hitW - GRAZE_W, hitL: zoneCenter - hitW, critL: zoneCenter - critW,
+    critR: zoneCenter + critW, hitR: zoneCenter + hitW, grazeR: zoneCenter + hitW + GRAZE_W,
   }
 }
 function getShotResult(pos: number, zoneCenter: number, round: number): ShotResult {
@@ -209,9 +211,11 @@ function TimingBar({ indicatorRef, flashRef, zoneRef, hitHalfW, critHalfW }: {
   hitHalfW: number
   critHalfW: number
 }) {
-  const grazeW = 0.05
+  const grazeW = GRAZE_W
   const totalW = hitHalfW * 2 + grazeW * 2
-  const critVisualPct = Math.max(10, (critHalfW * 2 / totalW) * 100)
+  const hitPct  = (hitHalfW * 2 / totalW) * 100
+  const hitLeft = (grazeW / totalW) * 100
+  const critVisualPct = Math.max(8, (critHalfW * 2 / totalW) * 100)
   const critLeft = (100 - critVisualPct) / 2
   return (
     <div style={{ position: 'relative', height: 28, borderRadius: 8 }}>
@@ -226,18 +230,24 @@ function TimingBar({ indicatorRef, flashRef, zoneRef, hitHalfW, critHalfW }: {
           left: `${(0.5 - hitHalfW - grazeW) * 100}%`,
           width: `${totalW * 100}%`,
         }}>
-          {/* Ship hull — top-down silhouette */}
+          {/* Ship hull — outer graze zone (slate) */}
           <div style={{
             position: 'absolute', inset: '3px 0',
             clipPath: 'polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%)',
-            background: 'rgba(74,222,128,0.14)',
-            filter: 'drop-shadow(0 0 3px rgba(74,222,128,0.4))',
+            background: 'rgba(148,163,184,0.12)',
+            filter: 'drop-shadow(0 0 3px rgba(148,163,184,0.3))',
+          }} />
+          {/* Hit zone — green inner band */}
+          <div style={{
+            position: 'absolute', top: '3px', bottom: '3px',
+            left: `${hitLeft}%`, width: `${hitPct}%`,
+            background: 'rgba(74,222,128,0.22)',
           }} />
           {/* Mast line */}
           <div style={{
             position: 'absolute', top: '25%', bottom: '25%',
             left: 'calc(50% - 1px)', width: 1,
-            background: 'rgba(74,222,128,0.35)',
+            background: 'rgba(74,222,128,0.4)',
           }} />
           {/* Crit zone — bridge marker */}
           <motion.div
@@ -397,8 +407,8 @@ export default function CannonGame({
     setEnemyMinDmg(e.minDmg)
     setEnemyMaxDmg(e.maxDmg)
     // Randomize zone starting position for each round
-    const hitW  = Math.max(0.045, 0.08 - round * 0.005)
-    const halfW = hitW + 0.05
+    const hitW  = Math.max(0.03, 0.06 - round * 0.004)
+    const halfW = hitW + GRAZE_W
     zonePosRef.current  = halfW + Math.random() * (1 - halfW * 2)
     zoneDirRef.current  = Math.random() < 0.5 ? 1 : -1
     if (isBossRound(round)) zoneJitterRef.current = 350 + Math.random() * 600
@@ -460,8 +470,8 @@ export default function CannonGame({
 
       // Moving zone block — speed mapped to enemy actionMs (faster enemy = faster zone)
       {
-        const hitW  = Math.max(0.045, 0.08 - roundRef.current * 0.005)
-        const halfW = hitW + 0.05
+        const hitW  = Math.max(0.03, 0.06 - roundRef.current * 0.004)
+        const halfW = hitW + GRAZE_W
         const zSpeed = (3000 / getActionMs(roundRef.current)) * 0.0028 * (dt / 16.67)
         if (isBossRound(roundRef.current)) {
           zoneJitterRef.current -= dt
@@ -597,10 +607,14 @@ export default function CannonGame({
     chargesRef.current = Math.min(MAX_CHARGES, chargesRef.current + 1)
     setCharges(chargesRef.current)
     canReloadRef.current = false
+    canFireRef.current = false
     setCanReload(false)
+    setCanFire(false)
     // Randomize indicator position — prevents cheesing by reloading near crit zone
     firePosRef.current = Math.random()
     fireDirRef.current = Math.random() < 0.5 ? 1 : -1
+    // Brief fire lockout so player can't snap-fire on reload
+    setTimeout(() => { canFireRef.current = true; setCanFire(true) }, 420)
     setTimeout(() => { canReloadRef.current = true; setCanReload(true) }, reloadCooldown)
   }, [reloadCooldown])
 
@@ -1010,7 +1024,7 @@ export default function CannonGame({
         <TimingBar
           indicatorRef={fireIndicatorRef} flashRef={fireFlashRef}
           zoneRef={zoneTargetRef}
-          hitHalfW={Math.max(0.045, 0.08 - (roundDisplay - 1) * 0.005)}
+          hitHalfW={Math.max(0.03, 0.06 - (roundDisplay - 1) * 0.004)}
           critHalfW={0.007}
         />
         <div style={{ display: 'flex', justifyContent: 'center', gap: 14, marginTop: 5 }}>
