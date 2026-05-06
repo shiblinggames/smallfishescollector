@@ -11,8 +11,10 @@ import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { getShip } from '@/lib/ships'
+import { getShipSkin } from '@/lib/shipSkins'
 import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
+import { RAID_ITEMS } from '@/lib/raidItems'
 
 interface CardVariant {
   id: number
@@ -49,6 +51,7 @@ interface Gear {
   lineTier: number
   shipTier: number
   shipName: string | null
+  equippedShipSkin?: string | null
 }
 
 interface Props {
@@ -58,6 +61,8 @@ interface Props {
   gear: Gear
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
   ownedSpecialIds?: string[]
+  raidItemIds?: string[]
+  equippedShipSkin?: string | null
   voyages?: VoyageEntry[]
   isPremium?: boolean
   isOwnProfile?: boolean
@@ -94,7 +99,7 @@ function cardTransform(off: number): { tx: number; tz: number; ry: number; scale
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.7rem', color: '#8a8782', marginBottom: 14 }}>
+    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.78rem', color: '#8a8782', marginBottom: 14 }}>
       {children}
     </p>
   )
@@ -185,7 +190,7 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   )
 }
 
-export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, ownedSpecialIds = [], isPremium, isOwnProfile, isInCrew: initialIsInCrew }: Props) {
+export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, ownedSpecialIds = [], raidItemIds = [], equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
@@ -201,8 +206,10 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
   const hook = getHook(gear.hookTier)
   const line = getLine(gear.lineTier)
   const ship = getShip(gear.shipTier)
+  const shipSkin = equippedShipSkin ? getShipSkin(equippedShipSkin) : null
 
   const ownedSpecials = SPECIAL_ITEMS.filter(s => ownedSpecialIds.includes(s.id))
+  const ownedRaidItems = RAID_ITEMS.filter(i => raidItemIds.includes(i.id))
 
   function toggleCrew() {
     startCrewTransition(async () => {
@@ -276,7 +283,9 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
               style={{
                 width: 200, height: 155,
                 objectFit: 'contain',
-                filter: `drop-shadow(0 4px 28px ${ship.color}60)`,
+                filter: shipSkin
+                  ? shipSkin.filter
+                  : `drop-shadow(0 4px 28px ${ship.color}60)`,
               }}
             />
             <div style={{ textAlign: 'center' }}>
@@ -314,11 +323,13 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
             <SectionLabel>Equipment</SectionLabel>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-              {/* Rod + Hook */}
+              {/* Rod, Hook, Reel, Line — 2×2 grid */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 {[
-                  { label: 'Rod',  color: rod.color,  name: rod.name,  img: rod.imageUrl ?? null },
+                  { label: 'Rod',  color: rod.color,  name: rod.name,  img: rod.imageUrl  ?? null },
                   { label: 'Hook', color: hook.color, name: hook.name, img: hook.imageUrl ?? null },
+                  { label: 'Reel', color: reel.color, name: reel.name, img: reel.imageUrl ?? null },
+                  { label: 'Line', color: line.color, name: line.name, img: line.imageUrl ?? null },
                 ].map(({ label, color, name, img }) => (
                   <div key={label} style={{
                     background: `linear-gradient(160deg, ${color}0d 0%, rgba(4,10,20,0.85) 60%)`,
@@ -333,28 +344,8 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                       }
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: color + 'aa', marginBottom: 4 }}>{label}</p>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: '#d8d5d0', lineHeight: 1.2 }}>{name}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Reel + Line */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {[
-                  { label: 'Reel', color: reel.color, name: reel.name },
-                  { label: 'Line', color: line.color, name: line.name },
-                ].map(({ label, color, name }) => (
-                  <div key={label} style={{
-                    background: 'rgba(4,10,20,0.7)', border: `1px solid ${color}28`,
-                    borderRadius: 12, padding: '0.7rem 0.85rem',
-                    display: 'flex', alignItems: 'center', gap: 10,
-                  }}>
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0, opacity: 0.8, boxShadow: `0 0 8px ${color}66` }} />
-                    <div>
-                      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: color + '99', marginBottom: 3 }}>{label}</p>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: '#b8b5b0', lineHeight: 1.2 }}>{name}</p>
+                      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: color + 'aa', marginBottom: 4 }}>{label}</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d8d5d0', lineHeight: 1.2 }}>{name}</p>
                     </div>
                   </div>
                 ))}
@@ -363,7 +354,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
               {/* Special Items */}
               {ownedSpecials.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a6fa0', marginBottom: 2 }}>Special Items</p>
+                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#7a6fa0', marginBottom: 2 }}>Special Items</p>
                   {ownedSpecials.map(item => (
                     <div key={item.id} style={{
                       background: `linear-gradient(130deg, ${item.color}12 0%, rgba(4,10,20,0.88) 55%)`,
@@ -378,11 +369,11 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                         : <div style={{ width: 44, height: 44, borderRadius: 10, background: item.color + '22', border: `1px solid ${item.color}44`, flexShrink: 0 }} />
                       }
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: item.color, lineHeight: 1.2, marginBottom: 4 }}>{item.name}</p>
-                        <p className="font-karla" style={{ fontSize: '0.65rem', color: '#a8a5a0', lineHeight: 1.5 }}>{item.description}</p>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: item.color, lineHeight: 1.2, marginBottom: 4 }}>{item.name}</p>
+                        <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a8a5a0', lineHeight: 1.5 }}>{item.description}</p>
                         <span style={{
                           display: 'inline-block', marginTop: 6,
-                          fontSize: '0.58rem', padding: '0.15rem 0.5rem', borderRadius: '2rem',
+                          fontSize: '0.6rem', padding: '0.15rem 0.5rem', borderRadius: '2rem',
                           background: item.color + '18', border: `1px solid ${item.color}40`, color: item.color,
                           fontFamily: 'var(--font-karla)', fontWeight: 700,
                           textTransform: 'uppercase', letterSpacing: '0.1em',
@@ -392,6 +383,42 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Raid Loot */}
+              {ownedRaidItems.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#60a5fa88', marginBottom: 2 }}>Raid Loot</p>
+                  {ownedRaidItems.map(item => {
+                    const rarityColors: Record<string, string> = { common: '#9ca3af', uncommon: '#4ade80', rare: '#60a5fa', epic: '#a78bfa', legendary: '#f0c040' }
+                    const c = rarityColors[item.rarity] ?? '#60a5fa'
+                    return (
+                      <div key={item.id} style={{
+                        background: `linear-gradient(130deg, ${c}10 0%, rgba(4,10,20,0.88) 55%)`,
+                        border: `1px solid ${c}35`,
+                        borderRadius: 14,
+                        padding: '0.85rem 1rem',
+                        display: 'flex', alignItems: 'center', gap: 14,
+                      }}>
+                        {item.image
+                          ? <img src={item.image} alt={item.name} style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 0 10px ${c}66)` }} />
+                          : <div style={{ width: 44, height: 44, borderRadius: 10, background: c + '22', border: `1px solid ${c}44`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>{item.emoji}</div>
+                        }
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: c, lineHeight: 1.2, marginBottom: 4 }}>{item.name}</p>
+                          <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a8a5a0', lineHeight: 1.5 }}>{item.description}</p>
+                          <span style={{
+                            display: 'inline-block', marginTop: 6,
+                            fontSize: '0.6rem', padding: '0.15rem 0.5rem', borderRadius: '2rem',
+                            background: c + '18', border: `1px solid ${c}35`, color: c,
+                            fontFamily: 'var(--font-karla)', fontWeight: 700,
+                            textTransform: 'uppercase', letterSpacing: '0.1em',
+                          }}>{item.source}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
 
@@ -420,32 +447,21 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                           onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
                         />
                       </div>
-                      <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#f0ede8', lineHeight: 1.2 }}>{fish.name}</p>
+                      <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#f0ede8', lineHeight: 1.2 }}>{fish.name}</p>
                       <span style={{
-                        fontSize: '0.55rem', padding: '0.15rem 0.45rem', borderRadius: '2rem',
+                        fontSize: '0.6rem', padding: '0.15rem 0.45rem', borderRadius: '2rem',
                         background: `${c}14`, border: `1px solid ${c}38`, color: c,
                         fontFamily: 'var(--font-karla)', fontWeight: 700,
                         textTransform: 'uppercase', letterSpacing: '0.1em',
                       }}>
                         {RARITY_LABEL[fish.bite_rarity] ?? 'Unknown'}
                       </span>
-                      {fish.habitat && (
-                        <span style={{
-                          fontSize: '0.55rem', padding: '0.12rem 0.4rem', borderRadius: '2rem',
-                          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)',
-                          color: 'rgba(255,255,255,0.5)',
-                          fontFamily: 'var(--font-karla)', fontWeight: 600,
-                          textTransform: 'uppercase', letterSpacing: '0.08em',
-                        }}>
-                          {fish.habitat}
-                        </span>
-                      )}
                     </div>
                   )
                 })}
               </div>
               {stats.uniqueSpecies > 0 && (
-                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#6a6764', marginTop: 10, textAlign: 'center' }}>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#6a6764', marginTop: 10, textAlign: 'center' }}>
                   {stats.uniqueSpecies.toLocaleString()} species caught
                   {stats.highestPerfectStreak > 0 ? ` · ${stats.highestPerfectStreak}× best streak` : ''}
                 </p>
@@ -478,17 +494,16 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                     >
                       <button
                         onClick={() => setExpandedVoyage(isExpanded ? null : v.id)}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '0.85rem 1rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '0.95rem 1rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
                       >
-                        <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚓</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                            <p className="font-karla font-700" style={{ fontSize: '0.75rem', color: '#f0ede8' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#f0ede8' }}>
                               {routeConfig?.name ?? v.route}
                             </p>
                             {crewLostCount > 0 && (
                               <span style={{
-                                fontSize: '0.55rem', padding: '0.12rem 0.4rem', borderRadius: '2rem',
+                                fontSize: '0.6rem', padding: '0.15rem 0.45rem', borderRadius: '2rem',
                                 background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)',
                                 color: '#f87171', fontFamily: 'var(--font-karla)', fontWeight: 700,
                                 textTransform: 'uppercase' as const, letterSpacing: '0.1em',
@@ -497,13 +512,13 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                               </span>
                             )}
                           </div>
-                          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7a7572', marginTop: 3 }}>
+                          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#7a7572', marginTop: 4 }}>
                             {date}
                             {v.total_doubloons > 0 ? ` · +${v.total_doubloons.toLocaleString()} ⟡` : ''}
-                            {v.total_gems > 0 ? ` · +${v.total_gems} 💎` : ''}
+                            {v.total_gems > 0 ? ` · +${v.total_gems} gems` : ''}
                           </p>
                           {preview && !isExpanded && (
-                            <p className="font-karla" style={{ fontSize: '0.62rem', fontStyle: 'italic', color: 'rgba(255,255,255,0.32)', marginTop: 4, lineHeight: 1.5 }}>
+                            <p className="font-karla" style={{ fontSize: '0.7rem', fontStyle: 'italic', color: 'rgba(255,255,255,0.32)', marginTop: 5, lineHeight: 1.55 }}>
                               {preview}
                             </p>
                           )}
@@ -518,10 +533,10 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
 
                       {isExpanded && v.captains_log && (
                         <div style={{ padding: '0 1rem 1rem', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-                          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: 'rgba(180,120,30,0.6)', marginBottom: '0.5rem', paddingTop: '0.75rem' }}>
+                          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: 'rgba(180,120,30,0.6)', marginBottom: '0.5rem', paddingTop: '0.75rem' }}>
                             Captain&apos;s Log
                           </p>
-                          <p className="font-karla" style={{ fontSize: '0.7rem', lineHeight: 1.75, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
+                          <p className="font-karla" style={{ fontSize: '0.75rem', lineHeight: 1.75, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
                             {v.captains_log}
                           </p>
                         </div>
@@ -529,7 +544,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
 
                       {isExpanded && !v.captains_log && (
                         <div style={{ padding: '0.5rem 1rem 1rem', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-                          <p className="font-karla" style={{ fontSize: '0.65rem', fontStyle: 'italic', color: '#6a6764' }}>Log not yet written.</p>
+                          <p className="font-karla" style={{ fontSize: '0.7rem', fontStyle: 'italic', color: '#6a6764' }}>Log not yet written.</p>
                         </div>
                       )}
                     </div>
@@ -543,7 +558,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                       background: 'none', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10,
                       padding: '0.7rem', cursor: 'pointer', width: '100%',
                       color: '#7a7572', fontFamily: 'var(--font-karla)', fontWeight: 700,
-                      fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.1em',
+                      fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em',
                     }}
                   >
                     {showAllVoyages ? 'Show less' : `Show ${hiddenCount} more voyage${hiddenCount !== 1 ? 's' : ''}`}

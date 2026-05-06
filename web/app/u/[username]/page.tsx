@@ -22,7 +22,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
     admin.from('profiles')
-      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner')
+      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items')
       .ilike('username', username)
       .single(),
   ])
@@ -131,7 +131,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             shipName: profile.ship_name ?? null,
           }}
           rarestFish={rarestFish}
-          ownedSpecialIds={profile.has_tide_turner ? ['tide_turner'] : []}
+          ownedSpecialIds={[
+            ...(profile.has_tide_turner ? ['tide_turner'] : []),
+            ...(profile.has_phantom_hook ? ['phantom_hook'] : []),
+          ]}
+          equippedShipSkin={(profile.equipped_ship_skin as string | null) ?? null}
+          raidItemIds={(profile.raid_items as string[] | null) ?? []}
           isOwnProfile={!!user && user.id === profile.id}
           isInCrew={!!crewRowData.data}
         />
