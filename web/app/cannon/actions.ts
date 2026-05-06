@@ -6,6 +6,7 @@ import { applyVariantBoosts, EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 
 export interface CannonPlayerStats {
   playerHPMax: number
+  shipMinDamage: number
   shipSpeed: number
   totalPower: number
   totalDodge: number
@@ -53,8 +54,9 @@ export async function getCannonPlayerStats(userId: string): Promise<CannonPlayer
   }
 
   return {
-    playerHPMax:  ship.durability,
-    shipSpeed:    ship.speed,
+    playerHPMax:   ship.durability,
+    shipMinDamage: ship.minDamage,
+    shipSpeed:     ship.speed,
     totalPower,
     totalDodge,
     totalFortune,

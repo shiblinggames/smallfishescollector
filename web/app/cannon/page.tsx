@@ -47,6 +47,7 @@ export default async function CannonPage() {
             shipImageUrl={stats.shipImageUrl}
             shipName={stats.shipName}
             playerHPMax={stats.playerHPMax}
+            shipMinDamage={stats.shipMinDamage}
             shipSpeed={stats.shipSpeed}
             totalPower={stats.totalPower}
             totalDodge={stats.totalDodge}

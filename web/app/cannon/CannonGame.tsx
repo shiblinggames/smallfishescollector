@@ -77,7 +77,17 @@ const CANNON_MISS_CD = 2400
 const DODGE_MISS_CD  = 1800
 const ENEMY_DODGE_MS = 1400
 
-const BASE_SHOT_DAMAGE: Record<string, number> = { critical: 10, hit: 5, graze: 2, miss: 0 }
+function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: number): number {
+  if (!res || res === 'miss') return 0
+  const powerMax = Math.max(shipMinDamage, Math.floor(totalPower / 25))
+  const ranges: Record<string, [number, number]> = {
+    critical: [shipMinDamage, powerMax * 2],
+    hit:      [shipMinDamage, powerMax],
+    graze:    [1, Math.max(1, Math.ceil(powerMax * 0.4))],
+  }
+  const [min, max] = ranges[res]
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
 const SHOT_LABEL:  Record<string, string> = { critical: 'Critical!', hit: 'Hit!', graze: 'Graze', miss: 'Miss' }
 const SHOT_COLOR:  Record<string, string> = { critical: '#fbbf24', hit: '#4ade80', graze: '#94a3b8', miss: '#6b7280' }
 const DODGE_LABEL: Record<string, string> = { full: 'Dodged!', half: 'Half Dodge', miss: 'Hit!' }
@@ -226,19 +236,19 @@ function TimingBar({ indicatorRef, flashRef, zones, critZone }: {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function CannonGame({
-  shipImageUrl, shipName, playerHPMax, shipSpeed,
+  shipImageUrl, shipName, playerHPMax, shipMinDamage, shipSpeed,
   totalPower, totalDodge, totalFortune, crewCount,
 }: {
   shipImageUrl: string
   shipName: string
   playerHPMax: number
+  shipMinDamage: number
   shipSpeed: number
   totalPower: number
   totalDodge: number
   totalFortune: number
   crewCount: number
 }) {
-  const powerMult      = 1 + totalPower / 500
   const dodgeBonus     = totalDodge * 5
   const fortuneMult    = 1 + totalFortune / 150
   const reloadCooldown = Math.max(600, 2200 - shipSpeed * 110)
@@ -474,7 +484,7 @@ export default function CannonGame({
     flashBar(fireFlashRef, res === 'critical' ? '#fbbf24' : res === 'hit' ? '#4ade80' : res === 'graze' ? '#94a3b8' : '#6b7280')
 
     const dmgMult = isVolley ? 2 : 1
-    const dmg = Math.round((res ? BASE_SHOT_DAMAGE[res] : 0) * dmgMult * powerMult)
+    const dmg = rollShotDamage(res, shipMinDamage, totalPower) * dmgMult
 
     if (dmg > 0) {
       setShowCannonShot(true)
@@ -530,7 +540,7 @@ export default function CannonGame({
     } else {
       setTimeout(() => { canFireRef.current = true; setCanFire(true); setShotResult(null) }, 550)
     }
-  }, [powerMult, fortuneMult, cannonJammed, resetEnemyForRound])
+  }, [shipMinDamage, totalPower, fortuneMult, cannonJammed, resetEnemyForRound])
 
   const dodge = useCallback(() => {
     if (dodgeStateRef.current !== 'incoming' || dodgeLockedRef.current) return
