@@ -91,9 +91,9 @@ function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: numb
 const SHOT_LABEL: Record<string, string> = { critical: 'Critical!', hit: 'Hit!', graze: 'Graze', miss: 'Miss' }
 const SHOT_COLOR: Record<string, string> = { critical: '#fbbf24', hit: '#4ade80', graze: '#94a3b8', miss: '#6b7280' }
 
-function killGold(round: number, fortuneMult: number, isVolley: boolean) {
-  const base = isBossRound(round) ? 120 : 50
-  return Math.floor(base * fortuneMult * (isVolley ? 1.5 : 1))
+const KILL_GOLD: Record<string, number> = { brute: 20, sniper: 25, corsair: 35, pete: 0 }
+function killGold(round: number): number {
+  return KILL_GOLD[getEnemyForRound(round).id] ?? 0
 }
 function fmtGold(n: number) { return n.toLocaleString() }
 
@@ -279,7 +279,7 @@ export default function CannonGame({
   crewCount: number
 }) {
   const dodgeBonus        = totalDodge * 5
-  const fortuneMult       = 1 + totalFortune / 150
+  const fortuneMult       = 1 + totalFortune / 75   // 2× at max crew luck (~75)
   const reloadCooldown    = Math.max(600, 2200 - shipSpeed * 110)
   const dodgeCooldownUse  = Math.max(500, 1600 - dodgeBonus)
 
@@ -641,7 +641,7 @@ export default function CannonGame({
       if (enemyHPRef.current <= 0) {
         streakRef.current++
         setStreak(streakRef.current)
-        const earned = killGold(roundRef.current, fortuneMult, isVolley)
+        const earned = killGold(roundRef.current)
         potRef.current += earned
         setPot(potRef.current)
         setLastEarned(earned)
@@ -662,7 +662,7 @@ export default function CannonGame({
             setRaidTier(tier)
             if (tier) {
               const base  = Math.floor(Math.random() * 301 + 300)
-              const total = Math.floor(base * tier.mult) + potRef.current
+              const total = Math.floor(base * tier.mult * fortuneMult) + potRef.current
               setLootBase(base)
               setLootAmount(total)
             }
@@ -1242,7 +1242,7 @@ export default function CannonGame({
                     {fmtGold(lootAmount)} ⟡
                   </p>
                   <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.62rem', marginBottom: 16 }}>
-                    {fmtGold(pot)} raid · {fmtGold(Math.floor(lootBase * raidTier.mult))} crate ({raidTier.mult}×)
+                    {fmtGold(pot)} raid · {fmtGold(Math.floor(lootBase * raidTier.mult * fortuneMult))} crate ({raidTier.mult}× speed{fortuneMult > 1 ? ` · ${fortuneMult.toFixed(2)}× luck` : ''})
                   </p>
                   <motion.button
                     onPointerDown={async () => {
