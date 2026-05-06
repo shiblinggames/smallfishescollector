@@ -2,15 +2,16 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
-import Link from 'next/link'
 import { ZONES, ZONE_ORDER, EXPEDITION_SHIP_STATS, type Expedition } from '@/lib/expeditions'
 import ZoneCard from './ZoneCard'
+import RaidCard from './RaidCard'
 import CrewRoster from './CrewRoster'
 import DailyVoyagePanel from './DailyVoyagePanel'
 import VoyageHistory from './VoyageHistory'
 import ExpeditionsTour from './ExpeditionsTour'
 import { getCollectionForCrew } from './actions'
 import { getDailyVoyageState } from './voyageActions'
+import { getLevelFromXP } from '@/lib/expeditionLevel'
 
 export default async function ExpeditionsPage() {
   const supabase = await createClient()
@@ -42,6 +43,7 @@ export default async function ExpeditionsPage() {
 
   const shipTier = profile?.ship_tier ?? 0
   const doubloons = profile?.doubloons ?? 0
+  const navLevel = getLevelFromXP(profile?.expedition_xp ?? 0)
   const recentExpeditions = (expeditionRows ?? []) as Expedition[]
   const savedCrewVariantIds: number[] = (profile?.saved_crew as number[] | null) ?? []
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
@@ -101,23 +103,10 @@ export default async function ExpeditionsPage() {
             <VoyageHistory voyages={(voyageHistoryRows ?? []) as import('./VoyageHistory').VoyageHistoryEntry[]} />
           </div>
 
-          {/* ── Raids card ── */}
+          {/* ── Raids ── */}
           <div style={{ marginBottom: '1.5rem' }}>
             <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Raids</p>
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(20,14,6,0.80) 0%, rgba(14,10,4,0.88) 100%)',
-              border: '1px solid rgba(240,192,64,0.10)',
-              borderRadius: 16, padding: '1.1rem 1rem',
-              display: 'flex', alignItems: 'center', gap: '0.75rem',
-            }}>
-              <span style={{ fontSize: '1.2rem' }}>🔒</span>
-              <div>
-                <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#7a6848' }}>Coming soon</p>
-                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#4a3a28', lineHeight: 1.5, marginTop: 2 }}>
-                  Raids are still being built. Check back soon.
-                </p>
-              </div>
-            </div>
+            <RaidCard navLevel={navLevel} />
           </div>
 
           <div className="pb-16" />
