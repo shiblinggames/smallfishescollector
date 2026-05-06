@@ -3100,41 +3100,60 @@ export default function FishingGame({
                   )}
                   {isComplete && isClaimed && (
                     <div style={{
-                      background: 'rgba(4,10,18,0.5)',
-                      border: `1px solid ${zoneColor}22`,
+                      background: `linear-gradient(to bottom, ${zoneColor}14, ${zoneColor}08)`,
+                      border: `1px solid ${zoneColor}40`,
                       borderTop: 'none',
                       borderRadius: '0 0 12px 12px',
-                      padding: '0.45rem 0.9rem',
+                      padding: '0.7rem 0.9rem 0.8rem',
                     }}>
                       {confirmPrestigeZone === zone ? (
                         <div>
-                          <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', marginBottom: '0.35rem' }}>
-                            Reset your {HABITAT_LABEL[zone]} catch log for Prestige {(prestigeLevels[zone] ?? 0) + 1}? You&apos;ll earn +{((prestigeLevels[zone] ?? 0) + 1) * 5}% XP on every catch in this zone, and completing the collection again re-awards the full zone bonus.
+                          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: zoneColor, marginBottom: '0.3rem' }}>
+                            Are you sure?
+                          </p>
+                          <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.55rem', lineHeight: 1.4 }}>
+                            Your {HABITAT_LABEL[zone]} catch log resets, but you&apos;ll permanently earn <span style={{ color: zoneColor, fontWeight: 700 }}>+{((prestigeLevels[zone] ?? 0) + 1) * 5}% XP</span> on every catch here. You can complete the collection again for another full reward.
                           </p>
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => setConfirmPrestigeZone(null)}
                               className="font-karla font-600 uppercase tracking-[0.1em]"
-                              style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.35)', padding: '0.25rem 0.6rem', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6 }}
+                              style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', padding: '0.3rem 0.7rem', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 7 }}
                             >Cancel</button>
                             <button
                               onClick={() => handlePrestige(zone)}
                               disabled={prestigingZone === zone}
                               className="font-karla font-700 uppercase tracking-[0.1em]"
-                              style={{ fontSize: '0.55rem', color: zoneColor, padding: '0.25rem 0.7rem', background: zoneColor + '20', border: `1px solid ${zoneColor}55`, borderRadius: 6 }}
-                            >{prestigingZone === zone ? '…' : 'Confirm Prestige'}</button>
+                              style={{ fontSize: '0.62rem', color: '#fff', padding: '0.3rem 0.9rem', background: zoneColor + 'cc', border: `1px solid ${zoneColor}`, borderRadius: 7, boxShadow: `0 0 10px ${zoneColor}66` }}
+                            >{prestigingZone === zone ? '…' : 'Yes, Prestige!'}</button>
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-between">
-                          <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: zoneColor + '80' }}>
-                            Reward claimed
+                        <div>
+                          <div className="flex items-center gap-1.5" style={{ marginBottom: '0.25rem' }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill={zoneColor} style={{ filter: `drop-shadow(0 0 5px ${zoneColor})`, flexShrink: 0 }}>
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                            </svg>
+                            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: zoneColor }}>
+                              Prestige {(prestigeLevels[zone] ?? 0) + 1} Available
+                            </p>
+                          </div>
+                          <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.65)', marginBottom: '0.55rem', lineHeight: 1.35 }}>
+                            Reset your collection and permanently earn <span style={{ color: zoneColor, fontWeight: 700 }}>+{((prestigeLevels[zone] ?? 0) + 1) * 5}% XP</span> on every {HABITAT_LABEL[zone]} catch — forever.
                           </p>
                           <button
                             onClick={e => { e.stopPropagation(); setConfirmPrestigeZone(zone) }}
-                            className="font-karla font-700 uppercase tracking-[0.1em]"
-                            style={{ fontSize: '0.52rem', color: zoneColor, background: zoneColor + '18', border: `1px solid ${zoneColor}44`, borderRadius: 6, padding: '0.2rem 0.6rem' }}
-                          >Prestige {(prestigeLevels[zone] ?? 0) + 1}</button>
+                            className="font-karla font-700 uppercase tracking-[0.12em] w-full"
+                            style={{
+                              fontSize: '0.68rem',
+                              color: '#fff',
+                              padding: '0.42rem 1rem',
+                              background: `linear-gradient(135deg, ${zoneColor}aa, ${zoneColor}66)`,
+                              border: `1px solid ${zoneColor}88`,
+                              borderRadius: 8,
+                              boxShadow: `0 0 14px ${zoneColor}44, inset 0 1px 0 rgba(255,255,255,0.1)`,
+                            }}
+                          >★ Prestige {(prestigeLevels[zone] ?? 0) + 1}</button>
                         </div>
                       )}
                     </div>
