@@ -603,7 +603,7 @@ export default function CannonGame({
   const isIncoming    = dodgeState === 'incoming'
   const isVolleyReady = charges === MAX_CHARGES
   const isCommitted   = !canFire || !canReload
-  const raidScore     = totalPower + totalDodge + totalFortune
+  const powerMax      = Math.max(shipMinDamage, Math.floor(totalPower / 4))
 
   const dodgeBarColor  = dodgeWindowPct > 0.62 ? '#38bdf8' : dodgeWindowPct > 0.28 ? '#fbbf24' : '#ef4444'
   const actionBarColor = enemyActionPct > 0.4 ? '#a78bfa' : enemyActionPct > 0.15 ? '#fbbf24' : '#ef4444'
@@ -665,11 +665,14 @@ export default function CannonGame({
             )}
           </div>
 
-          {/* Raid Score */}
+          {/* Damage range */}
           <div style={{ marginTop: 2, borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 6 }}>
-            <p className="font-karla font-400 text-center" style={{ fontSize: '0.45rem', color: '#5a5855', letterSpacing: '0.08em', marginBottom: 2 }}>RAID SCORE</p>
-            <p className="font-karla font-700 text-center" style={{ fontSize: '0.88rem', color: raidScore > 0 ? '#f0ede8' : '#3a3835' }}>
-              {raidScore > 0 ? raidScore : '—'}
+            <p className="font-karla font-400 text-center" style={{ fontSize: '0.45rem', color: '#5a5855', letterSpacing: '0.08em', marginBottom: 3 }}>DAMAGE</p>
+            <p className="font-karla font-700 text-center" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>
+              {shipMinDamage}–{powerMax}
+            </p>
+            <p className="font-karla font-400 text-center" style={{ fontSize: '0.42rem', color: '#5a5855', marginTop: 1 }}>
+              crit {shipMinDamage}–{powerMax * 2}
             </p>
           </div>
         </div>
@@ -1004,13 +1007,10 @@ export default function CannonGame({
       {/* Idle badge */}
       {phase === 'idle' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-1">
-          {raidScore > 0 ? (
-            <span style={{ fontSize: '0.65rem', color: '#9a9488', fontFamily: 'var(--font-karla)' }}>
-              Raid Score: <span style={{ color: '#f0ede8', fontWeight: 700 }}>{raidScore}</span>
-            </span>
-          ) : (
-            <span style={{ fontSize: '0.6rem', color: '#4a4845', fontFamily: 'var(--font-karla)' }}>No crew assigned</span>
-          )}
+          <span style={{ fontSize: '0.65rem', color: '#9a9488', fontFamily: 'var(--font-karla)' }}>
+            DMG <span style={{ color: '#f0ede8', fontWeight: 700 }}>{shipMinDamage}–{powerMax}</span>
+            <span style={{ color: '#5a5855' }}> · crit {shipMinDamage}–{powerMax * 2}</span>
+          </span>
         </motion.div>
       )}
 
