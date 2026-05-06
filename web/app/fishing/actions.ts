@@ -579,7 +579,7 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
     .select(`prestige_levels, ${rewardCol}`)
     .eq('id', user.id).single()
   if (!profile) return { error: 'Profile not found' }
-  if (!profile[rewardCol]) return { error: 'Claim completion reward first' }
+  if (!(profile as Record<string, unknown>)[rewardCol]) return { error: 'Claim completion reward first' }
 
   const { count: caughtCount } = await admin
     .from('fish_collection').select('*', { count: 'exact', head: true })
