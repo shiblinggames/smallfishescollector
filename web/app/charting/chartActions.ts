@@ -134,7 +134,7 @@ export async function makeChartGuess(
   contestId: number,
   row: number,
   col: number,
-): Promise<{ correct: boolean; movesLeft: number; completed: boolean; newPathIndex: number; completionPosition: number | null; bonusDoubloons: number } | { error: string }> {
+): Promise<{ correct: boolean; movesLeft: number; completed: boolean; newPathIndex: number; completionPosition: number | null; bonusDoubloons: number; newDoubloonTotal: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
