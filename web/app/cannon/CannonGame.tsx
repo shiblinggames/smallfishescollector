@@ -274,6 +274,10 @@ export default function CannonGame({
   const [dodgePrimed, setDodgePrimed]   = useState(false)
   const [dodgeCooldown, setDodgeCooldown] = useState(false)
   const [dodgePrimePct, setDodgePrimePct] = useState(1)
+  const [actionLocked, setActionLocked] = useState(false)
+  const [dodgeFlash, setDodgeFlash]     = useState(false)
+  const [dodgeShake, setDodgeShake]     = useState(false)
+  const [showDodgeVFX, setShowDodgeVFX] = useState(false)
   const [roundDisplay, setRoundDisplay] = useState(1)
   const [isBoss, setIsBoss]             = useState(false)
   const [isClaiming, setIsClaiming]     = useState(false)
@@ -310,6 +314,7 @@ export default function CannonGame({
   const canReloadRef          = useRef(true)
   const dodgePrimedRef        = useRef(false)
   const dodgeCooldownRef      = useRef(false)
+  const actionLockedRef       = useRef(false)
   const dodgePrimeElapsedRef  = useRef(0)
   const dodgePrimeTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
   const roundEndingRef        = useRef(false)
@@ -356,10 +361,11 @@ export default function CannonGame({
     canReloadRef.current        = true
     setCanFire(true)
     if (dodgePrimeTimerRef.current) { clearTimeout(dodgePrimeTimerRef.current); dodgePrimeTimerRef.current = null }
-    dodgePrimedRef.current      = false
-    dodgeCooldownRef.current    = false
+    dodgePrimedRef.current       = false
+    dodgeCooldownRef.current     = false
+    actionLockedRef.current      = false
     dodgePrimeElapsedRef.current = 0
-    roundEndingRef.current      = false
+    roundEndingRef.current       = false
 
     resetEnemyForRound(0)
 
@@ -368,9 +374,10 @@ export default function CannonGame({
     setPlayerHP(playerHPMax)
     setCharges(0); setCanReload(true)
     setStreak(0); setPot(0); setLastEarned(0)
-    setCannonJammed(false)
+    setCannonJammed(false); setActionLocked(false)
     setShotResult(null); setDodgePrimed(false); setDodgeCooldown(false)
-    setDodgePrimePct(1); setRoundDisplay(1); setEnemySinking(false)
+    setDodgePrimePct(1); setDodgeFlash(false); setDodgeShake(false); setShowDodgeVFX(false)
+    setRoundDisplay(1); setEnemySinking(false)
     setShowCannonShot(false); setClearReady(false)
   }, [playerHPMax, resetEnemyForRound])
 
@@ -459,12 +466,21 @@ export default function CannonGame({
             setEnemyCharges(enemyChargesRef.current)
 
             if (dodgePrimedRef.current) {
-              // Prediction dodge — cancel prime, short cooldown
+              // Prediction dodge — cancel prime, reset actions, VFX
               if (dodgePrimeTimerRef.current) { clearTimeout(dodgePrimeTimerRef.current); dodgePrimeTimerRef.current = null }
               dodgePrimedRef.current = false
               dodgePrimeElapsedRef.current = 0
               setDodgePrimed(false); setDodgePrimePct(1)
-              setPHitsplat(p => ({ key: p.key + 1, text: 'DODGED!', color: '#38bdf8', big: false }))
+              // Reward: instantly restore fire + reload
+              canFireRef.current = true; setCanFire(true)
+              canReloadRef.current = true; setCanReload(true)
+              setShotResult(null)
+              // VFX cascade
+              setPHitsplat(p => ({ key: p.key + 1, text: 'DODGED!', color: '#38bdf8', big: true }))
+              setDodgeShake(true); setDodgeFlash(true); setShowDodgeVFX(true)
+              setTimeout(() => { setDodgeShake(false) }, 520)
+              setTimeout(() => { setDodgeFlash(false) }, 340)
+              setTimeout(() => { setShowDodgeVFX(false) }, 650)
               dodgeCooldownRef.current = true
               setDodgeCooldown(true)
               setTimeout(() => { dodgeCooldownRef.current = false; setDodgeCooldown(false) }, dodgeCooldownUse)
@@ -496,7 +512,7 @@ export default function CannonGame({
   }, [phase, dodgeCooldownUse])
 
   const doReload = useCallback(() => {
-    if (phaseRef.current !== 'playing' || !canReloadRef.current || chargesRef.current >= MAX_CHARGES) return
+    if (phaseRef.current !== 'playing' || !canReloadRef.current || chargesRef.current >= MAX_CHARGES || actionLockedRef.current) return
     chargesRef.current = Math.min(MAX_CHARGES, chargesRef.current + 1)
     setCharges(chargesRef.current)
     canReloadRef.current = false
@@ -508,7 +524,7 @@ export default function CannonGame({
   }, [reloadCooldown])
 
   const fire = useCallback(() => {
-    if (phaseRef.current !== 'playing' || !canFireRef.current || chargesRef.current < 1 || cannonJammed) return
+    if (phaseRef.current !== 'playing' || !canFireRef.current || chargesRef.current < 1 || cannonJammed || actionLockedRef.current) return
     canFireRef.current = false
     setCanFire(false)
 
@@ -588,19 +604,22 @@ export default function CannonGame({
 
   const primeDodge = useCallback(() => {
     if (phaseRef.current !== 'playing') return
-    if (dodgeCooldownRef.current || dodgePrimedRef.current) return
+    if (dodgeCooldownRef.current || dodgePrimedRef.current || actionLockedRef.current) return
     if (!canFireRef.current || !canReloadRef.current) return  // committed: can't prime mid-action
 
     dodgePrimedRef.current = true
     dodgePrimeElapsedRef.current = 0
     setDodgePrimed(true); setDodgePrimePct(1)
 
-    // Auto-expire prime after window
+    // Auto-expire: window ran out with no incoming shot → lock all actions as punishment
     if (dodgePrimeTimerRef.current) clearTimeout(dodgePrimeTimerRef.current)
     dodgePrimeTimerRef.current = setTimeout(() => {
       dodgePrimedRef.current = false
       dodgePrimeElapsedRef.current = 0
       setDodgePrimed(false); setDodgePrimePct(1)
+      actionLockedRef.current = true
+      setActionLocked(true)
+      setTimeout(() => { actionLockedRef.current = false; setActionLocked(false) }, 1200)
     }, DODGE_PRIME_MS)
   }, [])
 
@@ -620,8 +639,9 @@ export default function CannonGame({
     setPhase('idle')
   }, [isClaiming])
 
-  const isVolleyReady = charges === MAX_CHARGES
-  const isCommitted   = !canFire || !canReload
+  const isVolleyReady  = charges === MAX_CHARGES
+  const isCommitted    = !canFire || !canReload
+  const isActionLocked = actionLocked
   const powerMax      = shipMinDamage + Math.floor(totalPower / 4)
 
   const dodgePrimeBarColor = dodgePrimePct > 0.5 ? '#38bdf8' : dodgePrimePct > 0.2 ? '#fbbf24' : '#ef4444'
@@ -636,13 +656,22 @@ export default function CannonGame({
         {/* Player panel */}
         <div style={{
           flex: 1, background: 'rgba(96,165,250,0.05)',
-          border: '1px solid rgba(96,165,250,0.15)',
+          border: `1px solid ${dodgeShake ? 'rgba(56,189,248,0.5)' : 'rgba(96,165,250,0.15)'}`,
           borderRadius: 14, padding: '0.65rem 0.55rem',
           display: 'flex', flexDirection: 'column', gap: '0.3rem',
+          animation: dodgeShake ? 'dodge-slide 0.5s ease' : 'none',
+          transition: 'border-color 0.2s',
         }}>
           <div style={{ position: 'relative', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <img src={shipImageUrl} alt={shipName} style={{ width: '100%', height: 72, objectFit: 'contain', objectPosition: 'center' }} />
             {pHitsplat.key > 0 && <Hitsplat key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} animKey={pHitsplat.key} />}
+            {showDodgeVFX && (
+              <>
+                <span style={{ position: 'absolute', left: '60%', top: '15%', fontSize: '1.5rem', animation: 'cannon-shot 0.55s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💨</span>
+                <span style={{ position: 'absolute', left: '20%', top: '35%', fontSize: '1.2rem', animation: 'cannon-shot 0.5s 0.07s ease forwards', pointerEvents: 'none', zIndex: 10 }}>⚡</span>
+                <span style={{ position: 'absolute', left: '48%', top: '55%', fontSize: '1.0rem', animation: 'cannon-shot 0.6s 0.12s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💨</span>
+              </>
+            )}
           </div>
           <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.6rem', color: '#f0ede8', lineHeight: 1.2 }}>{shipName}</p>
           <HPBar current={playerHP} max={playerHPMax} color="#60a5fa" />
@@ -849,18 +878,18 @@ export default function CannonGame({
         {phase === 'playing' && (
           <motion.button
             onPointerDown={doReload}
-            whileTap={canReload && charges < MAX_CHARGES ? { scale: 0.95 } : {}}
+            whileTap={canReload && charges < MAX_CHARGES && !isActionLocked ? { scale: 0.95 } : {}}
             className="font-karla font-700"
             style={{
               flex: 1, padding: '12px 0', borderRadius: 14, cursor: 'pointer',
-              background: !canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.03)' : 'rgba(96,165,250,0.12)',
-              border: `1px solid ${!canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.07)' : 'rgba(96,165,250,0.35)'}`,
-              color: !canReload ? '#3a5a7a' : charges >= MAX_CHARGES ? '#4a4845' : '#60a5fa',
+              background: isActionLocked ? 'rgba(239,68,68,0.07)' : !canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.03)' : 'rgba(96,165,250,0.12)',
+              border: `1px solid ${isActionLocked ? 'rgba(239,68,68,0.22)' : !canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.07)' : 'rgba(96,165,250,0.35)'}`,
+              color: isActionLocked ? '#7a2a2a' : !canReload ? '#3a5a7a' : charges >= MAX_CHARGES ? '#4a4845' : '#60a5fa',
               fontSize: '0.85rem', letterSpacing: '0.06em',
-              opacity: !canReload || charges >= MAX_CHARGES ? 0.5 : 1,
+              opacity: isActionLocked || !canReload || charges >= MAX_CHARGES ? 0.45 : 1,
               transition: 'all 0.12s',
             }}>
-            {!canReload ? 'Loading…' : charges >= MAX_CHARGES ? 'Full' : 'RELOAD'}
+            {isActionLocked ? '…' : !canReload ? 'Loading…' : charges >= MAX_CHARGES ? 'Full' : 'RELOAD'}
           </motion.button>
         )}
 
@@ -868,7 +897,7 @@ export default function CannonGame({
         {phase === 'playing' && (
           <motion.button
             onPointerDown={primeDodge}
-            whileTap={!dodgeCooldown && !dodgePrimed && !isCommitted ? { scale: 0.95 } : {}}
+            whileTap={!dodgeCooldown && !dodgePrimed && !isCommitted && !isActionLocked ? { scale: 0.95 } : {}}
             animate={
               dodgePrimed
                 ? { boxShadow: ['0 0 0px #38bdf800', '0 0 14px #38bdf8aa', '0 0 6px #38bdf866'] }
@@ -878,32 +907,35 @@ export default function CannonGame({
             className="font-karla font-700"
             style={{
               flex: 1, padding: '12px 0', borderRadius: 14, cursor: 'pointer',
-              background: dodgePrimed     ? 'rgba(56,189,248,0.18)'
-                        : dodgeCooldown   ? 'rgba(255,255,255,0.03)'
-                        : isCommitted     ? 'rgba(251,146,60,0.06)'
-                        :                  'rgba(56,189,248,0.10)',
+              background: dodgePrimed        ? 'rgba(56,189,248,0.18)'
+                        : isActionLocked     ? 'rgba(239,68,68,0.07)'
+                        : dodgeCooldown      ? 'rgba(255,255,255,0.03)'
+                        : isCommitted        ? 'rgba(251,146,60,0.06)'
+                        :                     'rgba(56,189,248,0.10)',
               border: `1px solid ${
-                dodgePrimed   ? 'rgba(56,189,248,0.65)'
-                : dodgeCooldown ? 'rgba(255,255,255,0.07)'
-                : isCommitted   ? 'rgba(251,146,60,0.22)'
-                :                 'rgba(56,189,248,0.3)'
+                dodgePrimed    ? 'rgba(56,189,248,0.65)'
+                : isActionLocked ? 'rgba(239,68,68,0.22)'
+                : dodgeCooldown  ? 'rgba(255,255,255,0.07)'
+                : isCommitted    ? 'rgba(251,146,60,0.22)'
+                :                  'rgba(56,189,248,0.3)'
               }`,
               color: dodgePrimed   ? '#38bdf8'
-                   : dodgeCooldown ? '#2a4050'
-                   : isCommitted   ? '#f97316'
-                   :                 '#38bdf8',
+                   : isActionLocked ? '#7a2a2a'
+                   : dodgeCooldown  ? '#2a4050'
+                   : isCommitted    ? '#f97316'
+                   :                  '#38bdf8',
               fontSize: '0.85rem', letterSpacing: '0.06em',
-              opacity: dodgeCooldown || isCommitted ? 0.5 : 1,
+              opacity: isActionLocked || dodgeCooldown || isCommitted ? 0.45 : 1,
               transition: 'all 0.12s',
             }}>
-            {dodgePrimed ? 'DODGING…' : dodgeCooldown ? '…' : isCommitted ? 'Busy' : 'DODGE'}
+            {dodgePrimed ? 'DODGING…' : isActionLocked ? '…' : dodgeCooldown ? '…' : isCommitted ? 'Busy' : 'DODGE'}
           </motion.button>
         )}
 
         {/* Right: FIRE / VOLLEY / idle start */}
         <motion.button
-          onPointerDown={phase === 'playing' && !cannonJammed && charges > 0 ? fire : phase === 'idle' ? startGame : undefined}
-          whileTap={charges > 0 && !cannonJammed ? { scale: 0.95 } : {}}
+          onPointerDown={phase === 'playing' && !cannonJammed && charges > 0 && !isActionLocked ? fire : phase === 'idle' ? startGame : undefined}
+          whileTap={charges > 0 && !cannonJammed && !isActionLocked ? { scale: 0.95 } : {}}
           className="font-karla font-700"
           style={{
             flex: 1, padding: '12px 0', borderRadius: 14,
@@ -944,6 +976,15 @@ export default function CannonGame({
           position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 40,
           background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.35) 0%, rgba(251,191,36,0.08) 60%, transparent 100%)',
           animation: 'crit-flash 0.38s ease forwards',
+        }} />
+      )}
+
+      {/* ── Dodge flash ──────────────────────────────────────────────────────── */}
+      {dodgeFlash && (
+        <div style={{
+          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 40,
+          background: 'radial-gradient(ellipse at center, rgba(56,189,248,0.3) 0%, rgba(56,189,248,0.07) 60%, transparent 100%)',
+          animation: 'crit-flash 0.34s ease forwards',
         }} />
       )}
 
@@ -1043,6 +1084,14 @@ export default function CannonGame({
         @keyframes crit-flash {
           0%   { opacity: 1; }
           100% { opacity: 0; }
+        }
+        @keyframes dodge-slide {
+          0%   { transform: translateX(0) rotate(0deg); }
+          18%  { transform: translateX(14px) rotate(1deg); }
+          38%  { transform: translateX(-6px) rotate(-0.5deg); }
+          60%  { transform: translateX(4px) rotate(0.3deg); }
+          80%  { transform: translateX(-2px); }
+          100% { transform: translateX(0) rotate(0deg); }
         }
         @keyframes enemy-sink {
           0%   { transform: scaleX(-1) translateY(0) rotate(0deg); opacity: 1; }
