@@ -662,16 +662,34 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
     const final = rollLootIndex()
     setSlotFinal(final)
     setSlotLanded(false)
-    const interval = setInterval(() => {
-      setSlotDisplay(prev => (prev + 1) % BARNACLE_PETE_LOOT.length)
-    }, 80)
-    slotIntervalsRef.current = [interval]
-    setTimeout(() => {
-      clearInterval(interval)
-      setSlotDisplay(final)
-      setSlotLanded(true)
-    }, 1200)
-    return () => clearInterval(interval)
+
+    const tick = () => setSlotDisplay(prev => (prev + 1) % BARNACLE_PETE_LOOT.length)
+
+    // Three phases: fast → medium → slow, then snap to result
+    const fast = setInterval(tick, 70)
+    slotIntervalsRef.current = [fast]
+
+    const t1 = setTimeout(() => {
+      clearInterval(fast)
+      const med = setInterval(tick, 140)
+      slotIntervalsRef.current = [med]
+
+      const t2 = setTimeout(() => {
+        clearInterval(med)
+        const slow = setInterval(tick, 280)
+        slotIntervalsRef.current = [slow]
+
+        const t3 = setTimeout(() => {
+          clearInterval(slow)
+          setSlotDisplay(final)
+          setSlotLanded(true)
+        }, 900)
+        return () => clearTimeout(t3)
+      }, 900)
+      return () => clearTimeout(t2)
+    }, 1400)
+
+    return () => { clearTimeout(t1); slotIntervalsRef.current.forEach(clearInterval) }
   }, [lootOpened])
 
   // Raid timer — ticks through playing+clear, triggers time-expired at 5:00
@@ -1375,8 +1393,8 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
                     const color = RARITY_COLOR[item.rarity]
                     return (
                       <motion.div
-                        animate={slotLanded ? { scale: [1, 1.18, 1] } : {}}
-                        transition={{ duration: 0.35, ease: 'easeOut' }}
+                        animate={slotLanded ? { scale: [1, 1.32, 0.92, 1.1, 1] } : {}}
+                        transition={{ duration: 0.65, ease: 'easeOut' }}
                         style={{
                           width: 120, height: 144,
                           border: `2px solid ${slotLanded ? color : 'rgba(255,255,255,0.12)'}`,
