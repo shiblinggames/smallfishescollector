@@ -3174,96 +3174,6 @@ export default function FishingGame({
 
             {/* Scrollable body */}
             <div style={{ overflowY: 'auto', padding: '0 1.1rem 2rem', overscrollBehavior: 'contain' }}>
-            {/* Ancient Deep trophy zone */}
-            {(() => {
-              const zone = 'ancient_deep'
-              const zoneColor = HABITAT_COLOR[zone]
-              const bossSpecies = allFishSpecies.filter(f => f.habitat === zone)
-              const caughtCount = bossSpecies.filter(f => trophyCatches.has(f.id)).length
-              const isExpanded = expandedZone === zone
-              const fishingLevel = getLevelFromXP(fishingXP)
-              const isLocked = fishingLevel < 75
-              return (
-                <div key={zone} style={{ marginBottom: '0.6rem' }}>
-                  <button
-                    className="w-full text-left"
-                    style={{
-                      background: `linear-gradient(135deg, rgba(6,6,20,0.97) 0%, ${zoneColor}16 100%)`,
-                      border: `1px solid ${zoneColor}40`,
-                      borderLeft: `3px solid ${zoneColor}cc`,
-                      borderRadius: isExpanded && !isLocked ? '12px 12px 0 0' : 12,
-                      padding: '0.75rem 0.9rem 0.65rem',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => !isLocked && setExpandedZone(isExpanded ? null : zone)}
-                  >
-                    <div className="flex items-center justify-between" style={{ marginBottom: '0.4rem' }}>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                            style={{ fontSize: '0.85rem', color: zoneColor, lineHeight: 1 }}>
-                            {isLocked ? '🔒 ' : ''}Ancient Deep
-                          </p>
-                        </div>
-                        <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>
-                          {isLocked ? `Unlocks at Fishing Level 75` : 'Before time. Beyond depth.'}
-                        </p>
-                      </div>
-                      <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: isLocked ? 'rgba(255,255,255,0.2)' : (caughtCount === bossSpecies.length && bossSpecies.length > 0 ? zoneColor : 'rgba(255,255,255,0.5)') }}>
-                        {isLocked ? '—' : <>{caughtCount}<span style={{ color: 'rgba(255,255,255,0.25)' }}>/{bossSpecies.length}</span></>}
-                      </p>
-                    </div>
-                    {!isLocked && (
-                      <p className="font-karla font-500" style={{ fontSize: '0.65rem', color: `${zoneColor}88`, letterSpacing: '0.06em' }}>
-                        Ancient trophies · 3-stage boss catches
-                      </p>
-                    )}
-                  </button>
-                  {isExpanded && !isLocked && (
-                    <div style={{
-                      background: `${zoneColor}08`,
-                      border: `1px solid ${zoneColor}22`,
-                      borderTop: 'none',
-                      borderRadius: '0 0 12px 12px',
-                      padding: '0.5rem 0.6rem 0.6rem',
-                    }}>
-                      {bossSpecies.map(f => {
-                        const caught = trophyCatches.has(f.id)
-                        return (
-                          <div key={f.id} style={{
-                            display: 'flex', alignItems: 'center', gap: 10,
-                            padding: '0.45rem 0.5rem', borderRadius: 8, marginBottom: 2,
-                            background: caught ? `${zoneColor}14` : 'rgba(255,255,255,0.02)',
-                          }}>
-                            <div style={{
-                              width: 28, height: 28, borderRadius: 6, flexShrink: 0,
-                              background: caught ? `${zoneColor}30` : 'rgba(255,255,255,0.04)',
-                              border: `1px solid ${caught ? zoneColor + '60' : 'rgba(255,255,255,0.08)'}`,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: '0.9rem',
-                            }}>
-                              {caught ? '🏆' : '🔒'}
-                            </div>
-                            <div>
-                              <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: caught ? '#f0ede8' : 'rgba(255,255,255,0.3)', lineHeight: 1.2 }}>{f.name}</p>
-                              {caught && <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: `${zoneColor}99`, fontStyle: 'italic' }}>{f.scientific_name}</p>}
-                            </div>
-                            {caught && (
-                              <div style={{ marginLeft: 'auto' }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill={zoneColor} style={{ filter: `drop-shadow(0 0 4px ${zoneColor})` }}>
-                                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                                </svg>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
-
             {ZONES.filter(z => z !== 'ancient_deep').map(zone => {
               const zoneSpecies = allFishSpecies.filter(f => f.habitat === zone)
               const discoveredCount = zoneSpecies.filter(f => caughtFishIds.has(f.id)).length
@@ -3502,6 +3412,89 @@ export default function FishingGame({
                 </div>
               )
             })}
+
+            {/* Ancient Deep trophy zone */}
+            {(() => {
+              const zone = 'ancient_deep'
+              const zoneColor = HABITAT_COLOR[zone]
+              const bossSpecies = allFishSpecies.filter(f => f.habitat === zone)
+              const caughtCount = bossSpecies.filter(f => trophyCatches.has(f.id)).length
+              const isExpanded = expandedZone === zone
+              const isLocked = getLevelFromXP(fishingXP) < 75
+              return (
+                <div key={zone} style={{ marginBottom: '0.6rem' }}>
+                  <button
+                    className="w-full text-left"
+                    style={{
+                      background: `linear-gradient(135deg, rgba(6,6,20,0.97) 0%, ${zoneColor}16 100%)`,
+                      border: `1px solid ${zoneColor}40`,
+                      borderLeft: `3px solid ${zoneColor}cc`,
+                      borderRadius: isExpanded && !isLocked ? '12px 12px 0 0' : 12,
+                      padding: '0.75rem 0.9rem 0.65rem',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => !isLocked && setExpandedZone(isExpanded ? null : zone)}
+                  >
+                    <div className="flex items-center justify-between" style={{ marginBottom: '0.4rem' }}>
+                      <div>
+                        <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                          style={{ fontSize: '0.85rem', color: zoneColor, lineHeight: 1 }}>
+                          {isLocked ? '🔒 ' : ''}Ancient Deep
+                        </p>
+                        <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>
+                          {isLocked ? 'Unlocks at Fishing Level 75' : 'Before time. Beyond depth.'}
+                        </p>
+                      </div>
+                      <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: isLocked ? 'rgba(255,255,255,0.2)' : (caughtCount === bossSpecies.length && bossSpecies.length > 0 ? zoneColor : 'rgba(255,255,255,0.5)') }}>
+                        {isLocked ? '—' : <>{caughtCount}<span style={{ color: 'rgba(255,255,255,0.25)' }}>/{bossSpecies.length}</span></>}
+                      </p>
+                    </div>
+                    {!isLocked && (
+                      <p className="font-karla font-500" style={{ fontSize: '0.65rem', color: `${zoneColor}88`, letterSpacing: '0.06em' }}>
+                        Ancient trophies · 3-stage boss catches
+                      </p>
+                    )}
+                  </button>
+                  {isExpanded && !isLocked && (
+                    <div style={{
+                      background: `${zoneColor}08`, border: `1px solid ${zoneColor}22`,
+                      borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '0.5rem 0.6rem 0.6rem',
+                    }}>
+                      {bossSpecies.map(f => {
+                        const caught = trophyCatches.has(f.id)
+                        return (
+                          <div key={f.id} style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '0.45rem 0.5rem', borderRadius: 8, marginBottom: 2,
+                            background: caught ? `${zoneColor}14` : 'rgba(255,255,255,0.02)',
+                          }}>
+                            <div style={{
+                              width: 28, height: 28, borderRadius: 6, flexShrink: 0,
+                              background: caught ? `${zoneColor}30` : 'rgba(255,255,255,0.04)',
+                              border: `1px solid ${caught ? zoneColor + '60' : 'rgba(255,255,255,0.08)'}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem',
+                            }}>
+                              {caught ? '🏆' : '🔒'}
+                            </div>
+                            <div>
+                              <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: caught ? '#f0ede8' : 'rgba(255,255,255,0.3)', lineHeight: 1.2 }}>{f.name}</p>
+                              {caught && <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: `${zoneColor}99`, fontStyle: 'italic' }}>{f.scientific_name}</p>}
+                            </div>
+                            {caught && (
+                              <div style={{ marginLeft: 'auto' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill={zoneColor} style={{ filter: `drop-shadow(0 0 4px ${zoneColor})` }}>
+                                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
             </div>
           </motion.div>
         )}
