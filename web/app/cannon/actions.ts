@@ -21,7 +21,7 @@ export async function getCannonPlayerStats(userId: string): Promise<CannonPlayer
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew')
+    .select('ship_tier, saved_crew, ship_name')
     .eq('id', userId)
     .single()
 
@@ -61,7 +61,7 @@ export async function getCannonPlayerStats(userId: string): Promise<CannonPlayer
     totalDodge,
     totalFortune,
     shipImageUrl: ship.image,
-    shipName:     ship.name,
+    shipName:     (profile?.ship_name as string | null) ?? ship.name,
     crewCount:    savedCrew.length,
   }
 }

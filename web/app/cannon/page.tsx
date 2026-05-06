@@ -32,16 +32,6 @@ export default async function CannonPage() {
           </Link>
         </div>
 
-        <div className="px-6 pt-4 pb-6 text-center">
-          <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Mini Game</p>
-          <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem' }}>
-            Broadside
-          </h1>
-          <p className="font-karla font-300 text-[#a0a09a] text-xs mt-1">
-            Time your shot. Sink them all.
-          </p>
-        </div>
-
         <div className="px-6 pb-12 max-w-sm mx-auto md:[zoom:1.25] lg:[zoom:1.45]">
           <CannonGame
             shipImageUrl={stats.shipImageUrl}

@@ -317,6 +317,8 @@ export default function CannonGame({
   const [raidTier, setRaidTier]         = useState<{ mult: number; label: string; color: string } | null>(null)
   const [pHitsplat, setPHitsplat]       = useState({ key: 0, text: '', color: '', big: false })
   const [eHitsplat, setEHitsplat]       = useState({ key: 0, text: '', color: '', big: false })
+  const [enemyMinDmg, setEnemyMinDmg]   = useState(2)
+  const [enemyMaxDmg, setEnemyMaxDmg]   = useState(5)
 
   const fireIndicatorRef  = useRef<HTMLDivElement>(null)
   const fireFlashRef      = useRef<HTMLDivElement>(null)
@@ -368,6 +370,8 @@ export default function CannonGame({
     setEnemyDodging(false)
     setEnemyActionPct(1)
     setIsBoss(isBossRound(round))
+    setEnemyMinDmg(e.minDmg)
+    setEnemyMaxDmg(e.maxDmg)
     // Randomize zone starting position for each round
     const hitW  = Math.max(0.045, 0.08 - round * 0.005)
     const halfW = hitW + 0.05
@@ -705,6 +709,27 @@ export default function CannonGame({
   return (
     <div className="flex flex-col items-center gap-4 select-none" style={{ userSelect: 'none' }}>
 
+      {/* ── Round / status header ─────────────────────────────────────────────── */}
+      {(phase === 'playing' || phase === 'clear') && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingBottom: 2 }}>
+          <span className="font-karla font-400" style={{ fontSize: '0.48rem', color: '#4a4845' }}>Round {roundDisplay}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {enemyDodging && (
+              <motion.span
+                animate={{ opacity: [1, 0.4, 1] }}
+                transition={{ duration: 0.6, repeat: Infinity }}
+                className="font-karla font-700"
+                style={{ fontSize: '0.44rem', color: '#38bdf8', background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.4)', borderRadius: 4, padding: '1px 5px', letterSpacing: '0.08em' }}>
+                EVADING
+              </motion.span>
+            )}
+            {isBoss && (
+              <span className="font-karla font-700" style={{ fontSize: '0.44rem', color: '#f97316', background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.35)', borderRadius: 4, padding: '1px 5px', letterSpacing: '0.08em' }}>BOSS</span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Two-panel combat area ─────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 10, width: '100%' }}>
 
@@ -780,23 +805,6 @@ export default function CannonGame({
           display: 'flex', flexDirection: 'column', gap: '0.3rem',
           animation: critShake ? 'crit-shake 0.6s ease' : 'none',
         }}>
-          <div className="flex items-center justify-between">
-            <span className="font-karla font-400" style={{ fontSize: '0.44rem', color: '#4a4845' }}>Round {roundDisplay}</span>
-            <div className="flex items-center gap-1">
-              {enemyDodging && (
-                <motion.span
-                  animate={{ opacity: [1, 0.4, 1] }}
-                  transition={{ duration: 0.6, repeat: Infinity }}
-                  className="font-karla font-700"
-                  style={{ fontSize: '0.44rem', color: '#38bdf8', background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.4)', borderRadius: 4, padding: '1px 5px', letterSpacing: '0.08em' }}>
-                  EVADING
-                </motion.span>
-              )}
-              {isBoss && (
-                <span className="font-karla font-700" style={{ fontSize: '0.44rem', color: '#f97316', background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.35)', borderRadius: 4, padding: '1px 5px', letterSpacing: '0.08em' }}>BOSS</span>
-              )}
-            </div>
-          </div>
           <div style={{ position: 'relative', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
             <img src={shipImageUrl} alt="enemy" style={{
               width: '100%', height: 72, objectFit: 'contain', objectPosition: 'center',
@@ -850,23 +858,42 @@ export default function CannonGame({
                   }} />
               ))}
             </div>
+            {/* Placeholder row matches VOLLEY label height */}
+            <p className="font-karla font-700 text-center"
+              style={{ fontSize: '0.5rem', color: '#ef4444', marginTop: 5, letterSpacing: '0.1em',
+                textShadow: enemyCharges === MAX_CHARGES ? '0 0 8px #ef4444' : 'none',
+                opacity: enemyCharges === MAX_CHARGES ? 1 : 0, transition: 'opacity 0.2s' }}>
+              ARMED
+            </p>
           </div>
 
-          {/* Enemy action bar */}
-          <div style={{ marginTop: 4 }}>
-            <p className="font-karla font-700" style={{ fontSize: '0.45rem', color: actionBarColor, letterSpacing: '0.14em', marginBottom: 3, transition: 'color 0.3s' }}>ACTION</p>
-            <div style={{ height: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', width: `${enemyActionPct * 100}%`,
-                background: actionBarColor,
-                boxShadow: enemyActionPct < 0.25 ? `0 0 8px ${actionBarColor}88` : 'none',
-                transition: 'background 0.3s, box-shadow 0.3s',
-                borderRadius: 4,
-              }} />
-            </div>
+          {/* Enemy damage range */}
+          <div style={{ marginTop: 2, borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 6 }}>
+            <p className="font-karla font-400 text-center" style={{ fontSize: '0.45rem', color: '#5a5855', letterSpacing: '0.08em', marginBottom: 3 }}>DAMAGE</p>
+            <p className="font-karla font-700 text-center" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>
+              {enemyMinDmg}–{enemyMaxDmg}
+            </p>
+            <p style={{ fontSize: '0.42rem', marginTop: 1, visibility: 'hidden' }}>·</p>
           </div>
         </div>
 
+      </div>
+
+      {/* ── Enemy action bar — below cards, above cannon bar ─────────────────── */}
+      <div style={{ width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.45rem', color: actionBarColor, letterSpacing: '0.14em', transition: 'color 0.3s' }}>ENEMY ACTION</p>
+          <p className="font-karla font-400" style={{ fontSize: '0.42rem', color: 'rgba(167,139,250,0.35)' }}>{enemyName}</p>
+        </div>
+        <div style={{ height: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%', width: `${enemyActionPct * 100}%`,
+            background: actionBarColor,
+            boxShadow: enemyActionPct < 0.25 ? `0 0 8px ${actionBarColor}88` : 'none',
+            transition: 'background 0.3s, box-shadow 0.3s',
+            borderRadius: 4,
+          }} />
+        </div>
       </div>
 
       {/* ── Dodge prime indicator — always in DOM to prevent layout shift ─── */}
@@ -928,103 +955,121 @@ export default function CannonGame({
       </div>
 
       {/* ── Action buttons ────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 8, width: '100%' }}>
 
-        {/* RELOAD */}
-        {phase === 'playing' && (
-          <motion.button
-            onPointerDown={doReload}
-            whileTap={canReload && charges < MAX_CHARGES && !isActionLocked ? { scale: 0.95 } : {}}
-            className="font-karla font-700"
-            style={{
-              flex: 1, padding: '12px 0', borderRadius: 14, cursor: 'pointer',
-              background: isActionLocked ? 'rgba(239,68,68,0.07)' : !canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.03)' : 'rgba(96,165,250,0.12)',
-              border: `1px solid ${isActionLocked ? 'rgba(239,68,68,0.22)' : !canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.07)' : 'rgba(96,165,250,0.35)'}`,
-              color: isActionLocked ? '#7a2a2a' : !canReload ? '#3a5a7a' : charges >= MAX_CHARGES ? '#4a4845' : '#60a5fa',
-              fontSize: '0.85rem', letterSpacing: '0.06em',
-              opacity: isActionLocked || !canReload || charges >= MAX_CHARGES ? 0.45 : 1,
-              transition: 'all 0.12s',
-            }}>
-            {isActionLocked ? '…' : !canReload ? 'Loading…' : charges >= MAX_CHARGES ? 'Full' : 'RELOAD'}
-          </motion.button>
-        )}
+      {/* Playing phase: circle buttons */}
+      {phase === 'playing' && (
+        <div style={{ display: 'flex', gap: 14, justifyContent: 'center', width: '100%' }}>
 
-        {/* DODGE */}
-        {phase === 'playing' && (
-          <motion.button
-            onPointerDown={primeDodge}
-            whileTap={!dodgeCooldown && !dodgePrimed && !isCommitted && !isActionLocked ? { scale: 0.95 } : {}}
-            animate={
-              dodgePrimed
-                ? { boxShadow: ['0 0 0px #38bdf800', '0 0 14px #38bdf8aa', '0 0 6px #38bdf866'] }
-                : {}
-            }
-            transition={{ duration: 0.4, repeat: Infinity }}
-            className="font-karla font-700"
-            style={{
-              flex: 1, padding: '12px 0', borderRadius: 14, cursor: 'pointer',
-              background: dodgePrimed        ? 'rgba(56,189,248,0.18)'
-                        : isActionLocked     ? 'rgba(239,68,68,0.07)'
-                        : dodgeCooldown      ? 'rgba(255,255,255,0.03)'
-                        : isCommitted        ? 'rgba(251,146,60,0.06)'
-                        :                     'rgba(56,189,248,0.10)',
-              border: `1px solid ${
-                dodgePrimed    ? 'rgba(56,189,248,0.65)'
-                : isActionLocked ? 'rgba(239,68,68,0.22)'
-                : dodgeCooldown  ? 'rgba(255,255,255,0.07)'
-                : isCommitted    ? 'rgba(251,146,60,0.22)'
-                :                  'rgba(56,189,248,0.3)'
-              }`,
-              color: dodgePrimed   ? '#38bdf8'
-                   : isActionLocked ? '#7a2a2a'
-                   : dodgeCooldown  ? '#2a4050'
-                   : isCommitted    ? '#f97316'
-                   :                  '#38bdf8',
-              fontSize: '0.85rem', letterSpacing: '0.06em',
-              opacity: isActionLocked || dodgeCooldown || isCommitted ? 0.45 : 1,
-              transition: 'all 0.12s',
-            }}>
-            {dodgePrimed ? 'DODGING…' : isActionLocked ? '…' : dodgeCooldown ? '…' : isCommitted ? 'Busy' : 'DODGE'}
-          </motion.button>
-        )}
+          {/* RELOAD */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+            <motion.button
+              onPointerDown={doReload}
+              whileTap={canReload && charges < MAX_CHARGES && !isActionLocked ? { scale: 0.88 } : {}}
+              style={{
+                width: 72, height: 72, borderRadius: '50%', cursor: 'pointer',
+                background: isActionLocked ? 'rgba(239,68,68,0.07)' : !canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.03)' : 'rgba(96,165,250,0.12)',
+                border: `2px solid ${isActionLocked ? 'rgba(239,68,68,0.22)' : !canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.1)' : 'rgba(96,165,250,0.45)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                opacity: isActionLocked || !canReload || charges >= MAX_CHARGES ? 0.4 : 1,
+                transition: 'all 0.12s',
+                boxShadow: !isActionLocked && canReload && charges < MAX_CHARGES ? '0 0 14px rgba(96,165,250,0.18), inset 0 1px 0 rgba(255,255,255,0.07)' : 'none',
+              }}>
+              <p className="font-karla font-700" style={{
+                fontSize: '0.72rem', letterSpacing: '0.06em',
+                color: isActionLocked ? '#7a2a2a' : !canReload ? '#3a5a7a' : charges >= MAX_CHARGES ? '#4a4845' : '#60a5fa',
+              }}>
+                {isActionLocked ? '…' : !canReload ? 'Wait' : charges >= MAX_CHARGES ? 'Full' : 'RELOAD'}
+              </p>
+            </motion.button>
+          </div>
 
-        {/* Right: FIRE / VOLLEY / idle start */}
+          {/* DODGE */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+            <motion.button
+              onPointerDown={primeDodge}
+              whileTap={!dodgeCooldown && !dodgePrimed && !isCommitted && !isActionLocked ? { scale: 0.88 } : {}}
+              animate={dodgePrimed ? { boxShadow: ['0 0 0px #38bdf800', '0 0 20px #38bdf8aa', '0 0 8px #38bdf866'] } : {}}
+              transition={{ duration: 0.4, repeat: Infinity }}
+              style={{
+                width: 72, height: 72, borderRadius: '50%', cursor: 'pointer',
+                background: dodgePrimed    ? 'rgba(56,189,248,0.18)'
+                          : isActionLocked ? 'rgba(239,68,68,0.07)'
+                          : dodgeCooldown  ? 'rgba(255,255,255,0.03)'
+                          : isCommitted    ? 'rgba(251,146,60,0.06)'
+                          :                 'rgba(56,189,248,0.10)',
+                border: `2px solid ${dodgePrimed    ? 'rgba(56,189,248,0.65)'
+                          : isActionLocked ? 'rgba(239,68,68,0.22)'
+                          : dodgeCooldown  ? 'rgba(255,255,255,0.1)'
+                          : isCommitted    ? 'rgba(251,146,60,0.22)'
+                          :                 'rgba(56,189,248,0.35)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                opacity: isActionLocked || dodgeCooldown || isCommitted ? 0.4 : 1,
+                transition: 'background 0.12s, border-color 0.12s, opacity 0.12s',
+              }}>
+              <p className="font-karla font-700" style={{
+                fontSize: '0.72rem', letterSpacing: '0.06em',
+                color: dodgePrimed   ? '#38bdf8'
+                     : isActionLocked ? '#7a2a2a'
+                     : dodgeCooldown  ? '#2a4050'
+                     : isCommitted    ? '#f97316'
+                     :                  '#38bdf8',
+              }}>
+                {dodgePrimed ? 'PRIMED' : isActionLocked || dodgeCooldown ? '…' : isCommitted ? 'Busy' : 'DODGE'}
+              </p>
+            </motion.button>
+          </div>
+
+          {/* FIRE / VOLLEY */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+            <motion.button
+              onPointerDown={!cannonJammed && charges > 0 && !isActionLocked ? fire : undefined}
+              whileTap={!cannonJammed && charges > 0 && !isActionLocked ? { scale: 0.88 } : {}}
+              animate={isVolleyReady ? { boxShadow: ['0 0 0px #f0c04000', '0 0 20px #f0c04077', '0 0 0px #f0c04000'] } : {}}
+              transition={{ duration: 1.4, repeat: Infinity }}
+              style={{
+                width: 72, height: 72, borderRadius: '50%',
+                cursor: !cannonJammed && charges > 0 && !isActionLocked ? 'pointer' : 'default',
+                background: cannonJammed  ? 'rgba(251,146,60,0.1)'
+                          : isVolleyReady ? 'rgba(240,192,64,0.18)'
+                          : charges === 0 ? 'rgba(255,255,255,0.03)'
+                          :                'rgba(239,68,68,0.14)',
+                border: `2px solid ${cannonJammed  ? 'rgba(251,146,60,0.35)'
+                          : isVolleyReady ? 'rgba(240,192,64,0.6)'
+                          : charges === 0 ? 'rgba(255,255,255,0.1)'
+                          :                'rgba(239,68,68,0.45)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                opacity: charges === 0 && !cannonJammed ? 0.32 : cannonJammed ? 0.7 : 1,
+                transition: 'all 0.12s',
+              }}>
+              <p className="font-karla font-700" style={{
+                fontSize: cannonJammed ? '0.6rem' : '0.72rem', letterSpacing: '0.06em',
+                color: cannonJammed  ? '#f97316'
+                     : isVolleyReady ? '#f0c040'
+                     : charges === 0 ? '#4a4845'
+                     :                '#ef4444',
+              }}>
+                {cannonJammed ? 'Jammed' : charges === 0 ? 'Empty' : isVolleyReady ? 'VOLLEY' : 'FIRE'}
+              </p>
+            </motion.button>
+          </div>
+
+        </div>
+      )}
+
+      {/* Idle phase: start button */}
+      {phase === 'idle' && (
         <motion.button
-          onPointerDown={phase === 'playing' && !cannonJammed && charges > 0 && !isActionLocked ? fire : phase === 'idle' ? startGame : undefined}
-          whileTap={charges > 0 && !cannonJammed && !isActionLocked ? { scale: 0.95 } : {}}
+          onPointerDown={startGame}
+          whileTap={{ scale: 0.96 }}
           className="font-karla font-700"
           style={{
-            flex: 1, padding: '12px 0', borderRadius: 14,
-            cursor: (phase === 'clear' || cannonJammed || (phase === 'playing' && charges === 0)) ? 'default' : 'pointer',
-            background: cannonJammed       ? 'rgba(251,146,60,0.1)'
-                      : isVolleyReady       ? 'rgba(240,192,64,0.18)'
-                      : phase === 'playing' ? 'rgba(239,68,68,0.14)'
-                      :                      'rgba(56,189,248,0.14)',
-            border: `1px solid ${
-              cannonJammed       ? 'rgba(251,146,60,0.3)'
-              : isVolleyReady    ? 'rgba(240,192,64,0.55)'
-              : phase === 'playing' ? 'rgba(239,68,68,0.38)'
-              :                    'rgba(56,189,248,0.38)'
-            }`,
-            color: cannonJammed        ? '#f97316'
-                 : isVolleyReady       ? '#f0c040'
-                 : phase === 'playing' ? '#ef4444'
-                 :                      '#38bdf8',
-            fontSize: cannonJammed ? '0.72rem' : '0.92rem',
-            letterSpacing: '0.06em',
-            opacity: phase === 'clear' ? 0 : (phase === 'playing' && charges === 0 && !cannonJammed) ? 0.35 : cannonJammed ? 0.7 : 1,
-            pointerEvents: phase === 'clear' ? 'none' : 'auto',
-            transition: 'all 0.12s',
-            boxShadow: isVolleyReady ? '0 0 12px rgba(240,192,64,0.25)' : 'none',
+            width: '100%', padding: '14px 0', borderRadius: 14, cursor: 'pointer',
+            background: 'rgba(56,189,248,0.14)', border: '1px solid rgba(56,189,248,0.38)',
+            color: '#38bdf8', fontSize: '0.92rem', letterSpacing: '0.06em',
           }}>
-          {phase === 'idle'        ? 'Open Fire'
-         : cannonJammed            ? 'Jammed…'
-         : phase === 'playing' && charges === 0 ? 'No Charges'
-         : isVolleyReady           ? '🔥 VOLLEY'
-         : phase === 'playing'     ? 'FIRE'
-         :                          'Try Again'}
+          Open Fire
         </motion.button>
-      </div>
+      )}
 
       {/* ── Crit flash ───────────────────────────────────────────────────────── */}
       {critFlash && (
