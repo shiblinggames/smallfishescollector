@@ -795,8 +795,8 @@ export default function CannonGame({
           display: 'flex', flexDirection: 'column', gap: '0.3rem',
           animation: dodgeShake ? 'dodge-slide 0.5s ease' : 'none',
         }}>
-          <div style={{ position: 'relative', height: 140, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-            <img src={shipImageUrl} alt={shipName} style={{ width: '100%', height: 140, objectFit: 'contain', objectPosition: 'bottom' }} />
+          <div style={{ position: 'relative', height: 190, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+            <img src={shipImageUrl} alt={shipName} style={{ width: '100%', height: 190, objectFit: 'contain', objectPosition: 'bottom' }} />
             {/* Captain portrait — top left, click to view crew */}
             {crewMembers.length > 0 && (
               <button
@@ -824,17 +824,6 @@ export default function CannonGame({
           </div>
           <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.75rem', color: '#f0ede8', lineHeight: 1.2 }}>{shipName}</p>
           <HPBar current={playerHP} max={playerHPMax} color="#60a5fa" />
-
-          {/* Damage range */}
-          <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 6 }}>
-            <p className="font-karla font-400 text-center" style={{ fontSize: '0.6rem', color: '#5a5855', letterSpacing: '0.08em', marginBottom: 3 }}>DAMAGE</p>
-            <p className="font-karla font-700 text-center" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>
-              {shipMinDamage}–{powerMax}
-            </p>
-            <p className="font-karla font-400 text-center" style={{ fontSize: '0.58rem', color: '#5a5855', marginTop: 1 }}>
-              crit {shipMinDamage * 2}–{Math.round(powerMax * 1.5)}
-            </p>
-          </div>
         </div>
 
         {/* Enemy panel */}
@@ -844,9 +833,9 @@ export default function CannonGame({
           display: 'flex', flexDirection: 'column', gap: '0.3rem',
           animation: critShake ? 'crit-shake 0.6s ease' : 'none',
         }}>
-          <div style={{ position: 'relative', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          <div style={{ position: 'relative', height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
             <img src={enemyImage} alt={enemyName} style={{
-              width: '100%', height: 72, objectFit: 'contain', objectPosition: 'center',
+              width: '100%', height: 120, objectFit: 'contain', objectPosition: 'center',
               transform: 'scaleX(-1)',
               animation: enemySinking ? 'enemy-sink 0.9s ease-in forwards' : 'none',
               filter: isBoss ? 'hue-rotate(20deg) brightness(0.9)' : 'hue-rotate(180deg) brightness(0.8)',
@@ -885,55 +874,39 @@ export default function CannonGame({
           </div>
           <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.75rem', color: '#f0ede8', lineHeight: 1.2 }}>{enemyName}</p>
           <HPBar current={enemyHP} max={enemyHPMax} color={isBoss ? '#f97316' : '#a78bfa'} />
-
-          {/* Enemy cannon charges */}
-          <div style={{
-            marginTop: 4,
-            background: enemyCharges > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.02)',
-            border: `1px solid ${enemyCharges > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.07)'}`,
-            borderRadius: 8, padding: '0.4rem 0.35rem',
-            transition: 'all 0.3s',
-          }}>
-            <p className="font-karla font-700 text-center" style={{ fontSize: '0.62rem', color: enemyCharges > 0 ? '#ef4444' : '#3a3835', letterSpacing: '0.12em', marginBottom: 6, transition: 'color 0.3s' }}>CANNONS</p>
-            <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-              {[0, 1, 2].map(i => (
-                <motion.div key={i}
-                  animate={{ scale: i === enemyCharges - 1 ? [1, 1.5, 1] : 1 }}
-                  transition={{ duration: 0.18 }}
-                  style={{
-                    width: 18, height: 18, borderRadius: '50%',
-                    background: i < enemyCharges ? '#ef4444' : 'rgba(255,255,255,0.06)',
-                    boxShadow: i < enemyCharges ? '0 0 8px #ef444499, 0 0 16px #ef444433' : 'none',
-                    border: `2px solid ${i < enemyCharges ? '#ef4444' : 'rgba(255,255,255,0.08)'}`,
-                  }} />
-              ))}
-            </div>
-            {/* Placeholder row matches VOLLEY label height */}
-            <p className="font-karla font-700 text-center"
-              style={{ fontSize: '0.65rem', color: '#ef4444', marginTop: 5, letterSpacing: '0.1em',
-                textShadow: enemyCharges === MAX_CHARGES ? '0 0 8px #ef4444' : 'none',
-                opacity: enemyCharges === MAX_CHARGES ? 1 : 0, transition: 'opacity 0.2s' }}>
-              ARMED
-            </p>
-          </div>
-
-          {/* Enemy damage range */}
-          <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 6 }}>
-            <p className="font-karla font-400 text-center" style={{ fontSize: '0.6rem', color: '#5a5855', letterSpacing: '0.08em', marginBottom: 3 }}>DAMAGE</p>
-            <p className="font-karla font-700 text-center" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>
-              {enemyMinDmg}–{enemyMaxDmg}
-            </p>
-            <p style={{ fontSize: '0.42rem', marginTop: 1, visibility: 'hidden' }}>·</p>
-          </div>
         </div>
 
       </div>
 
-      {/* ── Enemy action bar — below cards, above cannon bar ─────────────────── */}
+      {/* ── Enemy action bar — cannon dots inline with progress bar ─────────── */}
       <div style={{ width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
-          <p className="font-karla font-700" style={{ fontSize: '0.6rem', color: actionBarColor, letterSpacing: '0.14em', transition: 'color 0.3s' }}>ENEMY ACTION</p>
-          <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(167,139,250,0.35)' }}>{enemyName}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+          {/* Cannon charge dots */}
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            {[0, 1, 2].map(i => (
+              <motion.div key={i}
+                animate={{ scale: i === enemyCharges - 1 ? [1, 1.5, 1] : 1 }}
+                transition={{ duration: 0.18 }}
+                style={{
+                  width: 10, height: 10, borderRadius: '50%',
+                  background: i < enemyCharges ? '#ef4444' : 'rgba(255,255,255,0.08)',
+                  boxShadow: i < enemyCharges ? '0 0 6px #ef444499' : 'none',
+                  border: `1.5px solid ${i < enemyCharges ? '#ef4444' : 'rgba(255,255,255,0.1)'}`,
+                  transition: 'background 0.15s, box-shadow 0.15s',
+                }} />
+            ))}
+            <AnimatePresence>
+              {enemyCharges === MAX_CHARGES && (
+                <motion.span
+                  initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -4 }}
+                  className="font-karla font-700"
+                  style={{ fontSize: '0.58rem', color: '#ef4444', letterSpacing: '0.1em', marginLeft: 1, textShadow: '0 0 8px #ef444499' }}>
+                  ARMED
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </div>
+          <p className="font-karla font-700" style={{ fontSize: '0.6rem', color: actionBarColor, letterSpacing: '0.14em', transition: 'color 0.3s', marginLeft: 'auto' }}>ENEMY</p>
         </div>
         <div style={{ height: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
           <div style={{
@@ -941,27 +914,6 @@ export default function CannonGame({
             background: actionBarColor,
             boxShadow: enemyActionPct < 0.25 ? `0 0 8px ${actionBarColor}88` : 'none',
             transition: 'background 0.3s, box-shadow 0.3s',
-            borderRadius: 4,
-          }} />
-        </div>
-      </div>
-
-      {/* ── Player action bar ────────────────────────────────────────────────── */}
-      <div style={{ width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
-          <p className="font-karla font-700" style={{ fontSize: '0.6rem', color: playerReady ? '#4ade80' : '#3a6a4a', letterSpacing: '0.14em', transition: 'color 0.3s' }}>
-            YOUR ACTION
-          </p>
-          <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: playerReady ? 'rgba(74,222,128,0.5)' : 'rgba(74,222,128,0.2)', transition: 'color 0.3s' }}>
-            {playerReady ? 'READY' : 'charging…'}
-          </p>
-        </div>
-        <div style={{ height: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
-          <div style={{
-            height: '100%', width: `${playerActionPct * 100}%`,
-            background: playerReady ? '#4ade80' : '#2a6a3a',
-            boxShadow: playerReady ? '0 0 10px rgba(74,222,128,0.6)' : 'none',
-            transition: 'background 0.2s, box-shadow 0.2s',
             borderRadius: 4,
           }} />
         </div>
@@ -1050,6 +1002,27 @@ export default function CannonGame({
               <span className="font-karla font-400" style={{ fontSize: '0.6rem', color: z.color }}>{z.label}</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* ── Player action bar ────────────────────────────────────────────────── */}
+      <div style={{ width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.6rem', color: playerReady ? '#4ade80' : '#3a6a4a', letterSpacing: '0.14em', transition: 'color 0.3s' }}>
+            YOUR ACTION
+          </p>
+          <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: playerReady ? 'rgba(74,222,128,0.5)' : 'rgba(74,222,128,0.2)', transition: 'color 0.3s' }}>
+            {playerReady ? 'READY' : 'charging…'}
+          </p>
+        </div>
+        <div style={{ height: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%', width: `${playerActionPct * 100}%`,
+            background: playerReady ? '#4ade80' : '#2a6a3a',
+            boxShadow: playerReady ? '0 0 10px rgba(74,222,128,0.6)' : 'none',
+            transition: 'background 0.2s, box-shadow 0.2s',
+            borderRadius: 4,
+          }} />
         </div>
       </div>
 
