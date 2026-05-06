@@ -614,7 +614,7 @@ export default function CannonGame({
     firePosRef.current = Math.random()
     fireDirRef.current = Math.random() < 0.5 ? 1 : -1
     // Brief fire lockout so player can't snap-fire on reload
-    setTimeout(() => { canFireRef.current = true; setCanFire(true) }, 420)
+    setTimeout(() => { canFireRef.current = true; setCanFire(true) }, 600)
     setTimeout(() => { canReloadRef.current = true; setCanReload(true) }, reloadCooldown)
   }, [reloadCooldown])
 
@@ -1105,13 +1105,13 @@ export default function CannonGame({
           {/* FIRE / VOLLEY */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
             <motion.button
-              onPointerDown={!cannonJammed && charges > 0 && !isActionLocked ? fire : undefined}
-              whileTap={!cannonJammed && charges > 0 && !isActionLocked ? { scale: 0.88 } : {}}
+              onPointerDown={canFire && !cannonJammed && charges > 0 && !isActionLocked ? fire : undefined}
+              whileTap={canFire && !cannonJammed && charges > 0 && !isActionLocked ? { scale: 0.88 } : {}}
               animate={isVolleyReady ? { boxShadow: ['0 0 0px #f0c04000', '0 0 20px #f0c04077', '0 0 0px #f0c04000'] } : {}}
               transition={{ duration: 1.4, repeat: Infinity }}
               style={{
                 width: 72, height: 72, borderRadius: '50%',
-                cursor: !cannonJammed && charges > 0 && !isActionLocked ? 'pointer' : 'default',
+                cursor: canFire && !cannonJammed && charges > 0 && !isActionLocked ? 'pointer' : 'default',
                 background: cannonJammed  ? 'rgba(251,146,60,0.1)'
                           : isVolleyReady ? 'rgba(240,192,64,0.18)'
                           : charges === 0 ? 'rgba(255,255,255,0.03)'
