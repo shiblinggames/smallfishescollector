@@ -57,7 +57,7 @@ export default function RaidCard({ navLevel }: Props) {
             }}>☠️</div>
             <div>
               <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8', lineHeight: 1.2 }}>
-                Dead Man&apos;s Broadside
+                The Corsair&apos;s Reckoning
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 3 }}>
                 <span
