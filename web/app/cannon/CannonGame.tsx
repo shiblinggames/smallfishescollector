@@ -169,18 +169,19 @@ function Hitsplat({ text, color, big, animKey }: { text: string; color: string; 
   return (
     <div key={animKey} style={{
       position: 'absolute', top: '40%', left: '50%',
-      animation: 'hitsplat-pop 0.9s ease forwards',
+      animation: 'hitsplat-pop 1.1s ease forwards',
       pointerEvents: 'none', zIndex: 20, whiteSpace: 'nowrap',
     }}>
       <div style={{
-        background: 'rgba(8,6,4,0.9)', border: `2px solid ${color}`,
-        borderRadius: big ? 10 : 6,
-        padding: big ? '0.28rem 0.65rem' : '0.15rem 0.42rem',
-        boxShadow: big ? `0 0 14px ${color}88` : `0 0 6px ${color}55`,
+        background: color,
+        borderRadius: big ? '45% 55% 52% 48% / 48% 52% 55% 45%' : '50% 50% 48% 52% / 52% 48% 50% 50%',
+        padding: big ? '0.42rem 0.9rem' : '0.22rem 0.55rem',
+        boxShadow: big ? `0 3px 18px ${color}99, 0 0 10px ${color}66` : `0 2px 10px ${color}88`,
+        transform: big ? 'rotate(-4deg)' : 'rotate(2deg)',
       }}>
         <p className="font-cinzel font-700" style={{
-          fontSize: big ? '0.95rem' : '0.7rem', color, lineHeight: 1,
-          textShadow: big ? `0 0 12px ${color}` : 'none',
+          fontSize: big ? '1.05rem' : '0.75rem', color: '#fff', lineHeight: 1,
+          textShadow: '0 1px 4px rgba(0,0,0,0.75)',
         }}>{text}</p>
       </div>
     </div>
@@ -343,6 +344,9 @@ export default function CannonGame({
   const [isCritShot, setIsCritShot]     = useState(false)
   const [critShake, setCritShake]       = useState(false)
   const [critFlash, setCritFlash]       = useState(false)
+  const [hitShake, setHitShake]         = useState(false)
+  const [playerRecoil, setPlayerRecoil] = useState(false)
+  const [playerHitShake, setPlayerHitShake] = useState(false)
   const [clearReady, setClearReady]     = useState(false)
   const [raidElapsedMs, setRaidElapsedMs] = useState(0)
   const [lootAmount, setLootAmount]     = useState(0)
@@ -574,6 +578,8 @@ export default function CannonGame({
               playerHPRef.current = Math.max(0, playerHPRef.current - dmg)
               setPlayerHP(playerHPRef.current)
               setPHitsplat(p => ({ key: p.key + 1, text: `-${dmg}`, color: '#f87171', big: true }))
+              setPlayerHitShake(true)
+              setTimeout(() => setPlayerHitShake(false), 520)
               if (playerHPRef.current <= 0) {
                 phaseRef.current = 'dead'
                 setBest(prev => Math.max(prev, streakRef.current))
@@ -645,6 +651,8 @@ export default function CannonGame({
       setIsVolleyShot(isVolley)
       setIsCritShot(res === 'critical')
       setTimeout(() => setShowCannonShot(false), 700)
+      setPlayerRecoil(true)
+      setTimeout(() => setPlayerRecoil(false), 420)
       if (res === 'critical') {
         setCritShake(true)
         setCritFlash(true)
@@ -652,6 +660,9 @@ export default function CannonGame({
         setTimeout(() => { setCritShake(false) }, 620)
         setTimeout(() => { setCritFlash(false) }, 380)
         setTimeout(() => { critFreezeRef.current = false }, 300)
+      } else if (res === 'hit' || res === 'graze') {
+        setHitShake(true)
+        setTimeout(() => setHitShake(false), 470)
       }
 
       const blocked = enemyDodgingRef.current && res !== 'critical'
@@ -775,7 +786,7 @@ export default function CannonGame({
     <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
 
       {/* ── Round / status header ─────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingBottom: 2, visibility: phase === 'idle' ? 'hidden' : 'visible' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingBottom: 2, visibility: (phase === 'idle' || phase === 'ready') ? 'hidden' : 'visible' }}>
           <span className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#e0d8c8', textShadow: '0 1px 6px rgba(0,0,0,0.95)' }}>Round {roundDisplay}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {enemyDodging && (
@@ -801,7 +812,7 @@ export default function CannonGame({
           flex: 3, background: 'none',
           borderRadius: 14, padding: '0.65rem 0.55rem',
           display: 'flex', flexDirection: 'column', gap: '0.3rem',
-          animation: dodgeShake ? 'dodge-slide 0.5s ease' : 'none',
+          animation: dodgeShake ? 'dodge-slide 0.5s ease' : playerHitShake ? 'player-hit 0.5s ease' : playerRecoil ? 'player-recoil 0.4s ease' : 'none',
         }}>
           <div style={{ position: 'relative', height: 230, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
             <img src={shipImageUrl} alt={shipName} style={{ width: '100%', height: 230, objectFit: 'contain', objectPosition: 'bottom' }} />
@@ -810,7 +821,7 @@ export default function CannonGame({
               <button
                 onClick={() => setShowCrewInfo(true)}
                 style={{
-                  position: 'absolute', top: 4, left: 4, zIndex: 5,
+                  position: 'absolute', bottom: 4, left: 4, zIndex: 5,
                   width: 32, height: 32, borderRadius: '50%',
                   border: '2px solid rgba(96,165,250,0.65)',
                   overflow: 'hidden', padding: 0, cursor: 'pointer',
@@ -839,7 +850,7 @@ export default function CannonGame({
           flex: 2, background: 'none',
           borderRadius: 14, padding: '0.65rem 0.55rem',
           display: 'flex', flexDirection: 'column', gap: '0.3rem',
-          animation: critShake ? 'crit-shake 0.6s ease' : 'none',
+          animation: critShake ? 'crit-shake 0.6s ease' : hitShake ? 'hit-shake 0.45s ease' : 'none',
         }}>
           <div style={{ position: 'relative', height: 230, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden', paddingBottom: 24 }}>
             <img src={enemyImage} alt={enemyName} style={{
@@ -1120,27 +1131,11 @@ export default function CannonGame({
         </div>
       )}
 
-      {/* Idle / ready phase: Open Fire in Dodge position */}
+      {/* Idle / ready phase: placeholder buttons to hold layout */}
       {(phase === 'idle' || phase === 'ready') && (
         <div style={{ display: 'flex', gap: 14, justifyContent: 'center', width: '100%' }}>
-          {/* Invisible placeholder — RELOAD position */}
           <div style={{ width: 82, height: 82, flexShrink: 0 }} />
-          {/* Open Fire — same position as DODGE */}
-          <motion.button
-            onPointerDown={openFire}
-            whileTap={{ scale: 0.88 }}
-            animate={{ boxShadow: ['0 0 0px #38bdf800', '0 0 20px #38bdf8aa', '0 0 8px #38bdf866'] }}
-            transition={{ duration: 0.9, repeat: Infinity }}
-            style={{
-              width: 82, height: 82, borderRadius: '50%', cursor: 'pointer',
-              background: 'rgba(56,189,248,0.16)', border: '2px solid rgba(56,189,248,0.65)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            }}>
-            <p className="font-karla font-700" style={{ fontSize: '0.62rem', letterSpacing: '0.06em', color: '#38bdf8', textAlign: 'center', lineHeight: 1.2 }}>
-              OPEN<br />FIRE
-            </p>
-          </motion.button>
-          {/* Invisible placeholder — FIRE position */}
+          <div style={{ width: 82, height: 82, flexShrink: 0 }} />
           <div style={{ width: 82, height: 82, flexShrink: 0 }} />
         </div>
       )}
@@ -1162,6 +1157,32 @@ export default function CannonGame({
           animation: 'crit-flash 0.34s ease forwards',
         }} />
       )}
+
+      {/* ── Round start overlay (idle + ready) ───────────────────────────────── */}
+      <AnimatePresence>
+        {(phase === 'idle' || phase === 'ready') && (
+          <motion.div
+            key={phase === 'idle' ? 'idle-overlay' : `ready-${roundDisplay}`}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.62)', zIndex: 50 }}>
+            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.45)', fontSize: '0.65rem', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>
+              {phase === 'idle' ? 'Raise the colours' : isBoss ? 'Boss Round' : 'Round'}
+            </p>
+            <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '5rem', lineHeight: 1, marginBottom: 36, textShadow: '0 2px 24px rgba(0,0,0,0.85)' }}>
+              {roundDisplay}
+            </p>
+            <motion.button
+              onPointerDown={openFire}
+              animate={{ boxShadow: ['0 0 0px #ef444400', '0 0 28px #ef444488', '0 0 0px #ef444400'] }}
+              transition={{ duration: 1.1, repeat: Infinity }}
+              whileTap={{ scale: 0.95 }}
+              className="font-karla font-700"
+              style={{ padding: '14px 48px', borderRadius: 14, cursor: 'pointer', background: 'rgba(239,68,68,0.18)', border: '1.5px solid rgba(239,68,68,0.55)', color: '#ef4444', fontSize: '1rem', letterSpacing: '0.1em' }}>
+              OPEN FIRE
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Round clear overlay ───────────────────────────────────────────────── */}
       <AnimatePresence>
@@ -1377,10 +1398,11 @@ export default function CannonGame({
 
       <style>{`
         @keyframes hitsplat-pop {
-          0%   { opacity: 0; transform: translateX(-50%) translateY(-10%) scale(0.2) rotate(-10deg); }
-          28%  { opacity: 1; transform: translateX(-50%) translateY(-65%) scale(1.25) rotate(4deg); }
-          55%  { opacity: 1; transform: translateX(-50%) translateY(-58%) scale(1) rotate(0deg); }
-          100% { opacity: 0; transform: translateX(-50%) translateY(-74%) scale(0.85) rotate(0deg); }
+          0%   { opacity: 0; transform: translateX(-50%) translateY(-10%) scale(0.1) rotate(-18deg); }
+          18%  { opacity: 1; transform: translateX(-50%) translateY(-72%) scale(1.4) rotate(6deg); }
+          38%  { opacity: 1; transform: translateX(-50%) translateY(-65%) scale(1.08) rotate(-3deg); }
+          62%  { opacity: 1; transform: translateX(-50%) translateY(-68%) scale(1.02) rotate(2deg); }
+          100% { opacity: 0; transform: translateX(-50%) translateY(-84%) scale(0.82) rotate(0deg); }
         }
         @keyframes cannon-shot {
           0%   { opacity: 0; transform: translate(-20px, 6px) scale(0.2) rotate(-20deg); }
@@ -1409,6 +1431,31 @@ export default function CannonGame({
           38%  { transform: translateX(-6px) rotate(-0.5deg); }
           60%  { transform: translateX(4px) rotate(0.3deg); }
           80%  { transform: translateX(-2px); }
+          100% { transform: translateX(0) rotate(0deg); }
+        }
+        @keyframes hit-shake {
+          0%   { transform: translateX(0) rotate(0deg); }
+          15%  { transform: translateX(-6px) rotate(-1deg); }
+          35%  { transform: translateX(6px) rotate(0.8deg); }
+          55%  { transform: translateX(-4px) rotate(-0.5deg); }
+          75%  { transform: translateX(3px) rotate(0.3deg); }
+          90%  { transform: translateX(-1px); }
+          100% { transform: translateX(0) rotate(0deg); }
+        }
+        @keyframes player-recoil {
+          0%   { transform: translateX(0) rotate(0deg); }
+          22%  { transform: translateX(-14px) rotate(-2deg); }
+          55%  { transform: translateX(5px) rotate(0.6deg); }
+          80%  { transform: translateX(-2px); }
+          100% { transform: translateX(0) rotate(0deg); }
+        }
+        @keyframes player-hit {
+          0%   { transform: translateX(0) rotate(0deg); }
+          12%  { transform: translateX(9px) rotate(1.2deg); }
+          28%  { transform: translateX(-9px) rotate(-1.2deg); }
+          45%  { transform: translateX(6px) rotate(0.8deg); }
+          62%  { transform: translateX(-4px) rotate(-0.5deg); }
+          80%  { transform: translateX(2px); }
           100% { transform: translateX(0) rotate(0deg); }
         }
         @keyframes enemy-sink {
