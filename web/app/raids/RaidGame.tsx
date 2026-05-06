@@ -1382,10 +1382,10 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
                 </motion.div>
               ) : (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/plunderopen.png" alt="Plunder crate open" style={{ width: 100, height: 100, objectFit: 'contain' }} />
+                  <img src="/plunderopen.png" alt="Plunder crate open" style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: 20 }} />
 
                   {/* Single loot roll */}
                   {(() => {
@@ -1404,6 +1404,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
                           overflow: 'hidden',
                           transition: 'border-color 0.2s, background 0.2s',
                           boxShadow: slotLanded ? `0 0 28px ${color}55` : 'none',
+                          marginBottom: 20,
                         }}>
                         {item.id === 'corsair_black' ? (
                           <img src={shipImageUrl} alt={item.label}
@@ -1429,11 +1430,8 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
                     )
                   })()}
 
-                  {/* Doubloon total + claim — appears after slot lands */}
-                  <AnimatePresence>
-                    {slotLanded && (
-                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  {/* Doubloon total + claim — always in flow, fades in when landed */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, opacity: slotLanded ? 1 : 0, transition: 'opacity 0.4s 0.2s' }}>
                         <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0c040', textShadow: '0 0 20px #f0c04088' }}>
                           {fmtGold(lootAmount)} ⟡
                         </p>
@@ -1454,9 +1452,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
                           style={{ padding: '12px 36px', borderRadius: 14, cursor: lootClaimed ? 'default' : 'pointer', background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', color: '#f0c040', fontSize: '0.92rem', letterSpacing: '0.06em', opacity: lootClaimed ? 0.6 : 1 }}>
                           {lootClaimed ? 'Claimed!' : 'Claim Loot'}
                         </motion.button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  </div>
 
                 </motion.div>
               )}
