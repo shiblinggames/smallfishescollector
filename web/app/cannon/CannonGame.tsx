@@ -790,12 +790,10 @@ export default function CannonGame({
 
         {/* Player panel */}
         <div style={{
-          flex: 1, background: 'rgba(96,165,250,0.05)',
-          border: `1px solid ${dodgeShake ? 'rgba(56,189,248,0.5)' : 'rgba(96,165,250,0.15)'}`,
+          flex: 1, background: 'none',
           borderRadius: 14, padding: '0.65rem 0.55rem',
           display: 'flex', flexDirection: 'column', gap: '0.3rem',
           animation: dodgeShake ? 'dodge-slide 0.5s ease' : 'none',
-          transition: 'border-color 0.2s',
         }}>
           <div style={{ position: 'relative', height: 140, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
             <img src={shipImageUrl} alt={shipName} style={{ width: '100%', height: 140, objectFit: 'contain', objectPosition: 'bottom' }} />
@@ -841,9 +839,7 @@ export default function CannonGame({
 
         {/* Enemy panel */}
         <div style={{
-          flex: 1,
-          background: isBoss ? 'rgba(249,115,22,0.06)' : 'rgba(167,139,250,0.05)',
-          border: `1px solid ${isBoss ? 'rgba(249,115,22,0.22)' : 'rgba(167,139,250,0.15)'}`,
+          flex: 1, background: 'none',
           borderRadius: 14, padding: '0.65rem 0.55rem',
           display: 'flex', flexDirection: 'column', gap: '0.3rem',
           animation: critShake ? 'crit-shake 0.6s ease' : 'none',
