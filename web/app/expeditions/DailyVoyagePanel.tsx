@@ -173,6 +173,7 @@ export default function DailyVoyagePanel({
   const [liveCrewIds, setLiveCrewIds] = useState<number[]>(savedCrewVariantIds)
   const [expandedDropKey, setExpandedDropKey] = useState<string | null>(null)
   const [infoOpen, setInfoOpen] = useState(false)
+  const [mapOpen, setMapOpen] = useState(false)
   const [logExpanded, setLogExpanded] = useState(false)
   const [xpEarned, setXpEarned] = useState(0)
   const [levelUp, setLevelUp] = useState<{ from: number; to: number } | null>(null)
@@ -270,14 +271,53 @@ export default function DailyVoyagePanel({
             </p>
           ) : (
             <>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.85rem' }}>
-                <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a09070', lineHeight: 1.5, flex: 1 }}>
-                  Send your crew on a voyage. They return with stories — and sometimes something worth keeping. Higher Nav and expedition level reduce the time.
-                </p>
+              {/* ── Always-visible: crew + score ── */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.6rem' }}>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '0.2rem 0.55rem' }}>
+                  {savedCrew.map((c, i) => (
+                    <span key={c.variantId} style={{ display: 'flex', alignItems: 'baseline', gap: '0.2rem' }}>
+                      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.44rem', color: '#7a6848' }}>{i === 0 ? 'Capt' : 'Crew'}</span>
+                      <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: rarityColor(c.rarity) }}>{c.name}</span>
+                    </span>
+                  ))}
+                </div>
+                {stats && (
+                  <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                    <p className="font-karla" style={{ fontSize: '0.48rem', color: '#7a6848', marginBottom: 1 }}>Score</p>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f0ede8', lineHeight: 1 }}>
+                      {stats.power + stats.dodge + Math.round(stats.fortune * 0.5)}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Choose Voyage toggle ── */}
+              <button
+                onClick={() => setMapOpen(v => !v)}
+                style={{
+                  width: '100%',
+                  background: mapOpen ? 'rgba(240,192,64,0.07)' : 'rgba(255,255,255,0.025)',
+                  border: `1px solid ${mapOpen ? 'rgba(240,192,64,0.25)' : 'rgba(255,255,255,0.1)'}`,
+                  borderRadius: 8, padding: '0.52rem 0.85rem',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  cursor: 'pointer', transition: 'all 0.15s',
+                  marginBottom: mapOpen ? '0.75rem' : 0,
+                }}
+              >
+                <span className="font-cinzel font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: mapOpen ? '#c8a060' : '#8a7050' }}>
+                  Choose Voyage
+                </span>
+                <span style={{ fontSize: '0.52rem', color: '#6a5040', transform: mapOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▼</span>
+              </button>
+
+              {/* ── Expanded map section ── */}
+              {mapOpen && (
+              <>
+              {/* Info button */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
                 <button
                   onClick={() => setInfoOpen(true)}
                   style={{
-                    flexShrink: 0, marginTop: 2,
                     width: 22, height: 22, borderRadius: '50%',
                     background: 'rgba(200,170,100,0.10)', border: '1px solid rgba(200,170,100,0.25)',
                     color: '#a08860', fontSize: '0.72rem', fontWeight: 700,
@@ -312,7 +352,6 @@ export default function DailyVoyagePanel({
                       <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#c8aa6a' }}>How Voyages Work</p>
                       <button onClick={() => setInfoOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6a5a40', fontSize: '1rem', lineHeight: 1 }}>✕</button>
                     </div>
-
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                       {([
                         ['🗺️', 'Pick a route', 'Tap a location on the map. Riskier routes pay more — but your crew might not make it back.'],
@@ -330,31 +369,6 @@ export default function DailyVoyagePanel({
                       ))}
                     </div>
                   </div>
-                </div>
-              )}
-
-              {/* Crew list */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.75rem' }}>
-                {savedCrew.map((c, i) => {
-                  const rc = rarityColor(c.rarity)
-                  return (
-                    <div key={c.variantId} style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-                      <span className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.48rem', color: '#7a6848', width: 42, flexShrink: 0 }}>
-                        {i === 0 ? 'Captain' : 'Crew'}
-                      </span>
-                      <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: rc }}>{c.name}</span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Crew score */}
-              {stats && (
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.9rem' }}>
-                  <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.62rem', color: '#8a7860' }}>Score</span>
-                  <span className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8', lineHeight: 1 }}>
-                    {stats.power + stats.dodge + Math.round(stats.fortune * 0.5)}
-                  </span>
                 </div>
               )}
 
@@ -630,6 +644,8 @@ export default function DailyVoyagePanel({
                   )
                 })()}
               </div>
+              </>
+              )}
             </>
           )}
         </div>
