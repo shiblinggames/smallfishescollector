@@ -354,6 +354,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
     return () => { document.body.style.overflow = prev }
   }, [])
 
+  const [showTutorial, setShowTutorial] = useState(false)
   const [phase, setPhase]               = useState<GamePhase>('idle')
   const [playerHP, setPlayerHP]         = useState(playerHPMax)
   const [enemyHP, setEnemyHP]           = useState(0)
@@ -853,12 +854,24 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
   }, [])
 
   const openFire = useCallback(() => {
-    if (phaseRef.current === 'idle') { startGame(); return }
+    if (phaseRef.current === 'idle') {
+      if (!localStorage.getItem('raid_tutorial_seen')) {
+        setShowTutorial(true)
+        return
+      }
+      startGame(); return
+    }
     if (phaseRef.current === 'ready') {
       phaseRef.current = 'playing'
       setPhase('playing')
     }
   }, [startGame])
+
+  function dismissTutorial() {
+    localStorage.setItem('raid_tutorial_seen', '1')
+    setShowTutorial(false)
+    startGame()
+  }
 
   const retreat = useCallback(async () => {
     if (isClaiming) return
@@ -867,10 +880,8 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
       const res = await claimRaidLoot(potRef.current, [])
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
     } finally { setIsClaiming(false) }
-    setBest(prev => Math.max(prev, streakRef.current))
-    phaseRef.current = 'idle'
-    setPhase('idle')
-  }, [isClaiming])
+    router.push('/expeditions')
+  }, [isClaiming, router])
 
   const isVolleyReady  = charges === MAX_CHARGES
   const playerReady    = playerActionPct >= 1
