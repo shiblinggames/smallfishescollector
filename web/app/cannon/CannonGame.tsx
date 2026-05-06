@@ -21,6 +21,17 @@ const ENEMY_HP_BASE    = 2
 const CANNON_MISS_CD   = 2400  // ms locked after a clean miss
 const PARRY_MISS_CD    = 2600  // ms exposed after missing the parry zone
 
+// ── Boss rounds ───────────────────────────────────────────────────────────────
+
+function isBossRound(round: number) {
+  return round > 0 && round % 5 === 0
+}
+
+function getEnemyHPMax(round: number) {
+  const base = ENEMY_HP_BASE + Math.floor(round / 2)
+  return isBossRound(round) ? base + 10 : base
+}
+
 // ── Zone geometry ─────────────────────────────────────────────────────────────
 
 function getFireZones(round: number, critBonus = 0) {
@@ -190,6 +201,7 @@ export default function CannonGame({
   const [isClaiming, setIsClaiming]       = useState(false)
   const [cannonJammed, setCannonJammed]   = useState(false)
   const [parryLocked, setParryLocked]     = useState(false)
+  const [isBoss, setIsBoss]               = useState(false)
 
   const fireIndicatorRef  = useRef<HTMLDivElement>(null)
   const fireFlashRef      = useRef<HTMLDivElement>(null)
@@ -237,7 +249,7 @@ export default function CannonGame({
     setPhase('playing')
     setPlayerHP(playerHPMax); setEnemyHP(ENEMY_HP_BASE); setEnemyHPMax(ENEMY_HP_BASE)
     setStreak(0); setPot(0); setLastEarned(0)
-    setCannonJammed(false); setParryLocked(false)
+    setCannonJammed(false); setParryLocked(false); setIsBoss(false)
     setShotResult(null); setParryState('none'); setParryFeedback(null)
     setEnemyFirePct(1); setRoundDisplay(1)
   }, [playerHPMax])
@@ -337,16 +349,20 @@ export default function CannonGame({
         streakRef.current++
         setStreak(streakRef.current)
 
-        const earned = killGold(roundRef.current, fortuneMult)
+        const bossKill = isBossRound(roundRef.current)
+        const earned = killGold(roundRef.current, fortuneMult) * (bossKill ? 2 : 1)
         potRef.current += earned
         setPot(potRef.current)
         setLastEarned(earned)
 
         roundRef.current++
         setRoundDisplay(roundRef.current + 1)
-        const newMax = ENEMY_HP_BASE + Math.floor(roundRef.current / 2)
+        const nextBoss = isBossRound(roundRef.current)
+        setIsBoss(nextBoss)
+        const newMax = getEnemyHPMax(roundRef.current)
         enemyHPMaxRef.current = newMax; enemyHPRef.current = newMax
-        fireIntervalRef.current = Math.max(1200, ENEMY_FIRE_MS - roundRef.current * ENEMY_FIRE_DEC)
+        const baseInterval = Math.max(1200, ENEMY_FIRE_MS - roundRef.current * ENEMY_FIRE_DEC)
+        fireIntervalRef.current = nextBoss ? Math.floor(baseInterval * 0.72) : baseInterval
         fireElapsedRef.current = 0
         parryStateRef.current = 'none'; parryElapsedRef.current = 0
         setEnemyHP(newMax); setEnemyHPMax(newMax)
@@ -455,7 +471,12 @@ export default function CannonGame({
       {/* Enemy section */}
       <div className="w-full max-w-sm">
         <div className="flex items-center justify-between mb-2 px-1">
-          <span className="font-karla font-600 text-[#f0ede8]" style={{ fontSize: '0.8rem' }}>Enemy Ship</span>
+          <div className="flex items-center gap-2">
+            <span className="font-karla font-600 text-[#f0ede8]" style={{ fontSize: '0.8rem' }}>Enemy Ship</span>
+            {isBoss && (
+              <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: '#f97316', background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.4)', borderRadius: 4, padding: '1px 6px', letterSpacing: '0.1em' }}>BOSS</span>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             {phase === 'playing' || phase === 'clear' ? (
               <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#f0c040' }}>
@@ -683,9 +704,17 @@ export default function CannonGame({
               style={{ color: '#f0c040', fontSize: '1.1rem', marginBottom: 2 }}>
               +{fmtGold(lastEarned)} ⟡
             </motion.p>
-            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.4)', fontSize: '0.75rem', marginBottom: 36 }}>
+            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.4)', fontSize: '0.75rem', marginBottom: isBoss ? 12 : 36 }}>
               Pot: {fmtGold(pot)} ⟡
             </p>
+            {isBoss && (
+              <motion.p
+                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                className="font-cinzel font-700"
+                style={{ color: '#f97316', fontSize: '0.85rem', letterSpacing: '0.1em', marginBottom: 28 }}>
+                ⚔ BOSS INCOMING
+              </motion.p>
+            )}
 
             <div style={{ display: 'flex', gap: 10, flexDirection: 'column', width: 240 }}>
               <motion.button
