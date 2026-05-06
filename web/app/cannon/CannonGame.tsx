@@ -6,9 +6,6 @@ import { claimCannonLoot } from './actions'
 
 type GamePhase  = 'idle' | 'playing' | 'clear' | 'dead'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
-type DodgeState  = 'none' | 'incoming' | 'success' | 'half' | 'failed'
-type DodgeResult = 'full' | 'half' | 'miss'
-
 // ── Enemy definitions ─────────────────────────────────────────────────────────
 
 interface BroadsideEnemy {
@@ -73,9 +70,10 @@ function rollIncomingDamage(round: number): number {
 const MAX_CHARGES    = 3
 const SPEED_BASE     = 0.006
 const SPEED_INC      = 0.0008
-const CANNON_MISS_CD = 2400
-const DODGE_MISS_CD  = 1800
-const ENEMY_DODGE_MS = 1400
+const CANNON_MISS_CD      = 2400
+const DODGE_PRIME_MS      = 750   // window stays primed this long
+const DODGE_COOLDOWN_MISS = 2200  // cooldown after eating an unblocked hit
+const ENEMY_DODGE_MS      = 1400
 
 function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: number): number {
   if (!res || res === 'miss') return 0
@@ -88,10 +86,8 @@ function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: numb
   const [min, max] = ranges[res]
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
-const SHOT_LABEL:  Record<string, string> = { critical: 'Critical!', hit: 'Hit!', graze: 'Graze', miss: 'Miss' }
-const SHOT_COLOR:  Record<string, string> = { critical: '#fbbf24', hit: '#4ade80', graze: '#94a3b8', miss: '#6b7280' }
-const DODGE_LABEL: Record<string, string> = { full: 'Dodged!', half: 'Half Dodge', miss: 'Hit!' }
-const DODGE_COLOR: Record<string, string> = { full: '#38bdf8', half: '#fbbf24', miss: '#ef4444' }
+const SHOT_LABEL: Record<string, string> = { critical: 'Critical!', hit: 'Hit!', graze: 'Graze', miss: 'Miss' }
+const SHOT_COLOR: Record<string, string> = { critical: '#fbbf24', hit: '#4ade80', graze: '#94a3b8', miss: '#6b7280' }
 
 function killGold(round: number, fortuneMult: number, isVolley: boolean) {
   const base = isBossRound(round) ? 120 : 50
@@ -254,14 +250,10 @@ export default function CannonGame({
   totalFortune: number
   crewCount: number
 }) {
-  const dodgeBonus     = totalDodge * 5
-  const fortuneMult    = 1 + totalFortune / 150
-  const reloadCooldown = Math.max(600, 2200 - shipSpeed * 110)
-
-  const dodgeWindowMs = useCallback(
-    () => Math.max(400, 700 + dodgeBonus - roundRef.current * 8),
-    [dodgeBonus],
-  )
+  const dodgeBonus        = totalDodge * 5
+  const fortuneMult       = 1 + totalFortune / 150
+  const reloadCooldown    = Math.max(600, 2200 - shipSpeed * 110)
+  const dodgeCooldownUse  = Math.max(500, 1600 - dodgeBonus)
 
   const [phase, setPhase]               = useState<GamePhase>('idle')
   const [playerHP, setPlayerHP]         = useState(playerHPMax)
@@ -279,14 +271,13 @@ export default function CannonGame({
   const [pot, setPot]                   = useState(0)
   const [lastEarned, setLastEarned]     = useState(0)
   const [shotResult, setShotResult]     = useState<ShotResult>(null)
-  const [dodgeState, setDodgeState]     = useState<DodgeState>('none')
-  const [dodgeFeedback, setDodgeFeedback] = useState<DodgeResult | null>(null)
-  const [dodgeWindowPct, setDodgeWindowPct] = useState(1)
+  const [dodgePrimed, setDodgePrimed]   = useState(false)
+  const [dodgeCooldown, setDodgeCooldown] = useState(false)
+  const [dodgePrimePct, setDodgePrimePct] = useState(1)
   const [roundDisplay, setRoundDisplay] = useState(1)
   const [isBoss, setIsBoss]             = useState(false)
   const [isClaiming, setIsClaiming]     = useState(false)
   const [cannonJammed, setCannonJammed] = useState(false)
-  const [dodgeLocked, setDodgeLocked]   = useState(false)
   const [enemySinking, setEnemySinking] = useState(false)
   const [showCannonShot, setShowCannonShot] = useState(false)
   const [isVolleyShot, setIsVolleyShot] = useState(false)
@@ -317,7 +308,10 @@ export default function CannonGame({
   const canFireRef            = useRef(true)
   const chargesRef            = useRef(1)
   const canReloadRef          = useRef(true)
-  const dodgeLockedRef        = useRef(false)
+  const dodgePrimedRef        = useRef(false)
+  const dodgeCooldownRef      = useRef(false)
+  const dodgePrimeElapsedRef  = useRef(0)
+  const dodgePrimeTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
   const roundEndingRef        = useRef(false)
   const rafRef                = useRef(0)
   const enemyChargesRef        = useRef(0)
@@ -325,9 +319,6 @@ export default function CannonGame({
   const enemyDodgeTimeoutRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
   const enemyPatternIdxRef     = useRef(0)
   const enemyActionElapsedRef  = useRef(0)
-  const dodgeStateRef         = useRef<DodgeState>('none')
-  const dodgeElapsedRef       = useRef(0)
-  const pendingDamageRef      = useRef(0)
 
   const resetEnemyForRound = useCallback((round: number) => {
     const e = getEnemyForRound(round)
@@ -360,15 +351,15 @@ export default function CannonGame({
     roundRef.current        = 0; streakRef.current  = 0
     potRef.current          = 0
     playerHPRef.current     = playerHPMax
-    canFireRef.current      = true
-    chargesRef.current      = 0
-    canReloadRef.current    = true
+    canFireRef.current          = true
+    chargesRef.current          = 0
+    canReloadRef.current        = true
     setCanFire(true)
-    dodgeLockedRef.current  = false
-    roundEndingRef.current  = false
-    dodgeStateRef.current   = 'none'
-    dodgeElapsedRef.current = 0
-    pendingDamageRef.current = 0
+    if (dodgePrimeTimerRef.current) { clearTimeout(dodgePrimeTimerRef.current); dodgePrimeTimerRef.current = null }
+    dodgePrimedRef.current      = false
+    dodgeCooldownRef.current    = false
+    dodgePrimeElapsedRef.current = 0
+    roundEndingRef.current      = false
 
     resetEnemyForRound(0)
 
@@ -377,9 +368,9 @@ export default function CannonGame({
     setPlayerHP(playerHPMax)
     setCharges(0); setCanReload(true)
     setStreak(0); setPot(0); setLastEarned(0)
-    setCannonJammed(false); setDodgeLocked(false)
-    setShotResult(null); setDodgeState('none'); setDodgeFeedback(null)
-    setDodgeWindowPct(1); setRoundDisplay(1); setEnemySinking(false)
+    setCannonJammed(false)
+    setShotResult(null); setDodgePrimed(false); setDodgeCooldown(false)
+    setDodgePrimePct(1); setRoundDisplay(1); setEnemySinking(false)
     setShowCannonShot(false); setClearReady(false)
   }, [playerHPMax, resetEnemyForRound])
 
@@ -431,67 +422,69 @@ export default function CannonGame({
 
       if (roundEndingRef.current) { rafRef.current = requestAnimationFrame(loop); return }
 
-      // Dodge window drains separately when open
-      if (dodgeStateRef.current === 'incoming') {
-        dodgeElapsedRef.current += dt
-        const pct = Math.max(0, 1 - dodgeElapsedRef.current / dodgeWindowMs())
-        setDodgeWindowPct(pct)
-
-        if (dodgeElapsedRef.current >= dodgeWindowMs()) {
-          // Window expired — auto miss
-          dodgeStateRef.current = 'failed'
-          setDodgeState('failed'); setDodgeFeedback('miss')
-          const dmg = pendingDamageRef.current
-          playerHPRef.current = Math.max(0, playerHPRef.current - dmg)
-          setPlayerHP(playerHPRef.current)
-          setPHitsplat(p => ({ key: p.key + 1, text: `-${dmg}`, color: '#f87171', big: true }))
-          setTimeout(() => { dodgeStateRef.current = 'none'; setDodgeState('none'); setDodgeFeedback(null) }, 700)
-          if (playerHPRef.current <= 0) {
-            phaseRef.current = 'dead'
-            setBest(prev => Math.max(prev, streakRef.current))
-            setPhase('dead'); return
-          }
-        }
+      // Dodge prime countdown
+      if (dodgePrimedRef.current) {
+        dodgePrimeElapsedRef.current += dt
+        setDodgePrimePct(Math.max(0, 1 - dodgePrimeElapsedRef.current / DODGE_PRIME_MS))
       }
 
-      // Enemy action timer pauses while dodge window is open
-      if (dodgeStateRef.current !== 'incoming') {
-        const actionMs = getActionMs(roundRef.current)
-        enemyActionElapsedRef.current += dt
-        setEnemyActionPct(Math.max(0, 1 - enemyActionElapsedRef.current / actionMs))
+      // Enemy action timer
+      const actionMs = getActionMs(roundRef.current)
+      enemyActionElapsedRef.current += dt
+      setEnemyActionPct(Math.max(0, 1 - enemyActionElapsedRef.current / actionMs))
 
-        if (enemyActionElapsedRef.current >= actionMs) {
-          enemyActionElapsedRef.current = 0
+      if (enemyActionElapsedRef.current >= actionMs) {
+        enemyActionElapsedRef.current = 0
 
-          const e = getEnemyForRound(roundRef.current)
-          const action = e.pattern[enemyPatternIdxRef.current % e.pattern.length]
-          enemyPatternIdxRef.current++
+        const e = getEnemyForRound(roundRef.current)
+        const action = e.pattern[enemyPatternIdxRef.current % e.pattern.length]
+        enemyPatternIdxRef.current++
 
-          if (action === 'reload') {
-            if (enemyChargesRef.current < MAX_CHARGES) {
-              enemyChargesRef.current++
-              setEnemyCharges(enemyChargesRef.current)
-            }
-          } else if (action === 'dodge') {
-            enemyDodgingRef.current = true
-            setEnemyDodging(true)
-            if (enemyDodgeTimeoutRef.current) clearTimeout(enemyDodgeTimeoutRef.current)
-            enemyDodgeTimeoutRef.current = setTimeout(() => {
-              enemyDodgingRef.current = false
-              setEnemyDodging(false)
-            }, ENEMY_DODGE_MS)
-          } else if (action === 'fire') {
-            if (enemyChargesRef.current > 0) {
-              enemyChargesRef.current--
-              setEnemyCharges(enemyChargesRef.current)
-              pendingDamageRef.current = rollIncomingDamage(roundRef.current)
-              dodgeElapsedRef.current = 0
-              dodgeStateRef.current = 'incoming'
-              setDodgeState('incoming')
-              setDodgeWindowPct(1)
-            }
-            // No charges → skip fire, pattern still advances
+        if (action === 'reload') {
+          if (enemyChargesRef.current < MAX_CHARGES) {
+            enemyChargesRef.current++
+            setEnemyCharges(enemyChargesRef.current)
           }
+        } else if (action === 'dodge') {
+          enemyDodgingRef.current = true
+          setEnemyDodging(true)
+          if (enemyDodgeTimeoutRef.current) clearTimeout(enemyDodgeTimeoutRef.current)
+          enemyDodgeTimeoutRef.current = setTimeout(() => {
+            enemyDodgingRef.current = false
+            setEnemyDodging(false)
+          }, ENEMY_DODGE_MS)
+        } else if (action === 'fire') {
+          if (enemyChargesRef.current > 0) {
+            enemyChargesRef.current--
+            setEnemyCharges(enemyChargesRef.current)
+
+            if (dodgePrimedRef.current) {
+              // Prediction dodge — cancel prime, short cooldown
+              if (dodgePrimeTimerRef.current) { clearTimeout(dodgePrimeTimerRef.current); dodgePrimeTimerRef.current = null }
+              dodgePrimedRef.current = false
+              dodgePrimeElapsedRef.current = 0
+              setDodgePrimed(false); setDodgePrimePct(1)
+              setPHitsplat(p => ({ key: p.key + 1, text: 'DODGED!', color: '#38bdf8', big: false }))
+              dodgeCooldownRef.current = true
+              setDodgeCooldown(true)
+              setTimeout(() => { dodgeCooldownRef.current = false; setDodgeCooldown(false) }, dodgeCooldownUse)
+            } else {
+              // Took the hit
+              const dmg = rollIncomingDamage(roundRef.current)
+              playerHPRef.current = Math.max(0, playerHPRef.current - dmg)
+              setPlayerHP(playerHPRef.current)
+              setPHitsplat(p => ({ key: p.key + 1, text: `-${dmg}`, color: '#f87171', big: true }))
+              if (playerHPRef.current <= 0) {
+                phaseRef.current = 'dead'
+                setBest(prev => Math.max(prev, streakRef.current))
+                setPhase('dead'); return
+              }
+              dodgeCooldownRef.current = true
+              setDodgeCooldown(true)
+              setTimeout(() => { dodgeCooldownRef.current = false; setDodgeCooldown(false) }, DODGE_COOLDOWN_MISS)
+            }
+          }
+          // No charges → skip fire, pattern still advances
         }
       }
 
@@ -500,7 +493,7 @@ export default function CannonGame({
 
     rafRef.current = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [phase, dodgeWindowMs])
+  }, [phase, dodgeCooldownUse])
 
   const doReload = useCallback(() => {
     if (phaseRef.current !== 'playing' || !canReloadRef.current || chargesRef.current >= MAX_CHARGES) return
@@ -572,10 +565,7 @@ export default function CannonGame({
         setTimeout(() => {
           roundRef.current++
           resetEnemyForRound(roundRef.current)
-          dodgeStateRef.current   = 'none'
-          dodgeElapsedRef.current = 0
           setRoundDisplay(roundRef.current + 1)
-          setDodgeState('none'); setDodgeWindowPct(1)
           setEnemySinking(false)
           roundEndingRef.current = false
           phaseRef.current = 'clear'
@@ -596,50 +586,27 @@ export default function CannonGame({
     }
   }, [shipMinDamage, totalPower, fortuneMult, cannonJammed, resetEnemyForRound])
 
-  const dodge = useCallback(() => {
-    if (dodgeStateRef.current !== 'incoming' || dodgeLockedRef.current) return
-    if (!canFireRef.current || !canReloadRef.current) return
-    const ratio = dodgeElapsedRef.current / dodgeWindowMs()
-    const res: DodgeResult = ratio < 0.38 ? 'full' : ratio < 0.72 ? 'half' : 'miss'
+  const primeDodge = useCallback(() => {
+    if (phaseRef.current !== 'playing') return
+    if (dodgeCooldownRef.current || dodgePrimedRef.current) return
+    if (!canFireRef.current || !canReloadRef.current) return  // committed: can't prime mid-action
 
-    dodgeStateRef.current = res === 'full' ? 'success' : res === 'half' ? 'half' : 'failed'
-    setDodgeFeedback(res)
+    dodgePrimedRef.current = true
+    dodgePrimeElapsedRef.current = 0
+    setDodgePrimed(true); setDodgePrimePct(1)
 
-    if (res === 'miss') {
-      const dmg = pendingDamageRef.current
-      playerHPRef.current = Math.max(0, playerHPRef.current - dmg)
-      setPlayerHP(playerHPRef.current)
-      setPHitsplat(p => ({ key: p.key + 1, text: `-${dmg}`, color: '#f87171', big: true }))
-      dodgeLockedRef.current = true
-      setDodgeLocked(true)
-      setTimeout(() => { dodgeLockedRef.current = false; setDodgeLocked(false) }, DODGE_MISS_CD)
-      if (playerHPRef.current <= 0) {
-        phaseRef.current = 'dead'
-        setBest(prev => Math.max(prev, streakRef.current))
-        setPhase('dead'); return
-      }
-    } else if (res === 'half') {
-      const dmg = Math.ceil(pendingDamageRef.current / 2)
-      playerHPRef.current = Math.max(0, playerHPRef.current - dmg)
-      setPlayerHP(playerHPRef.current)
-      setPHitsplat(p => ({ key: p.key + 1, text: `-${dmg}`, color: '#fbbf24', big: false }))
-      if (playerHPRef.current <= 0) {
-        phaseRef.current = 'dead'
-        setBest(prev => Math.max(prev, streakRef.current))
-        setPhase('dead'); return
-      }
-    } else {
-      setPHitsplat(p => ({ key: p.key + 1, text: 'DODGED!', color: '#38bdf8', big: false }))
-    }
-
-    dodgeElapsedRef.current = 0
-    setDodgeWindowPct(1)
-    setTimeout(() => { dodgeStateRef.current = 'none'; setDodgeState('none'); setDodgeFeedback(null) }, 600)
-  }, [dodgeWindowMs])
+    // Auto-expire prime after window
+    if (dodgePrimeTimerRef.current) clearTimeout(dodgePrimeTimerRef.current)
+    dodgePrimeTimerRef.current = setTimeout(() => {
+      dodgePrimedRef.current = false
+      dodgePrimeElapsedRef.current = 0
+      setDodgePrimed(false); setDodgePrimePct(1)
+    }, DODGE_PRIME_MS)
+  }, [])
 
   const advance = useCallback(() => {
     canFireRef.current = true
-    setShotResult(null); setDodgeFeedback(null); setClearReady(false)
+    setShotResult(null); setClearReady(false)
     phaseRef.current = 'playing'
     setPhase('playing')
   }, [])
@@ -653,13 +620,12 @@ export default function CannonGame({
     setPhase('idle')
   }, [isClaiming])
 
-  const isIncoming    = dodgeState === 'incoming'
   const isVolleyReady = charges === MAX_CHARGES
   const isCommitted   = !canFire || !canReload
   const powerMax      = shipMinDamage + Math.floor(totalPower / 4)
 
-  const dodgeBarColor  = dodgeWindowPct > 0.62 ? '#38bdf8' : dodgeWindowPct > 0.28 ? '#fbbf24' : '#ef4444'
-  const actionBarColor = enemyActionPct > 0.4 ? '#a78bfa' : enemyActionPct > 0.15 ? '#fbbf24' : '#ef4444'
+  const dodgePrimeBarColor = dodgePrimePct > 0.5 ? '#38bdf8' : dodgePrimePct > 0.2 ? '#fbbf24' : '#ef4444'
+  const actionBarColor     = enemyActionPct > 0.4 ? '#a78bfa' : enemyActionPct > 0.15 ? '#fbbf24' : '#ef4444'
 
   return (
     <div className="flex flex-col items-center gap-4 select-none" style={{ userSelect: 'none' }}>
@@ -820,71 +786,33 @@ export default function CannonGame({
 
       </div>
 
-      {/* ── Dodge section — always in DOM to prevent layout shift ──────────── */}
+      {/* ── Dodge prime indicator — always in DOM to prevent layout shift ─── */}
       <div style={{
-        width: '100%', background: 'rgba(8,6,4,0.4)', border: '1px solid rgba(56,189,248,0.2)',
-        borderRadius: 12, padding: '0.55rem 0.65rem',
-        opacity: isIncoming ? 1 : 0,
-        pointerEvents: isIncoming ? 'auto' : 'none',
-        transition: 'opacity 0.18s',
+        width: '100%', borderRadius: 12, padding: '0.45rem 0.65rem',
+        background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.18)',
+        opacity: dodgePrimed ? 1 : 0, pointerEvents: 'none', transition: 'opacity 0.15s',
       }}>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-              <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#38bdf8', letterSpacing: '0.08em' }}>FULL</span>
-              <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: dodgeLocked ? '#ef4444' : '#f0ede8', letterSpacing: '0.06em' }}>
-                {dodgeLocked ? '⚠ EXPOSED' : '⚡ DODGE!'}
-              </span>
-              <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#ef4444', letterSpacing: '0.08em' }}>MISS</span>
-            </div>
-
-            <div style={{ position: 'relative', height: 28, borderRadius: 8, overflow: 'hidden' }}>
-              {/* Static zone backgrounds: left=miss, middle=half, right=full */}
-              <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
-                <div style={{ width: '28%', background: 'rgba(239,68,68,0.2)' }} />
-                <div style={{ width: '34%', background: 'rgba(251,191,36,0.15)' }} />
-                <div style={{ flex: 1, background: 'rgba(56,189,248,0.15)' }} />
-              </div>
-              {/* Zone dividers */}
-              <div style={{ position: 'absolute', top: 0, bottom: 0, left: '28%', width: 2, background: 'rgba(251,191,36,0.55)', zIndex: 2 }} />
-              <div style={{ position: 'absolute', top: 0, bottom: 0, left: '62%', width: 2, background: 'rgba(56,189,248,0.55)', zIndex: 2 }} />
-              {/* Drain fill */}
-              <div style={{
-                position: 'absolute', top: 0, bottom: 0, left: 0,
-                width: `${dodgeWindowPct * 100}%`,
-                background: dodgeBarColor,
-                boxShadow: `0 0 12px ${dodgeBarColor}88`,
-                transition: 'background 0.25s',
-                borderRadius: '6px 0 0 6px',
-                zIndex: 3,
-              }} />
-            </div>
-
-            <div style={{ display: 'flex', marginTop: 4 }}>
-              <span style={{ width: '28%', textAlign: 'center' }}>
-                <span className="font-karla" style={{ fontSize: '0.42rem', color: 'rgba(239,68,68,0.55)' }}>miss</span>
-              </span>
-              <span style={{ width: '34%', textAlign: 'center' }}>
-                <span className="font-karla" style={{ fontSize: '0.42rem', color: 'rgba(251,191,36,0.55)' }}>half</span>
-              </span>
-              <span style={{ flex: 1, textAlign: 'center' }}>
-                <span className="font-karla" style={{ fontSize: '0.42rem', color: 'rgba(56,189,248,0.55)' }}>full</span>
-              </span>
-            </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#38bdf8', letterSpacing: '0.1em' }}>⚡ DODGE PRIMED</span>
+          <span className="font-karla font-400" style={{ fontSize: '0.45rem', color: 'rgba(56,189,248,0.55)' }}>window</span>
+        </div>
+        <div style={{ height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%', width: `${dodgePrimePct * 100}%`,
+            background: dodgePrimeBarColor,
+            boxShadow: `0 0 8px ${dodgePrimeBarColor}88`,
+            transition: 'background 0.2s', borderRadius: 4,
+          }} />
+        </div>
       </div>
 
       {/* ── Feedback ─────────────────────────────────────────────────────────── */}
       <div style={{ height: 22 }}>
         <AnimatePresence mode="wait">
-          {shotResult && !dodgeFeedback && (
+          {shotResult && (
             <motion.p key={shotResult} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
               className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: SHOT_COLOR[shotResult], textAlign: 'center' }}>
               {SHOT_LABEL[shotResult]}
-            </motion.p>
-          )}
-          {dodgeFeedback && (
-            <motion.p key={`d-${dodgeFeedback}`} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: DODGE_COLOR[dodgeFeedback], textAlign: 'center' }}>
-              {DODGE_LABEL[dodgeFeedback]}
             </motion.p>
           )}
         </AnimatePresence>
@@ -915,50 +843,60 @@ export default function CannonGame({
       </div>
 
       {/* ── Action buttons ────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+      <div style={{ display: 'flex', gap: 8, width: '100%' }}>
 
-        {/* Left: RELOAD normally, DODGE when incoming */}
+        {/* RELOAD */}
         {phase === 'playing' && (
           <motion.button
-            onPointerDown={isIncoming ? dodge : doReload}
-            whileTap={{ scale: 0.95 }}
-            animate={
-              isIncoming && !dodgeLocked && !isCommitted
-                ? { boxShadow: ['0 0 0px #38bdf800', '0 0 16px #38bdf8aa', '0 0 8px #38bdf866'] }
-                : dodgeLocked
-                ? { boxShadow: ['0 0 0px #ef444400', '0 0 10px #ef444455', '0 0 0px #ef444400'] }
-                : {}
-            }
-            transition={{ duration: 0.45, repeat: Infinity }}
+            onPointerDown={doReload}
+            whileTap={canReload && charges < MAX_CHARGES ? { scale: 0.95 } : {}}
             className="font-karla font-700"
             style={{
               flex: 1, padding: '12px 0', borderRadius: 14, cursor: 'pointer',
-              background: isIncoming && !dodgeLocked && !isCommitted ? 'rgba(56,189,248,0.2)'
-                        : isIncoming && isCommitted   ? 'rgba(251,146,60,0.08)'
-                        : dodgeLocked                 ? 'rgba(239,68,68,0.08)'
-                        : !canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.03)'
-                        :                               'rgba(96,165,250,0.12)',
-              border: `1px solid ${
-                isIncoming && !dodgeLocked && !isCommitted ? 'rgba(56,189,248,0.6)'
-                : isIncoming && isCommitted   ? 'rgba(251,146,60,0.3)'
-                : dodgeLocked                 ? 'rgba(239,68,68,0.3)'
-                : !canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.07)'
-                :                               'rgba(96,165,250,0.35)'
-              }`,
-              color: isIncoming && !dodgeLocked && !isCommitted ? '#38bdf8'
-                   : isIncoming && isCommitted   ? '#f97316'
-                   : dodgeLocked                 ? '#ef4444'
-                   : !canReload                  ? '#3a5a7a'
-                   : charges >= MAX_CHARGES      ? '#4a4845'
-                   :                              '#60a5fa',
-              fontSize: (dodgeLocked || (isIncoming && isCommitted)) ? '0.72rem' : '0.92rem',
-              letterSpacing: '0.06em',
-              opacity: (!isIncoming && (!canReload || charges >= MAX_CHARGES)) ? 0.5 : 1,
+              background: !canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.03)' : 'rgba(96,165,250,0.12)',
+              border: `1px solid ${!canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.07)' : 'rgba(96,165,250,0.35)'}`,
+              color: !canReload ? '#3a5a7a' : charges >= MAX_CHARGES ? '#4a4845' : '#60a5fa',
+              fontSize: '0.85rem', letterSpacing: '0.06em',
+              opacity: !canReload || charges >= MAX_CHARGES ? 0.5 : 1,
               transition: 'all 0.12s',
             }}>
-            {isIncoming
-              ? (dodgeLocked ? 'Exposed…' : isCommitted ? 'Committed…' : 'DODGE')
-              : (!canReload ? 'Loading…' : charges >= MAX_CHARGES ? 'Full' : 'RELOAD')}
+            {!canReload ? 'Loading…' : charges >= MAX_CHARGES ? 'Full' : 'RELOAD'}
+          </motion.button>
+        )}
+
+        {/* DODGE */}
+        {phase === 'playing' && (
+          <motion.button
+            onPointerDown={primeDodge}
+            whileTap={!dodgeCooldown && !dodgePrimed && !isCommitted ? { scale: 0.95 } : {}}
+            animate={
+              dodgePrimed
+                ? { boxShadow: ['0 0 0px #38bdf800', '0 0 14px #38bdf8aa', '0 0 6px #38bdf866'] }
+                : {}
+            }
+            transition={{ duration: 0.4, repeat: Infinity }}
+            className="font-karla font-700"
+            style={{
+              flex: 1, padding: '12px 0', borderRadius: 14, cursor: 'pointer',
+              background: dodgePrimed     ? 'rgba(56,189,248,0.18)'
+                        : dodgeCooldown   ? 'rgba(255,255,255,0.03)'
+                        : isCommitted     ? 'rgba(251,146,60,0.06)'
+                        :                  'rgba(56,189,248,0.10)',
+              border: `1px solid ${
+                dodgePrimed   ? 'rgba(56,189,248,0.65)'
+                : dodgeCooldown ? 'rgba(255,255,255,0.07)'
+                : isCommitted   ? 'rgba(251,146,60,0.22)'
+                :                 'rgba(56,189,248,0.3)'
+              }`,
+              color: dodgePrimed   ? '#38bdf8'
+                   : dodgeCooldown ? '#2a4050'
+                   : isCommitted   ? '#f97316'
+                   :                 '#38bdf8',
+              fontSize: '0.85rem', letterSpacing: '0.06em',
+              opacity: dodgeCooldown || isCommitted ? 0.5 : 1,
+              transition: 'all 0.12s',
+            }}>
+            {dodgePrimed ? 'DODGING…' : dodgeCooldown ? '…' : isCommitted ? 'Busy' : 'DODGE'}
           </motion.button>
         )}
 
