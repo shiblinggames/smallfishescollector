@@ -672,7 +672,7 @@ export default function RaidGame({
       setEnemyHP(enemyHPRef.current)
       setEHitsplat(p => ({
         key: p.key + 1,
-        text: blocked ? `-${effectiveDmg}` : res === 'critical' ? `⚡ ${dmg}` : `-${dmg}`,
+        text: blocked ? `-${effectiveDmg}` : res === 'critical' ? `☠ ${dmg}` : `-${dmg}`,
         color: blocked ? '#38bdf8' : res === 'critical' ? '#fbbf24' : '#f87171',
         big: res === 'critical',
       }))
