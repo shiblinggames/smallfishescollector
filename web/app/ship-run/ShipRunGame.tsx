@@ -228,8 +228,8 @@ export default function ShipRunGame({ shipImageUrl, shipName }: { shipImageUrl: 
       obstacles.current.forEach(o => drawObstacle(ctx, o))
       drawShip(ctx, shipY.current, shipImg.current)
 
-      ctx.fillStyle = 'rgba(255,255,255,0.7)'
-      ctx.font = 'bold 16px sans-serif'
+      ctx.fillStyle = 'rgba(240,237,232,0.65)'
+      ctx.font = '700 15px Karla, sans-serif'
       ctx.textAlign = 'right'
       ctx.fillText(`${Math.floor(score.current / 10)}m`, CW - 14, 26)
 
@@ -246,29 +246,33 @@ export default function ShipRunGame({ shipImageUrl, shipName }: { shipImageUrl: 
         ref={canvasRef}
         width={CW}
         height={CH}
-        style={{ width: '100%', display: 'block', touchAction: 'none', borderRadius: 16 }}
+        style={{ width: '100%', display: 'block', touchAction: 'none', borderRadius: 20, border: '1px solid rgba(255,255,255,0.06)' }}
         onPointerDown={handleTap}
       />
       {phase !== 'playing' && (
         <div style={{
           position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.55)', borderRadius: 16,
+          background: 'rgba(0,0,0,0.6)', borderRadius: 20,
         }}>
           {phase === 'dead' && <>
-            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, marginBottom: 4, fontFamily: 'sans-serif' }}>Distance</p>
-            <p style={{ color: '#fff', fontSize: 38, fontWeight: 800, margin: '0 0 20px', fontFamily: 'sans-serif' }}>{finalScore}m</p>
+            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.45)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>Distance</p>
+            <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '2.4rem', margin: '0 0 20px' }}>{finalScore}m</p>
           </>}
           {phase === 'idle' && (
-            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, marginBottom: 20, fontFamily: 'sans-serif' }}>
+            <p className="font-karla font-300" style={{ color: 'rgba(240,237,232,0.45)', fontSize: '0.8rem', marginBottom: 20 }}>
               Tap left · right to dodge
             </p>
           )}
-          <button onClick={startGame} style={{
-            padding: '12px 36px', background: '#38bdf8', border: 'none',
-            borderRadius: 12, color: '#0b1d30', fontWeight: 700, fontSize: 16,
-            fontFamily: 'sans-serif', cursor: 'pointer',
-          }}>
+          <button
+            onClick={startGame}
+            className="font-karla font-700"
+            style={{
+              padding: '11px 34px', background: 'rgba(56,189,248,0.15)',
+              border: '1px solid rgba(56,189,248,0.4)', borderRadius: 12,
+              color: '#38bdf8', fontSize: '0.9rem', letterSpacing: '0.04em', cursor: 'pointer',
+            }}
+          >
             {phase === 'idle' ? 'Set Sail' : 'Try Again'}
           </button>
         </div>
