@@ -3239,7 +3239,7 @@ export default function FishingGame({
             />
             {/* Quick-buy worms */}
             {(() => {
-              const canAfford = doubloons >= 20
+              const canAfford = doubloons >= 200
               return (
                 <button
                   disabled={buyingWorms || !canAfford}
@@ -3279,7 +3279,7 @@ export default function FishingGame({
                     </span>
                   </div>
                   <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: wormBuyMsg ? (wormBuyMsg.startsWith('+') ? '#4ade80' : '#f87171') : (canAfford ? '#d4a96a' : 'rgba(255,255,255,0.2)') }}>
-                    {wormBuyMsg ?? '20 ⟡'}
+                    {wormBuyMsg ?? '200 ⟡'}
                   </span>
                 </button>
               )

@@ -371,7 +371,7 @@ export async function reelIn(
 }
 
 const QUICK_BUY_WORMS_QTY  = 10
-const QUICK_BUY_WORMS_COST = 20  // 2× the shop price of 10 doubloons per 10
+const QUICK_BUY_WORMS_COST = 200  // 2× the shop price of 100 doubloons per 10
 
 export async function quickBuyWorms(): Promise<{ qty: number; doubloons: number } | { error: string }> {
   const supabase = await createClient()
