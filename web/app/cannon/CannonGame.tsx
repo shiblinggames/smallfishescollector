@@ -722,14 +722,14 @@ export default function CannonGame({
 
       </div>
 
-      {/* ── Dodge section ─────────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {isIncoming && (
-          <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.97 }}
-            style={{ width: '100%', background: 'rgba(8,6,4,0.4)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 12, padding: '0.55rem 0.65rem' }}>
+      {/* ── Dodge section — always in DOM to prevent layout shift ──────────── */}
+      <div style={{
+        width: '100%', background: 'rgba(8,6,4,0.4)', border: '1px solid rgba(56,189,248,0.2)',
+        borderRadius: 12, padding: '0.55rem 0.65rem',
+        opacity: isIncoming ? 1 : 0,
+        pointerEvents: isIncoming ? 'auto' : 'none',
+        transition: 'opacity 0.18s',
+      }}>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
               <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#38bdf8', letterSpacing: '0.08em' }}>FULL</span>
@@ -772,9 +772,7 @@ export default function CannonGame({
                 <span className="font-karla" style={{ fontSize: '0.42rem', color: 'rgba(56,189,248,0.55)' }}>full</span>
               </span>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </div>
 
       {/* ── Feedback ─────────────────────────────────────────────────────────── */}
       <div style={{ height: 22 }}>
