@@ -1065,7 +1065,7 @@ export default function CannonGame({
               onPointerDown={playerReady && charges < MAX_CHARGES && !isActionLocked ? doReload : undefined}
               whileTap={playerReady && charges < MAX_CHARGES && !isActionLocked ? { scale: 0.88 } : {}}
               style={{
-                width: 72, height: 72, borderRadius: '50%', cursor: playerReady && charges < MAX_CHARGES && !isActionLocked ? 'pointer' : 'default',
+                width: 82, height: 82, borderRadius: '50%', cursor: playerReady && charges < MAX_CHARGES && !isActionLocked ? 'pointer' : 'default',
                 background: isActionLocked ? 'rgba(239,68,68,0.07)' : !playerReady || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.03)' : 'rgba(96,165,250,0.12)',
                 border: `2px solid ${isActionLocked ? 'rgba(239,68,68,0.22)' : !playerReady || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.1)' : 'rgba(96,165,250,0.45)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1090,7 +1090,7 @@ export default function CannonGame({
               animate={dodgePrimed ? { boxShadow: ['0 0 0px #38bdf800', '0 0 20px #38bdf8aa', '0 0 8px #38bdf866'] } : {}}
               transition={{ duration: 0.4, repeat: Infinity }}
               style={{
-                width: 72, height: 72, borderRadius: '50%', cursor: 'pointer',
+                width: 82, height: 82, borderRadius: '50%', cursor: 'pointer',
                 background: dodgePrimed    ? 'rgba(56,189,248,0.18)'
                           : isActionLocked ? 'rgba(239,68,68,0.07)'
                           : dodgeCooldown  ? 'rgba(255,255,255,0.03)'
@@ -1123,7 +1123,7 @@ export default function CannonGame({
               animate={isVolleyReady ? { boxShadow: ['0 0 0px #f0c04000', '0 0 20px #f0c04077', '0 0 0px #f0c04000'] } : {}}
               transition={{ duration: 1.4, repeat: Infinity }}
               style={{
-                width: 72, height: 72, borderRadius: '50%',
+                width: 82, height: 82, borderRadius: '50%',
                 cursor: playerReady && !cannonJammed && charges > 0 && !isActionLocked ? 'pointer' : 'default',
                 background: cannonJammed  ? 'rgba(251,146,60,0.1)'
                           : isVolleyReady ? 'rgba(240,192,64,0.18)'
@@ -1330,22 +1330,13 @@ export default function CannonGame({
                   style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(239,68,68,0.16)', border: '1px solid rgba(239,68,68,0.45)', color: '#ef4444', fontSize: '0.92rem', letterSpacing: '0.06em' }}>
                   Try Again
                 </motion.button>
-                {pot > 0 && (
-                  <motion.button
-                    onPointerDown={async () => {
-                      if (isClaiming) return
-                      setIsClaiming(true)
-                      try { await claimCannonLoot(potRef.current) } finally { setIsClaiming(false) }
-                      phaseRef.current = 'idle'
-                      setPhase('idle')
-                    }}
-                    whileTap={{ scale: 0.96 }}
-                    disabled={isClaiming}
-                    className="font-karla font-600"
-                    style={{ padding: '12px 0', borderRadius: 14, cursor: isClaiming ? 'default' : 'pointer', background: 'rgba(240,197,64,0.1)', border: '1px solid rgba(240,197,64,0.32)', color: '#f0c040', fontSize: '0.82rem', letterSpacing: '0.04em', opacity: isClaiming ? 0.6 : 1 }}>
-                    {isClaiming ? 'Banking…' : `Leave — Bank ${fmtGold(pot)} ⟡`}
-                  </motion.button>
-                )}
+                <motion.button
+                  onPointerDown={() => { phaseRef.current = 'idle'; setPhase('idle') }}
+                  whileTap={{ scale: 0.96 }}
+                  className="font-karla font-600"
+                  style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#6a6764', fontSize: '0.82rem', letterSpacing: '0.04em' }}>
+                  Leave
+                </motion.button>
               </div>
             </motion.div>
           )
