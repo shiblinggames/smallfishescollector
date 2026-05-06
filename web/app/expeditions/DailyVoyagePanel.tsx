@@ -271,24 +271,22 @@ export default function DailyVoyagePanel({
             </p>
           ) : (
             <>
-              {/* ── Always-visible: crew + score ── */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.6rem' }}>
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '0.2rem 0.55rem' }}>
-                  {savedCrew.map((c, i) => (
-                    <span key={c.variantId} style={{ display: 'flex', alignItems: 'baseline', gap: '0.2rem' }}>
-                      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.44rem', color: '#7a6848' }}>{i === 0 ? 'Capt' : 'Crew'}</span>
-                      <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: rarityColor(c.rarity) }}>{c.name}</span>
-                    </span>
-                  ))}
-                </div>
-                {stats && (
-                  <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                    <p className="font-karla" style={{ fontSize: '0.48rem', color: '#7a6848', marginBottom: 1 }}>Score</p>
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f0ede8', lineHeight: 1 }}>
-                      {stats.power + stats.dodge + Math.round(stats.fortune * 0.5)}
-                    </p>
-                  </div>
-                )}
+              {/* ── Always-visible: description + info ── */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a7860', lineHeight: 1.55, flex: 1 }}>
+                  Send your crew on a daily voyage. They return with doubloons, rare drops, and stories — but risky routes can cost you crew permanently.
+                </p>
+                <button
+                  onClick={() => setInfoOpen(true)}
+                  style={{
+                    flexShrink: 0, width: 22, height: 22, borderRadius: '50%',
+                    background: 'rgba(200,170,100,0.10)', border: '1px solid rgba(200,170,100,0.25)',
+                    color: '#a08860', fontSize: '0.72rem', fontWeight: 700,
+                    cursor: 'pointer', lineHeight: 1,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  aria-label="How voyages work"
+                >?</button>
               </div>
 
               {/* ── Choose Voyage toggle ── */}
@@ -313,20 +311,6 @@ export default function DailyVoyagePanel({
               {/* ── Expanded map section ── */}
               {mapOpen && (
               <>
-              {/* Info button */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
-                <button
-                  onClick={() => setInfoOpen(true)}
-                  style={{
-                    width: 22, height: 22, borderRadius: '50%',
-                    background: 'rgba(200,170,100,0.10)', border: '1px solid rgba(200,170,100,0.25)',
-                    color: '#a08860', fontSize: '0.72rem', fontWeight: 700,
-                    cursor: 'pointer', lineHeight: 1,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                  aria-label="How voyages work"
-                >?</button>
-              </div>
 
               {/* Info modal */}
               {infoOpen && (
