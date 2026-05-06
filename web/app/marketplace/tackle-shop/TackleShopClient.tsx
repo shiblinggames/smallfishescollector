@@ -149,7 +149,7 @@ export default function TackleShopClient({
     { key: 'hook',  label: 'Hooks', color: '#f0c040', desc: 'Widens the catch zone on the dial.',  imageUrl: '/models/hooks/steel-hook.png' },
     { key: 'rod',   label: 'Rods',  color: '#b8956a', desc: 'Every rod has a unique ability.',       imageUrl: '/driftwoodrod.png' },
     { key: 'reel',  label: 'Reels', color: '#60a5fa', desc: 'Slows the needle for easier timing.',   imageUrl: '/basicreel.png' },
-    { key: 'line',  label: 'Line',  color: '#4ade80', desc: 'Shrinks snag zones. Earned by species.' },
+    { key: 'line',  label: 'Line',  color: '#4ade80', desc: 'Shrinks snag zones. Earned by species.',  imageUrl: '/monofilament.png' },
   ]
 
   // ── Landing ────────────────────────────────────────────────────────────
