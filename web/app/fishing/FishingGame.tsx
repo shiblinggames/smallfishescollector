@@ -3109,7 +3109,7 @@ export default function FishingGame({
                       {confirmPrestigeZone === zone ? (
                         <div>
                           <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', marginBottom: '0.35rem' }}>
-                            Reset your {HABITAT_LABEL[zone]} catch log for Prestige {(prestigeLevels[zone] ?? 0) + 1}? You&apos;ll earn a permanent +{((prestigeLevels[zone] ?? 0) + 1) * 5}% sell bonus on all fish, and completing the collection again will re-award the full zone bonus.
+                            Reset your {HABITAT_LABEL[zone]} catch log for Prestige {(prestigeLevels[zone] ?? 0) + 1}? You&apos;ll earn +{((prestigeLevels[zone] ?? 0) + 1) * 5}% XP on every catch in this zone, and completing the collection again re-awards the full zone bonus.
                           </p>
                           <div className="flex items-center gap-2">
                             <button

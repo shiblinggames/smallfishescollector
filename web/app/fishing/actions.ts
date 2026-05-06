@@ -200,7 +200,7 @@ export async function reelIn(
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, ship_tier, has_phantom_hook, line_tier').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, ship_tier, has_phantom_hook, line_tier, prestige_levels').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -269,7 +269,10 @@ export async function reelIn(
   // Track abyss streak for achievements
   const isAbyssPerfect = result === 'perfect' && fish.habitat === 'abyss'
   const newAbyssStreak = isAbyssPerfect ? (profile.fishing_abyss_streak ?? 0) + 1 : 0
-  const xpGained = catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + (result === 'perfect' ? streakBonus : 0)
+  const prestigeLevels = (profile.prestige_levels as Record<string, number> | null) ?? {}
+  const zonePrestige = prestigeLevels[fish.habitat] ?? 0
+  const prestigeXPMult = 1 + zonePrestige * 0.05
+  const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + (result === 'perfect' ? streakBonus : 0)) * prestigeXPMult)
   const newXP = (profile.fishing_xp ?? 0) + xpGained
 
   const [, baitFetchResult] = await Promise.all([
@@ -418,16 +421,13 @@ export async function sellFish(
   const [{ data: invRow }, { data: fish }, { data: profile }] = await Promise.all([
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', fishId).single(),
     admin.from('fish_species').select('sell_value').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, prestige_levels').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons').eq('id', user.id).single(),
   ])
 
   if (!invRow || !fish || !profile) return { error: 'Data not found' }
   if (invRow.quantity < quantity) return { error: 'Not enough fish' }
 
-  const prestigeLevels = (profile.prestige_levels as Record<string, number> | null) ?? {}
-  const totalPrestige = Object.values(prestigeLevels).reduce((s, v) => s + v, 0)
-  const prestigeMult = 1 + totalPrestige * 0.05
-  const earned = Math.floor(fish.sell_value * (fullPrice ? 1.0 : 0.65) * prestigeMult) * quantity
+  const earned = Math.floor(fish.sell_value * (fullPrice ? 1.0 : 0.65)) * quantity
   const newDoubloons = (profile.doubloons ?? 0) + earned
 
   await Promise.all([
