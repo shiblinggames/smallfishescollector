@@ -453,6 +453,9 @@ export default function CannonGame({
     setCharges(chargesRef.current)
     canReloadRef.current = false
     setCanReload(false)
+    // Randomize indicator position — prevents cheesing by reloading near crit zone
+    firePosRef.current = Math.random()
+    fireDirRef.current = Math.random() < 0.5 ? 1 : -1
     setTimeout(() => { canReloadRef.current = true; setCanReload(true) }, reloadCooldown)
   }, [reloadCooldown])
 
