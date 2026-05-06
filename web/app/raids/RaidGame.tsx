@@ -465,7 +465,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins,
     const halfW = hitW + GRAZE_W
     zonePosRef.current  = halfW + Math.random() * (1 - halfW * 2)
     zoneDirRef.current  = Math.random() < 0.5 ? 1 : -1
-    if (isBossRound(round)) zoneJitterRef.current = 350 + Math.random() * 600
+    if (isBossRound(round)) zoneJitterRef.current = 1800 + Math.random() * 2200
   }, [])
 
   const startGame = useCallback(() => {
@@ -530,12 +530,18 @@ export default function RaidGame({ equippedShipSkin, shipSkins,
           zoneJitterRef.current -= dt
           if (zoneJitterRef.current <= 0) {
             zoneDirRef.current *= -1
-            zoneJitterRef.current = 350 + Math.random() * 600
+            zoneJitterRef.current = 1800 + Math.random() * 2200
           }
         }
         zonePosRef.current += zSpeed * zoneDirRef.current
-        if (zonePosRef.current >= 1 - halfW) { zonePosRef.current = 1 - halfW; zoneDirRef.current = -1 }
-        if (zonePosRef.current <= halfW)      { zonePosRef.current = halfW;     zoneDirRef.current =  1 }
+        if (zonePosRef.current >= 1 - halfW) {
+          zonePosRef.current = 1 - halfW; zoneDirRef.current = -1
+          if (isBossRound(roundRef.current)) zoneJitterRef.current = 1800 + Math.random() * 2200
+        }
+        if (zonePosRef.current <= halfW) {
+          zonePosRef.current = halfW; zoneDirRef.current = 1
+          if (isBossRound(roundRef.current)) zoneJitterRef.current = 1800 + Math.random() * 2200
+        }
         if (zoneTargetRef.current) {
           zoneTargetRef.current.style.left  = `${(zonePosRef.current - halfW) * 100}%`
           zoneTargetRef.current.style.width = `${halfW * 2 * 100}%`
