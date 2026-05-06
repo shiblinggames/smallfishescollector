@@ -6,6 +6,32 @@ import { claimRaidLoot } from './actions'
 
 type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
+
+// ── Raid loot table ───────────────────────────────────────────────────────────
+// Replace image: null with a URL string once art is ready
+interface RaidLootItem {
+  id: string
+  label: string
+  image: string | null
+  emoji: string
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
+}
+const RARITY_COLOR: Record<RaidLootItem['rarity'], string> = {
+  common:    '#9ca3af',
+  uncommon:  '#4ade80',
+  rare:      '#60a5fa',
+  epic:      '#a78bfa',
+  legendary: '#f0c040',
+}
+const BARNACLE_PETE_LOOT: RaidLootItem[] = [
+  { id: 'doubloons_50',  label: '50 ⟡',  image: null, emoji: '🪙', rarity: 'common'   },
+  { id: 'doubloons_100', label: '100 ⟡', image: null, emoji: '🪙', rarity: 'common'   },
+  { id: 'doubloons_200', label: '200 ⟡', image: null, emoji: '💰', rarity: 'uncommon' },
+  { id: 'gem_1',         label: '1 Gem',  image: null, emoji: '💎', rarity: 'rare'     },
+  { id: 'gem_3',         label: '3 Gems', image: null, emoji: '💎', rarity: 'epic'     },
+  { id: 'pack',          label: 'Pack',   image: null, emoji: '📦', rarity: 'rare'     },
+]
+
 // ── Enemy definitions ─────────────────────────────────────────────────────────
 
 const ENEMY_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/'
@@ -353,6 +379,10 @@ export default function RaidGame({
   const [lootBase, setLootBase]         = useState(0)
   const [lootOpened, setLootOpened]     = useState(false)
   const [lootClaimed, setLootClaimed]   = useState(false)
+  const [slotDisplays, setSlotDisplays] = useState([0, 0, 0])
+  const [slotLanded, setSlotLanded]     = useState([false, false, false])
+  const [slotFinals, setSlotFinals]     = useState([0, 0, 0])
+  const slotIntervalsRef = useRef<ReturnType<typeof setInterval>[]>([])
   const [raidTimeSecs, setRaidTimeSecs] = useState(0)
   const [raidTier, setRaidTier]         = useState<{ mult: number; label: string; color: string } | null>(null)
   const [pHitsplat, setPHitsplat]       = useState({ key: 0, text: '', color: '', big: false })
@@ -600,6 +630,28 @@ export default function RaidGame({
     rafRef.current = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafRef.current)
   }, [phase, dodgeCooldownUse, playerActionMs])
+
+  // Slot machine spin — triggers when loot crate is opened
+  useEffect(() => {
+    if (!lootOpened) return
+    const finals = [0, 1, 2].map(() => Math.floor(Math.random() * BARNACLE_PETE_LOOT.length))
+    setSlotFinals(finals)
+    setSlotLanded([false, false, false])
+    const intervals = [0, 1, 2].map(i =>
+      setInterval(() => {
+        setSlotDisplays(prev => { const n = [...prev]; n[i] = (n[i] + 1) % BARNACLE_PETE_LOOT.length; return n })
+      }, 80)
+    )
+    slotIntervalsRef.current = intervals
+    ;[1200, 1900, 2600].forEach((delay, i) => {
+      setTimeout(() => {
+        clearInterval(intervals[i])
+        setSlotDisplays(prev => { const n = [...prev]; n[i] = finals[i]; return n })
+        setSlotLanded(prev => { const n = [...prev]; n[i] = true; return n })
+      }, delay)
+    })
+    return () => intervals.forEach(clearInterval)
+  }, [lootOpened])
 
   // Raid timer — ticks through playing+clear, triggers time-expired at 5:00
   useEffect(() => {
@@ -1282,30 +1334,79 @@ export default function RaidGame({
                   </motion.button>
                 </motion.div>
               ) : (
-                <motion.div initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 18 }}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: '2.8rem' }}>💰</span>
-                  <p className="font-cinzel font-700" style={{ fontSize: '2.2rem', color: '#f0c040', textShadow: '0 0 24px #f0c04099' }}>
-                    {fmtGold(lootAmount)} ⟡
-                  </p>
-                  <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.62rem', marginBottom: 16 }}>
-                    {fmtGold(pot)} raid · {fmtGold(Math.floor(lootBase * raidTier.mult * fortuneMult))} crate ({raidTier.mult}× speed{fortuneMult > 1 ? ` · ${fortuneMult.toFixed(2)}× luck` : ''})
-                  </p>
-                  <motion.button
-                    onPointerDown={async () => {
-                      if (lootClaimed) return
-                      setLootClaimed(true)
-                      await claimRaidLoot(lootAmount)
-                      phaseRef.current = 'idle'
-                      setPhase('idle')
-                    }}
-                    whileTap={{ scale: 0.95 }}
-                    className="font-karla font-700"
-                    disabled={lootClaimed}
-                    style={{ padding: '12px 32px', borderRadius: 14, cursor: lootClaimed ? 'default' : 'pointer', background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', color: '#f0c040', fontSize: '0.92rem', letterSpacing: '0.06em', opacity: lootClaimed ? 0.6 : 1 }}>
-                    {lootClaimed ? 'Claimed!' : 'Claim Loot'}
-                  </motion.button>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+
+                  {/* Slot reels */}
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    {[0, 1, 2].map(i => {
+                      const item    = BARNACLE_PETE_LOOT[slotDisplays[i]]
+                      const landed  = slotLanded[i]
+                      const color   = RARITY_COLOR[item.rarity]
+                      return (
+                        <motion.div
+                          key={i}
+                          animate={landed ? { scale: [1, 1.14, 1] } : {}}
+                          transition={{ duration: 0.3, ease: 'easeOut' }}
+                          style={{
+                            width: 90, height: 108,
+                            border: `2px solid ${landed ? color : 'rgba(255,255,255,0.12)'}`,
+                            borderRadius: 14,
+                            background: landed ? `${color}1a` : 'rgba(0,0,0,0.45)',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            overflow: 'hidden',
+                            transition: 'border-color 0.2s, background 0.2s',
+                            boxShadow: landed ? `0 0 18px ${color}44` : 'none',
+                          }}>
+                          {item.image ? (
+                            <img src={item.image} alt={item.label}
+                              style={{ width: 54, height: 54, objectFit: 'contain',
+                                filter: !landed ? 'blur(1.5px) brightness(0.6)' : 'none',
+                                transition: 'filter 0.15s' }} />
+                          ) : (
+                            <span style={{ fontSize: '2.2rem',
+                              filter: !landed ? 'blur(1.5px) brightness(0.6)' : 'none',
+                              transition: 'filter 0.15s' }}>{item.emoji}</span>
+                          )}
+                          <p className="font-karla font-700" style={{
+                            fontSize: '0.6rem', color: landed ? color : 'transparent',
+                            textAlign: 'center', lineHeight: 1.2,
+                            transition: 'color 0.2s',
+                          }}>{item.label}</p>
+                        </motion.div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Doubloon total + claim — appears after all slots land */}
+                  <AnimatePresence>
+                    {slotLanded.every(Boolean) && (
+                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0c040', textShadow: '0 0 20px #f0c04088' }}>
+                          {fmtGold(lootAmount)} ⟡
+                        </p>
+                        <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.3)', fontSize: '0.6rem', marginBottom: 10 }}>
+                          {fmtGold(pot)} raid · {fmtGold(Math.floor(lootBase * raidTier.mult * fortuneMult))} crate ({raidTier.mult}× speed{fortuneMult > 1 ? ` · ${fortuneMult.toFixed(2)}× luck` : ''})
+                        </p>
+                        <motion.button
+                          onPointerDown={async () => {
+                            if (lootClaimed) return
+                            setLootClaimed(true)
+                            await claimRaidLoot(lootAmount)
+                            phaseRef.current = 'idle'
+                            setPhase('idle')
+                          }}
+                          whileTap={{ scale: 0.95 }}
+                          disabled={lootClaimed}
+                          className="font-karla font-700"
+                          style={{ padding: '12px 36px', borderRadius: 14, cursor: lootClaimed ? 'default' : 'pointer', background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', color: '#f0c040', fontSize: '0.92rem', letterSpacing: '0.06em', opacity: lootClaimed ? 0.6 : 1 }}>
+                          {lootClaimed ? 'Claimed!' : 'Claim Loot'}
+                        </motion.button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                 </motion.div>
               )}
             </motion.div>
