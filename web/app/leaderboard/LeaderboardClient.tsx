@@ -62,10 +62,11 @@ function Avatar({ username, size = 36 }: { username: string; size?: number }) {
 }
 
 const ZONE_LABELS: Record<string, { label: string; color: string }> = {
-  abyss:      { label: 'Abyss',       color: '#8b5cf6' },
-  deep:       { label: 'Deep',        color: '#3b82f6' },
-  openWaters: { label: 'Open Waters', color: '#22d3ee' },
-  shallows:   { label: 'Shallows',    color: '#6ee7b7' },
+  shallows:     { label: 'Shallows',     color: '#60a5fa' },
+  open_waters:  { label: 'Open Waters',  color: '#34d399' },
+  deep:         { label: 'Deep',         color: '#a78bfa' },
+  abyss:        { label: 'Abyss',        color: '#f87171' },
+  ancient_deep: { label: 'Ancient Deep', color: '#c084fc' },
 }
 
 function ZoneBadge({ zone }: { zone: string | null | undefined }) {
