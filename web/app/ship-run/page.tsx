@@ -45,7 +45,7 @@ export default async function ShipRunPage() {
           </p>
         </div>
 
-        <div className="px-4 pb-12 max-w-sm mx-auto">
+        <div className="px-4 pb-12 max-w-xl mx-auto">
           <ShipRunGame shipImageUrl={ship.imageUrl ?? '/models/rowboat.png'} shipName={ship.name} />
         </div>
       </main>

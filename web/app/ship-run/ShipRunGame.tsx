@@ -13,8 +13,8 @@ interface Obstacle {
 }
 
 const LANES   = 3
-const CW      = 390
-const CH      = 340
+const CW      = 600
+const CH      = 460
 const LANE_H  = CH / LANES
 const SHIP_X  = CW * 0.14
 const SHIP_W  = LANE_H * 1.5
