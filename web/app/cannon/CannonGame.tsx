@@ -105,7 +105,7 @@ function getTimeTier(secs: number): { mult: number; label: string; color: string
 
 function getFireZones(round: number, zoneCenter = 0.5) {
   const hitW  = Math.max(0.045, 0.08  - round * 0.005)
-  const critW = Math.min(0.02, Math.max(0.004, 0.006 - round * 0.0003))
+  const critW = Math.min(0.030, Math.max(0.010, 0.024 - round * 0.001))
   return {
     grazeL: zoneCenter - hitW - 0.05, hitL: zoneCenter - hitW, critL: zoneCenter - critW,
     critR: zoneCenter + critW, hitR: zoneCenter + hitW, grazeR: zoneCenter + hitW + 0.05,
@@ -202,8 +202,7 @@ function TimingBar({ indicatorRef, flashRef, zoneRef, hitHalfW, critHalfW }: {
 }) {
   const grazeW = 0.05
   const totalW = hitHalfW * 2 + grazeW * 2
-  // Exaggerate crit zone for visibility (actual detection uses real critHalfW)
-  const critVisualPct = Math.max(16, (critHalfW * 2 / totalW) * 100 * 4)
+  const critVisualPct = Math.max(10, (critHalfW * 2 / totalW) * 100)
   const critLeft = (100 - critVisualPct) / 2
   return (
     <div style={{ position: 'relative', height: 28, borderRadius: 8 }}>
@@ -942,7 +941,7 @@ export default function CannonGame({
           indicatorRef={fireIndicatorRef} flashRef={fireFlashRef}
           zoneRef={zoneTargetRef}
           hitHalfW={Math.max(0.045, 0.08 - (roundDisplay - 1) * 0.005)}
-          critHalfW={Math.min(0.02, Math.max(0.004, 0.006 - (roundDisplay - 1) * 0.0003))}
+          critHalfW={Math.min(0.030, Math.max(0.010, 0.024 - (roundDisplay - 1) * 0.001))}
         />
         <div style={{ display: 'flex', justifyContent: 'center', gap: 14, marginTop: 5 }}>
           {[{ label: 'Graze', color: '#94a3b8' }, { label: 'Hit', color: '#4ade80' }, { label: '★ Crit', color: '#fbbf24' }].map(z => (
