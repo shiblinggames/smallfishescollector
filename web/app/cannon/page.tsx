@@ -22,12 +22,7 @@ export default async function CannonPage() {
         doubloons={profile?.doubloons ?? 0}
         gems={profile?.gems ?? 0}
       />
-      <main className="min-h-screen pb-24 sm:pb-0" style={{
-        backgroundImage: 'url(/raid1background.jpg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed',
-      }}>
+      <main className="min-h-screen pb-24 sm:pb-0">
         <div className="px-6 pt-6 pb-2">
           <Link
             href="/tavern"
