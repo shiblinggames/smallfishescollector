@@ -101,16 +101,16 @@ function fmtGold(n: number) { return n.toLocaleString() }
 
 // ── Zone geometry ─────────────────────────────────────────────────────────────
 
-function getFireZones(round: number, critBonus = 0) {
+function getFireZones(round: number, zoneCenter = 0.5) {
   const hitW  = Math.max(0.045, 0.08  - round * 0.005)
-  const critW = Math.min(0.02, Math.max(0.004, 0.006 - round * 0.0003 + critBonus))
+  const critW = Math.min(0.02, Math.max(0.004, 0.006 - round * 0.0003))
   return {
-    grazeL: 0.5 - hitW - 0.05, hitL: 0.5 - hitW, critL: 0.5 - critW,
-    critR: 0.5 + critW, hitR: 0.5 + hitW, grazeR: 0.5 + hitW + 0.05,
+    grazeL: zoneCenter - hitW - 0.05, hitL: zoneCenter - hitW, critL: zoneCenter - critW,
+    critR: zoneCenter + critW, hitR: zoneCenter + hitW, grazeR: zoneCenter + hitW + 0.05,
   }
 }
-function getShotResult(pos: number, round: number, critBonus = 0): ShotResult {
-  const z = getFireZones(round, critBonus)
+function getShotResult(pos: number, zoneCenter: number, round: number): ShotResult {
+  const z = getFireZones(round, zoneCenter)
   if (pos >= z.critL && pos <= z.critR)   return 'critical'
   if (pos >= z.hitL  && pos <= z.hitR)    return 'hit'
   if (pos >= z.grazeL && pos <= z.grazeR) return 'graze'
@@ -191,12 +191,18 @@ function HPBar({ current, max, color }: { current: number; max: number; color: s
   )
 }
 
-function TimingBar({ indicatorRef, flashRef, zones, critZone }: {
+function TimingBar({ indicatorRef, flashRef, zoneRef, hitHalfW, critHalfW }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
-  zones: { color: string; left: number; width: number }[]
-  critZone?: { left: number; width: number }
+  zoneRef:      React.RefObject<HTMLDivElement | null>
+  hitHalfW: number
+  critHalfW: number
 }) {
+  const grazeW   = 0.05
+  const totalW   = hitHalfW * 2 + grazeW * 2
+  const grazePct = (grazeW / totalW) * 100
+  const hitPct   = ((hitHalfW - critHalfW) / totalW) * 100
+  const critPct  = (critHalfW * 2 / totalW) * 100
   return (
     <div style={{ position: 'relative', height: 48, borderRadius: 12 }}>
       <div style={{
@@ -204,24 +210,23 @@ function TimingBar({ indicatorRef, flashRef, zones, critZone }: {
         background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
         overflow: 'hidden',
       }}>
-        {zones.map((z, i) => (
-          <div key={i} style={{
-            position: 'absolute', top: 0, bottom: 0,
-            left: `${z.left * 100}%`, width: `${z.width * 100}%`,
-            background: z.color,
-          }} />
-        ))}
-        {critZone && (
+        {/* Moving zone block — left/width driven by RAF at 60fps via zoneRef */}
+        <div ref={zoneRef} style={{
+          position: 'absolute', top: 0, bottom: 0,
+          left: `${(0.5 - hitHalfW - grazeW) * 100}%`,
+          width: `${totalW * 100}%`,
+          display: 'flex',
+        }}>
+          <div style={{ width: `${grazePct}%`, background: 'rgba(148,163,184,0.12)' }} />
+          <div style={{ width: `${hitPct}%`, background: 'rgba(74,222,128,0.18)' }} />
           <motion.div
-            animate={{ opacity: [0.35, 0.6, 0.35] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-            style={{
-              position: 'absolute', top: 0, bottom: 0,
-              left: `${critZone.left * 100}%`, width: `${critZone.width * 100}%`,
-              background: 'rgba(251,191,36,0.26)', pointerEvents: 'none',
-            }}
+            animate={{ opacity: [0.35, 0.65, 0.35] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ width: `${critPct}%`, background: 'rgba(251,191,36,0.26)' }}
           />
-        )}
+          <div style={{ width: `${hitPct}%`, background: 'rgba(74,222,128,0.18)' }} />
+          <div style={{ width: `${grazePct}%`, background: 'rgba(148,163,184,0.12)' }} />
+        </div>
         <div ref={flashRef} style={{ position: 'absolute', inset: 0, opacity: 0, pointerEvents: 'none' }} />
       </div>
       <div ref={indicatorRef} style={{
@@ -294,10 +299,14 @@ export default function CannonGame({
 
   const fireIndicatorRef  = useRef<HTMLDivElement>(null)
   const fireFlashRef      = useRef<HTMLDivElement>(null)
+  const zoneTargetRef     = useRef<HTMLDivElement>(null)
   const critFreezeRef     = useRef(false)
 
   const firePosRef            = useRef(0)
   const fireDirRef            = useRef(1)
+  const zonePosRef            = useRef(0.5)
+  const zoneDirRef            = useRef(1)
+  const zoneJitterRef         = useRef(0)
   const roundRef              = useRef(0)
   const streakRef             = useRef(0)
   const potRef                = useRef(0)
@@ -336,10 +345,18 @@ export default function CannonGame({
     setEnemyDodging(false)
     setEnemyActionPct(1)
     setIsBoss(isBossRound(round))
+    // Randomize zone starting position for each round
+    const hitW  = Math.max(0.045, 0.08 - round * 0.005)
+    const halfW = hitW + 0.05
+    zonePosRef.current  = halfW + Math.random() * (1 - halfW * 2)
+    zoneDirRef.current  = Math.random() < 0.5 ? 1 : -1
+    if (isBossRound(round)) zoneJitterRef.current = 350 + Math.random() * 600
   }, [])
 
   const startGame = useCallback(() => {
     firePosRef.current      = 0; fireDirRef.current = 1
+    zonePosRef.current      = 0.5; zoneDirRef.current = Math.random() < 0.5 ? 1 : -1
+    zoneJitterRef.current   = 0
     roundRef.current        = 0; streakRef.current  = 0
     potRef.current          = 0
     playerHPRef.current     = playerHPMax
@@ -382,8 +399,30 @@ export default function CannonGame({
       }
       if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
       if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current =  1 }
+
+      // Moving zone block — speed mapped to enemy actionMs (faster enemy = faster zone)
+      {
+        const hitW  = Math.max(0.045, 0.08 - roundRef.current * 0.005)
+        const halfW = hitW + 0.05
+        const zSpeed = (3000 / getActionMs(roundRef.current)) * 0.0028 * (dt / 16.67)
+        if (isBossRound(roundRef.current)) {
+          zoneJitterRef.current -= dt
+          if (zoneJitterRef.current <= 0) {
+            zoneDirRef.current *= -1
+            zoneJitterRef.current = 350 + Math.random() * 600
+          }
+        }
+        zonePosRef.current += zSpeed * zoneDirRef.current
+        if (zonePosRef.current >= 1 - halfW) { zonePosRef.current = 1 - halfW; zoneDirRef.current = -1 }
+        if (zonePosRef.current <= halfW)      { zonePosRef.current = halfW;     zoneDirRef.current =  1 }
+        if (zoneTargetRef.current) {
+          zoneTargetRef.current.style.left  = `${(zonePosRef.current - halfW) * 100}%`
+          zoneTargetRef.current.style.width = `${halfW * 2 * 100}%`
+        }
+      }
+
       if (fireIndicatorRef.current) {
-        const zone = getShotResult(firePosRef.current, roundRef.current)
+        const zone = getShotResult(firePosRef.current, zonePosRef.current, roundRef.current)
         const s = indicatorStyle(zone)
         fireIndicatorRef.current.style.left       = `calc(${firePosRef.current * 100}% - 2px)`
         fireIndicatorRef.current.style.background = s.bg
@@ -484,7 +523,7 @@ export default function CannonGame({
     chargesRef.current -= isVolley ? MAX_CHARGES : 1
     setCharges(chargesRef.current)
 
-    const res = getShotResult(firePosRef.current, roundRef.current)
+    const res = getShotResult(firePosRef.current, zonePosRef.current, roundRef.current)
     setShotResult(res)
     snapIndicator(fireIndicatorRef)
     flashBar(fireFlashRef, res === 'critical' ? '#fbbf24' : res === 'hit' ? '#4ade80' : res === 'graze' ? '#94a3b8' : '#6b7280')
@@ -614,7 +653,6 @@ export default function CannonGame({
     setPhase('idle')
   }, [isClaiming])
 
-  const fZones        = getFireZones(roundRef.current)
   const isIncoming    = dodgeState === 'incoming'
   const isVolleyReady = charges === MAX_CHARGES
   const isCommitted   = !canFire || !canReload
@@ -622,14 +660,6 @@ export default function CannonGame({
 
   const dodgeBarColor  = dodgeWindowPct > 0.62 ? '#38bdf8' : dodgeWindowPct > 0.28 ? '#fbbf24' : '#ef4444'
   const actionBarColor = enemyActionPct > 0.4 ? '#a78bfa' : enemyActionPct > 0.15 ? '#fbbf24' : '#ef4444'
-
-  const fireBarZones = [
-    { color: 'rgba(148,163,184,0.12)', left: fZones.grazeL, width: fZones.hitL   - fZones.grazeL },
-    { color: 'rgba(74,222,128,0.18)',  left: fZones.hitL,   width: fZones.critL  - fZones.hitL   },
-    { color: 'rgba(251,191,36,0.22)',  left: fZones.critL,  width: fZones.critR  - fZones.critL  },
-    { color: 'rgba(74,222,128,0.18)',  left: fZones.critR,  width: fZones.hitR   - fZones.critR  },
-    { color: 'rgba(148,163,184,0.12)', left: fZones.hitR,   width: fZones.grazeR - fZones.hitR   },
-  ]
 
   return (
     <div className="flex flex-col items-center gap-4 select-none" style={{ userSelect: 'none' }}>
@@ -870,8 +900,9 @@ export default function CannonGame({
         </div>
         <TimingBar
           indicatorRef={fireIndicatorRef} flashRef={fireFlashRef}
-          zones={fireBarZones}
-          critZone={{ left: fZones.critL, width: fZones.critR - fZones.critL }}
+          zoneRef={zoneTargetRef}
+          hitHalfW={Math.max(0.045, 0.08 - (roundDisplay - 1) * 0.005)}
+          critHalfW={Math.min(0.02, Math.max(0.004, 0.006 - (roundDisplay - 1) * 0.0003))}
         />
         <div style={{ display: 'flex', justifyContent: 'center', gap: 14, marginTop: 5 }}>
           {[{ label: 'Graze', color: '#94a3b8' }, { label: 'Hit', color: '#4ade80' }, { label: '★ Crit', color: '#fbbf24' }].map(z => (
