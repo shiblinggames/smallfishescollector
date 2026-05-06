@@ -3109,7 +3109,7 @@ export default function FishingGame({
                       {confirmPrestigeZone === zone ? (
                         <div>
                           <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', marginBottom: '0.35rem' }}>
-                            Reset your {HABITAT_LABEL[zone]} catch log for Prestige {(prestigeLevels[zone] ?? 0) + 1}? You'll re-earn the +{((prestigeLevels[zone] ?? 0) + 1) * 5}% sell bonus.
+                            Reset your {HABITAT_LABEL[zone]} catch log for Prestige {(prestigeLevels[zone] ?? 0) + 1}? You&apos;ll earn a permanent +{((prestigeLevels[zone] ?? 0) + 1) * 5}% sell bonus on all fish, and completing the collection again will re-award the full zone bonus.
                           </p>
                           <div className="flex items-center gap-2">
                             <button
@@ -3196,9 +3196,9 @@ export default function FishingGame({
                                   style={{ background: `${rarityColor}0a`, border: `1px solid ${rarityColor}25`, borderTop: 'none' }}>
                                   <FishImg name={f.name} style={{ width: '100%', height: 110, objectFit: 'contain', marginBottom: '0.5rem' }} />
                                   <p className="font-karla font-300 italic mb-2"
-                                    style={{ fontSize: '0.75rem', color: rarityColor + 'aa' }}>{f.scientific_name}</p>
+                                    style={{ fontSize: '0.82rem', color: rarityColor + 'cc' }}>{f.scientific_name}</p>
                                   <p className="font-karla font-400 mb-3"
-                                    style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.55 }}>
+                                    style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.55 }}>
                                     &ldquo;{f.fun_fact}&rdquo;
                                   </p>
                                   <p className="font-cinzel font-700"
