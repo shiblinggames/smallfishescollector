@@ -218,7 +218,7 @@ function TimingBar({ indicatorRef, flashRef, zoneRef, hitHalfW, critHalfW }: {
   const critVisualPct = Math.max(8, (critHalfW * 2 / totalW) * 100)
   const critLeft = (100 - critVisualPct) / 2
   return (
-    <div style={{ position: 'relative', height: 28, borderRadius: 8 }}>
+    <div style={{ position: 'relative', height: 44, borderRadius: 8 }}>
       <div style={{
         position: 'absolute', inset: 0, borderRadius: 8,
         background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
