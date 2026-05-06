@@ -769,7 +769,6 @@ export default function CannonGame({
   const isActionLocked = actionLocked
   const powerMax      = shipMinDamage + Math.floor(totalPower / 4)
 
-  const dodgePrimeBarColor = dodgePrimePct > 0.5 ? '#38bdf8' : dodgePrimePct > 0.2 ? '#fbbf24' : '#ef4444'
   const actionBarColor     = enemyActionPct > 0.4 ? '#a78bfa' : enemyActionPct > 0.15 ? '#fbbf24' : '#ef4444'
 
   return (
@@ -928,28 +927,6 @@ export default function CannonGame({
         </div>
       </div>
 
-      {/* ── Dodge prime indicator — always in DOM to prevent layout shift ─── */}
-      <div style={{
-        width: '100%', borderRadius: 12,
-        padding: dodgePrimed ? '0.45rem 0.65rem' : '0',
-        maxHeight: dodgePrimed ? 60 : 0,
-        overflow: 'hidden',
-        background: 'rgba(10,30,50,0.75)', border: dodgePrimed ? '1px solid rgba(56,189,248,0.45)' : 'none',
-        opacity: dodgePrimed ? 1 : 0, pointerEvents: 'none', transition: 'opacity 0.15s, max-height 0.15s, padding 0.15s',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: '#38bdf8', letterSpacing: '0.1em', textShadow: '0 1px 6px rgba(0,0,0,0.95)' }}>⚡ DODGE PRIMED</span>
-          <span className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#7dd8f8', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>window</span>
-        </div>
-        <div style={{ height: 8, background: 'rgba(0,0,0,0.45)', borderRadius: 4, overflow: 'hidden' }}>
-          <div style={{
-            height: '100%', width: `${dodgePrimePct * 100}%`,
-            background: dodgePrimeBarColor,
-            boxShadow: `0 0 8px ${dodgePrimeBarColor}88`,
-            transition: 'background 0.2s', borderRadius: 4,
-          }} />
-        </div>
-      </div>
 
       {/* ── Feedback ─────────────────────────────────────────────────────────── */}
       <div style={{ height: 18 }}>
