@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { claimCannonLoot } from './actions'
 
-type GamePhase  = 'idle' | 'playing' | 'clear' | 'dead'
+type GamePhase  = 'idle' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
 // ── Enemy definitions ─────────────────────────────────────────────────────────
 
@@ -87,6 +87,19 @@ function killGold(round: number, fortuneMult: number, isVolley: boolean) {
   return Math.floor(base * fortuneMult * (isVolley ? 1.5 : 1))
 }
 function fmtGold(n: number) { return n.toLocaleString() }
+
+function fmtTime(ms: number) {
+  const s = Math.floor(ms / 1000)
+  const m = Math.floor(s / 60)
+  return `${m}:${String(s % 60).padStart(2, '0')}`
+}
+
+function getTimeTier(secs: number): { mult: number; label: string; color: string } {
+  if (secs < 180) return { mult: 2.0,  label: 'Legendary',   color: '#f97316' }
+  if (secs < 300) return { mult: 1.5,  label: 'Swift',       color: '#fbbf24' }
+  if (secs < 480) return { mult: 1.25, label: 'Steady',      color: '#4ade80' }
+  return                  { mult: 1.0,  label: 'Hard-fought', color: '#94a3b8' }
+}
 
 // ── Zone geometry ─────────────────────────────────────────────────────────────
 
@@ -296,6 +309,12 @@ export default function CannonGame({
   const [critShake, setCritShake]       = useState(false)
   const [critFlash, setCritFlash]       = useState(false)
   const [clearReady, setClearReady]     = useState(false)
+  const [raidElapsedMs, setRaidElapsedMs] = useState(0)
+  const [lootAmount, setLootAmount]     = useState(0)
+  const [lootOpened, setLootOpened]     = useState(false)
+  const [lootClaimed, setLootClaimed]   = useState(false)
+  const [raidTimeSecs, setRaidTimeSecs] = useState(0)
+  const [raidTier, setRaidTier]         = useState<{ mult: number; label: string; color: string } | null>(null)
   const [pHitsplat, setPHitsplat]       = useState({ key: 0, text: '', color: '', big: false })
   const [eHitsplat, setEHitsplat]       = useState({ key: 0, text: '', color: '', big: false })
 
@@ -319,6 +338,7 @@ export default function CannonGame({
   const canFireRef            = useRef(true)
   const chargesRef            = useRef(1)
   const canReloadRef          = useRef(true)
+  const raidStartTimeRef      = useRef(0)
   const dodgePrimedRef        = useRef(false)
   const dodgeCooldownRef      = useRef(false)
   const actionLockedRef       = useRef(false)
@@ -376,6 +396,8 @@ export default function CannonGame({
 
     resetEnemyForRound(0)
 
+    raidStartTimeRef.current = performance.now()
+
     phaseRef.current = 'playing'
     setPhase('playing')
     setPlayerHP(playerHPMax)
@@ -386,6 +408,8 @@ export default function CannonGame({
     setDodgePrimePct(1); setDodgeFlash(false); setDodgeShake(false); setShowDodgeVFX(false)
     setRoundDisplay(1); setEnemySinking(false)
     setShowCannonShot(false); setClearReady(false)
+    setRaidElapsedMs(0); setLootAmount(0); setLootOpened(false); setLootClaimed(false)
+    setRaidTimeSecs(0); setRaidTier(null)
   }, [playerHPMax, resetEnemyForRound])
 
   useEffect(() => {
@@ -518,6 +542,15 @@ export default function CannonGame({
     return () => cancelAnimationFrame(rafRef.current)
   }, [phase, dodgeCooldownUse])
 
+  // Raid timer — keeps ticking through 'clear' screens too
+  useEffect(() => {
+    if (phase !== 'playing' && phase !== 'clear') return
+    const id = setInterval(() => {
+      setRaidElapsedMs(performance.now() - raidStartTimeRef.current)
+    }, 200)
+    return () => clearInterval(id)
+  }, [phase])
+
   const doReload = useCallback(() => {
     if (phaseRef.current !== 'playing' || !canReloadRef.current || chargesRef.current >= MAX_CHARGES || actionLockedRef.current) return
     chargesRef.current = Math.min(MAX_CHARGES, chargesRef.current + 1)
@@ -586,14 +619,29 @@ export default function CannonGame({
         setClearReady(false)
 
         setTimeout(() => {
-          roundRef.current++
-          resetEnemyForRound(roundRef.current)
-          setRoundDisplay(roundRef.current + 1)
           setEnemySinking(false)
           roundEndingRef.current = false
-          phaseRef.current = 'clear'
-          setPhase('clear')
-          setTimeout(() => setClearReady(true), 80)
+
+          if (isBossRound(roundRef.current)) {
+            // Raid complete — compute plunder crate loot
+            const elapsed = performance.now() - raidStartTimeRef.current
+            const secs    = elapsed / 1000
+            const tier    = getTimeTier(secs)
+            const base    = Math.floor(Math.random() * 301 + 300)
+            const total   = Math.floor(base * tier.mult)
+            setRaidTimeSecs(secs)
+            setRaidTier(tier)
+            setLootAmount(total)
+            phaseRef.current = 'loot'
+            setPhase('loot')
+          } else {
+            roundRef.current++
+            resetEnemyForRound(roundRef.current)
+            setRoundDisplay(roundRef.current + 1)
+            phaseRef.current = 'clear'
+            setPhase('clear')
+            setTimeout(() => setClearReady(true), 80)
+          }
         }, 920)
 
         setTimeout(() => { canFireRef.current = true; setCanFire(true); setShotResult(null) }, 550)
@@ -858,7 +906,9 @@ export default function CannonGame({
         <div className="flex items-center justify-between px-1 mb-1.5">
           <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#9a9488', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Cannon</p>
           {(phase === 'playing' || phase === 'clear') && (
-            <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#f0c040' }}>⟡ {fmtGold(pot)}</span>
+            <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764', letterSpacing: '0.06em' }}>
+              ⏱ {fmtTime(raidElapsedMs)}
+            </span>
           )}
         </div>
         <TimingBar
@@ -1049,6 +1099,76 @@ export default function CannonGame({
             <button className="font-karla font-700" style={{ padding: '11px 32px', background: 'rgba(56,189,248,0.14)', border: '1px solid rgba(56,189,248,0.38)', borderRadius: 12, color: '#38bdf8', fontSize: '0.88rem', cursor: 'pointer' }}>
               Try Again
             </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Loot overlay (raid complete) ─────────────────────────────────────── */}
+      <AnimatePresence>
+        {phase === 'loot' && raidTier && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.88)', zIndex: 50 }}>
+            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.6rem', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 6 }}>Raid Complete</p>
+            <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '1.6rem', marginBottom: 10 }}>Barnacle Pete Defeated</p>
+
+            {/* Time */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <span className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#5a5855' }}>Cleared in</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>{fmtTime(raidTimeSecs * 1000)}</span>
+            </div>
+            <motion.div initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }}
+              style={{ background: `${raidTier.color}18`, border: `1px solid ${raidTier.color}55`, borderRadius: 8, padding: '3px 12px', marginBottom: 28 }}>
+              <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: raidTier.color, letterSpacing: '0.1em' }}>
+                {raidTier.label} · {raidTier.mult}×
+              </span>
+            </motion.div>
+
+            {/* Plunder crate */}
+            {!lootOpened ? (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                <motion.div
+                  animate={{ y: [0, -4, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{ fontSize: '3.5rem' }}>🪝</motion.div>
+                <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.4)', fontSize: '0.65rem', letterSpacing: '0.08em' }}>Plunder Crate</p>
+                <motion.button
+                  onPointerDown={() => setLootOpened(true)}
+                  whileTap={{ scale: 0.95 }}
+                  animate={{ boxShadow: ['0 0 0px #f0c04000', '0 0 18px #f0c04066', '0 0 0px #f0c04000'] }}
+                  transition={{ duration: 1.4, repeat: Infinity }}
+                  className="font-karla font-700"
+                  style={{ padding: '12px 32px', borderRadius: 14, cursor: 'pointer', background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', color: '#f0c040', fontSize: '0.92rem', letterSpacing: '0.06em' }}>
+                  Open Crate
+                </motion.button>
+              </motion.div>
+            ) : (
+              <motion.div initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 18 }}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: '2.8rem' }}>💰</span>
+                <p className="font-cinzel font-700" style={{ fontSize: '2.2rem', color: '#f0c040', textShadow: '0 0 24px #f0c04099' }}>
+                  {fmtGold(lootAmount)} ⟡
+                </p>
+                <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.62rem', marginBottom: 16 }}>
+                  {fmtGold(Math.floor(Math.random() * 0 + 300))} base · {raidTier.mult}× {raidTier.label}
+                </p>
+                <motion.button
+                  onPointerDown={async () => {
+                    if (lootClaimed) return
+                    setLootClaimed(true)
+                    await claimCannonLoot(lootAmount)
+                    phaseRef.current = 'idle'
+                    setPhase('idle')
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  className="font-karla font-700"
+                  disabled={lootClaimed}
+                  style={{ padding: '12px 32px', borderRadius: 14, cursor: lootClaimed ? 'default' : 'pointer', background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', color: '#f0c040', fontSize: '0.92rem', letterSpacing: '0.06em', opacity: lootClaimed ? 0.6 : 1 }}>
+                  {lootClaimed ? 'Claimed!' : 'Claim Loot'}
+                </motion.button>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
