@@ -200,7 +200,7 @@ export async function reelIn(
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, ship_tier, has_phantom_hook').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, ship_tier, has_phantom_hook, line_tier').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -261,7 +261,9 @@ export async function reelIn(
       .eq('user_id', user.id)
     const unique = count ?? 0
     const newLineTier = getLineForSpeciesCount(unique).tier
-    await admin.from('profiles').update({ line_tier: newLineTier }).eq('id', user.id)
+    if (newLineTier > (profile?.line_tier ?? 0)) {
+      await admin.from('profiles').update({ line_tier: newLineTier }).eq('id', user.id)
+    }
   }
 
   // Track abyss streak for achievements
