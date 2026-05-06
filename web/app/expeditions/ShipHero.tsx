@@ -260,8 +260,8 @@ export default function ShipHero({
             {/* Drawer */}
             <motion.div
               key="loadout-drawer"
-              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+              initial={{ y: '100vh' }} animate={{ y: 0 }} exit={{ y: '100vh' }}
+              transition={{ type: 'spring', stiffness: 380, damping: 36 }}
               {...drawerDragProps(closeLoadout)}
               style={{
                 position: 'fixed', bottom: 0,
@@ -271,11 +271,13 @@ export default function ShipHero({
                 background: 'rgba(6,12,20,0.98)',
                 borderTop: '1px solid rgba(255,255,255,0.09)',
                 borderRadius: '18px 18px 0 0',
-                maxHeight: '85vh', overflowY: 'auto', overscrollBehavior: 'contain',
-                padding: '0 1rem 3rem',
+                maxHeight: '85vh',
+                display: 'flex', flexDirection: 'column',
+                overflow: 'hidden',
               }}
             >
               <DrawerHandle />
+              <div style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain', padding: '0 1rem 3rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                 <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: '#6a6764' }}>Loadout</p>
                 <button onClick={closeLoadout} style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
@@ -418,6 +420,7 @@ export default function ShipHero({
                 <p className="font-karla" style={{ fontSize: '0.7rem', color: '#4a4845' }}>Item slots coming soon.</p>
                 <p className="font-karla" style={{ fontSize: '0.6rem', color: '#3a3835', marginTop: 3 }}>Special items drop from raid bosses.</p>
               </div>
+              </div>{/* end scrollable */}
             </motion.div>
 
             {/* Crew picker — outside the motion.div to avoid CSS transform stacking context */}
