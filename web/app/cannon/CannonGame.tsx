@@ -79,7 +79,7 @@ const ENEMY_DODGE_MS = 1400
 
 function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: number): number {
   if (!res || res === 'miss') return 0
-  const powerMax = Math.max(shipMinDamage, Math.floor(totalPower / 25))
+  const powerMax = Math.max(shipMinDamage, Math.floor(totalPower / 4))
   const ranges: Record<string, [number, number]> = {
     critical: [shipMinDamage, powerMax * 2],
     hit:      [shipMinDamage, powerMax],
