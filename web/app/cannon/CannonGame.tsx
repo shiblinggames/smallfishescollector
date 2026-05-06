@@ -609,9 +609,6 @@ export default function CannonGame({
     consecutiveDodgesRef.current = 0
     chargesRef.current = Math.min(MAX_CHARGES, chargesRef.current + 1)
     setCharges(chargesRef.current)
-    // Randomize indicator position — prevents cheesing by reloading near crit zone
-    firePosRef.current = Math.random()
-    fireDirRef.current = Math.random() < 0.5 ? 1 : -1
     playerActionElapsedRef.current = 0
     setPlayerActionPct(0)
   }, [])
