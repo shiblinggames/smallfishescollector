@@ -26,7 +26,7 @@ const PARRY_MISS_CD    = 2600  // ms exposed after missing the parry zone
 function getFireZones(round: number, critBonus = 0) {
   const hitW  = Math.max(0.045, 0.08  - round * 0.005)
   const critW = Math.min(0.08,  Math.max(0.015, 0.032 - round * 0.002 + critBonus))
-  return { grazeL: 0.5 - hitW - 0.14, hitL: 0.5 - hitW, critL: 0.5 - critW, critR: 0.5 + critW, hitR: 0.5 + hitW, grazeR: 0.5 + hitW + 0.14 }
+  return { grazeL: 0.5 - hitW - 0.05, hitL: 0.5 - hitW, critL: 0.5 - critW, critR: 0.5 + critW, hitR: 0.5 + hitW, grazeR: 0.5 + hitW + 0.05 }
 }
 
 function getShotResult(pos: number, round: number, critBonus = 0): ShotResult {
