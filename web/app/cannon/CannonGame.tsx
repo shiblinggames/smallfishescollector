@@ -8,14 +8,17 @@ type GamePhase  = 'idle' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
 // ── Enemy definitions ─────────────────────────────────────────────────────────
 
+const ENEMY_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/'
+
 interface BroadsideEnemy {
   id: string
   name: string
   hpBase: number
   minDmg: number
   maxDmg: number
-  actionMs: number    // how long each action step takes
-  pattern: string[]   // sequence of 'reload' | 'fire' actions
+  actionMs: number
+  pattern: string[]
+  image: string
 }
 
 const BROADSIDE_ENEMIES: Record<string, BroadsideEnemy> = {
@@ -23,21 +26,25 @@ const BROADSIDE_ENEMIES: Record<string, BroadsideEnemy> = {
     id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 2, maxDmg: 5,
     actionMs: 4500,
     pattern: ['reload', 'fire', 'reload', 'fire'],
+    image: ENEMY_IMG_BASE + 'enemytier1.png',
   },
   sniper: {
     id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
     actionMs: 5500,
     pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
+    image: ENEMY_IMG_BASE + 'enemytier1elite.png',
   },
   corsair: {
     id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
     actionMs: 3500,
     pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
+    image: ENEMY_IMG_BASE + 'enemytier1boss.png',
   },
   pete: {
     id: 'pete', name: 'Barnacle Pete', hpBase: 55, minDmg: 8, maxDmg: 15,
     actionMs: 4500,
     pattern: ['reload', 'reload', 'dodge', 'fire', 'reload', 'fire'],
+    image: ENEMY_IMG_BASE + 'barnacle_pete.png',
   },
 }
 const BROADSIDE_SEQUENCE = ['brute', 'brute', 'sniper', 'sniper', 'corsair', 'corsair']
@@ -279,6 +286,7 @@ export default function CannonGame({
   const [enemyHP, setEnemyHP]           = useState(0)
   const [enemyHPMax, setEnemyHPMax]     = useState(0)
   const [enemyName, setEnemyName]       = useState('Reef Raider')
+  const [enemyImage, setEnemyImage]     = useState(BROADSIDE_ENEMIES.brute.image)
   const [enemyCharges, setEnemyCharges]   = useState(0)
   const [enemyDodging, setEnemyDodging]   = useState(false)
   const [enemyActionPct, setEnemyActionPct] = useState(1)
@@ -366,6 +374,7 @@ export default function CannonGame({
     enemyActionElapsedRef.current = 0
     setEnemyHP(hp); setEnemyHPMax(hp)
     setEnemyName(e.name)
+    setEnemyImage(e.image)
     setEnemyCharges(0)
     setEnemyDodging(false)
     setEnemyActionPct(1)
@@ -546,11 +555,17 @@ export default function CannonGame({
     return () => cancelAnimationFrame(rafRef.current)
   }, [phase, dodgeCooldownUse])
 
-  // Raid timer — keeps ticking through 'clear' screens too
+  // Raid timer — ticks through playing+clear, triggers time-expired at 5:00
   useEffect(() => {
     if (phase !== 'playing' && phase !== 'clear') return
     const id = setInterval(() => {
-      setRaidElapsedMs(performance.now() - raidStartTimeRef.current)
+      const elapsed = performance.now() - raidStartTimeRef.current
+      setRaidElapsedMs(elapsed)
+      if (elapsed >= 300000 && phaseRef.current !== 'loot') {
+        setRaidTimeSecs(elapsed / 1000)
+        phaseRef.current = 'loot'
+        setPhase('loot')
+      }
     }, 200)
     return () => clearInterval(id)
   }, [phase])
@@ -808,11 +823,9 @@ export default function CannonGame({
           animation: critShake ? 'crit-shake 0.6s ease' : 'none',
         }}>
           <div style={{ position: 'relative', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            <img src={shipImageUrl} alt="enemy" style={{
+            <img src={enemyImage} alt={enemyName} style={{
               width: '100%', height: 72, objectFit: 'contain', objectPosition: 'center',
-              transform: 'scaleX(-1)',
-              animation: enemySinking ? 'enemy-sink 0.9s ease-in forwards' : 'none',
-              filter: isBoss ? 'hue-rotate(20deg) brightness(0.9)' : 'hue-rotate(180deg) brightness(0.8)',
+              animation: enemySinking ? 'enemy-sink-portrait 0.9s ease-in forwards' : 'none',
             }} />
             {eHitsplat.key > 0 && <Hitsplat key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} animKey={eHitsplat.key} />}
             {showCannonShot && (
@@ -1226,19 +1239,37 @@ export default function CannonGame({
               <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.6rem', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 6 }}>Time Expired</p>
               <p className="font-cinzel font-700" style={{ color: '#f87171', fontSize: '1.6rem', marginBottom: 10 }}>Too Slow</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <span className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#5a5855' }}>Finished in</span>
+                <span className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#5a5855' }}>Stopped at</span>
                 <span className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>{fmtTime(raidTimeSecs * 1000)}</span>
               </div>
               <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.28)', fontSize: '0.68rem', marginBottom: 32, textAlign: 'center' }}>
-                Complete the raid in under 5:00 to earn loot.
+                Finish the raid in under 5:00 to earn loot.
               </p>
-              <motion.button
-                onPointerDown={() => { phaseRef.current = 'idle'; setPhase('idle') }}
-                whileTap={{ scale: 0.96 }}
-                className="font-karla font-700"
-                style={{ padding: '12px 32px', borderRadius: 14, cursor: 'pointer', background: 'rgba(56,189,248,0.14)', border: '1px solid rgba(56,189,248,0.38)', color: '#38bdf8', fontSize: '0.88rem' }}>
-                Try Again
-              </motion.button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 240 }}>
+                <motion.button
+                  onPointerDown={startGame}
+                  whileTap={{ scale: 0.96 }}
+                  className="font-karla font-700"
+                  style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(239,68,68,0.16)', border: '1px solid rgba(239,68,68,0.45)', color: '#ef4444', fontSize: '0.92rem', letterSpacing: '0.06em' }}>
+                  Try Again
+                </motion.button>
+                {pot > 0 && (
+                  <motion.button
+                    onPointerDown={async () => {
+                      if (isClaiming) return
+                      setIsClaiming(true)
+                      try { await claimCannonLoot(potRef.current) } finally { setIsClaiming(false) }
+                      phaseRef.current = 'idle'
+                      setPhase('idle')
+                    }}
+                    whileTap={{ scale: 0.96 }}
+                    disabled={isClaiming}
+                    className="font-karla font-600"
+                    style={{ padding: '12px 0', borderRadius: 14, cursor: isClaiming ? 'default' : 'pointer', background: 'rgba(240,197,64,0.1)', border: '1px solid rgba(240,197,64,0.32)', color: '#f0c040', fontSize: '0.82rem', letterSpacing: '0.04em', opacity: isClaiming ? 0.6 : 1 }}>
+                    {isClaiming ? 'Banking…' : `Leave — Bank ${fmtGold(pot)} ⟡`}
+                  </motion.button>
+                )}
+              </div>
             </motion.div>
           )
         )}
@@ -1295,6 +1326,12 @@ export default function CannonGame({
           15%  { transform: scaleX(-1) translateY(5px) rotate(-3deg); opacity: 0.9; }
           55%  { transform: scaleX(-1) translateY(40px) rotate(-9deg); opacity: 0.5; filter: brightness(0.5); }
           100% { transform: scaleX(-1) translateY(90px) rotate(-13deg); opacity: 0; filter: brightness(0.2); }
+        }
+        @keyframes enemy-sink-portrait {
+          0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+          15%  { transform: translateY(5px) rotate(-3deg); opacity: 0.9; }
+          55%  { transform: translateY(40px) rotate(-9deg); opacity: 0.5; filter: brightness(0.5); }
+          100% { transform: translateY(90px) rotate(-13deg); opacity: 0; filter: brightness(0.2); }
         }
       `}</style>
     </div>
