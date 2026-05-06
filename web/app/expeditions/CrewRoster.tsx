@@ -272,29 +272,50 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
         {hasCrew && (
           <div style={{ padding: '1rem 1rem 0.85rem' }}>
 
-            {/* Crew Score — single number, tap to expand */}
-            <button
-              onClick={() => setShowBreakdown(b => !b)}
-              style={{
-                width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              }}
-            >
-              <div style={{ textAlign: 'left' }}>
-                <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#6a6764', marginBottom: 4 }}>Crew Score</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '2.6rem', color: '#f0ede8', lineHeight: 1 }}>
-                  {totalPower + totalDodge + Math.round(totalFortune * 0.5)}
-                </p>
-                <div style={{ display: 'flex', gap: '0.75rem', marginTop: 6 }}>
-                  {STAT_COLS.map(s => (
-                    <span key={s.key} className="font-karla font-600" style={{ fontSize: '0.65rem', color: '#7a7674' }}>
-                      {s.label.slice(0, 3)} {totals[s.key]}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <span style={{ fontSize: '0.65rem', color: '#4a4845', transition: 'transform 0.15s', display: 'inline-block', transform: showBreakdown ? 'rotate(180deg)' : 'none' }}>▼</span>
-            </button>
+            {/* Scores row — tap to expand breakdown */}
+            {(() => {
+              const voyageScore = totalPower + totalDodge + Math.round(totalFortune * 0.5)
+              const powerMax    = shipStats.minDamage + Math.floor(totalPower / 4)
+              const raidScore   = Math.floor(powerMax * 4) + Math.floor(shipStats.durability * 0.5) + Math.floor(totalDodge * 0.4) + Math.floor(totalFortune * 0.2)
+              return (
+                <button
+                  onClick={() => setShowBreakdown(b => !b)}
+                  style={{
+                    width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+                    {/* Voyage Score */}
+                    <div style={{ textAlign: 'left' }}>
+                      <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#6a6764', marginBottom: 4 }}>Voyage Score</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '2.6rem', color: '#f0ede8', lineHeight: 1 }}>
+                        {voyageScore}
+                      </p>
+                    </div>
+                    {/* Divider */}
+                    <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.07)', marginTop: 2 }} />
+                    {/* Raid Score */}
+                    <div style={{ textAlign: 'left' }}>
+                      <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#6a6764', marginBottom: 4 }}>Raid Score</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '2.6rem', color: '#f97316', lineHeight: 1 }}>
+                        {raidScore}
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                    <span style={{ fontSize: '0.65rem', color: '#4a4845', transition: 'transform 0.15s', display: 'inline-block', transform: showBreakdown ? 'rotate(180deg)' : 'none' }}>▼</span>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      {STAT_COLS.map(s => (
+                        <span key={s.key} className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7a7674' }}>
+                          {s.label.slice(0, 3)} {totals[s.key]}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </button>
+              )
+            })()}
 
             {showBreakdown && (
               <div style={{ marginTop: '0.85rem', paddingTop: '0.65rem', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
