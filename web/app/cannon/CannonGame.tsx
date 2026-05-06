@@ -105,7 +105,7 @@ function getTimeTier(secs: number): { mult: number; label: string; color: string
 
 function getFireZones(round: number, zoneCenter = 0.5) {
   const hitW  = Math.max(0.045, 0.08  - round * 0.005)
-  const critW = 0.024
+  const critW = 0.012
   return {
     grazeL: zoneCenter - hitW - 0.05, hitL: zoneCenter - hitW, critL: zoneCenter - critW,
     critR: zoneCenter + critW, hitR: zoneCenter + hitW, grazeR: zoneCenter + hitW + 0.05,
@@ -941,7 +941,7 @@ export default function CannonGame({
           indicatorRef={fireIndicatorRef} flashRef={fireFlashRef}
           zoneRef={zoneTargetRef}
           hitHalfW={Math.max(0.045, 0.08 - (roundDisplay - 1) * 0.005)}
-          critHalfW={0.024}
+          critHalfW={0.012}
         />
         <div style={{ display: 'flex', justifyContent: 'center', gap: 14, marginTop: 5 }}>
           {[{ label: 'Graze', color: '#94a3b8' }, { label: 'Hit', color: '#4ade80' }, { label: '★ Crit', color: '#fbbf24' }].map(z => (
