@@ -62,7 +62,7 @@ function formatCountdown(ms: number): string {
 // Percentage positions on voyagemap.png — tweak to reposition nodes
 const ROUTE_NODES: Record<VoyageRoute, { x: number; y: number }> = {
   coastal:  { x: 20, y: 17 },
-  open:     { x: 63, y: 37 },
+  open:     { x: 63, y: 32 },
   deep:     { x: 28, y: 43 },
   triangle: { x: 45, y: 59 },
 }
