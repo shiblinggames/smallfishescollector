@@ -21,8 +21,8 @@ export default async function CannonPage() {
         doubloons={profile?.doubloons ?? 0}
         gems={profile?.gems ?? 0}
       />
-      <main className="min-h-screen pb-24 sm:pb-0">
-        <div className="px-6 pb-12 max-w-sm mx-auto md:[zoom:1.25] lg:[zoom:1.45]">
+      <main>
+        <div className="px-6 pt-4 pb-6 max-w-sm mx-auto md:[zoom:1.25] lg:[zoom:1.45]">
           <CannonGame
             shipImageUrl={stats.shipImageUrl}
             shipName={stats.shipName}

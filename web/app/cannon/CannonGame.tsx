@@ -302,6 +302,12 @@ export default function CannonGame({
   const playerActionMs    = Math.max(700, 2000 - shipSpeed * 100)
   const dodgeCooldownUse  = Math.max(500, 1600 - dodgeBonus)
 
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
+
   const [phase, setPhase]               = useState<GamePhase>('idle')
   const [playerHP, setPlayerHP]         = useState(playerHPMax)
   const [enemyHP, setEnemyHP]           = useState(0)
