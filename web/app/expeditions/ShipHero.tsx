@@ -227,16 +227,21 @@ export default function ShipHero({
         <button
           onClick={() => setLoadoutOpen(true)}
           style={{
-            width: '100%', background: 'rgba(255,255,255,0.025)', border: 'none',
-            borderTop: '1px solid rgba(255,255,255,0.07)',
-            padding: '0.6rem 1rem', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+            width: '100%', background: 'rgba(240,192,64,0.04)', border: 'none',
+            borderTop: '1px solid rgba(240,192,64,0.14)',
+            padding: '0.65rem 1rem', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
-          </svg>
-          <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.3)' }}>Loadout</span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#c8a060' }}>Edit Loadout</span>
+            <span className="font-karla" style={{ fontSize: '0.52rem', color: '#6a5838' }}>
+              {hasCrew
+                ? `${slots.filter(Boolean).length} crew assigned · Skins · Items`
+                : 'Choose crew · Skins · Items'}
+            </span>
+          </div>
+          <span style={{ fontSize: '1rem', color: '#8a6838', lineHeight: 1 }}>›</span>
         </button>
       </div>
 
