@@ -106,9 +106,9 @@ function computeRouteEstimate(
   const pWin         = Math.min(1, stats.power   / 30)
   const pDodge       = Math.min(1, stats.dodge   / 28)
 
-  const enc = route === 'deep' ? (crewCount >= 2 ? 5 : 4) : route === 'open' ? 2 : 0
-  const dng = route === 'deep' ? 2 : route === 'open' ? (crewCount >= 2 ? 2 : 1) : 0
-  const dis = 2
+  const enc = route === 'triangle' ? 3 : route === 'deep' ? (crewCount >= 2 ? 5 : 4) : route === 'open' ? 2 : 0
+  const dng = route === 'triangle' ? 3 : route === 'deep' ? 2 : route === 'open' ? (crewCount >= 2 ? 2 : 1) : 0
+  const dis = route === 'triangle' ? 4 : 2
 
   const expected =
     dis * pDiscovery * 120 * fortuneScale * rc.payoutScale +
