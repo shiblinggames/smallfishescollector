@@ -256,7 +256,7 @@ export default function CannonGame({
   const [enemyCharges, setEnemyCharges]   = useState(0)
   const [enemyDodging, setEnemyDodging]   = useState(false)
   const [enemyActionPct, setEnemyActionPct] = useState(1)
-  const [charges, setCharges]           = useState(1)
+  const [charges, setCharges]           = useState(0)
   const [canFire, setCanFire]           = useState(true)
   const [canReload, setCanReload]       = useState(true)
   const [streak, setStreak]             = useState(0)
@@ -330,7 +330,7 @@ export default function CannonGame({
     potRef.current          = 0
     playerHPRef.current     = playerHPMax
     canFireRef.current      = true
-    chargesRef.current      = 1
+    chargesRef.current      = 0
     canReloadRef.current    = true
     setCanFire(true)
     dodgeLockedRef.current  = false
@@ -344,7 +344,7 @@ export default function CannonGame({
     phaseRef.current = 'playing'
     setPhase('playing')
     setPlayerHP(playerHPMax)
-    setCharges(1); setCanReload(true)
+    setCharges(0); setCanReload(true)
     setStreak(0); setPot(0); setLastEarned(0)
     setCannonJammed(false); setDodgeLocked(false)
     setShotResult(null); setDodgeState('none'); setDodgeFeedback(null)
