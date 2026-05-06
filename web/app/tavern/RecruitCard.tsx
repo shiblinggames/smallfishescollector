@@ -18,15 +18,15 @@ export default function RecruitCard({ packsAvailable }: Props) {
       onKeyDown={e => e.key === 'Enter' && router.push('/packs')}
       style={{
         position: 'relative', overflow: 'hidden',
-        background: 'rgba(6,12,20,0.96)',
-        border: '1px solid rgba(200,168,112,0.35)',
-        borderTop: '1px solid rgba(200,168,112,0.65)',
+        background: 'linear-gradient(135deg, rgba(8,14,22,0.98) 0%, rgba(28,20,10,0.95) 100%)',
+        border: '1px solid rgba(200,168,112,0.5)',
+        borderTop: '2px solid rgba(200,168,112,0.8)',
         borderRadius: 20,
         padding: '1.4rem 1.5rem 1.3rem',
         cursor: 'pointer',
         userSelect: 'none',
         display: 'flex', alignItems: 'stretch', gap: '1rem',
-        boxShadow: '0 0 32px rgba(200,168,112,0.07)',
+        boxShadow: '0 0 40px rgba(200,168,112,0.14), inset 0 0 60px rgba(200,168,112,0.03)',
       }}
     >
       {/* Left: text */}
@@ -61,7 +61,7 @@ export default function RecruitCard({ packsAvailable }: Props) {
             maxHeight: 120,
             objectFit: 'contain',
             opacity: 0.92,
-            filter: 'drop-shadow(0 2px 10px rgba(200,168,112,0.25))',
+            filter: 'drop-shadow(0 4px 18px rgba(200,168,112,0.55))',
           }}
         />
       </div>

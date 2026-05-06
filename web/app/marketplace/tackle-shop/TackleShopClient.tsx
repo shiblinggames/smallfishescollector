@@ -205,7 +205,7 @@ export default function TackleShopClient({
                       maxWidth: '100%',
                       maxHeight: 110,
                       objectFit: 'contain',
-                      filter: `drop-shadow(0 2px 10px ${color}28)`,
+                      filter: `drop-shadow(0 4px 16px ${color}50)`,
                       opacity: 0.92,
                     }}
                   />

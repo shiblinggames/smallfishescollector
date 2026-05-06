@@ -228,7 +228,7 @@ function DestCard({
               maxWidth: '100%',
               maxHeight: 130,
               objectFit: 'contain',
-              filter: `drop-shadow(0 2px 10px ${accent}28)`,
+              filter: `drop-shadow(0 4px 16px ${accent}50)`,
               opacity: 0.92,
               ...artStyle,
             }}

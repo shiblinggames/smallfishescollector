@@ -81,7 +81,7 @@ export default function GameCard({ href, eyebrow, title, statusText, icon, compl
               maxHeight: 110,
               objectFit: 'contain',
               opacity: done ? 0.4 : 0.88,
-              filter: `drop-shadow(0 2px 8px ${accent}22)`,
+              filter: `drop-shadow(0 4px 16px ${accent}50)`,
             }}
           />
         </div>
