@@ -1,0 +1,469 @@
+'use client'
+
+import { useState, useTransition, useEffect } from 'react'
+import Link from 'next/link'
+import type { ShipStats } from '@/lib/expeditions'
+import { RARITY_COLORS } from '@/lib/expeditions'
+import { SHIP_SKINS } from '@/lib/shipSkins'
+import { saveCrew, equipShipSkin } from '../actions'
+import { renameShip } from '@/app/shipyard/actions'
+import { getXPProgress, getNavigatorTitle } from '@/lib/expeditionLevel'
+
+const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
+
+type CollectionCard = {
+  collectionId: number
+  variantId: number
+  name: string
+  filename: string
+  borderStyle: string
+  artEffect: string
+  variantName: string
+  dropWeight: number
+  rarity: string
+  power: number
+  dodge: number
+  fortune: number
+}
+
+const STAT_COLS = [
+  { key: 'power'   as const, label: 'Power',   short: 'PWR', color: '#f87171' },
+  { key: 'dodge'   as const, label: 'Nav',      short: 'NAV', color: '#60a5fa' },
+  { key: 'fortune' as const, label: 'Fortune',  short: 'FTN', color: '#f0c040' },
+]
+
+interface Props {
+  shipStats: ShipStats
+  shipTier: number
+  collection: CollectionCard[]
+  savedCrewVariantIds: number[]
+  shipName: string | null
+  expeditionXP: number
+  equippedShipSkin: string | null
+  shipSkins: string[]
+}
+
+export default function LoadoutClient({
+  shipStats, collection, savedCrewVariantIds,
+  shipName: initialShipName, expeditionXP,
+  equippedShipSkin: initialEquippedSkin, shipSkins: ownedSkins,
+}: Props) {
+  const xpProgress = getXPProgress(expeditionXP)
+
+  // Crew state
+  const [slots, setSlots] = useState<(CollectionCard | null)[]>(() => {
+    const arr: (CollectionCard | null)[] = Array(shipStats.crewSlots).fill(null)
+    savedCrewVariantIds.forEach((vid, i) => {
+      if (i < shipStats.crewSlots) {
+        const card = collection.find(c => c.variantId === vid)
+        if (card) arr[i] = card
+      }
+    })
+    return arr
+  })
+  const [pickerSlot, setPickerSlot] = useState<number | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [sortBy, setSortBy] = useState<'power' | 'dodge' | 'fortune' | null>(null)
+
+  // Ship name state
+  const [shipName, setShipName] = useState(initialShipName)
+  const [editingName, setEditingName] = useState(false)
+  const [nameInput, setNameInput] = useState(initialShipName ?? '')
+
+  // Skin state
+  const [equippedSkin, setEquippedSkin] = useState(initialEquippedSkin)
+
+  const [, startTransition] = useTransition()
+
+  useEffect(() => {
+    document.body.style.overflow = sheetOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [sheetOpen])
+
+  // Ship rename
+  function submitRename() {
+    const trimmed = nameInput.trim().slice(0, 32)
+    if (!trimmed) { setEditingName(false); return }
+    setShipName(trimmed)
+    setEditingName(false)
+    startTransition(async () => { await renameShip(trimmed) })
+  }
+
+  // Crew management
+  const assignedVariantIds = new Set(slots.filter(Boolean).map(c => c!.variantId))
+
+  function openPickerForSlot(i: number) { setPickerSlot(i); setSheetOpen(true); setSortBy(null) }
+  function closeSheet() { setSheetOpen(false); setPickerSlot(null) }
+
+  function assignCard(card: CollectionCard) {
+    if (pickerSlot === null) return
+    const next = [...slots]
+    next[pickerSlot] = card
+    setSlots(next)
+    closeSheet()
+    persistCrew(next)
+  }
+
+  function removeFromSlot(i: number, e: React.MouseEvent) {
+    e.stopPropagation()
+    const next = [...slots]
+    next[i] = null
+    setSlots(next)
+    persistCrew(next)
+  }
+
+  function persistCrew(next: (CollectionCard | null)[]) {
+    const ids = next.filter(Boolean).map(c => c!.variantId)
+    window.dispatchEvent(new CustomEvent('crew-changed', { detail: ids }))
+    startTransition(async () => { await saveCrew(ids) })
+  }
+
+  // Skin equip
+  function handleEquipSkin(skinId: string | null) {
+    setEquippedSkin(skinId)
+    startTransition(async () => { await equipShipSkin(skinId) })
+  }
+
+  // Crew scores
+  const totalPower   = slots.reduce((s, c, i) => s + (c ? Math.round(c.power   * (i === 0 ? 1 : 0.8)) : 0), 0)
+  const totalDodge   = slots.reduce((s, c, i) => s + (c ? Math.round(c.dodge   * (i === 0 ? 1 : 0.8)) : 0), 0)
+  const totalFortune = slots.reduce((s, c, i) => s + (c ? Math.round(c.fortune * (i === 0 ? 1 : 0.8)) : 0), 0)
+  const hasCrew = slots.some(Boolean)
+
+  // Current skin filter
+  const skinDef = equippedSkin ? SHIP_SKINS.find(s => s.id === equippedSkin) : undefined
+  const currentFilter = skinDef?.filter ?? 'none'
+
+  // Picker cards
+  const pickerCards = pickerSlot !== null
+    ? collection.filter(c => !assignedVariantIds.has(c.variantId) || slots[pickerSlot]?.variantId === c.variantId)
+    : collection
+  const sortedPickerCards = sortBy
+    ? [...pickerCards].sort((a, b) => b[sortBy] - a[sortBy])
+    : pickerCards
+
+  const sectionHeading: React.CSSProperties = {
+    fontSize: '1.1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em',
+  }
+
+  return (
+    <div>
+      {/* Back link */}
+      <Link
+        href="/expeditions"
+        className="font-karla font-700 uppercase tracking-[0.08em]"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.58rem', color: '#6a7490', textDecoration: 'none', marginBottom: '1rem' }}
+      >
+        ← Expeditions
+      </Link>
+
+      {/* Ship hero */}
+      <div style={{
+        background: 'rgba(6,8,12,0.82)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: 20,
+        padding: '1.5rem 1rem 1.25rem',
+        textAlign: 'center',
+        marginBottom: '1.5rem',
+      }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={shipStats.image}
+          alt={shipName ?? shipStats.name}
+          style={{ width: 120, height: 120, objectFit: 'contain', display: 'block', margin: '0 auto 1rem', filter: currentFilter, transition: 'filter 0.35s ease' }}
+        />
+
+        {editingName ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
+            <input
+              autoFocus
+              value={nameInput}
+              onChange={e => setNameInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') submitRename(); if (e.key === 'Escape') setEditingName(false) }}
+              maxLength={32}
+              placeholder={shipStats.name}
+              style={{
+                background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: 7, padding: '0.28rem 0.6rem',
+                color: '#f0ede8', fontSize: '0.9rem', fontFamily: 'inherit',
+                outline: 'none', textAlign: 'center', width: 180,
+              }}
+            />
+            <button onClick={submitRename} style={{ background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.3)', borderRadius: 5, padding: '0.25rem 0.55rem', color: '#f0c040', cursor: 'pointer', fontSize: '0.65rem' }} className="font-karla font-700">Save</button>
+            <button onClick={() => setEditingName(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5a5248', fontSize: '0.65rem' }} className="font-karla">✕</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => { setNameInput(shipName ?? ''); setEditingName(true) }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: '0.4rem' }}
+          >
+            <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#e0ddd8' }}>{shipName ?? shipStats.name}</p>
+            <span style={{ fontSize: '0.6rem', color: '#4a3a28' }}>✎</span>
+          </button>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: '#7090c0' }}>Lv {xpProgress.level}</p>
+            <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#5a7aaa', fontStyle: 'italic' }}>{getNavigatorTitle(xpProgress.level)}</p>
+          </div>
+          <div style={{ width: 90, height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{ height: '100%', borderRadius: 3, width: `${xpProgress.progress * 100}%`, background: 'linear-gradient(90deg, #4a6090 0%, #7090c0 100%)' }} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Crew ── */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <p className="font-cinzel font-700" style={sectionHeading}>Crew</p>
+        <div style={{
+          background: 'rgba(6,8,12,0.82)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 16,
+          overflow: 'hidden',
+        }}>
+          <div style={{ padding: '1rem', borderBottom: hasCrew ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+            <div style={{ display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
+              {slots.map((card, i) => {
+                const isCaptain = i === 0
+                const rc = card ? (RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764') : null
+                return (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+                    {card ? (
+                      <>
+                        <div
+                          onClick={() => openPickerForSlot(i)}
+                          style={{
+                            position: 'relative', width: 64, height: 64,
+                            borderRadius: 12, overflow: 'hidden',
+                            border: isCaptain ? '2px solid rgba(240,192,64,0.55)' : `1.5px solid ${rc}40`,
+                            cursor: 'pointer', flexShrink: 0,
+                          }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
+                          {isCaptain && (
+                            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(10,8,4,0.85)', borderTop: '1px solid rgba(240,192,64,0.3)', textAlign: 'center', padding: '0.12rem 0' }}>
+                              <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.34rem', color: '#f0c040' }}>Captain</span>
+                            </div>
+                          )}
+                          <button
+                            onClick={e => removeFromSlot(i, e)}
+                            style={{ position: 'absolute', top: 3, right: 3, width: 16, height: 16, borderRadius: '50%', background: 'rgba(0,0,0,0.72)', border: '1px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
+                          >
+                            <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="3" strokeLinecap="round">
+                              <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                          </button>
+                        </div>
+                        <p className="font-karla font-600 truncate text-center" style={{ fontSize: '0.52rem', color: isCaptain ? '#d4b870' : '#8a8784', maxWidth: 64, lineHeight: 1.2 }}>{card.name}</p>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => openPickerForSlot(i)}
+                        style={{ width: 64, height: 64, borderRadius: 12, background: isCaptain ? 'rgba(240,192,64,0.03)' : 'rgba(255,255,255,0.02)', border: isCaptain ? '1.5px dashed rgba(240,192,64,0.18)' : '1.5px dashed rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', gap: 4, padding: 0 }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={isCaptain ? 'rgba(240,192,64,0.22)' : 'rgba(255,255,255,0.12)'} strokeWidth="2.5" strokeLinecap="round">
+                          <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        <p className="font-karla" style={{ fontSize: '0.38rem', color: isCaptain ? '#8a7030' : '#5a5856' }}>{isCaptain ? 'Captain' : 'Crew'}</p>
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {hasCrew && (
+            <div style={{ padding: '0.875rem 1rem', display: 'flex', gap: '1.5rem' }}>
+              {STAT_COLS.map(s => (
+                <div key={s.key}>
+                  <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#6a6764', marginBottom: 1 }}>{s.short}</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: s.color }}>
+                    {s.key === 'power' ? totalPower : s.key === 'dodge' ? totalDodge : totalFortune}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Ship Skins ── */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <p className="font-cinzel font-700" style={sectionHeading}>Ship Skins</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          {/* Default skin */}
+          <button
+            onClick={() => handleEquipSkin(null)}
+            style={{
+              background: 'rgba(6,8,12,0.82)',
+              border: `1.5px solid ${equippedSkin === null ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.08)'}`,
+              borderRadius: 14,
+              padding: '0.875rem 1rem',
+              display: 'flex', alignItems: 'center', gap: '1rem',
+              cursor: 'pointer', width: '100%', textAlign: 'left',
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={shipStats.image} alt="" style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#e0ddd8', marginBottom: 2 }}>Default</p>
+              <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764' }}>The original hull</p>
+            </div>
+            {equippedSkin === null && (
+              <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.52rem', color: '#f0ede8', flexShrink: 0 }}>Equipped</span>
+            )}
+          </button>
+
+          {SHIP_SKINS.map(skin => {
+            const owned   = ownedSkins.includes(skin.id)
+            const equipped = equippedSkin === skin.id
+            return (
+              <button
+                key={skin.id}
+                onClick={owned ? () => handleEquipSkin(skin.id) : undefined}
+                disabled={!owned}
+                style={{
+                  background: 'rgba(6,8,12,0.82)',
+                  border: `1.5px solid ${equipped ? skin.color + '88' : owned ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)'}`,
+                  borderRadius: 14,
+                  padding: '0.875rem 1rem',
+                  display: 'flex', alignItems: 'center', gap: '1rem',
+                  cursor: owned ? 'pointer' : 'default',
+                  opacity: owned ? 1 : 0.5,
+                  width: '100%', textAlign: 'left',
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={shipStats.image}
+                  alt=""
+                  style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0, filter: owned ? skin.filter : 'brightness(0.25) saturate(0)', transition: 'filter 0.25s' }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: equipped ? skin.color : '#e0ddd8', marginBottom: 2 }}>{skin.name}</p>
+                  <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764' }}>{skin.description}</p>
+                  {!owned && (
+                    <p className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845', marginTop: 3 }}>Drops from: {skin.source}</p>
+                  )}
+                </div>
+                {equipped && (
+                  <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.52rem', color: skin.color, flexShrink: 0 }}>Equipped</span>
+                )}
+                {owned && !equipped && (
+                  <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#4a4845', flexShrink: 0 }}>Equip</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Items ── */}
+      <div style={{ marginBottom: '2rem' }}>
+        <p className="font-cinzel font-700" style={sectionHeading}>Items</p>
+        <div style={{ background: 'rgba(6,8,12,0.82)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '1.25rem 1rem', textAlign: 'center' }}>
+          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#4a4845' }}>Item slots coming soon.</p>
+          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#3a3835', marginTop: 4 }}>Special items drop from raid bosses.</p>
+        </div>
+      </div>
+
+      {/* Crew picker bottom sheet */}
+      {sheetOpen && (
+        <div
+          onClick={closeSheet}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 60, paddingTop: '3rem' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: '#0d0d0c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 520, maxHeight: '100%', display: 'flex', flexDirection: 'column' }}
+          >
+            <div style={{ padding: '1rem 1.25rem 0.875rem', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div>
+                <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.48rem', color: pickerSlot === 0 ? '#f0c040' : '#4a6a8a', marginBottom: 3 }}>
+                  {pickerSlot === 0 ? 'Captain' : pickerSlot !== null ? `Slot ${pickerSlot + 1}` : 'Collection'}
+                </p>
+                <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>
+                  {pickerSlot !== null ? (pickerSlot === 0 ? 'Assign Captain' : 'Assign Crew') : 'Crew Roster'}
+                </p>
+                {pickerSlot === 0 ? (
+                  <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8a8480', lineHeight: 1.5 }}>Your captain leads the voyage and uses their full stats. The captain <span style={{ color: '#c8aa6a' }}>always returns</span>.</p>
+                    <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6460', lineHeight: 1.5 }}>Crew members contribute 80% of their stats and <span style={{ color: '#f87171' }}>can be lost permanently</span> on dangerous routes.</p>
+                  </div>
+                ) : pickerSlot !== null ? (
+                  <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6460', lineHeight: 1.5, marginTop: 6 }}>Crew contribute 80% of their stats and can be lost on risky voyages.</p>
+                ) : null}
+              </div>
+              <button
+                onClick={closeSheet}
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, padding: 0 }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6a6764" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Sort bar */}
+            <div style={{ padding: '0.5rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+              <span className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845' }}>Sort:</span>
+              {STAT_COLS.map(s => {
+                const active = sortBy === s.key
+                return (
+                  <button
+                    key={s.key}
+                    onClick={() => setSortBy(active ? null : s.key)}
+                    className="font-karla font-700"
+                    style={{ fontSize: '0.6rem', padding: '0.22rem 0.6rem', borderRadius: 999, background: active ? `${s.color}22` : 'rgba(255,255,255,0.04)', border: `1px solid ${active ? s.color + '66' : 'rgba(255,255,255,0.1)'}`, color: active ? s.color : '#5a5858', cursor: 'pointer' }}
+                  >
+                    {s.short}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div style={{ overflowY: 'auto', flex: 1, padding: '1rem 1.25rem 2rem', overscrollBehavior: 'contain' }}>
+              {collection.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                  <p className="font-karla" style={{ fontSize: '0.78rem', color: '#4a4845' }}>No cards yet. Open some packs first!</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
+                  {sortedPickerCards.map(card => {
+                    const inCrew = assignedVariantIds.has(card.variantId) && slots[pickerSlot ?? -1]?.variantId !== card.variantId
+                    const canPick = pickerSlot !== null && !inCrew
+                    const rc = RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764'
+                    return (
+                      <div
+                        key={card.variantId}
+                        onClick={canPick ? () => assignCard(card) : undefined}
+                        style={{ width: 90, borderRadius: 10, overflow: 'hidden', background: '#080a0e', border: `1.5px solid ${rc}55`, cursor: canPick ? 'pointer' : 'default', opacity: inCrew ? 0.28 : 1, flexShrink: 0 }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
+                        <div style={{ padding: '0.3rem 0.4rem 0.35rem', background: 'rgba(4,5,8,0.92)' }}>
+                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.52rem', color: '#f0ede8', lineHeight: 1.2, marginBottom: 5 }}>{card.name}</p>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            {STAT_COLS.map(s => (
+                              <div key={s.key} style={{ textAlign: 'center' }}>
+                                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.color, lineHeight: 1 }}>{card[s.key]}</p>
+                                <p style={{ fontSize: '0.38rem', color: '#5a5858', lineHeight: 1, marginTop: 2 }}>{s.short}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
