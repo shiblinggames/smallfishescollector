@@ -17,19 +17,36 @@ interface BroadsideEnemy {
   hpBase: number
   minDmg: number
   maxDmg: number
-  fireIntervalMs: number
+  actionMs: number    // how long each action step takes
+  pattern: string[]   // sequence of 'reload' | 'fire' actions
 }
 
 const BROADSIDE_ENEMIES: Record<string, BroadsideEnemy> = {
-  brute:   { id: 'brute',   name: 'Reef Raider',          hpBase: 25, minDmg: 6,  maxDmg: 10, fireIntervalMs: 3200 },
-  sniper:  { id: 'sniper',  name: "Crow's Nest Marksman", hpBase: 30, minDmg: 3,  maxDmg: 18, fireIntervalMs: 3800 },
-  corsair: { id: 'corsair', name: 'Saltwater Corsair',    hpBase: 38, minDmg: 8,  maxDmg: 14, fireIntervalMs: 2600 },
-  pete:    { id: 'pete',    name: 'Barnacle Pete',        hpBase: 55, minDmg: 10, maxDmg: 20, fireIntervalMs: 2400 },
+  brute: {
+    id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 6, maxDmg: 10,
+    actionMs: 1800,
+    pattern: ['reload', 'fire', 'reload', 'fire'],
+  },
+  sniper: {
+    id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 5, maxDmg: 22,
+    actionMs: 2200,
+    pattern: ['reload', 'reload', 'reload', 'fire'],
+  },
+  corsair: {
+    id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 8, maxDmg: 14,
+    actionMs: 1100,
+    pattern: ['reload', 'fire', 'reload', 'fire'],
+  },
+  pete: {
+    id: 'pete', name: 'Barnacle Pete', hpBase: 55, minDmg: 10, maxDmg: 20,
+    actionMs: 1500,
+    pattern: ['reload', 'reload', 'fire', 'reload', 'fire'],
+  },
 }
 const BROADSIDE_SEQUENCE = ['brute', 'brute', 'sniper', 'sniper', 'corsair', 'corsair']
 
-function isBossRound(round: number)  { return round % 7 === 6 }
-function getCycle(round: number)     { return Math.floor(round / 7) }
+function isBossRound(round: number) { return round % 7 === 6 }
+function getCycle(round: number)    { return Math.floor(round / 7) }
 
 function getEnemyForRound(round: number): BroadsideEnemy {
   if (isBossRound(round)) return BROADSIDE_ENEMIES.pete
@@ -39,9 +56,9 @@ function getEnemyHP(round: number): number {
   const e = getEnemyForRound(round)
   return Math.round(e.hpBase * (1 + getCycle(round) * 0.25))
 }
-function getFireInterval(round: number): number {
+function getActionMs(round: number): number {
   const e = getEnemyForRound(round)
-  return Math.max(1000, e.fireIntervalMs - getCycle(round) * 150)
+  return Math.max(700, e.actionMs - getCycle(round) * 100)
 }
 function rollIncomingDamage(round: number): number {
   const e = getEnemyForRound(round)
@@ -243,6 +260,8 @@ export default function CannonGame({
   const [enemyHP, setEnemyHP]           = useState(0)
   const [enemyHPMax, setEnemyHPMax]     = useState(0)
   const [enemyName, setEnemyName]       = useState('Reef Raider')
+  const [enemyCharges, setEnemyCharges] = useState(0)
+  const [enemyActionPct, setEnemyActionPct] = useState(1)
   const [charges, setCharges]           = useState(1)
   const [canReload, setCanReload]       = useState(true)
   const [streak, setStreak]             = useState(0)
@@ -252,7 +271,7 @@ export default function CannonGame({
   const [shotResult, setShotResult]     = useState<ShotResult>(null)
   const [dodgeState, setDodgeState]     = useState<DodgeState>('none')
   const [dodgeFeedback, setDodgeFeedback] = useState<DodgeResult | null>(null)
-  const [enemyFirePct, setEnemyFirePct] = useState(1)
+  const [dodgeWindowPct, setDodgeWindowPct] = useState(1)
   const [roundDisplay, setRoundDisplay] = useState(1)
   const [isBoss, setIsBoss]             = useState(false)
   const [isClaiming, setIsClaiming]     = useState(false)
@@ -268,26 +287,42 @@ export default function CannonGame({
   const fireIndicatorRef = useRef<HTMLDivElement>(null)
   const fireFlashRef     = useRef<HTMLDivElement>(null)
 
-  const firePosRef       = useRef(0)
-  const fireDirRef       = useRef(1)
-  const roundRef         = useRef(0)
-  const streakRef        = useRef(0)
-  const potRef           = useRef(0)
-  const playerHPRef      = useRef(playerHPMax)
-  const enemyHPRef       = useRef(0)
-  const enemyHPMaxRef    = useRef(0)
-  const phaseRef         = useRef<GamePhase>('idle')
-  const canFireRef       = useRef(true)
-  const chargesRef       = useRef(1)
-  const canReloadRef     = useRef(true)
-  const dodgeLockedRef   = useRef(false)
-  const roundEndingRef   = useRef(false)
-  const rafRef           = useRef(0)
-  const fireIntervalRef  = useRef(3200)
-  const fireElapsedRef   = useRef(0)
-  const dodgeStateRef    = useRef<DodgeState>('none')
-  const dodgeElapsedRef  = useRef(0)
-  const pendingDamageRef = useRef(0)
+  const firePosRef            = useRef(0)
+  const fireDirRef            = useRef(1)
+  const roundRef              = useRef(0)
+  const streakRef             = useRef(0)
+  const potRef                = useRef(0)
+  const playerHPRef           = useRef(playerHPMax)
+  const enemyHPRef            = useRef(0)
+  const enemyHPMaxRef         = useRef(0)
+  const phaseRef              = useRef<GamePhase>('idle')
+  const canFireRef            = useRef(true)
+  const chargesRef            = useRef(1)
+  const canReloadRef          = useRef(true)
+  const dodgeLockedRef        = useRef(false)
+  const roundEndingRef        = useRef(false)
+  const rafRef                = useRef(0)
+  const enemyChargesRef       = useRef(0)
+  const enemyPatternIdxRef    = useRef(0)
+  const enemyActionElapsedRef = useRef(0)
+  const dodgeStateRef         = useRef<DodgeState>('none')
+  const dodgeElapsedRef       = useRef(0)
+  const pendingDamageRef      = useRef(0)
+
+  const resetEnemyForRound = useCallback((round: number) => {
+    const e = getEnemyForRound(round)
+    const hp = getEnemyHP(round)
+    enemyHPRef.current          = hp
+    enemyHPMaxRef.current       = hp
+    enemyChargesRef.current     = 0
+    enemyPatternIdxRef.current  = 0
+    enemyActionElapsedRef.current = 0
+    setEnemyHP(hp); setEnemyHPMax(hp)
+    setEnemyName(e.name)
+    setEnemyCharges(0)
+    setEnemyActionPct(1)
+    setIsBoss(isBossRound(round))
+  }, [])
 
   const startGame = useCallback(() => {
     firePosRef.current      = 0; fireDirRef.current = 1
@@ -301,27 +336,20 @@ export default function CannonGame({
     roundEndingRef.current  = false
     dodgeStateRef.current   = 'none'
     dodgeElapsedRef.current = 0
-    fireElapsedRef.current  = 0
     pendingDamageRef.current = 0
 
-    const firstEnemy = getEnemyForRound(0)
-    const firstHP    = getEnemyHP(0)
-    enemyHPRef.current    = firstHP
-    enemyHPMaxRef.current = firstHP
-    fireIntervalRef.current = getFireInterval(0)
+    resetEnemyForRound(0)
 
     phaseRef.current = 'playing'
     setPhase('playing')
     setPlayerHP(playerHPMax)
-    setEnemyHP(firstHP); setEnemyHPMax(firstHP)
-    setEnemyName(firstEnemy.name)
     setCharges(1); setCanReload(true)
     setStreak(0); setPot(0); setLastEarned(0)
-    setCannonJammed(false); setDodgeLocked(false); setIsBoss(false)
+    setCannonJammed(false); setDodgeLocked(false)
     setShotResult(null); setDodgeState('none'); setDodgeFeedback(null)
-    setEnemyFirePct(1); setRoundDisplay(1); setEnemySinking(false)
+    setDodgeWindowPct(1); setRoundDisplay(1); setEnemySinking(false)
     setShowCannonShot(false); setClearReady(false)
-  }, [playerHPMax])
+  }, [playerHPMax, resetEnemyForRound])
 
   useEffect(() => {
     if (phase !== 'playing') return
@@ -332,6 +360,7 @@ export default function CannonGame({
       const dt = Math.min(now - lastTime, 50)
       lastTime = now
 
+      // Player fire indicator
       const fSpeed = SPEED_BASE + roundRef.current * SPEED_INC
       firePosRef.current += fSpeed * (dt / 16.67) * fireDirRef.current
       if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
@@ -346,12 +375,14 @@ export default function CannonGame({
 
       if (roundEndingRef.current) { rafRef.current = requestAnimationFrame(loop); return }
 
+      // Dodge window drains separately when open
       if (dodgeStateRef.current === 'incoming') {
         dodgeElapsedRef.current += dt
         const pct = Math.max(0, 1 - dodgeElapsedRef.current / dodgeWindowMs())
-        setEnemyFirePct(pct)
+        setDodgeWindowPct(pct)
 
         if (dodgeElapsedRef.current >= dodgeWindowMs()) {
+          // Window expired — auto miss
           dodgeStateRef.current = 'failed'
           setDodgeState('failed'); setDodgeFeedback('miss')
           const dmg = pendingDamageRef.current
@@ -364,18 +395,39 @@ export default function CannonGame({
             setBest(prev => Math.max(prev, streakRef.current))
             setPhase('dead'); return
           }
-          fireElapsedRef.current = 0; setEnemyFirePct(1)
         }
-      } else {
-        fireElapsedRef.current += dt
-        setEnemyFirePct(Math.max(0, 1 - fireElapsedRef.current / fireIntervalRef.current))
+      }
 
-        if (fireElapsedRef.current >= fireIntervalRef.current) {
-          fireElapsedRef.current  = 0
-          dodgeElapsedRef.current = 0
-          pendingDamageRef.current = rollIncomingDamage(roundRef.current)
-          dodgeStateRef.current = 'incoming'
-          setDodgeState('incoming')
+      // Enemy action timer pauses while dodge window is open
+      if (dodgeStateRef.current !== 'incoming') {
+        const actionMs = getActionMs(roundRef.current)
+        enemyActionElapsedRef.current += dt
+        setEnemyActionPct(Math.max(0, 1 - enemyActionElapsedRef.current / actionMs))
+
+        if (enemyActionElapsedRef.current >= actionMs) {
+          enemyActionElapsedRef.current = 0
+
+          const e = getEnemyForRound(roundRef.current)
+          const action = e.pattern[enemyPatternIdxRef.current % e.pattern.length]
+          enemyPatternIdxRef.current++
+
+          if (action === 'reload') {
+            if (enemyChargesRef.current < MAX_CHARGES) {
+              enemyChargesRef.current++
+              setEnemyCharges(enemyChargesRef.current)
+            }
+          } else if (action === 'fire') {
+            if (enemyChargesRef.current > 0) {
+              enemyChargesRef.current--
+              setEnemyCharges(enemyChargesRef.current)
+              pendingDamageRef.current = rollIncomingDamage(roundRef.current)
+              dodgeElapsedRef.current = 0
+              dodgeStateRef.current = 'incoming'
+              setDodgeState('incoming')
+              setDodgeWindowPct(1)
+            }
+            // No charges → skip fire, pattern still advances
+          }
         }
       }
 
@@ -440,19 +492,11 @@ export default function CannonGame({
 
         setTimeout(() => {
           roundRef.current++
-          const nextEnemy = getEnemyForRound(roundRef.current)
-          const nextBoss  = isBossRound(roundRef.current)
-          const newMax    = getEnemyHP(roundRef.current)
-          enemyHPMaxRef.current   = newMax
-          enemyHPRef.current      = newMax
-          fireIntervalRef.current = getFireInterval(roundRef.current)
-          fireElapsedRef.current  = 0
-          dodgeStateRef.current   = 'none'; dodgeElapsedRef.current = 0
+          resetEnemyForRound(roundRef.current)
+          dodgeStateRef.current   = 'none'
+          dodgeElapsedRef.current = 0
           setRoundDisplay(roundRef.current + 1)
-          setIsBoss(nextBoss)
-          setEnemyHP(newMax); setEnemyHPMax(newMax)
-          setEnemyName(nextEnemy.name)
-          setEnemyFirePct(1); setDodgeState('none')
+          setDodgeState('none'); setDodgeWindowPct(1)
           setEnemySinking(false)
           roundEndingRef.current = false
           phaseRef.current = 'clear'
@@ -471,7 +515,7 @@ export default function CannonGame({
     } else {
       setTimeout(() => { canFireRef.current = true; setShotResult(null) }, 550)
     }
-  }, [critBonus, fortuneMult, cannonJammed])
+  }, [critBonus, fortuneMult, cannonJammed, resetEnemyForRound])
 
   const dodge = useCallback(() => {
     if (dodgeStateRef.current !== 'incoming' || dodgeLockedRef.current) return
@@ -508,8 +552,8 @@ export default function CannonGame({
       setPHitsplat(p => ({ key: p.key + 1, text: 'DODGED!', color: '#38bdf8', big: false }))
     }
 
-    dodgeElapsedRef.current = 0; fireElapsedRef.current = 0
-    setEnemyFirePct(1)
+    dodgeElapsedRef.current = 0
+    setDodgeWindowPct(1)
     setTimeout(() => { dodgeStateRef.current = 'none'; setDodgeState('none'); setDodgeFeedback(null) }, 600)
   }, [dodgeWindowMs])
 
@@ -534,8 +578,9 @@ export default function CannonGame({
   const isVolleyReady = charges === MAX_CHARGES
   const curEnemy      = getEnemyForRound(roundRef.current)
 
-  // Dodge bar color mirrors the result zones: blue=full, yellow=half, red=miss
-  const dodgeBarColor = enemyFirePct > 0.62 ? '#38bdf8' : enemyFirePct > 0.28 ? '#fbbf24' : '#ef4444'
+  const dodgeBarColor = dodgeWindowPct > 0.62 ? '#38bdf8' : dodgeWindowPct > 0.28 ? '#fbbf24' : '#ef4444'
+  // Action bar pulses red as it approaches 0 (enemy about to act)
+  const actionBarColor = enemyActionPct > 0.4 ? '#a78bfa' : enemyActionPct > 0.15 ? '#fbbf24' : '#ef4444'
 
   const fireBarZones = [
     { color: 'rgba(148,163,184,0.12)', left: fZones.grazeL, width: fZones.hitL   - fZones.grazeL },
@@ -564,6 +609,7 @@ export default function CannonGame({
           </div>
           <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.6rem', color: '#f0ede8', lineHeight: 1.2 }}>{shipName}</p>
           <HPBar current={playerHP} max={playerHPMax} color="#60a5fa" />
+          {/* Player charges */}
           <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 2 }}>
             {[0, 1, 2].map(i => (
               <motion.div key={i}
@@ -625,34 +671,47 @@ export default function CannonGame({
           <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.6rem', color: '#f0ede8', lineHeight: 1.2 }}>{enemyName}</p>
           <HPBar current={enemyHP} max={enemyHPMax} color={isBoss ? '#f97316' : '#a78bfa'} />
 
-          {/* Enemy fire charge bar / dodge drain window */}
+          {/* Enemy charges */}
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 2 }}>
+            {[0, 1, 2].map(i => (
+              <motion.div key={i}
+                animate={{ scale: i === enemyCharges - 1 ? [1, 1.5, 1] : 1 }}
+                transition={{ duration: 0.18 }}
+                style={{
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: i < enemyCharges ? '#ef4444' : 'rgba(255,255,255,0.08)',
+                  boxShadow: i < enemyCharges ? '0 0 5px #ef444466' : 'none',
+                  transition: 'background 0.15s',
+                }} />
+            ))}
+          </div>
+
+          {/* Action bar (normal) or dodge drain bar (incoming) */}
           <div style={{ marginTop: 2 }}>
-            <div style={{
-              height: isIncoming ? 10 : 3,
-              background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden',
-              transition: 'height 0.12s ease',
-            }}>
-              <div style={{
-                height: '100%',
-                width: `${enemyFirePct * 100}%`,
-                background: isIncoming
-                  ? dodgeBarColor
-                  : enemyFirePct > 0.4 ? '#a78bfa' : enemyFirePct > 0.2 ? '#fbbf24' : '#ef4444',
-                transition: 'background 0.25s',
-                borderRadius: 3,
-              }} />
-            </div>
-            <AnimatePresence>
-              {isIncoming && (
+            {isIncoming ? (
+              <>
+                <div style={{ height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', width: `${dodgeWindowPct * 100}%`,
+                    background: dodgeBarColor, transition: 'background 0.25s', borderRadius: 3,
+                  }} />
+                </div>
                 <motion.p
-                  initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  initial={{ opacity: 0, y: -2 }} animate={{ opacity: 1, y: 0 }}
                   className="font-karla font-700 text-center"
                   style={{ fontSize: '0.52rem', color: dodgeBarColor, marginTop: 3, letterSpacing: '0.1em', textTransform: 'uppercase' }}
                 >
                   {dodgeLocked ? '⚠ Exposed' : '⚡ Incoming!'}
                 </motion.p>
-              )}
-            </AnimatePresence>
+              </>
+            ) : (
+              <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', width: `${enemyActionPct * 100}%`,
+                  background: actionBarColor, transition: 'background 0.3s', borderRadius: 3,
+                }} />
+              </div>
+            )}
           </div>
 
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.25rem', marginTop: '0.05rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.05rem' }}>
