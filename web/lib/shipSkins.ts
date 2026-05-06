@@ -12,8 +12,8 @@ export const SHIP_SKINS: ShipSkinDef[] = [
     id: 'corsair_black',
     name: 'Corsair Black',
     description: "The hull of a ship that's never sailed under honest colours.",
-    filter: 'brightness(0.22) saturate(0.15) contrast(1.6) drop-shadow(0 0 22px rgba(200,20,20,0.9))',
-    color: '#dc2626',
+    filter: 'brightness(0.5) saturate(0.2) contrast(1.1) drop-shadow(0 0 5px rgba(200,20,20,0.25))',
+    color: '#9ca3af',
     source: "Barnacle Pete's Raid",
   },
 ]
