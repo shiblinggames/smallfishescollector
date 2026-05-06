@@ -43,6 +43,7 @@ export default async function CannonPage() {
             totalDodge={stats.totalDodge}
             totalFortune={stats.totalFortune}
             crewCount={stats.crewCount}
+            crewMembers={stats.crewMembers}
           />
         </div>
       </main>

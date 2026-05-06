@@ -264,9 +264,17 @@ function TimingBar({ indicatorRef, flashRef, zoneRef, hitHalfW, critHalfW }: {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
+interface CannonCrewMember {
+  name: string
+  imageUrl: string
+  power: number
+  dodge: number
+  fortune: number
+}
+
 export default function CannonGame({
   shipImageUrl, shipName, playerHPMax, shipMinDamage, shipSpeed,
-  totalPower, totalDodge, totalFortune, crewCount,
+  totalPower, totalDodge, totalFortune, crewCount, crewMembers,
 }: {
   shipImageUrl: string
   shipName: string
@@ -277,6 +285,7 @@ export default function CannonGame({
   totalDodge: number
   totalFortune: number
   crewCount: number
+  crewMembers: CannonCrewMember[]
 }) {
   const dodgeBonus        = totalDodge * 5
   const fortuneMult       = 1 + totalFortune / 75   // 2× at max crew luck (~75)
@@ -311,6 +320,7 @@ export default function CannonGame({
   const [roundDisplay, setRoundDisplay] = useState(1)
   const [isBoss, setIsBoss]             = useState(false)
   const [isClaiming, setIsClaiming]     = useState(false)
+  const [showCrewInfo, setShowCrewInfo] = useState(false)
   const [cannonJammed, setCannonJammed] = useState(false)
   const [enemySinking, setEnemySinking] = useState(false)
   const [showCannonShot, setShowCannonShot] = useState(false)
@@ -774,8 +784,24 @@ export default function CannonGame({
           animation: dodgeShake ? 'dodge-slide 0.5s ease' : 'none',
           transition: 'border-color 0.2s',
         }}>
-          <div style={{ position: 'relative', height: 110, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-            <img src={shipImageUrl} alt={shipName} style={{ width: '100%', height: 110, objectFit: 'contain', objectPosition: 'bottom' }} />
+          <div style={{ position: 'relative', height: 140, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+            <img src={shipImageUrl} alt={shipName} style={{ width: '100%', height: 140, objectFit: 'contain', objectPosition: 'bottom' }} />
+            {/* Captain portrait — top left, click to view crew */}
+            {crewMembers.length > 0 && (
+              <button
+                onClick={() => setShowCrewInfo(true)}
+                style={{
+                  position: 'absolute', top: 4, left: 4, zIndex: 5,
+                  width: 32, height: 32, borderRadius: '50%',
+                  border: '2px solid rgba(96,165,250,0.65)',
+                  overflow: 'hidden', padding: 0, cursor: 'pointer',
+                  boxShadow: '0 0 8px rgba(96,165,250,0.35)',
+                  background: 'rgba(0,0,0,0.3)',
+                }}
+              >
+                <img src={crewMembers[0].imageUrl} alt={crewMembers[0].name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
+              </button>
+            )}
             {pHitsplat.key > 0 && <Hitsplat key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} animKey={pHitsplat.key} />}
             {showDodgeVFX && (
               <>
@@ -789,7 +815,7 @@ export default function CannonGame({
           <HPBar current={playerHP} max={playerHPMax} color="#60a5fa" />
 
           {/* Damage range */}
-          <div style={{ marginTop: 2, borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 6 }}>
+          <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 6 }}>
             <p className="font-karla font-400 text-center" style={{ fontSize: '0.45rem', color: '#5a5855', letterSpacing: '0.08em', marginBottom: 3 }}>DAMAGE</p>
             <p className="font-karla font-700 text-center" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>
               {shipMinDamage}–{powerMax}
@@ -883,7 +909,7 @@ export default function CannonGame({
           </div>
 
           {/* Enemy damage range */}
-          <div style={{ marginTop: 2, borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 6 }}>
+          <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 6 }}>
             <p className="font-karla font-400 text-center" style={{ fontSize: '0.45rem', color: '#5a5855', letterSpacing: '0.08em', marginBottom: 3 }}>DAMAGE</p>
             <p className="font-karla font-700 text-center" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>
               {enemyMinDmg}–{enemyMaxDmg}
@@ -1307,6 +1333,59 @@ export default function CannonGame({
             <span style={{ color: '#5a5855' }}> · crit {shipMinDamage * 2}–{Math.round(powerMax * 1.5)}</span>
           </span>
         </motion.div>
+      )}
+
+      {/* ── Crew info popup ─────────────────────────────────────────────────── */}
+      {showCrewInfo && (
+        <div
+          onClick={() => setShowCrewInfo(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 60,
+            background: 'rgba(0,0,0,0.78)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1.5rem',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(135deg, rgba(8,10,18,0.99) 0%, rgba(6,8,14,0.99) 100%)',
+              border: '1px solid rgba(96,165,250,0.2)',
+              borderRadius: 16, padding: '1.1rem',
+              width: '100%', maxWidth: 280,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.9rem' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>Your Crew</p>
+              <button onClick={() => setShowCrewInfo(false)} style={{ background: 'none', border: 'none', color: '#5a5855', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1, padding: '2px 4px' }}>✕</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              {crewMembers.map((c, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
+                    border: i === 0 ? '2px solid rgba(240,192,64,0.55)' : '1.5px solid rgba(255,255,255,0.12)',
+                  }}>
+                    <img src={c.imageUrl} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: 4 }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.7rem', color: '#f0ede8', lineHeight: 1.2 }}>{c.name}</p>
+                      {i === 0 && (
+                        <span className="font-karla font-700" style={{ fontSize: '0.36rem', color: '#f0c040', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.25)', borderRadius: 3, padding: '0.08rem 0.28rem', textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>Captain</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.7rem' }}>
+                      <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#f87171' }}>PWR {c.power}</span>
+                      <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#60a5fa' }}>NAV {c.dodge}</span>
+                      <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#f0c040' }}>FTN {c.fortune}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       <style>{`
