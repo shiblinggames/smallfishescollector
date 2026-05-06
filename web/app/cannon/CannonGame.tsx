@@ -284,7 +284,7 @@ export default function CannonGame({
         if (parryElapsedRef.current >= parryWindowMs()) {
           parryStateRef.current = 'failed'
           setParryState('failed'); setParryFeedback('miss')
-          playerHPRef.current--
+          playerHPRef.current = Math.max(0, playerHPRef.current - 2)
           setPlayerHP(playerHPRef.current)
           setPlayerHit(true)
           flashBar(parryFlashRef, '#ef4444')
