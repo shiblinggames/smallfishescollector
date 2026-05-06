@@ -145,7 +145,7 @@ function Hitsplat({ text, color, big, animKey }: { text: string; color: string; 
   return (
     <div key={animKey} style={{
       position: 'absolute', top: '40%', left: '50%',
-      animation: 'hitsplat-pop 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards',
+      animation: 'hitsplat-pop 0.9s ease forwards',
       pointerEvents: 'none', zIndex: 20, whiteSpace: 'nowrap',
     }}>
       <div style={{
@@ -255,6 +255,7 @@ export default function CannonGame({
   const [enemyCharges, setEnemyCharges] = useState(0)
   const [enemyActionPct, setEnemyActionPct] = useState(1)
   const [charges, setCharges]           = useState(1)
+  const [canFire, setCanFire]           = useState(true)
   const [canReload, setCanReload]       = useState(true)
   const [streak, setStreak]             = useState(0)
   const [best, setBest]                 = useState(0)
@@ -324,6 +325,7 @@ export default function CannonGame({
     canFireRef.current      = true
     chargesRef.current      = 1
     canReloadRef.current    = true
+    setCanFire(true)
     dodgeLockedRef.current  = false
     roundEndingRef.current  = false
     dodgeStateRef.current   = 'none'
@@ -442,6 +444,7 @@ export default function CannonGame({
   const fire = useCallback(() => {
     if (phaseRef.current !== 'playing' || !canFireRef.current || chargesRef.current < 1 || cannonJammed) return
     canFireRef.current = false
+    setCanFire(false)
 
     const isVolley = chargesRef.current === MAX_CHARGES
     chargesRef.current -= isVolley ? MAX_CHARGES : 1
@@ -496,21 +499,22 @@ export default function CannonGame({
           setTimeout(() => setClearReady(true), 80)
         }, 920)
 
-        setTimeout(() => { canFireRef.current = true; setShotResult(null) }, 550)
+        setTimeout(() => { canFireRef.current = true; setCanFire(true); setShotResult(null) }, 550)
         return
       }
     }
 
     if (res === 'miss') {
       setCannonJammed(true)
-      setTimeout(() => { canFireRef.current = true; setShotResult(null); setCannonJammed(false) }, CANNON_MISS_CD)
+      setTimeout(() => { canFireRef.current = true; setCanFire(true); setShotResult(null); setCannonJammed(false) }, CANNON_MISS_CD)
     } else {
-      setTimeout(() => { canFireRef.current = true; setShotResult(null) }, 550)
+      setTimeout(() => { canFireRef.current = true; setCanFire(true); setShotResult(null) }, 550)
     }
   }, [critBonus, fortuneMult, cannonJammed, resetEnemyForRound])
 
   const dodge = useCallback(() => {
     if (dodgeStateRef.current !== 'incoming' || dodgeLockedRef.current) return
+    if (!canFireRef.current || !canReloadRef.current) return
     const ratio = dodgeElapsedRef.current / dodgeWindowMs()
     const res: DodgeResult = ratio < 0.38 ? 'full' : ratio < 0.72 ? 'half' : 'miss'
 
@@ -568,6 +572,7 @@ export default function CannonGame({
   const fZones        = getFireZones(roundRef.current, critBonus)
   const isIncoming    = dodgeState === 'incoming'
   const isVolleyReady = charges === MAX_CHARGES
+  const isCommitted   = !canFire || !canReload
   const raidScore     = totalPower + totalDodge + totalFortune
 
   const dodgeBarColor  = dodgeWindowPct > 0.62 ? '#38bdf8' : dodgeWindowPct > 0.28 ? '#fbbf24' : '#ef4444'
@@ -821,7 +826,7 @@ export default function CannonGame({
             onPointerDown={isIncoming ? dodge : doReload}
             whileTap={{ scale: 0.95 }}
             animate={
-              isIncoming && !dodgeLocked
+              isIncoming && !dodgeLocked && !isCommitted
                 ? { boxShadow: ['0 0 0px #38bdf800', '0 0 16px #38bdf8aa', '0 0 8px #38bdf866'] }
                 : dodgeLocked
                 ? { boxShadow: ['0 0 0px #ef444400', '0 0 10px #ef444455', '0 0 0px #ef444400'] }
@@ -831,27 +836,32 @@ export default function CannonGame({
             className="font-karla font-700"
             style={{
               flex: 1, padding: '12px 0', borderRadius: 14, cursor: 'pointer',
-              background: isIncoming && !dodgeLocked ? 'rgba(56,189,248,0.2)'
-                        : dodgeLocked               ? 'rgba(239,68,68,0.08)'
+              background: isIncoming && !dodgeLocked && !isCommitted ? 'rgba(56,189,248,0.2)'
+                        : isIncoming && isCommitted   ? 'rgba(251,146,60,0.08)'
+                        : dodgeLocked                 ? 'rgba(239,68,68,0.08)'
                         : !canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.03)'
-                        :                             'rgba(96,165,250,0.12)',
+                        :                               'rgba(96,165,250,0.12)',
               border: `1px solid ${
-                isIncoming && !dodgeLocked ? 'rgba(56,189,248,0.6)'
-                : dodgeLocked             ? 'rgba(239,68,68,0.3)'
+                isIncoming && !dodgeLocked && !isCommitted ? 'rgba(56,189,248,0.6)'
+                : isIncoming && isCommitted   ? 'rgba(251,146,60,0.3)'
+                : dodgeLocked                 ? 'rgba(239,68,68,0.3)'
                 : !canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.07)'
-                :                           'rgba(96,165,250,0.35)'
+                :                               'rgba(96,165,250,0.35)'
               }`,
-              color: isIncoming && !dodgeLocked ? '#38bdf8'
-                   : dodgeLocked               ? '#ef4444'
-                   : !canReload                ? '#3a5a7a'
-                   : charges >= MAX_CHARGES    ? '#4a4845'
-                   :                            '#60a5fa',
-              fontSize: dodgeLocked ? '0.72rem' : '0.92rem',
+              color: isIncoming && !dodgeLocked && !isCommitted ? '#38bdf8'
+                   : isIncoming && isCommitted   ? '#f97316'
+                   : dodgeLocked                 ? '#ef4444'
+                   : !canReload                  ? '#3a5a7a'
+                   : charges >= MAX_CHARGES      ? '#4a4845'
+                   :                              '#60a5fa',
+              fontSize: (dodgeLocked || (isIncoming && isCommitted)) ? '0.72rem' : '0.92rem',
               letterSpacing: '0.06em',
               opacity: (!isIncoming && (!canReload || charges >= MAX_CHARGES)) ? 0.5 : 1,
               transition: 'all 0.12s',
             }}>
-            {isIncoming ? (dodgeLocked ? 'Exposed…' : 'DODGE') : (!canReload ? 'Loading…' : charges >= MAX_CHARGES ? 'Full' : 'RELOAD')}
+            {isIncoming
+              ? (dodgeLocked ? 'Exposed…' : isCommitted ? 'Committed…' : 'DODGE')
+              : (!canReload ? 'Loading…' : charges >= MAX_CHARGES ? 'Full' : 'RELOAD')}
           </motion.button>
         )}
 
@@ -968,8 +978,9 @@ export default function CannonGame({
       <style>{`
         @keyframes hitsplat-pop {
           0%   { opacity: 0; transform: translateX(-50%) translateY(-10%) scale(0.2) rotate(-10deg); }
-          55%  { opacity: 1; transform: translateX(-50%) translateY(-65%) scale(1.25) rotate(4deg); }
-          100% { opacity: 1; transform: translateX(-50%) translateY(-58%) scale(1) rotate(0deg); }
+          28%  { opacity: 1; transform: translateX(-50%) translateY(-65%) scale(1.25) rotate(4deg); }
+          55%  { opacity: 1; transform: translateX(-50%) translateY(-58%) scale(1) rotate(0deg); }
+          100% { opacity: 0; transform: translateX(-50%) translateY(-74%) scale(0.85) rotate(0deg); }
         }
         @keyframes cannon-shot {
           0%   { opacity: 0; transform: translate(-20px, 6px) scale(0.2) rotate(-20deg); }
