@@ -20,22 +20,22 @@ interface BroadsideEnemy {
 
 const BROADSIDE_ENEMIES: Record<string, BroadsideEnemy> = {
   brute: {
-    id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 6, maxDmg: 10,
+    id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 2, maxDmg: 5,
     actionMs: 4500,
     pattern: ['reload', 'fire', 'reload', 'fire'],
   },
   sniper: {
-    id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 5, maxDmg: 22,
+    id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
     actionMs: 5500,
     pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
   },
   corsair: {
-    id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 8, maxDmg: 14,
+    id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
     actionMs: 3500,
     pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
   },
   pete: {
-    id: 'pete', name: 'Barnacle Pete', hpBase: 55, minDmg: 10, maxDmg: 20,
+    id: 'pete', name: 'Barnacle Pete', hpBase: 55, minDmg: 8, maxDmg: 15,
     actionMs: 4500,
     pattern: ['reload', 'reload', 'dodge', 'fire', 'reload', 'fire'],
   },
