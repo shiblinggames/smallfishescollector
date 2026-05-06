@@ -79,7 +79,7 @@ const ENEMY_DODGE_MS = 1400
 
 function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: number): number {
   if (!res || res === 'miss') return 0
-  const powerMax = Math.max(shipMinDamage, Math.floor(totalPower / 4))
+  const powerMax = shipMinDamage + Math.floor(totalPower / 4)
   const ranges: Record<string, [number, number]> = {
     critical: [shipMinDamage * 2, Math.round(powerMax * 1.5)],
     hit:      [shipMinDamage, powerMax],
@@ -618,7 +618,7 @@ export default function CannonGame({
   const isIncoming    = dodgeState === 'incoming'
   const isVolleyReady = charges === MAX_CHARGES
   const isCommitted   = !canFire || !canReload
-  const powerMax      = Math.max(shipMinDamage, Math.floor(totalPower / 4))
+  const powerMax      = shipMinDamage + Math.floor(totalPower / 4)
 
   const dodgeBarColor  = dodgeWindowPct > 0.62 ? '#38bdf8' : dodgeWindowPct > 0.28 ? '#fbbf24' : '#ef4444'
   const actionBarColor = enemyActionPct > 0.4 ? '#a78bfa' : enemyActionPct > 0.15 ? '#fbbf24' : '#ef4444'
