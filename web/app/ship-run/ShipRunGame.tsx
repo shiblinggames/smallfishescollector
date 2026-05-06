@@ -6,89 +6,44 @@ type GamePhase = 'idle' | 'playing' | 'dead'
 
 interface Obstacle {
   x: number
-  lane: number
+  topH: number   // height of top block (0 = no top block)
+  botH: number   // height of bottom block (0 = no bottom block)
   w: number
-  h: number
-  type: 'rock' | 'barrel' | 'monster'
+  passed: boolean
 }
 
-const LANES   = 3
-const CW      = 600
-const CH      = 460
-const LANE_H  = CH / LANES
-const SHIP_X  = CW * 0.14
-const SHIP_W  = LANE_H * 1.5
-const SHIP_H  = LANE_H * 0.52
-
-function drawShip(ctx: CanvasRenderingContext2D, y: number, img: HTMLImageElement | null) {
-  if (img) {
-    ctx.drawImage(img, SHIP_X - SHIP_W * 0.38, y, SHIP_W, SHIP_H)
-  } else {
-    ctx.fillStyle = '#60a5fa'
-    ctx.beginPath()
-    ctx.roundRect(SHIP_X - 24, y, 48, SHIP_H, 6)
-    ctx.fill()
-  }
-}
-
-function drawObstacle(ctx: CanvasRenderingContext2D, obs: Obstacle) {
-  const obsY = obs.lane * LANE_H + (LANE_H - obs.h) / 2
-  if (obs.type === 'rock') {
-    ctx.fillStyle = '#4b5563'
-    ctx.beginPath()
-    ctx.roundRect(obs.x, obsY, obs.w, obs.h, 10)
-    ctx.fill()
-    ctx.fillStyle = 'rgba(255,255,255,0.08)'
-    ctx.fillRect(obs.x + 5, obsY + 5, obs.w * 0.28, 3)
-  } else if (obs.type === 'barrel') {
-    ctx.fillStyle = '#78350f'
-    ctx.beginPath()
-    ctx.roundRect(obs.x, obsY, obs.w, obs.h, 6)
-    ctx.fill()
-    ctx.strokeStyle = 'rgba(0,0,0,0.35)'
-    ctx.lineWidth = 2
-    for (const frac of [0.32, 0.68]) {
-      ctx.beginPath()
-      ctx.moveTo(obs.x + 4, obsY + obs.h * frac)
-      ctx.lineTo(obs.x + obs.w - 4, obsY + obs.h * frac)
-      ctx.stroke()
-    }
-  } else {
-    ctx.fillStyle = '#0d9488'
-    ctx.shadowColor = '#2dd4bf'
-    ctx.shadowBlur = 14
-    ctx.beginPath()
-    ctx.ellipse(obs.x + obs.w / 2, obsY + obs.h / 2, obs.w / 2, obs.h / 2, 0, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.shadowBlur = 0
-    ctx.fillStyle = '#fff'
-    ctx.beginPath()
-    ctx.arc(obs.x + obs.w * 0.38, obsY + obs.h * 0.38, 4.5, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.fillStyle = '#000'
-    ctx.beginPath()
-    ctx.arc(obs.x + obs.w * 0.38, obsY + obs.h * 0.38, 2, 0, Math.PI * 2)
-    ctx.fill()
-  }
-}
+const CW         = 600
+const CH         = 460
+const GRAVITY    = 0.28
+const LIFT       = 0.62
+const MAX_VEL    = 8
+const SHIP_X     = CW * 0.18
+const SHIP_W     = 64
+const SHIP_H     = 28
+const GAP_MIN    = 110
+const GAP_MAX    = 160
+const Y_MIN      = 20
+const Y_MAX      = CH - 20 - SHIP_H
 
 export default function ShipRunGame({ shipImageUrl, shipName }: { shipImageUrl: string; shipName: string }) {
   const canvasRef  = useRef<HTMLCanvasElement>(null)
   const [phase, setPhase]           = useState<GamePhase>('idle')
   const [finalScore, setFinalScore] = useState(0)
 
-  const shipLane    = useRef(1)
-  const shipY       = useRef((1 + 0.5) * LANE_H - SHIP_H / 2)
-  const score       = useRef(0)
-  const speed       = useRef(2.8)
-  const obstacles   = useRef<Obstacle[]>([])
-  const gameOver    = useRef(false)
-  const animFrame   = useRef(0)
-  const shipImg     = useRef<HTMLImageElement | null>(null)
-  const bgOffset    = useRef(0)
-  const phaseRef    = useRef<GamePhase>('idle')
-  const frameCount  = useRef(0)
-  const lastSpawn   = useRef(0)
+  const shipY      = useRef(CH / 2 - SHIP_H / 2)
+  const velY       = useRef(0)
+  const holding    = useRef(false)
+  const score      = useRef(0)
+  const speed      = useRef(3)
+  const obstacles  = useRef<Obstacle[]>([])
+  const gameOver   = useRef(false)
+  const animFrame  = useRef(0)
+  const shipImg    = useRef<HTMLImageElement | null>(null)
+  const bgOffset   = useRef(0)
+  const phaseRef   = useRef<GamePhase>('idle')
+  const frameCount = useRef(0)
+  const lastSpawn  = useRef(0)
+  const dpr        = useRef(1)
 
   useEffect(() => {
     const img = new Image()
@@ -96,22 +51,20 @@ export default function ShipRunGame({ shipImageUrl, shipName }: { shipImageUrl: 
     img.onload = () => { shipImg.current = img }
   }, [shipImageUrl])
 
-  const dpr = useRef(1)
-
-  // Size the backing store for device pixel ratio once on mount
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    dpr.current = window.devicePixelRatio || 1
+    dpr.current   = window.devicePixelRatio || 1
     canvas.width  = CW * dpr.current
     canvas.height = CH * dpr.current
   }, [])
 
   const startGame = useCallback(() => {
-    shipLane.current   = 1
-    shipY.current      = (1 + 0.5) * LANE_H - SHIP_H / 2
+    shipY.current      = CH / 2 - SHIP_H / 2
+    velY.current       = 0
+    holding.current    = false
     score.current      = 0
-    speed.current      = 2.8
+    speed.current      = 3
     obstacles.current  = []
     gameOver.current   = false
     bgOffset.current   = 0
@@ -121,19 +74,16 @@ export default function ShipRunGame({ shipImageUrl, shipName }: { shipImageUrl: 
     setPhase('playing')
   }, [])
 
-  const handleTap = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     e.preventDefault()
     if (phaseRef.current !== 'playing') { startGame(); return }
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    if (x < rect.width / 2) {
-      shipLane.current = Math.max(0, shipLane.current - 1)
-    } else {
-      shipLane.current = Math.min(LANES - 1, shipLane.current + 1)
-    }
+    holding.current = true
   }, [startGame])
+
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault()
+    holding.current = false
+  }, [])
 
   useEffect(() => {
     if (phase !== 'playing') return
@@ -142,47 +92,91 @@ export default function ShipRunGame({ shipImageUrl, shipName }: { shipImageUrl: 
     const rawCtx = canvas.getContext('2d')
     if (!rawCtx) return
     const ctx: CanvasRenderingContext2D = rawCtx
-    // Restore DPR scale (setTransform replaces rather than stacks)
     ctx.setTransform(dpr.current, 0, 0, dpr.current, 0, 0)
 
     function spawnObstacle() {
-      const lane  = Math.floor(Math.random() * LANES)
-      const types = ['rock', 'rock', 'barrel', 'monster'] as Obstacle['type'][]
-      const type  = types[Math.floor(Math.random() * types.length)]
-      const w     = type === 'rock' ? 38 + Math.random() * 24 : type === 'barrel' ? 28 : 44
-      obstacles.current.push({ x: CW + 20, lane, w, h: LANE_H * (type === 'monster' ? 0.6 : 0.42), type })
+      const gapSize = GAP_MIN + Math.random() * (GAP_MAX - GAP_MIN)
+      const gapY    = Y_MIN + Math.random() * (CH - Y_MIN * 2 - gapSize)
+      obstacles.current.push({
+        x:      CW + 10,
+        topH:   gapY,
+        botH:   CH - gapY - gapSize,
+        w:      28 + Math.random() * 18,
+        passed: false,
+      })
+    }
+
+    function drawObstacle(obs: Obstacle) {
+      const gapY  = obs.topH
+      const gapBot = CH - obs.botH
+
+      // top block
+      if (obs.topH > 0) {
+        const grad = ctx.createLinearGradient(obs.x, 0, obs.x + obs.w, 0)
+        grad.addColorStop(0, '#1e3a5f')
+        grad.addColorStop(1, '#162d4a')
+        ctx.fillStyle = grad
+        ctx.beginPath()
+        ctx.roundRect(obs.x, 0, obs.w, gapY, [0, 0, 8, 8])
+        ctx.fill()
+        // edge glow
+        ctx.fillStyle = 'rgba(56,189,248,0.18)'
+        ctx.fillRect(obs.x, gapY - 3, obs.w, 3)
+      }
+
+      // bottom block
+      if (obs.botH > 0) {
+        const grad = ctx.createLinearGradient(obs.x, 0, obs.x + obs.w, 0)
+        grad.addColorStop(0, '#1e3a5f')
+        grad.addColorStop(1, '#162d4a')
+        ctx.fillStyle = grad
+        ctx.beginPath()
+        ctx.roundRect(obs.x, gapBot, obs.w, obs.botH, [8, 8, 0, 0])
+        ctx.fill()
+        ctx.fillStyle = 'rgba(56,189,248,0.18)'
+        ctx.fillRect(obs.x, gapBot, obs.w, 3)
+      }
     }
 
     function tick() {
       if (gameOver.current) return
       frameCount.current++
+      speed.current = 3 + score.current / 350
 
-      speed.current  = 2.8 + score.current / 400
-      bgOffset.current = (bgOffset.current + speed.current * 0.4) % CW
+      // Physics
+      if (holding.current) {
+        velY.current = Math.max(velY.current - LIFT, -MAX_VEL)
+      } else {
+        velY.current = Math.min(velY.current + GRAVITY, MAX_VEL)
+      }
+      shipY.current = Math.max(Y_MIN, Math.min(Y_MAX, shipY.current + velY.current))
 
-      const targetY  = (shipLane.current + 0.5) * LANE_H - SHIP_H / 2
-      shipY.current += (targetY - shipY.current) * 0.2
+      bgOffset.current = (bgOffset.current + speed.current * 0.5) % CW
 
+      // Move obstacles
       obstacles.current = obstacles.current
         .map(o => ({ ...o, x: o.x - speed.current }))
-        .filter(o => o.x + o.w > 0)
+        .filter(o => o.x + o.w > -10)
 
-      const interval = Math.max(55, 115 - score.current / 25)
+      // Spawn
+      const interval = Math.max(80, 160 - score.current / 15)
       if (frameCount.current - lastSpawn.current > interval) {
         spawnObstacle()
-        if (Math.random() < 0.25 && score.current > 150) setTimeout(spawnObstacle, 350)
         lastSpawn.current = frameCount.current
       }
 
       score.current++
 
-      const sLeft  = SHIP_X - SHIP_W * 0.22
-      const sRight = SHIP_X + SHIP_W * 0.22
-      const sTop   = shipY.current + SHIP_H * 0.18
-      const sBot   = shipY.current + SHIP_H * 0.82
+      // Collision
+      const sL = SHIP_X - SHIP_W * 0.35
+      const sR = SHIP_X + SHIP_W * 0.35
+      const sT = shipY.current + SHIP_H * 0.15
+      const sB = shipY.current + SHIP_H * 0.85
       for (const obs of obstacles.current) {
-        const oY = obs.lane * LANE_H + (LANE_H - obs.h) / 2
-        if (sRight > obs.x + 5 && sLeft < obs.x + obs.w - 5 && sBot > oY + 5 && sTop < oY + obs.h - 5) {
+        if (sR < obs.x || sL > obs.x + obs.w) continue
+        const gapY   = obs.topH
+        const gapBot = CH - obs.botH
+        if ((obs.topH > 0 && sT < gapY) || (obs.botH > 0 && sB > gapBot)) {
           gameOver.current = true
           phaseRef.current = 'dead'
           cancelAnimationFrame(animFrame.current)
@@ -195,43 +189,44 @@ export default function ShipRunGame({ shipImageUrl, shipName }: { shipImageUrl: 
       // ── Draw ──
       ctx.clearRect(0, 0, CW, CH)
 
+      // Ocean bg
       const grad = ctx.createLinearGradient(0, 0, 0, CH)
       grad.addColorStop(0, '#0b1d30')
       grad.addColorStop(1, '#09263a')
       ctx.fillStyle = grad
       ctx.fillRect(0, 0, CW, CH)
 
-      ctx.strokeStyle = 'rgba(56,189,248,0.07)'
+      // Scrolling wave lines
+      ctx.strokeStyle = 'rgba(56,189,248,0.06)'
       ctx.lineWidth = 1
-      for (let row = 0; row < 9; row++) {
-        const baseY = (CH / 9) * row + CH / 18
+      for (let row = 0; row < 12; row++) {
+        const baseY = (CH / 12) * row + CH / 24
         ctx.beginPath()
-        for (let x = 0; x <= CW + 50; x += 5) {
+        for (let x = 0; x <= CW + 60; x += 5) {
           const wx = x - bgOffset.current
-          const wy = baseY + Math.sin(wx / 28) * 2.5
+          const wy = baseY + Math.sin(wx / 32) * 3
           x === 0 ? ctx.moveTo(wx, wy) : ctx.lineTo(wx, wy)
         }
         ctx.stroke()
       }
 
-      ctx.strokeStyle = 'rgba(56,189,248,0.05)'
-      ctx.setLineDash([6, 14])
-      ctx.lineWidth = 1
-      for (let i = 1; i < LANES; i++) {
+      obstacles.current.forEach(o => drawObstacle(o))
+
+      // Ship
+      if (shipImg.current) {
+        ctx.drawImage(shipImg.current, SHIP_X - SHIP_W / 2, shipY.current, SHIP_W, SHIP_H)
+      } else {
+        ctx.fillStyle = '#60a5fa'
         ctx.beginPath()
-        ctx.moveTo(0, LANE_H * i)
-        ctx.lineTo(CW, LANE_H * i)
-        ctx.stroke()
+        ctx.roundRect(SHIP_X - SHIP_W / 2, shipY.current, SHIP_W, SHIP_H, 5)
+        ctx.fill()
       }
-      ctx.setLineDash([])
 
-      obstacles.current.forEach(o => drawObstacle(ctx, o))
-      drawShip(ctx, shipY.current, shipImg.current)
-
-      ctx.fillStyle = 'rgba(240,237,232,0.65)'
+      // Score
+      ctx.fillStyle = 'rgba(240,237,232,0.6)'
       ctx.font = '700 15px Karla, sans-serif'
       ctx.textAlign = 'right'
-      ctx.fillText(`${Math.floor(score.current / 10)}m`, CW - 14, 26)
+      ctx.fillText(`${Math.floor(score.current / 10)}m`, CW - 16, 28)
 
       animFrame.current = requestAnimationFrame(tick)
     }
@@ -247,7 +242,10 @@ export default function ShipRunGame({ shipImageUrl, shipName }: { shipImageUrl: 
         width={CW}
         height={CH}
         style={{ width: '100%', display: 'block', touchAction: 'none', borderRadius: 20, border: '1px solid rgba(255,255,255,0.06)' }}
-        onPointerDown={handleTap}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        onPointerCancel={handlePointerUp}
       />
       {phase !== 'playing' && (
         <div style={{
@@ -260,8 +258,8 @@ export default function ShipRunGame({ shipImageUrl, shipName }: { shipImageUrl: 
             <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '2.4rem', margin: '0 0 20px' }}>{finalScore}m</p>
           </>}
           {phase === 'idle' && (
-            <p className="font-karla font-300" style={{ color: 'rgba(240,237,232,0.45)', fontSize: '0.8rem', marginBottom: 20 }}>
-              Tap left · right to dodge
+            <p className="font-karla font-300" style={{ color: 'rgba(240,237,232,0.45)', fontSize: '0.85rem', marginBottom: 20 }}>
+              Hold to rise · release to fall
             </p>
           )}
           <button
