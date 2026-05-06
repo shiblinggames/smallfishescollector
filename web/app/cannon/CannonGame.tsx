@@ -354,6 +354,7 @@ export default function CannonGame({
   const actionLockedRef       = useRef(false)
   const dodgePrimeElapsedRef  = useRef(0)
   const dodgePrimeTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const consecutiveDodgesRef  = useRef(0)
   const roundEndingRef        = useRef(false)
   const rafRef                = useRef(0)
   const enemyChargesRef        = useRef(0)
@@ -405,6 +406,7 @@ export default function CannonGame({
     dodgeCooldownRef.current     = false
     actionLockedRef.current      = false
     dodgePrimeElapsedRef.current = 0
+    consecutiveDodgesRef.current = 0
     roundEndingRef.current       = false
 
     resetEnemyForRound(0)
@@ -510,17 +512,21 @@ export default function CannonGame({
             setEnemyCharges(enemyChargesRef.current)
 
             if (dodgePrimedRef.current) {
-              // Prediction dodge — cancel prime, reset actions, VFX
+              // Prediction dodge — 80% reduction, cancel prime, reset actions, VFX
               if (dodgePrimeTimerRef.current) { clearTimeout(dodgePrimeTimerRef.current); dodgePrimeTimerRef.current = null }
               dodgePrimedRef.current = false
               dodgePrimeElapsedRef.current = 0
               setDodgePrimed(false); setDodgePrimePct(1)
+              const rawDmg    = rollIncomingDamage(roundRef.current)
+              const dodgedDmg = Math.max(1, Math.round(rawDmg * 0.2))
+              playerHPRef.current = Math.max(0, playerHPRef.current - dodgedDmg)
+              setPlayerHP(playerHPRef.current)
               // Reward: instantly restore fire + reload
               canFireRef.current = true; setCanFire(true)
               canReloadRef.current = true; setCanReload(true)
               setShotResult(null)
               // VFX cascade
-              setPHitsplat(p => ({ key: p.key + 1, text: 'DODGED!', color: '#38bdf8', big: true }))
+              setPHitsplat(p => ({ key: p.key + 1, text: `-${dodgedDmg}`, color: '#38bdf8', big: false }))
               setDodgeShake(true); setDodgeFlash(true); setShowDodgeVFX(true)
               setTimeout(() => { setDodgeShake(false) }, 520)
               setTimeout(() => { setDodgeFlash(false) }, 340)
@@ -528,6 +534,7 @@ export default function CannonGame({
               dodgeCooldownRef.current = true
               setDodgeCooldown(true)
               setTimeout(() => { dodgeCooldownRef.current = false; setDodgeCooldown(false) }, dodgeCooldownUse)
+              if (playerHPRef.current <= 0) { phaseRef.current = 'dead'; setBest(prev => Math.max(prev, streakRef.current)); setPhase('dead'); return }
             } else {
               // Took the hit
               const dmg = rollIncomingDamage(roundRef.current)
@@ -572,6 +579,7 @@ export default function CannonGame({
 
   const doReload = useCallback(() => {
     if (phaseRef.current !== 'playing' || !canReloadRef.current || chargesRef.current >= MAX_CHARGES || actionLockedRef.current) return
+    consecutiveDodgesRef.current = 0
     chargesRef.current = Math.min(MAX_CHARGES, chargesRef.current + 1)
     setCharges(chargesRef.current)
     canReloadRef.current = false
@@ -584,6 +592,7 @@ export default function CannonGame({
 
   const fire = useCallback(() => {
     if (phaseRef.current !== 'playing' || !canFireRef.current || chargesRef.current < 1 || cannonJammed || actionLockedRef.current) return
+    consecutiveDodgesRef.current = 0
     canFireRef.current = false
     setCanFire(false)
 
@@ -614,18 +623,18 @@ export default function CannonGame({
       }
 
       const blocked = enemyDodgingRef.current && res !== 'critical'
-      const effectiveDmg = blocked ? 0 : dmg
+      const effectiveDmg = blocked ? Math.max(1, Math.round(dmg * 0.2)) : dmg
 
       enemyHPRef.current = Math.max(0, enemyHPRef.current - effectiveDmg)
       setEnemyHP(enemyHPRef.current)
       setEHitsplat(p => ({
         key: p.key + 1,
-        text: blocked ? 'Blocked!' : res === 'critical' ? `⚡ ${dmg}` : `-${dmg}`,
+        text: blocked ? `-${effectiveDmg}` : res === 'critical' ? `⚡ ${dmg}` : `-${dmg}`,
         color: blocked ? '#38bdf8' : res === 'critical' ? '#fbbf24' : '#f87171',
         big: res === 'critical',
       }))
 
-      if (!blocked && enemyHPRef.current <= 0) {
+      if (enemyHPRef.current <= 0) {
         streakRef.current++
         setStreak(streakRef.current)
         const earned = killGold(roundRef.current, fortuneMult, isVolley)
@@ -682,7 +691,9 @@ export default function CannonGame({
     if (phaseRef.current !== 'playing') return
     if (dodgeCooldownRef.current || dodgePrimedRef.current || actionLockedRef.current) return
     if (!canFireRef.current || !canReloadRef.current) return  // committed: can't prime mid-action
+    if (consecutiveDodgesRef.current >= 3) return  // must use another action first
 
+    consecutiveDodgesRef.current++
     dodgePrimedRef.current = true
     dodgePrimeElapsedRef.current = 0
     setDodgePrimed(true); setDodgePrimePct(1)
