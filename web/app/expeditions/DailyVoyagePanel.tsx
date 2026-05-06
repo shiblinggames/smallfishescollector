@@ -485,7 +485,7 @@ export default function DailyVoyagePanel({
 
                       {/* Stats row */}
                       {stats && (() => {
-                        const REC: Record<string, number> = { coastal: 20, open: 45, deep: 75 }
+                        const REC: Record<string, number> = { coastal: 20, open: 20, deep: 40 }
                         const rec = REC[selectedRoute] ?? 0
                         const crewScore = stats.power + stats.dodge + Math.round(stats.fortune * 0.5)
                         const met = crewScore >= rec

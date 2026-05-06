@@ -238,16 +238,8 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
     route === 'coastal'
       ? ['peaceful', 'discovery', 'discovery', 'weather', 'peaceful']
       : route === 'deep'
-      ? [
-          'discovery', 'encounter', 'danger', 'encounter',
-          'discovery', 'encounter', 'danger', 'encounter', 'weather',
-          ...(crewCount >= 2 ? ['encounter' as VoyageEventType] : []),
-        ]
-      : [
-          'peaceful', 'discovery', 'encounter', 'danger',
-          'discovery', 'encounter', 'weather',
-          ...(crewCount >= 2 ? ['danger' as VoyageEventType] : []),
-        ]
+      ? ['discovery', 'encounter', 'danger', 'discovery', 'encounter', 'danger', 'weather', 'discovery', 'peaceful']
+      : ['peaceful', 'discovery', 'encounter', 'discovery', 'peaceful', 'discovery', 'weather', 'danger']
 
   // Light shuffle — swap adjacent pairs randomly
   for (let i = sequence.length - 1; i > 1; i--) {
