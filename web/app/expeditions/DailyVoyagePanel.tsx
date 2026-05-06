@@ -9,7 +9,7 @@ import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
 import { getRingSkin, type RingSkinId } from '@/lib/ringSkins'
 import { getBait } from '@/lib/bait'
 import { getSpecialItem } from '@/lib/specialItems'
-import { sendDailyVoyage, revealVoyageResults, fetchVoyageCaptainsLog, type DailyVoyage } from './voyageActions'
+import { sendDailyVoyage, revealVoyageResults, type DailyVoyage } from './voyageActions'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 
 type PanelState = 'idle' | 'away' | 'returned' | 'done'
@@ -170,7 +170,6 @@ export default function DailyVoyagePanel({
   const [claimedBait, setClaimedBait] = useState<{ type: string; qty: number }[]>([])
   const [claimedTideTurner, setClaimedTideTurner] = useState(false)
   const [claimedPhantomHook, setClaimedPhantomHook] = useState(false)
-  const [captainsLog, setCaptainsLog] = useState<string | null>(null)
   const [liveCrewIds, setLiveCrewIds] = useState<number[]>(savedCrewVariantIds)
   const [expandedDropKey, setExpandedDropKey] = useState<string | null>(null)
   const [infoOpen, setInfoOpen] = useState(false)
@@ -183,24 +182,6 @@ export default function DailyVoyagePanel({
     window.addEventListener('crew-changed', handler)
     return () => window.removeEventListener('crew-changed', handler)
   }, [])
-
-  // Poll for captain's log after claiming — it's generated async so may take a few seconds
-  useEffect(() => {
-    if (panelState !== 'done' || !activeVoyage || captainsLog) return
-    let attempts = 0
-    const poll = async () => {
-      if (attempts >= 5) return
-      attempts++
-      const res = await fetchVoyageCaptainsLog(activeVoyage.id)
-      if ('log' in res && res.log) {
-        setCaptainsLog(res.log)
-      } else {
-        setTimeout(poll, 3000)
-      }
-    }
-    const id = setTimeout(poll, 2000)
-    return () => clearTimeout(id)
-  }, [panelState, activeVoyage, captainsLog])
 
   const returnTime = activeVoyage
     ? new Date(activeVoyage.created_at).getTime() + (activeVoyage.duration_ms ?? BASE_VOYAGE_MS)
@@ -834,17 +815,9 @@ export default function DailyVoyagePanel({
                           </span>
                         )}
                       </div>
-                      {e.narrative.split('\n\n').map((para, pi) => (
-                        <p key={pi} className="font-karla" style={{
-                          fontSize: '0.74rem',
-                          color: pi === 0 ? '#a09070' : '#7a6a50',
-                          lineHeight: 1.6,
-                          fontStyle: pi > 0 ? 'italic' : 'normal',
-                          marginTop: pi > 0 ? '0.3rem' : 0,
-                        }}>
-                          {para}
-                        </p>
-                      ))}
+                      <p className="font-karla" style={{ fontSize: '0.74rem', color: '#a09070', lineHeight: 1.6 }}>
+                        {e.narrative.split('\n\n')[0]}
+                      </p>
                       {isCrewLoss && lostCard && (
                         <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#c06060', marginTop: '0.3rem' }}>
                           {lostCard.name} — lost at sea.
@@ -1146,27 +1119,6 @@ export default function DailyVoyagePanel({
               </div>
             )
           })()}
-
-          {/* Captain's log */}
-          <div style={{
-            background: 'rgba(16,12,6,0.55)',
-            border: '1px solid rgba(160,140,90,0.18)',
-            borderRadius: 8, padding: '0.65rem 0.8rem',
-            marginTop: '0.55rem',
-          }}>
-            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#7a6848', marginBottom: '0.35rem' }}>
-              Captain&apos;s Log
-            </p>
-            {captainsLog ? (
-              <p className="font-karla" style={{ fontSize: '0.64rem', color: '#c8b890', lineHeight: 1.7, fontStyle: 'italic' }}>
-                &ldquo;{captainsLog}&rdquo;
-              </p>
-            ) : (
-              <p className="font-karla" style={{ fontSize: '0.60rem', color: '#4a4030', lineHeight: 1.5, fontStyle: 'italic' }}>
-                The captain is still writing…
-              </p>
-            )}
-          </div>
 
           {lostCards.length > 0 && (
             <div style={{

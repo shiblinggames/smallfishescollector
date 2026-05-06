@@ -22,27 +22,20 @@ function formatDate(iso: string): string {
 }
 
 function VoyageRow({ v, defaultOpen }: { v: VoyageHistoryEntry; defaultOpen: boolean }) {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
   const rc = ROUTE_CONFIGS[v.route as VoyageRoute]
-  const hasLog = !!v.captains_log
 
   return (
     <div style={{
       background: 'rgba(12,10,6,0.55)',
-      border: `1px solid ${isOpen ? 'rgba(160,140,90,0.25)' : 'rgba(255,255,255,0.06)'}`,
+      border: '1px solid rgba(255,255,255,0.06)',
       borderRadius: 10,
       overflow: 'hidden',
-      transition: 'border-color 0.15s',
     }}>
-      <button
-        onClick={() => hasLog && setIsOpen(o => !o)}
-        disabled={!hasLog}
+      <div
         style={{
-          width: '100%', background: 'none', border: 'none',
+          width: '100%',
           padding: '0.55rem 0.75rem',
           display: 'flex', alignItems: 'center', gap: '0.6rem',
-          cursor: hasLog ? 'pointer' : 'default',
-          textAlign: 'left',
         }}
       >
         <div style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: rc?.color ?? '#7a6848' }} />
@@ -70,18 +63,7 @@ function VoyageRow({ v, defaultOpen }: { v: VoyageHistoryEntry; defaultOpen: boo
           )}
         </div>
 
-        {hasLog && (
-          <span style={{ fontSize: '0.6rem', color: '#5a4a30', flexShrink: 0, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▼</span>
-        )}
-      </button>
-
-      {isOpen && hasLog && (
-        <div style={{ borderTop: '1px solid rgba(160,140,90,0.12)', padding: '0.75rem 0.875rem', background: 'rgba(8,6,2,0.40)' }}>
-          <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b8a878', lineHeight: 1.8, fontStyle: 'italic' }}>
-            &ldquo;{v.captains_log}&rdquo;
-          </p>
-        </div>
-      )}
+      </div>
     </div>
   )
 }
