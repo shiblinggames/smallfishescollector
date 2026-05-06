@@ -18,7 +18,8 @@ interface BroadsideEnemy {
   maxDmg: number
   actionMs: number
   pattern: string[]
-  image: string
+  image: string       // ship art
+  portrait?: string   // circular portrait overlay (boss only)
 }
 
 const BROADSIDE_ENEMIES: Record<string, BroadsideEnemy> = {
@@ -32,19 +33,20 @@ const BROADSIDE_ENEMIES: Record<string, BroadsideEnemy> = {
     id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
     actionMs: 5500,
     pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1elite.png',
+    image: ENEMY_IMG_BASE + 'enemytier1.png',
   },
   corsair: {
     id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
     actionMs: 3500,
     pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1boss.png',
+    image: ENEMY_IMG_BASE + 'enemytier1elite.png',
   },
   pete: {
     id: 'pete', name: 'Barnacle Pete', hpBase: 55, minDmg: 8, maxDmg: 15,
     actionMs: 4500,
     pattern: ['reload', 'reload', 'dodge', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'barnacle_pete.png',
+    image: ENEMY_IMG_BASE + 'enemytier1boss.png',
+    portrait: ENEMY_IMG_BASE + 'barnacle_pete.png',
   },
 }
 const BROADSIDE_SEQUENCE = ['brute', 'brute', 'sniper', 'sniper', 'corsair', 'corsair']
@@ -287,6 +289,7 @@ export default function CannonGame({
   const [enemyHPMax, setEnemyHPMax]     = useState(0)
   const [enemyName, setEnemyName]       = useState('Reef Raider')
   const [enemyImage, setEnemyImage]     = useState(BROADSIDE_ENEMIES.brute.image)
+  const [enemyPortrait, setEnemyPortrait] = useState<string | null>(null)
   const [enemyCharges, setEnemyCharges]   = useState(0)
   const [enemyDodging, setEnemyDodging]   = useState(false)
   const [enemyActionPct, setEnemyActionPct] = useState(1)
@@ -376,6 +379,7 @@ export default function CannonGame({
     setEnemyHP(hp); setEnemyHPMax(hp)
     setEnemyName(e.name)
     setEnemyImage(e.image)
+    setEnemyPortrait(e.portrait ?? null)
     setEnemyCharges(0)
     setEnemyDodging(false)
     setEnemyActionPct(1)
@@ -836,8 +840,21 @@ export default function CannonGame({
           <div style={{ position: 'relative', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
             <img src={enemyImage} alt={enemyName} style={{
               width: '100%', height: 72, objectFit: 'contain', objectPosition: 'center',
-              animation: enemySinking ? 'enemy-sink-portrait 0.9s ease-in forwards' : 'none',
+              transform: 'scaleX(-1)',
+              animation: enemySinking ? 'enemy-sink 0.9s ease-in forwards' : 'none',
+              filter: isBoss ? 'hue-rotate(20deg) brightness(0.9)' : 'hue-rotate(180deg) brightness(0.8)',
             }} />
+            {enemyPortrait && (
+              <div style={{
+                position: 'absolute', bottom: 2, right: 2,
+                width: 26, height: 26, borderRadius: '50%',
+                border: '2px solid rgba(249,115,22,0.6)',
+                overflow: 'hidden',
+                boxShadow: '0 0 8px rgba(249,115,22,0.4)',
+              }}>
+                <img src={enemyPortrait} alt="portrait" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            )}
             {eHitsplat.key > 0 && <Hitsplat key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} animKey={eHitsplat.key} />}
             {showCannonShot && (
               <>
