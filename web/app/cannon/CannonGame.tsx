@@ -770,8 +770,7 @@ export default function CannonGame({
     <div className="flex flex-col items-center gap-4 select-none" style={{ userSelect: 'none' }}>
 
       {/* ── Round / status header ─────────────────────────────────────────────── */}
-      {(phase === 'playing' || phase === 'ready' || phase === 'clear') && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingBottom: 2 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingBottom: 2, visibility: phase === 'idle' ? 'hidden' : 'visible' }}>
           <span className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#4a4845' }}>Round {roundDisplay}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {enemyDodging && (
@@ -787,8 +786,7 @@ export default function CannonGame({
               <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: '#f97316', background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.35)', borderRadius: 4, padding: '1px 5px', letterSpacing: '0.08em' }}>BOSS</span>
             )}
           </div>
-        </div>
-      )}
+      </div>
 
       {/* ── Two-panel combat area ─────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 10, width: '100%' }}>

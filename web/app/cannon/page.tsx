@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
-import Link from 'next/link'
 import CannonGame from './CannonGame'
 import { getCannonPlayerStats } from './actions'
 
@@ -23,15 +22,6 @@ export default async function CannonPage() {
         gems={profile?.gems ?? 0}
       />
       <main className="min-h-screen pb-24 sm:pb-0">
-        <div className="px-6 pt-6 pb-2">
-          <Link
-            href="/tavern"
-            className="font-karla text-[#6a6764] text-xs uppercase tracking-[0.12em] hover:text-[#a0a09a] transition-colors"
-          >
-            ← Tavern
-          </Link>
-        </div>
-
         <div className="px-6 pb-12 max-w-sm mx-auto md:[zoom:1.25] lg:[zoom:1.45]">
           <CannonGame
             shipImageUrl={stats.shipImageUrl}
