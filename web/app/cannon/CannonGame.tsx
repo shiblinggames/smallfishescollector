@@ -1321,15 +1321,6 @@ export default function CannonGame({
         )}
       </AnimatePresence>
 
-      {/* Idle badge */}
-      {phase === 'idle' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-1">
-          <span style={{ fontSize: '0.65rem', color: '#9a9488', fontFamily: 'var(--font-karla)' }}>
-            DMG <span style={{ color: '#f0ede8', fontWeight: 700 }}>{shipMinDamage}–{powerMax}</span>
-            <span style={{ color: '#5a5855' }}> · crit {shipMinDamage * 2}–{Math.round(powerMax * 1.5)}</span>
-          </span>
-        </motion.div>
-      )}
 
       {/* ── Crew info popup ─────────────────────────────────────────────────── */}
       {showCrewInfo && (
