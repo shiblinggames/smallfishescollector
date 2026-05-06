@@ -163,7 +163,7 @@ const STREAK_MESSAGES: [number, string[]][] = [
     "You are on fire right now. 🔥🔥",
     "Keep. it. going. 🔥🔥",
     "The fish don't stand a chance. 🔥🔥",
-    "Absolutely dialled in. 🔥🔥",
+    "Absolutely dialed in. 🔥🔥",
     "This is getting out of hand. 🔥🔥",
   ]],
   [4, [
@@ -183,7 +183,7 @@ const STREAK_MESSAGES: [number, string[]][] = [
     "Two in a row.",
     "Back to back. keep it up.",
     "Keep it going.",
-    "You're dialled in.",
+    "You're dialed in.",
     "Bait saved, streak alive.",
   ]],
 ]
