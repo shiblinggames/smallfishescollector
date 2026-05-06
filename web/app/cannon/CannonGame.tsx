@@ -790,7 +790,7 @@ export default function CannonGame({
 
         {/* Player panel */}
         <div style={{
-          flex: 1, background: 'none',
+          flex: 3, background: 'none',
           borderRadius: 14, padding: '0.65rem 0.55rem',
           display: 'flex', flexDirection: 'column', gap: '0.3rem',
           animation: dodgeShake ? 'dodge-slide 0.5s ease' : 'none',
@@ -828,7 +828,7 @@ export default function CannonGame({
 
         {/* Enemy panel */}
         <div style={{
-          flex: 1, background: 'none',
+          flex: 2, background: 'none',
           borderRadius: 14, padding: '0.65rem 0.55rem',
           display: 'flex', flexDirection: 'column', gap: '0.3rem',
           animation: critShake ? 'crit-shake 0.6s ease' : 'none',
