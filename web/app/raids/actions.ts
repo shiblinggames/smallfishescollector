@@ -25,6 +25,8 @@ export interface RaidPlayerStats {
   shipName: string
   crewCount: number
   crewMembers: RaidCrewMember[]
+  equippedShipSkin: string | null
+  shipSkins: string[]
 }
 
 export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStats> {
@@ -32,7 +34,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name')
+    .select('ship_tier, saved_crew, ship_name, equipped_ship_skin, ship_skins')
     .eq('id', userId)
     .single()
 
@@ -62,45 +64,81 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
         totalDodge   += Math.floor(stats.dodge   * mult)
         totalFortune += Math.floor(stats.fortune * mult)
         crewMembers.push({
-          name:    card.name,
+          name:     card.name,
           imageUrl: CARD_IMG_BASE + card.filename,
-          power:   Math.floor(stats.power   * mult),
-          dodge:   Math.floor(stats.dodge   * mult),
-          fortune: Math.floor(stats.fortune * mult),
+          power:    Math.floor(stats.power   * mult),
+          dodge:    Math.floor(stats.dodge   * mult),
+          fortune:  Math.floor(stats.fortune * mult),
         })
       })
     }
   }
 
   return {
-    playerHPMax:   ship.durability,
-    shipMinDamage: ship.minDamage,
-    shipSpeed:     ship.speed,
+    playerHPMax:      ship.durability,
+    shipMinDamage:    ship.minDamage,
+    shipSpeed:        ship.speed,
     totalPower,
     totalDodge,
     totalFortune,
-    shipImageUrl: ship.image,
-    shipName:     (profile?.ship_name as string | null) ?? ship.name,
-    crewCount:    savedCrew.length,
+    shipImageUrl:     ship.image,
+    shipName:         (profile?.ship_name as string | null) ?? ship.name,
+    crewCount:        savedCrew.length,
     crewMembers,
+    equippedShipSkin: (profile?.equipped_ship_skin as string | null) ?? null,
+    shipSkins:        (profile?.ship_skins as string[] | null) ?? [],
   }
 }
 
-export async function claimRaidLoot(doubloons: number): Promise<void> {
-  if (doubloons <= 0) return
+// Item IDs and what they grant
+const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; packs?: number; shipSkin?: string }> = {
+  doubloons_300:  { doubloons: 300 },
+  doubloons_600:  { doubloons: 600 },
+  gems_3:         { gems: 3 },
+  gems_5:         { gems: 5 },
+  pack:           { packs: 1 },
+  corsair_black:  { shipSkin: 'corsair_black' },
+}
+
+export async function claimRaidLoot(
+  baseDoubloons: number,
+  rolledItemIds: string[],
+): Promise<{ newShipSkins: string[] }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
+  if (!user) return { newShipSkins: [] }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons')
+    .select('doubloons, gems, packs_available, ship_skins, equipped_ship_skin')
     .eq('id', user.id)
     .single()
 
+  let doubloons     = (profile?.doubloons ?? 0) + baseDoubloons
+  let gems          = profile?.gems ?? 0
+  let packs         = profile?.packs_available ?? 0
+  const ownedSkins  = (profile?.ship_skins as string[] | null) ?? []
+  let equippedSkin  = (profile?.equipped_ship_skin as string | null) ?? null
+  const newSkins    = [...ownedSkins]
+
+  for (const id of rolledItemIds) {
+    const grant = ITEM_GRANTS[id]
+    if (!grant) continue
+    if (grant.doubloons) doubloons += grant.doubloons
+    if (grant.gems)      gems      += grant.gems
+    if (grant.packs)     packs     += grant.packs
+    if (grant.shipSkin && !newSkins.includes(grant.shipSkin)) {
+      newSkins.push(grant.shipSkin)
+      // Auto-equip if this is their first ship skin
+      if (!equippedSkin) equippedSkin = grant.shipSkin
+    }
+  }
+
   await admin
     .from('profiles')
-    .update({ doubloons: (profile?.doubloons ?? 0) + doubloons })
+    .update({ doubloons, gems, packs_available: packs, ship_skins: newSkins, equipped_ship_skin: equippedSkin })
     .eq('id', user.id)
+
+  return { newShipSkins: newSkins.filter(s => !ownedSkins.includes(s)) }
 }

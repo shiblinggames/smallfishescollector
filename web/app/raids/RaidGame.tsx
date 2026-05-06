@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { claimRaidLoot } from './actions'
+import { getShipSkin } from '@/lib/shipSkins'
 
 type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
@@ -15,6 +16,7 @@ interface RaidLootItem {
   image: string | null
   emoji: string
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
+  weight: number
 }
 const RARITY_COLOR: Record<RaidLootItem['rarity'], string> = {
   common:    '#9ca3af',
@@ -24,13 +26,22 @@ const RARITY_COLOR: Record<RaidLootItem['rarity'], string> = {
   legendary: '#f0c040',
 }
 const BARNACLE_PETE_LOOT: RaidLootItem[] = [
-  { id: 'doubloons_50',  label: '50 ⟡',  image: null, emoji: '🪙', rarity: 'common'   },
-  { id: 'doubloons_100', label: '100 ⟡', image: null, emoji: '🪙', rarity: 'common'   },
-  { id: 'doubloons_200', label: '200 ⟡', image: null, emoji: '💰', rarity: 'uncommon' },
-  { id: 'gem_1',         label: '1 Gem',  image: null, emoji: '💎', rarity: 'rare'     },
-  { id: 'gem_3',         label: '3 Gems', image: null, emoji: '💎', rarity: 'epic'     },
-  { id: 'pack',          label: 'Pack',   image: null, emoji: '📦', rarity: 'rare'     },
+  { id: 'doubloons_300', label: '+300 ⟡',       image: null, emoji: '🪙', rarity: 'common',   weight: 35 },
+  { id: 'doubloons_600', label: '+600 ⟡',       image: null, emoji: '💰', rarity: 'uncommon', weight: 25 },
+  { id: 'gems_3',        label: '3 Gems',        image: null, emoji: '💎', rarity: 'uncommon', weight: 20 },
+  { id: 'gems_5',        label: '5 Gems',        image: null, emoji: '💎', rarity: 'rare',     weight: 12 },
+  { id: 'pack',          label: '1 Pack',        image: null, emoji: '📦', rarity: 'rare',     weight: 10 },
+  { id: 'corsair_black', label: 'Corsair Black', image: null, emoji: '🚢', rarity: 'epic',     weight: 5  },
 ]
+function rollLootIndex(): number {
+  const total = BARNACLE_PETE_LOOT.reduce((s, i) => s + i.weight, 0)
+  let r = Math.random() * total
+  for (let i = 0; i < BARNACLE_PETE_LOOT.length; i++) {
+    r -= BARNACLE_PETE_LOOT[i].weight
+    if (r <= 0) return i
+  }
+  return BARNACLE_PETE_LOOT.length - 1
+}
 
 // ── Enemy definitions ─────────────────────────────────────────────────────────
 
@@ -309,7 +320,7 @@ interface RaidCrewMember {
   fortune: number
 }
 
-export default function RaidGame({
+export default function RaidGame({ equippedShipSkin, shipSkins,
   shipImageUrl, shipName, playerHPMax, shipMinDamage, shipSpeed,
   totalPower, totalDodge, totalFortune, crewCount, crewMembers,
 }: {
@@ -323,7 +334,11 @@ export default function RaidGame({
   totalFortune: number
   crewCount: number
   crewMembers: RaidCrewMember[]
+  equippedShipSkin: string | null
+  shipSkins: string[]
 }) {
+  const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
+  const shipFilter        = shipSkinDef?.filter ?? 'none'
   const dodgeBonus        = totalDodge * 5
   const fortuneMult       = 1 + totalFortune / 75   // 2× at max crew luck (~75)
   const playerActionMs    = Math.max(700, 2000 - shipSpeed * 100)
@@ -634,7 +649,7 @@ export default function RaidGame({
   // Slot machine spin — triggers when loot crate is opened
   useEffect(() => {
     if (!lootOpened) return
-    const finals = [0, 1, 2].map(() => Math.floor(Math.random() * BARNACLE_PETE_LOOT.length))
+    const finals = [0, 1, 2].map(() => rollLootIndex())
     setSlotFinals(finals)
     setSlotLanded([false, false, false])
     const intervals = [0, 1, 2].map(i =>
@@ -821,7 +836,7 @@ export default function RaidGame({
   const retreat = useCallback(async () => {
     if (isClaiming) return
     setIsClaiming(true)
-    try { await claimRaidLoot(potRef.current) } finally { setIsClaiming(false) }
+    try { await claimRaidLoot(potRef.current, []) } finally { setIsClaiming(false) }
     setBest(prev => Math.max(prev, streakRef.current))
     phaseRef.current = 'idle'
     setPhase('idle')
@@ -867,7 +882,7 @@ export default function RaidGame({
           animation: dodgeShake ? 'dodge-slide 0.5s ease' : playerHitShake ? 'player-hit 0.5s ease' : playerRecoil ? 'player-recoil 0.4s ease' : 'none',
         }}>
           <div style={{ position: 'relative', height: 230, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-            <img src={shipImageUrl} alt={shipName} style={{ width: '100%', height: 230, objectFit: 'contain', objectPosition: 'bottom' }} />
+            <img src={shipImageUrl} alt={shipName} style={{ width: '100%', height: 230, objectFit: 'contain', objectPosition: 'bottom', filter: shipFilter }} />
             {/* Captain portrait — top left, click to view crew */}
             {crewMembers.length > 0 && (
               <button
@@ -1358,7 +1373,12 @@ export default function RaidGame({
                             transition: 'border-color 0.2s, background 0.2s',
                             boxShadow: landed ? `0 0 18px ${color}44` : 'none',
                           }}>
-                          {item.image ? (
+                          {item.id === 'corsair_black' ? (
+                            <img src={shipImageUrl} alt={item.label}
+                              style={{ width: 54, height: 54, objectFit: 'contain', objectPosition: 'bottom',
+                                filter: !landed ? 'blur(1.5px) brightness(0.3)' : getShipSkin('corsair_black')!.filter,
+                                transition: 'filter 0.15s' }} />
+                          ) : item.image ? (
                             <img src={item.image} alt={item.label}
                               style={{ width: 54, height: 54, objectFit: 'contain',
                                 filter: !landed ? 'blur(1.5px) brightness(0.6)' : 'none',
@@ -1393,7 +1413,7 @@ export default function RaidGame({
                           onPointerDown={async () => {
                             if (lootClaimed) return
                             setLootClaimed(true)
-                            await claimRaidLoot(lootAmount)
+                            await claimRaidLoot(lootAmount, slotFinals.map(i => BARNACLE_PETE_LOOT[i].id))
                             phaseRef.current = 'idle'
                             setPhase('idle')
                           }}
