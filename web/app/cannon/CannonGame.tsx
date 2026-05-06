@@ -21,48 +21,41 @@ interface BroadsideEnemy {
 const BROADSIDE_ENEMIES: Record<string, BroadsideEnemy> = {
   brute: {
     id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 6, maxDmg: 10,
-    actionMs: 3000,
+    actionMs: 4500,
     pattern: ['reload', 'fire', 'reload', 'fire'],
   },
   sniper: {
     id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 5, maxDmg: 22,
-    actionMs: 4000,
+    actionMs: 5500,
     pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
   },
   corsair: {
     id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 8, maxDmg: 14,
-    actionMs: 2000,
+    actionMs: 3500,
     pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
   },
   pete: {
     id: 'pete', name: 'Barnacle Pete', hpBase: 55, minDmg: 10, maxDmg: 20,
-    actionMs: 2800,
+    actionMs: 4500,
     pattern: ['reload', 'reload', 'dodge', 'fire', 'reload', 'fire'],
   },
 }
 const BROADSIDE_SEQUENCE = ['brute', 'brute', 'sniper', 'sniper', 'corsair', 'corsair']
 
 function isBossRound(round: number) { return round % 7 === 6 }
-function getCycle(round: number)    { return Math.floor(round / 7) }
-
 function getEnemyForRound(round: number): BroadsideEnemy {
   if (isBossRound(round)) return BROADSIDE_ENEMIES.pete
   return BROADSIDE_ENEMIES[BROADSIDE_SEQUENCE[round % 7]]
 }
 function getEnemyHP(round: number): number {
-  const e = getEnemyForRound(round)
-  return Math.round(e.hpBase * (1 + getCycle(round) * 0.25))
+  return getEnemyForRound(round).hpBase
 }
 function getActionMs(round: number): number {
-  const e = getEnemyForRound(round)
-  return Math.max(700, e.actionMs - getCycle(round) * 100)
+  return getEnemyForRound(round).actionMs
 }
 function rollIncomingDamage(round: number): number {
   const e = getEnemyForRound(round)
-  const c = getCycle(round)
-  const min = e.minDmg + c
-  const max = e.maxDmg + c * 2
-  return Math.floor(Math.random() * (max - min + 1)) + min
+  return Math.floor(Math.random() * (e.maxDmg - e.minDmg + 1)) + e.minDmg
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -91,7 +84,7 @@ const SHOT_COLOR: Record<string, string> = { critical: '#fbbf24', hit: '#4ade80'
 
 function killGold(round: number, fortuneMult: number, isVolley: boolean) {
   const base = isBossRound(round) ? 120 : 50
-  return Math.floor(base * (getCycle(round) + 1) * fortuneMult * (isVolley ? 1.5 : 1))
+  return Math.floor(base * fortuneMult * (isVolley ? 1.5 : 1))
 }
 function fmtGold(n: number) { return n.toLocaleString() }
 
