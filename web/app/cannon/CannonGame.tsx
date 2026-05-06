@@ -285,12 +285,16 @@ export default function CannonGame({
   const [enemySinking, setEnemySinking] = useState(false)
   const [showCannonShot, setShowCannonShot] = useState(false)
   const [isVolleyShot, setIsVolleyShot] = useState(false)
+  const [isCritShot, setIsCritShot]     = useState(false)
+  const [critShake, setCritShake]       = useState(false)
+  const [critFlash, setCritFlash]       = useState(false)
   const [clearReady, setClearReady]     = useState(false)
   const [pHitsplat, setPHitsplat]       = useState({ key: 0, text: '', color: '', big: false })
   const [eHitsplat, setEHitsplat]       = useState({ key: 0, text: '', color: '', big: false })
 
-  const fireIndicatorRef = useRef<HTMLDivElement>(null)
-  const fireFlashRef     = useRef<HTMLDivElement>(null)
+  const fireIndicatorRef  = useRef<HTMLDivElement>(null)
+  const fireFlashRef      = useRef<HTMLDivElement>(null)
+  const critFreezeRef     = useRef(false)
 
   const firePosRef            = useRef(0)
   const fireDirRef            = useRef(1)
@@ -373,7 +377,9 @@ export default function CannonGame({
 
       // Player fire indicator
       const fSpeed = SPEED_BASE + roundRef.current * SPEED_INC
-      firePosRef.current += fSpeed * (dt / 16.67) * fireDirRef.current
+      if (!critFreezeRef.current) {
+        firePosRef.current += fSpeed * (dt / 16.67) * fireDirRef.current
+      }
       if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
       if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current =  1 }
       if (fireIndicatorRef.current) {
@@ -489,7 +495,16 @@ export default function CannonGame({
     if (dmg > 0) {
       setShowCannonShot(true)
       setIsVolleyShot(isVolley)
-      setTimeout(() => setShowCannonShot(false), 600)
+      setIsCritShot(res === 'critical')
+      setTimeout(() => setShowCannonShot(false), 700)
+      if (res === 'critical') {
+        setCritShake(true)
+        setCritFlash(true)
+        critFreezeRef.current = true
+        setTimeout(() => { setCritShake(false) }, 620)
+        setTimeout(() => { setCritFlash(false) }, 380)
+        setTimeout(() => { critFreezeRef.current = false }, 300)
+      }
 
       const blocked = enemyDodgingRef.current && res !== 'critical'
       const effectiveDmg = blocked ? 0 : dmg
@@ -684,6 +699,7 @@ export default function CannonGame({
           border: `1px solid ${isBoss ? 'rgba(249,115,22,0.22)' : 'rgba(167,139,250,0.15)'}`,
           borderRadius: 14, padding: '0.65rem 0.55rem',
           display: 'flex', flexDirection: 'column', gap: '0.3rem',
+          animation: critShake ? 'crit-shake 0.6s ease' : 'none',
         }}>
           <div className="flex items-center justify-between">
             <span className="font-karla font-400" style={{ fontSize: '0.44rem', color: '#4a4845' }}>Round {roundDisplay}</span>
@@ -712,8 +728,16 @@ export default function CannonGame({
             {eHitsplat.key > 0 && <Hitsplat key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} animKey={eHitsplat.key} />}
             {showCannonShot && (
               <>
-                <span style={{ position: 'absolute', left: '18%', top: '38%', fontSize: isVolleyShot ? '1.3rem' : '0.9rem', animation: 'cannon-shot 0.5s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💥</span>
-                {isVolleyShot && (
+                <span style={{ position: 'absolute', left: '18%', top: '38%', fontSize: isCritShot ? '1.6rem' : isVolleyShot ? '1.3rem' : '0.9rem', animation: 'cannon-shot 0.55s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💥</span>
+                {isCritShot && (
+                  <>
+                    <span style={{ position: 'absolute', left: '42%', top: '20%', fontSize: '1.4rem', animation: 'cannon-shot 0.5s 0.06s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💥</span>
+                    <span style={{ position: 'absolute', left: '28%', top: '55%', fontSize: '1.2rem', animation: 'cannon-shot 0.55s 0.1s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💥</span>
+                    <span style={{ position: 'absolute', left: '55%', top: '42%', fontSize: '1.8rem', animation: 'cannon-shot 0.65s 0.04s ease forwards', pointerEvents: 'none', zIndex: 10 }}>⭐</span>
+                    <span style={{ position: 'absolute', left: '38%', top: '38%', fontSize: '1.5rem', animation: 'cannon-shot 0.7s 0.12s ease forwards', pointerEvents: 'none', zIndex: 10 }}>🔥</span>
+                  </>
+                )}
+                {isVolleyShot && !isCritShot && (
                   <>
                     <span style={{ position: 'absolute', left: '35%', top: '55%', fontSize: '1.2rem', animation: 'cannon-shot 0.5s 0.07s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💥</span>
                     <span style={{ position: 'absolute', left: '44%', top: '18%', fontSize: '1.4rem', animation: 'cannon-shot 0.6s 0.14s ease forwards', pointerEvents: 'none', zIndex: 10 }}>🔥</span>
@@ -945,6 +969,15 @@ export default function CannonGame({
         </motion.button>
       </div>
 
+      {/* ── Crit flash ───────────────────────────────────────────────────────── */}
+      {critFlash && (
+        <div style={{
+          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 40,
+          background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.35) 0%, rgba(251,191,36,0.08) 60%, transparent 100%)',
+          animation: 'crit-flash 0.38s ease forwards',
+        }} />
+      )}
+
       {/* ── Round clear overlay ───────────────────────────────────────────────── */}
       <AnimatePresence>
         {phase === 'clear' && clearReady && (
@@ -1026,6 +1059,21 @@ export default function CannonGame({
           30%  { opacity: 1; transform: translate(0) scale(1.2) rotate(5deg); }
           65%  { opacity: 0.7; transform: translate(4px, -5px) scale(0.9); }
           100% { opacity: 0; transform: translate(10px, -10px) scale(0.3); }
+        }
+        @keyframes crit-shake {
+          0%   { transform: translateX(0) rotate(0deg); }
+          12%  { transform: translateX(-10px) rotate(-1.5deg); }
+          25%  { transform: translateX(10px) rotate(1.5deg); }
+          38%  { transform: translateX(-8px) rotate(-1deg); }
+          52%  { transform: translateX(8px) rotate(1deg); }
+          65%  { transform: translateX(-4px) rotate(-0.5deg); }
+          78%  { transform: translateX(4px) rotate(0.3deg); }
+          90%  { transform: translateX(-2px); }
+          100% { transform: translateX(0) rotate(0deg); }
+        }
+        @keyframes crit-flash {
+          0%   { opacity: 1; }
+          100% { opacity: 0; }
         }
         @keyframes enemy-sink {
           0%   { transform: scaleX(-1) translateY(0) rotate(0deg); opacity: 1; }
