@@ -437,6 +437,16 @@ body {
 .reveal-glow-legendary { animation: reveal-glow-legendary 2.5s ease-out forwards; }
 .reveal-glow-mythic    { animation: reveal-glow-mythic    4s ease-out forwards; }
 
+/* ── Peek glows (hold-to-peek on card back) ── */
+@keyframes peek-glow-rare-in      { from { filter: drop-shadow(0 0 4px  rgba(96,165,250,0.2));  } to { filter: drop-shadow(0 0 18px rgba(96,165,250,0.9));  } }
+@keyframes peek-glow-epic-in      { from { filter: drop-shadow(0 0 4px  rgba(168,85,247,0.2));  } to { filter: drop-shadow(0 0 24px rgba(168,85,247,0.95)); } }
+@keyframes peek-glow-legendary-in { from { filter: drop-shadow(0 0 4px  rgba(255,210,60,0.2));  } to { filter: drop-shadow(0 0 30px rgba(255,210,60,1));    } }
+@keyframes peek-glow-mythic-in    { from { filter: drop-shadow(0 0 4px  rgba(255,56,56,0.2));   } to { filter: drop-shadow(0 0 36px rgba(255,56,56,0.95)) drop-shadow(0 0 18px rgba(255,180,180,0.6)); } }
+.peek-glow-rare      { animation: peek-glow-rare-in      0.22s ease-out forwards; }
+.peek-glow-epic      { animation: peek-glow-epic-in      0.22s ease-out forwards; }
+.peek-glow-legendary { animation: peek-glow-legendary-in 0.22s ease-out forwards; }
+.peek-glow-mythic    { animation: peek-glow-mythic-in    0.22s ease-out forwards; }
+
 /* ── Screen flash overlay ── */
 @keyframes reveal-flash {
   0%   { opacity: 1; }

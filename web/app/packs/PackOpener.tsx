@@ -38,6 +38,10 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
   const [achievementKeys, setAchievementKeys] = useState<string[]>([])
   const pendingAchievements = useRef<string[]>([])
+  const [peekGlows, setPeekGlows] = useState<string[]>([])
+  const peekTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
+  const peekActive = useRef<Set<number>>(new Set())
+  const suppressClick = useRef<Set<number>>(new Set())
 
   function getInner(i: number) {
     return cardRefs.current[i]?.querySelector('.flip-card-inner') as HTMLElement | null
@@ -74,6 +78,31 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     }
   }
 
+  const PEEK_GLOW: Record<string, string> = {
+    Rare: 'peek-glow-rare', Epic: 'peek-glow-epic',
+    Legendary: 'peek-glow-legendary', Mythic: 'peek-glow-mythic',
+  }
+
+  function handlePointerDown(i: number) {
+    if (flipped[i] || loading) return
+    const timer = setTimeout(() => {
+      const rarity = rarityFromVariant(cards[i].variantName, cards[i].dropWeight)
+      peekActive.current.add(i)
+      setPeekGlows(prev => { const n = [...prev]; n[i] = PEEK_GLOW[rarity] ?? ''; return n })
+    }, 350)
+    peekTimers.current.set(i, timer)
+  }
+
+  function handlePointerUp(i: number) {
+    clearTimeout(peekTimers.current.get(i))
+    peekTimers.current.delete(i)
+    if (peekActive.current.has(i)) {
+      peekActive.current.delete(i)
+      suppressClick.current.add(i)
+      setPeekGlows(prev => { const n = [...prev]; n[i] = ''; return n })
+    }
+  }
+
   async function openPack() {
     if (packs <= 0 || loading) return
     if (packButtonRef.current) {
@@ -83,6 +112,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     setLoading(true)
     setFlipped(new Array(cards.length || 5).fill(false))
     setGlowClasses(new Array(cards.length || 5).fill(''))
+    setPeekGlows(new Array(cards.length || 5).fill(''))
     setPrize(null)
     setShockwaveCards(new Set())
     setMythicFeatured(null)
@@ -102,6 +132,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     setCards(result.drawn)
     setFlipped(new Array(result.drawn.length).fill(false))
     setGlowClasses(new Array(result.drawn.length).fill(''))
+    setPeekGlows(new Array(result.drawn.length).fill(''))
     setFlash(result.isGodPack ? { type: 'godpack', key: Date.now() } : null)
     const newPacks = result.packsRemaining ?? packs - 1
     setPacks(newPacks)
@@ -155,6 +186,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
   }
 
   function flipCard(i: number) {
+    if (suppressClick.current.has(i)) { suppressClick.current.delete(i); return }
     if (flipped[i] || loading) return
     resetTilt(i)
     const rarity = rarityFromVariant(cards[i].variantName, cards[i].dropWeight)
@@ -217,6 +249,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     setCards([])
     setFlipped([])
     setGlowClasses([])
+    setPeekGlows([])
     setFlash(null)
     setPrize(null)
     setIsGodPack(false)
@@ -357,11 +390,14 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
       <div key={i} className="relative" style={{ animation: 'cardEntrance 0.55s cubic-bezier(0.34,1.56,0.64,1) both', animationDelay: `${i * 130}ms` }}>
         <div
           ref={(el) => { cardRefs.current[i] = el }}
-          className={`flip-card pack-card-size select-none ${flipped[i] ? 'flipped' : loading ? '' : 'cursor-pointer'} ${glowClasses[i] ?? ''}`}
+          className={`flip-card pack-card-size select-none ${flipped[i] ? 'flipped' : loading ? '' : 'cursor-pointer'} ${glowClasses[i] ?? ''} ${peekGlows[i] ?? ''}`}
           style={{ opacity: mythicFeatured !== null && mythicFeatured !== i ? 0.2 : 1, transition: 'opacity 0.3s ease' }}
           onClick={() => flipCard(i)}
           onMouseMove={(e) => handleMouseMove(e, i)}
-          onMouseLeave={(e) => handleMouseLeave(e, i)}
+          onMouseLeave={(e) => { handleMouseLeave(e, i); handlePointerUp(i) }}
+          onPointerDown={() => handlePointerDown(i)}
+          onPointerUp={() => handlePointerUp(i)}
+          onPointerCancel={() => handlePointerUp(i)}
         >
           {renderFlipInner(card, i)}
         </div>
