@@ -465,14 +465,9 @@ export default function CannonGame({
             <span className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#9a9488' }}>Round {roundDisplay}</span>
           </div>
         </div>
-        <div className="flex gap-2 mb-3 px-1">
-          {Array.from({ length: enemyHPMax }).map((_, i) => (
-            <div key={i} style={{
-              width: 10, height: 10, borderRadius: '50%',
-              background: i < enemyHP ? '#ef4444' : 'rgba(255,255,255,0.1)',
-              boxShadow: i < enemyHP ? '0 0 6px #ef444488' : 'none', transition: 'background 0.15s',
-            }} />
-          ))}
+        <div className="flex items-baseline gap-1 mb-3 px-1">
+          <span className="font-karla font-700" style={{ fontSize: '1rem', color: '#ef4444', transition: 'color 0.15s' }}>{enemyHP}</span>
+          <span className="font-karla font-400" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)' }}>/ {enemyHPMax} HP</span>
         </div>
         <motion.div animate={enemyHit ? { x: [0, -8, 6, -4, 0] } : { x: 0 }} transition={{ duration: 0.3 }}
           style={{ display: 'flex', justifyContent: 'flex-end', paddingRight: 8 }}>
@@ -638,14 +633,9 @@ export default function CannonGame({
             width: 80, height: 36, objectFit: 'contain',
             filter: playerHit ? 'brightness(2) saturate(0)' : 'none', transition: 'filter 0.15s',
           }} />
-          <div className="flex gap-2">
-            {Array.from({ length: playerHPMax }).map((_, i) => (
-              <div key={i} style={{
-                width: 10, height: 10, borderRadius: '50%',
-                background: i < playerHP ? '#38bdf8' : 'rgba(255,255,255,0.1)',
-                boxShadow: i < playerHP ? '0 0 6px #38bdf888' : 'none', transition: 'background 0.15s',
-              }} />
-            ))}
+          <div className="flex items-baseline gap-1">
+            <span className="font-karla font-700" style={{ fontSize: '1rem', color: '#38bdf8', transition: 'color 0.15s' }}>{playerHP}</span>
+            <span className="font-karla font-400" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)' }}>/ {playerHPMax} HP</span>
           </div>
         </motion.div>
 
