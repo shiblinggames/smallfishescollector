@@ -437,15 +437,43 @@ body {
 .reveal-glow-legendary { animation: reveal-glow-legendary 2.5s ease-out forwards; }
 .reveal-glow-mythic    { animation: reveal-glow-mythic    4s ease-out forwards; }
 
-/* ── Peek glows (hold-to-peek on card back) ── */
-@keyframes peek-glow-rare-in      { from { filter: drop-shadow(0 0 4px  rgba(96,165,250,0.2));  } to { filter: drop-shadow(0 0 18px rgba(96,165,250,0.9));  } }
-@keyframes peek-glow-epic-in      { from { filter: drop-shadow(0 0 4px  rgba(168,85,247,0.2));  } to { filter: drop-shadow(0 0 24px rgba(168,85,247,0.95)); } }
-@keyframes peek-glow-legendary-in { from { filter: drop-shadow(0 0 4px  rgba(255,210,60,0.2));  } to { filter: drop-shadow(0 0 30px rgba(255,210,60,1));    } }
-@keyframes peek-glow-mythic-in    { from { filter: drop-shadow(0 0 4px  rgba(255,56,56,0.2));   } to { filter: drop-shadow(0 0 36px rgba(255,56,56,0.95)) drop-shadow(0 0 18px rgba(255,180,180,0.6)); } }
-.peek-glow-rare      { animation: peek-glow-rare-in      0.22s ease-out forwards; }
-.peek-glow-epic      { animation: peek-glow-epic-in      0.22s ease-out forwards; }
-.peek-glow-legendary { animation: peek-glow-legendary-in 0.22s ease-out forwards; }
-.peek-glow-mythic    { animation: peek-glow-mythic-in    0.22s ease-out forwards; }
+/* ── Peek glows (hold-to-peek on card back) — glow builds while card jiggles ── */
+@keyframes peek-glow-rare-in {
+  0%   { filter: drop-shadow(0 0 2px  rgba(96,165,250,0.1));  transform: scale(1)    rotate(0deg);    }
+  18%  { filter: drop-shadow(0 0 22px rgba(96,165,250,1));    transform: scale(1.05) rotate(-2.5deg); }
+  36%  { filter: drop-shadow(0 0 18px rgba(96,165,250,0.9));  transform: scale(1.04) rotate(2deg);    }
+  54%  { filter: drop-shadow(0 0 18px rgba(96,165,250,0.9));  transform: scale(1.03) rotate(-1deg);   }
+  72%  { filter: drop-shadow(0 0 18px rgba(96,165,250,0.9));  transform: scale(1.02) rotate(0.4deg);  }
+  100% { filter: drop-shadow(0 0 18px rgba(96,165,250,0.9));  transform: scale(1.02) rotate(0deg);    }
+}
+@keyframes peek-glow-epic-in {
+  0%   { filter: drop-shadow(0 0 2px  rgba(168,85,247,0.1));  transform: scale(1)    rotate(0deg);    }
+  18%  { filter: drop-shadow(0 0 28px rgba(168,85,247,1));    transform: scale(1.05) rotate(-2.5deg); }
+  36%  { filter: drop-shadow(0 0 24px rgba(168,85,247,0.95)); transform: scale(1.04) rotate(2deg);    }
+  54%  { filter: drop-shadow(0 0 24px rgba(168,85,247,0.95)); transform: scale(1.03) rotate(-1deg);   }
+  72%  { filter: drop-shadow(0 0 24px rgba(168,85,247,0.95)); transform: scale(1.02) rotate(0.4deg);  }
+  100% { filter: drop-shadow(0 0 24px rgba(168,85,247,0.95)); transform: scale(1.02) rotate(0deg);    }
+}
+@keyframes peek-glow-legendary-in {
+  0%   { filter: drop-shadow(0 0 2px  rgba(255,210,60,0.1));  transform: scale(1)    rotate(0deg);    }
+  18%  { filter: drop-shadow(0 0 36px rgba(255,210,60,1));    transform: scale(1.06) rotate(-2.5deg); }
+  36%  { filter: drop-shadow(0 0 30px rgba(255,210,60,1));    transform: scale(1.05) rotate(2deg);    }
+  54%  { filter: drop-shadow(0 0 30px rgba(255,210,60,1));    transform: scale(1.03) rotate(-1deg);   }
+  72%  { filter: drop-shadow(0 0 30px rgba(255,210,60,1));    transform: scale(1.02) rotate(0.4deg);  }
+  100% { filter: drop-shadow(0 0 30px rgba(255,210,60,1));    transform: scale(1.02) rotate(0deg);    }
+}
+@keyframes peek-glow-mythic-in {
+  0%   { filter: drop-shadow(0 0 2px  rgba(255,56,56,0.1));   transform: scale(1)    rotate(0deg);    }
+  18%  { filter: drop-shadow(0 0 44px rgba(255,56,56,1)) drop-shadow(0 0 20px rgba(255,180,180,0.8)); transform: scale(1.07) rotate(-3deg);   }
+  36%  { filter: drop-shadow(0 0 36px rgba(255,56,56,0.95)) drop-shadow(0 0 18px rgba(255,180,180,0.6)); transform: scale(1.05) rotate(2.5deg); }
+  54%  { filter: drop-shadow(0 0 36px rgba(255,56,56,0.95)) drop-shadow(0 0 18px rgba(255,180,180,0.6)); transform: scale(1.03) rotate(-1deg);  }
+  72%  { filter: drop-shadow(0 0 36px rgba(255,56,56,0.95)) drop-shadow(0 0 18px rgba(255,180,180,0.6)); transform: scale(1.02) rotate(0.4deg); }
+  100% { filter: drop-shadow(0 0 36px rgba(255,56,56,0.95)) drop-shadow(0 0 18px rgba(255,180,180,0.6)); transform: scale(1.02) rotate(0deg);   }
+}
+.peek-glow-rare      { animation: peek-glow-rare-in      0.55s ease-out forwards; }
+.peek-glow-epic      { animation: peek-glow-epic-in      0.55s ease-out forwards; }
+.peek-glow-legendary { animation: peek-glow-legendary-in 0.55s ease-out forwards; }
+.peek-glow-mythic    { animation: peek-glow-mythic-in    0.55s ease-out forwards; }
 
 /* ── Screen flash overlay ── */
 @keyframes reveal-flash {
