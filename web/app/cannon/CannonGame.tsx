@@ -715,7 +715,11 @@ export default function CannonGame({
   const primeDodge = useCallback(() => {
     if (phaseRef.current !== 'playing') return
     if (dodgeCooldownRef.current || dodgePrimedRef.current || actionLockedRef.current) return
+    if (!playerReadyRef.current) return
     if (consecutiveDodgesRef.current >= 3) return  // must use another action first
+
+    playerActionElapsedRef.current = 0
+    setPlayerActionPct(0)
 
     consecutiveDodgesRef.current++
     dodgePrimedRef.current = true
@@ -1086,21 +1090,23 @@ export default function CannonGame({
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
             <motion.button
               onPointerDown={primeDodge}
-              whileTap={!dodgeCooldown && !dodgePrimed && !isActionLocked ? { scale: 0.88 } : {}}
+              whileTap={playerReady && !dodgeCooldown && !dodgePrimed && !isActionLocked ? { scale: 0.88 } : {}}
               animate={dodgePrimed ? { boxShadow: ['0 0 0px #38bdf800', '0 0 20px #38bdf8aa', '0 0 8px #38bdf866'] } : {}}
               transition={{ duration: 0.4, repeat: Infinity }}
               style={{
-                width: 82, height: 82, borderRadius: '50%', cursor: 'pointer',
+                width: 82, height: 82, borderRadius: '50%', cursor: playerReady && !dodgeCooldown && !dodgePrimed && !isActionLocked ? 'pointer' : 'default',
                 background: dodgePrimed    ? 'rgba(56,189,248,0.18)'
                           : isActionLocked ? 'rgba(239,68,68,0.07)'
                           : dodgeCooldown  ? 'rgba(255,255,255,0.03)'
+                          : !playerReady   ? 'rgba(255,255,255,0.03)'
                           :                 'rgba(56,189,248,0.10)',
                 border: `2px solid ${dodgePrimed    ? 'rgba(56,189,248,0.65)'
                           : isActionLocked ? 'rgba(239,68,68,0.22)'
                           : dodgeCooldown  ? 'rgba(255,255,255,0.1)'
+                          : !playerReady   ? 'rgba(255,255,255,0.1)'
                           :                 'rgba(56,189,248,0.35)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                opacity: isActionLocked || dodgeCooldown ? 0.4 : 1,
+                opacity: isActionLocked || dodgeCooldown || !playerReady ? 0.4 : 1,
                 transition: 'background 0.12s, border-color 0.12s, opacity 0.12s',
               }}>
               <p className="font-karla font-700" style={{
