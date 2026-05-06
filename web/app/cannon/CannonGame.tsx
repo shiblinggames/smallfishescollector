@@ -838,9 +838,9 @@ export default function CannonGame({
           display: 'flex', flexDirection: 'column', gap: '0.3rem',
           animation: critShake ? 'crit-shake 0.6s ease' : 'none',
         }}>
-          <div style={{ position: 'relative', height: 90, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden' }}>
+          <div style={{ position: 'relative', height: 230, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden', paddingBottom: 24 }}>
             <img src={enemyImage} alt={enemyName} style={{
-              width: '100%', height: 90, objectFit: 'contain', objectPosition: 'center',
+              width: '100%', height: 90, objectFit: 'contain', objectPosition: 'bottom',
               transform: 'scaleX(-1)',
               animation: enemySinking ? 'enemy-sink 0.9s ease-in forwards' : 'none',
               filter: isBoss ? 'hue-rotate(20deg) brightness(0.9)' : 'hue-rotate(180deg) brightness(0.8)',
