@@ -2677,7 +2677,7 @@ export default function FishingGame({
                 >
                   <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)' }}>Bait</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: outOfBait ? '#f87171' : baitAccent, lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
-                    {selectedBaitDef?.name ?? '—'}
+                    {selectedBaitDef?.name ?? '—'}{selectedBaitQty > 0 && <span style={{ opacity: 0.6, fontWeight: 400 }}> ×{selectedBaitQty}</span>}
                   </p>
                 </button>
 
