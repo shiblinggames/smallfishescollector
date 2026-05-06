@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { claimRaidLoot } from './actions'
 import { getShipSkin } from '@/lib/shipSkins'
@@ -339,6 +340,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
   shipSkins: string[]
   equippedItems: string[]
 }) {
+  const router            = useRouter()
   const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
   const shipFilter        = shipSkinDef?.filter ?? 'none'
   const dodgeBonus        = totalDodge * 5
@@ -1426,8 +1428,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
                             setLootClaimed(true)
                             const res = await claimRaidLoot(lootAmount, [BARNACLE_PETE_LOOT[slotFinal].id])
                             window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
-                            phaseRef.current = 'idle'
-                            setPhase('idle')
+                            router.push('/expeditions')
                           }}
                           whileTap={{ scale: 0.95 }}
                           disabled={lootClaimed}
