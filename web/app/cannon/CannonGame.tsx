@@ -24,22 +24,22 @@ interface BroadsideEnemy {
 const BROADSIDE_ENEMIES: Record<string, BroadsideEnemy> = {
   brute: {
     id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 6, maxDmg: 10,
-    actionMs: 1800,
+    actionMs: 3000,
     pattern: ['reload', 'fire', 'reload', 'fire'],
   },
   sniper: {
     id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 5, maxDmg: 22,
-    actionMs: 2200,
+    actionMs: 4000,
     pattern: ['reload', 'reload', 'reload', 'fire'],
   },
   corsair: {
     id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 8, maxDmg: 14,
-    actionMs: 1100,
+    actionMs: 2000,
     pattern: ['reload', 'fire', 'reload', 'fire'],
   },
   pete: {
     id: 'pete', name: 'Barnacle Pete', hpBase: 55, minDmg: 10, maxDmg: 20,
-    actionMs: 1500,
+    actionMs: 2800,
     pattern: ['reload', 'reload', 'fire', 'reload', 'fire'],
   },
 }
@@ -163,14 +163,6 @@ function Hitsplat({ text, color, big, animKey }: { text: string; color: string; 
   )
 }
 
-function StatTile({ label, value, color }: { label: string; value: string | number; color: string }) {
-  return (
-    <div style={{ textAlign: 'center', padding: '0.2rem 0' }}>
-      <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color, lineHeight: 1.1 }}>{value}</p>
-      <p className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.4rem', color: '#4a4845', marginTop: 2 }}>{label}</p>
-    </div>
-  )
-}
 
 function HPBar({ current, max, color }: { current: number; max: number; color: string }) {
   const pct = max > 0 ? (current / max) * 100 : 0
@@ -181,8 +173,8 @@ function HPBar({ current, max, color }: { current: number; max: number; color: s
         <p className="font-karla" style={{ fontSize: '0.38rem', color: '#4a4845' }}>HP</p>
         <p className="font-karla font-600" style={{ fontSize: '0.44rem', color: barColor }}>{current}/{max}</p>
       </div>
-      <div style={{ height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 3, transition: 'width 0.35s ease, background 0.35s ease' }} />
+      <div style={{ height: 7, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 4, transition: 'width 0.35s ease, background 0.35s ease' }} />
       </div>
     </div>
   )
@@ -576,10 +568,9 @@ export default function CannonGame({
   const fZones        = getFireZones(roundRef.current, critBonus)
   const isIncoming    = dodgeState === 'incoming'
   const isVolleyReady = charges === MAX_CHARGES
-  const curEnemy      = getEnemyForRound(roundRef.current)
+  const raidScore     = totalPower + totalDodge + totalFortune
 
-  const dodgeBarColor = dodgeWindowPct > 0.62 ? '#38bdf8' : dodgeWindowPct > 0.28 ? '#fbbf24' : '#ef4444'
-  // Action bar pulses red as it approaches 0 (enemy about to act)
+  const dodgeBarColor  = dodgeWindowPct > 0.62 ? '#38bdf8' : dodgeWindowPct > 0.28 ? '#fbbf24' : '#ef4444'
   const actionBarColor = enemyActionPct > 0.4 ? '#a78bfa' : enemyActionPct > 0.15 ? '#fbbf24' : '#ef4444'
 
   const fireBarZones = [
@@ -601,7 +592,7 @@ export default function CannonGame({
           flex: 1, background: 'rgba(96,165,250,0.05)',
           border: '1px solid rgba(96,165,250,0.15)',
           borderRadius: 14, padding: '0.65rem 0.55rem',
-          display: 'flex', flexDirection: 'column', gap: '0.35rem',
+          display: 'flex', flexDirection: 'column', gap: '0.3rem',
         }}>
           <div style={{ position: 'relative', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <img src={shipImageUrl} alt={shipName} style={{ width: '100%', height: 72, objectFit: 'contain', objectPosition: 'center' }} />
@@ -609,28 +600,42 @@ export default function CannonGame({
           </div>
           <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.6rem', color: '#f0ede8', lineHeight: 1.2 }}>{shipName}</p>
           <HPBar current={playerHP} max={playerHPMax} color="#60a5fa" />
-          {/* Player charges */}
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 2 }}>
-            {[0, 1, 2].map(i => (
-              <motion.div key={i}
-                animate={{ scale: i === charges - 1 ? [1, 1.4, 1] : 1 }}
-                transition={{ duration: 0.2 }}
-                style={{
-                  width: 7, height: 7, borderRadius: '50%',
-                  background: i < charges ? '#f0c040' : 'rgba(255,255,255,0.1)',
-                  boxShadow: i < charges ? '0 0 4px #f0c04088' : 'none',
-                  transition: 'background 0.2s',
-                }} />
-            ))}
+
+          {/* Player cannon charges */}
+          <div style={{
+            marginTop: 4,
+            background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.15)',
+            borderRadius: 8, padding: '0.4rem 0.35rem',
+          }}>
+            <p className="font-karla font-700 text-center" style={{ fontSize: '0.48rem', color: '#a07820', letterSpacing: '0.12em', marginBottom: 6 }}>CANNON</p>
+            <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+              {[0, 1, 2].map(i => (
+                <motion.div key={i}
+                  animate={{ scale: i === charges - 1 ? [1, 1.4, 1] : 1 }}
+                  transition={{ duration: 0.2 }}
+                  style={{
+                    width: 18, height: 18, borderRadius: '50%',
+                    background: i < charges ? '#f0c040' : 'rgba(255,255,255,0.07)',
+                    boxShadow: i < charges ? '0 0 8px #f0c04099, 0 0 16px #f0c04044' : 'none',
+                    border: `2px solid ${i < charges ? '#f0c040' : 'rgba(255,255,255,0.1)'}`,
+                  }} />
+              ))}
+            </div>
             {isVolleyReady && (
-              <span className="font-karla font-700" style={{ fontSize: '0.42rem', color: '#f0c040', marginLeft: 2 }}>VOLLEY</span>
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="font-karla font-700 text-center"
+                style={{ fontSize: '0.5rem', color: '#f0c040', marginTop: 5, letterSpacing: '0.1em', textShadow: '0 0 8px #f0c040' }}>
+                VOLLEY
+              </motion.p>
             )}
           </div>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.25rem', marginTop: '0.05rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.05rem' }}>
-            <StatTile label="PWR" value={totalPower   || '—'} color="#f87171" />
-            <StatTile label="NAV" value={totalDodge   || '—'} color="#60a5fa" />
-            <StatTile label="FTN" value={totalFortune || '—'} color="#f0c040" />
-            <StatTile label="SPD" value={shipSpeed}           color="#a78bfa" />
+
+          {/* Raid Score */}
+          <div style={{ marginTop: 2, borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 6 }}>
+            <p className="font-karla font-400 text-center" style={{ fontSize: '0.45rem', color: '#5a5855', letterSpacing: '0.08em', marginBottom: 2 }}>RAID SCORE</p>
+            <p className="font-karla font-700 text-center" style={{ fontSize: '0.88rem', color: raidScore > 0 ? '#f0ede8' : '#3a3835' }}>
+              {raidScore > 0 ? raidScore : '—'}
+            </p>
           </div>
         </div>
 
@@ -640,7 +645,7 @@ export default function CannonGame({
           background: isBoss ? 'rgba(249,115,22,0.06)' : 'rgba(167,139,250,0.05)',
           border: `1px solid ${isBoss ? 'rgba(249,115,22,0.22)' : 'rgba(167,139,250,0.15)'}`,
           borderRadius: 14, padding: '0.65rem 0.55rem',
-          display: 'flex', flexDirection: 'column', gap: '0.35rem',
+          display: 'flex', flexDirection: 'column', gap: '0.3rem',
         }}>
           <div className="flex items-center justify-between">
             <span className="font-karla font-400" style={{ fontSize: '0.44rem', color: '#4a4845' }}>Round {roundDisplay}</span>
@@ -671,56 +676,100 @@ export default function CannonGame({
           <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.6rem', color: '#f0ede8', lineHeight: 1.2 }}>{enemyName}</p>
           <HPBar current={enemyHP} max={enemyHPMax} color={isBoss ? '#f97316' : '#a78bfa'} />
 
-          {/* Enemy charges */}
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 2 }}>
-            {[0, 1, 2].map(i => (
-              <motion.div key={i}
-                animate={{ scale: i === enemyCharges - 1 ? [1, 1.5, 1] : 1 }}
-                transition={{ duration: 0.18 }}
-                style={{
-                  width: 7, height: 7, borderRadius: '50%',
-                  background: i < enemyCharges ? '#ef4444' : 'rgba(255,255,255,0.08)',
-                  boxShadow: i < enemyCharges ? '0 0 5px #ef444466' : 'none',
-                  transition: 'background 0.15s',
-                }} />
-            ))}
-          </div>
-
-          {/* Action bar (normal) or dodge drain bar (incoming) */}
-          <div style={{ marginTop: 2 }}>
-            {isIncoming ? (
-              <>
-                <div style={{ height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', width: `${dodgeWindowPct * 100}%`,
-                    background: dodgeBarColor, transition: 'background 0.25s', borderRadius: 3,
+          {/* Enemy cannon charges */}
+          <div style={{
+            marginTop: 4,
+            background: enemyCharges > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.02)',
+            border: `1px solid ${enemyCharges > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.07)'}`,
+            borderRadius: 8, padding: '0.4rem 0.35rem',
+            transition: 'all 0.3s',
+          }}>
+            <p className="font-karla font-700 text-center" style={{ fontSize: '0.48rem', color: enemyCharges > 0 ? '#ef4444' : '#3a3835', letterSpacing: '0.12em', marginBottom: 6, transition: 'color 0.3s' }}>CANNONS</p>
+            <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+              {[0, 1, 2].map(i => (
+                <motion.div key={i}
+                  animate={{ scale: i === enemyCharges - 1 ? [1, 1.5, 1] : 1 }}
+                  transition={{ duration: 0.18 }}
+                  style={{
+                    width: 18, height: 18, borderRadius: '50%',
+                    background: i < enemyCharges ? '#ef4444' : 'rgba(255,255,255,0.06)',
+                    boxShadow: i < enemyCharges ? '0 0 8px #ef444499, 0 0 16px #ef444433' : 'none',
+                    border: `2px solid ${i < enemyCharges ? '#ef4444' : 'rgba(255,255,255,0.08)'}`,
                   }} />
-                </div>
-                <motion.p
-                  initial={{ opacity: 0, y: -2 }} animate={{ opacity: 1, y: 0 }}
-                  className="font-karla font-700 text-center"
-                  style={{ fontSize: '0.52rem', color: dodgeBarColor, marginTop: 3, letterSpacing: '0.1em', textTransform: 'uppercase' }}
-                >
-                  {dodgeLocked ? '⚠ Exposed' : '⚡ Incoming!'}
-                </motion.p>
-              </>
-            ) : (
-              <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', width: `${enemyActionPct * 100}%`,
-                  background: actionBarColor, transition: 'background 0.3s', borderRadius: 3,
-                }} />
-              </div>
-            )}
+              ))}
+            </div>
           </div>
 
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.25rem', marginTop: '0.05rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.05rem' }}>
-            <StatTile label="HP"  value={enemyHPMax} color="#f87171" />
-            <StatTile label="DMG" value={`${curEnemy.minDmg}–${curEnemy.maxDmg}`} color="#a78bfa" />
+          {/* Enemy action bar */}
+          <div style={{ marginTop: 4 }}>
+            <p className="font-karla font-700" style={{ fontSize: '0.45rem', color: actionBarColor, letterSpacing: '0.14em', marginBottom: 3, transition: 'color 0.3s' }}>ACTION</p>
+            <div style={{ height: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', width: `${enemyActionPct * 100}%`,
+                background: actionBarColor,
+                boxShadow: enemyActionPct < 0.25 ? `0 0 8px ${actionBarColor}88` : 'none',
+                transition: 'background 0.3s, box-shadow 0.3s',
+                borderRadius: 4,
+              }} />
+            </div>
           </div>
         </div>
 
       </div>
+
+      {/* ── Dodge section ─────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {isIncoming && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.97 }}
+            style={{ width: '100%', background: 'rgba(8,6,4,0.4)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 12, padding: '0.55rem 0.65rem' }}>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+              <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#38bdf8', letterSpacing: '0.08em' }}>FULL</span>
+              <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: dodgeLocked ? '#ef4444' : '#f0ede8', letterSpacing: '0.06em' }}>
+                {dodgeLocked ? '⚠ EXPOSED' : '⚡ DODGE!'}
+              </span>
+              <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: '#ef4444', letterSpacing: '0.08em' }}>MISS</span>
+            </div>
+
+            <div style={{ position: 'relative', height: 28, borderRadius: 8, overflow: 'hidden' }}>
+              {/* Static zone backgrounds: left=miss, middle=half, right=full */}
+              <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
+                <div style={{ width: '28%', background: 'rgba(239,68,68,0.2)' }} />
+                <div style={{ width: '34%', background: 'rgba(251,191,36,0.15)' }} />
+                <div style={{ flex: 1, background: 'rgba(56,189,248,0.15)' }} />
+              </div>
+              {/* Zone dividers */}
+              <div style={{ position: 'absolute', top: 0, bottom: 0, left: '28%', width: 2, background: 'rgba(251,191,36,0.55)', zIndex: 2 }} />
+              <div style={{ position: 'absolute', top: 0, bottom: 0, left: '62%', width: 2, background: 'rgba(56,189,248,0.55)', zIndex: 2 }} />
+              {/* Drain fill */}
+              <div style={{
+                position: 'absolute', top: 0, bottom: 0, left: 0,
+                width: `${dodgeWindowPct * 100}%`,
+                background: dodgeBarColor,
+                boxShadow: `0 0 12px ${dodgeBarColor}88`,
+                transition: 'background 0.25s',
+                borderRadius: '6px 0 0 6px',
+                zIndex: 3,
+              }} />
+            </div>
+
+            <div style={{ display: 'flex', marginTop: 4 }}>
+              <span style={{ width: '28%', textAlign: 'center' }}>
+                <span className="font-karla" style={{ fontSize: '0.42rem', color: 'rgba(239,68,68,0.55)' }}>miss</span>
+              </span>
+              <span style={{ width: '34%', textAlign: 'center' }}>
+                <span className="font-karla" style={{ fontSize: '0.42rem', color: 'rgba(251,191,36,0.55)' }}>half</span>
+              </span>
+              <span style={{ flex: 1, textAlign: 'center' }}>
+                <span className="font-karla" style={{ fontSize: '0.42rem', color: 'rgba(56,189,248,0.55)' }}>full</span>
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Feedback ─────────────────────────────────────────────────────────── */}
       <div style={{ height: 22 }}>
@@ -903,14 +952,16 @@ export default function CannonGame({
         )}
       </AnimatePresence>
 
-      {/* Idle stat badges */}
-      {phase === 'idle' && crewCount > 0 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="flex gap-3 flex-wrap justify-center">
-          {totalPower   > 0 && <span style={{ fontSize: '0.6rem', color: '#f87171', fontFamily: 'var(--font-karla)' }}>PWR {totalPower}</span>}
-          {totalDodge   > 0 && <span style={{ fontSize: '0.6rem', color: '#60a5fa', fontFamily: 'var(--font-karla)' }}>NAV {totalDodge}</span>}
-          {totalFortune > 0 && <span style={{ fontSize: '0.6rem', color: '#f0c040', fontFamily: 'var(--font-karla)' }}>FTN {totalFortune}</span>}
-          <span style={{ fontSize: '0.6rem', color: '#a78bfa', fontFamily: 'var(--font-karla)' }}>SPD {shipSpeed}</span>
+      {/* Idle badge */}
+      {phase === 'idle' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-1">
+          {raidScore > 0 ? (
+            <span style={{ fontSize: '0.65rem', color: '#9a9488', fontFamily: 'var(--font-karla)' }}>
+              Raid Score: <span style={{ color: '#f0ede8', fontWeight: 700 }}>{raidScore}</span>
+            </span>
+          ) : (
+            <span style={{ fontSize: '0.6rem', color: '#4a4845', fontFamily: 'var(--font-karla)' }}>No crew assigned</span>
+          )}
         </motion.div>
       )}
 
