@@ -131,7 +131,7 @@ export async function checkAchievements(userId: string, trigger: AchievementTrig
       const keys: string[] = []
       if (needs('expedition_first')) keys.push('expedition_first')
       if (trigger.zone === 'coral_run'          && needs('expedition_coral_run'))  keys.push('expedition_coral_run')
-      if (trigger.zone === 'bertuna_triangle'    && needs('expedition_bertuna'))    keys.push('expedition_bertuna')
+      if (trigger.zone === 'cursed_straits'       && needs('expedition_bertuna'))    keys.push('expedition_bertuna')
       if (trigger.zone === 'sunken_reach'        && needs('expedition_sunken'))     keys.push('expedition_sunken')
       if (trigger.zone === 'davy_jones_locker'   && needs('expedition_davy_jones')) keys.push('expedition_davy_jones')
       await award(keys)

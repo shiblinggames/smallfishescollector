@@ -61,9 +61,10 @@ function formatCountdown(ms: number): string {
 
 // Percentage positions on voyagemap.png — tweak to reposition nodes
 const ROUTE_NODES: Record<VoyageRoute, { x: number; y: number }> = {
-  coastal: { x: 20, y: 17 },
-  open:    { x: 63, y: 37 },
-  deep:    { x: 28, y: 43 },
+  coastal:  { x: 20, y: 17 },
+  open:     { x: 63, y: 37 },
+  deep:     { x: 28, y: 43 },
+  triangle: { x: 75, y: 68 },
 }
 
 type DropEntry =
@@ -376,8 +377,8 @@ export default function DailyVoyagePanel({
                 {/* Clickable route nodes */}
                 {(() => {
                   const expeditionLevel = getLevelFromXP(expeditionXP)
-                  const ROUTE_MIN_LEVELS: Record<VoyageRoute, number> = { coastal: 1, open: 5, deep: 15 }
-                  const REC_SCORES: Record<VoyageRoute, number> = { coastal: 20, open: 45, deep: 75 }
+                  const ROUTE_MIN_LEVELS: Record<VoyageRoute, number> = { coastal: 1, open: 5, deep: 15, triangle: 25 }
+                  const REC_SCORES: Record<VoyageRoute, number> = { coastal: 20, open: 20, deep: 40, triangle: 50 }
                   return (Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map(routeKey => {
                     const rco = ROUTE_CONFIGS[routeKey]
                     const node = ROUTE_NODES[routeKey]
@@ -445,7 +446,7 @@ export default function DailyVoyagePanel({
                 {/* Overlay panel — fades up from the bottom when a route is selected */}
                 {selectedRoute && (() => {
                   const expeditionLevel = getLevelFromXP(expeditionXP)
-                  const ROUTE_MIN_LEVELS_OVL: Record<VoyageRoute, number> = { coastal: 1, open: 5, deep: 15 }
+                  const ROUTE_MIN_LEVELS_OVL: Record<VoyageRoute, number> = { coastal: 1, open: 5, deep: 15, triangle: 25 }
                   const minLevel = ROUTE_MIN_LEVELS_OVL[selectedRoute]
                   const routeLocked = expeditionLevel < minLevel
                   const rco = ROUTE_CONFIGS[selectedRoute]
@@ -485,7 +486,7 @@ export default function DailyVoyagePanel({
 
                       {/* Stats row */}
                       {stats && (() => {
-                        const REC: Record<string, number> = { coastal: 20, open: 20, deep: 40 }
+                        const REC: Record<string, number> = { coastal: 20, open: 20, deep: 40, triangle: 50 }
                         const rec = REC[selectedRoute] ?? 0
                         const crewScore = stats.power + stats.dodge + Math.round(stats.fortune * 0.5)
                         const met = crewScore >= rec

@@ -239,6 +239,8 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
       ? ['peaceful', 'discovery', 'discovery', 'weather', 'peaceful']
       : route === 'deep'
       ? ['discovery', 'encounter', 'danger', 'discovery', 'encounter', 'danger', 'weather', 'discovery', 'peaceful']
+      : route === 'triangle'
+      ? ['encounter', 'danger', 'discovery', 'encounter', 'danger', 'weather', 'encounter', 'danger', 'discovery', 'discovery']
       : ['peaceful', 'discovery', 'encounter', 'discovery', 'peaceful', 'discovery', 'weather', 'danger']
 
   // Light shuffle — swap adjacent pairs randomly

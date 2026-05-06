@@ -1,6 +1,6 @@
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type ZoneKey = 'coral_run' | 'bertuna_triangle' | 'sunken_reach' | 'davy_jones_locker'
+export type ZoneKey = 'coral_run' | 'cursed_straits' | 'sunken_reach' | 'davy_jones_locker'
 export type ExpeditionStatus = 'active' | 'completed' | 'failed'
 export type CombatAction = 'reload' | 'fire' | 'fire_heavy' | 'defend'
 export type NodeType = 'fight' | 'event' | 'shop' | 'boss'
@@ -620,8 +620,8 @@ export const ZONES: Record<ZoneKey, ZoneConfig> = {
     itemDropPool: ['powder_keg', 'patched_hull', 'anchor_chain', 'bait_barrel', 'lucky_lure'],
     itemDropChance: 0.30,
   },
-  bertuna_triangle: {
-    name: 'The Bertuna Triangle',
+  cursed_straits: {
+    name: 'The Cursed Straits',
     icon: '🧭',
     description: 'The stretch where ships go missing.',
     requiredShipTier: 2,
@@ -682,7 +682,7 @@ export const ZONES: Record<ZoneKey, ZoneConfig> = {
   },
 }
 
-export const ZONE_ORDER: ZoneKey[] = ['coral_run', 'bertuna_triangle', 'sunken_reach', 'davy_jones_locker']
+export const ZONE_ORDER: ZoneKey[] = ['coral_run', 'cursed_straits', 'sunken_reach', 'davy_jones_locker']
 
 // ── Run items (dropped mid-expedition, applied immediately, not kept) ─────────
 

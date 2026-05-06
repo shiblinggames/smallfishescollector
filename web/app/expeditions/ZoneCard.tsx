@@ -19,7 +19,7 @@ const ZONE_THEME: Record<ZoneKey, {
     border: 'rgba(74,222,128,0.18)',
     glow: 'rgba(74,222,128,0.06)',
   },
-  bertuna_triangle: {
+  cursed_straits: {
     label: 'Intermediate',
     color: '#f0c040',
     dim: 'rgba(240,192,64,0.5)',

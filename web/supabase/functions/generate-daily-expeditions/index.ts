@@ -9,8 +9,8 @@ const ZONES = {
     eventTypes: ['rival_pirates', 'mild_storm', 'merchant_vessel', 'stranded_ship', 'fog', 'fishing_spot', 'hidden_cove'],
     crisisTypes: ['storm', 'sea_creature'],
   },
-  bertuna_triangle: {
-    name: 'The Bertuna Triangle',
+  cursed_straits: {
+    name: 'The Cursed Straits',
     description: 'The stretch where ships go missing. Rival pirates, sea fog, cursed winds.',
     length: 6,
     eventTypes: ['rival_pirates', 'ghost_ship', 'whirlpool', 'storm', 'sea_creature', 'cursed_cargo', 'merchant_vessel'],

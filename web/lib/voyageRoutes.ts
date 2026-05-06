@@ -1,6 +1,6 @@
 export type VoyageEventType = 'discovery' | 'encounter' | 'danger' | 'weather' | 'peaceful'
 export type VoyageEventOutcome = 'success' | 'failure' | 'neutral'
-export type VoyageRoute = 'coastal' | 'open' | 'deep'
+export type VoyageRoute = 'coastal' | 'open' | 'deep' | 'triangle'
 
 export interface RouteConfig {
   name: string
@@ -43,6 +43,16 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     crewLossScale: 0.5,
     gemScale: 1.5,
     baseDoubloons: 200,
+  },
+  triangle: {
+    name: 'The Bertuna Triangle',
+    tagline: 'Ships go missing here. Few come back the same.',
+    riskLabel: 'Extreme',
+    color: '#f43f5e',
+    payoutScale: 2.2,
+    crewLossScale: 1.0,
+    gemScale: 2.2,
+    baseDoubloons: 380,
   },
 }
 

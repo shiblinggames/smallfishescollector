@@ -41,7 +41,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   // Expedition
   { key: 'expedition_first',       name: 'Set Sail',            description: 'Complete your first expedition',            category: 'expedition', icon: 'ship'   },
   { key: 'expedition_coral_run',   name: 'Coral Navigator',     description: 'Complete the Coral Run',                    category: 'expedition', icon: 'ship'   },
-  { key: 'expedition_bertuna',     name: 'Bertuna Drifter',     description: 'Navigate the Bertuna Triangle',             category: 'expedition', icon: 'ship'   },
+  { key: 'expedition_bertuna',     name: 'Cursed Straits',      description: 'Navigate the Cursed Straits',               category: 'expedition', icon: 'ship'   },
   { key: 'expedition_sunken',      name: 'Sunken Reach Diver',  description: 'Brave the Sunken Reach',                    category: 'expedition', icon: 'ship'   },
   { key: 'expedition_davy_jones',  name: "Davy Jones' Victor",  description: "Survive Davy Jones' Locker",                category: 'expedition', icon: 'trophy' },
 
