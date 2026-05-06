@@ -87,6 +87,11 @@ const ROUTE_DROPS: Record<VoyageRoute, DropEntry[]> = {
     { kind: 'skin',    id: 'coral_spire',    rate: '~5%' },
     { kind: 'bait',    type: 'golden',       rate: '~8%' },
   ],
+  triangle: [
+    { kind: 'special', id: 'tide_turner',    rate: '~4%' },
+    { kind: 'skin',    id: 'coral_spire',    rate: '~8%' },
+    { kind: 'bait',    type: 'golden',       rate: '~12%' },
+  ],
 }
 
 function computeRouteEstimate(
@@ -121,7 +126,7 @@ function computeRouteEstimate(
   }
 
   // XP estimate — same event counts, best/worst case outcomes
-  const XP_BASE: Record<VoyageRoute, number> = { coastal: 30, open: 55, deep: 90 }
+  const XP_BASE: Record<VoyageRoute, number> = { coastal: 30, open: 55, deep: 90, triangle: 140 }
   const xpBase      = XP_BASE[route]
   const xpCrewBonus = crewCount * 12
   const xpMin = xpBase + xpCrewBonus + enc * 5  + dng * 3  + dis * 4
