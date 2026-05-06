@@ -23,6 +23,8 @@ function formatDate(iso: string): string {
 
 function VoyageRow({ v, defaultOpen }: { v: VoyageHistoryEntry; defaultOpen: boolean }) {
   const rc = ROUTE_CONFIGS[v.route as VoyageRoute]
+  const [open, setOpen] = useState(defaultOpen)
+  const hasLog = !!v.captains_log
 
   return (
     <div style={{
@@ -32,10 +34,12 @@ function VoyageRow({ v, defaultOpen }: { v: VoyageHistoryEntry; defaultOpen: boo
       overflow: 'hidden',
     }}>
       <div
+        onClick={hasLog ? () => setOpen(o => !o) : undefined}
         style={{
           width: '100%',
           padding: '0.55rem 0.75rem',
           display: 'flex', alignItems: 'center', gap: '0.6rem',
+          cursor: hasLog ? 'pointer' : 'default',
         }}
       >
         <div style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: rc?.color ?? '#7a6848' }} />
@@ -61,9 +65,19 @@ function VoyageRow({ v, defaultOpen }: { v: VoyageHistoryEntry; defaultOpen: boo
               -{v.crew_lost.length} crew
             </span>
           )}
+          {hasLog && (
+            <span style={{ fontSize: '0.55rem', color: '#4a3f28', marginLeft: 2, transform: open ? 'rotate(180deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s' }}>▼</span>
+          )}
         </div>
-
       </div>
+
+      {open && v.captains_log && (
+        <div style={{ padding: '0 0.75rem 0.65rem', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a7a5a', lineHeight: 1.6, fontStyle: 'italic', paddingTop: '0.5rem' }}>
+            {v.captains_log}
+          </p>
+        </div>
+      )}
     </div>
   )
 }
