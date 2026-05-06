@@ -81,7 +81,7 @@ function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: numb
   if (!res || res === 'miss') return 0
   const powerMax = Math.max(shipMinDamage, Math.floor(totalPower / 4))
   const ranges: Record<string, [number, number]> = {
-    critical: [shipMinDamage, powerMax * 2],
+    critical: [shipMinDamage * 2, Math.round(powerMax * 1.5)],
     hit:      [shipMinDamage, powerMax],
     graze:    [1, Math.max(1, Math.ceil(powerMax * 0.4))],
   }
@@ -672,7 +672,7 @@ export default function CannonGame({
               {shipMinDamage}–{powerMax}
             </p>
             <p className="font-karla font-400 text-center" style={{ fontSize: '0.42rem', color: '#5a5855', marginTop: 1 }}>
-              crit {shipMinDamage}–{powerMax * 2}
+              crit {shipMinDamage * 2}–{Math.round(powerMax * 1.5)}
             </p>
           </div>
         </div>
@@ -1009,7 +1009,7 @@ export default function CannonGame({
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-1">
           <span style={{ fontSize: '0.65rem', color: '#9a9488', fontFamily: 'var(--font-karla)' }}>
             DMG <span style={{ color: '#f0ede8', fontWeight: 700 }}>{shipMinDamage}–{powerMax}</span>
-            <span style={{ color: '#5a5855' }}> · crit {shipMinDamage}–{powerMax * 2}</span>
+            <span style={{ color: '#5a5855' }}> · crit {shipMinDamage * 2}–{Math.round(powerMax * 1.5)}</span>
           </span>
         </motion.div>
       )}
