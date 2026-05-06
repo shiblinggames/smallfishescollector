@@ -26,8 +26,8 @@ const RARITY_COLOR: Record<RaidLootItem['rarity'], string> = {
   legendary: '#f0c040',
 }
 const BARNACLE_PETE_LOOT: RaidLootItem[] = [
-  { id: 'doubloons_300', label: '+300 ⟡',       image: null, emoji: '🪙', rarity: 'common',   weight: 35 },
-  { id: 'doubloons_600', label: '+600 ⟡',       image: null, emoji: '💰', rarity: 'uncommon', weight: 25 },
+  { id: 'doubloons_300', label: '+300 ⟡',       image: '/smallpile.png',   emoji: '🪙', rarity: 'common',   weight: 35 },
+  { id: 'doubloons_600', label: '+600 ⟡',       image: '/dailybonus.png',  emoji: '💰', rarity: 'uncommon', weight: 25 },
   { id: 'gems_3',        label: '3 Gems',        image: null, emoji: '💎', rarity: 'uncommon', weight: 20 },
   { id: 'gems_5',        label: '5 Gems',        image: null, emoji: '💎', rarity: 'rare',     weight: 12 },
   { id: 'pack',          label: '1 Pack',        image: null, emoji: '📦', rarity: 'rare',     weight: 10 },
@@ -394,9 +394,9 @@ export default function RaidGame({ equippedShipSkin, shipSkins,
   const [lootBase, setLootBase]         = useState(0)
   const [lootOpened, setLootOpened]     = useState(false)
   const [lootClaimed, setLootClaimed]   = useState(false)
-  const [slotDisplays, setSlotDisplays] = useState([0, 0, 0])
-  const [slotLanded, setSlotLanded]     = useState([false, false, false])
-  const [slotFinals, setSlotFinals]     = useState([0, 0, 0])
+  const [slotDisplay, setSlotDisplay] = useState(0)
+  const [slotLanded, setSlotLanded]   = useState(false)
+  const [slotFinal, setSlotFinal]     = useState(0)
   const slotIntervalsRef = useRef<ReturnType<typeof setInterval>[]>([])
   const [raidTimeSecs, setRaidTimeSecs] = useState(0)
   const [raidTier, setRaidTier]         = useState<{ mult: number; label: string; color: string } | null>(null)
@@ -655,23 +655,19 @@ export default function RaidGame({ equippedShipSkin, shipSkins,
   // Slot machine spin — triggers when loot crate is opened
   useEffect(() => {
     if (!lootOpened) return
-    const finals = [0, 1, 2].map(() => rollLootIndex())
-    setSlotFinals(finals)
-    setSlotLanded([false, false, false])
-    const intervals = [0, 1, 2].map(i =>
-      setInterval(() => {
-        setSlotDisplays(prev => { const n = [...prev]; n[i] = (n[i] + 1) % BARNACLE_PETE_LOOT.length; return n })
-      }, 80)
-    )
-    slotIntervalsRef.current = intervals
-    ;[1200, 1900, 2600].forEach((delay, i) => {
-      setTimeout(() => {
-        clearInterval(intervals[i])
-        setSlotDisplays(prev => { const n = [...prev]; n[i] = finals[i]; return n })
-        setSlotLanded(prev => { const n = [...prev]; n[i] = true; return n })
-      }, delay)
-    })
-    return () => intervals.forEach(clearInterval)
+    const final = rollLootIndex()
+    setSlotFinal(final)
+    setSlotLanded(false)
+    const interval = setInterval(() => {
+      setSlotDisplay(prev => (prev + 1) % BARNACLE_PETE_LOOT.length)
+    }, 80)
+    slotIntervalsRef.current = [interval]
+    setTimeout(() => {
+      clearInterval(interval)
+      setSlotDisplay(final)
+      setSlotLanded(true)
+    }, 1200)
+    return () => clearInterval(interval)
   }, [lootOpened])
 
   // Raid timer — ticks through playing+clear, triggers time-expired at 5:00
@@ -1361,55 +1357,51 @@ export default function RaidGame({ equippedShipSkin, shipSkins,
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
 
-                  {/* Slot reels */}
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    {[0, 1, 2].map(i => {
-                      const item    = BARNACLE_PETE_LOOT[slotDisplays[i]]
-                      const landed  = slotLanded[i]
-                      const color   = RARITY_COLOR[item.rarity]
-                      return (
-                        <motion.div
-                          key={i}
-                          animate={landed ? { scale: [1, 1.14, 1] } : {}}
-                          transition={{ duration: 0.3, ease: 'easeOut' }}
-                          style={{
-                            width: 90, height: 108,
-                            border: `2px solid ${landed ? color : 'rgba(255,255,255,0.12)'}`,
-                            borderRadius: 14,
-                            background: landed ? `${color}1a` : 'rgba(0,0,0,0.45)',
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
-                            overflow: 'hidden',
-                            transition: 'border-color 0.2s, background 0.2s',
-                            boxShadow: landed ? `0 0 18px ${color}44` : 'none',
-                          }}>
-                          {item.id === 'corsair_black' ? (
-                            <img src={shipImageUrl} alt={item.label}
-                              style={{ width: 54, height: 54, objectFit: 'contain', objectPosition: 'bottom',
-                                filter: !landed ? 'blur(1.5px) brightness(0.3)' : getShipSkin('corsair_black')!.filter,
-                                transition: 'filter 0.15s' }} />
-                          ) : item.image ? (
-                            <img src={item.image} alt={item.label}
-                              style={{ width: 54, height: 54, objectFit: 'contain',
-                                filter: !landed ? 'blur(1.5px) brightness(0.6)' : 'none',
-                                transition: 'filter 0.15s' }} />
-                          ) : (
-                            <span style={{ fontSize: '2.2rem',
-                              filter: !landed ? 'blur(1.5px) brightness(0.6)' : 'none',
-                              transition: 'filter 0.15s' }}>{item.emoji}</span>
-                          )}
-                          <p className="font-karla font-700" style={{
-                            fontSize: '0.6rem', color: landed ? color : 'transparent',
-                            textAlign: 'center', lineHeight: 1.2,
-                            transition: 'color 0.2s',
-                          }}>{item.label}</p>
-                        </motion.div>
-                      )
-                    })}
-                  </div>
+                  {/* Single loot roll */}
+                  {(() => {
+                    const item  = BARNACLE_PETE_LOOT[slotDisplay]
+                    const color = RARITY_COLOR[item.rarity]
+                    return (
+                      <motion.div
+                        animate={slotLanded ? { scale: [1, 1.18, 1] } : {}}
+                        transition={{ duration: 0.35, ease: 'easeOut' }}
+                        style={{
+                          width: 120, height: 144,
+                          border: `2px solid ${slotLanded ? color : 'rgba(255,255,255,0.12)'}`,
+                          borderRadius: 18,
+                          background: slotLanded ? `${color}1a` : 'rgba(0,0,0,0.45)',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
+                          overflow: 'hidden',
+                          transition: 'border-color 0.2s, background 0.2s',
+                          boxShadow: slotLanded ? `0 0 28px ${color}55` : 'none',
+                        }}>
+                        {item.id === 'corsair_black' ? (
+                          <img src={shipImageUrl} alt={item.label}
+                            style={{ width: 70, height: 70, objectFit: 'contain', objectPosition: 'bottom',
+                              filter: !slotLanded ? 'blur(1.5px) brightness(0.3)' : getShipSkin('corsair_black')!.filter,
+                              transition: 'filter 0.15s' }} />
+                        ) : item.image ? (
+                          <img src={item.image} alt={item.label}
+                            style={{ width: 70, height: 70, objectFit: 'contain',
+                              filter: !slotLanded ? 'blur(1.5px) brightness(0.6)' : 'none',
+                              transition: 'filter 0.15s' }} />
+                        ) : (
+                          <span style={{ fontSize: '2.8rem',
+                            filter: !slotLanded ? 'blur(1.5px) brightness(0.6)' : 'none',
+                            transition: 'filter 0.15s' }}>{item.emoji}</span>
+                        )}
+                        <p className="font-karla font-700" style={{
+                          fontSize: '0.72rem', color: slotLanded ? color : 'transparent',
+                          textAlign: 'center', lineHeight: 1.2,
+                          transition: 'color 0.2s',
+                        }}>{item.label}</p>
+                      </motion.div>
+                    )
+                  })()}
 
-                  {/* Doubloon total + claim — appears after all slots land */}
+                  {/* Doubloon total + claim — appears after slot lands */}
                   <AnimatePresence>
-                    {slotLanded.every(Boolean) && (
+                    {slotLanded && (
                       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
                         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                         <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0c040', textShadow: '0 0 20px #f0c04088' }}>
@@ -1422,7 +1414,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins,
                           onPointerDown={async () => {
                             if (lootClaimed) return
                             setLootClaimed(true)
-                            const res = await claimRaidLoot(lootAmount, slotFinals.map(i => BARNACLE_PETE_LOOT[i].id))
+                            const res = await claimRaidLoot(lootAmount, [BARNACLE_PETE_LOOT[slotFinal].id])
                             window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
                             phaseRef.current = 'idle'
                             setPhase('idle')
