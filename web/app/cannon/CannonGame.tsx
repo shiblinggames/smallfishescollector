@@ -254,7 +254,7 @@ function TimingBar({ indicatorRef, flashRef, zoneRef, hitHalfW, critHalfW }: {
             animate={{ opacity: [0.4, 0.75, 0.4] }}
             transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
             style={{
-              position: 'absolute', top: '18%', bottom: '18%',
+              position: 'absolute', top: '3px', bottom: '3px',
               left: `${critLeft}%`, width: `${critVisualPct}%`,
               background: 'rgba(251,191,36,0.5)',
               borderRadius: 2,
