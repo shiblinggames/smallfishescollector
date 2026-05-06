@@ -96,6 +96,17 @@ export default function ShipRunGame({ shipImageUrl, shipName }: { shipImageUrl: 
     img.onload = () => { shipImg.current = img }
   }, [shipImageUrl])
 
+  const dpr = useRef(1)
+
+  // Size the backing store for device pixel ratio once on mount
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    dpr.current = window.devicePixelRatio || 1
+    canvas.width  = CW * dpr.current
+    canvas.height = CH * dpr.current
+  }, [])
+
   const startGame = useCallback(() => {
     shipLane.current   = 1
     shipY.current      = (1 + 0.5) * LANE_H - SHIP_H / 2
@@ -131,6 +142,8 @@ export default function ShipRunGame({ shipImageUrl, shipName }: { shipImageUrl: 
     const rawCtx = canvas.getContext('2d')
     if (!rawCtx) return
     const ctx: CanvasRenderingContext2D = rawCtx
+    // Restore DPR scale (setTransform replaces rather than stacks)
+    ctx.setTransform(dpr.current, 0, 0, dpr.current, 0, 0)
 
     function spawnObstacle() {
       const lane  = Math.floor(Math.random() * LANES)
