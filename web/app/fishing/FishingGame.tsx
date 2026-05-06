@@ -1992,6 +1992,7 @@ export default function FishingGame({
     if ('error' in result) return
     setClaimedZones(prev => ({ ...prev, [zone]: true }))
     setDoubloons(result.doubloons)
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.doubloons }))
     setZoneClaimToast({ zone, earned: result.earned })
     setTimeout(() => setZoneClaimToast(null), 4000)
   }

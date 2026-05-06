@@ -103,10 +103,10 @@ const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; packs?: n
 export async function claimRaidLoot(
   baseDoubloons: number,
   rolledItemIds: string[],
-): Promise<{ newShipSkins: string[] }> {
+): Promise<{ newShipSkins: string[]; newDoubloonTotal: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { newShipSkins: [] }
+  if (!user) return { newShipSkins: [], newDoubloonTotal: 0 }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
@@ -140,5 +140,5 @@ export async function claimRaidLoot(
     .update({ doubloons, gems, packs_available: packs, ship_skins: newSkins, equipped_ship_skin: equippedSkin })
     .eq('id', user.id)
 
-  return { newShipSkins: newSkins.filter(s => !ownedSkins.includes(s)) }
+  return { newShipSkins: newSkins.filter(s => !ownedSkins.includes(s)), newDoubloonTotal: doubloons }
 }

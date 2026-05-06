@@ -836,7 +836,10 @@ export default function RaidGame({ equippedShipSkin, shipSkins,
   const retreat = useCallback(async () => {
     if (isClaiming) return
     setIsClaiming(true)
-    try { await claimRaidLoot(potRef.current, []) } finally { setIsClaiming(false) }
+    try {
+      const res = await claimRaidLoot(potRef.current, [])
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+    } finally { setIsClaiming(false) }
     setBest(prev => Math.max(prev, streakRef.current))
     phaseRef.current = 'idle'
     setPhase('idle')
@@ -1413,7 +1416,8 @@ export default function RaidGame({ equippedShipSkin, shipSkins,
                           onPointerDown={async () => {
                             if (lootClaimed) return
                             setLootClaimed(true)
-                            await claimRaidLoot(lootAmount, slotFinals.map(i => BARNACLE_PETE_LOOT[i].id))
+                            const res = await claimRaidLoot(lootAmount, slotFinals.map(i => BARNACLE_PETE_LOOT[i].id))
+                            window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
                             phaseRef.current = 'idle'
                             setPhase('idle')
                           }}

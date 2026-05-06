@@ -43,6 +43,7 @@ export default async function TavernPage() {
   const chartCompleted = hasContest && !!chartState.progress.completed_at
   const chartTilesCharted = hasContest ? chartState.progress.path_index : 0
   const chartPathLength = hasContest ? chartState.pathLength : 0
+  const chartMovesLeft = hasContest ? chartState.movesAvailable : 0
 
 
   const bartenderLines = [
@@ -131,7 +132,8 @@ export default async function TavernPage() {
               title="Chart the Course"
               statusText={
                 chartCompleted ? 'Voyage complete ✓' :
-                chartTilesCharted > 0 ? `${chartTilesCharted} / ${chartPathLength} tiles charted` :
+                chartTilesCharted > 0 ? `${chartTilesCharted} / ${chartPathLength} tiles · ${chartMovesLeft} move${chartMovesLeft === 1 ? '' : 's'} left` :
+                chartMovesLeft > 0 ? `${chartMovesLeft} move${chartMovesLeft === 1 ? '' : 's'} available` :
                 'Chart a path from sea to shore'
               }
               info={[]}
