@@ -1555,6 +1555,45 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
         </div>
       )}
 
+      {/* ── First-time tutorial ── */}
+      {showTutorial && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+          <div style={{ width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div>
+              <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#5a5248', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 4 }}>Before you sail in</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8' }}>How this works</p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {[
+                { icon: '🎯', title: 'Hit the zone', body: "There's a moving marker on a track. Fire when it lines up with the glowing zone. Miss and your cannon jams for a moment." },
+                { icon: '🔁', title: 'Reload between shots', body: 'Your cannon starts empty. Hit Reload to load a charge — you can hold up to 3 at once.' },
+                { icon: '💥', title: 'Volley hits hard', body: 'Load all 3 charges and the Fire button becomes VOLLEY. That\'s double damage in one shot.' },
+                { icon: '🛡️', title: 'Dodge when Pete fires', body: "Watch his action bar. When it fills up he's shooting. Hit Dodge before he fires and you'll shrug off most of it." },
+                { icon: '☠️', title: 'Boss rounds', body: "Every 7th round Pete gets aggressive — his zone moves faster and changes direction. Stay focused." },
+                { icon: '⏱️', title: 'You have 5 minutes', body: "Clock runs from the moment you open fire. Run out of time and the plunder crate is still yours — just no bonus." },
+              ].map(({ icon, title, body }) => (
+                <div key={title} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '1.1rem', lineHeight: 1, marginTop: 2, flexShrink: 0 }}>{icon}</span>
+                  <div>
+                    <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#e0ddd8', marginBottom: 2 }}>{title}</p>
+                    <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.5 }}>{body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <motion.button
+              onPointerDown={dismissTutorial}
+              whileTap={{ scale: 0.97 }}
+              className="font-karla font-700"
+              style={{ marginTop: '0.5rem', padding: '14px', borderRadius: 14, cursor: 'pointer', background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', color: '#f0c040', fontSize: '0.95rem', letterSpacing: '0.06em', width: '100%' }}>
+              Got it — Open Fire
+            </motion.button>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes hitsplat-pop {
           0%   { opacity: 0; transform: translateX(-50%) translateY(-10%) scale(0.1) rotate(-18deg); }
