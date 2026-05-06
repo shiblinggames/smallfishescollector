@@ -86,16 +86,16 @@ export default async function TavernPage() {
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       {!profile?.has_seen_welcome && <WelcomeModal />}
       <main className="min-h-screen">
+        <div className="px-4 max-w-lg mx-auto pt-6 pb-16 flex flex-col gap-6" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* Recruit Crew — top feature card */}
-        <div className="px-6 max-w-4xl mx-auto pt-8 pb-4" style={{ position: 'relative', zIndex: 1 }}>
+        <div>
           <RecruitCard packsAvailable={profile?.packs_available ?? 0} />
         </div>
 
-        <div className="px-6 max-w-4xl mx-auto mb-2" style={{ position: 'relative', zIndex: 1 }}>
-          <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784]" style={{ fontSize: '0.72rem' }}>Today</p>
-        </div>
-        <div className="px-6 flex flex-col gap-3 pb-6 max-w-4xl mx-auto" style={{ position: 'relative', zIndex: 1 }}>
+        <div>
+          <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Today</p>
+          <div className="flex flex-col gap-3">
           <GameCard
             href="/tavern/daily-bonus"
             eyebrow="Daily"
@@ -119,11 +119,12 @@ export default async function TavernPage() {
             art={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/Hammerhead_Shark.png`}
             accent="#60a5fa"
           />
+          </div>
         </div>
 
         {hasContest && (
-          <div className="px-6 max-w-4xl mx-auto mb-6" style={{ position: 'relative', zIndex: 1 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-2" style={{ fontSize: '0.72rem' }}>Contest</p>
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Contest</p>
             <GameCard
               href="/charting"
               eyebrow="Contest"
@@ -143,10 +144,9 @@ export default async function TavernPage() {
           </div>
         )}
 
-        <div className="px-6 max-w-4xl mx-auto mb-2 mt-4" style={{ position: 'relative', zIndex: 1 }}>
-          <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784]" style={{ fontSize: '0.72rem' }}>Games</p>
-        </div>
-        <div className="px-6 flex flex-col gap-3 pb-6 max-w-4xl mx-auto" style={{ position: 'relative', zIndex: 1 }}>
+        <div>
+          <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Games</p>
+          <div className="flex flex-col gap-3">
           <GameCard
             href="/tavern/crown-and-anchor"
             eyebrow="Game"
@@ -169,9 +169,10 @@ export default async function TavernPage() {
             art="/fishslots.png"
             accent="#a78bfa"
           />
+          </div>
         </div>
 
-        <div className="px-6 pb-16 text-center" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.75rem' }}>
             Enjoying the game?{' '}
             <Link href="/marketplace" className="text-[#f0c040] hover:text-[#f5d060] transition-colors">
@@ -184,6 +185,8 @@ export default async function TavernPage() {
               Contact us
             </Link>
           </p>
+        </div>
+
         </div>
       </main>
     </>
