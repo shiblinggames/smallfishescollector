@@ -95,12 +95,7 @@ export default function VoyageHistory({ voyages }: Props) {
 
   return (
     <div style={{ marginTop: '0.85rem' }}>
-      <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.68rem', color: '#7a6848', marginBottom: '0.6rem' }}>
-        Recent Voyages
-      </p>
-
-      {/* Most recent — log open by default */}
-      <VoyageRow v={latest} defaultOpen={true} />
+      <VoyageRow v={latest} defaultOpen={false} />
 
       {/* Older entries — behind a toggle */}
       {older.length > 0 && (

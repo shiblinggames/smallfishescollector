@@ -174,6 +174,7 @@ export default function DailyVoyagePanel({
   const [liveCrewIds, setLiveCrewIds] = useState<number[]>(savedCrewVariantIds)
   const [expandedDropKey, setExpandedDropKey] = useState<string | null>(null)
   const [infoOpen, setInfoOpen] = useState(false)
+  const [logExpanded, setLogExpanded] = useState(false)
   const [xpEarned, setXpEarned] = useState(0)
   const [levelUp, setLevelUp] = useState<{ from: number; to: number } | null>(null)
 
@@ -655,19 +656,17 @@ export default function DailyVoyagePanel({
     )
   }
 
-  // ── Away / Returned: live activity log ────────────────────────────────────
+  // ── Away / Returned: collapsed summary with expandable log ──────────────
   if ((panelState === 'away' || panelState === 'returned') && activeVoyage) {
     const events = activeVoyage.events as VoyageEvent[]
     const voyageDurationMs = activeVoyage.duration_ms ?? BASE_VOYAGE_MS
     const elapsed = voyageDurationMs - msRemaining
     const isComplete = msRemaining === 0
 
-    // Event i reveals at (i+1)/total * voyageDuration — evenly spaced, last at voyage end
     const visibleEvents = events.filter((_, i) =>
       elapsed >= ((i + 1) / events.length) * voyageDurationMs
     )
 
-    // Time until next event
     const nextIdx = visibleEvents.length
     const msToNext = !isComplete && nextIdx < events.length
       ? Math.max(0, ((nextIdx + 1) / events.length) * voyageDurationMs - elapsed)
@@ -675,6 +674,10 @@ export default function DailyVoyagePanel({
 
     const awayCrew = activeVoyage.crew_variant_ids
       .map(id => byVariantId.get(id)).filter(Boolean) as CrewCard[]
+
+    const lootSoFar = visibleEvents.reduce((sum, e) => sum + (e.doubloonDelta ?? 0), 0)
+
+    const routeCfg = activeVoyage.route ? ROUTE_CONFIGS[activeVoyage.route as VoyageRoute] : null
 
     return (
       <div>
@@ -685,21 +688,106 @@ export default function DailyVoyagePanel({
           transition: 'border-color 0.4s',
         }}>
 
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.8rem' }}>
-            <div>
+          {/* ── Always-visible summary row ── */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+
+              {/* Title + route */}
               <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: isComplete ? '#f0e8cc' : '#b0bee0', lineHeight: 1.2, transition: 'color 0.4s' }}>
                 {isComplete ? 'Crew has returned' : 'Voyage underway'}
               </p>
-              {activeVoyage.route && (() => {
-                const routeCfg = ROUTE_CONFIGS[activeVoyage.route as VoyageRoute]
-                return routeCfg ? (
-                  <p className="font-karla" style={{ fontSize: '0.68rem', color: routeCfg.color, marginTop: 2 }}>
-                    {routeCfg.name}
-                  </p>
-                ) : null
-              })()}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: 6 }}>
+              {routeCfg && (
+                <p className="font-karla" style={{ fontSize: '0.68rem', color: routeCfg.color, marginTop: 2, marginBottom: 10 }}>
+                  {routeCfg.name}
+                </p>
+              )}
+
+              {/* Key metrics */}
+              {isComplete ? (
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem', marginBottom: visibleEvents.length > 0 ? 10 : 0 }}>
+                  {activeVoyage.total_doubloons > 0 && (
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f0c040', lineHeight: 1 }}>
+                      +{activeVoyage.total_doubloons} ⟡
+                    </p>
+                  )}
+                  {activeVoyage.total_gems > 0 && (
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#a78bfa', lineHeight: 1 }}>
+                      +{activeVoyage.total_gems} gems
+                    </p>
+                  )}
+                  {activeVoyage.total_doubloons === 0 && activeVoyage.total_gems === 0 && (
+                    <p className="font-karla" style={{ fontSize: '0.65rem', color: '#9a8868' }}>Returned empty-handed</p>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '1.25rem', marginBottom: 10, flexWrap: 'wrap' }}>
+                  <div>
+                    <p className="font-karla font-600 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: '#4a5a7a', marginBottom: 2 }}>Returns in</p>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#7090b0', lineHeight: 1 }}>
+                      {formatCountdown(msRemaining)}
+                    </p>
+                  </div>
+                  {msToNext !== null && (
+                    <div>
+                      <p className="font-karla font-600 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: '#4a5a7a', marginBottom: 2 }}>Next event</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '1.0rem', color: '#5a7090', lineHeight: 1 }}>
+                        {formatCountdown(msToNext)}
+                      </p>
+                    </div>
+                  )}
+                  {lootSoFar > 0 && (
+                    <div>
+                      <p className="font-karla font-600 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: '#4a5a7a', marginBottom: 2 }}>Collected</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '1.0rem', color: '#c8aa6a', lineHeight: 1 }}>
+                        +{lootSoFar} ⟡
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Log toggle */}
+              {visibleEvents.length > 0 && (
+                <button
+                  onClick={() => setLogExpanded(v => !v)}
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                >
+                  <span className="font-karla" style={{ fontSize: '0.68rem', color: '#4a5a70' }}>
+                    {logExpanded ? 'Hide log' : `View log · ${visibleEvents.length} event${visibleEvents.length !== 1 ? 's' : ''}`}
+                  </span>
+                  <span style={{ fontSize: '0.55rem', color: '#3a4a60', transform: logExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▼</span>
+                </button>
+              )}
+            </div>
+
+            {/* Claim button — right side, always visible when complete */}
+            {isComplete && (
+              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                <button
+                  onClick={handleClaim}
+                  disabled={isPending}
+                  style={{
+                    background: isPending ? 'rgba(240,192,64,0.06)' : 'rgba(240,192,64,0.16)',
+                    border: '1px solid rgba(240,192,64,0.40)',
+                    borderRadius: 8, padding: '0.5rem 1.1rem',
+                    color: '#f0c040', cursor: isPending ? 'default' : 'pointer',
+                    opacity: isPending ? 0.5 : 1,
+                  }}
+                  className="font-karla font-700 uppercase tracking-[0.1em]"
+                >
+                  <span style={{ fontSize: '0.62rem' }}>{isPending ? 'Claiming…' : 'Claim Loot →'}</span>
+                </button>
+                {error && <p className="font-karla" style={{ fontSize: '0.6rem', color: '#f87171' }}>{error}</p>}
+              </div>
+            )}
+          </div>
+
+          {/* ── Expandable log ── */}
+          {logExpanded && (
+            <div style={{ marginTop: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.75rem' }}>
+
+              {/* Crew list */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginBottom: '0.75rem' }}>
                 {awayCrew.map((c, i) => {
                   const rc = rarityColor(c.rarity)
                   return (
@@ -712,148 +800,84 @@ export default function DailyVoyagePanel({
                   )
                 })}
               </div>
-            </div>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: isComplete ? '#f0c040' : '#6080b0', opacity: 0.7 }} />
-          </div>
 
-          {/* Activity log */}
-          {visibleEvents.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginBottom: '0.8rem' }}>
-              {visibleEvents.map((e, i) => {
-                const isCrewLoss = e.crewVariantLost != null
-                const lostCard = isCrewLoss ? collection.find(c => c.variantId === e.crewVariantLost) : null
-                const s = isCrewLoss
-                  ? OUTCOME_STYLES.failure
-                  : (OUTCOME_STYLES[e.outcome] ?? OUTCOME_STYLES.neutral)
-                return (
-                  <div key={i} style={{
-                    background: s.bg,
-                    border: `1px solid ${s.border}`,
-                    borderLeft: `2px solid ${s.color}`,
-                    borderRadius: 8, padding: '0.55rem 0.7rem',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: e.narrative ? '0.3rem' : 0 }}>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#e8d4b0', flex: 1 }}>{e.title}</p>
-                      {(e.doubloonDelta > 0 || e.gemDelta > 0) && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
-                          {e.doubloonDelta > 0 && (
-                            <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#f0c040' }}>
-                              +{e.doubloonDelta} ⟡
-                            </p>
-                          )}
-                          {e.gemDelta > 0 && (
-                            <p className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#a78bfa' }}>
-                              +{e.gemDelta} gem{e.gemDelta !== 1 ? 's' : ''}
-                            </p>
-                          )}
-                        </div>
+              {/* Event log */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                {visibleEvents.map((e, i) => {
+                  const isCrewLoss = e.crewVariantLost != null
+                  const lostCard = isCrewLoss ? collection.find(c => c.variantId === e.crewVariantLost) : null
+                  const s = isCrewLoss
+                    ? OUTCOME_STYLES.failure
+                    : (OUTCOME_STYLES[e.outcome] ?? OUTCOME_STYLES.neutral)
+                  return (
+                    <div key={i} style={{
+                      background: s.bg,
+                      border: `1px solid ${s.border}`,
+                      borderLeft: `2px solid ${s.color}`,
+                      borderRadius: 8, padding: '0.55rem 0.7rem',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: e.narrative ? '0.3rem' : 0 }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#e8d4b0', flex: 1 }}>{e.title}</p>
+                        {(e.doubloonDelta > 0 || e.gemDelta > 0) && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                            {e.doubloonDelta > 0 && (
+                              <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#f0c040' }}>+{e.doubloonDelta} ⟡</p>
+                            )}
+                            {e.gemDelta > 0 && (
+                              <p className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#a78bfa' }}>+{e.gemDelta} gem{e.gemDelta !== 1 ? 's' : ''}</p>
+                            )}
+                          </div>
+                        )}
+                        {isCrewLoss && (
+                          <span className="font-karla font-700" style={{ fontSize: '0.52rem', color: '#f87171', background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.22)', borderRadius: 4, padding: '0.12rem 0.35rem', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
+                            Crew Lost
+                          </span>
+                        )}
+                      </div>
+                      {e.narrative.split('\n\n').map((para, pi) => (
+                        <p key={pi} className="font-karla" style={{
+                          fontSize: '0.74rem',
+                          color: pi === 0 ? '#a09070' : '#7a6a50',
+                          lineHeight: 1.6,
+                          fontStyle: pi > 0 ? 'italic' : 'normal',
+                          marginTop: pi > 0 ? '0.3rem' : 0,
+                        }}>
+                          {para}
+                        </p>
+                      ))}
+                      {isCrewLoss && lostCard && (
+                        <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#c06060', marginTop: '0.3rem' }}>
+                          {lostCard.name} — lost at sea.
+                        </p>
                       )}
-                      {isCrewLoss && (
-                        <span className="font-karla font-700" style={{ fontSize: '0.52rem', color: '#f87171', background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.22)', borderRadius: 4, padding: '0.12rem 0.35rem', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
-                          Crew Lost
-                        </span>
-                      )}
-                    </div>
-                    {e.narrative.split('\n\n').map((para, pi) => (
-                      <p key={pi} className="font-karla" style={{
-                        fontSize: '0.74rem',
-                        color: pi === 0 ? '#a09070' : '#7a6a50',
-                        lineHeight: 1.6,
-                        fontStyle: pi > 0 ? 'italic' : 'normal',
-                        marginTop: pi > 0 ? '0.3rem' : 0,
-                      }}>
-                        {para}
-                      </p>
-                    ))}
-                    {isCrewLoss && lostCard && (
-                      <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#c06060', marginTop: '0.3rem' }}>
-                        {lostCard.name} — lost at sea.
-                      </p>
-                    )}
-                    {e.ringSkinDrop && (() => {
-                      const skin = getRingSkin(e.ringSkinDrop)
-                      return (
+                      {e.ringSkinDrop && (() => {
+                        const skin = getRingSkin(e.ringSkinDrop)
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.3rem' }}>
+                            {skin.imageUrl
+                              ? <img src={skin.imageUrl} alt={skin.name} style={{ width: 16, height: 16, objectFit: 'contain', flexShrink: 0 }} />
+                              : <div style={{ width: 10, height: 10, borderRadius: '50%', border: `1.5px solid ${skin.stroke}`, flexShrink: 0 }} />
+                            }
+                            <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: skin.color }}>
+                              Ring skin found: {skin.name}
+                            </p>
+                          </div>
+                        )
+                      })()}
+                      {e.baitDrop && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.3rem' }}>
-                          {skin.imageUrl
-                            ? <img src={skin.imageUrl} alt={skin.name} style={{ width: 16, height: 16, objectFit: 'contain', flexShrink: 0 }} />
-                            : <div style={{ width: 10, height: 10, borderRadius: '50%', border: `1.5px solid ${skin.stroke}`, flexShrink: 0 }} />
-                          }
-                          <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: skin.color }}>
-                            Ring skin found: {skin.name}
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: e.baitDrop === 'golden' ? '#fde68a' : '#4ade80', flexShrink: 0 }} />
+                          <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: e.baitDrop === 'golden' ? '#fde68a' : '#4ade80' }}>
+                            {e.baitDrop === 'golden' ? 'Golden Lure found!' : 'Luminous Lure found!'}
                           </p>
                         </div>
-                      )
-                    })()}
-                    {e.baitDrop && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.3rem' }}>
-                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: e.baitDrop === 'golden' ? '#fde68a' : '#4ade80', flexShrink: 0 }} />
-                        <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: e.baitDrop === 'golden' ? '#fde68a' : '#4ade80' }}>
-                          {e.baitDrop === 'golden' ? 'Golden Lure found!' : 'Luminous Lure found!'}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* Footer: countdown / next-event / claim */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.7rem' }}>
-            {isComplete ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
-                <div>
-                  {activeVoyage.total_doubloons > 0 || activeVoyage.total_gems > 0 ? (
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem' }}>
-                      {activeVoyage.total_doubloons > 0 && (
-                        <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f0c040', lineHeight: 1 }}>
-                          +{activeVoyage.total_doubloons} ⟡
-                        </p>
-                      )}
-                      {activeVoyage.total_gems > 0 && (
-                        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#a78bfa', lineHeight: 1 }}>
-                          +{activeVoyage.total_gems} gems
-                        </p>
                       )}
                     </div>
-                  ) : (
-                    <p className="font-karla" style={{ fontSize: '0.65rem', color: '#9a8868' }}>
-                      Returned empty-handed
-                    </p>
-                  )}
-                  {error && <p className="font-karla" style={{ fontSize: '0.6rem', color: '#f87171', marginTop: 4 }}>{error}</p>}
-                </div>
-                <button
-                  onClick={handleClaim}
-                  disabled={isPending}
-                  style={{
-                    flexShrink: 0,
-                    background: isPending ? 'rgba(240,192,64,0.06)' : 'rgba(240,192,64,0.16)',
-                    border: '1px solid rgba(240,192,64,0.40)',
-                    borderRadius: 8, padding: '0.5rem 1.1rem',
-                    color: '#f0c040', cursor: isPending ? 'default' : 'pointer',
-                    opacity: isPending ? 0.5 : 1,
-                  }}
-                  className="font-karla font-700 uppercase tracking-[0.1em]"
-                >
-                  <span style={{ fontSize: '0.62rem' }}>{isPending ? 'Claiming…' : 'Claim Loot →'}</span>
-                </button>
+                  )
+                })}
               </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.5rem' }}>
-                {msToNext !== null ? (
-                  <p className="font-karla" style={{ fontSize: '0.68rem', color: '#6a7890' }}>
-                    Next event in <span style={{ color: '#7090c0', fontWeight: 700 }}>{formatCountdown(msToNext)}</span>
-                  </p>
-                ) : (
-                  <div />
-                )}
-                <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#7090b0', letterSpacing: '0.03em' }}>
-                  {formatCountdown(msRemaining)}
-                </p>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
         </div>
       </div>
