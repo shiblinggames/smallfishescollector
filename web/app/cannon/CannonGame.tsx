@@ -299,7 +299,7 @@ export default function CannonGame({
 }) {
   const dodgeBonus        = totalDodge * 5
   const fortuneMult       = 1 + totalFortune / 75   // 2× at max crew luck (~75)
-  const reloadCooldown    = Math.max(600, 2200 - shipSpeed * 110)
+  const playerActionMs    = Math.max(700, 2000 - shipSpeed * 100)
   const dodgeCooldownUse  = Math.max(500, 1600 - dodgeBonus)
 
   const [phase, setPhase]               = useState<GamePhase>('idle')
@@ -313,8 +313,7 @@ export default function CannonGame({
   const [enemyDodging, setEnemyDodging]   = useState(false)
   const [enemyActionPct, setEnemyActionPct] = useState(1)
   const [charges, setCharges]           = useState(0)
-  const [canFire, setCanFire]           = useState(true)
-  const [canReload, setCanReload]       = useState(true)
+  const [playerActionPct, setPlayerActionPct] = useState(0)
   const [streak, setStreak]             = useState(0)
   const [best, setBest]                 = useState(0)
   const [pot, setPot]                   = useState(0)
@@ -368,9 +367,9 @@ export default function CannonGame({
   const enemyHPRef            = useRef(0)
   const enemyHPMaxRef         = useRef(0)
   const phaseRef              = useRef<GamePhase>('idle')
-  const canFireRef            = useRef(true)
+  const playerActionElapsedRef = useRef(0)
+  const playerReadyRef         = useRef(false)
   const chargesRef            = useRef(1)
-  const canReloadRef          = useRef(true)
   const raidStartTimeRef      = useRef(0)
   const dodgePrimedRef        = useRef(false)
   const dodgeCooldownRef      = useRef(false)
@@ -420,11 +419,10 @@ export default function CannonGame({
     zoneJitterRef.current   = 0
     roundRef.current        = 0; streakRef.current  = 0
     potRef.current          = 0
-    playerHPRef.current     = playerHPMax
-    canFireRef.current          = true
-    chargesRef.current          = 0
-    canReloadRef.current        = true
-    setCanFire(true)
+    playerHPRef.current          = playerHPMax
+    playerActionElapsedRef.current = 0
+    playerReadyRef.current        = false
+    chargesRef.current            = 0
     if (dodgePrimeTimerRef.current) { clearTimeout(dodgePrimeTimerRef.current); dodgePrimeTimerRef.current = null }
     dodgePrimedRef.current       = false
     dodgeCooldownRef.current     = false
@@ -440,7 +438,7 @@ export default function CannonGame({
     phaseRef.current = 'playing'
     setPhase('playing')
     setPlayerHP(playerHPMax)
-    setCharges(0); setCanReload(true)
+    setCharges(0); setPlayerActionPct(0)
     setStreak(0); setPot(0); setLastEarned(0)
     setCannonJammed(false); setActionLocked(false)
     setShotResult(null); setDodgePrimed(false); setDodgeCooldown(false)
@@ -499,6 +497,12 @@ export default function CannonGame({
 
       if (roundEndingRef.current) { rafRef.current = requestAnimationFrame(loop); return }
 
+      // Player action bar
+      playerActionElapsedRef.current += dt
+      const pPct = Math.min(1, Math.max(0, playerActionElapsedRef.current / playerActionMs))
+      playerReadyRef.current = pPct >= 1
+      setPlayerActionPct(pPct)
+
       // Dodge prime countdown
       if (dodgePrimedRef.current) {
         dodgePrimeElapsedRef.current += dt
@@ -545,9 +549,8 @@ export default function CannonGame({
               const dodgedDmg = Math.max(1, Math.round(rawDmg * 0.2))
               playerHPRef.current = Math.max(0, playerHPRef.current - dodgedDmg)
               setPlayerHP(playerHPRef.current)
-              // Reward: instantly restore fire + reload
-              canFireRef.current = true; setCanFire(true)
-              canReloadRef.current = true; setCanReload(true)
+              // Reward: instantly ready the player action bar
+              playerActionElapsedRef.current = playerActionMs
               setShotResult(null)
               // VFX cascade
               setPHitsplat(p => ({ key: p.key + 1, text: `-${dodgedDmg}`, color: '#38bdf8', big: false }))
@@ -584,7 +587,7 @@ export default function CannonGame({
 
     rafRef.current = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [phase, dodgeCooldownUse])
+  }, [phase, dodgeCooldownUse, playerActionMs])
 
   // Raid timer — ticks through playing+clear, triggers time-expired at 5:00
   useEffect(() => {
@@ -602,27 +605,20 @@ export default function CannonGame({
   }, [phase])
 
   const doReload = useCallback(() => {
-    if (phaseRef.current !== 'playing' || !canReloadRef.current || chargesRef.current >= MAX_CHARGES || actionLockedRef.current) return
+    if (phaseRef.current !== 'playing' || !playerReadyRef.current || chargesRef.current >= MAX_CHARGES || actionLockedRef.current) return
     consecutiveDodgesRef.current = 0
     chargesRef.current = Math.min(MAX_CHARGES, chargesRef.current + 1)
     setCharges(chargesRef.current)
-    canReloadRef.current = false
-    canFireRef.current = false
-    setCanReload(false)
-    setCanFire(false)
     // Randomize indicator position — prevents cheesing by reloading near crit zone
     firePosRef.current = Math.random()
     fireDirRef.current = Math.random() < 0.5 ? 1 : -1
-    // Brief fire lockout so player can't snap-fire on reload
-    setTimeout(() => { canFireRef.current = true; setCanFire(true) }, 600)
-    setTimeout(() => { canReloadRef.current = true; setCanReload(true) }, reloadCooldown)
-  }, [reloadCooldown])
+    playerActionElapsedRef.current = 0
+    setPlayerActionPct(0)
+  }, [])
 
   const fire = useCallback(() => {
-    if (phaseRef.current !== 'playing' || !canFireRef.current || chargesRef.current < 1 || cannonJammed || actionLockedRef.current) return
+    if (phaseRef.current !== 'playing' || !playerReadyRef.current || chargesRef.current < 1 || cannonJammed || actionLockedRef.current) return
     consecutiveDodgesRef.current = 0
-    canFireRef.current = false
-    setCanFire(false)
 
     const isVolley = chargesRef.current === MAX_CHARGES
     chargesRef.current -= isVolley ? MAX_CHARGES : 1
@@ -632,6 +628,11 @@ export default function CannonGame({
     setShotResult(res)
     snapIndicator(fireIndicatorRef)
     flashBar(fireFlashRef, res === 'critical' ? '#fbbf24' : res === 'hit' ? '#4ade80' : res === 'graze' ? '#94a3b8' : '#6b7280')
+
+    // Reset action bar — miss applies a penalty by starting in negative time
+    playerActionElapsedRef.current = res === 'miss' ? -CANNON_MISS_CD : 0
+    setPlayerActionPct(0)
+    if (res === 'miss') setCannonJammed(true)
 
     const dmgMult = isVolley ? 2 : 1
     const dmg = rollShotDamage(res, shipMinDamage, totalPower) * dmgMult
@@ -677,6 +678,7 @@ export default function CannonGame({
         setTimeout(() => {
           setEnemySinking(false)
           roundEndingRef.current = false
+          setShotResult(null)
 
           if (isBossRound(roundRef.current)) {
             const elapsed = performance.now() - raidStartTimeRef.current
@@ -701,24 +703,18 @@ export default function CannonGame({
             setTimeout(() => setClearReady(true), 80)
           }
         }, 920)
-
-        setTimeout(() => { canFireRef.current = true; setCanFire(true); setShotResult(null) }, 550)
         return
       }
     }
 
-    if (res === 'miss') {
-      setCannonJammed(true)
-      setTimeout(() => { canFireRef.current = true; setCanFire(true); setShotResult(null); setCannonJammed(false) }, CANNON_MISS_CD)
-    } else {
-      setTimeout(() => { canFireRef.current = true; setCanFire(true); setShotResult(null) }, 550)
-    }
+    // Clear jammed state once the bar refills (handled via cannonJammed + bar reaching ready)
+    if (res !== 'miss') setTimeout(() => setShotResult(null), 500)
+    else setTimeout(() => { setCannonJammed(false); setShotResult(null) }, CANNON_MISS_CD)
   }, [shipMinDamage, totalPower, fortuneMult, cannonJammed, resetEnemyForRound])
 
   const primeDodge = useCallback(() => {
     if (phaseRef.current !== 'playing') return
     if (dodgeCooldownRef.current || dodgePrimedRef.current || actionLockedRef.current) return
-    if (!canFireRef.current || !canReloadRef.current) return  // committed: can't prime mid-action
     if (consecutiveDodgesRef.current >= 3) return  // must use another action first
 
     consecutiveDodgesRef.current++
@@ -755,7 +751,7 @@ export default function CannonGame({
   }, [isClaiming])
 
   const isVolleyReady  = charges === MAX_CHARGES
-  const isCommitted    = !canFire || !canReload
+  const playerReady    = playerActionPct >= 1
   const isActionLocked = actionLocked
   const powerMax      = shipMinDamage + Math.floor(totalPower / 4)
 
@@ -951,6 +947,27 @@ export default function CannonGame({
         </div>
       </div>
 
+      {/* ── Player action bar ────────────────────────────────────────────────── */}
+      <div style={{ width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.45rem', color: playerReady ? '#4ade80' : '#3a6a4a', letterSpacing: '0.14em', transition: 'color 0.3s' }}>
+            YOUR ACTION
+          </p>
+          <p className="font-karla font-400" style={{ fontSize: '0.42rem', color: playerReady ? 'rgba(74,222,128,0.5)' : 'rgba(74,222,128,0.2)', transition: 'color 0.3s' }}>
+            {playerReady ? 'READY' : 'charging…'}
+          </p>
+        </div>
+        <div style={{ height: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%', width: `${playerActionPct * 100}%`,
+            background: playerReady ? '#4ade80' : '#2a6a3a',
+            boxShadow: playerReady ? '0 0 10px rgba(74,222,128,0.6)' : 'none',
+            transition: 'background 0.2s, box-shadow 0.2s',
+            borderRadius: 4,
+          }} />
+        </div>
+      </div>
+
       {/* ── Dodge prime indicator — always in DOM to prevent layout shift ─── */}
       <div style={{
         width: '100%', borderRadius: 12, padding: '0.45rem 0.65rem',
@@ -1046,22 +1063,22 @@ export default function CannonGame({
           {/* RELOAD */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
             <motion.button
-              onPointerDown={doReload}
-              whileTap={canReload && charges < MAX_CHARGES && !isActionLocked ? { scale: 0.88 } : {}}
+              onPointerDown={playerReady && charges < MAX_CHARGES && !isActionLocked ? doReload : undefined}
+              whileTap={playerReady && charges < MAX_CHARGES && !isActionLocked ? { scale: 0.88 } : {}}
               style={{
-                width: 72, height: 72, borderRadius: '50%', cursor: 'pointer',
-                background: isActionLocked ? 'rgba(239,68,68,0.07)' : !canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.03)' : 'rgba(96,165,250,0.12)',
-                border: `2px solid ${isActionLocked ? 'rgba(239,68,68,0.22)' : !canReload || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.1)' : 'rgba(96,165,250,0.45)'}`,
+                width: 72, height: 72, borderRadius: '50%', cursor: playerReady && charges < MAX_CHARGES && !isActionLocked ? 'pointer' : 'default',
+                background: isActionLocked ? 'rgba(239,68,68,0.07)' : !playerReady || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.03)' : 'rgba(96,165,250,0.12)',
+                border: `2px solid ${isActionLocked ? 'rgba(239,68,68,0.22)' : !playerReady || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.1)' : 'rgba(96,165,250,0.45)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                opacity: isActionLocked || !canReload || charges >= MAX_CHARGES ? 0.4 : 1,
+                opacity: isActionLocked || !playerReady || charges >= MAX_CHARGES ? 0.4 : 1,
                 transition: 'all 0.12s',
-                boxShadow: !isActionLocked && canReload && charges < MAX_CHARGES ? '0 0 14px rgba(96,165,250,0.18), inset 0 1px 0 rgba(255,255,255,0.07)' : 'none',
+                boxShadow: !isActionLocked && playerReady && charges < MAX_CHARGES ? '0 0 14px rgba(96,165,250,0.18), inset 0 1px 0 rgba(255,255,255,0.07)' : 'none',
               }}>
               <p className="font-karla font-700" style={{
                 fontSize: '0.72rem', letterSpacing: '0.06em',
-                color: isActionLocked ? '#7a2a2a' : !canReload ? '#3a5a7a' : charges >= MAX_CHARGES ? '#4a4845' : '#60a5fa',
+                color: isActionLocked ? '#7a2a2a' : !playerReady ? '#3a5a7a' : charges >= MAX_CHARGES ? '#4a4845' : '#60a5fa',
               }}>
-                {isActionLocked ? '…' : !canReload ? 'Wait' : charges >= MAX_CHARGES ? 'Full' : 'RELOAD'}
+                {isActionLocked ? '…' : charges >= MAX_CHARGES ? 'Full' : 'RELOAD'}
               </p>
             </motion.button>
           </div>
@@ -1070,7 +1087,7 @@ export default function CannonGame({
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
             <motion.button
               onPointerDown={primeDodge}
-              whileTap={!dodgeCooldown && !dodgePrimed && !isCommitted && !isActionLocked ? { scale: 0.88 } : {}}
+              whileTap={!dodgeCooldown && !dodgePrimed && !isActionLocked ? { scale: 0.88 } : {}}
               animate={dodgePrimed ? { boxShadow: ['0 0 0px #38bdf800', '0 0 20px #38bdf8aa', '0 0 8px #38bdf866'] } : {}}
               transition={{ duration: 0.4, repeat: Infinity }}
               style={{
@@ -1078,26 +1095,23 @@ export default function CannonGame({
                 background: dodgePrimed    ? 'rgba(56,189,248,0.18)'
                           : isActionLocked ? 'rgba(239,68,68,0.07)'
                           : dodgeCooldown  ? 'rgba(255,255,255,0.03)'
-                          : isCommitted    ? 'rgba(251,146,60,0.06)'
                           :                 'rgba(56,189,248,0.10)',
                 border: `2px solid ${dodgePrimed    ? 'rgba(56,189,248,0.65)'
                           : isActionLocked ? 'rgba(239,68,68,0.22)'
                           : dodgeCooldown  ? 'rgba(255,255,255,0.1)'
-                          : isCommitted    ? 'rgba(251,146,60,0.22)'
                           :                 'rgba(56,189,248,0.35)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                opacity: isActionLocked || dodgeCooldown || isCommitted ? 0.4 : 1,
+                opacity: isActionLocked || dodgeCooldown ? 0.4 : 1,
                 transition: 'background 0.12s, border-color 0.12s, opacity 0.12s',
               }}>
               <p className="font-karla font-700" style={{
                 fontSize: '0.72rem', letterSpacing: '0.06em',
-                color: dodgePrimed   ? '#38bdf8'
+                color: dodgePrimed    ? '#38bdf8'
                      : isActionLocked ? '#7a2a2a'
                      : dodgeCooldown  ? '#2a4050'
-                     : isCommitted    ? '#f97316'
                      :                  '#38bdf8',
               }}>
-                {dodgePrimed ? 'PRIMED' : isActionLocked || dodgeCooldown ? '…' : isCommitted ? 'Busy' : 'DODGE'}
+                {dodgePrimed ? 'PRIMED' : isActionLocked || dodgeCooldown ? '…' : 'DODGE'}
               </p>
             </motion.button>
           </div>
@@ -1105,13 +1119,13 @@ export default function CannonGame({
           {/* FIRE / VOLLEY */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
             <motion.button
-              onPointerDown={canFire && !cannonJammed && charges > 0 && !isActionLocked ? fire : undefined}
-              whileTap={canFire && !cannonJammed && charges > 0 && !isActionLocked ? { scale: 0.88 } : {}}
+              onPointerDown={playerReady && !cannonJammed && charges > 0 && !isActionLocked ? fire : undefined}
+              whileTap={playerReady && !cannonJammed && charges > 0 && !isActionLocked ? { scale: 0.88 } : {}}
               animate={isVolleyReady ? { boxShadow: ['0 0 0px #f0c04000', '0 0 20px #f0c04077', '0 0 0px #f0c04000'] } : {}}
               transition={{ duration: 1.4, repeat: Infinity }}
               style={{
                 width: 72, height: 72, borderRadius: '50%',
-                cursor: canFire && !cannonJammed && charges > 0 && !isActionLocked ? 'pointer' : 'default',
+                cursor: playerReady && !cannonJammed && charges > 0 && !isActionLocked ? 'pointer' : 'default',
                 background: cannonJammed  ? 'rgba(251,146,60,0.1)'
                           : isVolleyReady ? 'rgba(240,192,64,0.18)'
                           : charges === 0 ? 'rgba(255,255,255,0.03)'
