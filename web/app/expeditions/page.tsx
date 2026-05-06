@@ -6,7 +6,6 @@ import { EXPEDITION_SHIP_STATS, type Expedition } from '@/lib/expeditions'
 import RaidCard from './RaidCard'
 import ShipHero from './ShipHero'
 import DailyVoyagePanel from './DailyVoyagePanel'
-import VoyageHistory from './VoyageHistory'
 import ExpeditionsTour from './ExpeditionsTour'
 import { getCollectionForCrew } from './actions'
 import { getDailyVoyageState } from './voyageActions'
@@ -98,8 +97,8 @@ export default async function ExpeditionsPage() {
               readyVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.readyVoyage}
               expeditionXP={profile?.expedition_xp ?? 0}
               raidActive={hasActiveRaid}
+              voyages={(voyageHistoryRows ?? []) as import('./VoyageHistory').VoyageHistoryEntry[]}
             />
-            <VoyageHistory voyages={(voyageHistoryRows ?? []) as import('./VoyageHistory').VoyageHistoryEntry[]} />
           </div>
 
           {/* ── Raids ── */}

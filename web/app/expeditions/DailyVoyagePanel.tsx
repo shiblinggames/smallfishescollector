@@ -11,6 +11,7 @@ import { getBait } from '@/lib/bait'
 import { getSpecialItem } from '@/lib/specialItems'
 import { sendDailyVoyage, revealVoyageResults, type DailyVoyage } from './voyageActions'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
+import VoyageHistory, { type VoyageHistoryEntry } from './VoyageHistory'
 
 type PanelState = 'idle' | 'away' | 'returned' | 'done'
 
@@ -143,6 +144,7 @@ interface Props {
   readyVoyage: DailyVoyage | null
   raidActive?: boolean
   expeditionXP?: number
+  voyages?: VoyageHistoryEntry[]
 }
 
 export default function DailyVoyagePanel({
@@ -153,6 +155,7 @@ export default function DailyVoyagePanel({
   readyVoyage,
   raidActive = false,
   expeditionXP = 0,
+  voyages = [],
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -633,6 +636,7 @@ export default function DailyVoyagePanel({
             </>
           )}
         </div>
+        <VoyageHistory voyages={voyages} />
       </div>
     )
   }
@@ -853,6 +857,7 @@ export default function DailyVoyagePanel({
           )}
 
         </div>
+        <VoyageHistory voyages={voyages} />
       </div>
     )
   }

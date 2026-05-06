@@ -264,7 +264,10 @@ export default function ShipHero({
               transition={{ type: 'spring', stiffness: 400, damping: 38 }}
               {...drawerDragProps(closeLoadout)}
               style={{
-                position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
+                position: 'fixed', bottom: 0,
+                left: 'max(0px, calc(50% - 240px))',
+                right: 'max(0px, calc(50% - 240px))',
+                zIndex: 50,
                 background: 'rgba(6,12,20,0.98)',
                 borderTop: '1px solid rgba(255,255,255,0.09)',
                 borderRadius: '18px 18px 0 0',
