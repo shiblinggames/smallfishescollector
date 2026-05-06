@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { claimRaidLoot } from './actions'
+import { claimRaidLoot, markRaidTutorialSeen } from './actions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
 
@@ -324,7 +324,7 @@ interface RaidCrewMember {
 
 export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
   shipImageUrl, shipName, playerHPMax, shipMinDamage, shipSpeed,
-  totalPower, totalDodge, totalFortune, crewCount, crewMembers,
+  totalPower, totalDodge, totalFortune, crewCount, crewMembers, hasSeenRaidTutorial,
 }: {
   shipImageUrl: string
   shipName: string
@@ -339,6 +339,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
   equippedShipSkin: string | null
   shipSkins: string[]
   equippedItems: string[]
+  hasSeenRaidTutorial: boolean
 }) {
   const router            = useRouter()
   const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
@@ -856,7 +857,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
 
   const openFire = useCallback(() => {
     if (phaseRef.current === 'idle') {
-      if (!localStorage.getItem('raid_tutorial_seen')) {
+      if (!hasSeenRaidTutorial) {
         setShowTutorial(true)
         return
       }
@@ -869,7 +870,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
   }, [startGame])
 
   function dismissTutorial() {
-    localStorage.setItem('raid_tutorial_seen', '1')
+    markRaidTutorialSeen()
     setShowTutorial(false)
     setTourStep(0)
     startGame()
