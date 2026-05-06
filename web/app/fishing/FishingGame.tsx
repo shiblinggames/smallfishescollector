@@ -3036,7 +3036,7 @@ export default function FishingGame({
                           )}
                         </div>
                         <p className="font-karla font-400"
-                          style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>{HABITAT_TAGLINE[zone]}</p>
+                          style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>{HABITAT_TAGLINE[zone]}</p>
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <div className="flex items-center gap-2">
@@ -3050,8 +3050,8 @@ export default function FishingGame({
                           </svg>
                         </div>
                         <p className="font-karla font-600"
-                          style={{ fontSize: '0.58rem', color: isClaimed ? zoneColor + '70' : 'rgba(240,192,64,0.4)' }}>
-                          {isClaimed ? '✓ reward claimed' : `🏆 ${(ZONE_REWARD_DOUBLOONS_UI[zone] ?? 0).toLocaleString()} ⟡ on completion`}
+                          style={{ fontSize: '0.68rem', color: isClaimed ? zoneColor + '99' : 'rgba(240,192,64,0.65)' }}>
+                          {isClaimed ? '✓ reward claimed' : `${(ZONE_REWARD_DOUBLOONS_UI[zone] ?? 0).toLocaleString()} ⟡ on completion`}
                         </p>
                       </div>
                     </div>
