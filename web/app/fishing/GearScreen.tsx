@@ -146,7 +146,7 @@ export default function GearScreen({
   equippedRodTier, ownedRods, onEquipRod,
   reelTier, hookTier, lineTier, shipTier,
   equippedRingSkin, unlockedRingSkins, onEquipRingSkin,
-  hasTideTurner, tideTurnerSkipsLeft,
+  hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook,
   equippedSpecial, onEquipSpecial,
   onClose,
 }: {
@@ -165,6 +165,7 @@ export default function GearScreen({
   onEquipRingSkin: (skin: string) => void
   hasTideTurner: boolean
   tideTurnerSkipsLeft: number
+  hasPhantomHook: boolean
   equippedSpecial: string | null
   onEquipSpecial: (itemId: string | null) => void
   onClose: () => void
@@ -450,7 +451,7 @@ export default function GearScreen({
                   <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#8b6fc0' }}>Special Items</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {SPECIAL_ITEMS.map(item => {
-                      const owned = item.id === 'tide_turner' ? hasTideTurner : false
+                      const owned = item.id === 'tide_turner' ? hasTideTurner : item.id === 'phantom_hook' ? hasPhantomHook : false
                       const isEquipped = equippedSpecial === item.id
                       return (
                         <div key={item.id} style={{

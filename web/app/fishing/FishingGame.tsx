@@ -1349,7 +1349,7 @@ export default function FishingGame({
   hasSeenFishingTour, hasSeenFishingCatchTour,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
-  hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial,
+  hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook,
 }: {
   hookTier: number
   rodTier: number
@@ -1378,6 +1378,7 @@ export default function FishingGame({
   hasTideTurner: boolean
   initialTideTurnerSkipsLeft: number
   initialEquippedSpecial: string | null
+  hasPhantomHook: boolean
 }) {
 
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
@@ -3194,6 +3195,7 @@ export default function FishingGame({
               }}
               hasTideTurner={hasTideTurner}
               tideTurnerSkipsLeft={tideTurnerSkipsLeft}
+              hasPhantomHook={hasPhantomHook}
               equippedSpecial={equippedSpecial}
               onEquipSpecial={async (itemId) => {
                 setEquippedSpecial(itemId)

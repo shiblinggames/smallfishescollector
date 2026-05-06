@@ -70,7 +70,7 @@ const ROUTE_NODES: Record<VoyageRoute, { x: number; y: number }> = {
 type DropEntry =
   | { kind: 'skin';    id: RingSkinId; rate: string }
   | { kind: 'bait';    type: string;   rate: string }
-  | { kind: 'special'; id: 'tide_turner'; rate: string }
+  | { kind: 'special'; id: 'tide_turner' | 'phantom_hook'; rate: string }
 
 const ROUTE_DROPS: Record<VoyageRoute, DropEntry[]> = {
   coastal: [
@@ -88,9 +88,9 @@ const ROUTE_DROPS: Record<VoyageRoute, DropEntry[]> = {
     { kind: 'bait',    type: 'golden',       rate: '~8%' },
   ],
   triangle: [
-    { kind: 'special', id: 'tide_turner',    rate: '~4%' },
-    { kind: 'skin',    id: 'coral_spire',    rate: '~8%' },
-    { kind: 'bait',    type: 'golden',       rate: '~12%' },
+    { kind: 'bait',    type: 'luminous',       rate: '~20%' },
+    { kind: 'skin',    id: 'abyssal_sigil',    rate: '~5%' },
+    { kind: 'special', id: 'phantom_hook',     rate: '~2%' },
   ],
 }
 
@@ -169,6 +169,7 @@ export default function DailyVoyagePanel({
   const [claimedRingSkins, setClaimedRingSkins] = useState<string[]>([])
   const [claimedBait, setClaimedBait] = useState<{ type: string; qty: number }[]>([])
   const [claimedTideTurner, setClaimedTideTurner] = useState(false)
+  const [claimedPhantomHook, setClaimedPhantomHook] = useState(false)
   const [captainsLog, setCaptainsLog] = useState<string | null>(null)
   const [liveCrewIds, setLiveCrewIds] = useState<number[]>(savedCrewVariantIds)
   const [expandedDropKey, setExpandedDropKey] = useState<string | null>(null)
@@ -250,6 +251,7 @@ export default function DailyVoyagePanel({
       setClaimedRingSkins(res.newRingSkins)
       setClaimedBait(res.earnedBait)
       if (res.newTideTurner) setClaimedTideTurner(true)
+      if (res.newPhantomHook) setClaimedPhantomHook(true)
       setXpEarned(res.xpEarned)
       if (res.newExpeditionLevel > res.oldExpeditionLevel) setLevelUp({ from: res.oldExpeditionLevel, to: res.newExpeditionLevel })
       setPanelState('done')
@@ -1018,6 +1020,70 @@ export default function DailyVoyagePanel({
                     style={{ marginTop: 6 }}
                   >
                     <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: '#7c3aed', background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)', borderRadius: 4, padding: '0.15rem 0.45rem' }}>
+                      Permanent · Equip from gear
+                    </span>
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {claimedPhantomHook && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.88, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 280, damping: 20, delay: 0.15 }}
+              style={{
+                position: 'relative', overflow: 'hidden',
+                background: 'linear-gradient(135deg, rgba(13,100,96,0.22) 0%, rgba(45,212,191,0.10) 60%, rgba(6,78,59,0.18) 100%)',
+                border: '1px solid rgba(45,212,191,0.45)',
+                borderRadius: 16,
+                padding: '1.1rem 1.1rem 1rem',
+                boxShadow: '0 0 32px rgba(45,212,191,0.20), inset 0 1px 0 rgba(255,255,255,0.07)',
+              }}
+            >
+              <div style={{
+                position: 'absolute', top: -30, right: -20,
+                width: 120, height: 120, borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(45,212,191,0.28) 0%, transparent 70%)',
+                pointerEvents: 'none',
+              }} />
+
+              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: '#5eead4', marginBottom: '0.65rem', letterSpacing: '0.2em' }}>
+                ✦ Rare find ✦
+              </p>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{
+                  width: 64, height: 64, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(45,212,191,0.12)', borderRadius: 12, border: '1px solid rgba(45,212,191,0.3)',
+                  filter: 'drop-shadow(0 0 16px rgba(45,212,191,0.6))',
+                }}>
+                  <span style={{ fontSize: '2rem' }}>🎣</span>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <motion.p
+                    className="font-cinzel font-700"
+                    initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 }}
+                    style={{ fontSize: '1.05rem', color: '#ccfbf1', lineHeight: 1.1, marginBottom: 4, textShadow: '0 0 20px rgba(45,212,191,0.5)' }}
+                  >
+                    Phantom Hook
+                  </motion.p>
+                  <motion.p
+                    className="font-karla font-300"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    transition={{ delay: 0.55 }}
+                    style={{ fontSize: '0.7rem', color: '#5eead4', lineHeight: 1.45 }}
+                  >
+                    25% chance to save your bait on every cast. Stacks with perfect-catch saves.
+                  </motion.p>
+                  <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    transition={{ delay: 0.7 }}
+                    style={{ marginTop: 6 }}
+                  >
+                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: '#0d9488', background: 'rgba(45,212,191,0.12)', border: '1px solid rgba(45,212,191,0.28)', borderRadius: 4, padding: '0.15rem 0.45rem' }}>
                       Permanent · Equip from gear
                     </span>
                   </motion.div>

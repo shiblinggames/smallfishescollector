@@ -200,14 +200,15 @@ export async function reelIn(
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, ship_tier').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, ship_tier, has_phantom_hook').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
   if (!fish || !profile) return { error: 'Data not found' }
 
-  // Perfect: 50% chance to return the bait used for this cast
-  const baitSaved = result === 'perfect' && Math.random() < PERFECT_BAIT_SAVE_CHANCE
+  // Perfect: 50% chance to return the bait used for this cast; Phantom Hook: additional 25% on any catch
+  let baitSaved = result === 'perfect' && Math.random() < PERFECT_BAIT_SAVE_CHANCE
+  if (!baitSaved && profile.has_phantom_hook) baitSaved = Math.random() < 0.25
 
   // Check if new species for bestiary
   const { data: existing } = await admin

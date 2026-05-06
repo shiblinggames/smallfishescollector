@@ -197,6 +197,7 @@ export interface VoyageResult {
   ringSkinDrops: string[]
   baitDrops: { type: string; qty: number }[]
   tideTurnerDrop: boolean
+  phantomHookDrop: boolean
 }
 
 function rand(min: number, max: number): number {
@@ -411,9 +412,17 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
   for (const e of events) {
     if (e.baitDrop) baitDropMap.set(e.baitDrop, (baitDropMap.get(e.baitDrop) ?? 0) + 1)
   }
+
+  // Triangle voyage-level bonus drops
+  if (route === 'triangle' && Math.random() < 0.20)
+    baitDropMap.set('luminous', (baitDropMap.get('luminous') ?? 0) + 1)
+  if (route === 'triangle' && Math.random() < 0.05)
+    ringSkinDrops.push('abyssal_sigil')
+
   const baitDrops = Array.from(baitDropMap.entries()).map(([type, qty]) => ({ type, qty }))
   const tideTurnerDrop = route === 'deep' && Math.random() < 0.02
-  return { events, totalDoubloons, totalGems, crewLost, ringSkinDrops, baitDrops, tideTurnerDrop }
+  const phantomHookDrop = route === 'triangle' && Math.random() < 0.02
+  return { events, totalDoubloons, totalGems, crewLost, ringSkinDrops, baitDrops, tideTurnerDrop, phantomHookDrop }
 }
 
 // ── Event text pools ──────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-export type SpecialItemId = 'tide_turner'
+export type SpecialItemId = 'tide_turner' | 'phantom_hook'
 
 export type SpecialItemDef = {
   id: SpecialItemId
@@ -19,6 +19,14 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
     description: 'Skip a hooked fish during the catch phase without breaking your perfect streak. Your bait is consumed.',
     effectLabel: '3 skips / day',
     obtainedFrom: 'The Howling Deep voyage',
+  },
+  {
+    id: 'phantom_hook',
+    name: 'Phantom Hook',
+    color: '#2dd4bf',
+    description: '25% chance to save your bait on every cast. Stacks with perfect-catch saves.',
+    effectLabel: '25% bait save',
+    obtainedFrom: 'The Bertuna Triangle voyage',
   },
 ]
 
