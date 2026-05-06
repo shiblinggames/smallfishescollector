@@ -703,13 +703,12 @@ export default function CannonGame({
                   }} />
               ))}
             </div>
-            {isVolleyReady && (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="font-karla font-700 text-center"
-                style={{ fontSize: '0.5rem', color: '#f0c040', marginTop: 5, letterSpacing: '0.1em', textShadow: '0 0 8px #f0c040' }}>
-                VOLLEY
-              </motion.p>
-            )}
+            <p className="font-karla font-700 text-center"
+              style={{ fontSize: '0.5rem', color: '#f0c040', marginTop: 5, letterSpacing: '0.1em',
+                textShadow: isVolleyReady ? '0 0 8px #f0c040' : 'none',
+                opacity: isVolleyReady ? 1 : 0, transition: 'opacity 0.2s' }}>
+              VOLLEY
+            </p>
           </div>
 
           {/* Damage range */}
