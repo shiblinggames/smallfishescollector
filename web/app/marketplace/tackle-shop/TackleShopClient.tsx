@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { HOOKS } from '@/lib/hooks'
 import { RODS } from '@/lib/rods'
 import { REELS } from '@/lib/reels'
@@ -345,11 +346,11 @@ export default function TackleShopClient({
                     })}
                   </div>
                 ) : (
-                  <div style={{ marginTop: 2, padding: '0.35rem 0.5rem', borderRadius: 8, background: `${bait.color}10`, border: `1px solid ${bait.color}28`, textAlign: 'center' }}>
+                  <Link href="/expeditions" style={{ textDecoration: 'none', display: 'block', marginTop: 2, padding: '0.35rem 0.5rem', borderRadius: 8, background: `${bait.color}10`, border: `1px solid ${bait.color}28`, textAlign: 'center' }}>
                     <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: bait.color }}>
-                      Earned — not for sale
+                      Earned from voyages →
                     </span>
-                  </div>
+                  </Link>
                 )}
               </div>
             )
