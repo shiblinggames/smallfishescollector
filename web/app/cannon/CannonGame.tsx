@@ -93,7 +93,7 @@ function fmtGold(n: number) { return n.toLocaleString() }
 
 function getFireZones(round: number, critBonus = 0) {
   const hitW  = Math.max(0.045, 0.08  - round * 0.005)
-  const critW = Math.min(0.08, Math.max(0.015, 0.032 - round * 0.002 + critBonus))
+  const critW = Math.min(0.05, Math.max(0.008, 0.016 - round * 0.001 + critBonus))
   return {
     grazeL: 0.5 - hitW - 0.05, hitL: 0.5 - hitW, critL: 0.5 - critW,
     critR: 0.5 + critW, hitR: 0.5 + hitW, grazeR: 0.5 + hitW + 0.05,
