@@ -238,7 +238,7 @@ export default function CannonGame({
   totalFortune: number
   crewCount: number
 }) {
-  const critBonus      = totalPower / 6000
+  const powerMult      = 1 + totalPower / 500
   const dodgeBonus     = totalDodge * 5
   const fortuneMult    = 1 + totalFortune / 150
   const reloadCooldown = Math.max(600, 2200 - shipSpeed * 110)
@@ -367,7 +367,7 @@ export default function CannonGame({
       if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
       if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current =  1 }
       if (fireIndicatorRef.current) {
-        const zone = getShotResult(firePosRef.current, roundRef.current, critBonus)
+        const zone = getShotResult(firePosRef.current, roundRef.current)
         const s = indicatorStyle(zone)
         fireIndicatorRef.current.style.left       = `calc(${firePosRef.current * 100}% - 2px)`
         fireIndicatorRef.current.style.background = s.bg
@@ -445,7 +445,7 @@ export default function CannonGame({
 
     rafRef.current = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [phase, critBonus, dodgeWindowMs])
+  }, [phase, dodgeWindowMs])
 
   const doReload = useCallback(() => {
     if (phaseRef.current !== 'playing' || !canReloadRef.current || chargesRef.current >= MAX_CHARGES) return
@@ -468,14 +468,13 @@ export default function CannonGame({
     chargesRef.current -= isVolley ? MAX_CHARGES : 1
     setCharges(chargesRef.current)
 
-    const volleyCritBonus = isVolley ? critBonus * 1.5 : critBonus
-    const res = getShotResult(firePosRef.current, roundRef.current, volleyCritBonus)
+    const res = getShotResult(firePosRef.current, roundRef.current)
     setShotResult(res)
     snapIndicator(fireIndicatorRef)
     flashBar(fireFlashRef, res === 'critical' ? '#fbbf24' : res === 'hit' ? '#4ade80' : res === 'graze' ? '#94a3b8' : '#6b7280')
 
     const dmgMult = isVolley ? 2 : 1
-    const dmg = (res ? BASE_SHOT_DAMAGE[res] : 0) * dmgMult
+    const dmg = Math.round((res ? BASE_SHOT_DAMAGE[res] : 0) * dmgMult * powerMult)
 
     if (dmg > 0) {
       setShowCannonShot(true)
@@ -531,7 +530,7 @@ export default function CannonGame({
     } else {
       setTimeout(() => { canFireRef.current = true; setCanFire(true); setShotResult(null) }, 550)
     }
-  }, [critBonus, fortuneMult, cannonJammed, resetEnemyForRound])
+  }, [powerMult, fortuneMult, cannonJammed, resetEnemyForRound])
 
   const dodge = useCallback(() => {
     if (dodgeStateRef.current !== 'incoming' || dodgeLockedRef.current) return
@@ -590,7 +589,7 @@ export default function CannonGame({
     setPhase('idle')
   }, [isClaiming])
 
-  const fZones        = getFireZones(roundRef.current, critBonus)
+  const fZones        = getFireZones(roundRef.current)
   const isIncoming    = dodgeState === 'incoming'
   const isVolleyReady = charges === MAX_CHARGES
   const isCommitted   = !canFire || !canReload
