@@ -1,17 +1,17 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
-import CannonGame from './CannonGame'
-import { getCannonPlayerStats } from './actions'
+import RaidGame from './RaidGame'
+import { getRaidPlayerStats } from './actions'
 
-export default async function CannonPage() {
+export default async function RaidPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
   const [{ data: profile }, stats] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
-    getCannonPlayerStats(user.id),
+    getRaidPlayerStats(user.id),
   ])
 
   return (
@@ -23,7 +23,7 @@ export default async function CannonPage() {
       />
       <main>
         <div className="px-6 pt-4 pb-6 max-w-sm mx-auto md:[zoom:1.25] lg:[zoom:1.45]">
-          <CannonGame
+          <RaidGame
             shipImageUrl={stats.shipImageUrl}
             shipName={stats.shipName}
             playerHPMax={stats.playerHPMax}

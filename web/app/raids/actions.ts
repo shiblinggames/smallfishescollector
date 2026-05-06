@@ -6,7 +6,7 @@ import { applyVariantBoosts, EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
-export interface CannonCrewMember {
+export interface RaidCrewMember {
   name: string
   imageUrl: string
   power: number
@@ -14,7 +14,7 @@ export interface CannonCrewMember {
   fortune: number
 }
 
-export interface CannonPlayerStats {
+export interface RaidPlayerStats {
   playerHPMax: number
   shipMinDamage: number
   shipSpeed: number
@@ -24,10 +24,10 @@ export interface CannonPlayerStats {
   shipImageUrl: string
   shipName: string
   crewCount: number
-  crewMembers: CannonCrewMember[]
+  crewMembers: RaidCrewMember[]
 }
 
-export async function getCannonPlayerStats(userId: string): Promise<CannonPlayerStats> {
+export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStats> {
   const admin = createAdminClient()
 
   const { data: profile } = await admin
@@ -41,7 +41,7 @@ export async function getCannonPlayerStats(userId: string): Promise<CannonPlayer
   const savedCrew = (profile?.saved_crew as number[] | null) ?? []
 
   let totalPower = 0, totalDodge = 0, totalFortune = 0
-  const crewMembers: CannonCrewMember[] = []
+  const crewMembers: RaidCrewMember[] = []
 
   if (savedCrew.length > 0) {
     const { data: crewData } = await admin
@@ -86,7 +86,7 @@ export async function getCannonPlayerStats(userId: string): Promise<CannonPlayer
   }
 }
 
-export async function claimCannonLoot(doubloons: number): Promise<void> {
+export async function claimRaidLoot(doubloons: number): Promise<void> {
   if (doubloons <= 0) return
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

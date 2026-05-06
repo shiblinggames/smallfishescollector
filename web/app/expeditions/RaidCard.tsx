@@ -15,7 +15,7 @@ export default function RaidCard({ navLevel }: Props) {
 
   function handleClick() {
     if (locked) return
-    router.push('/cannon')
+    router.push('/raids')
   }
 
   return (

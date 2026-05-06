@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { claimCannonLoot } from './actions'
+import { claimRaidLoot } from './actions'
 
 type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
@@ -275,7 +275,7 @@ function TimingBar({ indicatorRef, flashRef, zoneRef, hitHalfW, critHalfW }: {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-interface CannonCrewMember {
+interface RaidCrewMember {
   name: string
   imageUrl: string
   power: number
@@ -283,7 +283,7 @@ interface CannonCrewMember {
   fortune: number
 }
 
-export default function CannonGame({
+export default function RaidGame({
   shipImageUrl, shipName, playerHPMax, shipMinDamage, shipSpeed,
   totalPower, totalDodge, totalFortune, crewCount, crewMembers,
 }: {
@@ -296,7 +296,7 @@ export default function CannonGame({
   totalDodge: number
   totalFortune: number
   crewCount: number
-  crewMembers: CannonCrewMember[]
+  crewMembers: RaidCrewMember[]
 }) {
   const dodgeBonus        = totalDodge * 5
   const fortuneMult       = 1 + totalFortune / 75   // 2× at max crew luck (~75)
@@ -769,7 +769,7 @@ export default function CannonGame({
   const retreat = useCallback(async () => {
     if (isClaiming) return
     setIsClaiming(true)
-    try { await claimCannonLoot(potRef.current) } finally { setIsClaiming(false) }
+    try { await claimRaidLoot(potRef.current) } finally { setIsClaiming(false) }
     setBest(prev => Math.max(prev, streakRef.current))
     phaseRef.current = 'idle'
     setPhase('idle')
@@ -1296,7 +1296,7 @@ export default function CannonGame({
                     onPointerDown={async () => {
                       if (lootClaimed) return
                       setLootClaimed(true)
-                      await claimCannonLoot(lootAmount)
+                      await claimRaidLoot(lootAmount)
                       phaseRef.current = 'idle'
                       setPhase('idle')
                     }}
