@@ -370,6 +370,35 @@ export async function reelIn(
   return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, newAchievements, bountyCompletion, xpGained, newXP, dailyProgress: newP }
 }
 
+const QUICK_BUY_WORMS_QTY  = 10
+const QUICK_BUY_WORMS_COST = 20  // 2× the shop price of 10 doubloons per 10
+
+export async function quickBuyWorms(): Promise<{ qty: number; doubloons: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('doubloons')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile) return { error: 'Profile not found' }
+  if ((profile.doubloons ?? 0) < QUICK_BUY_WORMS_COST) return { error: 'Not enough doubloons' }
+
+  const newDoubloons = profile.doubloons - QUICK_BUY_WORMS_COST
+
+  await Promise.all([
+    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+    admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: 'worm', p_qty: QUICK_BUY_WORMS_QTY }),
+    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -QUICK_BUY_WORMS_COST, reason: 'Quick-buy worms' }),
+  ])
+
+  return { qty: QUICK_BUY_WORMS_QTY, doubloons: newDoubloons }
+}
+
 // Sell fish from inventory
 export async function sellFish(
   fishId: number,

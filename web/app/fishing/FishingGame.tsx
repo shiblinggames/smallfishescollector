@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, sellFish, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, useTideTurnerSkip, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { castLine, reelIn, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, useTideTurnerSkip, type FishSpecies, type FishingBountyCompletion } from './actions'
 import { claimDailyReward } from './dailyChallengeActions'
 import { getDailyChallenges, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
 import { getRingSkin } from '@/lib/ringSkins'
@@ -1418,6 +1418,8 @@ export default function FishingGame({
   const [sessionNewSpecies, setSessionNewSpecies] = useState(0)
   const [sessionGems, setSessionGems] = useState(0)
   const [sellPending, setSellPending] = useState<number | null>(null)
+  const [buyingWorms, setBuyingWorms] = useState(false)
+  const [wormBuyMsg, setWormBuyMsg] = useState<string | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
   const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean; gemEarned?: boolean; perfectStreak: number; streakBonusXP: number; jackpotMultiplier?: number } | null>(null)
   const [challengeActive, setChallengeActive] = useState(false)
@@ -3235,8 +3237,55 @@ export default function FishingGame({
               selectedBait={selectedBait}
               onSelect={(type) => { setSelectedBait(type); setBaitOpen(false) }}
             />
+            {/* Quick-buy worms */}
+            {(() => {
+              const canAfford = doubloons >= 20
+              return (
+                <button
+                  disabled={buyingWorms || !canAfford}
+                  onClick={async () => {
+                    setBuyingWorms(true)
+                    setWormBuyMsg(null)
+                    const res = await quickBuyWorms()
+                    if ('error' in res) {
+                      setWormBuyMsg(res.error)
+                    } else {
+                      setBaitInventory(prev =>
+                        prev.some(b => b.bait_type === 'worm')
+                          ? prev.map(b => b.bait_type === 'worm' ? { ...b, quantity: b.quantity + res.qty } : b)
+                          : [...prev, { bait_type: 'worm', quantity: res.qty }]
+                      )
+                      setDoubloons(res.doubloons)
+                      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+                      setWormBuyMsg('+10 worms')
+                    }
+                    setBuyingWorms(false)
+                    setTimeout(() => setWormBuyMsg(null), 2000)
+                  }}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl mt-3 w-full"
+                  style={{
+                    background: canAfford ? 'rgba(160,120,80,0.08)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${canAfford ? 'rgba(160,120,80,0.28)' : 'rgba(255,255,255,0.07)'}`,
+                    cursor: canAfford && !buyingWorms ? 'pointer' : 'not-allowed',
+                    opacity: buyingWorms ? 0.6 : 1,
+                  }}
+                >
+                  <div style={{ textAlign: 'left' }}>
+                    <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: canAfford ? '#d4a96a' : 'rgba(255,255,255,0.25)' }}>
+                      Quick-buy Worms
+                    </span>
+                    <span className="font-karla font-400" style={{ fontSize: '0.58rem', color: canAfford ? 'rgba(212,169,106,0.55)' : 'rgba(255,255,255,0.15)', marginLeft: 6 }}>
+                      ×10 · 2× price
+                    </span>
+                  </div>
+                  <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: wormBuyMsg ? (wormBuyMsg.startsWith('+') ? '#4ade80' : '#f87171') : (canAfford ? '#d4a96a' : 'rgba(255,255,255,0.2)') }}>
+                    {wormBuyMsg ?? '20 ⟡'}
+                  </span>
+                </button>
+              )
+            })()}
             <Link href="/marketplace/tackle-shop#bait" onClick={() => setBaitOpen(false)}
-              className="flex items-center justify-between px-3 py-2.5 rounded-xl mt-3"
+              className="flex items-center justify-between px-3 py-2.5 rounded-xl mt-2"
               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}>
               <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Buy more bait</span>
               <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#5a5956' }}>Tackle Shop ↗</span>
