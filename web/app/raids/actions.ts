@@ -6,6 +6,7 @@ import { applyVariantBoosts, EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
+
 export interface RaidCrewMember {
   name: string
   imageUrl: string
@@ -28,6 +29,7 @@ export interface RaidPlayerStats {
   equippedShipSkin: string | null
   shipSkins: string[]
   equippedRaidItems: string[]
+  hasSeenRaidTutorial: boolean
 }
 
 export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStats> {
@@ -35,7 +37,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, equipped_ship_skin, ship_skins, equipped_raid_items')
+    .select('ship_tier, saved_crew, ship_name, equipped_ship_skin, ship_skins, equipped_raid_items, has_seen_raid_tutorial')
     .eq('id', userId)
     .single()
 
@@ -86,9 +88,10 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     shipName:         (profile?.ship_name as string | null) ?? ship.name,
     crewCount:        savedCrew.length,
     crewMembers,
-    equippedShipSkin:  (profile?.equipped_ship_skin as string | null) ?? null,
-    shipSkins:         (profile?.ship_skins as string[] | null) ?? [],
-    equippedRaidItems: (profile?.equipped_raid_items as string[] | null) ?? [],
+    equippedShipSkin:     (profile?.equipped_ship_skin as string | null) ?? null,
+    shipSkins:            (profile?.ship_skins as string[] | null) ?? [],
+    equippedRaidItems:    (profile?.equipped_raid_items as string[] | null) ?? [],
+    hasSeenRaidTutorial:  (profile?.has_seen_raid_tutorial as boolean | null) ?? false,
   }
 }
 
