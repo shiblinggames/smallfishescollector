@@ -576,10 +576,16 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
 
   const { data: profile } = await admin
     .from('profiles')
-    .select(`prestige_levels, ${rewardCol}`)
+    .select('prestige_levels, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded')
     .eq('id', user.id).single()
   if (!profile) return { error: 'Profile not found' }
-  if (!(profile as Record<string, unknown>)[rewardCol]) return { error: 'Claim completion reward first' }
+  const rewardClaimed: Record<string, boolean | null> = {
+    shallows:    profile.zone_shallows_rewarded,
+    open_waters: profile.zone_open_waters_rewarded,
+    deep:        profile.zone_deep_rewarded,
+    abyss:       profile.zone_abyss_rewarded,
+  }
+  if (!rewardClaimed[zone]) return { error: 'Claim completion reward first' }
 
   const { count: caughtCount } = await admin
     .from('fish_collection').select('*', { count: 'exact', head: true })
