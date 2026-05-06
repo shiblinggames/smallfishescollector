@@ -30,17 +30,17 @@ export const SHIPS: ShipDef[] = [
     holdCapacity: 70, color: '#4ade80', imageUrl: '/models/schooner.png',
   },
   {
-    tier: 4, name: 'Brigantine', cost: 15000,
+    tier: 4, name: 'Brigantine', cost: 22000,
     description: 'Fast and capable. A merchant\'s best friend.',
     holdCapacity: 120, color: '#f0c040', imageUrl: '/models/brigantine.png',
   },
   {
-    tier: 5, name: 'Galleon', cost: 40000,
+    tier: 5, name: 'Galleon', cost: 80000,
     description: 'A grand vessel. The sea respects your presence.',
     holdCapacity: 180, color: '#a78bfa', imageUrl: '/models/galleon.png',
   },
   {
-    tier: 6, name: 'Man-o-War', cost: 100000,
+    tier: 6, name: 'Man-o-War', cost: 200000,
     description: 'The most feared ship on the water.',
     holdCapacity: 250, color: '#ff6b35', imageUrl: '/models/man-o-war.png',
   },
