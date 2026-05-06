@@ -1344,9 +1344,11 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
                   <motion.div
-                    animate={{ y: [0, -4, 0] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                    style={{ fontSize: '3.5rem' }}>🪝</motion.div>
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/plunderclosed.png" alt="Plunder crate" style={{ width: 120, height: 120, objectFit: 'contain' }} />
+                  </motion.div>
                   <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.4)', fontSize: '0.65rem', letterSpacing: '0.08em' }}>Plunder Crate</p>
                   <motion.button
                     onPointerDown={() => setLootOpened(true)}
@@ -1361,6 +1363,9 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
               ) : (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/plunderopen.png" alt="Plunder crate open" style={{ width: 100, height: 100, objectFit: 'contain' }} />
 
                   {/* Single loot roll */}
                   {(() => {
