@@ -95,6 +95,9 @@ export default function VoyageHistory({ voyages }: Props) {
 
   return (
     <div style={{ marginTop: '0.85rem' }}>
+      <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#4a3f28', marginBottom: '0.45rem' }}>
+        Past Voyages
+      </p>
       <VoyageRow v={latest} defaultOpen={false} />
 
       {/* Older entries — behind a toggle */}

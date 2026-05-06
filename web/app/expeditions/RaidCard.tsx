@@ -121,8 +121,8 @@ export default function RaidCard({ navLevel }: Props) {
               <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f97316' }}>300–900 ⟡</p>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <p className="font-karla" style={{ fontSize: '0.6rem', color: '#4a4845', marginBottom: 1 }}>Format</p>
-              <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#8a8880' }}>Real-time action</p>
+              <p className="font-karla" style={{ fontSize: '0.6rem', color: '#4a4845', marginBottom: 1 }}>Recommended</p>
+              <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#8a8880' }}>50+ Raid Score</p>
             </div>
           </div>
         )}

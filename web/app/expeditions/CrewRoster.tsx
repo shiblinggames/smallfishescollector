@@ -301,9 +301,6 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
                       <p className="font-cinzel font-700" style={{ fontSize: '2.6rem', color: '#f0ede8', lineHeight: 1 }}>
                         {raidScore}
                       </p>
-                      <p className="font-karla font-600" style={{ fontSize: '0.6rem', marginTop: 5, color: raidScore >= 50 ? '#4ade80' : '#6a6764' }}>
-                        {raidScore >= 50 ? '✓ Ready for Pete' : 'Rec. 50+ for Pete'}
-                      </p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
