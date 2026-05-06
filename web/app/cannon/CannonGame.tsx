@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { claimCannonLoot } from './actions'
 
-type GamePhase  = 'idle' | 'playing' | 'clear' | 'dead' | 'loot'
+type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
 // ── Enemy definitions ─────────────────────────────────────────────────────────
 
@@ -737,9 +737,17 @@ export default function CannonGame({
 
   const advance = useCallback(() => {
     setShotResult(null); setClearReady(false)
-    phaseRef.current = 'playing'
-    setPhase('playing')
+    phaseRef.current = 'ready'
+    setPhase('ready')
   }, [])
+
+  const openFire = useCallback(() => {
+    if (phaseRef.current === 'idle') { startGame(); return }
+    if (phaseRef.current === 'ready') {
+      phaseRef.current = 'playing'
+      setPhase('playing')
+    }
+  }, [startGame])
 
   const retreat = useCallback(async () => {
     if (isClaiming) return
@@ -762,7 +770,7 @@ export default function CannonGame({
     <div className="flex flex-col items-center gap-4 select-none" style={{ userSelect: 'none' }}>
 
       {/* ── Round / status header ─────────────────────────────────────────────── */}
-      {(phase === 'playing' || phase === 'clear') && (
+      {(phase === 'playing' || phase === 'ready' || phase === 'clear') && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingBottom: 2 }}>
           <span className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#4a4845' }}>Round {roundDisplay}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -976,7 +984,7 @@ export default function CannonGame({
               )}
             </AnimatePresence>
           </div>
-          {(phase === 'playing' || phase === 'clear') && (
+          {(phase === 'playing' || phase === 'ready' || phase === 'clear') && (
             <span className="font-karla font-600" style={{
               fontSize: '0.82rem', letterSpacing: '0.06em',
               color: raidElapsedMs >= 270000 ? '#ef4444' : raidElapsedMs >= 180000 ? '#fbbf24' : '#6a6764',
@@ -1127,19 +1135,29 @@ export default function CannonGame({
         </div>
       )}
 
-      {/* Idle phase: start button */}
-      {phase === 'idle' && (
-        <motion.button
-          onPointerDown={startGame}
-          whileTap={{ scale: 0.96 }}
-          className="font-karla font-700"
-          style={{
-            width: '100%', padding: '14px 0', borderRadius: 14, cursor: 'pointer',
-            background: 'rgba(56,189,248,0.14)', border: '1px solid rgba(56,189,248,0.38)',
-            color: '#38bdf8', fontSize: '0.92rem', letterSpacing: '0.06em',
-          }}>
-          Open Fire
-        </motion.button>
+      {/* Idle / ready phase: Open Fire in Dodge position */}
+      {(phase === 'idle' || phase === 'ready') && (
+        <div style={{ display: 'flex', gap: 14, justifyContent: 'center', width: '100%' }}>
+          {/* Invisible placeholder — RELOAD position */}
+          <div style={{ width: 82, height: 82, flexShrink: 0 }} />
+          {/* Open Fire — same position as DODGE */}
+          <motion.button
+            onPointerDown={openFire}
+            whileTap={{ scale: 0.88 }}
+            animate={{ boxShadow: ['0 0 0px #38bdf800', '0 0 20px #38bdf8aa', '0 0 8px #38bdf866'] }}
+            transition={{ duration: 0.9, repeat: Infinity }}
+            style={{
+              width: 82, height: 82, borderRadius: '50%', cursor: 'pointer',
+              background: 'rgba(56,189,248,0.16)', border: '2px solid rgba(56,189,248,0.65)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+            <p className="font-karla font-700" style={{ fontSize: '0.62rem', letterSpacing: '0.06em', color: '#38bdf8', textAlign: 'center', lineHeight: 1.2 }}>
+              OPEN<br />FIRE
+            </p>
+          </motion.button>
+          {/* Invisible placeholder — FIRE position */}
+          <div style={{ width: 82, height: 82, flexShrink: 0 }} />
+        </div>
       )}
 
       {/* ── Crit flash ───────────────────────────────────────────────────────── */}
