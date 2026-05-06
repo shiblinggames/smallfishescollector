@@ -88,7 +88,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     const timer = setTimeout(() => {
       const rarity = rarityFromVariant(cards[i].variantName, cards[i].dropWeight)
       peekActive.current.add(i)
-      setPeekGlows(prev => { const n = [...prev]; n[i] = PEEK_GLOW[rarity] ?? ''; return n })
+      setPeekGlows(prev => { const n = [...prev]; n[i] = PEEK_GLOW[rarity] ?? 'peek-jiggle'; return n })
     }, 350)
     peekTimers.current.set(i, timer)
   }

@@ -475,6 +475,16 @@ body {
 .peek-glow-legendary { animation: peek-glow-legendary-in 0.55s ease-out forwards; }
 .peek-glow-mythic    { animation: peek-glow-mythic-in    0.55s ease-out forwards; }
 
+@keyframes peek-jiggle-in {
+  0%   { transform: scale(1)    rotate(0deg);    }
+  18%  { transform: scale(1.05) rotate(-2.5deg); }
+  36%  { transform: scale(1.04) rotate(2deg);    }
+  54%  { transform: scale(1.03) rotate(-1deg);   }
+  72%  { transform: scale(1.02) rotate(0.4deg);  }
+  100% { transform: scale(1.02) rotate(0deg);    }
+}
+.peek-jiggle { animation: peek-jiggle-in 0.55s ease-out forwards; }
+
 /* ── Screen flash overlay ── */
 @keyframes reveal-flash {
   0%   { opacity: 1; }
