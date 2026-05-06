@@ -2,31 +2,33 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { claimCannonLoot } from './actions'
 
-type GamePhase   = 'idle' | 'playing' | 'dead'
+type GamePhase   = 'idle' | 'playing' | 'clear' | 'dead'
 type ShotResult  = 'miss' | 'graze' | 'hit' | 'critical' | null
 type ParryState  = 'none' | 'incoming' | 'success' | 'half' | 'failed'
 type ParryResult = 'full' | 'half' | 'miss'
 
-const ENEMY_HP_BASE    = 3
-const PLAYER_HP_MAX    = 3
 const SPEED_BASE       = 0.006
 const SPEED_INC        = 0.0008
 const PARRY_SPEED_BASE = 0.009
 const PARRY_SPEED_INC  = 0.001
 const ENEMY_FIRE_MS    = 3200
-const ENEMY_FIRE_DEC   = 150
+const ENEMY_FIRE_DEC   = 120
 const PARRY_WINDOW_MS  = 2200
 const PARRY_WINDOW_DEC = 40
+const ENEMY_HP_BASE    = 2
 
-function getFireZones(round: number) {
-  const hitW  = Math.max(0.07, 0.13  - round * 0.008)
-  const critW = Math.max(0.03, 0.065 - round * 0.005)
+// ── Zone geometry ─────────────────────────────────────────────────────────────
+
+function getFireZones(round: number, critBonus = 0) {
+  const hitW  = Math.max(0.07, 0.13  - round * 0.007)
+  const critW = Math.min(0.14, Math.max(0.03, 0.065 - round * 0.004 + critBonus))
   return { grazeL: 0.5 - hitW - 0.18, hitL: 0.5 - hitW, critL: 0.5 - critW, critR: 0.5 + critW, hitR: 0.5 + hitW, grazeR: 0.5 + hitW + 0.18 }
 }
 
-function getShotResult(pos: number, round: number): ShotResult {
-  const z = getFireZones(round)
+function getShotResult(pos: number, round: number, critBonus = 0): ShotResult {
+  const z = getFireZones(round, critBonus)
   if (pos >= z.critL && pos <= z.critR)   return 'critical'
   if (pos >= z.hitL  && pos <= z.hitR)    return 'hit'
   if (pos >= z.grazeL && pos <= z.grazeR) return 'graze'
@@ -34,8 +36,8 @@ function getShotResult(pos: number, round: number): ShotResult {
 }
 
 function getParryZones(round: number) {
-  const fullW = Math.max(0.07, 0.13 - round * 0.006)
-  const halfW = Math.max(0.10, 0.20 - round * 0.004)
+  const fullW = Math.max(0.07, 0.13 - round * 0.005)
+  const halfW = Math.max(0.09, 0.20 - round * 0.004)
   return { halfL: 0.5 - fullW - halfW, fullL: 0.5 - fullW, fullR: 0.5 + fullW, halfR: 0.5 + fullW + halfW }
 }
 
@@ -52,7 +54,17 @@ const SHOT_COLOR:  Record<string, string> = { critical: '#fbbf24', hit: '#4ade80
 const PARRY_LABEL: Record<string, string> = { full: 'Parried!', half: 'Half Parry', miss: 'Hit!' }
 const PARRY_COLOR: Record<string, string> = { full: '#38bdf8', half: '#fbbf24', miss: '#ef4444' }
 
-// Colors the indicator takes when passing through each zone
+// Base doubloons per enemy kill — scales steeply with round
+function killGold(round: number, fortuneMult: number) {
+  return Math.floor(40 * (round + 1) * fortuneMult)
+}
+
+function fmtGold(n: number) {
+  return n.toLocaleString()
+}
+
+// ── Indicator helpers ─────────────────────────────────────────────────────────
+
 function indicatorStyle(zone: ShotResult) {
   if (zone === 'critical') return { bg: '#fbbf24', shadow: '0 0 18px rgba(251,191,36,1), 0 0 8px rgba(251,191,36,0.7)' }
   if (zone === 'hit')      return { bg: '#4ade80', shadow: '0 0 12px rgba(74,222,128,0.85)' }
@@ -66,7 +78,6 @@ function parryIndicatorStyle(result: ParryResult) {
   return { bg: 'rgba(240,237,232,0.25)', shadow: '0 0 4px rgba(240,237,232,0.1)' }
 }
 
-// Direct-DOM helpers — no React re-renders
 function flashBar(ref: React.RefObject<HTMLDivElement | null>, color: string) {
   if (!ref.current) return
   ref.current.style.background = color
@@ -93,7 +104,8 @@ function snapIndicator(ref: React.RefObject<HTMLDivElement | null>) {
   })
 }
 
-// ── Bar component ─────────────────────────────────────────────────────────────
+// ── TimingBar ─────────────────────────────────────────────────────────────────
+
 function TimingBar({ indicatorRef, flashRef, zones, critZone }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
@@ -102,7 +114,6 @@ function TimingBar({ indicatorRef, flashRef, zones, critZone }: {
 }) {
   return (
     <div style={{ position: 'relative', height: 52, borderRadius: 12 }}>
-      {/* Zone fills — clipped to bar */}
       <div style={{
         position: 'absolute', inset: 0, borderRadius: 12,
         background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
@@ -115,7 +126,6 @@ function TimingBar({ indicatorRef, flashRef, zones, critZone }: {
             background: z.color,
           }} />
         ))}
-        {/* Crit zone ambient pulse */}
         {critZone && (
           <motion.div
             animate={{ opacity: [0.35, 0.6, 0.35] }}
@@ -127,12 +137,10 @@ function TimingBar({ indicatorRef, flashRef, zones, critZone }: {
             }}
           />
         )}
-        {/* Tap flash overlay */}
         <div ref={flashRef} style={{
           position: 'absolute', inset: 0, opacity: 0, pointerEvents: 'none', borderRadius: 12,
         }} />
       </div>
-      {/* Indicator — outside overflow:hidden so glow isn't clipped */}
       <div ref={indicatorRef} style={{
         position: 'absolute', top: 5, bottom: 5, width: 4, borderRadius: 2,
         background: 'rgba(240,237,232,0.3)',
@@ -143,20 +151,41 @@ function TimingBar({ indicatorRef, flashRef, zones, critZone }: {
   )
 }
 
-export default function CannonGame({ shipImageUrl }: { shipImageUrl: string }) {
-  const [phase, setPhase]               = useState<GamePhase>('idle')
-  const [playerHP, setPlayerHP]         = useState(PLAYER_HP_MAX)
-  const [enemyHP, setEnemyHP]           = useState(ENEMY_HP_BASE)
-  const [enemyHPMax, setEnemyHPMax]     = useState(ENEMY_HP_BASE)
-  const [streak, setStreak]             = useState(0)
-  const [best, setBest]                 = useState(0)
-  const [shotResult, setShotResult]     = useState<ShotResult>(null)
-  const [parryState, setParryState]     = useState<ParryState>('none')
+// ── Main component ─────────────────────────────────────────────────────────────
+
+export default function CannonGame({
+  shipImageUrl, shipName, playerHPMax,
+  totalPower, totalDodge, totalFortune, crewCount,
+}: {
+  shipImageUrl: string
+  shipName: string
+  playerHPMax: number
+  totalPower: number
+  totalDodge: number
+  totalFortune: number
+  crewCount: number
+}) {
+  // Derived bonuses
+  const critBonus     = totalPower / 800        // wider crit zone
+  const parryBonus    = totalDodge * 8          // +ms parry window per NAV point
+  const fortuneMult   = 1 + totalFortune / 150  // gold multiplier
+
+  const [phase, setPhase]                 = useState<GamePhase>('idle')
+  const [playerHP, setPlayerHP]           = useState(playerHPMax)
+  const [enemyHP, setEnemyHP]             = useState(ENEMY_HP_BASE)
+  const [enemyHPMax, setEnemyHPMax]       = useState(ENEMY_HP_BASE)
+  const [streak, setStreak]               = useState(0)
+  const [best, setBest]                   = useState(0)
+  const [pot, setPot]                     = useState(0)
+  const [lastEarned, setLastEarned]       = useState(0)
+  const [shotResult, setShotResult]       = useState<ShotResult>(null)
+  const [parryState, setParryState]       = useState<ParryState>('none')
   const [parryFeedback, setParryFeedback] = useState<ParryResult | null>(null)
-  const [enemyFirePct, setEnemyFirePct] = useState(1)
-  const [enemyHit, setEnemyHit]         = useState(false)
-  const [playerHit, setPlayerHit]       = useState(false)
-  const [roundDisplay, setRoundDisplay] = useState(1)
+  const [enemyFirePct, setEnemyFirePct]   = useState(1)
+  const [enemyHit, setEnemyHit]           = useState(false)
+  const [playerHit, setPlayerHit]         = useState(false)
+  const [roundDisplay, setRoundDisplay]   = useState(1)
+  const [isClaiming, setIsClaiming]       = useState(false)
 
   const fireIndicatorRef  = useRef<HTMLDivElement>(null)
   const fireFlashRef      = useRef<HTMLDivElement>(null)
@@ -169,7 +198,8 @@ export default function CannonGame({ shipImageUrl }: { shipImageUrl: string }) {
   const parryDirRef     = useRef(1)
   const roundRef        = useRef(0)
   const streakRef       = useRef(0)
-  const playerHPRef     = useRef(PLAYER_HP_MAX)
+  const potRef          = useRef(0)
+  const playerHPRef     = useRef(playerHPMax)
   const enemyHPRef      = useRef(ENEMY_HP_BASE)
   const enemyHPMaxRef   = useRef(ENEMY_HP_BASE)
   const phaseRef        = useRef<GamePhase>('idle')
@@ -180,13 +210,16 @@ export default function CannonGame({ shipImageUrl }: { shipImageUrl: string }) {
   const parryStateRef   = useRef<ParryState>('none')
   const parryElapsedRef = useRef(0)
 
-  const parryWindowMs = () => Math.max(800, PARRY_WINDOW_MS - roundRef.current * PARRY_WINDOW_DEC)
+  const parryWindowMs = useCallback(() =>
+    Math.max(800, PARRY_WINDOW_MS + parryBonus - roundRef.current * PARRY_WINDOW_DEC),
+  [parryBonus])
 
   const startGame = useCallback(() => {
     firePosRef.current      = 0; fireDirRef.current      = 1
     parryPosRef.current     = 0; parryDirRef.current     = 1
     roundRef.current        = 0; streakRef.current       = 0
-    playerHPRef.current     = PLAYER_HP_MAX
+    potRef.current          = 0
+    playerHPRef.current     = playerHPMax
     enemyHPRef.current      = ENEMY_HP_BASE
     enemyHPMaxRef.current   = ENEMY_HP_BASE
     canFireRef.current      = true
@@ -196,34 +229,36 @@ export default function CannonGame({ shipImageUrl }: { shipImageUrl: string }) {
     parryElapsedRef.current = 0
     phaseRef.current = 'playing'
     setPhase('playing')
-    setPlayerHP(PLAYER_HP_MAX); setEnemyHP(ENEMY_HP_BASE); setEnemyHPMax(ENEMY_HP_BASE)
-    setStreak(0); setShotResult(null); setParryState('none'); setParryFeedback(null)
+    setPlayerHP(playerHPMax); setEnemyHP(ENEMY_HP_BASE); setEnemyHPMax(ENEMY_HP_BASE)
+    setStreak(0); setPot(0); setLastEarned(0)
+    setShotResult(null); setParryState('none'); setParryFeedback(null)
     setEnemyFirePct(1); setRoundDisplay(1)
-  }, [])
+  }, [playerHPMax])
 
   useEffect(() => {
     if (phase !== 'playing') return
     let lastTime = performance.now()
 
     function loop(now: number) {
+      if (phaseRef.current !== 'playing') return
       const dt = Math.min(now - lastTime, 50)
       lastTime = now
 
-      // Fire bar indicator
+      // Fire bar
       const fSpeed = SPEED_BASE + roundRef.current * SPEED_INC
       firePosRef.current += fSpeed * (dt / 16.67) * fireDirRef.current
       if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
       if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current =  1 }
       if (fireIndicatorRef.current) {
-        const zone = getShotResult(firePosRef.current, roundRef.current)
+        const zone = getShotResult(firePosRef.current, roundRef.current, critBonus)
         const s = indicatorStyle(zone)
-        fireIndicatorRef.current.style.left = `calc(${firePosRef.current * 100}% - 2px)`
+        fireIndicatorRef.current.style.left       = `calc(${firePosRef.current * 100}% - 2px)`
         fireIndicatorRef.current.style.background = s.bg
         fireIndicatorRef.current.style.boxShadow  = s.shadow
       }
 
       if (parryStateRef.current === 'incoming') {
-        // Parry bar indicator
+        // Parry bar
         const pSpeed = PARRY_SPEED_BASE + roundRef.current * PARRY_SPEED_INC
         parryPosRef.current += pSpeed * (dt / 16.67) * parryDirRef.current
         if (parryPosRef.current >= 1) { parryPosRef.current = 1; parryDirRef.current = -1 }
@@ -236,10 +271,8 @@ export default function CannonGame({ shipImageUrl }: { shipImageUrl: string }) {
           parryIndicatorRef.current.style.boxShadow  = s.shadow
         }
 
-        // Parry window countdown
         parryElapsedRef.current += dt
-        const pct = 1 - parryElapsedRef.current / parryWindowMs()
-        setEnemyFirePct(Math.max(0, pct))
+        setEnemyFirePct(Math.max(0, 1 - parryElapsedRef.current / parryWindowMs()))
 
         if (parryElapsedRef.current >= parryWindowMs()) {
           parryStateRef.current = 'failed'
@@ -258,10 +291,9 @@ export default function CannonGame({ shipImageUrl }: { shipImageUrl: string }) {
           fireElapsedRef.current = 0; setEnemyFirePct(1)
         }
       } else {
-        // Enemy fire countdown
+        // Enemy countdown
         fireElapsedRef.current += dt
-        const pct = 1 - fireElapsedRef.current / fireIntervalRef.current
-        setEnemyFirePct(Math.max(0, pct))
+        setEnemyFirePct(Math.max(0, 1 - fireElapsedRef.current / fireIntervalRef.current))
 
         if (fireElapsedRef.current >= fireIntervalRef.current) {
           fireElapsedRef.current = 0
@@ -277,18 +309,17 @@ export default function CannonGame({ shipImageUrl }: { shipImageUrl: string }) {
 
     rafRef.current = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [phase])
+  }, [phase, critBonus, parryWindowMs])
 
   const fire = useCallback(() => {
     if (phaseRef.current !== 'playing' || !canFireRef.current) return
     canFireRef.current = false
-    const res = getShotResult(firePosRef.current, roundRef.current)
+    const res = getShotResult(firePosRef.current, roundRef.current, critBonus)
     setShotResult(res)
     snapIndicator(fireIndicatorRef)
-    const flashColor = res === 'critical' ? '#fbbf24' : res === 'hit' ? '#4ade80' : res === 'graze' ? '#94a3b8' : '#6b7280'
-    flashBar(fireFlashRef, flashColor)
-    const dmg = res ? SHOT_DAMAGE[res] : 0
+    flashBar(fireFlashRef, res === 'critical' ? '#fbbf24' : res === 'hit' ? '#4ade80' : res === 'graze' ? '#94a3b8' : '#6b7280')
 
+    const dmg = res ? SHOT_DAMAGE[res] : 0
     if (dmg > 0) {
       enemyHPRef.current = Math.max(0, enemyHPRef.current - dmg)
       setEnemyHP(enemyHPRef.current)
@@ -296,19 +327,34 @@ export default function CannonGame({ shipImageUrl }: { shipImageUrl: string }) {
       setTimeout(() => setEnemyHit(false), 350)
 
       if (enemyHPRef.current <= 0) {
-        roundRef.current++; streakRef.current++
-        setStreak(streakRef.current); setRoundDisplay(roundRef.current + 1)
+        streakRef.current++
+        setStreak(streakRef.current)
+
+        // Award gold for this kill
+        const earned = killGold(roundRef.current, fortuneMult)
+        potRef.current += earned
+        setPot(potRef.current)
+        setLastEarned(earned)
+
+        // Advance to next round
+        roundRef.current++
+        setRoundDisplay(roundRef.current + 1)
         const newMax = ENEMY_HP_BASE + Math.floor(roundRef.current / 2)
         enemyHPMaxRef.current = newMax; enemyHPRef.current = newMax
-        fireIntervalRef.current = Math.max(1400, ENEMY_FIRE_MS - roundRef.current * ENEMY_FIRE_DEC)
+        fireIntervalRef.current = Math.max(1200, ENEMY_FIRE_MS - roundRef.current * ENEMY_FIRE_DEC)
         fireElapsedRef.current = 0
         parryStateRef.current = 'none'; parryElapsedRef.current = 0
         setEnemyHP(newMax); setEnemyHPMax(newMax)
         setEnemyFirePct(1); setParryState('none')
+
+        // Pause for round-clear choice
+        phaseRef.current = 'clear'
+        setTimeout(() => setPhase('clear'), 320)
+        return
       }
     }
     setTimeout(() => { canFireRef.current = true; setShotResult(null) }, 550)
-  }, [])
+  }, [critBonus, fortuneMult])
 
   const parry = useCallback(() => {
     if (parryStateRef.current !== 'incoming') return
@@ -316,8 +362,7 @@ export default function CannonGame({ shipImageUrl }: { shipImageUrl: string }) {
     parryStateRef.current = res === 'full' ? 'success' : 'half'
     setParryFeedback(res)
     snapIndicator(parryIndicatorRef)
-    const flashColor = res === 'full' ? '#38bdf8' : res === 'half' ? '#fbbf24' : '#ef4444'
-    flashBar(parryFlashRef, flashColor)
+    flashBar(parryFlashRef, res === 'full' ? '#38bdf8' : res === 'half' ? '#fbbf24' : '#ef4444')
 
     if (res === 'miss') {
       playerHPRef.current--
@@ -347,32 +392,59 @@ export default function CannonGame({ shipImageUrl }: { shipImageUrl: string }) {
     setTimeout(() => { parryStateRef.current = 'none'; setParryState('none'); setParryFeedback(null) }, 600)
   }, [])
 
-  const fZones = getFireZones(roundRef.current)
+  const advance = useCallback(() => {
+    canFireRef.current = true
+    setShotResult(null)
+    phaseRef.current = 'playing'
+    setPhase('playing')
+  }, [])
+
+  const retreat = useCallback(async () => {
+    if (isClaiming) return
+    setIsClaiming(true)
+    try {
+      await claimCannonLoot(potRef.current)
+    } finally {
+      setIsClaiming(false)
+    }
+    setBest(prev => Math.max(prev, streakRef.current))
+    phaseRef.current = 'idle'
+    setPhase('idle')
+  }, [isClaiming])
+
+  const fZones = getFireZones(roundRef.current, critBonus)
   const pZones = getParryZones(roundRef.current)
   const isIncoming = parryState === 'incoming'
 
   const fireBarZones = [
-    { color: 'rgba(148,163,184,0.12)', left: fZones.grazeL, width: fZones.hitL - fZones.grazeL  },
-    { color: 'rgba(74,222,128,0.18)',  left: fZones.hitL,   width: fZones.critL - fZones.hitL   },
-    { color: 'rgba(251,191,36,0.22)',  left: fZones.critL,  width: fZones.critR - fZones.critL  },
-    { color: 'rgba(74,222,128,0.18)',  left: fZones.critR,  width: fZones.hitR - fZones.critR   },
-    { color: 'rgba(148,163,184,0.12)', left: fZones.hitR,   width: fZones.grazeR - fZones.hitR  },
+    { color: 'rgba(148,163,184,0.12)', left: fZones.grazeL, width: fZones.hitL   - fZones.grazeL },
+    { color: 'rgba(74,222,128,0.18)',  left: fZones.hitL,   width: fZones.critL  - fZones.hitL   },
+    { color: 'rgba(251,191,36,0.22)',  left: fZones.critL,  width: fZones.critR  - fZones.critL  },
+    { color: 'rgba(74,222,128,0.18)',  left: fZones.critR,  width: fZones.hitR   - fZones.critR  },
+    { color: 'rgba(148,163,184,0.12)', left: fZones.hitR,   width: fZones.grazeR - fZones.hitR   },
   ]
 
   const parryBarZones = [
-    { color: 'rgba(251,191,36,0.18)',  left: pZones.halfL,  width: pZones.fullL - pZones.halfL  },
-    { color: 'rgba(56,189,248,0.28)',  left: pZones.fullL,  width: pZones.fullR - pZones.fullL  },
-    { color: 'rgba(251,191,36,0.18)',  left: pZones.fullR,  width: pZones.halfR - pZones.fullR  },
+    { color: 'rgba(251,191,36,0.18)',  left: pZones.halfL,  width: pZones.fullL - pZones.halfL },
+    { color: 'rgba(56,189,248,0.28)',  left: pZones.fullL,  width: pZones.fullR - pZones.fullL },
+    { color: 'rgba(251,191,36,0.18)',  left: pZones.fullR,  width: pZones.halfR - pZones.fullR },
   ]
 
   return (
     <div className="flex flex-col items-center gap-5 select-none" style={{ userSelect: 'none' }}>
 
-      {/* Enemy */}
+      {/* Enemy section */}
       <div className="w-full max-w-sm">
         <div className="flex items-center justify-between mb-2 px-1">
           <span className="font-karla font-600 text-[#f0ede8]" style={{ fontSize: '0.8rem' }}>Enemy Ship</span>
-          <span className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#9a9488' }}>Round {roundDisplay}</span>
+          <div className="flex items-center gap-3">
+            {phase === 'playing' || phase === 'clear' ? (
+              <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#f0c040' }}>
+                ⟡ {fmtGold(pot)}
+              </span>
+            ) : null}
+            <span className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#9a9488' }}>Round {roundDisplay}</span>
+          </div>
         </div>
         <div className="flex gap-2 mb-3 px-1">
           {Array.from({ length: enemyHPMax }).map((_, i) => (
@@ -429,7 +501,7 @@ export default function CannonGame({ shipImageUrl }: { shipImageUrl: string }) {
         </div>
       </div>
 
-      {/* Parry bar — appears when incoming */}
+      {/* Parry bar */}
       <div style={{ width: '100%', maxWidth: 360, minHeight: 80 }}>
         <AnimatePresence>
           {isIncoming && (
@@ -456,7 +528,7 @@ export default function CannonGame({ shipImageUrl }: { shipImageUrl: string }) {
         </AnimatePresence>
       </div>
 
-      {/* Incoming countdown bar */}
+      {/* Countdown bar */}
       {phase === 'playing' && (
         <div style={{ width: '100%', maxWidth: 360 }}>
           <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
@@ -470,17 +542,22 @@ export default function CannonGame({ shipImageUrl }: { shipImageUrl: string }) {
         </div>
       )}
 
-      {/* Buttons */}
+      {/* Action buttons */}
       <div style={{ display: 'flex', gap: 12, width: '100%', maxWidth: 360 }}>
-        <motion.button onPointerDown={phase === 'playing' ? fire : startGame} whileTap={{ scale: 0.95 }}
+        <motion.button
+          onPointerDown={phase === 'playing' ? fire : phase === 'idle' ? startGame : undefined}
+          whileTap={{ scale: 0.95 }}
           className="font-karla font-700"
           style={{
             flex: 1, padding: '13px 0',
             background: phase === 'playing' ? 'rgba(239,68,68,0.15)' : 'rgba(56,189,248,0.15)',
             border: `1px solid ${phase === 'playing' ? 'rgba(239,68,68,0.4)' : 'rgba(56,189,248,0.4)'}`,
-            borderRadius: 14, cursor: 'pointer',
+            borderRadius: 14, cursor: phase === 'clear' ? 'default' : 'pointer',
             color: phase === 'playing' ? '#ef4444' : '#38bdf8',
             fontSize: '1rem', letterSpacing: '0.06em',
+            opacity: phase === 'clear' ? 0 : 1,
+            pointerEvents: phase === 'clear' ? 'none' : 'auto',
+            transition: 'opacity 0.15s',
           }}>
           {phase === 'idle' ? 'Open Fire' : phase === 'dead' ? 'Try Again' : 'FIRE'}
         </motion.button>
@@ -513,7 +590,7 @@ export default function CannonGame({ shipImageUrl }: { shipImageUrl: string }) {
             filter: playerHit ? 'brightness(2) saturate(0)' : 'none', transition: 'filter 0.15s',
           }} />
           <div className="flex gap-2">
-            {Array.from({ length: PLAYER_HP_MAX }).map((_, i) => (
+            {Array.from({ length: playerHPMax }).map((_, i) => (
               <div key={i} style={{
                 width: 10, height: 10, borderRadius: '50%',
                 background: i < playerHP ? '#38bdf8' : 'rgba(255,255,255,0.1)',
@@ -522,19 +599,119 @@ export default function CannonGame({ shipImageUrl }: { shipImageUrl: string }) {
             ))}
           </div>
         </motion.div>
+
+        {/* Crew stat badges — shown on idle */}
+        {phase === 'idle' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="flex gap-3 flex-wrap mt-3 px-2">
+            <span className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
+              {shipName} · {playerHPMax} HP
+            </span>
+            {crewCount > 0 ? (
+              <>
+                {totalPower  > 0 && <span style={{ fontSize: '0.62rem', color: '#f87171', fontFamily: 'var(--font-karla)' }}>PWR {totalPower}</span>}
+                {totalDodge  > 0 && <span style={{ fontSize: '0.62rem', color: '#60a5fa', fontFamily: 'var(--font-karla)' }}>NAV {totalDodge}</span>}
+                {totalFortune > 0 && <span style={{ fontSize: '0.62rem', color: '#f0c040', fontFamily: 'var(--font-karla)' }}>FTN {totalFortune}</span>}
+              </>
+            ) : (
+              <span style={{ fontSize: '0.62rem', color: '#4a4845', fontFamily: 'var(--font-karla)' }}>No crew assigned</span>
+            )}
+          </motion.div>
+        )}
       </div>
 
-      {/* Dead overlay */}
+      {/* ── Round clear overlay ─────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {phase === 'clear' && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0.78)', zIndex: 50,
+            }}>
+            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>
+              Enemy Sunk
+            </p>
+            <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '1.6rem', marginBottom: 4 }}>
+              Round {roundDisplay - 1} Clear
+            </p>
+            <motion.p
+              key={lastEarned}
+              initial={{ opacity: 0, y: -4, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              className="font-karla font-700"
+              style={{ color: '#f0c040', fontSize: '1.1rem', marginBottom: 2 }}>
+              +{fmtGold(lastEarned)} ⟡
+            </motion.p>
+            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.4)', fontSize: '0.75rem', marginBottom: 36 }}>
+              Pot: {fmtGold(pot)} ⟡
+            </p>
+
+            <div style={{ display: 'flex', gap: 10, flexDirection: 'column', width: 240 }}>
+              <motion.button
+                onPointerDown={advance} whileTap={{ scale: 0.96 }}
+                className="font-karla font-700"
+                style={{
+                  padding: '13px 0', borderRadius: 14, cursor: 'pointer',
+                  background: 'rgba(239,68,68,0.18)',
+                  border: '1px solid rgba(239,68,68,0.5)',
+                  color: '#ef4444', fontSize: '0.95rem', letterSpacing: '0.06em',
+                }}>
+                Advance →
+              </motion.button>
+              <motion.button
+                onPointerDown={retreat} whileTap={{ scale: 0.96 }}
+                disabled={isClaiming}
+                className="font-karla font-600"
+                style={{
+                  padding: '13px 0', borderRadius: 14, cursor: isClaiming ? 'default' : 'pointer',
+                  background: 'rgba(240,197,64,0.12)',
+                  border: '1px solid rgba(240,197,64,0.35)',
+                  color: '#f0c040', fontSize: '0.88rem', letterSpacing: '0.04em',
+                  opacity: isClaiming ? 0.6 : 1,
+                }}>
+                {isClaiming ? 'Banking…' : `Retreat — Bank ${fmtGold(pot)} ⟡`}
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Dead overlay ─────────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {phase === 'dead' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.72)', zIndex: 50 }}
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0.78)', zIndex: 50,
+            }}
             onPointerDown={startGame}>
-            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.4)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>Ships Sunk</p>
+            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
+              Lost at Sea
+            </p>
             <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '3rem', margin: '0 0 4px' }}>{streak}</p>
-            {best > 0 && <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.3)', fontSize: '0.75rem', marginBottom: 28 }}>Best: {best}</p>}
+            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.3)', fontSize: '0.7rem', marginBottom: 4 }}>
+              {streak === 1 ? '1 ship sunk' : `${streak} ships sunk`}
+            </p>
+            {pot > 0 && (
+              <p className="font-karla font-400" style={{ color: 'rgba(239,68,68,0.55)', fontSize: '0.8rem', marginBottom: 4 }}>
+                Lost {fmtGold(pot)} ⟡
+              </p>
+            )}
+            {best > 0 && (
+              <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.25)', fontSize: '0.7rem', marginBottom: 28 }}>
+                Best: {best}
+              </p>
+            )}
             {best === 0 && <div style={{ marginBottom: 28 }} />}
-            <button className="font-karla font-700" style={{ padding: '11px 34px', background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.4)', borderRadius: 12, color: '#38bdf8', fontSize: '0.9rem', letterSpacing: '0.04em', cursor: 'pointer' }}>
+            <button className="font-karla font-700" style={{
+              padding: '11px 34px',
+              background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.4)',
+              borderRadius: 12, color: '#38bdf8', fontSize: '0.9rem', letterSpacing: '0.04em', cursor: 'pointer',
+            }}>
               Try Again
             </button>
           </motion.div>

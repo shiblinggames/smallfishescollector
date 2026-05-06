@@ -2,21 +2,18 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
-import { getShip } from '@/lib/ships'
 import CannonGame from './CannonGame'
+import { getCannonPlayerStats } from './actions'
 
 export default async function CannonPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('packs_available, doubloons, gems, ship_tier')
-    .eq('id', user.id)
-    .single()
-
-  const ship = getShip(profile?.ship_tier ?? 0)
+  const [{ data: profile }, stats] = await Promise.all([
+    supabase.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
+    getCannonPlayerStats(user.id),
+  ])
 
   return (
     <>
@@ -46,7 +43,15 @@ export default async function CannonPage() {
         </div>
 
         <div className="px-6 pb-12 max-w-sm mx-auto">
-          <CannonGame shipImageUrl={ship.imageUrl ?? '/models/rowboat.png'} />
+          <CannonGame
+            shipImageUrl={stats.shipImageUrl}
+            shipName={stats.shipName}
+            playerHPMax={stats.playerHPMax}
+            totalPower={stats.totalPower}
+            totalDodge={stats.totalDodge}
+            totalFortune={stats.totalFortune}
+            crewCount={stats.crewCount}
+          />
         </div>
       </main>
     </>
