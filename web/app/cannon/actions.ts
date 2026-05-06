@@ -52,7 +52,7 @@ export async function getCannonPlayerStats(userId: string): Promise<CannonPlayer
   }
 
   return {
-    playerHPMax:  Math.min(9, 3 + shipTier),
+    playerHPMax:  ship.durability,
     totalPower,
     totalDodge,
     totalFortune,
