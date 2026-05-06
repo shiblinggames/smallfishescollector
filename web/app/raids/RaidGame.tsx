@@ -786,9 +786,9 @@ export default function RaidGame({
     <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
 
       {/* ── Round / status header ─────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingBottom: 2, visibility: (phase === 'idle' || phase === 'ready') ? 'hidden' : 'visible' }}>
-          <span className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#e0d8c8', textShadow: '0 1px 6px rgba(0,0,0,0.95)' }}>Round {roundDisplay}</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', paddingBottom: 2, visibility: (phase === 'idle' || phase === 'ready') ? 'hidden' : 'visible' }}>
+          <span className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', textShadow: '0 2px 10px rgba(0,0,0,0.95)' }}>Round {roundDisplay}</span>
+          <div style={{ position: 'absolute', right: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
             {enemyDodging && (
               <motion.span
                 animate={{ opacity: [1, 0.4, 1] }}
