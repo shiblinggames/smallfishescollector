@@ -20,6 +20,7 @@ const PARRY_WINDOW_DEC = 12
 const ENEMY_HP_BASE    = 2
 const CANNON_MISS_CD   = 2400  // ms locked after a clean miss
 const PARRY_MISS_CD    = 2600  // ms exposed after missing the parry zone
+const INCOMING_DAMAGE  = 10    // full hit damage; half parry = 5
 
 // ── Boss rounds ───────────────────────────────────────────────────────────────
 
@@ -296,7 +297,7 @@ export default function CannonGame({
         if (parryElapsedRef.current >= parryWindowMs()) {
           parryStateRef.current = 'failed'
           setParryState('failed'); setParryFeedback('miss')
-          playerHPRef.current = Math.max(0, playerHPRef.current - 2)
+          playerHPRef.current = Math.max(0, playerHPRef.current - INCOMING_DAMAGE)
           setPlayerHP(playerHPRef.current)
           setPlayerHit(true)
           flashBar(parryFlashRef, '#ef4444')
@@ -396,7 +397,7 @@ export default function CannonGame({
     flashBar(parryFlashRef, res === 'full' ? '#38bdf8' : res === 'half' ? '#fbbf24' : '#ef4444')
 
     if (res === 'miss') {
-      playerHPRef.current--
+      playerHPRef.current = Math.max(0, playerHPRef.current - INCOMING_DAMAGE)
       setPlayerHP(playerHPRef.current)
       setPlayerHit(true)
       setTimeout(() => setPlayerHit(false), 450)
@@ -410,7 +411,7 @@ export default function CannonGame({
         setPhase('dead'); return
       }
     } else if (res === 'half') {
-      playerHPRef.current = Math.max(0, playerHPRef.current - 1)
+      playerHPRef.current = Math.max(0, playerHPRef.current - Math.ceil(INCOMING_DAMAGE / 2))
       setPlayerHP(playerHPRef.current)
       setPlayerHit(true)
       setTimeout(() => setPlayerHit(false), 300)
