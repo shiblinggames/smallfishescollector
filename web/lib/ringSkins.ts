@@ -56,8 +56,9 @@ export const RING_SKINS: RingSkinDef[] = [
     stroke: '#c084fc',
     glow: 'drop-shadow(0 0 10px rgba(192,132,252,0.65))',
     color: '#c084fc',
+    imageUrl: '/abyssalsigil.png',
     description: "No one knows what it means. Found in the deepest wreck.",
-    source: 'Voyage: The Deep (rare)',
+    source: 'Voyage: The Bertuna Triangle (rare)',
   },
   {
     id: 'navigators_silver',

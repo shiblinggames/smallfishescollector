@@ -24,6 +24,7 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
     id: 'phantom_hook',
     name: 'Phantom Hook',
     color: '#2dd4bf',
+    image: '/phantomhook.png',
     description: '25% chance to save your bait on every cast. Stacks with perfect-catch saves.',
     effectLabel: '25% bait save',
     obtainedFrom: 'The Bertuna Triangle voyage',

@@ -1054,13 +1054,17 @@ export default function DailyVoyagePanel({
               </p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{
-                  width: 64, height: 64, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'rgba(45,212,191,0.12)', borderRadius: 12, border: '1px solid rgba(45,212,191,0.3)',
-                  filter: 'drop-shadow(0 0 16px rgba(45,212,191,0.6))',
-                }}>
-                  <span style={{ fontSize: '2rem' }}>🎣</span>
-                </div>
+                <motion.img
+                  src="/phantomhook.png"
+                  alt="Phantom Hook"
+                  initial={{ scale: 0.6, opacity: 0, rotate: -8 }}
+                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 16, delay: 0.3 }}
+                  style={{
+                    width: 64, height: 64, objectFit: 'contain', flexShrink: 0,
+                    filter: 'drop-shadow(0 0 16px rgba(45,212,191,0.8)) drop-shadow(0 0 32px rgba(13,188,155,0.5))',
+                  }}
+                />
                 <div style={{ flex: 1 }}>
                   <motion.p
                     className="font-cinzel font-700"
