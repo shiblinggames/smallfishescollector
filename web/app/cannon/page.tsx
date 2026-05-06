@@ -42,7 +42,7 @@ export default async function CannonPage() {
           </p>
         </div>
 
-        <div className="px-6 pb-12 max-w-sm mx-auto">
+        <div className="px-6 pb-12 max-w-sm mx-auto md:[zoom:1.5] lg:[zoom:1.85]">
           <CannonGame
             shipImageUrl={stats.shipImageUrl}
             shipName={stats.shipName}
