@@ -2413,25 +2413,32 @@ export default function FishingGame({
                       fireLevel={perfectStreak >= 3 ? 2 : perfectStreak === 2 ? 1 : 0}
                       snapKey={snapKey} perfectBurstKey={perfectBurstKey}
                       ringSkin={getRingSkin(equippedRingSkin)} />
+                    {equippedSpecial === 'tide_turner' && tideTurnerSkipsLeft > 0 && phase === 'catching' && (
+                      <button
+                        onClick={handleTideTurnerSkip}
+                        style={{
+                          position: 'absolute',
+                          bottom: '12%',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          zIndex: 20,
+                          background: 'rgba(14,8,28,0.88)',
+                          border: '1px solid rgba(167,139,250,0.55)',
+                          borderRadius: 10,
+                          padding: '0.35rem 0.85rem',
+                          cursor: 'pointer',
+                          color: '#c4b5fd',
+                          fontSize: '0.68rem',
+                          fontFamily: 'inherit',
+                          whiteSpace: 'nowrap',
+                          boxShadow: '0 2px 12px rgba(139,111,192,0.35)',
+                        }}
+                        className="font-karla font-700"
+                      >
+                        Skip — {tideTurnerSkipsLeft} left
+                      </button>
+                    )}
                   </div>
-                  {equippedSpecial === 'tide_turner' && tideTurnerSkipsLeft > 0 && phase === 'catching' && (
-                    <button
-                      onClick={handleTideTurnerSkip}
-                      style={{
-                        background: 'rgba(139,111,192,0.12)',
-                        border: '1px solid rgba(139,111,192,0.3)',
-                        borderRadius: 12,
-                        padding: '0.38rem 0.9rem',
-                        cursor: 'pointer',
-                        color: '#a78bfa',
-                        fontSize: '0.68rem',
-                        fontFamily: 'inherit',
-                      }}
-                      className="font-karla font-600"
-                    >
-                      Skip — {tideTurnerSkipsLeft} left today
-                    </button>
-                  )}
                 </motion.div>
               )}
 
