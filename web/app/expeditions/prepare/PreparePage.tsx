@@ -48,7 +48,7 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
   const [pickerSlot, setPickerSlot] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const assignedVariantIds = new Set(crew.filter(Boolean).map(c => c!.variantId))
+  const assignedNames = new Set(crew.filter(Boolean).map(c => c!.name))
 
   function assignCard(card: CollectionCard) {
     if (pickerSlot === null) return
@@ -86,7 +86,7 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
 
   const canAfford = doubloons >= zoneConfig.entryCost
   const pickerCards = pickerSlot !== null
-    ? collection.filter(c => !assignedVariantIds.has(c.variantId) || crew[pickerSlot]?.variantId === c.variantId)
+    ? collection.filter(c => !assignedNames.has(c.name) || crew[pickerSlot]?.name === c.name)
     : []
 
   return (
