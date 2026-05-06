@@ -105,6 +105,7 @@ export default function ChartBoard({
       if (result.bonusDoubloons > 0) {
         setBonusToast(`+${result.bonusDoubloons.toLocaleString()} ⟡`)
         setTimeout(() => setBonusToast(null), 3500)
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloonTotal }))
       }
     })
   }

@@ -229,5 +229,6 @@ export async function makeChartGuess(
     completionPosition = (count ?? 0) <= 3 ? (count ?? 0) : null
   }
 
-  return { correct, movesLeft: Math.max(0, totalLevels - newMovesUsed), completed, newPathIndex, completionPosition, bonusDoubloons }
+  const newDoubloonTotal = (profile?.doubloons ?? 0) + bonusDoubloons
+  return { correct, movesLeft: Math.max(0, totalLevels - newMovesUsed), completed, newPathIndex, completionPosition, bonusDoubloons, newDoubloonTotal }
 }
