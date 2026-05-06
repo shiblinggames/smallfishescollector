@@ -3026,11 +3026,13 @@ export default function FishingGame({
                           <p className="font-karla font-700 uppercase tracking-[0.14em]"
                             style={{ fontSize: '0.85rem', color: zoneColor, lineHeight: 1 }}>{HABITAT_LABEL[zone]}</p>
                           {(prestigeLevels[zone] ?? 0) > 0 && (
-                            <span className="font-cinzel font-700" style={{
-                              fontSize: '0.55rem', color: zoneColor,
-                              background: zoneColor + '22', border: `1px solid ${zoneColor}55`,
-                              borderRadius: 4, padding: '1px 5px', letterSpacing: '0.05em',
-                            }}>{toRoman(prestigeLevels[zone])}</span>
+                            <div style={{ display: 'flex', gap: 3 }}>
+                              {Array.from({ length: prestigeLevels[zone] }).map((_, i) => (
+                                <svg key={i} width="11" height="11" viewBox="0 0 24 24" fill={zoneColor} style={{ filter: `drop-shadow(0 0 4px ${zoneColor}cc)`, flexShrink: 0 }}>
+                                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                </svg>
+                              ))}
+                            </div>
                           )}
                         </div>
                         <p className="font-karla font-400"
@@ -3107,7 +3109,7 @@ export default function FishingGame({
                       {confirmPrestigeZone === zone ? (
                         <div>
                           <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', marginBottom: '0.35rem' }}>
-                            Reset your {HABITAT_LABEL[zone]} catch log for Prestige {toRoman((prestigeLevels[zone] ?? 0) + 1)}? You'll re-earn the +{((prestigeLevels[zone] ?? 0) + 1) * 5}% sell bonus.
+                            Reset your {HABITAT_LABEL[zone]} catch log for Prestige {(prestigeLevels[zone] ?? 0) + 1}? You'll re-earn the +{((prestigeLevels[zone] ?? 0) + 1) * 5}% sell bonus.
                           </p>
                           <div className="flex items-center gap-2">
                             <button
@@ -3126,13 +3128,13 @@ export default function FishingGame({
                       ) : (
                         <div className="flex items-center justify-between">
                           <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: zoneColor + '80' }}>
-                            Reward claimed {(prestigeLevels[zone] ?? 0) > 0 ? `· Prestige ${toRoman(prestigeLevels[zone])}` : ''}
+                            Reward claimed
                           </p>
                           <button
                             onClick={e => { e.stopPropagation(); setConfirmPrestigeZone(zone) }}
                             className="font-karla font-700 uppercase tracking-[0.1em]"
                             style={{ fontSize: '0.52rem', color: zoneColor, background: zoneColor + '18', border: `1px solid ${zoneColor}44`, borderRadius: 6, padding: '0.2rem 0.6rem' }}
-                          >Prestige {toRoman((prestigeLevels[zone] ?? 0) + 1)}</button>
+                          >Prestige {(prestigeLevels[zone] ?? 0) + 1}</button>
                         </div>
                       )}
                     </div>
