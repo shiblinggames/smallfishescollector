@@ -33,6 +33,29 @@ type InventoryItem = {
 // ─── Wait time mechanics ──────────────────────────────────────────────────────
 
 
+function applyBossMods(zones: ZoneDef[], mechanic: BossMechanic | null, shrinkDeg: number): ZoneDef[] {
+  if (!mechanic) return zones
+  let result = [...zones]
+  if (mechanic === 'split') {
+    const perfect = result.find(z => z.type === 'perfect')
+    if (perfect) {
+      const center = (perfect.from + perfect.to) / 2
+      const half = (perfect.to - perfect.from) / 2
+      const opposite = (center + 180) % 360
+      result = [...result, { from: opposite - half, to: opposite + half, type: 'perfect' as ZoneType, label: 'Perfect!', color: '#fde68a' }]
+    }
+  }
+  if (shrinkDeg > 0) {
+    result = result.map(z => {
+      if (z.type !== 'perfect') return z
+      const center = (z.from + z.to) / 2
+      const newHalf = Math.max(2, (z.to - z.from) / 2 - shrinkDeg / 2)
+      return { ...z, from: center - newHalf, to: center + newHalf }
+    })
+  }
+  return result
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CX = 110, CY = 110
@@ -44,18 +67,21 @@ const HABITAT_COLOR: Record<string, string> = {
   open_waters: '#34d399',
   deep:        '#a78bfa',
   abyss:       '#f87171',
+  ancient_deep: '#c084fc',
 }
 const HABITAT_LABEL: Record<string, string> = {
   shallows:    'Shallows',
   open_waters: 'Open Waters',
   deep:        'Deep',
   abyss:       'Abyss',
+  ancient_deep: 'Ancient Deep',
 }
 const HABITAT_TAGLINE: Record<string, string> = {
   shallows:    'Clear water, gentle currents',
   open_waters: 'Wide open sea',
   deep:        'Cold and dark below',
   abyss:       'The unknown depths',
+  ancient_deep: 'Before time. Beyond depth.',
 }
 // Background art — place images in public/fishing/
 const ZONE_BG: Record<string, string> = {
@@ -63,10 +89,22 @@ const ZONE_BG: Record<string, string> = {
   open_waters: '/fishing/open-waters.jpg',
   deep:        '/fishing/deep.jpg',
   abyss:       '/fishing/abyss.jpg',
+  ancient_deep: '/fishing/abyss.jpg',
 }
 
-const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
+const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep'] as const
 type ZoneKey = typeof ZONES[number]
+
+type BossMechanic = 'shrink' | 'drift' | 'accelerate' | 'randomize' | 'split'
+const BOSS_CONFIG: Record<string, BossMechanic> = {
+  'Megalodon':    'shrink',
+  'Plesiosaur':   'drift',
+  'Dunkleosteus': 'accelerate',
+  'Mosasaurus':   'randomize',
+  'Kraken':       'split',
+  'Leviathan':    'shrink', // gets random mechanic per stage via handlePrestige logic
+}
+const LEVIATHAN_MECHANICS: BossMechanic[] = ['shrink', 'drift', 'accelerate', 'randomize', 'split']
 
 const RARITY: Record<number, { label: string; color: string; hookedText: string }> = {
   1: { label: 'Common',    color: '#94a3b8', hookedText: "Something's on the line…" },
@@ -155,6 +193,16 @@ const WAIT_MESSAGES: Record<ZoneKey, string[]> = {
     "The pressure down here is immense.",
     "Legendary fish have been caught here. really.",
     "Tip: a perfect streak at this depth pays off massively.",
+  ],
+  ancient_deep: [
+    "Something ancient stirs…",
+    "You are not alone down here.",
+    "Three perfect strikes. That's the deal.",
+    "It knows you're here.",
+    "Few have ever seen what swims here.",
+    "Stay sharp. All three stages.",
+    "These things were here before the continents split.",
+    "No second chances in the Ancient Deep.",
   ],
 }
 
@@ -1357,7 +1405,7 @@ export default function FishingGame({
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook,
-  initialPrestigeLevels,
+  initialPrestigeLevels, initialTrophyCatches,
 }: {
   hookTier: number
   rodTier: number
@@ -1388,6 +1436,7 @@ export default function FishingGame({
   initialEquippedSpecial: string | null
   hasPhantomHook: boolean
   initialPrestigeLevels: Record<string, number>
+  initialTrophyCatches: number[]
 }) {
 
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
@@ -1424,6 +1473,17 @@ export default function FishingGame({
   const [prestigingZone, setPrestigingZone] = useState<string | null>(null)
   const [confirmPrestigeZone, setConfirmPrestigeZone] = useState<string | null>(null)
   const [tappedFishId, setTappedFishId] = useState<number | null>(null)
+  const [trophyCatches, setTrophyCatches] = useState(() => new Set(initialTrophyCatches))
+
+  // Boss fight state (ancient_deep)
+  const [bossStage, setBossStage] = useState(0)
+  const bossStageRef = useRef(0)
+  const [activeBossMechanic, setActiveBossMechanic] = useState<BossMechanic | null>(null)
+  const activeBossMechanicRef = useRef<BossMechanic | null>(null)
+  const [bossZoneShrink, setBossZoneShrink] = useState(0)
+  const bossZoneShrinkRef = useRef(0)
+  const bossNeedleMultRef = useRef(1.0)
+  const [bossStageCleared, setBossStageCleared] = useState(false)
 
   const [sessionCatches, setSessionCatches] = useState<FishSpecies[]>([])
   const [sessionPerfects, setSessionPerfects] = useState(0)
@@ -1606,8 +1666,8 @@ export default function FishingGame({
     }
     const diffSpeed = FISH_DIFFICULTY_SPEED[Math.max(0, Math.min(4, hookedFish.catchDifficulty - 1))]
     const zoneDiff  = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
-    const baseMin = diffSpeed.speedMin * reel.needleSpeedMultiplier
-    const baseMax = diffSpeed.speedMax * reel.needleSpeedMultiplier
+    const baseMin = diffSpeed.speedMin * reel.needleSpeedMultiplier * bossNeedleMultRef.current
+    const baseMax = diffSpeed.speedMax * reel.needleSpeedMultiplier * bossNeedleMultRef.current
     const capturedZoneRotation = zoneRotation
 
     speedRef.current   = baseMin + Math.random() * (baseMax - baseMin)
@@ -1655,6 +1715,13 @@ export default function FishingGame({
     }
   // retryKey increments on Second Wind retry to restart animation with fresh randomization
   }, [phase, hookedFish, reel.needleSpeedMultiplier, retryKey])
+
+  // Drift mechanic: Plesiosaur rotates the zone arc continuously while the needle spins
+  useEffect(() => {
+    if (phase !== 'catching' || activeBossMechanic !== 'drift') return
+    const id = setInterval(() => setZoneRotation(r => (r + 1) % 360), 30)
+    return () => clearInterval(id)
+  }, [phase, activeBossMechanic])
 
   function deductBait(type: string, qty = 1) {
     setBaitInventory(prev => prev.map(b =>
@@ -1705,6 +1772,23 @@ export default function FishingGame({
       await new Promise(r => setTimeout(r, res.waitMs))
 
       setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity })
+
+      // Initialise boss fight state for ancient_deep
+      if (selectedZone === 'ancient_deep') {
+        const bossName = allFishSpecies.find(f => f.id === res.fishId)?.name ?? ''
+        const isLeviathan = bossName === 'Leviathan'
+        const mechanic = isLeviathan
+          ? LEVIATHAN_MECHANICS[Math.floor(Math.random() * LEVIATHAN_MECHANICS.length)]
+          : (BOSS_CONFIG[bossName] ?? 'shrink')
+        activeBossMechanicRef.current = mechanic
+        setActiveBossMechanic(mechanic)
+        bossStageRef.current = 1
+        setBossStage(1)
+        bossZoneShrinkRef.current = 0
+        setBossZoneShrink(0)
+        bossNeedleMultRef.current = 1.0
+      }
+
       setPhase('hooked')
     } catch {
       if (!isBloom) setBaitInventory(prev => prev.map(b =>
@@ -1763,7 +1847,10 @@ export default function FishingGame({
     const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
     const baitBonus = getBait(selectedBaitRef.current).catchZoneBonus
     const eventCatchBonus = activeEventRef.current?.type === 'glassy' ? 12 : 0
-    const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus + baitBonus + rod.catchZoneBonus + eventCatchBonus, rod.perfectZoneBonus + 1)
+    const baseZones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus + baitBonus + rod.catchZoneBonus + eventCatchBonus, rod.perfectZoneBonus + 1)
+    const zones = selectedZone === 'ancient_deep'
+      ? applyBossMods(baseZones, activeBossMechanicRef.current, bossZoneShrinkRef.current)
+      : baseZones
     const zone  = getZone(zones, angleRef.current, zoneRotation)
 
     // Snag immune: treat penalty as miss — no extra bait lost
@@ -1772,6 +1859,73 @@ export default function FishingGame({
     if (effectiveZoneType === 'penalty') deductBait(selectedBaitRef.current)
 
     const isCatch = effectiveZoneType === 'catch' || effectiveZoneType === 'perfect'
+
+    // Ancient Deep: 3-stage boss mechanic
+    if (selectedZone === 'ancient_deep') {
+      if (!isCatch) {
+        // Miss resets the entire boss fight
+        bossStageRef.current = 0
+        setBossStage(0)
+        activeBossMechanicRef.current = null
+        setActiveBossMechanic(null)
+        bossZoneShrinkRef.current = 0
+        setBossZoneShrink(0)
+        bossNeedleMultRef.current = 1.0
+        // Fall through to normal miss handling
+      } else {
+        const stage = bossStageRef.current
+        if (stage < 3) {
+          // Stage cleared — show feedback, then advance
+          setBossStageCleared(true)
+          phaseRef.current = 'reeling'
+          setPhase('reeling')
+          await new Promise(r => setTimeout(r, 1100))
+          setBossStageCleared(false)
+
+          const nextStage = stage + 1
+          bossStageRef.current = nextStage
+          setBossStage(nextStage)
+
+          // Apply stage-escalation for each mechanic
+          const mechanic = activeBossMechanicRef.current
+          if (mechanic === 'shrink') {
+            const newShrink = bossZoneShrinkRef.current + 10
+            bossZoneShrinkRef.current = newShrink
+            setBossZoneShrink(newShrink)
+          } else if (mechanic === 'accelerate') {
+            bossNeedleMultRef.current = Math.min(bossNeedleMultRef.current * 1.4, 4.0)
+          }
+
+          // Leviathan: pick a new random mechanic each stage
+          const bossName = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
+          if (bossName === 'Leviathan') {
+            const next = LEVIATHAN_MECHANICS[Math.floor(Math.random() * LEVIATHAN_MECHANICS.length)]
+            activeBossMechanicRef.current = next
+            setActiveBossMechanic(next)
+            bossZoneShrinkRef.current = next === 'shrink' ? 8 : 0
+            setBossZoneShrink(next === 'shrink' ? 8 : 0)
+            bossNeedleMultRef.current = next === 'accelerate' ? 1.5 : 1.0
+          }
+
+          setZoneRotation(Math.floor(Math.random() * 360))
+          angleRef.current = 270
+          dirRef.current = 1
+          setAngle(270)
+          setRetryKey(k => k + 1)
+          phaseRef.current = 'catching'
+          setPhase('catching')
+          return
+        }
+        // Stage 3 cleared — reset stage counter and fall through to reelIn
+        bossStageRef.current = 0
+        setBossStage(0)
+        activeBossMechanicRef.current = null
+        setActiveBossMechanic(null)
+        bossZoneShrinkRef.current = 0
+        setBossZoneShrink(0)
+        bossNeedleMultRef.current = 1.0
+      }
+    }
 
     if (!isCatch) {
       // Second Wind rod: 25% chance to retry the dial on miss or snag
@@ -1877,7 +2031,14 @@ export default function FishingGame({
         const desiredQty = doubleCatch ? 2 : jackpotMultiplier
         const actualQty = Math.min(desiredQty, Math.max(0, holdCapacity - currentHoldCount))
         setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge, perfectStreak: newStreak, streakBonusXP, jackpotMultiplier: actualQty > 1 ? actualQty : undefined })
-        if (isNewSpecies) { setCaughtFishIds(prev => new Set([...prev, fish.id])); setUncheckedNewFishIds(prev => new Set([...prev, fish.id])) }
+        if (isNewSpecies) {
+          if (fish.habitat === 'ancient_deep') {
+            setTrophyCatches(prev => new Set([...prev, fish.id]))
+          } else {
+            setCaughtFishIds(prev => new Set([...prev, fish.id]))
+            setUncheckedNewFishIds(prev => new Set([...prev, fish.id]))
+          }
+        }
         const catchCount = actualQty
         const newCatches = [...sessionCatches, ...Array(catchCount).fill(fish)]
         const newPerfects = sessionPerfects + (wasPerfect ? 1 : 0)
@@ -2023,7 +2184,10 @@ export default function FishingGame({
   }
 
   // Zone display helpers
-  const catchingZones = hookedFish ? buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus + (activeEvent?.type === 'glassy' ? 12 : 0), rod.perfectZoneBonus + 1) : []
+  const catchingZones = hookedFish ? (() => {
+    const base = buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus + (activeEvent?.type === 'glassy' ? 12 : 0), rod.perfectZoneBonus + 1)
+    return selectedZone === 'ancient_deep' ? applyBossMods(base, activeBossMechanic, bossZoneShrink) : base
+  })() : []
   const currentZone   = (phase === 'catching' || phase === 'reeling') ? getZone(catchingZones, angle, zoneRotation) : null
 
   function needleColor(): string {
@@ -2396,8 +2560,23 @@ export default function FishingGame({
                             color: retryFlash ? '#fb923c' : (currentZone?.color ?? '#e8e4de'),
                             textShadow: retryFlash ? '0 0 16px rgba(251,146,60,0.7)' : currentZone ? `0 0 16px ${currentZone.color}70` : 'none',
                           }}>
-                          {retryFlash ? 'Second Wind!' : phase === 'reeling' ? 'Reeling in…' : (currentZone?.label ?? '')}
+                          {retryFlash ? 'Second Wind!' : (phase === 'reeling' && bossStageCleared) ? `Stage ${bossStage - 1}/3 — Hold On!` : phase === 'reeling' ? 'Reeling in…' : (currentZone?.label ?? '')}
                         </p>
+                      </div>
+                    )}
+                    {/* Boss stage progress dots */}
+                    {selectedZone === 'ancient_deep' && phase === 'catching' && bossStage > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', marginTop: 4 }}>
+                        <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#c084fc99' }}>Stage</p>
+                        {[1,2,3].map(s => (
+                          <div key={s} style={{
+                            width: 8, height: 8, borderRadius: '50%',
+                            background: s < bossStage ? '#c084fc' : s === bossStage ? '#c084fc' : 'rgba(192,132,252,0.2)',
+                            boxShadow: s <= bossStage ? '0 0 6px #c084fcaa' : 'none',
+                            border: s === bossStage ? '1px solid #c084fc' : '1px solid rgba(192,132,252,0.3)',
+                          }} />
+                        ))}
+                        <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#c084fc99' }}>{bossStage}/3</p>
                       </div>
                     )}
                   </div>
@@ -2995,7 +3174,97 @@ export default function FishingGame({
 
             {/* Scrollable body */}
             <div style={{ overflowY: 'auto', padding: '0 1.1rem 2rem', overscrollBehavior: 'contain' }}>
-            {ZONES.map(zone => {
+            {/* Ancient Deep trophy zone */}
+            {(() => {
+              const zone = 'ancient_deep'
+              const zoneColor = HABITAT_COLOR[zone]
+              const bossSpecies = allFishSpecies.filter(f => f.habitat === zone)
+              const caughtCount = bossSpecies.filter(f => trophyCatches.has(f.id)).length
+              const isExpanded = expandedZone === zone
+              const fishingLevel = getLevelFromXP(fishingXP)
+              const isLocked = fishingLevel < 75
+              return (
+                <div key={zone} style={{ marginBottom: '0.6rem' }}>
+                  <button
+                    className="w-full text-left"
+                    style={{
+                      background: `linear-gradient(135deg, rgba(6,6,20,0.97) 0%, ${zoneColor}16 100%)`,
+                      border: `1px solid ${zoneColor}40`,
+                      borderLeft: `3px solid ${zoneColor}cc`,
+                      borderRadius: isExpanded && !isLocked ? '12px 12px 0 0' : 12,
+                      padding: '0.75rem 0.9rem 0.65rem',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => !isLocked && setExpandedZone(isExpanded ? null : zone)}
+                  >
+                    <div className="flex items-center justify-between" style={{ marginBottom: '0.4rem' }}>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                            style={{ fontSize: '0.85rem', color: zoneColor, lineHeight: 1 }}>
+                            {isLocked ? '🔒 ' : ''}Ancient Deep
+                          </p>
+                        </div>
+                        <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>
+                          {isLocked ? `Unlocks at Fishing Level 75` : 'Before time. Beyond depth.'}
+                        </p>
+                      </div>
+                      <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: isLocked ? 'rgba(255,255,255,0.2)' : (caughtCount === bossSpecies.length && bossSpecies.length > 0 ? zoneColor : 'rgba(255,255,255,0.5)') }}>
+                        {isLocked ? '—' : <>{caughtCount}<span style={{ color: 'rgba(255,255,255,0.25)' }}>/{bossSpecies.length}</span></>}
+                      </p>
+                    </div>
+                    {!isLocked && (
+                      <p className="font-karla font-500" style={{ fontSize: '0.65rem', color: `${zoneColor}88`, letterSpacing: '0.06em' }}>
+                        Ancient trophies · 3-stage boss catches
+                      </p>
+                    )}
+                  </button>
+                  {isExpanded && !isLocked && (
+                    <div style={{
+                      background: `${zoneColor}08`,
+                      border: `1px solid ${zoneColor}22`,
+                      borderTop: 'none',
+                      borderRadius: '0 0 12px 12px',
+                      padding: '0.5rem 0.6rem 0.6rem',
+                    }}>
+                      {bossSpecies.map(f => {
+                        const caught = trophyCatches.has(f.id)
+                        return (
+                          <div key={f.id} style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '0.45rem 0.5rem', borderRadius: 8, marginBottom: 2,
+                            background: caught ? `${zoneColor}14` : 'rgba(255,255,255,0.02)',
+                          }}>
+                            <div style={{
+                              width: 28, height: 28, borderRadius: 6, flexShrink: 0,
+                              background: caught ? `${zoneColor}30` : 'rgba(255,255,255,0.04)',
+                              border: `1px solid ${caught ? zoneColor + '60' : 'rgba(255,255,255,0.08)'}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: '0.9rem',
+                            }}>
+                              {caught ? '🏆' : '🔒'}
+                            </div>
+                            <div>
+                              <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: caught ? '#f0ede8' : 'rgba(255,255,255,0.3)', lineHeight: 1.2 }}>{f.name}</p>
+                              {caught && <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: `${zoneColor}99`, fontStyle: 'italic' }}>{f.scientific_name}</p>}
+                            </div>
+                            {caught && (
+                              <div style={{ marginLeft: 'auto' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill={zoneColor} style={{ filter: `drop-shadow(0 0 4px ${zoneColor})` }}>
+                                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
+            {ZONES.filter(z => z !== 'ancient_deep').map(zone => {
               const zoneSpecies = allFishSpecies.filter(f => f.habitat === zone)
               const discoveredCount = zoneSpecies.filter(f => caughtFishIds.has(f.id)).length
               const zoneColor = HABITAT_COLOR[zone]

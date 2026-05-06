@@ -44,6 +44,7 @@ const ZONE_WAIT_BASE: Record<string, [number, number]> = {
   open_waters: [5000,  20000],
   deep:        [8000,  35000],
   abyss:       [12000, 45000],
+  ancient_deep: [15000, 60000],
 }
 function fishWaitMs(catchScore: number, habitat: string, baitType: string, fishingLevel: number): number {
   const [zMin, zMax] = ZONE_WAIT_BASE[habitat] ?? [5000, 20000]
@@ -104,7 +105,7 @@ export async function castLine(baitType: string, habitat: string, noBait = false
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, hook_tier, fishing_xp, ship_tier')
+    .select('rod_tier, hook_tier, fishing_xp, ship_tier, trophy_catches')
     .eq('id', user.id)
     .single()
 
@@ -128,13 +129,21 @@ export async function castLine(baitType: string, habitat: string, noBait = false
   ])
 
   const totalFish = (holdRows ?? []).reduce((sum, r) => sum + (r.quantity ?? 0), 0)
-  if (totalFish >= ship.holdCapacity) {
+  if (habitat !== 'ancient_deep' && totalFish >= ship.holdCapacity) {
     return { error: `Fish hold full (${ship.holdCapacity}/${ship.holdCapacity}). Sell some fish to make room.` }
   }
 
   if (!noBait && (!baitRow || baitRow.quantity <= 0)) return { error: 'No bait remaining.' }
 
   if (!candidates || candidates.length === 0) return { error: 'No fish found in this zone' }
+
+  // Ancient Deep: filter out already-caught trophies
+  let pool = candidates
+  if (habitat === 'ancient_deep') {
+    const caught = new Set<number>((profile.trophy_catches as number[] | null) ?? [])
+    pool = candidates.filter(f => !caught.has(f.id))
+    if (pool.length === 0) return { error: 'You have caught all Ancient Deep trophies!' }
+  }
 
   if (!noBait && baitRow) {
     await admin
@@ -145,7 +154,7 @@ export async function castLine(baitType: string, habitat: string, noBait = false
   }
 
   const rod = getRod(profile.rod_tier ?? 0)
-  const fish = tierWeightedPick(candidates, habitat, rod.rarityBonus + eventRarityBonus)
+  const fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus)
   const waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel)
 
   return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs }
@@ -200,11 +209,24 @@ export async function reelIn(
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, ship_tier, has_phantom_hook, line_tier, prestige_levels').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, ship_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
   if (!fish || !profile) return { error: 'Data not found' }
+
+  // Trophy path: ancient_deep fish go straight to trophy_catches, skip hold/collection/bounty
+  if (fish.habitat === 'ancient_deep') {
+    const existing = ((profile.trophy_catches as number[] | null) ?? [])
+    const isNewTrophy = !existing.includes(fishId)
+    const xpGained = Math.round(catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') * 3)
+    const newXP = (profile.fishing_xp ?? 0) + xpGained
+    const updates: Record<string, unknown> = { fishing_xp: newXP }
+    if (isNewTrophy) updates.trophy_catches = [...existing, fishId]
+    await admin.from('profiles').update(updates).eq('id', user.id)
+    const newAchievements = await checkAchievements(user.id, { type: 'fishing', result, depthId: 4, abyssStreak: 0 })
+    return { caught: true, fish: fish as FishSpecies, baitSaved: false, isNewSpecies: isNewTrophy, newAchievements, xpGained, newXP, dailyProgress: [0, 0, 0] }
+  }
 
   // Perfect: 50% chance to return the bait used for this cast; Phantom Hook: additional 25% on any catch
   let baitSaved = result === 'perfect' && Math.random() < PERFECT_BAIT_SAVE_CHANCE

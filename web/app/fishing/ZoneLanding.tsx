@@ -9,7 +9,7 @@ const AUTO_NAME_RE = /^crew_[0-9a-f]{5}$/
 const DISMISSED_KEY = 'sf_username_prompt_dismissed'
 const XP_THRESHOLD = 100
 
-const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
+const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep'] as const
 export type ZoneKey = typeof ZONES[number]
 
 const HABITAT_COLOR: Record<string, string> = {
@@ -17,18 +17,21 @@ const HABITAT_COLOR: Record<string, string> = {
   open_waters: '#34d399',
   deep:        '#a78bfa',
   abyss:       '#f87171',
+  ancient_deep: '#c084fc',
 }
 const HABITAT_LABEL: Record<string, string> = {
   shallows:    'Shallows',
   open_waters: 'Open Waters',
   deep:        'Deep',
   abyss:       'Abyss',
+  ancient_deep: 'Ancient Deep',
 }
 const HABITAT_TAGLINE: Record<string, string> = {
   shallows:    'Clear water, gentle currents',
   open_waters: 'Wide open sea',
   deep:        'Cold and dark below',
   abyss:       'The unknown depths',
+  ancient_deep: 'Before time. Beyond depth.',
 }
 
 const ZONE_DIFFICULTY: Record<string, number> = {
@@ -36,6 +39,7 @@ const ZONE_DIFFICULTY: Record<string, number> = {
   open_waters: 2,
   deep:        3,
   abyss:       4,
+  ancient_deep: 5,
 }
 
 const ZONE_DIFFICULTY_LABEL: Record<string, string> = {
@@ -43,6 +47,7 @@ const ZONE_DIFFICULTY_LABEL: Record<string, string> = {
   open_waters: 'Moderate',
   deep:        'Challenging',
   abyss:       'Expert Only',
+  ancient_deep: 'Boss Encounters',
 }
 
 const ZONE_STATS: Record<string, { topSell: number }> = {
@@ -50,6 +55,7 @@ const ZONE_STATS: Record<string, { topSell: number }> = {
   open_waters: { topSell: 500  },
   deep:        { topSell: 680  },
   abyss:       { topSell: 1380 },
+  ancient_deep: { topSell: 6000 },
 }
 
 const HOW_IT_WORKS = [
