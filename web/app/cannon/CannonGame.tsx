@@ -735,7 +735,6 @@ export default function CannonGame({
   }, [])
 
   const advance = useCallback(() => {
-    canFireRef.current = true
     setShotResult(null); setClearReady(false)
     phaseRef.current = 'playing'
     setPhase('playing')
