@@ -187,39 +187,53 @@ function TimingBar({ indicatorRef, flashRef, zoneRef, hitHalfW, critHalfW }: {
   hitHalfW: number
   critHalfW: number
 }) {
-  const grazeW   = 0.05
-  const totalW   = hitHalfW * 2 + grazeW * 2
-  const grazePct = (grazeW / totalW) * 100
-  const hitPct   = ((hitHalfW - critHalfW) / totalW) * 100
-  const critPct  = (critHalfW * 2 / totalW) * 100
+  const grazeW = 0.05
+  const totalW = hitHalfW * 2 + grazeW * 2
+  // Exaggerate crit zone for visibility (actual detection uses real critHalfW)
+  const critVisualPct = Math.max(16, (critHalfW * 2 / totalW) * 100 * 4)
+  const critLeft = (100 - critVisualPct) / 2
   return (
-    <div style={{ position: 'relative', height: 48, borderRadius: 12 }}>
+    <div style={{ position: 'relative', height: 28, borderRadius: 8 }}>
       <div style={{
-        position: 'absolute', inset: 0, borderRadius: 12,
+        position: 'absolute', inset: 0, borderRadius: 8,
         background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
         overflow: 'hidden',
       }}>
-        {/* Moving zone block — left/width driven by RAF at 60fps via zoneRef */}
+        {/* Moving ship target — left/width driven by RAF at 60fps via zoneRef */}
         <div ref={zoneRef} style={{
           position: 'absolute', top: 0, bottom: 0,
           left: `${(0.5 - hitHalfW - grazeW) * 100}%`,
           width: `${totalW * 100}%`,
-          display: 'flex',
         }}>
-          <div style={{ width: `${grazePct}%`, background: 'rgba(148,163,184,0.12)' }} />
-          <div style={{ width: `${hitPct}%`, background: 'rgba(74,222,128,0.18)' }} />
+          {/* Ship hull — top-down silhouette */}
+          <div style={{
+            position: 'absolute', inset: '3px 0',
+            clipPath: 'polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%)',
+            background: 'rgba(74,222,128,0.14)',
+            filter: 'drop-shadow(0 0 3px rgba(74,222,128,0.4))',
+          }} />
+          {/* Mast line */}
+          <div style={{
+            position: 'absolute', top: '25%', bottom: '25%',
+            left: 'calc(50% - 1px)', width: 1,
+            background: 'rgba(74,222,128,0.35)',
+          }} />
+          {/* Crit zone — bridge marker */}
           <motion.div
-            animate={{ opacity: [0.35, 0.65, 0.35] }}
+            animate={{ opacity: [0.4, 0.75, 0.4] }}
             transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ width: `${critPct}%`, background: 'rgba(251,191,36,0.26)' }}
+            style={{
+              position: 'absolute', top: '18%', bottom: '18%',
+              left: `${critLeft}%`, width: `${critVisualPct}%`,
+              background: 'rgba(251,191,36,0.5)',
+              borderRadius: 2,
+            }}
           />
-          <div style={{ width: `${hitPct}%`, background: 'rgba(74,222,128,0.18)' }} />
-          <div style={{ width: `${grazePct}%`, background: 'rgba(148,163,184,0.12)' }} />
         </div>
         <div ref={flashRef} style={{ position: 'absolute', inset: 0, opacity: 0, pointerEvents: 'none' }} />
       </div>
       <div ref={indicatorRef} style={{
-        position: 'absolute', top: 5, bottom: 5, width: 4, borderRadius: 2,
+        position: 'absolute', top: 3, bottom: 3, width: 3, borderRadius: 2,
         background: 'rgba(240,237,232,0.3)', boxShadow: '0 0 4px rgba(240,237,232,0.12)',
         left: '0%', pointerEvents: 'none', zIndex: 2,
       }} />
