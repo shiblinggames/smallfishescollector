@@ -3,6 +3,7 @@ export interface LineDef {
   name: string
   description: string
   color: string
+  imageUrl?: string
   // Multiplier on penalty zone size (lower = smaller penalty zones = more forgiving)
   penaltyMultiplier: number
   // Number of unique species caught required to unlock (tier 0 is always unlocked)
@@ -15,6 +16,7 @@ export const LINES: LineDef[] = [
     name: 'Monofilament',
     description: 'Standard line. Snags happen.',
     color: '#a07858',
+    imageUrl: '/monofilament.png',
     penaltyMultiplier: 1.00,
     unlockAt: 0,
   },
@@ -23,6 +25,7 @@ export const LINES: LineDef[] = [
     name: 'Braided Line',
     description: 'Stronger weave. Fewer snags.',
     color: '#60a5fa',
+    imageUrl: '/braidedline.png',
     penaltyMultiplier: 0.82,
     unlockAt: 20,
   },
@@ -31,6 +34,7 @@ export const LINES: LineDef[] = [
     name: 'Copolymer',
     description: 'Blended nylon. More give, less break.',
     color: '#34d399',
+    imageUrl: '/copolymer.png',
     penaltyMultiplier: 0.67,
     unlockAt: 40,
   },
@@ -39,6 +43,7 @@ export const LINES: LineDef[] = [
     name: 'Fluorocarbon',
     description: 'Nearly invisible underwater. Very snag-resistant.',
     color: '#4ade80',
+    imageUrl: '/fluorocarbon.png',
     penaltyMultiplier: 0.54,
     unlockAt: 60,
   },
@@ -47,6 +52,7 @@ export const LINES: LineDef[] = [
     name: 'Titanium Wire',
     description: 'Near-zero stretch. Cuts through current like nothing.',
     color: '#94a3b8',
+    imageUrl: '/titaniumwire.png',
     penaltyMultiplier: 0.42,
     unlockAt: 80,
   },
@@ -55,6 +61,7 @@ export const LINES: LineDef[] = [
     name: 'Deep Sea Line',
     description: 'Built for the abyss. Almost nothing breaks it.',
     color: '#a78bfa',
+    imageUrl: '/deepsealine.png',
     penaltyMultiplier: 0.30,
     unlockAt: 100,
   },

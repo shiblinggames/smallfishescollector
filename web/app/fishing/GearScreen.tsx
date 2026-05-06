@@ -237,7 +237,7 @@ export default function GearScreen({
           <GearSlot label="Reel" image={reel.imageUrl ?? null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} onClick={() => setOpenSlot('reel')} />
         </div>
         <div style={{ gridColumn: '3', gridRow: '2' }}>
-          <GearSlot label="Line" icon={<LineIcon color={line.color} />} itemName={line.name} color={line.color} onClick={() => setOpenSlot('line')} />
+          <GearSlot label="Line" image={line.imageUrl ?? null} itemName={line.name} color={line.color} onClick={() => setOpenSlot('line')} />
         </div>
       </div>
 
