@@ -1243,7 +1243,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.62)', zIndex: 50 }}>
             <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.45)', fontSize: '0.65rem', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>
-              {phase === 'idle' ? 'Raise the colours' : isBoss ? 'Boss Round' : 'Round'}
+              {isBoss ? 'Boss Round' : 'Round'}
             </p>
             <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '5rem', lineHeight: 1, marginBottom: 36, textShadow: '0 2px 24px rgba(0,0,0,0.85)' }}>
               {roundDisplay}
