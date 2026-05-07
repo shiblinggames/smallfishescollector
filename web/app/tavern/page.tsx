@@ -38,7 +38,7 @@ export default async function TavernPage() {
     profile?.last_daily_claim === today &&
     (!isPremium || profile?.last_pack_claim === today)
 
-  const fotdDone = !!fotdAttempt && (fotdAttempt.solved || (fotdAttempt.guesses?.length ?? 0) >= 4)
+  const fotdDone = !!fotdAttempt && (fotdAttempt.solved || (fotdAttempt.guesses?.length ?? 0) >= 6)
   const crownCapReached = dailyWagered >= DAILY_CAP
   const slotsCapReached = slotsDailyWagered >= SLOTS_DAILY_CAP
   const hasContest = chartState && !('error' in chartState)

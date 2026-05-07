@@ -17,13 +17,13 @@ function capitalize(s: string): string {
   return s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }
 
-const GEM_REWARDS = [100, 75, 50, 25]
+const GEM_REWARDS = [100, 85, 70, 55, 40, 25]
 
 const COMPARISON_ATTRS: { key: keyof ComparisonResult['matches']; label: string }[] = [
-  { key: 'habitat_type',  label: 'Habitat' },
-  { key: 'size_category', label: 'Size'    },
-  { key: 'diet_type',     label: 'Diet'    },
-  { key: 'fish_group',    label: 'Group'   },
+  { key: 'water_type',    label: 'Water'  },
+  { key: 'region',        label: 'Region' },
+  { key: 'is_edible',     label: 'Edible' },
+  { key: 'size_category', label: 'Size'   },
 ]
 
 export default function FishOfTheDay({
@@ -73,24 +73,28 @@ export default function FishOfTheDay({
       if (result.milestoneReward) setMilestoneReward(result.milestoneReward)
       if (result.newAchievements?.length) setAchievementKeys(result.newAchievements)
 
-      setPuzzle(prev => ({
-        ...prev,
-        guesses: [...prev.guesses, guessing],
-        guessComparisons: [...prev.guessComparisons, result.comparison ?? null],
-        solved: result.correct,
-        isOver: result.isOver,
-        gems_awarded: result.gems ?? prev.gems_awarded,
-        streak: result.streak ?? prev.streak,
-        cluesRevealed: result.nextClue
-          ? [...prev.cluesRevealed, result.nextClue]
-          : prev.cluesRevealed,
-        answer: result.answer,
-      }))
+      setPuzzle(prev => {
+        const newGuesses = [...prev.guesses, guessing]
+        const newComparisons = [...prev.guessComparisons, result.comparison ?? null]
+        const newWrongCount = result.correct ? newGuesses.length - 1 : newGuesses.length
+        return {
+          ...prev,
+          guesses: newGuesses,
+          guessComparisons: newComparisons,
+          tilesPerGuess: Math.min(newWrongCount, 4),
+          solved: result.correct,
+          isOver: result.isOver,
+          gems_awarded: result.gems ?? prev.gems_awarded,
+          streak: result.streak ?? prev.streak,
+          answer: result.answer,
+        }
+      })
     })
   }
 
   const guessIndex = puzzle.guesses.length
   const reward = GEM_REWARDS[guessIndex] ?? 0
+  const visibleAttrs = COMPARISON_ATTRS.slice(0, puzzle.tilesPerGuess)
   const next = nextMilestone(puzzle.streak)
   const daysToNext = next.day - puzzle.streak
 
@@ -133,9 +137,9 @@ export default function FishOfTheDay({
         </div>
       )}
 
-      {/* Clues */}
+      {/* All 4 clues — always shown */}
       <div className="flex flex-col gap-2.5">
-        {puzzle.cluesRevealed.map((clue, i) => (
+        {puzzle.clues.map((clue, i) => (
           <div
             key={i}
             style={{
@@ -151,32 +155,6 @@ export default function FishOfTheDay({
             </p>
             <p className="font-karla text-[#f0ede8]" style={{ fontSize: '1rem', lineHeight: 1.6 }}>
               {clue}
-            </p>
-          </div>
-        ))}
-
-        {/* Locked clues */}
-        {!puzzle.isOver && Array.from({ length: 4 - puzzle.cluesRevealed.length }).map((_, i) => (
-          <div
-            key={i}
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px dashed rgba(255,255,255,0.13)',
-              borderRadius: '12px',
-              padding: '0.75rem 1rem',
-              opacity: 0.45,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a0a09a" strokeWidth="2" strokeLinecap="round">
-              <rect x="3" y="11" width="18" height="11" rx="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
-            <p className="font-karla font-600 uppercase tracking-[0.15em] text-[#a0a09a]"
-               style={{ fontSize: '0.58rem' }}>
-              Clue {puzzle.cluesRevealed.length + i + 1}
             </p>
           </div>
         ))}
@@ -198,10 +176,10 @@ export default function FishOfTheDay({
                     {g}
                   </span>
                 </div>
-                {!isCorrect && comparison && (
+                {!isCorrect && comparison && visibleAttrs.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-2" style={{ paddingLeft: '1.5rem' }}>
-                    {COMPARISON_ATTRS.map(({ key, label }) => {
-                      const value = comparison[key as keyof Omit<ComparisonResult, 'matches'>] as string
+                    {visibleAttrs.map(({ key, label }) => {
+                      const value = comparison[key as keyof Omit<ComparisonResult, 'matches'>]
                       const match = comparison.matches[key]
                       return (
                         <div
@@ -327,7 +305,7 @@ export default function FishOfTheDay({
           </button>
 
           <p className="font-karla text-center" style={{ color: '#6a6764', fontSize: '0.68rem' }}>
-            Guess {guessIndex + 1} of 4
+            Guess {guessIndex + 1} of 6
           </p>
         </div>
       )}
