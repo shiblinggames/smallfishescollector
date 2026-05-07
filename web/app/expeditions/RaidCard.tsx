@@ -15,9 +15,9 @@ const PETE_LOOT = [
   { label: '+300 ⟡',        rarity: 'common',   weight: 50 },
   { label: '+600 ⟡',        rarity: 'uncommon', weight: 25 },
   { label: '25 Gems',        rarity: 'rare',     weight: 15 },
-  { label: '1 Pack',         rarity: 'rare',     weight: 5  },
-  { label: 'Corsair Black',  rarity: 'epic',     weight: 5  },
-  { label: 'Corsair Cannon', rarity: 'rare',     weight: 3  },
+  { label: '1 Pack',         rarity: 'epic',      weight: 5  },
+  { label: 'Corsair Black',  rarity: 'epic',      weight: 5  },
+  { label: 'Corsair Cannon', rarity: 'legendary', weight: 3  },
 ]
 const PETE_LOOT_TOTAL = PETE_LOOT.reduce((s, i) => s + i.weight, 0)
 

@@ -33,9 +33,9 @@ const BARNACLE_PETE_LOOT: RaidLootItem[] = [
   { id: 'doubloons_300', label: '+300 ⟡',       image: '/smallpile.png',   emoji: '🪙', rarity: 'common',   weight: 50 },
   { id: 'doubloons_600', label: '+600 ⟡',       image: '/dailybonus.png',  emoji: '💰', rarity: 'uncommon', weight: 25 },
   { id: 'gems_25',       label: '25 Gems',       image: null, emoji: '💎', rarity: 'rare',     weight: 15 },
-  { id: 'pack',          label: '1 Pack',        image: '/cardbacknew.png', emoji: '📦', rarity: 'rare',     weight: 5  },
-  { id: 'corsair_black',  label: 'Corsair Black',  image: null, emoji: '🚢', rarity: 'epic',  weight: 5  },
-  { id: 'corsair_cannon', label: 'Corsair Cannon', image: '/corsaircannon.png', emoji: '💣', rarity: 'rare',  weight: 3  },
+  { id: 'pack',          label: '1 Pack',        image: '/cardbacknew.png', emoji: '📦', rarity: 'epic',      weight: 5  },
+  { id: 'corsair_black',  label: 'Corsair Black',  image: null, emoji: '🚢', rarity: 'epic',      weight: 5  },
+  { id: 'corsair_cannon', label: 'Corsair Cannon', image: '/corsaircannon.png', emoji: '💣', rarity: 'legendary', weight: 3  },
 ]
 function rollLootIndex(): number {
   const total = BARNACLE_PETE_LOOT.reduce((s, i) => s + i.weight, 0)
