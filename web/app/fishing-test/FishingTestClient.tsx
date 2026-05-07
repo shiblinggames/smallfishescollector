@@ -19,9 +19,9 @@ const ROD_OVERLAY: Record<Frame, { top: number; left: number; width: number; rot
   cast: { top: -15, left: -8,  width: 72, rotate: -45 },
 }
 
-const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
+const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number; hidden?: boolean }> = {
   rest: { top: 76,  left: -6,  width: 25, rotate: -37 },
-  wait: { top: 58,  left: -4,  width: 25, rotate: 0   },
+  wait: { top: 58,  left: -4,  width: 25, rotate: 0,   hidden: true },
   cast: { top: -8,  left: -2,  width: 12, rotate: 20  },
 }
 
@@ -98,7 +98,7 @@ export default function FishingTestClient() {
             )}
 
             {/* Hook overlay */}
-            {hook.imageUrl && (
+            {hook.imageUrl && !hc.hidden && (
               <img src={hook.imageUrl} alt="hook" style={{
                 position: 'absolute', top: `${hc.top}%`, left: `${hc.left}%`,
                 width: `${hc.width}%`,
