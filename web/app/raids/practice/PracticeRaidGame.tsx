@@ -23,6 +23,7 @@ interface PracticeEnemy {
   actionMs: number
   pattern: string[]
   image: string
+  portrait?: string
   killGold: number
   killXP: number
 }
@@ -31,17 +32,17 @@ const PRACTICE_ENEMIES: Record<string, PracticeEnemy> = {
   brute: {
     id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 2, maxDmg: 5,
     actionMs: 4500, pattern: ['reload', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'reefraider.png', killGold: 20, killXP: 20,
+    image: ENEMY_IMG_BASE + 'enemytier1.png', portrait: ENEMY_IMG_BASE + 'reefraider.png', killGold: 20, killXP: 20,
   },
   sniper: {
     id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
     actionMs: 5500, pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'crowsnestmarksman.png', killGold: 25, killXP: 30,
+    image: ENEMY_IMG_BASE + 'enemytier1.png', portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png', killGold: 25, killXP: 30,
   },
   corsair: {
     id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
     actionMs: 3500, pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'saltwatercorsair.png', killGold: 35, killXP: 45,
+    image: ENEMY_IMG_BASE + 'enemytier1elite.png', portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png', killGold: 35, killXP: 45,
   },
 }
 const NON_BOSS_IDS = ['brute', 'sniper', 'corsair'] as const
@@ -325,7 +326,8 @@ export default function PracticeRaidGame({
   const [enemyHP, setEnemyHP]       = useState(0)
   const [enemyHPMax, setEnemyHPMax] = useState(0)
   const [enemyName, setEnemyName]   = useState('')
-  const [enemyImage, setEnemyImage] = useState(PRACTICE_ENEMIES.brute.image)
+  const [enemyImage, setEnemyImage]     = useState(PRACTICE_ENEMIES.brute.image)
+  const [enemyPortrait, setEnemyPortrait] = useState<string | null>(PRACTICE_ENEMIES.brute.portrait ?? null)
   const [enemyCharges, setEnemyCharges]   = useState(0)
   const [enemyDodging, setEnemyDodging]   = useState(false)
   const [enemyActionPct, setEnemyActionPct] = useState(1)
@@ -415,7 +417,7 @@ export default function PracticeRaidGame({
     setPhase('playing')
     setPlayerHP(playerHPMax)
     setEnemyHP(enemy.hpBase); setEnemyHPMax(enemy.hpBase)
-    setEnemyName(enemy.name); setEnemyImage(enemy.image)
+    setEnemyName(enemy.name); setEnemyImage(enemy.image); setEnemyPortrait(enemy.portrait ?? null)
     setEnemyCharges(0); setEnemyDodging(false); setEnemyActionPct(1)
     setCharges(0); setPlayerActionPct(0)
     setCannonJammed(false); setActionLocked(false)
@@ -761,6 +763,17 @@ export default function PracticeRaidGame({
               animation: enemySinking ? 'enemy-sink 0.9s ease-in forwards' : 'none',
               filter: 'hue-rotate(180deg) brightness(0.8)',
             }} />
+            {enemyPortrait && (
+              <div style={{
+                position: 'absolute', bottom: 2, right: 2,
+                width: 26, height: 26, borderRadius: '50%',
+                border: '2px solid rgba(167,139,250,0.6)',
+                overflow: 'hidden',
+                boxShadow: '0 0 8px rgba(167,139,250,0.4)',
+              }}>
+                <img src={enemyPortrait} alt="portrait" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            )}
             {eHitsplat.key > 0 && <Hitsplat key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} animKey={eHitsplat.key} />}
             {showCannonShot && (
               <>
