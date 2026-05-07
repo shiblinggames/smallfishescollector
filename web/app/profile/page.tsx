@@ -7,6 +7,7 @@ import { getShip } from '@/lib/ships'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
+import { CHARACTER_COLORS } from '@/lib/characters'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -21,7 +22,7 @@ export default async function ProfilePage() {
     { data: ownedRows },
   ] = await Promise.all([
     supabase.from('profiles')
-      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, character_color')
+      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, character_color, unlocked_character_colors')
       .eq('id', user.id)
       .single(),
     admin.from('fish_collection')
@@ -55,6 +56,10 @@ export default async function ProfilePage() {
 
   const ship = getShip(profile?.ship_tier ?? 0)
   const level = getLevelFromXP(profile?.fishing_xp ?? 0)
+  const unlockedColors = [
+    ...CHARACTER_COLORS.filter(c => c.free).map(c => c.id),
+    ...((profile?.unlocked_character_colors as string[] | null) ?? []),
+  ]
   const expeditionLevel = getExpeditionLevel(profile?.expedition_xp ?? 0)
   const navigatorTitle = getNavigatorTitle(expeditionLevel)
   const isPremium =
@@ -84,6 +89,7 @@ export default async function ProfilePage() {
           shipName={ship.name}
           shipColor={ship.color}
           characterColor={profile?.character_color ?? 'default'}
+          unlockedColors={unlockedColors}
         />
       </main>
     </>

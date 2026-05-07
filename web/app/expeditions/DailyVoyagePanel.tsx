@@ -173,6 +173,7 @@ export default function DailyVoyagePanel({
   const [claimedBait, setClaimedBait] = useState<{ type: string; qty: number }[]>([])
   const [claimedTideTurner, setClaimedTideTurner] = useState(false)
   const [claimedPhantomHook, setClaimedPhantomHook] = useState(false)
+  const [claimedSkinId, setClaimedSkinId] = useState<string | null>(null)
   const [liveCrewIds, setLiveCrewIds] = useState<number[]>(savedCrewVariantIds)
   const [expandedDropKey, setExpandedDropKey] = useState<string | null>(null)
   const [infoOpen, setInfoOpen] = useState(false)
@@ -238,6 +239,7 @@ export default function DailyVoyagePanel({
       setClaimedBait(res.earnedBait)
       if (res.newTideTurner) setClaimedTideTurner(true)
       if (res.newPhantomHook) setClaimedPhantomHook(true)
+      if (res.unlockedSkinId) setClaimedSkinId(res.unlockedSkinId)
       setXpEarned(res.xpEarned)
       if (res.newExpeditionLevel > res.oldExpeditionLevel) setLevelUp({ from: res.oldExpeditionLevel, to: res.newExpeditionLevel })
       setPanelState('done')
@@ -1097,6 +1099,70 @@ export default function DailyVoyagePanel({
               </div>
             </motion.div>
           )}
+
+          {claimedSkinId && (() => {
+            const SKIN_NAMES: Record<string, string> = { default: 'Green', gray: 'Gray', blue: 'Blue', pink: 'Pink', sand: 'Sand', sky: 'Sky', golden: 'Golden', forest: 'Forest', mint: 'Mint' }
+            const skinName = SKIN_NAMES[claimedSkinId] ?? claimedSkinId
+            const prefix = claimedSkinId === 'default' ? 'fishing' : `fishing_${claimedSkinId}`
+            return (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.88, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 280, damping: 20, delay: 0.15 }}
+                style={{
+                  position: 'relative', overflow: 'hidden',
+                  background: 'linear-gradient(135deg, rgba(6,16,26,0.95) 0%, rgba(20,83,45,0.22) 100%)',
+                  border: '1px solid rgba(74,222,128,0.4)',
+                  borderRadius: 16,
+                  padding: '1.1rem 1.1rem 1rem',
+                  boxShadow: '0 0 32px rgba(74,222,128,0.18), inset 0 1px 0 rgba(255,255,255,0.07)',
+                }}
+              >
+                <div style={{
+                  position: 'absolute', top: -30, right: -20,
+                  width: 120, height: 120, borderRadius: '50%',
+                  background: 'radial-gradient(circle, rgba(74,222,128,0.28) 0%, transparent 70%)',
+                  pointerEvents: 'none',
+                }} />
+                <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: '#4ade80', marginBottom: '0.65rem', letterSpacing: '0.2em' }}>
+                  ✦ Skin Unlocked ✦
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <motion.div
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 320, damping: 16, delay: 0.3 }}
+                    style={{
+                      width: 64, height: 64, borderRadius: 12, flexShrink: 0,
+                      backgroundImage: `url(/${prefix}_rest.png)`,
+                      backgroundSize: '280% auto', backgroundPosition: 'center 92%',
+                      backgroundRepeat: 'no-repeat',
+                      border: '2px solid rgba(74,222,128,0.4)',
+                      boxShadow: '0 0 20px rgba(74,222,128,0.3)',
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <motion.p
+                      className="font-cinzel font-700"
+                      initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4 }}
+                      style={{ fontSize: '1.05rem', color: '#4ade80', lineHeight: 1.1, marginBottom: 4, textShadow: '0 0 20px rgba(74,222,128,0.5)' }}
+                    >
+                      {skinName}
+                    </motion.p>
+                    <motion.p
+                      className="font-karla font-300"
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                      transition={{ delay: 0.55 }}
+                      style={{ fontSize: '0.7rem', color: 'rgba(74,222,128,0.7)', lineHeight: 1.45 }}
+                    >
+                      New character color unlocked. Equip it from your profile.
+                    </motion.p>
+                  </div>
+                </div>
+              </motion.div>
+            )
+          })()}
 
           {/* XP earned */}
           {xpEarned > 0 && (() => {

@@ -1491,6 +1491,7 @@ export default function FishingGame({
   const [claimedZones, setClaimedZones] = useState<Record<string, boolean>>(zoneRewardsClaimed)
   const [claimingZone, setClaimingZone] = useState<string | null>(null)
   const [zoneClaimToast, setZoneClaimToast] = useState<{ zone: string; earned: number } | null>(null)
+  const [skinUnlockToast, setSkinUnlockToast] = useState<string | null>(null)
   const [prestigeLevels, setPrestigeLevels] = useState<Record<string, number>>(initialPrestigeLevels)
   const [prestigingZone, setPrestigingZone] = useState<string | null>(null)
   const [confirmPrestigeZone, setConfirmPrestigeZone] = useState<string | null>(null)
@@ -1516,7 +1517,7 @@ export default function FishingGame({
   const [wormBuyMsg, setWormBuyMsg] = useState<string | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
   const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean; gemEarned?: boolean; perfectStreak: number; streakBonusXP: number; jackpotMultiplier?: number } | null>(null)
-  const [crateResult, setCrateResult] = useState<{ type: 'doubloons'; amount: number } | { type: 'bait'; baitType: string; baitName: string; quantity: number } | null>(null)
+  const [crateResult, setCrateResult] = useState<{ type: 'doubloons'; amount: number } | { type: 'bait'; baitType: string; baitName: string; quantity: number } | { type: 'skin'; skinId: string; skinName: string } | null>(null)
   const [cratePhase, setCratePhase] = useState<'closed' | 'rolling' | 'revealed'>('closed')
   const [crateRollDisplay, setCrateRollDisplay] = useState<{ type: 'doubloons'; amount: number } | { type: 'bait'; baitType: string; baitName: string } | null>(null)
   const [challengeActive, setChallengeActive] = useState(false)
@@ -2107,6 +2108,7 @@ export default function FishingGame({
         } catch {}
 
         if (bountyCompletion) setBountyNotif(bountyCompletion)
+        if (res.unlockedSkinId) { setSkinUnlockToast(res.unlockedSkinId); setTimeout(() => setSkinUnlockToast(null), 6000) }
         const oldLevel = getLevelFromXP(fishingXP)
         const newLevel = getLevelFromXP(newXP)
         setFishingXP(newXP)
@@ -2191,6 +2193,7 @@ export default function FishingGame({
   function handleOpenCrate() {
     if (!crateResult || cratePhase !== 'closed') return
     const result = crateResult
+    if (result.type === 'skin') { setCratePhase('revealed'); return }
     setCratePhase('rolling')
 
     const pool: Array<{ type: 'doubloons'; amount: number } | { type: 'bait'; baitType: string; baitName: string }> = [
@@ -2233,7 +2236,7 @@ export default function FishingGame({
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: next }))
         return next
       })
-    } else {
+    } else if (result.type === 'bait') {
       setBaitInventory(prev => {
         const existing = prev.find(b => b.bait_type === result.baitType)
         if (existing) return prev.map(b => b.bait_type === result.baitType ? { ...b, quantity: b.quantity + result.quantity } : b)
@@ -2270,6 +2273,7 @@ export default function FishingGame({
     const result = await prestigeZone(zone)
     setPrestigingZone(null)
     if ('error' in result) { setConfirmPrestigeZone(null); return }
+    if (result.unlockedSkinId) { setSkinUnlockToast(result.unlockedSkinId); setTimeout(() => setSkinUnlockToast(null), 6000) }
     const zoneIds = new Set(allFishSpecies.filter(f => f.habitat === zone).map(f => f.id))
     setCaughtFishIds(prev => { const next = new Set(prev); zoneIds.forEach(id => next.delete(id)); return next })
     setClaimedZones(prev => ({ ...prev, [zone]: false }))
@@ -3025,34 +3029,56 @@ export default function FishingGame({
                       )}
 
                       {/* Revealed: reward + claim */}
-                      {cratePhase === 'revealed' && crateRollDisplay && (
+                      {cratePhase === 'revealed' && crateResult && (
                         <motion.div
                           initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.3, delay: 0.1 }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: '0.9rem' }}>
-                            <motion.img
-                              src={crateRollDisplay.type === 'doubloons' ? '/smallpile.png' : (getBait(crateRollDisplay.baitType).imageUrl ?? '/worms.png')}
-                              initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                              transition={{ type: 'spring', stiffness: 420, damping: 18, delay: 0.15 }}
-                              style={{ height: 48, width: 48, objectFit: 'contain' }}
-                            />
-                            <div style={{ textAlign: 'left' }}>
-                              <p className="font-cinzel font-700" style={{
-                                fontSize: '1.55rem',
-                                color: crateRollDisplay.type === 'doubloons' ? '#fbbf24' : '#86efac',
-                                textShadow: crateRollDisplay.type === 'doubloons' ? '0 0 28px rgba(251,191,36,0.55)' : '0 0 22px rgba(134,239,172,0.5)',
-                                lineHeight: 1,
-                              }}>
-                                {crateRollDisplay.type === 'doubloons'
-                                  ? `+${crateRollDisplay.amount.toLocaleString()} ⟡`
-                                  : `×${crateResult.type === 'bait' ? crateResult.quantity : 10}`}
+                          {crateResult.type === 'skin' ? (
+                            <div style={{ textAlign: 'center', marginBottom: '0.9rem' }}>
+                              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#4ade8099', marginBottom: 6 }}>Rare Drop!</p>
+                              <motion.div
+                                initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                                transition={{ type: 'spring', stiffness: 380, damping: 18, delay: 0.1 }}
+                                style={{
+                                  width: 72, height: 72, borderRadius: 12, overflow: 'hidden',
+                                  backgroundImage: `url(/fishing_${crateResult.skinId}_rest.png)`,
+                                  backgroundSize: '280% auto', backgroundPosition: 'center 92%',
+                                  backgroundRepeat: 'no-repeat', margin: '0 auto 8px',
+                                  border: '2px solid rgba(74,222,128,0.4)',
+                                  boxShadow: '0 0 20px rgba(74,222,128,0.25)',
+                                }}
+                              />
+                              <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#4ade80', textShadow: '0 0 20px rgba(74,222,128,0.5)', lineHeight: 1 }}>
+                                {crateResult.skinName} Skin
                               </p>
-                              <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
-                                {crateRollDisplay.type === 'doubloons' ? 'Doubloons' : crateRollDisplay.baitName}
-                              </p>
+                              <p className="font-karla" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>New character color unlocked</p>
                             </div>
-                          </div>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: '0.9rem' }}>
+                              <motion.img
+                                src={crateResult.type === 'doubloons' ? '/smallpile.png' : (getBait(crateResult.baitType).imageUrl ?? '/worms.png')}
+                                initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                                transition={{ type: 'spring', stiffness: 420, damping: 18, delay: 0.15 }}
+                                style={{ height: 48, width: 48, objectFit: 'contain' }}
+                              />
+                              <div style={{ textAlign: 'left' }}>
+                                <p className="font-cinzel font-700" style={{
+                                  fontSize: '1.55rem',
+                                  color: crateResult.type === 'doubloons' ? '#fbbf24' : '#86efac',
+                                  textShadow: crateResult.type === 'doubloons' ? '0 0 28px rgba(251,191,36,0.55)' : '0 0 22px rgba(134,239,172,0.5)',
+                                  lineHeight: 1,
+                                }}>
+                                  {crateResult.type === 'doubloons'
+                                    ? `+${crateResult.amount.toLocaleString()} ⟡`
+                                    : `×${crateResult.quantity}`}
+                                </p>
+                                <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
+                                  {crateResult.type === 'doubloons' ? 'Doubloons' : crateResult.baitName}
+                                </p>
+                              </div>
+                            </div>
+                          )}
                           <motion.button
                             onClick={handleClaimCrate}
                             whileTap={{ scale: 0.97 }}
@@ -3060,14 +3086,16 @@ export default function FishingGame({
                             style={{
                               width: '100%', padding: '0.65rem 0',
                               borderRadius: 12,
-                              background: crateRollDisplay.type === 'doubloons'
+                              background: crateResult.type === 'skin'
+                                ? 'linear-gradient(135deg, rgba(20,83,45,0.5), rgba(74,222,128,0.18))'
+                                : crateResult.type === 'doubloons'
                                 ? 'linear-gradient(135deg, rgba(217,119,6,0.45), rgba(251,191,36,0.2))'
                                 : 'linear-gradient(135deg, rgba(20,83,45,0.5), rgba(134,239,172,0.18))',
-                              border: crateRollDisplay.type === 'doubloons' ? '1px solid rgba(251,191,36,0.5)' : '1px solid rgba(134,239,172,0.45)',
-                              color: crateRollDisplay.type === 'doubloons' ? '#fbbf24' : '#86efac',
+                              border: crateResult.type === 'skin' ? '1px solid rgba(74,222,128,0.45)' : crateResult.type === 'doubloons' ? '1px solid rgba(251,191,36,0.5)' : '1px solid rgba(134,239,172,0.45)',
+                              color: crateResult.type === 'skin' ? '#4ade80' : crateResult.type === 'doubloons' ? '#fbbf24' : '#86efac',
                               fontSize: '0.72rem',
                               cursor: 'pointer',
-                              boxShadow: crateRollDisplay.type === 'doubloons' ? '0 0 20px rgba(251,191,36,0.22)' : '0 0 18px rgba(134,239,172,0.18)',
+                              boxShadow: crateResult.type === 'skin' ? '0 0 18px rgba(74,222,128,0.2)' : crateResult.type === 'doubloons' ? '0 0 20px rgba(251,191,36,0.22)' : '0 0 18px rgba(134,239,172,0.18)',
                             }}
                           >
                             Claim
@@ -3452,6 +3480,58 @@ export default function FishingGame({
 
       {/* ── Zone completion celebration ── */}
       <AnimatePresence>
+        {skinUnlockToast && (() => {
+          const skinColor = getCharSrc(skinUnlockToast)
+          const SKIN_NAMES: Record<string, string> = { default: 'Green', gray: 'Gray', blue: 'Blue', pink: 'Pink', sand: 'Sand', sky: 'Sky', golden: 'Golden', forest: 'Forest', mint: 'Mint' }
+          const skinName = SKIN_NAMES[skinUnlockToast] ?? skinUnlockToast
+          return (
+            <motion.div key="skin-unlock-toast"
+              initial={{ opacity: 0, scale: 0.88, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 20 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+              style={{
+                position: 'absolute', inset: 0, zIndex: 40,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(3,8,16,0.82)', backdropFilter: 'blur(6px)',
+              }}
+              onClick={() => setSkinUnlockToast(null)}
+            >
+              <div style={{
+                background: 'linear-gradient(145deg, rgba(6,16,26,0.98) 0%, rgba(20,83,45,0.25) 100%)',
+                border: '1px solid rgba(74,222,128,0.35)',
+                borderTop: '3px solid rgba(74,222,128,0.7)',
+                borderRadius: 20, padding: '2rem 2.5rem',
+                textAlign: 'center', maxWidth: 280,
+                boxShadow: '0 0 60px rgba(74,222,128,0.18), 0 0 120px rgba(74,222,128,0.08)',
+              }}>
+                <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: 'rgba(74,222,128,0.7)', marginBottom: '0.75rem' }}>
+                  Skin Unlocked
+                </p>
+                <motion.div
+                  initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.1 }}
+                  style={{
+                    width: 96, height: 96, borderRadius: 16, overflow: 'hidden', margin: '0 auto 1rem',
+                    backgroundImage: `url(${skinColor.rest})`,
+                    backgroundSize: '280% auto', backgroundPosition: 'center 92%',
+                    backgroundRepeat: 'no-repeat',
+                    border: '2px solid rgba(74,222,128,0.4)',
+                    boxShadow: '0 0 24px rgba(74,222,128,0.3)',
+                  }}
+                />
+                <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#4ade80', textShadow: '0 0 24px rgba(74,222,128,0.6)', marginBottom: '0.3rem', lineHeight: 1.1 }}>
+                  {skinName}
+                </p>
+                <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginBottom: '1rem' }}>
+                  New character color available
+                </p>
+                <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.2)' }}>Tap anywhere to close</p>
+              </div>
+            </motion.div>
+          )
+        })()}
+
         {zoneClaimToast && (() => {
           const zc = HABITAT_COLOR[zoneClaimToast.zone] ?? '#f59e0b'
           const zl = HABITAT_LABEL[zoneClaimToast.zone] ?? zoneClaimToast.zone

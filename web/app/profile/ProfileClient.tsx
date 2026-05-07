@@ -33,6 +33,7 @@ interface Props {
   shipName: string
   shipColor: string
   characterColor: string
+  unlockedColors: string[]
 }
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
@@ -57,6 +58,7 @@ export default function ProfileClient({
   shipName,
   shipColor,
   characterColor: initialCharacterColor,
+  unlockedColors,
 }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -290,21 +292,22 @@ export default function ProfileClient({
           {CHARACTER_COLORS.map(c => {
             const sprites = getCharacterSprites(c.id)
             const isActive = characterColor === c.id
+            const isUnlocked = unlockedColors.includes(c.id)
             return (
               <button
                 key={c.id}
-                disabled={!c.free || colorSaving}
+                disabled={!isUnlocked || colorSaving}
                 onClick={async () => {
-                  if (isActive) return
+                  if (isActive || !isUnlocked) return
                   setColorSaving(true)
                   setCharacterColor(c.id)
                   await updateCharacterColor(c.id)
                   setColorSaving(false)
                 }}
                 style={{
-                  background: 'none', border: 'none', cursor: c.free ? 'pointer' : 'default',
+                  background: 'none', border: 'none', cursor: isUnlocked ? 'pointer' : 'default',
                   padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                  opacity: !c.free ? 0.4 : 1,
+                  opacity: !isUnlocked ? 0.4 : 1,
                 }}
               >
                 <div style={{
@@ -316,10 +319,27 @@ export default function ProfileClient({
                   backgroundPosition: 'center 92%',
                   backgroundRepeat: 'no-repeat',
                   backgroundColor: 'rgba(255,255,255,0.03)',
-                }} />
+                  position: 'relative',
+                }}>
+                  {!isUnlocked && (
+                    <div style={{
+                      position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'rgba(0,0,0,0.45)', borderRadius: 12,
+                    }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                    </div>
+                  )}
+                </div>
                 <span className="font-karla font-600" style={{ fontSize: '0.65rem', color: isActive ? '#60a5fa' : '#6a6764' }}>
                   {c.name}
                 </span>
+                {!isUnlocked && c.unlockHint && (
+                  <span className="font-karla" style={{ fontSize: '0.55rem', color: '#4a4845', textAlign: 'center', maxWidth: 72, lineHeight: 1.3 }}>
+                    {c.unlockHint}
+                  </span>
+                )}
               </button>
             )
           })}

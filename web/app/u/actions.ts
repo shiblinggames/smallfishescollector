@@ -72,9 +72,15 @@ export async function updateCharacterColor(colorId: string): Promise<{ error?: s
 
   const color = CHARACTER_COLORS.find(c => c.id === colorId)
   if (!color) return { error: 'Invalid color' }
-  if (!color.free) return { error: 'Color not unlocked' }
 
   const admin = createAdminClient()
+
+  if (!color.free) {
+    const { data: profile } = await admin.from('profiles').select('unlocked_character_colors').eq('id', user.id).single()
+    const unlocked = (profile?.unlocked_character_colors as string[] | null) ?? []
+    if (!unlocked.includes(colorId)) return { error: 'Color not unlocked' }
+  }
+
   await admin.from('profiles').update({ character_color: colorId }).eq('id', user.id)
   return {}
 }

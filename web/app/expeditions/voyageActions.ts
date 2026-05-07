@@ -203,7 +203,7 @@ export async function sendDailyVoyage(crewVariantIds: number[], route: VoyageRou
 }
 
 export async function revealVoyageResults(voyageId: number): Promise<
-  { ok: true; earnedDoubloons: number; newDoubloonTotal: number; earnedGems: number; newGemTotal: number; crewLost: number[]; newRingSkins: string[]; earnedBait: { type: string; qty: number }[]; xpEarned: number; newExpeditionXP: number; oldExpeditionLevel: number; newExpeditionLevel: number; newTideTurner: boolean; newPhantomHook: boolean } | { error: string }
+  { ok: true; earnedDoubloons: number; newDoubloonTotal: number; earnedGems: number; newGemTotal: number; crewLost: number[]; newRingSkins: string[]; earnedBait: { type: string; qty: number }[]; xpEarned: number; newExpeditionXP: number; oldExpeditionLevel: number; newExpeditionLevel: number; newTideTurner: boolean; newPhantomHook: boolean; unlockedSkinId?: string } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -228,7 +228,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, gems, saved_crew, unlocked_ring_skins, expedition_xp, has_tide_turner, has_phantom_hook')
+    .select('doubloons, gems, saved_crew, unlocked_ring_skins, expedition_xp, has_tide_turner, has_phantom_hook, unlocked_character_colors')
     .eq('id', user.id)
     .single()
 
@@ -265,6 +265,16 @@ export async function revealVoyageResults(voyageId: number): Promise<
   const profileUpdate: Record<string, unknown> = { doubloons: newDoubloons, gems: newGems, saved_crew: newSavedCrew, unlocked_ring_skins: updatedSkins, expedition_xp: newExpeditionXP }
   if (newTideTurner) profileUpdate.has_tide_turner = true
   if (newPhantomHook) profileUpdate.has_phantom_hook = true
+
+  // Sky skin: unlock at navigation level 50
+  let unlockedSkinId: string | undefined
+  if (oldExpeditionLevel < 50 && newExpeditionLevel >= 50) {
+    const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
+    if (!currentUnlocked.includes('sky')) {
+      profileUpdate.unlocked_character_colors = [...currentUnlocked, 'sky']
+      unlockedSkinId = 'sky'
+    }
+  }
 
   await Promise.all([
     admin.from('profiles').update(profileUpdate).eq('id', user.id),
@@ -313,7 +323,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
     })
   })
 
-  return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, earnedGems: voyage.total_gems, newGemTotal: newGems, crewLost: voyage.crew_lost, newRingSkins, earnedBait, xpEarned, newExpeditionXP, oldExpeditionLevel, newExpeditionLevel, newTideTurner, newPhantomHook }
+  return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, earnedGems: voyage.total_gems, newGemTotal: newGems, crewLost: voyage.crew_lost, newRingSkins, earnedBait, xpEarned, newExpeditionXP, oldExpeditionLevel, newExpeditionLevel, newTideTurner, newPhantomHook, unlockedSkinId }
 }
 
 export async function fetchVoyageCaptainsLog(voyageId: number): Promise<{ log: string | null } | { error: string }> {

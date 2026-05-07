@@ -183,7 +183,7 @@ export async function reelIn(
   streakBonus = 0,
   jackpotMultiplier = 1,
 ): Promise<
-  | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; newAchievements: string[]; bountyCompletion?: FishingBountyCompletion; xpGained: number; newXP: number; dailyProgress: [number, number, number] }
+  | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; newAchievements: string[]; bountyCompletion?: FishingBountyCompletion; xpGained: number; newXP: number; dailyProgress: [number, number, number]; unlockedSkinId?: string }
   | { caught: false; newAchievements: string[] }
   | { error: string }
 > {
@@ -221,7 +221,7 @@ export async function reelIn(
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, ship_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, ship_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches, unlocked_character_colors').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -235,9 +235,19 @@ export async function reelIn(
     const newXP = (profile.fishing_xp ?? 0) + xpGained
     const updates: Record<string, unknown> = { fishing_xp: newXP }
     if (isNewTrophy) updates.trophy_catches = [...existing, fishId]
+    // Golden skin: unlock when all 6 trophies are caught
+    let unlockedSkinId: string | undefined
+    const newTrophies = isNewTrophy ? [...existing, fishId] : existing
+    if (newTrophies.length >= 6) {
+      const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
+      if (!currentUnlocked.includes('golden')) {
+        updates.unlocked_character_colors = [...currentUnlocked, 'golden']
+        unlockedSkinId = 'golden'
+      }
+    }
     await admin.from('profiles').update(updates).eq('id', user.id)
     const newAchievements = await checkAchievements(user.id, { type: 'fishing', result, depthId: 4, abyssStreak: 0 })
-    return { caught: true, fish: fish as FishSpecies, baitSaved: false, isNewSpecies: isNewTrophy, newAchievements, xpGained, newXP, dailyProgress: [0, 0, 0] }
+    return { caught: true, fish: fish as FishSpecies, baitSaved: false, isNewSpecies: isNewTrophy, newAchievements, xpGained, newXP, dailyProgress: [0, 0, 0], unlockedSkinId }
   }
 
   // Perfect: 50% chance to return the bait used for this cast; Phantom Hook: additional 25% on any catch
@@ -309,8 +319,21 @@ export async function reelIn(
   const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + (result === 'perfect' ? streakBonus : 0)) * prestigeXPMult)
   const newXP = (profile.fishing_xp ?? 0) + xpGained
 
+  // Forest skin: unlock at fishing level 50
+  const profileUpdates: Record<string, unknown> = { fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP }
+  let reelInUnlockedSkin: string | undefined
+  const oldFishingLevel = getLevelFromXP(profile.fishing_xp ?? 0)
+  const newFishingLevel = getLevelFromXP(newXP)
+  if (oldFishingLevel < 50 && newFishingLevel >= 50) {
+    const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
+    if (!currentUnlocked.includes('forest')) {
+      profileUpdates.unlocked_character_colors = [...currentUnlocked, 'forest']
+      reelInUnlockedSkin = 'forest'
+    }
+  }
+
   const [, baitFetchResult] = await Promise.all([
-    admin.from('profiles').update({ fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP }).eq('id', user.id),
+    admin.from('profiles').update(profileUpdates).eq('id', user.id),
     baitSaved
       ? admin.from('bait_inventory').select('quantity').eq('user_id', user.id).eq('bait_type', baitType).single()
       : Promise.resolve({ data: null }),
@@ -406,7 +429,7 @@ export async function reelIn(
     { onConflict: 'user_id,date' },
   )
 
-  return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, newAchievements, bountyCompletion, xpGained, newXP, dailyProgress: newP }
+  return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, newAchievements, bountyCompletion, xpGained, newXP, dailyProgress: newP, unlockedSkinId: reelInUnlockedSkin }
 }
 
 const CRATE_DOUBLOON_RANGE: Record<string, [number, number]> = {
@@ -428,12 +451,23 @@ const CRATE_BAIT_POOL: { type: string; weight: number }[] = [
 export async function reelCrate(zone: string): Promise<
   | { type: 'doubloons'; amount: number }
   | { type: 'bait'; baitType: string; baitName: string; quantity: number }
+  | { type: 'skin'; skinId: string; skinName: string }
   | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()
+
+  // 3% chance: Mint skin rare drop (only if not already owned)
+  if (Math.random() < 0.03) {
+    const { data: profile } = await admin.from('profiles').select('unlocked_character_colors').eq('id', user.id).single()
+    const currentUnlocked = (profile?.unlocked_character_colors as string[] | null) ?? []
+    if (!currentUnlocked.includes('mint')) {
+      await admin.from('profiles').update({ unlocked_character_colors: [...currentUnlocked, 'mint'] }).eq('id', user.id)
+      return { type: 'skin', skinId: 'mint', skinName: 'Mint' }
+    }
+  }
 
   if (Math.random() < 0.5) {
     // Doubloons
@@ -647,7 +681,7 @@ export async function claimZoneReward(zone: string): Promise<{ doubloons: number
   return { doubloons: newDoubloons, earned }
 }
 
-export async function prestigeZone(zone: string): Promise<{ prestigeLevel: number } | { error: string }> {
+export async function prestigeZone(zone: string): Promise<{ prestigeLevel: number; unlockedSkinId?: string } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -663,7 +697,7 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('prestige_levels, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded')
+    .select('prestige_levels, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, unlocked_character_colors')
     .eq('id', user.id).single()
   if (!profile) return { error: 'Profile not found' }
   const rewardClaimed: Record<string, boolean | null> = {
@@ -683,12 +717,24 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
   const newLevel = (currentLevels[zone] ?? 0) + 1
   const newLevels = { ...currentLevels, [zone]: newLevel }
 
+  // Sand skin: unlock when any zone reaches prestige 3
+  let prestigeUnlockedSkin: string | undefined
+  const profileUpdate: Record<string, unknown> = { prestige_levels: newLevels, [rewardCol]: false }
+  const maxPrestige = Math.max(...Object.values(newLevels))
+  if (maxPrestige >= 3) {
+    const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
+    if (!currentUnlocked.includes('sand')) {
+      profileUpdate.unlocked_character_colors = [...currentUnlocked, 'sand']
+      prestigeUnlockedSkin = 'sand'
+    }
+  }
+
   await Promise.all([
     admin.from('fish_collection').delete().eq('user_id', user.id).in('fish_id', zoneIds),
-    admin.from('profiles').update({ prestige_levels: newLevels, [rewardCol]: false }).eq('id', user.id),
+    admin.from('profiles').update(profileUpdate).eq('id', user.id),
   ])
 
-  return { prestigeLevel: newLevel }
+  return { prestigeLevel: newLevel, unlockedSkinId: prestigeUnlockedSkin }
 }
 
 export async function useTideTurnerSkip(): Promise<{ ok: true; skipsLeft: number } | { error: string }> {
