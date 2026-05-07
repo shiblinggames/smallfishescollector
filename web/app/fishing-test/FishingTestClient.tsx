@@ -12,7 +12,7 @@ const FRAMES: Record<Frame, string> = {
   cast: '/fishing_cast.png',
 }
 
-// Per-frame overlay config — tune these values until they line up
+// Per-frame rod/hook overlay config — % relative to the character container
 const ROD_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
   rest: { top: -8,  left: -12, width: 78, rotate: 0   },
   wait: { top: -5,  left: -10, width: 82, rotate: 0   },
@@ -25,6 +25,9 @@ const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; ro
   cast: { top: -8,  left: -2,  width: 12, rotate: 20 },
 }
 
+// Character position on the background — % of the phone preview container
+const CHAR_DEFAULT = { bottom: 12, left: 5, width: 70 }
+
 function Slider({ label, value, min, max, step = 1, onChange }: {
   label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void
 }) {
@@ -32,8 +35,7 @@ function Slider({ label, value, min, max, step = 1, onChange }: {
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
       <span style={{ width: 60, fontSize: 11, color: '#aaa', textAlign: 'right' }}>{label}</span>
       <input type="range" min={min} max={max} step={step} value={value}
-        onChange={e => onChange(Number(e.target.value))}
-        style={{ flex: 1 }} />
+        onChange={e => onChange(Number(e.target.value))} style={{ flex: 1 }} />
       <span style={{ width: 38, fontSize: 11, color: '#fff', textAlign: 'right' }}>{value}</span>
     </div>
   )
@@ -43,11 +45,11 @@ export default function FishingTestClient() {
   const [frame, setFrame] = useState<Frame>('rest')
   const [rodTier, setRodTier] = useState(0)
   const [hookTier, setHookTier] = useState(0)
-
   const [rodCfg, setRodCfg] = useState(ROD_OVERLAY)
   const [hookCfg, setHookCfg] = useState(HOOK_OVERLAY)
+  const [charPos, setCharPos] = useState(CHAR_DEFAULT)
 
-  const rod = RODS.find(r => r.tier === rodTier) ?? RODS[0]
+  const rod  = RODS.find(r => r.tier === rodTier) ?? RODS[0]
   const hook = HOOKS.find(h => h.tier === hookTier) ?? HOOKS[0]
   const rc = rodCfg[frame]
   const hc = hookCfg[frame]
@@ -62,50 +64,55 @@ export default function FishingTestClient() {
   return (
     <div style={{ minHeight: '100vh', background: '#08121c', display: 'flex', gap: 0 }}>
 
-      {/* ── Preview ── */}
+      {/* ── Phone preview ── */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ position: 'relative', width: 340, height: 280 }}>
-          {/* Character sprite */}
-          <img src={FRAMES[frame]} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center bottom' }} />
+        {/* Mimic the game's max-w-md container at phone aspect ratio */}
+        <div style={{ position: 'relative', width: 390, height: 720, overflow: 'hidden', borderRadius: 12, boxShadow: '0 0 0 1px rgba(255,255,255,0.1)' }}>
 
-          {/* Rod overlay */}
-          {rod.imageUrl && (
-            <img
-              src={rod.imageUrl}
-              alt="rod"
-              style={{
-                position: 'absolute',
-                top: `${rc.top}%`,
-                left: `${rc.left}%`,
+          {/* Zone background — fills container like the real game */}
+          <img
+            src="/fishingbackground1.jpeg"
+            alt=""
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
+          />
+
+          {/* Character + overlays — positioned on background */}
+          <div style={{
+            position: 'absolute',
+            bottom: `${charPos.bottom}%`,
+            left: `${charPos.left}%`,
+            width: `${charPos.width}%`,
+          }}>
+            {/* Character sprite */}
+            <img src={FRAMES[frame]} alt="" style={{ width: '100%', display: 'block' }} />
+
+            {/* Rod overlay */}
+            {rod.imageUrl && (
+              <img src={rod.imageUrl} alt="rod" style={{
+                position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
                 width: `${rc.width}%`,
                 transform: `rotate(${rc.rotate}deg)`,
                 transformOrigin: 'bottom right',
                 pointerEvents: 'none',
-              }}
-            />
-          )}
+              }} />
+            )}
 
-          {/* Hook overlay */}
-          {hook.imageUrl && (
-            <img
-              src={hook.imageUrl}
-              alt="hook"
-              style={{
-                position: 'absolute',
-                top: `${hc.top}%`,
-                left: `${hc.left}%`,
+            {/* Hook overlay */}
+            {hook.imageUrl && (
+              <img src={hook.imageUrl} alt="hook" style={{
+                position: 'absolute', top: `${hc.top}%`, left: `${hc.left}%`,
                 width: `${hc.width}%`,
                 transform: `rotate(${hc.rotate}deg)`,
                 transformOrigin: 'center center',
                 pointerEvents: 'none',
-              }}
-            />
-          )}
+              }} />
+            )}
+          </div>
         </div>
       </div>
 
       {/* ── Controls ── */}
-      <div style={{ width: 280, background: 'rgba(0,0,0,0.7)', padding: '1.2rem', overflowY: 'auto', fontSize: 12, color: '#ccc' }}>
+      <div style={{ width: 290, background: 'rgba(0,0,0,0.8)', padding: '1.2rem', overflowY: 'auto', fontSize: 12, color: '#ccc' }}>
 
         {/* Frame picker */}
         <p style={{ fontWeight: 700, marginBottom: 8, color: '#fff' }}>Frame</p>
@@ -119,42 +126,46 @@ export default function FishingTestClient() {
           ))}
         </div>
 
+        {/* Character position */}
+        <p style={{ fontWeight: 700, marginBottom: 4, color: '#fbbf24' }}>Character position</p>
+        <Slider label="bottom %" value={charPos.bottom} min={-20} max={60} onChange={v => setCharPos(p => ({ ...p, bottom: v }))} />
+        <Slider label="left %"   value={charPos.left}   min={-20} max={80} onChange={v => setCharPos(p => ({ ...p, left:   v }))} />
+        <Slider label="width %"  value={charPos.width}  min={20}  max={120} onChange={v => setCharPos(p => ({ ...p, width:  v }))} />
+
         {/* Rod picker */}
-        <p style={{ fontWeight: 700, marginBottom: 6, color: '#fff' }}>Rod</p>
+        <p style={{ fontWeight: 700, marginTop: 14, marginBottom: 6, color: '#fff' }}>Rod</p>
         <select value={rodTier} onChange={e => setRodTier(Number(e.target.value))}
-          style={{ width: '100%', marginBottom: 12, padding: '4px 6px', background: '#1e2d3e', color: '#fff', border: '1px solid #334', borderRadius: 6 }}>
+          style={{ width: '100%', marginBottom: 10, padding: '4px 6px', background: '#1e2d3e', color: '#fff', border: '1px solid #334', borderRadius: 6 }}>
           {RODS.filter(r => r.imageUrl).map(r => (
             <option key={r.tier} value={r.tier}>{r.name}</option>
           ))}
         </select>
 
-        {/* Rod overlay controls */}
         <p style={{ fontWeight: 600, marginBottom: 4, color: '#93c5fd' }}>Rod overlay ({frame})</p>
-        <Slider label="top %" value={rc.top} min={-50} max={100} onChange={v => setRod('top', v)} />
-        <Slider label="left %" value={rc.left} min={-50} max={100} onChange={v => setRod('left', v)} />
-        <Slider label="width %" value={rc.width} min={10} max={150} onChange={v => setRod('width', v)} />
+        <Slider label="top %"    value={rc.top}    min={-80} max={100}  onChange={v => setRod('top',    v)} />
+        <Slider label="left %"   value={rc.left}   min={-80} max={100}  onChange={v => setRod('left',   v)} />
+        <Slider label="width %"  value={rc.width}  min={10}  max={150}  onChange={v => setRod('width',  v)} />
         <Slider label="rotate °" value={rc.rotate} min={-180} max={180} onChange={v => setRod('rotate', v)} />
 
         {/* Hook picker */}
-        <p style={{ fontWeight: 700, marginTop: 16, marginBottom: 6, color: '#fff' }}>Hook</p>
+        <p style={{ fontWeight: 700, marginTop: 14, marginBottom: 6, color: '#fff' }}>Hook</p>
         <select value={hookTier} onChange={e => setHookTier(Number(e.target.value))}
-          style={{ width: '100%', marginBottom: 12, padding: '4px 6px', background: '#1e2d3e', color: '#fff', border: '1px solid #334', borderRadius: 6 }}>
+          style={{ width: '100%', marginBottom: 10, padding: '4px 6px', background: '#1e2d3e', color: '#fff', border: '1px solid #334', borderRadius: 6 }}>
           {HOOKS.filter(h => h.imageUrl).map(h => (
             <option key={h.tier} value={h.tier}>{h.name}</option>
           ))}
         </select>
 
-        {/* Hook overlay controls */}
         <p style={{ fontWeight: 600, marginBottom: 4, color: '#6ee7b7' }}>Hook overlay ({frame})</p>
-        <Slider label="top %" value={hc.top} min={-50} max={150} onChange={v => setHook('top', v)} />
-        <Slider label="left %" value={hc.left} min={-50} max={100} onChange={v => setHook('left', v)} />
-        <Slider label="width %" value={hc.width} min={2} max={50} onChange={v => setHook('width', v)} />
+        <Slider label="top %"    value={hc.top}    min={-80} max={150}  onChange={v => setHook('top',    v)} />
+        <Slider label="left %"   value={hc.left}   min={-80} max={100}  onChange={v => setHook('left',   v)} />
+        <Slider label="width %"  value={hc.width}  min={2}   max={60}   onChange={v => setHook('width',  v)} />
         <Slider label="rotate °" value={hc.rotate} min={-180} max={180} onChange={v => setHook('rotate', v)} />
 
         {/* Config dump */}
-        <p style={{ fontWeight: 700, marginTop: 20, marginBottom: 6, color: '#fff' }}>Current config</p>
-        <pre style={{ fontSize: 9.5, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
-{`ROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}`}
+        <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Current config</p>
+        <pre style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+{`CHAR:\n${JSON.stringify(charPos, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}`}
         </pre>
       </div>
     </div>
