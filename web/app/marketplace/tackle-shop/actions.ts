@@ -148,14 +148,17 @@ export async function equipRod(
 
   const admin = createAdminClient()
 
-  const { data: owned } = await admin
-    .from('rod_inventory')
-    .select('rod_tier')
-    .eq('user_id', user.id)
-    .eq('rod_tier', rodTier)
-    .maybeSingle()
+  // Tier 0 (Bamboo Rod) is the free starter rod — always equippable
+  if (rodTier !== 0) {
+    const { data: owned } = await admin
+      .from('rod_inventory')
+      .select('rod_tier')
+      .eq('user_id', user.id)
+      .eq('rod_tier', rodTier)
+      .maybeSingle()
 
-  if (!owned) return { error: 'Rod not owned' }
+    if (!owned) return { error: 'Rod not owned' }
+  }
 
   await admin.from('profiles').update({ rod_tier: rodTier }).eq('id', user.id)
 
