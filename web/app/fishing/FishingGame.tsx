@@ -805,10 +805,9 @@ function BaitSelector({ baitInventory, selectedBait, onSelect }: {
 
 type CharFrame = 'rest' | 'wait' | 'cast'
 
-const CHAR_SRC: Record<CharFrame, string> = {
-  rest: '/fishing_rest.png',
-  wait: '/fishing_wait.png',
-  cast: '/fishing_cast.png',
+function getCharSrc(colorId: string): Record<CharFrame, string> {
+  const prefix = colorId === 'default' ? 'fishing' : `fishing_${colorId}`
+  return { rest: `/${prefix}_rest.png`, wait: `/${prefix}_wait.png`, cast: `/${prefix}_cast.png` }
 }
 
 const CHAR_POS: Record<CharFrame, { bottom: number; left: number; width: number }> = {
@@ -1424,7 +1423,7 @@ export default function FishingGame({
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster,
-  initialPrestigeLevels, initialTrophyCatches,
+  initialPrestigeLevels, initialTrophyCatches, characterColor,
 }: {
   hookTier: number
   rodTier: number
@@ -1457,7 +1456,10 @@ export default function FishingGame({
   hasAutoCaster: boolean
   initialPrestigeLevels: Record<string, number>
   initialTrophyCatches: number[]
+  characterColor: string
 }) {
+
+  const charSrc = getCharSrc(characterColor)
 
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
   const [ownedRods, setOwnedRods] = useState(initialOwnedRods)
@@ -2363,7 +2365,7 @@ export default function FishingGame({
           transition={bgBobTransition}
           style={{ position: 'absolute', inset: 0, pointerEvents: 'none', filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))' }}
         >
-          {(Object.keys(CHAR_SRC) as CharFrame[]).map(f => {
+          {(Object.keys(charSrc) as CharFrame[]).map(f => {
             const p   = CHAR_POS[f]
             const rc  = CHAR_ROD_OVERLAY[f]
             const hc  = CHAR_HOOK_OVERLAY[f]
@@ -2376,7 +2378,7 @@ export default function FishingGame({
                 width: `${p.width}%`,
                 visibility: visible ? 'visible' : 'hidden',
               }}>
-                <img src={CHAR_SRC[f]} alt="" style={{ width: '100%', display: 'block' }} />
+                <img src={charSrc[f]} alt="" style={{ width: '100%', display: 'block' }} />
                 {rod.imageUrl && (
                   <img src={rod.imageUrl} alt="" style={{
                     position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
