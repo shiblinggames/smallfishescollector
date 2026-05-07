@@ -12,6 +12,7 @@ import { getShip } from '@/lib/ships'
 import { getShipSkin } from '@/lib/shipSkins'
 import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
 import { getCharacterSprites } from '@/lib/characters'
+import { SPECIAL_ITEMS } from '@/lib/specialItems'
 
 interface CardVariant {
   id: number
@@ -65,6 +66,7 @@ interface Props {
   isOwnProfile?: boolean
   isInCrew?: boolean
   characterColor?: string
+  equippedSpecialId?: string | null
 }
 
 function fishImageUrl(name: string) {
@@ -188,7 +190,7 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   )
 }
 
-export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default' }: Props) {
+export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
@@ -204,6 +206,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
   const ship = getShip(gear.shipTier)
   const shipSkin = equippedShipSkin ? getShipSkin(equippedShipSkin) : null
   const charSprites = getCharacterSprites(characterColor)
+  const equippedSpecial = equippedSpecialId ? SPECIAL_ITEMS.find(s => s.id === equippedSpecialId) ?? null : null
 
   function toggleCrew() {
     startCrewTransition(async () => {
@@ -260,56 +263,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
       {/* ── 2-col body on desktop ── */}
       <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-8 md:gap-10 items-start">
 
-        {/* ── LEFT: Ship + Crew ── */}
-        <div className="flex flex-col" style={{ gap: 28 }}>
-
-          {/* Ship Hero */}
-          <div style={{
-            background: `radial-gradient(ellipse at 50% 65%, ${ship.color}1c 0%, transparent 68%)`,
-            border: `1px solid ${ship.color}20`,
-            borderRadius: 20,
-            padding: '24px 16px 16px',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
-          }}>
-            <img
-              src={ship.imageUrl}
-              alt={ship.name}
-              style={{
-                width: 200, height: 155,
-                objectFit: 'contain',
-                filter: shipSkin
-                  ? shipSkin.filter
-                  : `drop-shadow(0 4px 28px ${ship.color}60)`,
-              }}
-            />
-            <div style={{ textAlign: 'center' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: ship.color, lineHeight: 1.2 }}>
-                {gear.shipName ?? ship.name}
-              </p>
-              <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: ship.color + '70', marginTop: 5 }}>
-                {ship.name}
-              </p>
-            </div>
-          </div>
-
-          {/* Crew */}
-          {(variants.length > 0 || stats.packsOpened > 0) && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <SectionLabel>Crew</SectionLabel>
-                {stats.packsOpened > 0 && (
-                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#6a6764', marginBottom: 14 }}>
-                    {stats.packsOpened.toLocaleString()} packs opened
-                  </p>
-                )}
-              </div>
-              {variants.length > 0 && <CrewCarousel variants={variants} />}
-            </div>
-          )}
-
-        </div>
-
-        {/* ── RIGHT: Equipment + Catches + Voyages ── */}
+        {/* ── LEFT: Fishing — character + catches ── */}
         <div className="flex flex-col" style={{ gap: 28 }}>
 
           {/* Character Loadout */}
@@ -357,6 +311,36 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
             </div>
           </div>
 
+          {/* Equipped Special */}
+          {equippedSpecial && (
+            <div style={{
+              background: `linear-gradient(130deg, ${equippedSpecial.color}12 0%, rgba(4,10,20,0.88) 55%)`,
+              border: `1px solid ${equippedSpecial.color}40`,
+              borderRadius: 16,
+              padding: '0.85rem 1rem',
+              display: 'flex', alignItems: 'center', gap: 14,
+              boxShadow: `0 0 20px ${equippedSpecial.color}14`,
+            }}>
+              {equippedSpecial.image
+                ? <img src={equippedSpecial.image} alt={equippedSpecial.name} style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 0 10px ${equippedSpecial.color}88)` }} />
+                : <div style={{ width: 44, height: 44, borderRadius: 10, background: equippedSpecial.color + '22', border: `1px solid ${equippedSpecial.color}44`, flexShrink: 0 }} />
+              }
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: equippedSpecial.color, lineHeight: 1.2, marginBottom: 4 }}>{equippedSpecial.name}</p>
+                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a8a5a0', lineHeight: 1.5 }}>{equippedSpecial.description}</p>
+                <span style={{
+                  display: 'inline-block', marginTop: 6,
+                  fontSize: '0.6rem', padding: '0.15rem 0.5rem', borderRadius: '2rem',
+                  background: equippedSpecial.color + '18', border: `1px solid ${equippedSpecial.color}40`, color: equippedSpecial.color,
+                  fontFamily: 'var(--font-karla)', fontWeight: 700,
+                  textTransform: 'uppercase', letterSpacing: '0.1em',
+                }}>
+                  {equippedSpecial.effectLabel}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Rarest Catches */}
           {rarestFish.length > 0 && (
             <div>
@@ -398,6 +382,55 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                   {stats.highestPerfectStreak > 0 ? ` · ${stats.highestPerfectStreak}× best streak` : ''}
                 </p>
               )}
+            </div>
+          )}
+
+        </div>
+
+        {/* ── RIGHT: Expedition — ship + crew + voyages ── */}
+        <div className="flex flex-col" style={{ gap: 28 }}>
+
+          {/* Ship Hero */}
+          <div style={{
+            background: `radial-gradient(ellipse at 50% 65%, ${ship.color}1c 0%, transparent 68%)`,
+            border: `1px solid ${ship.color}20`,
+            borderRadius: 20,
+            padding: '24px 16px 16px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+          }}>
+            <img
+              src={ship.imageUrl}
+              alt={ship.name}
+              style={{
+                width: 200, height: 155,
+                objectFit: 'contain',
+                filter: shipSkin
+                  ? shipSkin.filter
+                  : `drop-shadow(0 4px 28px ${ship.color}60)`,
+              }}
+            />
+            <div style={{ textAlign: 'center' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: ship.color, lineHeight: 1.2 }}>
+                {gear.shipName ?? ship.name}
+              </p>
+              <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: ship.color + '70', marginTop: 5 }}>
+                {ship.name}
+              </p>
+            </div>
+          </div>
+
+          {/* Crew */}
+          {(variants.length > 0 || stats.packsOpened > 0) && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <SectionLabel>Crew</SectionLabel>
+                {stats.packsOpened > 0 && (
+                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#6a6764', marginBottom: 14 }}>
+                    {stats.packsOpened.toLocaleString()} packs opened
+                  </p>
+                )}
+              </div>
+              {variants.length > 0 && <CrewCarousel variants={variants} />}
             </div>
           )}
 
