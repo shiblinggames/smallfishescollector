@@ -145,6 +145,15 @@ export async function castLine(baitType: string, habitat: string, noBait = false
     if (pool.length === 0) return { error: 'You have caught all Ancient Deep trophies!' }
   }
 
+  // Crate encounter: 3% chance in all zones except ancient_deep
+  if (habitat !== 'ancient_deep' && Math.random() < 0.03) {
+    if (!noBait && baitRow) {
+      await admin.from('bait_inventory').update({ quantity: baitRow.quantity - 1 }).eq('user_id', user.id).eq('bait_type', baitType)
+    }
+    const crateWait = { shallows: 4000, open_waters: 7000, deep: 11000, abyss: 16000 }[habitat] ?? 6000
+    return { fishId: CRATE_FISH_ID, catchDifficulty: 3, biteRarity: 3, waitMs: crateWait }
+  }
+
   if (!noBait && baitRow) {
     await admin
       .from('bait_inventory')
@@ -159,6 +168,8 @@ export async function castLine(baitType: string, habitat: string, noBait = false
 
   return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs }
 }
+
+export const CRATE_FISH_ID = -1
 
 const PERFECT_BAIT_SAVE_CHANCE = 0.5
 
@@ -395,6 +406,57 @@ export async function reelIn(
   )
 
   return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, newAchievements, bountyCompletion, xpGained, newXP, dailyProgress: newP }
+}
+
+const CRATE_DOUBLOON_RANGE: Record<string, [number, number]> = {
+  shallows:    [50,  200],
+  open_waters: [100, 400],
+  deep:        [200, 700],
+  abyss:       [400, 1000],
+}
+
+// Weighted bait pool for crate drops (chum + anglers_formula rarer)
+const CRATE_BAIT_POOL: { type: string; weight: number }[] = [
+  { type: 'worm',            weight: 35 },
+  { type: 'minnow',          weight: 25 },
+  { type: 'night_crawler',   weight: 20 },
+  { type: 'chum',            weight: 12 },
+  { type: 'anglers_formula', weight: 8  },
+]
+
+export async function reelCrate(zone: string): Promise<
+  | { type: 'doubloons'; amount: number }
+  | { type: 'bait'; baitType: string; baitName: string; quantity: number }
+  | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+  const admin = createAdminClient()
+
+  if (Math.random() < 0.5) {
+    // Doubloons
+    const [min, max] = CRATE_DOUBLOON_RANGE[zone] ?? [50, 200]
+    const amount = Math.floor(min + Math.random() * (max - min + 1))
+    const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
+    await admin.from('profiles').update({ doubloons: (profile?.doubloons ?? 0) + amount }).eq('id', user.id)
+    return { type: 'doubloons', amount }
+  } else {
+    // Bait — weighted random pick
+    const totalWeight = CRATE_BAIT_POOL.reduce((s, b) => s + b.weight, 0)
+    let rand = Math.random() * totalWeight
+    let picked = CRATE_BAIT_POOL[0]
+    for (const b of CRATE_BAIT_POOL) { rand -= b.weight; if (rand <= 0) { picked = b; break } }
+    const qty = 10
+    const { data: existing } = await admin.from('bait_inventory').select('quantity').eq('user_id', user.id).eq('bait_type', picked.type).single()
+    if (existing) {
+      await admin.from('bait_inventory').update({ quantity: existing.quantity + qty }).eq('user_id', user.id).eq('bait_type', picked.type)
+    } else {
+      await admin.from('bait_inventory').insert({ user_id: user.id, bait_type: picked.type, quantity: qty })
+    }
+    const baitName = getBait(picked.type).name
+    return { type: 'bait', baitType: picked.type, baitName, quantity: qty }
+  }
 }
 
 const QUICK_BUY_WORMS_QTY  = 10

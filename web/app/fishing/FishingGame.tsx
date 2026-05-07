@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, useTideTurnerSkip, prestigeZone, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, useTideTurnerSkip, prestigeZone, CRATE_FISH_ID, type FishSpecies, type FishingBountyCompletion } from './actions'
 import { claimDailyReward } from './dailyChallengeActions'
 import { getDailyChallenges, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
 import { getRingSkin } from '@/lib/ringSkins'
@@ -1494,6 +1494,7 @@ export default function FishingGame({
   const [wormBuyMsg, setWormBuyMsg] = useState<string | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
   const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean; gemEarned?: boolean; perfectStreak: number; streakBonusXP: number; jackpotMultiplier?: number } | null>(null)
+  const [crateResult, setCrateResult] = useState<{ type: 'doubloons'; amount: number } | { type: 'bait'; baitType: string; baitName: string; quantity: number } | null>(null)
   const [challengeActive, setChallengeActive] = useState(false)
   const [perfectStreak, setPerfectStreak] = useState(0)
   const [highestPerfectStreak, setHighestPerfectStreak] = useState(initialHighestPerfectStreak)
@@ -1844,6 +1845,36 @@ export default function FishingGame({
     setTimeout(() => setReelRippleKey(0), 1800)
     if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
 
+    // Crate encounter
+    if (hookedFishRef.current.fishId === CRATE_FISH_ID) {
+      phaseRef.current = 'reeling'
+      setPhase('reeling')
+      startTransition(async () => {
+        try {
+          const res = await reelCrate(selectedZone)
+          if (!('error' in res)) {
+            setCrateResult(res)
+            if (res.type === 'doubloons') {
+              setDoubloons(prev => {
+                const next = prev + res.amount
+                window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: next }))
+                return next
+              })
+            } else {
+              setBaitInventory(prev => {
+                const existing = prev.find(b => b.bait_type === res.baitType)
+                if (existing) return prev.map(b => b.bait_type === res.baitType ? { ...b, quantity: b.quantity + res.quantity } : b)
+                return [...prev, { bait_type: res.baitType, quantity: res.quantity }]
+              })
+            }
+          }
+        } catch {}
+        phaseRef.current = 'result'
+        setPhase('result')
+      })
+      return
+    }
+
     const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
     const baitBonus = getBait(selectedBaitRef.current).catchZoneBonus
     const eventCatchBonus = activeEventRef.current?.type === 'glassy' ? 12 : 0
@@ -2129,6 +2160,7 @@ export default function FishingGame({
     setTimeout(() => setCastRippleKey(0), 1800)
     setCatchResult(null)
     setMissResult(null)
+    setCrateResult(null)
     setHookedFish(null)
     setPerfectFlash(false)
     setBountyNotif(null)
@@ -2489,8 +2521,47 @@ export default function FishingGame({
                 const r = RARITY[hookedFish.biteRarity] ?? RARITY[1]
                 const isLegendary = hookedFish.biteRarity === 5
                 const isEpicPlus  = hookedFish.biteRarity >= 4
+                const isCrate = hookedFish.fishId === CRATE_FISH_ID
                 const isBoss = selectedZone === 'ancient_deep'
                 const bossName = isBoss ? (allFishSpecies.find(f => f.id === hookedFish.fishId)?.name ?? 'Ancient Creature') : null
+
+                if (isCrate) return (
+                  <motion.div key="hooked"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <motion.div
+                      initial={{ scale: 0.95 }} animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+                      style={{
+                        position: 'relative',
+                        background: 'rgba(20,12,4,0.60)',
+                        border: '1px solid #d9770640',
+                        borderRadius: 20,
+                        padding: '1.1rem 1.75rem',
+                        textAlign: 'center',
+                        boxShadow: '0 0 32px rgba(217,119,6,0.20)',
+                      }}
+                    >
+                      <motion.p
+                        className="font-karla font-700"
+                        animate={{ opacity: [1, 0.75, 1] }}
+                        transition={{ duration: 1.0, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{ fontSize: '1rem', color: '#fbbf24', textShadow: '0 0 16px rgba(251,191,36,0.6)' }}
+                      >
+                        Something heavy... and square?
+                      </motion.p>
+                      <div style={{
+                        position: 'absolute', bottom: -7, left: '50%',
+                        transform: 'translateX(-50%) rotate(45deg)',
+                        width: 12, height: 12,
+                        background: 'rgba(20,12,4,0.60)',
+                        borderRight: '1px solid #d9770640',
+                        borderBottom: '1px solid #d9770640',
+                      }} />
+                    </motion.div>
+                  </motion.div>
+                )
 
                 if (isBoss && bossName) return (
                   <motion.div key="hooked"
@@ -2753,7 +2824,43 @@ export default function FishingGame({
                     </motion.div>
                   )}
 
-                  {catchResult ? (
+                  {crateResult ? (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                      transition={{ type: 'spring', stiffness: 340, damping: 22 }}
+                      style={{
+                        background: 'rgba(20,12,4,0.88)',
+                        border: '1px solid #d9770660',
+                        borderRadius: 16,
+                        padding: '1.1rem 1.25rem',
+                        boxShadow: '0 0 28px rgba(217,119,6,0.18)',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: '#d97706', marginBottom: '0.5rem' }}>
+                        Sunken Crate Found
+                      </p>
+                      {crateResult.type === 'doubloons' ? (
+                        <>
+                          <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#fbbf24', textShadow: '0 0 20px rgba(251,191,36,0.5)', lineHeight: 1 }}>
+                            +{crateResult.amount.toLocaleString()} ⟡
+                          </p>
+                          <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: 'rgba(251,191,36,0.55)', marginTop: '0.25rem' }}>
+                            Doubloons
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#86efac', textShadow: '0 0 16px rgba(134,239,172,0.4)', lineHeight: 1 }}>
+                            ×{crateResult.quantity} {crateResult.baitName}
+                          </p>
+                          <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: 'rgba(134,239,172,0.55)', marginTop: '0.25rem' }}>
+                            Bait added to your tackle
+                          </p>
+                        </>
+                      )}
+                    </motion.div>
+                  ) : catchResult ? (
                     <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} xpGained={catchResult.xpGained} doubleCatch={catchResult.doubleCatch} gemEarned={catchResult.gemEarned} perfectStreak={catchResult.perfectStreak} streakBonusXP={catchResult.streakBonusXP} jackpotMultiplier={catchResult.jackpotMultiplier} />
                   ) : missResult ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
