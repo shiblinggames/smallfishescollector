@@ -1847,23 +1847,6 @@ export default function FishingGame({
     setTimeout(() => setReelRippleKey(0), 1800)
     if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
 
-    // Crate encounter — fetch loot from server but don't credit until player claims
-    if (hookedFishRef.current.fishId === CRATE_FISH_ID) {
-      phaseRef.current = 'reeling'
-      setPhase('reeling')
-      startTransition(async () => {
-        try {
-          const res = await reelCrate(selectedZone)
-          if (!('error' in res)) setCrateResult(res)
-        } catch {}
-        setCratePhase('closed')
-        setCrateRollDisplay(null)
-        phaseRef.current = 'result'
-        setPhase('result')
-      })
-      return
-    }
-
     const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
     const baitBonus = getBait(selectedBaitRef.current).catchZoneBonus
     const eventCatchBonus = activeEventRef.current?.type === 'glassy' ? 12 : 0
@@ -1975,9 +1958,11 @@ export default function FishingGame({
       await new Promise(r => setTimeout(r, 200))
       phaseRef.current = 'result'
       setPhase('result')
-      startTransition(async () => {
-        await reelIn(hookedFishRef.current!.fishId, effectiveZoneType as 'miss' | 'penalty', selectedBaitRef.current)
-      })
+      if (hookedFishRef.current!.fishId !== CRATE_FISH_ID) {
+        startTransition(async () => {
+          await reelIn(hookedFishRef.current!.fishId, effectiveZoneType as 'miss' | 'penalty', selectedBaitRef.current)
+        })
+      }
       return
     }
 
@@ -2001,6 +1986,21 @@ export default function FishingGame({
     await new Promise(r => setTimeout(r, 200))
     phaseRef.current = 'reeling'
     setPhase('reeling')
+
+    // Crate catch — fetch loot, don't credit until player claims
+    if (hookedFishRef.current.fishId === CRATE_FISH_ID) {
+      startTransition(async () => {
+        try {
+          const res = await reelCrate(selectedZone)
+          if (!('error' in res)) setCrateResult(res)
+        } catch {}
+        setCratePhase('closed')
+        setCrateRollDisplay(null)
+        phaseRef.current = 'result'
+        setPhase('result')
+      })
+      return
+    }
 
     // Twin-Strike rod: 25% chance to catch 2 fish
     const doubleCatch = rod.doubleCatchChance > 0 && Math.random() < rod.doubleCatchChance
