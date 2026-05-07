@@ -311,11 +311,12 @@ export default function ProfileClient({
                   width: 72, height: 72, borderRadius: 12, overflow: 'hidden',
                   border: isActive ? '2px solid #60a5fa' : '2px solid rgba(255,255,255,0.08)',
                   boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.35)' : 'none',
-                  background: 'rgba(255,255,255,0.03)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <img src={sprites.rest} alt={c.name} style={{ width: '130%', objectFit: 'contain', marginTop: 8 }} />
-                </div>
+                  backgroundImage: `url(${sprites.rest})`,
+                  backgroundSize: '280% auto',
+                  backgroundPosition: 'center 92%',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundColor: 'rgba(255,255,255,0.03)',
+                }} />
                 <span className="font-karla font-600" style={{ fontSize: '0.65rem', color: isActive ? '#60a5fa' : '#6a6764' }}>
                   {c.name}
                 </span>
