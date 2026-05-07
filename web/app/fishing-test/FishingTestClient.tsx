@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { RODS } from '@/lib/rods'
 import { HOOKS } from '@/lib/hooks'
 
@@ -45,13 +45,36 @@ function Slider({ label, value, min, max, step = 1, onChange }: {
   )
 }
 
+// Animation sequence: [frame, duration ms]
+const ANIM_SEQUENCE: [Frame, number][] = [
+  ['cast', 600],
+  ['wait', 2500],
+  ['cast', 500],
+  ['rest', 800],
+]
+
 export default function FishingTestClient() {
   const [frame, setFrame] = useState<Frame>('rest')
+  const [animating, setAnimating] = useState(false)
   const [rodTier, setRodTier] = useState(0)
   const [hookTier, setHookTier] = useState(0)
   const [rodCfg, setRodCfg] = useState(ROD_OVERLAY)
   const [hookCfg, setHookCfg] = useState(HOOK_OVERLAY)
   const [charCfg, setCharCfg] = useState(CHAR_DEFAULT)
+  const animRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function playAnimation() {
+    if (animating) return
+    setAnimating(true)
+    let elapsed = 0
+    ANIM_SEQUENCE.forEach(([f, duration], i) => {
+      animRef.current = setTimeout(() => {
+        setFrame(f)
+        if (i === ANIM_SEQUENCE.length - 1) setAnimating(false)
+      }, elapsed)
+      elapsed += duration
+    })
+  }
 
   const rod  = RODS.find(r => r.tier === rodTier) ?? RODS[0]
   const hook = HOOKS.find(h => h.tier === hookTier) ?? HOOKS[0]
@@ -123,17 +146,22 @@ export default function FishingTestClient() {
       {/* ── Controls ── */}
       <div style={{ width: 290, background: 'rgba(0,0,0,0.8)', padding: '1.2rem', overflowY: 'auto', fontSize: 12, color: '#ccc' }}>
 
-        {/* Frame picker */}
+        {/* Frame picker + animate */}
         <p style={{ fontWeight: 700, marginBottom: 8, color: '#fff' }}>Frame</p>
-        <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
           {(['rest', 'wait', 'cast'] as Frame[]).map(f => (
-            <button key={f} onClick={() => setFrame(f)} style={{
+            <button key={f} onClick={() => { setFrame(f) }} style={{
               flex: 1, padding: '4px 0', borderRadius: 6, cursor: 'pointer',
               background: frame === f ? '#3b82f6' : 'rgba(255,255,255,0.08)',
               border: 'none', color: '#fff', fontWeight: frame === f ? 700 : 400,
             }}>{f}</button>
           ))}
         </div>
+        <button onClick={playAnimation} disabled={animating} style={{
+          width: '100%', padding: '6px 0', borderRadius: 6, cursor: animating ? 'default' : 'pointer',
+          background: animating ? 'rgba(255,255,255,0.04)' : '#16a34a',
+          border: 'none', color: '#fff', fontWeight: 700, marginBottom: 16, fontSize: 12,
+        }}>{animating ? 'casting...' : '▶ Play cast sequence'}</button>
 
         {/* Character position */}
         <p style={{ fontWeight: 700, marginBottom: 4, color: '#fbbf24' }}>Character position ({frame})</p>
