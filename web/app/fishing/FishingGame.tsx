@@ -1495,6 +1495,8 @@ export default function FishingGame({
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
   const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean; gemEarned?: boolean; perfectStreak: number; streakBonusXP: number; jackpotMultiplier?: number } | null>(null)
   const [crateResult, setCrateResult] = useState<{ type: 'doubloons'; amount: number } | { type: 'bait'; baitType: string; baitName: string; quantity: number } | null>(null)
+  const [cratePhase, setCratePhase] = useState<'closed' | 'rolling' | 'revealed'>('closed')
+  const [crateRollDisplay, setCrateRollDisplay] = useState<{ type: 'doubloons'; amount: number } | { type: 'bait'; baitType: string; baitName: string } | null>(null)
   const [challengeActive, setChallengeActive] = useState(false)
   const [perfectStreak, setPerfectStreak] = useState(0)
   const [highestPerfectStreak, setHighestPerfectStreak] = useState(initialHighestPerfectStreak)
@@ -1845,30 +1847,17 @@ export default function FishingGame({
     setTimeout(() => setReelRippleKey(0), 1800)
     if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
 
-    // Crate encounter
+    // Crate encounter — fetch loot from server but don't credit until player claims
     if (hookedFishRef.current.fishId === CRATE_FISH_ID) {
       phaseRef.current = 'reeling'
       setPhase('reeling')
       startTransition(async () => {
         try {
           const res = await reelCrate(selectedZone)
-          if (!('error' in res)) {
-            setCrateResult(res)
-            if (res.type === 'doubloons') {
-              setDoubloons(prev => {
-                const next = prev + res.amount
-                window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: next }))
-                return next
-              })
-            } else {
-              setBaitInventory(prev => {
-                const existing = prev.find(b => b.bait_type === res.baitType)
-                if (existing) return prev.map(b => b.bait_type === res.baitType ? { ...b, quantity: b.quantity + res.quantity } : b)
-                return [...prev, { bait_type: res.baitType, quantity: res.quantity }]
-              })
-            }
-          }
+          if (!('error' in res)) setCrateResult(res)
         } catch {}
+        setCratePhase('closed')
+        setCrateRollDisplay(null)
         phaseRef.current = 'result'
         setPhase('result')
       })
@@ -2161,6 +2150,8 @@ export default function FishingGame({
     setCatchResult(null)
     setMissResult(null)
     setCrateResult(null)
+    setCratePhase('closed')
+    setCrateRollDisplay(null)
     setHookedFish(null)
     setPerfectFlash(false)
     setBountyNotif(null)
@@ -2168,6 +2159,63 @@ export default function FishingGame({
     setHoldOpen(false)
     setGearOpen(false)
     await doCast()
+  }
+
+  function handleOpenCrate() {
+    if (!crateResult || cratePhase !== 'closed') return
+    const result = crateResult
+    setCratePhase('rolling')
+
+    const pool: Array<{ type: 'doubloons'; amount: number } | { type: 'bait'; baitType: string; baitName: string }> = [
+      { type: 'doubloons', amount: 75 },
+      { type: 'bait',      baitType: 'worm',            baitName: 'Worms' },
+      { type: 'doubloons', amount: 350 },
+      { type: 'bait',      baitType: 'night_crawler',   baitName: 'Night Crawler' },
+      { type: 'doubloons', amount: 150 },
+      { type: 'bait',      baitType: 'minnow',          baitName: 'Minnow' },
+      { type: 'doubloons', amount: 500 },
+      { type: 'bait',      baitType: 'chum',            baitName: 'Chum' },
+      { type: 'doubloons', amount: 250 },
+      { type: 'bait',      baitType: 'anglers_formula', baitName: "Angler's Formula" },
+    ]
+    const delays = [65, 65, 75, 95, 125, 165, 220, 300, 420, 600]
+    let elapsed = 0
+    delays.forEach((d, i) => {
+      elapsed += d
+      const isLast = i === delays.length - 1
+      setTimeout(() => {
+        if (isLast) {
+          const final = result.type === 'doubloons'
+            ? { type: 'doubloons' as const, amount: result.amount }
+            : { type: 'bait' as const, baitType: result.baitType, baitName: result.baitName }
+          setCrateRollDisplay(final)
+          setCratePhase('revealed')
+        } else {
+          setCrateRollDisplay(pool[Math.floor(Math.random() * pool.length)])
+        }
+      }, elapsed)
+    })
+  }
+
+  async function handleClaimCrate() {
+    if (!crateResult) return
+    const result = crateResult
+    if (result.type === 'doubloons') {
+      setDoubloons(prev => {
+        const next = prev + result.amount
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: next }))
+        return next
+      })
+    } else {
+      setBaitInventory(prev => {
+        const existing = prev.find(b => b.bait_type === result.baitType)
+        if (existing) return prev.map(b => b.bait_type === result.baitType ? { ...b, quantity: b.quantity + result.quantity } : b)
+        return [...prev, { bait_type: result.baitType, quantity: result.quantity }]
+      })
+    }
+    setCratePhase('closed')
+    setCrateRollDisplay(null)
+    await handleCastAgain()
   }
 
   async function handleClaimDaily(index: 0 | 1 | 2) {
@@ -2829,35 +2877,141 @@ export default function FishingGame({
                       initial={{ opacity: 0, scale: 0.95, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }}
                       transition={{ type: 'spring', stiffness: 340, damping: 22 }}
                       style={{
-                        background: 'rgba(20,12,4,0.88)',
-                        border: '1px solid #d9770660',
-                        borderRadius: 16,
-                        padding: '1.1rem 1.25rem',
-                        boxShadow: '0 0 28px rgba(217,119,6,0.18)',
+                        background: 'rgba(14,8,2,0.92)',
+                        border: `1px solid ${cratePhase === 'revealed' ? '#d9770688' : '#d9770640'}`,
+                        borderRadius: 18,
+                        padding: '1.2rem 1.25rem',
+                        boxShadow: cratePhase === 'revealed' ? '0 0 40px rgba(217,119,6,0.28)' : '0 0 20px rgba(217,119,6,0.12)',
                         textAlign: 'center',
+                        transition: 'box-shadow 0.4s, border-color 0.4s',
                       }}
                     >
-                      <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: '#d97706', marginBottom: '0.5rem' }}>
-                        Sunken Crate Found
+                      <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: '#92400e', marginBottom: '0.75rem' }}>
+                        Sunken Crate
                       </p>
-                      {crateResult.type === 'doubloons' ? (
-                        <>
-                          <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#fbbf24', textShadow: '0 0 20px rgba(251,191,36,0.5)', lineHeight: 1 }}>
-                            +{crateResult.amount.toLocaleString()} ⟡
+
+                      {/* Crate image — shakes while rolling */}
+                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
+                        <motion.img
+                          src={cratePhase === 'revealed' ? '/crateopen.png' : '/crateclosed.png'}
+                          alt="crate"
+                          animate={cratePhase === 'rolling'
+                            ? { rotate: [-4, 4, -4, 3, -3, 0], scale: [1, 1.04, 1] }
+                            : cratePhase === 'revealed'
+                            ? { scale: [1, 1.12, 1] }
+                            : { scale: 1, rotate: 0 }
+                          }
+                          transition={cratePhase === 'rolling'
+                            ? { duration: 0.35, repeat: Infinity, ease: 'easeInOut' }
+                            : cratePhase === 'revealed'
+                            ? { duration: 0.45, ease: 'easeOut' }
+                            : {}
+                          }
+                          style={{ height: 80, objectFit: 'contain', cursor: cratePhase === 'closed' ? 'pointer' : 'default' }}
+                          onClick={cratePhase === 'closed' ? handleOpenCrate : undefined}
+                        />
+                      </div>
+
+                      {/* Phase: closed — tap prompt */}
+                      {cratePhase === 'closed' && (
+                        <motion.div
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                          style={{ cursor: 'pointer' }}
+                          onClick={handleOpenCrate}
+                        >
+                          <motion.p
+                            className="font-cinzel font-700"
+                            animate={{ opacity: [1, 0.6, 1] }}
+                            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                            style={{ fontSize: '0.85rem', color: '#fbbf24' }}
+                          >
+                            Tap to Open
+                          </motion.p>
+                        </motion.div>
+                      )}
+
+                      {/* Phase: rolling — loot ticker with images */}
+                      {cratePhase === 'rolling' && (
+                        <div style={{
+                          minHeight: 60, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'rgba(0,0,0,0.4)', borderRadius: 10, padding: '0.5rem 1.2rem',
+                          overflow: 'hidden',
+                        }}>
+                          <AnimatePresence mode="wait">
+                            {crateRollDisplay && (
+                              <motion.div
+                                key={crateRollDisplay.type === 'doubloons' ? `d-${crateRollDisplay.amount}` : `b-${crateRollDisplay.baitType}`}
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 10 }}
+                                transition={{ duration: 0.07 }}
+                                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+                              >
+                                <img
+                                  src={crateRollDisplay.type === 'doubloons' ? '/smallpile.png' : (getBait(crateRollDisplay.baitType).imageUrl ?? '/worms.png')}
+                                  style={{ height: 32, width: 32, objectFit: 'contain' }}
+                                />
+                                <p className="font-cinzel font-700" style={{
+                                  fontSize: '0.8rem',
+                                  color: crateRollDisplay.type === 'doubloons' ? '#fbbf24' : '#86efac',
+                                }}>
+                                  {crateRollDisplay.type === 'doubloons'
+                                    ? `${crateRollDisplay.amount.toLocaleString()} ⟡`
+                                    : crateRollDisplay.baitName}
+                                </p>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )}
+
+                      {/* Phase: revealed — final reward + claim */}
+                      {cratePhase === 'revealed' && crateRollDisplay && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                          transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}
+                        >
+                          <img
+                            src={crateRollDisplay.type === 'doubloons' ? '/smallpile.png' : (getBait(crateRollDisplay.baitType).imageUrl ?? '/worms.png')}
+                            style={{ height: 44, width: 44, objectFit: 'contain' }}
+                          />
+                          <p
+                            className="font-cinzel font-700"
+                            style={{
+                              fontSize: '1.5rem',
+                              color: crateRollDisplay.type === 'doubloons' ? '#fbbf24' : '#86efac',
+                              textShadow: crateRollDisplay.type === 'doubloons' ? '0 0 24px rgba(251,191,36,0.6)' : '0 0 20px rgba(134,239,172,0.5)',
+                              lineHeight: 1,
+                            }}
+                          >
+                            {crateRollDisplay.type === 'doubloons'
+                              ? `+${crateRollDisplay.amount.toLocaleString()} ⟡`
+                              : `×${crateResult.type === 'bait' ? crateResult.quantity : 10} ${crateRollDisplay.baitName}`}
                           </p>
-                          <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: 'rgba(251,191,36,0.55)', marginTop: '0.25rem' }}>
-                            Doubloons
+                          <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', marginBottom: '0.45rem' }}>
+                            {crateRollDisplay.type === 'doubloons' ? 'Doubloons' : 'Bait'}
                           </p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#86efac', textShadow: '0 0 16px rgba(134,239,172,0.4)', lineHeight: 1 }}>
-                            ×{crateResult.quantity} {crateResult.baitName}
-                          </p>
-                          <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: 'rgba(134,239,172,0.55)', marginTop: '0.25rem' }}>
-                            Bait added to your tackle
-                          </p>
-                        </>
+                          <motion.button
+                            onClick={handleClaimCrate}
+                            whileTap={{ scale: 0.96 }}
+                            className="font-karla font-700 uppercase tracking-[0.14em]"
+                            style={{
+                              padding: '0.55rem 1.8rem',
+                              borderRadius: 10,
+                              background: crateRollDisplay.type === 'doubloons'
+                                ? 'linear-gradient(135deg, rgba(217,119,6,0.5), rgba(251,191,36,0.25))'
+                                : 'linear-gradient(135deg, rgba(20,83,45,0.5), rgba(134,239,172,0.2))',
+                              border: crateRollDisplay.type === 'doubloons' ? '1px solid #d97706aa' : '1px solid #86efac88',
+                              color: crateRollDisplay.type === 'doubloons' ? '#fbbf24' : '#86efac',
+                              fontSize: '0.72rem',
+                              cursor: 'pointer',
+                              boxShadow: crateRollDisplay.type === 'doubloons' ? '0 0 16px rgba(217,119,6,0.3)' : '0 0 14px rgba(134,239,172,0.25)',
+                            }}
+                          >
+                            Claim
+                          </motion.button>
+                        </motion.div>
                       )}
                     </motion.div>
                   ) : catchResult ? (
@@ -2976,7 +3130,7 @@ export default function FishingGame({
                   <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#4a4845' }}>…</p>
                 </motion.div>
               )}
-              {phase === 'result' && holdTotalCount < holdCapacity && (
+              {phase === 'result' && holdTotalCount < holdCapacity && (!crateResult || cratePhase === 'revealed') && (
                 <motion.button key="again" onClick={handleCastAgain}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
