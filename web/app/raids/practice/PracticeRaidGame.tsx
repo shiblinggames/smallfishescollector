@@ -1110,13 +1110,16 @@ export default function PracticeRaidGame({
         {phase === 'dead' && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', zIndex: 50 }}
-            onPointerDown={retryGame}>
+            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', zIndex: 50 }}>
             <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.32)', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>Ship Sunk</p>
             <p className="font-cinzel font-700" style={{ color: '#f87171', fontSize: '2rem', marginBottom: 24 }}>Defeated</p>
-            <button className="font-karla font-700" style={{ padding: '11px 32px', background: 'rgba(56,189,248,0.14)', border: '1px solid rgba(56,189,248,0.38)', borderRadius: 12, color: '#38bdf8', fontSize: '0.88rem', cursor: 'pointer' }}>
-              Try Again
-            </button>
+            <motion.button
+              onPointerDown={() => router.push('/expeditions')}
+              whileTap={{ scale: 0.96 }}
+              className="font-karla font-700"
+              style={{ padding: '12px 32px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, color: '#c0b8a8', fontSize: '0.88rem', cursor: 'pointer', letterSpacing: '0.04em' }}>
+              Return Home
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>
