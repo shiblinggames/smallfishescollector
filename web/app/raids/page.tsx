@@ -10,7 +10,7 @@ export default async function RaidPage() {
   if (!user) redirect('/login')
 
   const [{ data: profile }, stats] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, gems, expedition_xp').eq('id', user.id).single(),
     getRaidPlayerStats(user.id),
   ])
 
@@ -37,6 +37,7 @@ export default async function RaidPage() {
             equippedShipSkin={stats.equippedShipSkin}
             shipSkins={stats.shipSkins}
             equippedItems={stats.equippedRaidItems}
+            initialExpeditionXP={profile?.expedition_xp ?? 0}
           />
         </div>
       </main>

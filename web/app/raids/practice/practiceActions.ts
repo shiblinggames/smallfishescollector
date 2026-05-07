@@ -10,29 +10,27 @@ export async function markPracticeRaidTutorialSeen(): Promise<void> {
   await createAdminClient().from('profiles').update({ has_seen_raid_tutorial: true }).eq('id', user.id)
 }
 
-export async function completePracticeRaid(
-  xpGained: number,
+// XP is awarded at kill time via awardRaidKillXP — this just banks doubloons + marks completion
+export async function claimPracticeWin(
   doubloons: number,
-): Promise<{ newExpeditionXP: number; newDoubloonTotal: number }> {
+): Promise<{ newDoubloonTotal: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { newExpeditionXP: 0, newDoubloonTotal: 0 }
+  if (!user) return { newDoubloonTotal: 0 }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('expedition_xp, doubloons')
+    .select('doubloons')
     .eq('id', user.id)
     .single()
 
-  const newExpeditionXP   = (profile?.expedition_xp ?? 0) + xpGained
-  const newDoubloonTotal  = (profile?.doubloons ?? 0) + doubloons
+  const newDoubloonTotal = (profile?.doubloons ?? 0) + doubloons
 
   await admin.from('profiles').update({
-    expedition_xp: newExpeditionXP,
     doubloons: newDoubloonTotal,
     has_completed_practice_raid: true,
   }).eq('id', user.id)
 
-  return { newExpeditionXP, newDoubloonTotal }
+  return { newDoubloonTotal }
 }

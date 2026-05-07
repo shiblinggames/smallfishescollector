@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { completePracticeRaid, markPracticeRaidTutorialSeen } from './practiceActions'
+import { claimPracticeWin, markPracticeRaidTutorialSeen } from './practiceActions'
+import { awardRaidKillXP, RAID_KILL_XP } from '../raidXPActions'
 import { getShipSkin } from '@/lib/shipSkins'
+import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
 
 type GamePhase  = 'idle' | 'playing' | 'win' | 'dead'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
@@ -23,23 +25,24 @@ interface PracticeEnemy {
   pattern: string[]
   image: string
   killGold: number
+  killXP: number
 }
 
 const PRACTICE_ENEMIES: Record<string, PracticeEnemy> = {
   brute: {
     id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 2, maxDmg: 5,
     actionMs: 4500, pattern: ['reload', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1.png', killGold: 20,
+    image: ENEMY_IMG_BASE + 'enemytier1.png', killGold: 20, killXP: RAID_KILL_XP.brute,
   },
   sniper: {
     id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
     actionMs: 5500, pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1.png', killGold: 25,
+    image: ENEMY_IMG_BASE + 'enemytier1.png', killGold: 25, killXP: RAID_KILL_XP.sniper,
   },
   corsair: {
     id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
     actionMs: 3500, pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1elite.png', killGold: 35,
+    image: ENEMY_IMG_BASE + 'enemytier1elite.png', killGold: 35, killXP: RAID_KILL_XP.corsair,
   },
 }
 const NON_BOSS_IDS = ['brute', 'sniper', 'corsair'] as const
@@ -226,6 +229,42 @@ function snapIndicator(ref: React.RefObject<HTMLDivElement | null>) {
   })
 }
 
+// ── Nav level bar ─────────────────────────────────────────────────────────────
+
+function NavLevelBar({ xp }: { xp: number }) {
+  const { level, progress, xpInLevel, xpForLevel } = getXPProgress(xp)
+  const isMax = level >= MAX_LEVEL
+  const fillPct = isMax ? 100 : progress * 100
+  const toGo = xpForLevel - xpInLevel
+  const c = '#4ade80'
+  return (
+    <div className="flex items-center gap-2"
+      style={{ background: 'rgba(4,10,18,0.72)', border: `1px solid ${c}28`, borderRadius: 16, padding: '0.35rem 0.75rem' }}>
+      <div className="shrink-0 flex items-baseline gap-0.5">
+        <span className="font-karla font-600" style={{ fontSize: '0.42rem', color: c + 'bb', letterSpacing: '0.08em' }}>NAV</span>
+        <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: c, lineHeight: 1 }}>{level}</span>
+      </div>
+      <div style={{ flex: 1, height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+        <motion.div
+          key={level}
+          style={{
+            height: '100%', borderRadius: 999,
+            background: `linear-gradient(90deg, ${c}88 0%, ${c} 100%)`,
+            boxShadow: `0 0 8px ${c}70`,
+          }}
+          initial={{ width: '0%' }}
+          animate={{ width: `${fillPct}%` }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        />
+      </div>
+      <p className="font-karla font-600 shrink-0"
+        style={{ fontSize: '0.55rem', color: isMax ? c : 'rgba(255,255,255,0.55)', lineHeight: 1 }}>
+        {isMax ? 'MAX' : `${toGo.toLocaleString()} xp`}
+      </p>
+    </div>
+  )
+}
+
 // ── Tour steps ────────────────────────────────────────────────────────────────
 
 const PRACTICE_TOUR = [
@@ -248,7 +287,7 @@ interface RaidCrewMember {
 export default function PracticeRaidGame({
   shipImageUrl, shipName, playerHPMax, shipMinDamage, shipSpeed,
   totalPower, totalDodge, crewMembers, equippedShipSkin,
-  hasSeenTutorial, hasCompletedPractice,
+  hasSeenTutorial, hasCompletedPractice, initialExpeditionXP,
 }: {
   shipImageUrl: string
   shipName: string
@@ -261,6 +300,7 @@ export default function PracticeRaidGame({
   equippedShipSkin: string | null
   hasSeenTutorial: boolean
   hasCompletedPractice: boolean
+  initialExpeditionXP: number
 }) {
   const router = useRouter()
   const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
@@ -313,6 +353,8 @@ export default function PracticeRaidGame({
   const [eHitsplat, setEHitsplat]         = useState({ key: 0, text: '', color: '', big: false })
   const [isClaiming, setIsClaiming]       = useState(false)
   const [winGold, setWinGold]             = useState(0)
+  const [navXP, setNavXP]                 = useState(initialExpeditionXP)
+  const [xpPopup, setXpPopup]             = useState<{ value: number; id: number } | null>(null)
 
   const fireIndicatorRef  = useRef<HTMLDivElement>(null)
   const fireFlashRef      = useRef<HTMLDivElement>(null)
@@ -573,7 +615,14 @@ export default function PracticeRaidGame({
         roundEndingRef.current = true
         setEnemySinking(true)
         const gold = currentEnemyRef.current.killGold
+        const xp   = currentEnemyRef.current.killXP
         setWinGold(gold)
+        if (xp > 0) {
+          awardRaidKillXP(xp).then(res => {
+            setNavXP(res.newExpeditionXP)
+            setXpPopup({ value: xp, id: Date.now() })
+          })
+        }
         setTimeout(() => {
           roundEndingRef.current = false
           phaseRef.current = 'win'
@@ -614,7 +663,7 @@ export default function PracticeRaidGame({
     if (isClaiming) return
     setIsClaiming(true)
     try {
-      const res = await completePracticeRaid(PRACTICE_XP, winGold)
+      const res = await claimPracticeWin(winGold)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
     } finally { setIsClaiming(false) }
     router.push('/expeditions')
@@ -897,6 +946,31 @@ export default function PracticeRaidGame({
         </div>
       )}
 
+      {/* ── Nav level bar ─────────────────────────────────────────────────────── */}
+      <div style={{ width: '100%', position: 'relative' }}>
+        <NavLevelBar xp={navXP} />
+        <AnimatePresence>
+          {xpPopup && (
+            <motion.p
+              key={xpPopup.id}
+              initial={{ opacity: 0, y: 0 }}
+              animate={{ opacity: [0, 1, 1, 0], y: -18 }}
+              transition={{ duration: 2.0, times: [0, 0.1, 0.6, 1], ease: 'easeOut' }}
+              onAnimationComplete={() => setXpPopup(null)}
+              className="font-karla font-700"
+              style={{
+                position: 'absolute', right: 8, top: 0,
+                fontSize: '0.8rem', color: '#4ade80',
+                pointerEvents: 'none',
+                textShadow: '0 0 10px rgba(74,222,128,0.7)',
+              }}
+            >
+              +{xpPopup.value} XP
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </div>
+
       {/* ── Crit flash ───────────────────────────────────────────────────────── */}
       {critFlash && (
         <div style={{
@@ -952,16 +1026,9 @@ export default function PracticeRaidGame({
             style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.88)', zIndex: 50 }}>
             <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.6rem', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 6 }}>Enemy Sunk</p>
             <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '1.6rem', marginBottom: 20 }}>{enemyName} Defeated</p>
-            <div style={{ display: 'flex', gap: 20, marginBottom: 28 }}>
-              <div style={{ textAlign: 'center' }}>
-                <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: '#5a5855', marginBottom: 4 }}>Navigation XP</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#4ade80', textShadow: '0 0 14px rgba(74,222,128,0.5)' }}>+{PRACTICE_XP}</p>
-              </div>
-              <div style={{ width: 1, background: 'rgba(255,255,255,0.08)' }} />
-              <div style={{ textAlign: 'center' }}>
-                <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: '#5a5855', marginBottom: 4 }}>Doubloons</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', textShadow: '0 0 14px rgba(240,192,64,0.5)' }}>+{winGold} ⟡</p>
-              </div>
+            <div style={{ textAlign: 'center', marginBottom: 28 }}>
+              <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: '#5a5855', marginBottom: 4 }}>Plunder</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: '#f0c040', textShadow: '0 0 14px rgba(240,192,64,0.5)' }}>+{winGold} ⟡</p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 240 }}>
               <motion.button

@@ -11,7 +11,7 @@ export default async function PracticeRaidPage() {
   if (!user) redirect('/login')
 
   const [{ data: profile }, stats] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, gems, has_seen_raid_tutorial, has_completed_practice_raid').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, gems, expedition_xp, has_seen_raid_tutorial, has_completed_practice_raid').eq('id', user.id).single(),
     getRaidPlayerStats(user.id),
   ])
 
@@ -36,6 +36,7 @@ export default async function PracticeRaidPage() {
             equippedShipSkin={stats.equippedShipSkin}
             hasSeenTutorial={stats.hasSeenRaidTutorial}
             hasCompletedPractice={!!(profile?.has_completed_practice_raid)}
+            initialExpeditionXP={profile?.expedition_xp ?? 0}
           />
         </div>
       </main>
