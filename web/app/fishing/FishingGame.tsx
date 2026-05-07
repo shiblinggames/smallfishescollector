@@ -3899,7 +3899,7 @@ export default function FishingGame({
                   if (itemId === 'auto_caster') {
                     setOwnedAutoCaster(true)
                     setDoubloons(d => {
-                      const next = d - 15000
+                      const next = d - 5000
                       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: next }))
                       return next
                     })
