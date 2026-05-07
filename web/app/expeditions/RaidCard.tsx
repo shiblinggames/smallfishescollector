@@ -1,6 +1,25 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+
+const RARITY_COLOR: Record<string, string> = {
+  common:    '#9ca3af',
+  uncommon:  '#4ade80',
+  rare:      '#60a5fa',
+  epic:      '#a78bfa',
+  legendary: '#f0c040',
+}
+
+const PETE_LOOT = [
+  { label: '+300 ⟡',        rarity: 'common',   weight: 50 },
+  { label: '+600 ⟡',        rarity: 'uncommon', weight: 25 },
+  { label: '25 Gems',        rarity: 'rare',     weight: 15 },
+  { label: '1 Pack',         rarity: 'rare',     weight: 5  },
+  { label: 'Corsair Black',  rarity: 'epic',     weight: 5  },
+  { label: 'Corsair Cannon', rarity: 'rare',     weight: 3  },
+]
+const PETE_LOOT_TOTAL = PETE_LOOT.reduce((s, i) => s + i.weight, 0)
 
 const PETE_PORTRAIT  = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/barnacle_pete.png'
 const BRUTE_IMG      = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/enemytier1.png'
@@ -13,6 +32,7 @@ interface Props {
 export default function RaidCard({ navLevel, hasCompletedPracticeRaid }: Props) {
   const router = useRouter()
   const mainLocked = !hasCompletedPracticeRaid
+  const [showLoot, setShowLoot] = useState(false)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -92,14 +112,18 @@ export default function RaidCard({ navLevel, hasCompletedPracticeRaid }: Props) 
 
           <div style={{ height: 1, background: 'rgba(74,222,128,0.1)', marginBottom: '0.85rem' }} />
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
             <div>
-              <p className="font-karla" style={{ fontSize: '0.6rem', color: '#4a4845', marginBottom: 1 }}>Reward</p>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#4ade80' }}>+{hasCompletedPracticeRaid ? '20–35' : '20'} ⟡ · +25 XP</p>
+              <p className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845', marginBottom: 2 }}>Doubloons</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#4ade80' }}>{hasCompletedPracticeRaid ? '20–35' : '20'} ⟡</p>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <p className="font-karla" style={{ fontSize: '0.6rem', color: '#4a4845', marginBottom: 1 }}>Difficulty</p>
-              <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#8a8880' }}>Easy</p>
+            <div>
+              <p className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845', marginBottom: 2 }}>XP</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#4ade80' }}>20–45 XP</p>
+            </div>
+            <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+              <p className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845', marginBottom: 2 }}>Difficulty</p>
+              <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a8880' }}>Easy</p>
             </div>
           </div>
         </div>
@@ -192,16 +216,54 @@ export default function RaidCard({ navLevel, hasCompletedPracticeRaid }: Props) 
               Complete the Reef Skirmish tutorial to unlock
             </p>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <p className="font-karla" style={{ fontSize: '0.6rem', color: '#4a4845', marginBottom: 1 }}>Plunder</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f97316' }}>300–900 ⟡</p>
+            <>
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem' }}>
+                <div>
+                  <p className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845', marginBottom: 2 }}>Plunder</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f97316' }}>300–900 ⟡</p>
+                </div>
+                <div>
+                  <p className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845', marginBottom: 2 }}>Kill XP</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#4ade80' }}>up to 370 XP</p>
+                </div>
+                <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                  <p className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845', marginBottom: 2 }}>Recommended</p>
+                  <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a8880' }}>50+ Raid Score</p>
+                </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <p className="font-karla" style={{ fontSize: '0.6rem', color: '#4a4845', marginBottom: 1 }}>Recommended</p>
-                <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#8a8880' }}>50+ Raid Score</p>
-              </div>
-            </div>
+
+              {/* Loot toggle */}
+              <button
+                onClick={e => { e.stopPropagation(); setShowLoot(o => !o) }}
+                className="font-karla font-600 uppercase tracking-[0.08em]"
+                style={{
+                  fontSize: '0.52rem', color: showLoot ? '#f97316' : '#5a5855',
+                  background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                <span>{showLoot ? '▾' : '▸'}</span> Pete&apos;s Loot Table
+              </button>
+
+              {showLoot && (
+                <div style={{ marginTop: '0.55rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {PETE_LOOT.map(item => {
+                    const color = RARITY_COLOR[item.rarity]
+                    const pct = ((item.weight / PETE_LOOT_TOTAL) * 100).toFixed(1)
+                    return (
+                      <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                          <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: color }}>{item.label}</span>
+                          <span className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845', textTransform: 'capitalize' }}>{item.rarity}</span>
+                        </div>
+                        <span className="font-karla font-600" style={{ fontSize: '0.65rem', color: '#5a5855' }}>{pct}%</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
