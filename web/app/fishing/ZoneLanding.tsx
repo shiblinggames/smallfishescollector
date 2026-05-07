@@ -47,7 +47,7 @@ const ZONE_DIFFICULTY_LABEL: Record<string, string> = {
   open_waters: 'Moderate',
   deep:        'Challenging',
   abyss:       'Expert Only',
-  ancient_deep: 'Boss Encounters',
+  ancient_deep: 'Beyond Expert',
 }
 
 const ZONE_STATS: Record<string, { topSell: number }> = {
