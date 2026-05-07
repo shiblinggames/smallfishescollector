@@ -31,17 +31,17 @@ const PRACTICE_ENEMIES: Record<string, PracticeEnemy> = {
   brute: {
     id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 2, maxDmg: 5,
     actionMs: 4500, pattern: ['reload', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1.png', killGold: 20, killXP: 20,
+    image: ENEMY_IMG_BASE + 'reefraider.png', killGold: 20, killXP: 20,
   },
   sniper: {
     id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
     actionMs: 5500, pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1.png', killGold: 25, killXP: 30,
+    image: ENEMY_IMG_BASE + 'crowsnestmarksman.png', killGold: 25, killXP: 30,
   },
   corsair: {
     id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
     actionMs: 3500, pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1elite.png', killGold: 35, killXP: 45,
+    image: ENEMY_IMG_BASE + 'saltwatercorsair.png', killGold: 35, killXP: 45,
   },
 }
 const NON_BOSS_IDS = ['brute', 'sniper', 'corsair'] as const

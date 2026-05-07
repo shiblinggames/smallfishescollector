@@ -68,19 +68,19 @@ const BROADSIDE_ENEMIES: Record<string, BroadsideEnemy> = {
     id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 2, maxDmg: 5,
     actionMs: 4500,
     pattern: ['reload', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1.png',
+    image: ENEMY_IMG_BASE + 'reefraider.png',
   },
   sniper: {
     id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
     actionMs: 5500,
     pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1.png',
+    image: ENEMY_IMG_BASE + 'crowsnestmarksman.png',
   },
   corsair: {
     id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
     actionMs: 3500,
     pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1elite.png',
+    image: ENEMY_IMG_BASE + 'saltwatercorsair.png',
   },
   pete: {
     id: 'pete', name: 'Barnacle Pete', hpBase: 55, minDmg: 8, maxDmg: 15,
