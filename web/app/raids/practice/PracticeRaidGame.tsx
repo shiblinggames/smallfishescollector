@@ -353,6 +353,9 @@ export default function PracticeRaidGame({
   const [pHitsplat, setPHitsplat]         = useState({ key: 0, text: '', color: '', big: false })
   const [eHitsplat, setEHitsplat]         = useState({ key: 0, text: '', color: '', big: false })
   const [winGold, setWinGold]             = useState(0)
+  const [winXP, setWinXP]                 = useState(0)
+  const [winPhase, setWinPhase]           = useState<'summary' | 'claimed'>('summary')
+  const [isClaiming, setIsClaiming]       = useState(false)
   const [navXP, setNavXP]                 = useState(initialExpeditionXP)
   const [xpPopup, setXpPopup]             = useState<{ value: number; id: number } | null>(null)
 
@@ -420,7 +423,7 @@ export default function PracticeRaidGame({
     setShotResult(null); setDodgePrimed(false); setDodgeCooldown(false)
     setDodgePrimePct(1); setDodgeFlash(false); setDodgeShake(false); setShowDodgeVFX(false)
     setEnemySinking(false); setShowCannonShot(false)
-    setWinGold(0)
+    setWinGold(0); setWinXP(0); setWinPhase('summary')
   }, [playerHPMax])
 
   function handleOpenFire() {
@@ -616,12 +619,7 @@ export default function PracticeRaidGame({
         setEnemySinking(true)
         const gold = currentEnemyRef.current.killGold
         const xp   = currentEnemyRef.current.killXP
-        setWinGold(gold)
-        awardPracticeKill(xp, gold).then(res => {
-          setNavXP(res.newExpeditionXP)
-          window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
-          if (xp > 0) setXpPopup({ value: xp, id: Date.now() })
-        })
+        setWinGold(gold); setWinXP(xp)
         setTimeout(() => {
           roundEndingRef.current = false
           phaseRef.current = 'win'
@@ -658,7 +656,22 @@ export default function PracticeRaidGame({
     }, DODGE_PRIME_MS)
   }, [])
 
+  const collectReward = useCallback(async () => {
+    if (isClaiming) return
+    setIsClaiming(true)
+    try {
+      const res = await awardPracticeKill(winXP, winGold)
+      setNavXP(res.newExpeditionXP)
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+      if (winXP > 0) setXpPopup({ value: winXP, id: Date.now() })
+      setWinPhase('claimed')
+    } finally {
+      setIsClaiming(false)
+    }
+  }, [isClaiming, winXP, winGold])
+
   const retryGame = useCallback(() => {
+    setWinPhase('summary')
     phaseRef.current = 'idle'
     setPhase('idle')
   }, [])
@@ -1015,26 +1028,55 @@ export default function PracticeRaidGame({
             style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.88)', zIndex: 50 }}>
             <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.6rem', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 6 }}>Enemy Sunk</p>
             <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '1.6rem', marginBottom: 20 }}>{enemyName} Defeated</p>
-            <div style={{ textAlign: 'center', marginBottom: 28 }}>
-              <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: '#5a5855', marginBottom: 4 }}>Plunder</p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: '#f0c040', textShadow: '0 0 14px rgba(240,192,64,0.5)' }}>+{winGold} ⟡</p>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 240 }}>
-              <motion.button
-                onPointerDown={() => router.push('/expeditions')}
-                whileTap={{ scale: 0.96 }}
-                className="font-karla font-700"
-                style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.45)', color: '#4ade80', fontSize: '0.92rem', letterSpacing: '0.06em' }}>
-                Return
-              </motion.button>
-              <motion.button
-                onPointerDown={retryGame}
-                whileTap={{ scale: 0.96 }}
-                className="font-karla font-600"
-                style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '0.82rem', letterSpacing: '0.04em' }}>
-                Fight Again
-              </motion.button>
-            </div>
+
+            <AnimatePresence mode="wait">
+              {winPhase === 'summary' ? (
+                <motion.div key="summary" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 28, marginBottom: 32, textAlign: 'center' }}>
+                    <div>
+                      <p className="font-karla font-400" style={{ fontSize: '0.52rem', color: '#5a5855', marginBottom: 4, letterSpacing: '0.1em' }}>PLUNDER</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0c040', textShadow: '0 0 14px rgba(240,192,64,0.5)' }}>+{winGold} ⟡</p>
+                    </div>
+                    <div>
+                      <p className="font-karla font-400" style={{ fontSize: '0.52rem', color: '#5a5855', marginBottom: 4, letterSpacing: '0.1em' }}>XP</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#4ade80', textShadow: '0 0 14px rgba(74,222,128,0.4)' }}>+{winXP}</p>
+                    </div>
+                  </div>
+                  <motion.button
+                    onPointerDown={collectReward}
+                    whileTap={!isClaiming ? { scale: 0.96 } : {}}
+                    disabled={isClaiming}
+                    className="font-karla font-700"
+                    style={{ width: 240, padding: '14px 0', borderRadius: 14, cursor: isClaiming ? 'default' : 'pointer', background: 'rgba(240,192,64,0.18)', border: '1.5px solid rgba(240,192,64,0.55)', color: '#f0c040', fontSize: '0.95rem', letterSpacing: '0.08em', opacity: isClaiming ? 0.6 : 1 }}>
+                    {isClaiming ? 'Saving…' : 'Collect'}
+                  </motion.button>
+                </motion.div>
+              ) : (
+                <motion.div key="claimed" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#4ade80', marginBottom: 28, letterSpacing: '0.06em' }}>
+                    +{winGold} ⟡  ·  +{winXP} XP saved
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 240 }}>
+                    <motion.button
+                      onPointerDown={retryGame}
+                      whileTap={{ scale: 0.96 }}
+                      className="font-karla font-700"
+                      style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(239,68,68,0.14)', border: '1px solid rgba(239,68,68,0.45)', color: '#ef4444', fontSize: '0.92rem', letterSpacing: '0.06em' }}>
+                      Fight Again
+                    </motion.button>
+                    <motion.button
+                      onPointerDown={() => router.push('/expeditions')}
+                      whileTap={{ scale: 0.96 }}
+                      className="font-karla font-600"
+                      style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(240,237,232,0.55)', fontSize: '0.82rem', letterSpacing: '0.04em' }}>
+                      Go Home
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
