@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import RaidGame from './RaidGame'
 import { getRaidPlayerStats } from './actions'
+import { CORSAIRS_RECKONING } from '@/lib/bossRaids'
 
 export default async function RaidPage() {
   const supabase = await createClient()
@@ -24,6 +25,7 @@ export default async function RaidPage() {
       <main>
         <div className="px-6 pt-4 pb-6 max-w-sm mx-auto md:[zoom:1.25] lg:[zoom:1.45]">
           <RaidGame
+            config={CORSAIRS_RECKONING}
             shipImageUrl={stats.shipImageUrl}
             shipName={stats.shipName}
             playerHPMax={stats.playerHPMax}

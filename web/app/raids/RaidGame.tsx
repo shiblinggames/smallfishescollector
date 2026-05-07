@@ -8,106 +8,39 @@ import { awardRaidKill } from './raidXPActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
+import {
+  BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR,
+} from '@/lib/bossRaids'
 
 type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
 
-// ── Raid loot table ───────────────────────────────────────────────────────────
-// Replace image: null with a URL string once art is ready
-interface RaidLootItem {
-  id: string
-  label: string
-  image: string | null
-  emoji: string
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
-  weight: number
-}
-const RARITY_COLOR: Record<RaidLootItem['rarity'], string> = {
-  common:    '#9ca3af',
-  uncommon:  '#4ade80',
-  rare:      '#60a5fa',
-  epic:      '#a78bfa',
-  legendary: '#f0c040',
-}
-const BARNACLE_PETE_LOOT: RaidLootItem[] = [
-  { id: 'doubloons_300', label: '+300 ⟡',       image: '/smallpile.png',   emoji: '🪙', rarity: 'common',   weight: 50 },
-  { id: 'doubloons_600', label: '+600 ⟡',       image: '/dailybonus.png',  emoji: '💰', rarity: 'uncommon', weight: 25 },
-  { id: 'gems_25',       label: '25 Gems',       image: null, emoji: '💎', rarity: 'rare',     weight: 15 },
-  { id: 'pack',          label: '1 Pack',        image: '/cardbacknew.png', emoji: '📦', rarity: 'epic',      weight: 5  },
-  { id: 'corsair_black',  label: 'Corsair Black',  image: null, emoji: '🚢', rarity: 'epic',      weight: 5  },
-  { id: 'corsair_cannon', label: 'Corsair Cannon', image: '/corsaircannon.png', emoji: '💣', rarity: 'legendary', weight: 3  },
-]
-function rollLootIndex(): number {
-  const total = BARNACLE_PETE_LOOT.reduce((s, i) => s + i.weight, 0)
+function rollLootIndex(loot: RaidLootItem[]): number {
+  const total = loot.reduce((s, i) => s + i.weight, 0)
   let r = Math.random() * total
-  for (let i = 0; i < BARNACLE_PETE_LOOT.length; i++) {
-    r -= BARNACLE_PETE_LOOT[i].weight
+  for (let i = 0; i < loot.length; i++) {
+    r -= loot[i].weight
     if (r <= 0) return i
   }
-  return BARNACLE_PETE_LOOT.length - 1
+  return loot.length - 1
 }
 
-// ── Enemy definitions ─────────────────────────────────────────────────────────
-
-const ENEMY_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/'
-
-interface BroadsideEnemy {
-  id: string
-  name: string
-  hpBase: number
-  minDmg: number
-  maxDmg: number
-  actionMs: number
-  pattern: string[]
-  image: string       // ship art
-  portrait?: string   // circular portrait overlay (boss only)
+function isBossRound(round: number, seqLen: number): boolean {
+  return round % (seqLen + 1) === seqLen
 }
-
-const BROADSIDE_ENEMIES: Record<string, BroadsideEnemy> = {
-  brute: {
-    id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 2, maxDmg: 5,
-    actionMs: 4500,
-    pattern: ['reload', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1.png',
-    portrait: ENEMY_IMG_BASE + 'reefraider.png',
-  },
-  sniper: {
-    id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
-    actionMs: 5500,
-    pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1.png',
-    portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png',
-  },
-  corsair: {
-    id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
-    actionMs: 3500,
-    pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1elite.png',
-    portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png',
-  },
-  pete: {
-    id: 'pete', name: 'Barnacle Pete', hpBase: 55, minDmg: 8, maxDmg: 15,
-    actionMs: 4500,
-    pattern: ['reload', 'reload', 'dodge', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1boss.png',
-    portrait: ENEMY_IMG_BASE + 'barnacle_pete.png',
-  },
+function getEnemyForRound(round: number, config: BossRaidConfig): BroadsideEnemy {
+  const cycleLen = config.sequence.length + 1
+  if (isBossRound(round, config.sequence.length)) return config.enemies[config.bossId]
+  return config.enemies[config.sequence[round % cycleLen]]
 }
-const BROADSIDE_SEQUENCE = ['brute', 'brute', 'sniper', 'sniper', 'corsair', 'corsair']
-
-function isBossRound(round: number) { return round % 7 === 6 }
-function getEnemyForRound(round: number): BroadsideEnemy {
-  if (isBossRound(round)) return BROADSIDE_ENEMIES.pete
-  return BROADSIDE_ENEMIES[BROADSIDE_SEQUENCE[round % 7]]
+function getEnemyHP(round: number, config: BossRaidConfig): number {
+  return getEnemyForRound(round, config).hpBase
 }
-function getEnemyHP(round: number): number {
-  return getEnemyForRound(round).hpBase
+function getActionMs(round: number, config: BossRaidConfig): number {
+  return getEnemyForRound(round, config).actionMs
 }
-function getActionMs(round: number): number {
-  return getEnemyForRound(round).actionMs
-}
-function rollIncomingDamage(round: number): number {
-  const e = getEnemyForRound(round)
+function rollIncomingDamage(round: number, config: BossRaidConfig): number {
+  const e = getEnemyForRound(round, config)
   return Math.floor(Math.random() * (e.maxDmg - e.minDmg + 1)) + e.minDmg
 }
 
@@ -135,14 +68,6 @@ function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: numb
 const SHOT_LABEL: Record<string, string> = { critical: 'Critical!', hit: 'Hit!', graze: 'Graze', miss: 'Miss' }
 const SHOT_COLOR: Record<string, string> = { critical: '#fbbf24', hit: '#4ade80', graze: '#94a3b8', miss: '#6b7280' }
 
-const KILL_GOLD: Record<string, number> = { brute: 20, sniper: 25, corsair: 35, pete: 180 }
-const KILL_XP:   Record<string, number> = { brute: 20, sniper: 30, corsair: 45, pete: 180 }
-function killGold(round: number): number {
-  return KILL_GOLD[getEnemyForRound(round).id] ?? 0
-}
-function killXP(round: number): number {
-  return KILL_XP[getEnemyForRound(round).id] ?? 0
-}
 function fmtGold(n: number) { return n.toLocaleString() }
 
 // ── Nav level bar ─────────────────────────────────────────────────────────────
@@ -367,10 +292,11 @@ interface RaidCrewMember {
   fortune: number
 }
 
-export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
+export default function RaidGame({ config, equippedShipSkin, shipSkins, equippedItems,
   shipImageUrl, shipName, playerHPMax, shipMinDamage, shipSpeed,
   totalPower, totalDodge, totalFortune, crewCount, crewMembers, initialExpeditionXP,
 }: {
+  config: BossRaidConfig
   shipImageUrl: string
   shipName: string
   playerHPMax: number
@@ -405,7 +331,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
   const [enemyHP, setEnemyHP]           = useState(0)
   const [enemyHPMax, setEnemyHPMax]     = useState(0)
   const [enemyName, setEnemyName]       = useState('Reef Raider')
-  const [enemyImage, setEnemyImage]     = useState(BROADSIDE_ENEMIES.brute.image)
+  const [enemyImage, setEnemyImage]     = useState(() => config.enemies[config.sequence[0]]?.image ?? '')
   const [enemyPortrait, setEnemyPortrait] = useState<string | null>(null)
   const [enemyCharges, setEnemyCharges]   = useState(0)
   const [enemyDodging, setEnemyDodging]   = useState(false)
@@ -495,8 +421,8 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
   const enemyActionElapsedRef  = useRef(0)
 
   const resetEnemyForRound = useCallback((round: number) => {
-    const e = getEnemyForRound(round)
-    const hp = getEnemyHP(round)
+    const e = getEnemyForRound(round, config)
+    const hp = getEnemyHP(round, config)
     enemyHPRef.current          = hp
     enemyHPMaxRef.current       = hp
     enemyChargesRef.current     = 0
@@ -511,7 +437,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
     setEnemyCharges(0)
     setEnemyDodging(false)
     setEnemyActionPct(1)
-    setIsBoss(isBossRound(round))
+    setIsBoss(isBossRound(round, config.sequence.length))
     setEnemyMinDmg(e.minDmg)
     setEnemyMaxDmg(e.maxDmg)
     // Randomize zone starting position for each round
@@ -519,7 +445,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
     const halfW = hitW + GRAZE_W
     zonePosRef.current  = halfW + Math.random() * (1 - halfW * 2)
     zoneDirRef.current  = Math.random() < 0.5 ? 1 : -1
-    if (isBossRound(round)) zoneJitterRef.current = 1800 + Math.random() * 2200
+    if (isBossRound(round, config.sequence.length)) zoneJitterRef.current = 1800 + Math.random() * 2200
   }, [])
 
   const startGame = useCallback(() => {
@@ -581,7 +507,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
         const hitW  = Math.max(0.03, 0.06 - roundRef.current * 0.004)
         const halfW = hitW + GRAZE_W
         const zSpeed = (3000 / getActionMs(roundRef.current)) * 0.0028 * (dt / 16.67)
-        if (isBossRound(roundRef.current)) {
+        if (isBossRound(roundRef.current, config.sequence.length)) {
           zoneJitterRef.current -= dt
           if (zoneJitterRef.current <= 0) {
             zoneDirRef.current *= -1
@@ -591,11 +517,11 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
         zonePosRef.current += zSpeed * zoneDirRef.current
         if (zonePosRef.current >= 1 - halfW) {
           zonePosRef.current = 1 - halfW; zoneDirRef.current = -1
-          if (isBossRound(roundRef.current)) zoneJitterRef.current = 1800 + Math.random() * 2200
+          if (isBossRound(roundRef.current, config.sequence.length)) zoneJitterRef.current = 1800 + Math.random() * 2200
         }
         if (zonePosRef.current <= halfW) {
           zonePosRef.current = halfW; zoneDirRef.current = 1
-          if (isBossRound(roundRef.current)) zoneJitterRef.current = 1800 + Math.random() * 2200
+          if (isBossRound(roundRef.current, config.sequence.length)) zoneJitterRef.current = 1800 + Math.random() * 2200
         }
         if (zoneTargetRef.current) {
           zoneTargetRef.current.style.left  = `${(zonePosRef.current - halfW) * 100}%`
@@ -628,14 +554,14 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
       }
 
       // Enemy action timer
-      const actionMs = getActionMs(roundRef.current)
+      const actionMs = getActionMs(roundRef.current, config)
       enemyActionElapsedRef.current += dt
       setEnemyActionPct(Math.max(0, 1 - enemyActionElapsedRef.current / actionMs))
 
       if (enemyActionElapsedRef.current >= actionMs) {
         enemyActionElapsedRef.current = 0
 
-        const e = getEnemyForRound(roundRef.current)
+        const e = getEnemyForRound(roundRef.current, config)
         const action = e.pattern[enemyPatternIdxRef.current % e.pattern.length]
         enemyPatternIdxRef.current++
 
@@ -663,7 +589,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
               dodgePrimedRef.current = false
               dodgePrimeElapsedRef.current = 0
               setDodgePrimed(false); setDodgePrimePct(1)
-              const rawDmg    = rollIncomingDamage(roundRef.current)
+              const rawDmg    = rollIncomingDamage(roundRef.current, config)
               const dodgedDmg = Math.max(1, Math.round(rawDmg * 0.2))
               playerHPRef.current = Math.max(0, playerHPRef.current - dodgedDmg)
               setPlayerHP(playerHPRef.current)
@@ -682,7 +608,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
               if (playerHPRef.current <= 0) { phaseRef.current = 'dead'; setBest(prev => Math.max(prev, streakRef.current)); setPhase('dead'); return }
             } else {
               // Took the hit
-              const dmg = rollIncomingDamage(roundRef.current)
+              const dmg = rollIncomingDamage(roundRef.current, config)
               playerHPRef.current = Math.max(0, playerHPRef.current - dmg)
               setPlayerHP(playerHPRef.current)
               setPHitsplat(p => ({ key: p.key + 1, text: `-${dmg}`, color: '#f87171', big: true }))
@@ -712,11 +638,11 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
   // Slot machine spin — triggers when loot crate is opened
   useEffect(() => {
     if (!lootOpened) return
-    const final = rollLootIndex()
+    const final = rollLootIndex(config.loot)
     setSlotFinal(final)
     setSlotLanded(false)
 
-    const tick = () => setSlotDisplay(prev => (prev + 1) % BARNACLE_PETE_LOOT.length)
+    const tick = () => setSlotDisplay(prev => (prev + 1) % config.loot.length)
 
     // Three phases: fast → medium → slow, then snap to result
     const fast = setInterval(tick, 70)
@@ -789,7 +715,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
     if (res === 'miss') setCannonJammed(true)
 
     const dmgMult = isVolley ? 2 : 1
-    const bossMult = isBossRound(roundRef.current)
+    const bossMult = isBossRound(roundRef.current, config.sequence.length)
       ? getActiveEffects(equippedItems).filter(e => e.type === 'boss_damage_mult').reduce((acc, e) => acc * e.value, 1)
       : 1
     const dmg = rollShotDamage(res, shipMinDamage, totalPower) * dmgMult * bossMult
@@ -828,8 +754,9 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
       if (enemyHPRef.current <= 0) {
         streakRef.current++
         setStreak(streakRef.current)
-        const gold = killGold(roundRef.current)
-        const xp   = killXP(roundRef.current)
+        const enemyId = getEnemyForRound(roundRef.current, config).id
+        const gold = config.killRewards[enemyId]?.gold ?? 0
+        const xp   = config.killRewards[enemyId]?.xp   ?? 0
 
         roundEndingRef.current = true
         setEnemySinking(true)
@@ -844,7 +771,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
           setWinXP(xp)
           setWinPhase('summary')
 
-          if (isBossRound(roundRef.current)) {
+          if (isBossRound(roundRef.current, config.sequence.length)) {
             const elapsed = performance.now() - raidStartTimeRef.current
             const secs    = elapsed / 1000
             const tier    = getTimeTier(secs)
@@ -1445,7 +1372,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.88)', zIndex: 50 }}>
               <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.6rem', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 6 }}>Raid Complete</p>
-              <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '1.6rem', marginBottom: 10 }}>Barnacle Pete Defeated</p>
+              <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '1.6rem', marginBottom: 10 }}>{config.bossDefeatedText}</p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <span className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#5a5855' }}>Cleared in</span>
@@ -1487,7 +1414,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
 
                   {/* Single loot roll */}
                   {(() => {
-                    const item  = BARNACLE_PETE_LOOT[slotDisplay]
+                    const item  = config.loot[slotDisplay]
                     const color = RARITY_COLOR[item.rarity]
                     return (
                       <motion.div
@@ -1504,10 +1431,10 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
                           boxShadow: slotLanded ? `0 0 28px ${color}55` : 'none',
                           marginBottom: 20,
                         }}>
-                        {item.id === 'corsair_black' ? (
+                        {item.shipSkinId ? (
                           <img src={shipImageUrl} alt={item.label}
                             style={{ width: 70, height: 70, objectFit: 'contain', objectPosition: 'bottom',
-                              filter: !slotLanded ? 'blur(1.5px) brightness(0.3)' : getShipSkin('corsair_black')!.filter,
+                              filter: !slotLanded ? 'blur(1.5px) brightness(0.3)' : getShipSkin(item.shipSkinId)!.filter,
                               transition: 'filter 0.15s' }} />
                         ) : item.image ? (
                           <img src={item.image} alt={item.label}
@@ -1540,7 +1467,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
                           onPointerDown={async () => {
                             if (lootClaimed) return
                             setLootClaimed(true)
-                            const res = await claimRaidLoot(lootAmount, [BARNACLE_PETE_LOOT[slotFinal].id])
+                            const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id])
                             window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
                             router.push('/expeditions')
                           }}
