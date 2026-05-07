@@ -25,6 +25,13 @@ const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; ro
   cast: { top: 19, left: 3,  width: 19, rotate: 8   },
 }
 
+const ZONE_BG: Record<string, string> = {
+  shallows:    '/fishingbackground1.jpeg',
+  open_waters: '/fishingbackground2.jpeg',
+  deep:        '/fishingbackground3.jpeg',
+  abyss:       '/fishingbackground4.jpeg',
+}
+
 // Per-frame character position on the background — % of the phone preview container
 const CHAR_DEFAULT: Record<Frame, { bottom: number; left: number; width: number }> = {
   rest: { bottom: 60, left: 31, width: 70 },
@@ -55,6 +62,7 @@ const ANIM_SEQUENCE: [Frame, number][] = [
 
 export default function FishingTestClient() {
   const [frame, setFrame] = useState<Frame>('rest')
+  const [zone, setZone] = useState<string>('shallows')
   const [animating, setAnimating] = useState(false)
   const [rodTier, setRodTier] = useState(0)
   const [hookTier, setHookTier] = useState(0)
@@ -103,7 +111,7 @@ export default function FishingTestClient() {
 
           {/* Zone background — fills container like the real game */}
           <img
-            src="/fishingbackground1.jpeg"
+            src={ZONE_BG[zone]}
             alt=""
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
           />
@@ -145,6 +153,18 @@ export default function FishingTestClient() {
 
       {/* ── Controls ── */}
       <div style={{ width: 290, background: 'rgba(0,0,0,0.8)', padding: '1.2rem', overflowY: 'auto', fontSize: 12, color: '#ccc' }}>
+
+        {/* Zone picker */}
+        <p style={{ fontWeight: 700, marginBottom: 6, color: '#fff' }}>Zone</p>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+          {Object.keys(ZONE_BG).map(z => (
+            <button key={z} onClick={() => setZone(z)} style={{
+              flex: 1, padding: '4px 0', borderRadius: 6, cursor: 'pointer', minWidth: 60,
+              background: zone === z ? '#7c3aed' : 'rgba(255,255,255,0.08)',
+              border: 'none', color: '#fff', fontWeight: zone === z ? 700 : 400, fontSize: 11,
+            }}>{z.replace('_', ' ')}</button>
+          ))}
+        </div>
 
         {/* Frame picker + animate */}
         <p style={{ fontWeight: 700, marginBottom: 8, color: '#fff' }}>Frame</p>
