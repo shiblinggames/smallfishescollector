@@ -34,6 +34,7 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
     id: 'auto_caster',
     name: 'Auto Caster',
     color: '#f0c040',
+    image: '/autocaster.png',
     description: 'Automatically casts again after each catch. Stops when your hold is full or you run out of bait.',
     effectLabel: 'Auto cast',
     shopCost: 15000,
