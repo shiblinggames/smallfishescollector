@@ -933,7 +933,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
     <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
 
       {/* ── Nav level bar ─────────────────────────────────────────────────────── */}
-      <div style={{ width: '100%', position: 'relative' }}>
+      <div style={{ width: '100%', position: 'sticky', top: 0, zIndex: 55 }}>
         <NavLevelBar xp={navXP} />
         <AnimatePresence>
           {xpPopup && (
@@ -1086,16 +1086,10 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
                   transition: 'background 0.15s, box-shadow 0.15s',
                 }} />
             ))}
-            <AnimatePresence>
-              {enemyCharges === MAX_CHARGES && (
-                <motion.span
-                  initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -4 }}
-                  className="font-karla font-700"
-                  style={{ fontSize: '0.58rem', color: '#ef4444', letterSpacing: '0.1em', marginLeft: 1, textShadow: '0 0 8px #ef444499' }}>
-                  ARMED
-                </motion.span>
-              )}
-            </AnimatePresence>
+            <span className="font-karla font-700"
+              style={{ fontSize: '0.58rem', color: '#ef4444', letterSpacing: '0.1em', marginLeft: 1, textShadow: '0 0 8px #ef444499', opacity: enemyCharges === MAX_CHARGES ? 1 : 0, transition: 'opacity 0.15s' }}>
+              ARMED
+            </span>
           </div>
           <p className="font-karla font-700" style={{ fontSize: '0.6rem', color: actionBarColor, letterSpacing: '0.14em', transition: 'color 0.3s', marginLeft: 'auto', textShadow: '0 1px 6px rgba(0,0,0,0.95)' }}>ENEMY</p>
         </div>
@@ -1140,16 +1134,10 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
                 }}
               />
             ))}
-            <AnimatePresence>
-              {isVolleyReady && (
-                <motion.span
-                  initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -4 }}
-                  className="font-karla font-700"
-                  style={{ fontSize: '0.68rem', color: '#f0c040', letterSpacing: '0.1em', marginLeft: 2, textShadow: '0 0 8px #f0c04099' }}>
-                  VOLLEY
-                </motion.span>
-              )}
-            </AnimatePresence>
+            <span className="font-karla font-700"
+              style={{ fontSize: '0.68rem', color: '#f0c040', letterSpacing: '0.1em', marginLeft: 2, textShadow: '0 0 8px #f0c04099', opacity: isVolleyReady ? 1 : 0, transition: 'opacity 0.15s' }}>
+              VOLLEY
+            </span>
           </div>
           {(phase === 'playing' || phase === 'ready' || phase === 'clear') && (
             <span className="font-karla font-600" style={{
