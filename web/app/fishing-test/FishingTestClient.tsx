@@ -25,8 +25,12 @@ const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; ro
   cast: { top: -8,  left: -2,  width: 12, rotate: 20  },
 }
 
-// Character position on the background — % of the phone preview container
-const CHAR_DEFAULT = { bottom: 12, left: 5, width: 70 }
+// Per-frame character position on the background — % of the phone preview container
+const CHAR_DEFAULT: Record<Frame, { bottom: number; left: number; width: number }> = {
+  rest: { bottom: 12, left: 5, width: 70 },
+  wait: { bottom: 12, left: 5, width: 70 },
+  cast: { bottom: 12, left: 5, width: 70 },
+}
 
 function Slider({ label, value, min, max, step = 1, onChange }: {
   label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void
@@ -47,13 +51,18 @@ export default function FishingTestClient() {
   const [hookTier, setHookTier] = useState(0)
   const [rodCfg, setRodCfg] = useState(ROD_OVERLAY)
   const [hookCfg, setHookCfg] = useState(HOOK_OVERLAY)
-  const [charPos, setCharPos] = useState(CHAR_DEFAULT)
+  const [charCfg, setCharCfg] = useState(CHAR_DEFAULT)
 
   const rod  = RODS.find(r => r.tier === rodTier) ?? RODS[0]
   const hook = HOOKS.find(h => h.tier === hookTier) ?? HOOKS[0]
   const rc = rodCfg[frame]
   const hc = hookCfg[frame]
 
+  const cp = charCfg[frame]
+
+  function setChar(key: keyof typeof cp, val: number) {
+    setCharCfg(prev => ({ ...prev, [frame]: { ...prev[frame], [key]: val } }))
+  }
   function setRod(key: keyof typeof rc, val: number) {
     setRodCfg(prev => ({ ...prev, [frame]: { ...prev[frame], [key]: val } }))
   }
@@ -79,9 +88,9 @@ export default function FishingTestClient() {
           {/* Character + overlays — positioned on background */}
           <div style={{
             position: 'absolute',
-            bottom: `${charPos.bottom}%`,
-            left: `${charPos.left}%`,
-            width: `${charPos.width}%`,
+            bottom: `${cp.bottom}%`,
+            left: `${cp.left}%`,
+            width: `${cp.width}%`,
           }}>
             {/* Character sprite */}
             <img src={FRAMES[frame]} alt="" style={{ width: '100%', display: 'block' }} />
@@ -127,10 +136,10 @@ export default function FishingTestClient() {
         </div>
 
         {/* Character position */}
-        <p style={{ fontWeight: 700, marginBottom: 4, color: '#fbbf24' }}>Character position</p>
-        <Slider label="bottom %" value={charPos.bottom} min={-20} max={60} onChange={v => setCharPos(p => ({ ...p, bottom: v }))} />
-        <Slider label="left %"   value={charPos.left}   min={-20} max={80} onChange={v => setCharPos(p => ({ ...p, left:   v }))} />
-        <Slider label="width %"  value={charPos.width}  min={20}  max={120} onChange={v => setCharPos(p => ({ ...p, width:  v }))} />
+        <p style={{ fontWeight: 700, marginBottom: 4, color: '#fbbf24' }}>Character position ({frame})</p>
+        <Slider label="bottom %" value={cp.bottom} min={-20} max={60}  onChange={v => setChar('bottom', v)} />
+        <Slider label="left %"   value={cp.left}   min={-20} max={80}  onChange={v => setChar('left',   v)} />
+        <Slider label="width %"  value={cp.width}  min={20}  max={120} onChange={v => setChar('width',  v)} />
 
         {/* Rod picker */}
         <p style={{ fontWeight: 700, marginTop: 14, marginBottom: 6, color: '#fff' }}>Rod</p>
@@ -165,7 +174,7 @@ export default function FishingTestClient() {
         {/* Config dump */}
         <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Current config</p>
         <pre style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
-{`CHAR:\n${JSON.stringify(charPos, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}`}
+{`CHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}`}
         </pre>
       </div>
     </div>
