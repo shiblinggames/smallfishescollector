@@ -2489,6 +2489,72 @@ export default function FishingGame({
                 const r = RARITY[hookedFish.biteRarity] ?? RARITY[1]
                 const isLegendary = hookedFish.biteRarity === 5
                 const isEpicPlus  = hookedFish.biteRarity >= 4
+                const isBoss = selectedZone === 'ancient_deep'
+                const bossName = isBoss ? (allFishSpecies.find(f => f.id === hookedFish.fishId)?.name ?? 'Ancient Creature') : null
+
+                if (isBoss && bossName) return (
+                  <motion.div key="hooked"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 1rem' }}>
+                    <motion.div
+                      initial={{ scale: 0.92, y: 8 }} animate={{ scale: 1, y: 0 }}
+                      transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+                      style={{
+                        width: '100%',
+                        background: 'rgba(20,4,4,0.92)',
+                        border: '1px solid #ef444466',
+                        borderLeft: '3px solid #ef4444',
+                        borderRadius: 14,
+                        padding: '1rem 1.1rem',
+                        boxShadow: '0 0 40px rgba(239,68,68,0.25), inset 0 0 30px rgba(239,68,68,0.04)',
+                      }}
+                    >
+                      {/* Warning header */}
+                      <motion.div
+                        animate={{ opacity: [1, 0.5, 1] }}
+                        transition={{ duration: 0.6, repeat: Infinity, ease: 'easeInOut' }}
+                        className="flex items-center gap-2"
+                        style={{ marginBottom: '0.6rem' }}
+                      >
+                        <span style={{ fontSize: '0.75rem' }}>⚠</span>
+                        <p className="font-karla font-700 uppercase tracking-[0.2em]" style={{ fontSize: '0.58rem', color: '#ef4444', letterSpacing: '0.2em' }}>
+                          Ancient Encounter Detected
+                        </p>
+                        <span style={{ fontSize: '0.75rem' }}>⚠</span>
+                      </motion.div>
+
+                      {/* Boss name */}
+                      <motion.p
+                        className="font-cinzel font-700"
+                        animate={{ textShadow: ['0 0 20px rgba(239,68,68,0.6)', '0 0 35px rgba(239,68,68,0.9)', '0 0 20px rgba(239,68,68,0.6)'] }}
+                        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{ fontSize: '1.5rem', color: '#fca5a5', letterSpacing: '0.05em', marginBottom: '0.5rem', lineHeight: 1 }}
+                      >
+                        {bossName}
+                      </motion.p>
+
+                      {/* Divider */}
+                      <div style={{ height: 1, background: 'linear-gradient(90deg, #ef444444, #ef444422, transparent)', marginBottom: '0.5rem' }} />
+
+                      {/* 3-stage warning */}
+                      <div className="flex items-center gap-2" style={{ marginBottom: '0.35rem' }}>
+                        <div className="flex gap-1">
+                          {[1,2,3].map(s => (
+                            <div key={s} style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 5px #ef4444' }} />
+                          ))}
+                        </div>
+                        <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#fca5a5' }}>
+                          3 stages required
+                        </p>
+                      </div>
+                      <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: 'rgba(252,165,165,0.55)', lineHeight: 1.4 }}>
+                        Miss once and it escapes. Stay sharp.
+                      </p>
+                    </motion.div>
+                  </motion.div>
+                )
+
                 return (
                   <motion.div key="hooked"
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
