@@ -806,12 +806,30 @@ function BaitSelector({ baitInventory, selectedBait, onSelect }: {
 
 type SceneFrame = 'windup' | 'cast1' | 'cast2' | 'fishing' | 'catching'
 
-const FRAME_SRC: Record<SceneFrame, string> = {
-  windup:   '/windup.jpg',
-  cast1:    '/cast1.jpg',
-  cast2:    '/cast2.jpeg',
-  fishing:  '/fishing1.jpg',
-  catching: '/fishing.jpeg',
+type CharFrame = 'rest' | 'wait' | 'cast'
+
+const CHAR_SRC: Record<CharFrame, string> = {
+  rest: '/fishing_rest.png',
+  wait: '/fishing_wait.png',
+  cast: '/fishing_cast.png',
+}
+
+const CHAR_POS: Record<CharFrame, { bottom: number; left: number; width: number }> = {
+  rest: { bottom: 60, left: 31, width: 70 },
+  wait: { bottom: 57, left: 26, width: 70 },
+  cast: { bottom: 60, left: 26, width: 70 },
+}
+
+const CHAR_ROD_OVERLAY: Record<CharFrame, { top: number; left: number; width: number; rotate: number }> = {
+  rest: { top: 35, left: 11, width: 51, rotate: -1  },
+  wait: { top: 22, left: 22, width: 51, rotate: -22 },
+  cast: { top: 28, left: 5,  width: 51, rotate: 49  },
+}
+
+const CHAR_HOOK_OVERLAY: Record<CharFrame, { top: number; left: number; width: number; rotate: number; hidden?: boolean }> = {
+  rest: { top: 84, left: 8,  width: 19, rotate: -37 },
+  wait: { top: 58, left: -4, width: 25, rotate: 0,   hidden: true },
+  cast: { top: 19, left: 3,  width: 19, rotate: 8   },
 }
 
 function fishImageUrl(name: string) {
@@ -1572,8 +1590,6 @@ export default function FishingGame({
   const nextChgMsRef    = useRef(0)
   const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number } | null>(null)
   const selectedBaitRef = useRef(selectedBait)
-  const frameRefs       = useRef<Partial<Record<SceneFrame, HTMLImageElement>>>({})
-
   useEffect(() => { phaseRef.current = phase }, [phase])
 
   useEffect(() => {
@@ -1634,12 +1650,6 @@ export default function FishingGame({
     return () => clearTimeout(id)
   }, [newStreakRecord])
 
-  // Force-decode actual in-DOM img elements on mount so GPU has them compositor-ready
-  useEffect(() => {
-    Object.values(frameRefs.current).forEach(img => {
-      if (img) img.decode().catch(() => {})
-    })
-  }, [])
 
   useEffect(() => {
     if (!hasSeenFishingTour) setTourStep(0)
@@ -2311,6 +2321,14 @@ export default function FishingGame({
 
   const isBobbing = sceneFrame === 'fishing' && (phase === 'casting' || phase === 'hooked')
 
+  const charFrame: CharFrame =
+    (phase === 'idle' || phase === 'result') ? 'rest' :
+    (sceneFrame === 'windup' || sceneFrame === 'cast1' || sceneFrame === 'cast2') ? 'cast' :
+    'wait'
+  const cp  = CHAR_POS[charFrame]
+  const crc = CHAR_ROD_OVERLAY[charFrame]
+  const chc = CHAR_HOOK_OVERLAY[charFrame]
+
   const hookedRarity = hookedFish?.biteRarity ?? 1
   const bgBobAnimate = !isBobbing
     ? { x: 0, y: 0 }
@@ -2334,27 +2352,51 @@ export default function FishingGame({
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0" style={{ background: '#08121c', zIndex: 40, display: 'flex', justifyContent: 'center' }}>
       <div className="relative w-full max-w-md overflow-hidden" style={{ height: '100%' }}>
 
-        {/* Background layers — img tags force eager loading so no black-frame on switch */}
+        {/* Background */}
         <motion.div
           animate={bgBobAnimate}
           transition={bgBobTransition}
           style={{ position: 'absolute', inset: '-14px' }}
         >
-          {(Object.keys(FRAME_SRC) as SceneFrame[]).map(frame => (
-            <img
-              key={frame}
-              ref={el => { if (el) frameRefs.current[frame] = el }}
-              src={FRAME_SRC[frame]}
-              alt=""
-              style={{
-                position: 'absolute', inset: 0,
-                width: '100%', height: '100%',
-                objectFit: 'cover',
-                objectPosition: 'top center',
-                zIndex: sceneFrame === frame ? 1 : 0,
-              }}
-            />
-          ))}
+          <img
+            src="/fishingbackground1.jpeg"
+            alt=""
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
+          />
+        </motion.div>
+
+        {/* Character + rod + hook overlay */}
+        <motion.div
+          animate={bgBobAnimate}
+          transition={bgBobTransition}
+          style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+        >
+          <div style={{
+            position: 'absolute',
+            bottom: `${cp.bottom}%`,
+            left: `${cp.left}%`,
+            width: `${cp.width}%`,
+          }}>
+            <img src={CHAR_SRC[charFrame]} alt="" style={{ width: '100%', display: 'block' }} />
+            {rod.imageUrl && (
+              <img src={rod.imageUrl} alt="" style={{
+                position: 'absolute', top: `${crc.top}%`, left: `${crc.left}%`,
+                width: `${crc.width}%`,
+                transform: `rotate(${crc.rotate}deg)`,
+                transformOrigin: 'bottom right',
+                pointerEvents: 'none',
+              }} />
+            )}
+            {hook.imageUrl && !chc.hidden && (
+              <img src={hook.imageUrl} alt="" style={{
+                position: 'absolute', top: `${chc.top}%`, left: `${chc.left}%`,
+                width: `${chc.width}%`,
+                transform: `rotate(${chc.rotate}deg)`,
+                transformOrigin: 'center center',
+                pointerEvents: 'none',
+              }} />
+            )}
+          </div>
         </motion.div>
 
         {/* Zone darkness overlay — gradient from transparent (top 20%) to dark (bottom) */}
