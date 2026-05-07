@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { CHARACTER_COLORS } from '@/lib/characters'
 
 export async function updateUsername(username: string): Promise<{ error?: string }> {
   const supabase = await createClient()
@@ -61,6 +62,20 @@ export async function updateShowcase(variantIds: number[]): Promise<{ error?: st
   }
 
   revalidatePath('/collection')
+  return {}
+}
+
+export async function updateCharacterColor(colorId: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const color = CHARACTER_COLORS.find(c => c.id === colorId)
+  if (!color) return { error: 'Invalid color' }
+  if (!color.free) return { error: 'Color not unlocked' }
+
+  const admin = createAdminClient()
+  await admin.from('profiles').update({ character_color: colorId }).eq('id', user.id)
   return {}
 }
 

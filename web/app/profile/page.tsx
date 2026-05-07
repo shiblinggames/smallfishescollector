@@ -21,7 +21,7 @@ export default async function ProfilePage() {
     { data: ownedRows },
   ] = await Promise.all([
     supabase.from('profiles')
-      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier')
+      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, character_color')
       .eq('id', user.id)
       .single(),
     admin.from('fish_collection')
@@ -83,6 +83,7 @@ export default async function ProfilePage() {
           uniqueSpecies={uniqueSpecies ?? 0}
           shipName={ship.name}
           shipColor={ship.color}
+          characterColor={profile?.character_color ?? 'default'}
         />
       </main>
     </>

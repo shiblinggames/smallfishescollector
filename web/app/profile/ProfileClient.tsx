@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
-import { updateUsername, updateShowcase } from '@/app/u/actions'
+import { updateUsername, updateShowcase, updateCharacterColor } from '@/app/u/actions'
+import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 
 type PickerCard = {
   variantId: number
@@ -31,6 +32,7 @@ interface Props {
   uniqueSpecies: number
   shipName: string
   shipColor: string
+  characterColor: string
 }
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
@@ -54,6 +56,7 @@ export default function ProfileClient({
   uniqueSpecies,
   shipName,
   shipColor,
+  characterColor: initialCharacterColor,
 }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -66,6 +69,8 @@ export default function ProfileClient({
 
   const [selectedShowcase, setSelectedShowcase] = useState<number[]>(initialShowcase)
   const [modalOpen, setModalOpen] = useState(false)
+  const [characterColor, setCharacterColor] = useState(initialCharacterColor)
+  const [colorSaving, setColorSaving] = useState(false)
 
   const color = avatarColor(username || email)
   const initial = (username || email).slice(0, 1).toUpperCase()
@@ -267,6 +272,56 @@ export default function ProfileClient({
         <div style={{ textAlign: 'right' }}>
           <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#7090c0', lineHeight: 1 }}>Lv {expeditionLevel}</p>
           <p className="font-karla font-400" style={{ fontSize: '0.48rem', color: '#4a6080', marginTop: 2 }}>expedition</p>
+        </div>
+      </div>
+
+      {/* ── Character color ── */}
+      <div style={{
+        background: 'rgba(4,10,20,0.85)',
+        border: '1px solid rgba(255,255,255,0.09)',
+        borderRadius: 16, padding: '1.1rem 1.25rem',
+        marginBottom: '0.75rem',
+      }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0ede8', marginBottom: 4 }}>Character</p>
+        <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#6a6764', marginBottom: '1rem' }}>
+          Choose your fisher's color. Reflects in-game and on your public profile.
+        </p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {CHARACTER_COLORS.map(c => {
+            const sprites = getCharacterSprites(c.id)
+            const isActive = characterColor === c.id
+            return (
+              <button
+                key={c.id}
+                disabled={!c.free || colorSaving}
+                onClick={async () => {
+                  if (isActive) return
+                  setColorSaving(true)
+                  setCharacterColor(c.id)
+                  await updateCharacterColor(c.id)
+                  setColorSaving(false)
+                }}
+                style={{
+                  background: 'none', border: 'none', cursor: c.free ? 'pointer' : 'default',
+                  padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                  opacity: !c.free ? 0.4 : 1,
+                }}
+              >
+                <div style={{
+                  width: 72, height: 72, borderRadius: 12, overflow: 'hidden',
+                  border: isActive ? '2px solid #60a5fa' : '2px solid rgba(255,255,255,0.08)',
+                  boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.35)' : 'none',
+                  background: 'rgba(255,255,255,0.03)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <img src={sprites.rest} alt={c.name} style={{ width: '130%', objectFit: 'contain', marginTop: 8 }} />
+                </div>
+                <span className="font-karla font-600" style={{ fontSize: '0.65rem', color: isActive ? '#60a5fa' : '#6a6764' }}>
+                  {c.name}
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
