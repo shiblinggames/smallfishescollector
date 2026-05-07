@@ -2362,7 +2362,7 @@ export default function FishingGame({
         <motion.div
           animate={bgBobAnimate}
           transition={bgBobTransition}
-          style={{ position: 'absolute', inset: 0, pointerEvents: 'none', filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))' }}
+          style={{ position: 'absolute', inset: 0, pointerEvents: 'none', filter: 'drop-shadow(0 18px 24px rgba(0,0,0,0.9)) drop-shadow(0 8px 10px rgba(0,0,0,0.7))' }}
         >
           {(Object.keys(CHAR_SRC) as CharFrame[]).map(f => {
             const p   = CHAR_POS[f]
