@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { claimPracticeWin, markPracticeRaidTutorialSeen } from './practiceActions'
-import { awardRaidKillXP, RAID_KILL_XP } from '../raidXPActions'
+import { awardPracticeKill } from './practiceActions'
+import { RAID_KILL_XP } from '../raidXPActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
 
@@ -352,7 +352,6 @@ export default function PracticeRaidGame({
   const [playerHitShake, setPlayerHitShake] = useState(false)
   const [pHitsplat, setPHitsplat]         = useState({ key: 0, text: '', color: '', big: false })
   const [eHitsplat, setEHitsplat]         = useState({ key: 0, text: '', color: '', big: false })
-  const [isClaiming, setIsClaiming]       = useState(false)
   const [winGold, setWinGold]             = useState(0)
   const [navXP, setNavXP]                 = useState(initialExpeditionXP)
   const [xpPopup, setXpPopup]             = useState<{ value: number; id: number } | null>(null)
@@ -432,7 +431,6 @@ export default function PracticeRaidGame({
   }
 
   function dismissTour() {
-    markPracticeRaidTutorialSeen()
     setSeenTutorial(true)
     setShowTour(false)
     setTourStep(0)
@@ -619,12 +617,11 @@ export default function PracticeRaidGame({
         const gold = currentEnemyRef.current.killGold
         const xp   = currentEnemyRef.current.killXP
         setWinGold(gold)
-        if (xp > 0) {
-          awardRaidKillXP(xp).then(res => {
-            setNavXP(res.newExpeditionXP)
-            setXpPopup({ value: xp, id: Date.now() })
-          })
-        }
+        awardPracticeKill(xp, gold).then(res => {
+          setNavXP(res.newExpeditionXP)
+          window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+          if (xp > 0) setXpPopup({ value: xp, id: Date.now() })
+        })
         setTimeout(() => {
           roundEndingRef.current = false
           phaseRef.current = 'win'
@@ -661,18 +658,6 @@ export default function PracticeRaidGame({
     }, DODGE_PRIME_MS)
   }, [])
 
-  const claimWin = useCallback(async () => {
-    if (isClaiming) return
-    setIsClaiming(true)
-    try {
-      const res = await claimPracticeWin(winGold)
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
-    } finally {
-      setIsClaiming(false)
-      router.push('/expeditions')
-    }
-  }, [isClaiming, winGold, router])
-
   const retryGame = useCallback(() => {
     phaseRef.current = 'idle'
     setPhase('idle')
@@ -685,6 +670,31 @@ export default function PracticeRaidGame({
 
   return (
     <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
+
+      {/* ── Nav level bar ─────────────────────────────────────────────────────── */}
+      <div style={{ width: '100%', position: 'relative' }}>
+        <NavLevelBar xp={navXP} />
+        <AnimatePresence>
+          {xpPopup && (
+            <motion.p
+              key={xpPopup.id}
+              initial={{ opacity: 0, y: 0 }}
+              animate={{ opacity: [0, 1, 1, 0], y: 18 }}
+              transition={{ duration: 2.0, times: [0, 0.1, 0.6, 1], ease: 'easeOut' }}
+              onAnimationComplete={() => setXpPopup(null)}
+              className="font-karla font-700"
+              style={{
+                position: 'absolute', right: 8, top: '100%',
+                fontSize: '0.8rem', color: '#4ade80',
+                pointerEvents: 'none',
+                textShadow: '0 0 10px rgba(74,222,128,0.7)',
+              }}
+            >
+              +{xpPopup.value} XP
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* ── Status header (hidden when idle) ─────────────────────────────────── */}
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', paddingBottom: 2, visibility: phase === 'idle' ? 'hidden' : 'visible' }}>
@@ -950,31 +960,6 @@ export default function PracticeRaidGame({
         </div>
       )}
 
-      {/* ── Nav level bar ─────────────────────────────────────────────────────── */}
-      <div style={{ width: '100%', position: 'relative' }}>
-        <NavLevelBar xp={navXP} />
-        <AnimatePresence>
-          {xpPopup && (
-            <motion.p
-              key={xpPopup.id}
-              initial={{ opacity: 0, y: 0 }}
-              animate={{ opacity: [0, 1, 1, 0], y: -18 }}
-              transition={{ duration: 2.0, times: [0, 0.1, 0.6, 1], ease: 'easeOut' }}
-              onAnimationComplete={() => setXpPopup(null)}
-              className="font-karla font-700"
-              style={{
-                position: 'absolute', right: 8, top: 0,
-                fontSize: '0.8rem', color: '#4ade80',
-                pointerEvents: 'none',
-                textShadow: '0 0 10px rgba(74,222,128,0.7)',
-              }}
-            >
-              +{xpPopup.value} XP
-            </motion.p>
-          )}
-        </AnimatePresence>
-      </div>
-
       {/* ── Crit flash ───────────────────────────────────────────────────────── */}
       {critFlash && (
         <div style={{
@@ -1036,15 +1021,14 @@ export default function PracticeRaidGame({
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 240 }}>
               <motion.button
-                onPointerDown={claimWin}
+                onPointerDown={() => router.push('/expeditions')}
                 whileTap={{ scale: 0.96 }}
-                disabled={isClaiming}
                 className="font-karla font-700"
-                style={{ padding: '12px 0', borderRadius: 14, cursor: isClaiming ? 'default' : 'pointer', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.45)', color: '#4ade80', fontSize: '0.92rem', letterSpacing: '0.06em', opacity: isClaiming ? 0.6 : 1 }}>
-                {isClaiming ? 'Claiming…' : 'Claim & Return'}
+                style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.45)', color: '#4ade80', fontSize: '0.92rem', letterSpacing: '0.06em' }}>
+                Return
               </motion.button>
               <motion.button
-                onPointerDown={() => { if (!isClaiming) retryGame() }}
+                onPointerDown={retryGame}
                 whileTap={{ scale: 0.96 }}
                 className="font-karla font-600"
                 style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '0.82rem', letterSpacing: '0.04em' }}>

@@ -931,6 +931,31 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
   return (
     <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
 
+      {/* ── Nav level bar ─────────────────────────────────────────────────────── */}
+      <div style={{ width: '100%', position: 'relative' }}>
+        <NavLevelBar xp={navXP} />
+        <AnimatePresence>
+          {xpPopup && (
+            <motion.p
+              key={xpPopup.id}
+              initial={{ opacity: 0, y: 0 }}
+              animate={{ opacity: [0, 1, 1, 0], y: 18 }}
+              transition={{ duration: 2.0, times: [0, 0.1, 0.6, 1], ease: 'easeOut' }}
+              onAnimationComplete={() => setXpPopup(null)}
+              className="font-karla font-700"
+              style={{
+                position: 'absolute', right: 8, top: '100%',
+                fontSize: '0.8rem', color: '#4ade80',
+                pointerEvents: 'none',
+                textShadow: '0 0 10px rgba(74,222,128,0.7)',
+              }}
+            >
+              +{xpPopup.value} XP
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </div>
+
       {/* ── Round / status header ─────────────────────────────────────────────── */}
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', paddingBottom: 2, visibility: (phase === 'idle' || phase === 'ready') ? 'hidden' : 'visible' }}>
           <span className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', textShadow: '0 2px 10px rgba(0,0,0,0.95)' }}>Round {roundDisplay}</span>
@@ -1285,31 +1310,6 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
           <div style={{ width: 82, height: 82, flexShrink: 0 }} />
         </div>
       )}
-
-      {/* ── Nav level bar ─────────────────────────────────────────────────────── */}
-      <div style={{ width: '100%', position: 'relative' }}>
-        <NavLevelBar xp={navXP} />
-        <AnimatePresence>
-          {xpPopup && (
-            <motion.p
-              key={xpPopup.id}
-              initial={{ opacity: 0, y: 0 }}
-              animate={{ opacity: [0, 1, 1, 0], y: -18 }}
-              transition={{ duration: 2.0, times: [0, 0.1, 0.6, 1], ease: 'easeOut' }}
-              onAnimationComplete={() => setXpPopup(null)}
-              className="font-karla font-700"
-              style={{
-                position: 'absolute', right: 8, top: 0,
-                fontSize: '0.8rem', color: '#4ade80',
-                pointerEvents: 'none',
-                textShadow: '0 0 10px rgba(74,222,128,0.7)',
-              }}
-            >
-              +{xpPopup.value} XP
-            </motion.p>
-          )}
-        </AnimatePresence>
-      </div>
 
       {/* ── Crit flash ───────────────────────────────────────────────────────── */}
       {critFlash && (
