@@ -374,6 +374,7 @@ export default function PracticeRaidGame({
   const enemyHPRef        = useRef(0)
   const playerActionElapsedRef = useRef(0)
   const playerReadyRef    = useRef(false)
+  const reloadSlowRef     = useRef(false)
   const chargesRef        = useRef(0)
   const dodgePrimedRef    = useRef(false)
   const dodgeCooldownRef  = useRef(false)
@@ -398,6 +399,7 @@ export default function PracticeRaidGame({
     playerHPRef.current = playerHPMax
     playerActionElapsedRef.current = 0
     playerReadyRef.current = false
+    reloadSlowRef.current = false
     chargesRef.current = 0
     if (dodgePrimeTimerRef.current) { clearTimeout(dodgePrimeTimerRef.current); dodgePrimeTimerRef.current = null }
     dodgePrimedRef.current = false
@@ -481,7 +483,9 @@ export default function PracticeRaidGame({
 
       // Player action bar
       playerActionElapsedRef.current += dt
-      const pPct = Math.min(1, Math.max(0, playerActionElapsedRef.current / playerActionMs))
+      const effectiveActionMs = reloadSlowRef.current ? playerActionMs * 2 : playerActionMs
+      const pPct = Math.min(1, Math.max(0, playerActionElapsedRef.current / effectiveActionMs))
+      if (pPct >= 1 && reloadSlowRef.current) reloadSlowRef.current = false
       playerReadyRef.current = pPct >= 1
       setPlayerActionPct(pPct)
 
@@ -564,6 +568,7 @@ export default function PracticeRaidGame({
     consecutiveDodgesRef.current = 0
     chargesRef.current = Math.min(MAX_CHARGES, chargesRef.current + 1)
     setCharges(chargesRef.current)
+    reloadSlowRef.current = true
     playerActionElapsedRef.current = 0
     setPlayerActionPct(0)
   }, [])
