@@ -293,7 +293,7 @@ export async function reelIn(
   const newAbyssStreak = isAbyssPerfect ? (profile.fishing_abyss_streak ?? 0) + 1 : 0
   const prestigeLevels = (profile.prestige_levels as Record<string, number> | null) ?? {}
   const zonePrestige = prestigeLevels[fish.habitat] ?? 0
-  const prestigeXPMult = 1 + zonePrestige * 0.05
+  const prestigeXPMult = 1 + zonePrestige * 0.10
   const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + (result === 'perfect' ? streakBonus : 0)) * prestigeXPMult)
   const newXP = (profile.fishing_xp ?? 0) + xpGained
 
