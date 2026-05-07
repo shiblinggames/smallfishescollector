@@ -804,8 +804,6 @@ function BaitSelector({ baitInventory, selectedBait, onSelect }: {
   )
 }
 
-type SceneFrame = 'windup' | 'cast1' | 'cast2' | 'fishing' | 'catching'
-
 type CharFrame = 'rest' | 'wait' | 'cast'
 
 const CHAR_SRC: Record<CharFrame, string> = {
@@ -1662,19 +1660,18 @@ export default function FishingGame({
     }
   }, [phase, hasSeenFishingCatchTour])
 
-  // Scene background frame — animates during casting phase
-  const [sceneFrame, setSceneFrame] = useState<SceneFrame>('fishing')
+  // Character frame — drives which sprite is shown
+  const [charFrame, setCharFrame] = useState<CharFrame>('rest')
   const [castAnimDone, setCastAnimDone] = useState(false)
   useEffect(() => {
-    if (phase === 'catching') { setSceneFrame('catching'); return }
+    if (phase === 'idle' || phase === 'result') { setCharFrame('rest'); return }
+    if (phase === 'hooked' || phase === 'catching' || phase === 'reeling') { setCharFrame('wait'); return }
     if (phase !== 'casting') { setCastAnimDone(false); return }
     setCastAnimDone(false)
-    setSceneFrame('windup')
-    const t1 = setTimeout(() => setSceneFrame('cast1'), 350)
-    const t2 = setTimeout(() => setSceneFrame('cast2'), 500)
-    const t3 = setTimeout(() => setSceneFrame('fishing'), 650)
-    const t4 = setTimeout(() => setCastAnimDone(true), 1500)
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4) }
+    setCharFrame('cast')
+    const t1 = setTimeout(() => setCharFrame('wait'), 650)
+    const t2 = setTimeout(() => setCastAnimDone(true), 1500)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [phase])
 
   // Needle animation during catching phase
@@ -2319,12 +2316,8 @@ export default function FishingGame({
   const holdTotalValue   = inventory.reduce((s, i) => s + Math.floor(i.fish_species.sell_value * (isFullMoon ? 1.0 : 0.65)) * i.quantity, 0)
   const holdBaseValue    = inventory.reduce((s, i) => s + i.fish_species.sell_value * i.quantity, 0)
 
-  const isBobbing = sceneFrame === 'fishing' && (phase === 'casting' || phase === 'hooked')
+  const isBobbing = charFrame === 'wait' && (phase === 'casting' || phase === 'hooked')
 
-  const charFrame: CharFrame =
-    (phase === 'idle' || phase === 'result') ? 'rest' :
-    (sceneFrame === 'windup' || sceneFrame === 'cast1' || sceneFrame === 'cast2') ? 'cast' :
-    'wait'
   const cp  = CHAR_POS[charFrame]
   const crc = CHAR_ROD_OVERLAY[charFrame]
   const chc = CHAR_HOOK_OVERLAY[charFrame]
