@@ -22,7 +22,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
     admin.from('profiles')
-      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items')
+      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items, character_color')
       .ilike('username', username)
       .single(),
   ])
@@ -139,6 +139,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           raidItemIds={(profile.raid_items as string[] | null) ?? []}
           isOwnProfile={!!user && user.id === profile.id}
           isInCrew={!!crewRowData.data}
+          characterColor={profile?.character_color ?? 'default'}
         />
       </main>
     </>

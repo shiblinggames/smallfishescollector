@@ -8,13 +8,10 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
 import { getHook } from '@/lib/hooks'
 import { getRod } from '@/lib/rods'
-import { getReel } from '@/lib/reels'
-import { getLine } from '@/lib/lines'
 import { getShip } from '@/lib/ships'
 import { getShipSkin } from '@/lib/shipSkins'
 import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
-import { SPECIAL_ITEMS } from '@/lib/specialItems'
-import { RAID_ITEMS } from '@/lib/raidItems'
+import { getCharacterSprites } from '@/lib/characters'
 
 interface CardVariant {
   id: number
@@ -67,6 +64,7 @@ interface Props {
   isPremium?: boolean
   isOwnProfile?: boolean
   isInCrew?: boolean
+  characterColor?: string
 }
 
 function fishImageUrl(name: string) {
@@ -190,7 +188,7 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   )
 }
 
-export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, ownedSpecialIds = [], raidItemIds = [], equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew }: Props) {
+export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default' }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
@@ -202,14 +200,10 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
   const expTitle = getNavigatorTitle(expLevel)
 
   const rod  = getRod(gear.rodTier)
-  const reel = getReel(gear.reelTier)
   const hook = getHook(gear.hookTier)
-  const line = getLine(gear.lineTier)
   const ship = getShip(gear.shipTier)
   const shipSkin = equippedShipSkin ? getShipSkin(equippedShipSkin) : null
-
-  const ownedSpecials = SPECIAL_ITEMS.filter(s => ownedSpecialIds.includes(s.id))
-  const ownedRaidItems = RAID_ITEMS.filter(i => raidItemIds.includes(i.id))
+  const charSprites = getCharacterSprites(characterColor)
 
   function toggleCrew() {
     startCrewTransition(async () => {
@@ -318,110 +312,48 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
         {/* ── RIGHT: Equipment + Catches + Voyages ── */}
         <div className="flex flex-col" style={{ gap: 28 }}>
 
-          {/* Equipment */}
-          <div>
-            <SectionLabel>Equipment</SectionLabel>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-
-              {/* Rod, Hook, Reel, Line — 2×2 grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {[
-                  { label: 'Rod',  color: rod.color,  name: rod.name,  img: rod.imageUrl  ?? null },
-                  { label: 'Hook', color: hook.color, name: hook.name, img: hook.imageUrl ?? null },
-                  { label: 'Reel', color: reel.color, name: reel.name, img: reel.imageUrl ?? null },
-                  { label: 'Line', color: line.color, name: line.name, img: line.imageUrl ?? null },
-                ].map(({ label, color, name, img }) => (
-                  <div key={label} style={{
-                    background: `linear-gradient(160deg, ${color}0d 0%, rgba(4,10,20,0.85) 60%)`,
-                    border: `1px solid ${color}35`,
-                    borderRadius: 16, padding: '1rem 0.75rem',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-                  }}>
-                    <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {img
-                        ? <img src={img} alt={label} style={{ maxWidth: 64, maxHeight: 64, objectFit: 'contain', filter: `drop-shadow(0 2px 12px ${color}66)` }} />
-                        : <div style={{ width: 20, height: 20, borderRadius: '50%', background: color, opacity: 0.6, boxShadow: `0 0 12px ${color}66` }} />
-                      }
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: color + 'aa', marginBottom: 4 }}>{label}</p>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d8d5d0', lineHeight: 1.2 }}>{name}</p>
-                    </div>
-                  </div>
-                ))}
+          {/* Character Loadout */}
+          <div style={{
+            background: 'radial-gradient(ellipse at 50% 90%, rgba(20,50,100,0.22) 0%, transparent 70%)',
+            border: '1px solid rgba(80,120,200,0.18)',
+            borderRadius: 20,
+            overflow: 'hidden',
+            paddingBottom: 14,
+          }}>
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              height: 200,
+              filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))',
+            }}>
+              <div style={{ position: 'absolute', bottom: 0, left: '12%', width: '72%' }}>
+                <img src={charSprites.rest} alt="" style={{ width: '100%', display: 'block' }} />
+                {rod.imageUrl && (
+                  <img src={rod.imageUrl} alt="" style={{
+                    position: 'absolute', top: '33%', left: '12%', width: '51%',
+                    transform: 'rotate(-1deg)', transformOrigin: 'bottom right',
+                    pointerEvents: 'none',
+                  }} />
+                )}
+                {hook.imageUrl && (
+                  <img src={hook.imageUrl} alt="" style={{
+                    position: 'absolute', top: '81%', left: '9%', width: '16%',
+                    transform: 'rotate(-30deg)', transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                  }} />
+                )}
               </div>
-
-              {/* Special Items */}
-              {ownedSpecials.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#7a6fa0', marginBottom: 2 }}>Special Items</p>
-                  {ownedSpecials.map(item => (
-                    <div key={item.id} style={{
-                      background: `linear-gradient(130deg, ${item.color}12 0%, rgba(4,10,20,0.88) 55%)`,
-                      border: `1px solid ${item.color}40`,
-                      borderRadius: 14,
-                      padding: '0.85rem 1rem',
-                      display: 'flex', alignItems: 'center', gap: 14,
-                      boxShadow: `0 0 20px ${item.color}14`,
-                    }}>
-                      {item.image
-                        ? <img src={item.image} alt={item.name} style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 0 10px ${item.color}88)` }} />
-                        : <div style={{ width: 44, height: 44, borderRadius: 10, background: item.color + '22', border: `1px solid ${item.color}44`, flexShrink: 0 }} />
-                      }
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: item.color, lineHeight: 1.2, marginBottom: 4 }}>{item.name}</p>
-                        <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a8a5a0', lineHeight: 1.5 }}>{item.description}</p>
-                        <span style={{
-                          display: 'inline-block', marginTop: 6,
-                          fontSize: '0.6rem', padding: '0.15rem 0.5rem', borderRadius: '2rem',
-                          background: item.color + '18', border: `1px solid ${item.color}40`, color: item.color,
-                          fontFamily: 'var(--font-karla)', fontWeight: 700,
-                          textTransform: 'uppercase', letterSpacing: '0.1em',
-                        }}>
-                          {item.effectLabel}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Raid Loot */}
-              {ownedRaidItems.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#60a5fa88', marginBottom: 2 }}>Raid Loot</p>
-                  {ownedRaidItems.map(item => {
-                    const rarityColors: Record<string, string> = { common: '#9ca3af', uncommon: '#4ade80', rare: '#60a5fa', epic: '#a78bfa', legendary: '#f0c040' }
-                    const c = rarityColors[item.rarity] ?? '#60a5fa'
-                    return (
-                      <div key={item.id} style={{
-                        background: `linear-gradient(130deg, ${c}10 0%, rgba(4,10,20,0.88) 55%)`,
-                        border: `1px solid ${c}35`,
-                        borderRadius: 14,
-                        padding: '0.85rem 1rem',
-                        display: 'flex', alignItems: 'center', gap: 14,
-                      }}>
-                        {item.image
-                          ? <img src={item.image} alt={item.name} style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 0 10px ${c}66)` }} />
-                          : <div style={{ width: 44, height: 44, borderRadius: 10, background: c + '22', border: `1px solid ${c}44`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>{item.emoji}</div>
-                        }
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: c, lineHeight: 1.2, marginBottom: 4 }}>{item.name}</p>
-                          <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a8a5a0', lineHeight: 1.5 }}>{item.description}</p>
-                          <span style={{
-                            display: 'inline-block', marginTop: 6,
-                            fontSize: '0.6rem', padding: '0.15rem 0.5rem', borderRadius: '2rem',
-                            background: c + '18', border: `1px solid ${c}35`, color: c,
-                            fontFamily: 'var(--font-karla)', fontWeight: 700,
-                            textTransform: 'uppercase', letterSpacing: '0.1em',
-                          }}>{item.source}</span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 0, padding: '0 20px' }}>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: rod.color + 'aa', marginBottom: 3 }}>Rod</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d8d5d0', lineHeight: 1.2 }}>{rod.name}</p>
+              </div>
+              <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: hook.color + 'aa', marginBottom: 3 }}>Hook</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d8d5d0', lineHeight: 1.2 }}>{hook.name}</p>
+              </div>
             </div>
           </div>
 
