@@ -2585,29 +2585,23 @@ export default function FishingGame({
                       transition={{ type: 'spring', stiffness: 380, damping: 22 }}
                       style={{
                         position: 'relative',
-                        background: 'rgba(20,12,4,0.60)',
-                        border: '1px solid #d9770640',
+                        background: 'rgba(4,10,18,0.52)',
+                        border: '1px solid rgba(255,255,255,0.12)',
                         borderRadius: 20,
                         padding: '1.1rem 1.75rem',
                         textAlign: 'center',
-                        boxShadow: '0 0 32px rgba(217,119,6,0.20)',
                       }}
                     >
-                      <motion.p
-                        className="font-karla font-700"
-                        animate={{ opacity: [1, 0.75, 1] }}
-                        transition={{ duration: 1.0, repeat: Infinity, ease: 'easeInOut' }}
-                        style={{ fontSize: '1rem', color: '#fbbf24', textShadow: '0 0 16px rgba(251,191,36,0.6)' }}
-                      >
+                      <p className="font-karla font-400" style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.65)' }}>
                         Something heavy... and square?
-                      </motion.p>
+                      </p>
                       <div style={{
                         position: 'absolute', bottom: -7, left: '50%',
                         transform: 'translateX(-50%) rotate(45deg)',
                         width: 12, height: 12,
-                        background: 'rgba(20,12,4,0.60)',
-                        borderRight: '1px solid #d9770640',
-                        borderBottom: '1px solid #d9770640',
+                        background: 'rgba(4,10,18,0.52)',
+                        borderRight: '1px solid rgba(255,255,255,0.12)',
+                        borderBottom: '1px solid rgba(255,255,255,0.12)',
                       }} />
                     </motion.div>
                   </motion.div>
