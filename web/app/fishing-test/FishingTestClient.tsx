@@ -14,15 +14,15 @@ const FRAMES: Record<Frame, string> = {
 
 // Per-frame rod/hook overlay config — % relative to the character container
 const ROD_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
-  rest: { top: -8,  left: -12, width: 78, rotate: 0   },
+  rest: { top: 6,   left: -1,  width: 68, rotate: -1  },
   wait: { top: -5,  left: -10, width: 82, rotate: 0   },
   cast: { top: -15, left: -8,  width: 72, rotate: -45 },
 }
 
 const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
-  rest: { top: 72,  left: -2,  width: 12, rotate: 0  },
-  wait: { top: 78,  left: -4,  width: 12, rotate: 0  },
-  cast: { top: -8,  left: -2,  width: 12, rotate: 20 },
+  rest: { top: 76,  left: -6,  width: 25, rotate: -37 },
+  wait: { top: 58,  left: -4,  width: 25, rotate: 0   },
+  cast: { top: -8,  left: -2,  width: 12, rotate: 20  },
 }
 
 // Character position on the background — % of the phone preview container
