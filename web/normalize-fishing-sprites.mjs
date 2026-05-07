@@ -1,11 +1,6 @@
-// Normalizes the three fishing character sprites onto a shared canvas so
-// they appear the same size when rendered at the same CSS width%.
-// Each crop is bottom-anchored and horizontally centered within the canvas.
-//
-// Source crops from newfishing.png (1920x1080):
-//   rest: left=218, top=1,   w=674, h=482
-//   wait: left=115, top=613, w=807, h=438
-//   cast: left=1011,top=150, w=794, h=713
+// Normalizes the three fishing character sprites onto a shared canvas.
+// Each crop is anchored so the boat bottom (lowest opaque pixel row)
+// lands at the same Y coordinate on the canvas.
 //
 // Usage: node normalize-fishing-sprites.mjs
 
@@ -23,32 +18,43 @@ const CROPS = [
   { name: 'fishing_cast', left: 1011,top: 150,  width: 794, height: 713 },
 ]
 
-// Canvas size: wider than widest crop, taller than tallest crop
-const CANVAS_W = 850
-const CANVAS_H = 750
+const CANVAS_W = 900
+const CANVAS_H = 800
+const BOAT_BOTTOM_Y = 780  // where the boat bottom lands on every canvas
+
+async function findLowestOpaqueRow(buf, width, height) {
+  // buf is raw RGBA, 4 bytes per pixel
+  for (let y = height - 1; y >= 0; y--) {
+    for (let x = 0; x < width; x++) {
+      const alpha = buf[(y * width + x) * 4 + 3]
+      if (alpha > 10) return y
+    }
+  }
+  return height - 1
+}
 
 async function run() {
   for (const crop of CROPS) {
-    // Extract the crop from the source sheet as raw RGBA pixels
-    const cropped = await sharp(SRC)
+    const { data: buf, info } = await sharp(SRC)
       .extract({ left: crop.left, top: crop.top, width: crop.width, height: crop.height })
       .ensureAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true })
 
-    // Position: bottom-anchored, horizontally centered
-    const left = Math.round((CANVAS_W - crop.width) / 2)
-    const top  = CANVAS_H - crop.height
+    const boatBottomInCrop = await findLowestOpaqueRow(buf, info.width, info.height)
 
-    // Composite onto transparent canvas
+    // Anchor: boat bottom in crop must land at BOAT_BOTTOM_Y on canvas
+    const topOnCanvas = BOAT_BOTTOM_Y - boatBottomInCrop
+    const leftOnCanvas = Math.round((CANVAS_W - crop.width) / 2)
+
     await sharp({
       create: { width: CANVAS_W, height: CANVAS_H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } }
     })
-      .composite([{ input: cropped.data, raw: cropped.info, left, top }])
+      .composite([{ input: buf, raw: { width: info.width, height: info.height, channels: 4 }, left: leftOnCanvas, top: topOnCanvas }])
       .png()
       .toFile(path.join(OUT, `${crop.name}.png`))
 
-    console.log(`✓ ${crop.name}.png  (placed at ${left}, ${top} on ${CANVAS_W}×${CANVAS_H} canvas)`)
+    console.log(`✓ ${crop.name}.png  boat bottom row=${boatBottomInCrop}, placed top=${topOnCanvas} left=${leftOnCanvas}`)
   }
 }
 
