@@ -21,8 +21,8 @@ const PETE_LOOT = [
 ]
 const PETE_LOOT_TOTAL = PETE_LOOT.reduce((s, i) => s + i.weight, 0)
 
-const PETE_PORTRAIT  = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/barnacle_pete.png'
-const BRUTE_IMG      = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/enemytier1.png'
+const PETE_PORTRAIT   = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/barnacle_pete.png'
+const REEF_RAIDER_IMG = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/reefraider.png'
 
 interface Props {
   navLevel: number
@@ -69,7 +69,7 @@ export default function RaidCard({ navLevel, hasCompletedPracticeRaid }: Props) 
                 overflow: 'hidden',
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={BRUTE_IMG} alt="Reef Raider" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'bottom', filter: 'hue-rotate(180deg) brightness(0.8)', transform: 'scaleX(-1)' }} />
+                <img src={REEF_RAIDER_IMG} alt="Reef Raider" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
               <div>
                 <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8', lineHeight: 1.2 }}>
