@@ -169,7 +169,7 @@ export async function castLine(baitType: string, habitat: string, noBait = false
   return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs }
 }
 
-export const CRATE_FISH_ID = -1
+const CRATE_FISH_ID = -1
 
 const PERFECT_BAIT_SAVE_CHANCE = 0.5
 
