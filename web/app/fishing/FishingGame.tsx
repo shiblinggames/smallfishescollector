@@ -1513,7 +1513,7 @@ export default function FishingGame({
   const [retryFlash, setRetryFlash] = useState(false)
   const [missResult, setMissResult] = useState<ZoneType | null>(null)
   const [fishingXP, setFishingXP]   = useState(initialFishingXP)
-  const [xpPopup, setXpPopup]       = useState<{ value: number; id: number } | null>(null)
+  const [xpPopup, setXpPopup]       = useState<{ value: number; id: number; prestige?: boolean } | null>(null)
   const [levelUpNotif, setLevelUpNotif] = useState<number | null>(null)
   const [podiumNotif, setPodiumNotif] = useState<PodiumNotif | null>(null)
   const podiumPositionsRef = useRef<{ fishingLevel: number | null; perfectStreak: number | null }>({ fishingLevel: null, perfectStreak: null })
@@ -2076,7 +2076,7 @@ export default function FishingGame({
         const oldLevel = getLevelFromXP(fishingXP)
         const newLevel = getLevelFromXP(newXP)
         setFishingXP(newXP)
-        setXpPopup({ value: xpGained, id: Date.now() })
+        setXpPopup({ value: xpGained, id: Date.now(), prestige: (prestigeLevels[fish.habitat] ?? 0) > 0 })
         if (newLevel > oldLevel) {
           setLevelUpNotif(newLevel)
           checkLeaderboardPosition('fishingLevel').then(r => {
@@ -2404,12 +2404,13 @@ export default function FishingGame({
                     className="font-karla font-700"
                     style={{
                       position: 'absolute', right: 8, top: 0,
-                      fontSize: '0.8rem', color: '#4ade80',
+                      fontSize: '0.8rem',
+                      color: xpPopup.prestige ? '#c084fc' : '#4ade80',
                       pointerEvents: 'none',
-                      textShadow: '0 0 10px rgba(74,222,128,0.7)',
+                      textShadow: xpPopup.prestige ? '0 0 10px rgba(192,132,252,0.8)' : '0 0 10px rgba(74,222,128,0.7)',
                     }}
                   >
-                    +{xpPopup.value} XP
+                    +{xpPopup.value} XP{xpPopup.prestige ? ' ✦' : ''}
                   </motion.p>
                 )}
               </AnimatePresence>
