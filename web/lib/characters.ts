@@ -11,6 +11,7 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'pink',    name: 'Pink',   free: true  },
   { id: 'sand',    name: 'Sand',   free: false },
   { id: 'sky',     name: 'Sky',    free: false },
+  { id: 'golden',  name: 'Golden', free: false },
 ]
 
 export function getCharacterSprites(colorId: string) {
