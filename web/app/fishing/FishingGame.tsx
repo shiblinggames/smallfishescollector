@@ -3792,7 +3792,7 @@ export default function FishingGame({
                     </div>
                     {!isLocked && (
                       <p className="font-karla font-500" style={{ fontSize: '0.65rem', color: `${zoneColor}88`, letterSpacing: '0.06em' }}>
-                        Ancient trophies · 3-stage boss catches
+                        Ancient trophies
                       </p>
                     )}
                   </button>
@@ -3815,10 +3815,12 @@ export default function FishingGame({
                               border: `1px solid ${caught ? zoneColor + '60' : 'rgba(255,255,255,0.08)'}`,
                               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem',
                             }}>
-                              {caught ? '🏆' : '🔒'}
+                              {caught ? '🏆' : <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.15)' }}>—</span>}
                             </div>
                             <div>
-                              <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: caught ? '#f0ede8' : 'rgba(255,255,255,0.3)', lineHeight: 1.2 }}>{f.name}</p>
+                              <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: caught ? '#f0ede8' : 'rgba(255,255,255,0.2)', lineHeight: 1.2 }}>
+                                {caught ? f.name : '??? Undiscovered'}
+                              </p>
                               {caught && <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: `${zoneColor}99`, fontStyle: 'italic' }}>{f.scientific_name}</p>}
                             </div>
                             {caught && (
