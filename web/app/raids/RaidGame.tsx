@@ -1416,18 +1416,19 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
       <AnimatePresence>
         {phase === 'dead' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', zIndex: 50 }}
-            onPointerDown={startGame}>
+            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', zIndex: 50 }}>
             <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.32)', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>Lost at Sea</p>
             <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '3rem', margin: '0 0 4px' }}>{streak}</p>
-            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.28)', fontSize: '0.7rem', marginBottom: 4 }}>
+            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.28)', fontSize: '0.7rem', marginBottom: 28 }}>
               {streak === 1 ? '1 ship sunk' : `${streak} ships sunk`}
             </p>
-            {best > 0 && <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.22)', fontSize: '0.68rem', marginBottom: 28 }}>Best: {best}</p>}
-            {best === 0 && <div style={{ marginBottom: 28 }} />}
-            <button className="font-karla font-700" style={{ padding: '11px 32px', background: 'rgba(56,189,248,0.14)', border: '1px solid rgba(56,189,248,0.38)', borderRadius: 12, color: '#38bdf8', fontSize: '0.88rem', cursor: 'pointer' }}>
-              Try Again
-            </button>
+            <motion.button
+              onPointerDown={() => router.push('/expeditions')}
+              whileTap={{ scale: 0.96 }}
+              className="font-karla font-700"
+              style={{ padding: '12px 32px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, color: '#c0b8a8', fontSize: '0.88rem', cursor: 'pointer', letterSpacing: '0.04em' }}>
+              Return to Port
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>
