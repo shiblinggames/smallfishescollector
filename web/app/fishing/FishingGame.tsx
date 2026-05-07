@@ -2358,38 +2358,47 @@ export default function FishingGame({
           />
         </motion.div>
 
-        {/* Character + rod + hook overlay */}
+        {/* Character + rod + hook overlay — all 3 frames always in DOM so sprites are pre-decoded */}
         <motion.div
           animate={bgBobAnimate}
           transition={bgBobTransition}
           style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
         >
-          <div style={{
-            position: 'absolute',
-            bottom: `${cp.bottom}%`,
-            left: `${cp.left}%`,
-            width: `${cp.width}%`,
-          }}>
-            <img src={CHAR_SRC[charFrame]} alt="" style={{ width: '100%', display: 'block' }} />
-            {rod.imageUrl && (
-              <img src={rod.imageUrl} alt="" style={{
-                position: 'absolute', top: `${crc.top}%`, left: `${crc.left}%`,
-                width: `${crc.width}%`,
-                transform: `rotate(${crc.rotate}deg)`,
-                transformOrigin: 'bottom right',
-                pointerEvents: 'none',
-              }} />
-            )}
-            {hook.imageUrl && !chc.hidden && (
-              <img src={hook.imageUrl} alt="" style={{
-                position: 'absolute', top: `${chc.top}%`, left: `${chc.left}%`,
-                width: `${chc.width}%`,
-                transform: `rotate(${chc.rotate}deg)`,
-                transformOrigin: 'center center',
-                pointerEvents: 'none',
-              }} />
-            )}
-          </div>
+          {(Object.keys(CHAR_SRC) as CharFrame[]).map(f => {
+            const p   = CHAR_POS[f]
+            const rc  = CHAR_ROD_OVERLAY[f]
+            const hc  = CHAR_HOOK_OVERLAY[f]
+            const visible = f === charFrame
+            return (
+              <div key={f} style={{
+                position: 'absolute',
+                bottom: `${p.bottom}%`,
+                left: `${p.left}%`,
+                width: `${p.width}%`,
+                visibility: visible ? 'visible' : 'hidden',
+              }}>
+                <img src={CHAR_SRC[f]} alt="" style={{ width: '100%', display: 'block' }} />
+                {rod.imageUrl && (
+                  <img src={rod.imageUrl} alt="" style={{
+                    position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
+                    width: `${rc.width}%`,
+                    transform: `rotate(${rc.rotate}deg)`,
+                    transformOrigin: 'bottom right',
+                    pointerEvents: 'none',
+                  }} />
+                )}
+                {hook.imageUrl && !hc.hidden && (
+                  <img src={hook.imageUrl} alt="" style={{
+                    position: 'absolute', top: `${hc.top}%`, left: `${hc.left}%`,
+                    width: `${hc.width}%`,
+                    transform: `rotate(${hc.rotate}deg)`,
+                    transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                  }} />
+                )}
+              </div>
+            )
+          })}
         </motion.div>
 
         {/* Zone darkness overlay — gradient from transparent (top 20%) to dark (bottom) */}
