@@ -151,7 +151,7 @@ export async function castLine(baitType: string, habitat: string, noBait = false
       await admin.from('bait_inventory').update({ quantity: baitRow.quantity - 1 }).eq('user_id', user.id).eq('bait_type', baitType)
     }
     const crateWait = { shallows: 4000, open_waters: 7000, deep: 11000, abyss: 16000 }[habitat] ?? 6000
-    return { fishId: CRATE_FISH_ID, catchDifficulty: 3, biteRarity: 3, waitMs: crateWait }
+    return { fishId: CRATE_FISH_ID, catchDifficulty: 1, biteRarity: 1, waitMs: crateWait }
   }
 
   if (!noBait && baitRow) {

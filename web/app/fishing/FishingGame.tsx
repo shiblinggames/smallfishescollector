@@ -2879,83 +2879,84 @@ export default function FishingGame({
                       initial={{ opacity: 0, scale: 0.95, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }}
                       transition={{ type: 'spring', stiffness: 340, damping: 22 }}
                       style={{
-                        background: 'rgba(14,8,2,0.92)',
-                        border: `1px solid ${cratePhase === 'revealed' ? '#d9770688' : '#d9770640'}`,
-                        borderRadius: 18,
-                        padding: '1.2rem 1.25rem',
-                        boxShadow: cratePhase === 'revealed' ? '0 0 40px rgba(217,119,6,0.28)' : '0 0 20px rgba(217,119,6,0.12)',
+                        background: 'rgba(6,14,22,0.96)',
+                        border: `1px solid ${cratePhase === 'revealed' ? 'rgba(251,191,36,0.35)' : 'rgba(255,255,255,0.1)'}`,
+                        borderRadius: 20,
+                        padding: '1.4rem 1.25rem 1.1rem',
+                        boxShadow: cratePhase === 'revealed' ? '0 0 50px rgba(251,191,36,0.18), 0 0 120px rgba(251,191,36,0.08)' : 'none',
                         textAlign: 'center',
-                        transition: 'box-shadow 0.4s, border-color 0.4s',
                       }}
                     >
-                      <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: '#92400e', marginBottom: '0.75rem' }}>
-                        Sunken Crate
-                      </p>
-
-                      {/* Crate image — shakes while rolling */}
-                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
+                      {/* Crate image */}
+                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.9rem' }}>
                         <motion.img
                           src={cratePhase === 'revealed' ? '/crateopen.png' : '/crateclosed.png'}
                           alt="crate"
                           animate={cratePhase === 'rolling'
-                            ? { rotate: [-4, 4, -4, 3, -3, 0], scale: [1, 1.04, 1] }
+                            ? { rotate: [-5, 5, -4, 4, -3, 3, 0], scale: [1, 1.05, 1] }
                             : cratePhase === 'revealed'
-                            ? { scale: [1, 1.12, 1] }
-                            : { scale: 1, rotate: 0 }
-                          }
-                          transition={cratePhase === 'rolling'
-                            ? { duration: 0.35, repeat: Infinity, ease: 'easeInOut' }
-                            : cratePhase === 'revealed'
-                            ? { duration: 0.45, ease: 'easeOut' }
+                            ? { scale: [0.85, 1.1, 1] }
                             : {}
                           }
-                          style={{ height: 80, objectFit: 'contain', cursor: cratePhase === 'closed' ? 'pointer' : 'default' }}
+                          transition={cratePhase === 'rolling'
+                            ? { duration: 0.3, repeat: Infinity, ease: 'easeInOut' }
+                            : cratePhase === 'revealed'
+                            ? { duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }
+                            : {}
+                          }
+                          style={{ height: 96, objectFit: 'contain', cursor: cratePhase === 'closed' ? 'pointer' : 'default' }}
                           onClick={cratePhase === 'closed' ? handleOpenCrate : undefined}
                         />
                       </div>
 
-                      {/* Phase: closed — tap prompt */}
+                      {/* Closed: label + tap button */}
                       {cratePhase === 'closed' && (
-                        <motion.div
-                          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                          style={{ cursor: 'pointer' }}
-                          onClick={handleOpenCrate}
-                        >
-                          <motion.p
-                            className="font-cinzel font-700"
-                            animate={{ opacity: [1, 0.6, 1] }}
-                            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-                            style={{ fontSize: '0.85rem', color: '#fbbf24' }}
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                          <p className="font-karla font-600" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginBottom: '0.7rem', letterSpacing: '0.06em' }}>
+                            You reeled up a sunken crate
+                          </p>
+                          <motion.button
+                            onClick={handleOpenCrate}
+                            whileTap={{ scale: 0.96 }}
+                            animate={{ boxShadow: ['0 0 0px rgba(251,191,36,0)', '0 0 18px rgba(251,191,36,0.45)', '0 0 0px rgba(251,191,36,0)'] }}
+                            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                            className="font-karla font-700 uppercase tracking-[0.14em]"
+                            style={{
+                              width: '100%', padding: '0.65rem 0',
+                              borderRadius: 12,
+                              background: 'linear-gradient(135deg, rgba(217,119,6,0.4), rgba(251,191,36,0.18))',
+                              border: '1px solid rgba(251,191,36,0.5)',
+                              color: '#fbbf24',
+                              fontSize: '0.72rem',
+                              cursor: 'pointer',
+                            }}
                           >
-                            Tap to Open
-                          </motion.p>
+                            Open Crate
+                          </motion.button>
                         </motion.div>
                       )}
 
-                      {/* Phase: rolling — loot ticker with images */}
+                      {/* Rolling: slot ticker */}
                       {cratePhase === 'rolling' && (
-                        <div style={{
-                          minHeight: 60, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: 'rgba(0,0,0,0.4)', borderRadius: 10, padding: '0.5rem 1.2rem',
-                          overflow: 'hidden',
-                        }}>
+                        <div style={{ minHeight: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                           <AnimatePresence mode="wait">
                             {crateRollDisplay && (
                               <motion.div
                                 key={crateRollDisplay.type === 'doubloons' ? `d-${crateRollDisplay.amount}` : `b-${crateRollDisplay.baitType}`}
-                                initial={{ opacity: 0, y: -10 }}
+                                initial={{ opacity: 0, y: -14 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 10 }}
-                                transition={{ duration: 0.07 }}
-                                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+                                exit={{ opacity: 0, y: 14 }}
+                                transition={{ duration: 0.06 }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 10 }}
                               >
                                 <img
                                   src={crateRollDisplay.type === 'doubloons' ? '/smallpile.png' : (getBait(crateRollDisplay.baitType).imageUrl ?? '/worms.png')}
-                                  style={{ height: 32, width: 32, objectFit: 'contain' }}
+                                  style={{ height: 36, width: 36, objectFit: 'contain' }}
                                 />
                                 <p className="font-cinzel font-700" style={{
-                                  fontSize: '0.8rem',
+                                  fontSize: '1.05rem',
                                   color: crateRollDisplay.type === 'doubloons' ? '#fbbf24' : '#86efac',
+                                  lineHeight: 1,
                                 }}>
                                   {crateRollDisplay.type === 'doubloons'
                                     ? `${crateRollDisplay.amount.toLocaleString()} ⟡`
@@ -2967,48 +2968,50 @@ export default function FishingGame({
                         </div>
                       )}
 
-                      {/* Phase: revealed — final reward + claim */}
+                      {/* Revealed: reward + claim */}
                       {cratePhase === 'revealed' && crateRollDisplay && (
                         <motion.div
-                          initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                          transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}
+                          initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.1 }}
                         >
-                          <img
-                            src={crateRollDisplay.type === 'doubloons' ? '/smallpile.png' : (getBait(crateRollDisplay.baitType).imageUrl ?? '/worms.png')}
-                            style={{ height: 44, width: 44, objectFit: 'contain' }}
-                          />
-                          <p
-                            className="font-cinzel font-700"
-                            style={{
-                              fontSize: '1.5rem',
-                              color: crateRollDisplay.type === 'doubloons' ? '#fbbf24' : '#86efac',
-                              textShadow: crateRollDisplay.type === 'doubloons' ? '0 0 24px rgba(251,191,36,0.6)' : '0 0 20px rgba(134,239,172,0.5)',
-                              lineHeight: 1,
-                            }}
-                          >
-                            {crateRollDisplay.type === 'doubloons'
-                              ? `+${crateRollDisplay.amount.toLocaleString()} ⟡`
-                              : `×${crateResult.type === 'bait' ? crateResult.quantity : 10} ${crateRollDisplay.baitName}`}
-                          </p>
-                          <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', marginBottom: '0.45rem' }}>
-                            {crateRollDisplay.type === 'doubloons' ? 'Doubloons' : 'Bait'}
-                          </p>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: '0.9rem' }}>
+                            <motion.img
+                              src={crateRollDisplay.type === 'doubloons' ? '/smallpile.png' : (getBait(crateRollDisplay.baitType).imageUrl ?? '/worms.png')}
+                              initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                              transition={{ type: 'spring', stiffness: 420, damping: 18, delay: 0.15 }}
+                              style={{ height: 48, width: 48, objectFit: 'contain' }}
+                            />
+                            <div style={{ textAlign: 'left' }}>
+                              <p className="font-cinzel font-700" style={{
+                                fontSize: '1.55rem',
+                                color: crateRollDisplay.type === 'doubloons' ? '#fbbf24' : '#86efac',
+                                textShadow: crateRollDisplay.type === 'doubloons' ? '0 0 28px rgba(251,191,36,0.55)' : '0 0 22px rgba(134,239,172,0.5)',
+                                lineHeight: 1,
+                              }}>
+                                {crateRollDisplay.type === 'doubloons'
+                                  ? `+${crateRollDisplay.amount.toLocaleString()} ⟡`
+                                  : `×${crateResult.type === 'bait' ? crateResult.quantity : 10}`}
+                              </p>
+                              <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
+                                {crateRollDisplay.type === 'doubloons' ? 'Doubloons' : crateRollDisplay.baitName}
+                              </p>
+                            </div>
+                          </div>
                           <motion.button
                             onClick={handleClaimCrate}
-                            whileTap={{ scale: 0.96 }}
+                            whileTap={{ scale: 0.97 }}
                             className="font-karla font-700 uppercase tracking-[0.14em]"
                             style={{
-                              padding: '0.55rem 1.8rem',
-                              borderRadius: 10,
+                              width: '100%', padding: '0.65rem 0',
+                              borderRadius: 12,
                               background: crateRollDisplay.type === 'doubloons'
-                                ? 'linear-gradient(135deg, rgba(217,119,6,0.5), rgba(251,191,36,0.25))'
-                                : 'linear-gradient(135deg, rgba(20,83,45,0.5), rgba(134,239,172,0.2))',
-                              border: crateRollDisplay.type === 'doubloons' ? '1px solid #d97706aa' : '1px solid #86efac88',
+                                ? 'linear-gradient(135deg, rgba(217,119,6,0.45), rgba(251,191,36,0.2))'
+                                : 'linear-gradient(135deg, rgba(20,83,45,0.5), rgba(134,239,172,0.18))',
+                              border: crateRollDisplay.type === 'doubloons' ? '1px solid rgba(251,191,36,0.5)' : '1px solid rgba(134,239,172,0.45)',
                               color: crateRollDisplay.type === 'doubloons' ? '#fbbf24' : '#86efac',
                               fontSize: '0.72rem',
                               cursor: 'pointer',
-                              boxShadow: crateRollDisplay.type === 'doubloons' ? '0 0 16px rgba(217,119,6,0.3)' : '0 0 14px rgba(134,239,172,0.25)',
+                              boxShadow: crateRollDisplay.type === 'doubloons' ? '0 0 20px rgba(251,191,36,0.22)' : '0 0 18px rgba(134,239,172,0.18)',
                             }}
                           >
                             Claim
