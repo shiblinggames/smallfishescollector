@@ -244,10 +244,46 @@ const STREAK_MESSAGES: [number, string[]][] = [
   ]],
 ]
 
-function pickWaitMessage(zone: ZoneKey, streak: number): string {
+const SPECIAL_ITEM_TIPS: { condition: (ctx: TipContext) => boolean; tip: string }[] = [
+  {
+    condition: ctx => !ctx.hasTideTurner,
+    tip: "Tip: the Tide Turner lets you skip a hooked fish without breaking your perfect streak — found on voyages.",
+  },
+  {
+    condition: ctx => !ctx.hasPhantomHook,
+    tip: "Tip: the Phantom Hook gives a 25% chance to save your bait on every cast — it's a voyage reward.",
+  },
+  {
+    condition: ctx => !ctx.hasAutoCaster,
+    tip: "Tip: the Auto Caster resets automatically after every catch — pick it up in the gear shop for 5,000 ⟡.",
+  },
+]
+
+const SKIN_TIPS = [
+  "Tip: reach Fishing Level 50 to unlock the Forest character color.",
+  "Tip: prestige any zone 3 times to unlock the Sand character color.",
+  "Tip: reach Navigation Level 50 on voyages to unlock the Sky character color.",
+  "Tip: catch all 6 Ancient Deep trophies to unlock the Golden character color.",
+  "Tip: open fishing crates for a rare chance to find the Mint character color.",
+]
+
+type TipContext = { hasTideTurner: boolean; hasPhantomHook: boolean; hasAutoCaster: boolean }
+
+function pickWaitMessage(zone: ZoneKey, streak: number, ctx?: TipContext): string {
   for (const [threshold, msgs] of STREAK_MESSAGES) {
     if (streak >= threshold) return msgs[Math.floor(Math.random() * msgs.length)]
   }
+
+  // 1-in-6 chance to show a contextual tip instead of a zone message
+  if (ctx && Math.random() < 1 / 6) {
+    const available: string[] = []
+    for (const { condition, tip } of SPECIAL_ITEM_TIPS) {
+      if (condition(ctx)) available.push(tip)
+    }
+    available.push(...SKIN_TIPS)
+    if (available.length > 0) return available[Math.floor(Math.random() * available.length)]
+  }
+
   const pool = WAIT_MESSAGES[zone]
   return pool[Math.floor(Math.random() * pool.length)]
 }
@@ -1771,7 +1807,7 @@ export default function FishingGame({
     const isRedTide = ev?.type === 'redtide'
 
     setPerfectBurstKey(0)
-    setWaitMessage(pickWaitMessage(selectedZone as ZoneKey, perfectStreak))
+    setWaitMessage(pickWaitMessage(selectedZone as ZoneKey, perfectStreak, { hasTideTurner, hasPhantomHook, hasAutoCaster: ownedAutoCaster }))
     if (!isBloom) deductBait(selectedBait)
     await new Promise(r => setTimeout(r, 200))
     setPhase('casting')
