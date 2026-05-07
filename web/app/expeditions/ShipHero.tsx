@@ -263,14 +263,7 @@ export default function ShipHero({
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
-            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#c8a060' }}>Edit Loadout</span>
-            <span className="font-karla" style={{ fontSize: '0.52rem', color: '#6a5838' }}>
-              {hasCrew
-                ? `${slots.filter(Boolean).length} crew assigned · Skins · Items`
-                : 'Choose crew · Skins · Items'}
-            </span>
-          </div>
+          <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: '#d4a860' }}>View Loadout &amp; Assign Crew</span>
           <span style={{ fontSize: '1rem', color: '#8a6838', lineHeight: 1 }}>›</span>
         </button>
       </div>
