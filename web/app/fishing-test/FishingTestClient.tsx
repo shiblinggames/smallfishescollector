@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { RODS } from '@/lib/rods'
 import { HOOKS } from '@/lib/hooks'
+import { BAITS } from '@/lib/bait'
 
 type Frame = 'rest' | 'wait' | 'cast'
 
@@ -12,7 +13,6 @@ const FRAMES: Record<Frame, string> = {
   cast: '/fishing_cast.png',
 }
 
-// Per-frame rod/hook overlay config — % relative to the character container
 const ROD_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
   rest: { top: 33, left: 12, width: 51, rotate: -1  },
   wait: { top: 24, left: 23, width: 51, rotate: -22 },
@@ -32,11 +32,24 @@ const ZONE_BG: Record<string, string> = {
   abyss:       '/fishingbackground4.jpeg',
 }
 
-// Per-frame character position on the background — % of the phone preview container
 const CHAR_DEFAULT: Record<Frame, { bottom: number; left: number; width: number }> = {
   rest: { bottom: 60, left: 31, width: 70 },
   wait: { bottom: 57, left: 26, width: 70 },
   cast: { bottom: 60, left: 26, width: 70 },
+}
+
+const BAITS_WITH_IMAGES = BAITS.filter(b => b.imageUrl)
+
+// Default base position for all baits (tune per-bait)
+const makeBaitBase = () => ({ top: 78, left: 30, width: 10, rotate: 0 })
+const BAIT_BASE_DEFAULT: Record<string, { top: number; left: number; width: number; rotate: number }> =
+  Object.fromEntries(BAITS_WITH_IMAGES.map(b => [b.type, makeBaitBase()]))
+
+// Per-frame delta applied on top of base (same for all baits)
+const BAIT_FRAME_OFFSET_DEFAULT: Record<Frame, { dTop: number; dLeft: number }> = {
+  rest: { dTop: 0,  dLeft: 0  },
+  wait: { dTop: 0,  dLeft: 0  },
+  cast: { dTop: 0,  dLeft: 0  },
 }
 
 function Slider({ label, value, min, max, step = 1, onChange }: {
@@ -52,7 +65,6 @@ function Slider({ label, value, min, max, step = 1, onChange }: {
   )
 }
 
-// Animation sequence: [frame, duration ms]
 const ANIM_SEQUENCE: [Frame, number][] = [
   ['cast', 600],
   ['wait', 2500],
@@ -66,9 +78,12 @@ export default function FishingTestClient() {
   const [animating, setAnimating] = useState(false)
   const [rodTier, setRodTier] = useState(0)
   const [hookTier, setHookTier] = useState(0)
+  const [selectedBaitType, setSelectedBaitType] = useState(BAITS_WITH_IMAGES[0].type)
   const [rodCfg, setRodCfg] = useState(ROD_OVERLAY)
   const [hookCfg, setHookCfg] = useState(HOOK_OVERLAY)
   const [charCfg, setCharCfg] = useState(CHAR_DEFAULT)
+  const [baitBase, setBaitBase] = useState(BAIT_BASE_DEFAULT)
+  const [baitOffset, setBaitOffset] = useState(BAIT_FRAME_OFFSET_DEFAULT)
   const animRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function playAnimation() {
@@ -86,10 +101,14 @@ export default function FishingTestClient() {
 
   const rod  = RODS.find(r => r.tier === rodTier) ?? RODS[0]
   const hook = HOOKS.find(h => h.tier === hookTier) ?? HOOKS[0]
+  const bait = BAITS_WITH_IMAGES.find(b => b.type === selectedBaitType) ?? BAITS_WITH_IMAGES[0]
   const rc = rodCfg[frame]
   const hc = hookCfg[frame]
-
   const cp = charCfg[frame]
+  const bb = baitBase[selectedBaitType]
+  const bo = baitOffset[frame]
+  const baitTop  = bb.top  + bo.dTop
+  const baitLeft = bb.left + bo.dLeft
 
   function setChar(key: keyof typeof cp, val: number) {
     setCharCfg(prev => ({ ...prev, [frame]: { ...prev[frame], [key]: val } }))
@@ -100,51 +119,53 @@ export default function FishingTestClient() {
   function setHook(key: keyof typeof hc, val: number) {
     setHookCfg(prev => ({ ...prev, [frame]: { ...prev[frame], [key]: val } }))
   }
+  function setBait(key: keyof typeof bb, val: number) {
+    setBaitBase(prev => ({ ...prev, [selectedBaitType]: { ...prev[selectedBaitType], [key]: val } }))
+  }
+  function setBaitOff(key: keyof typeof bo, val: number) {
+    setBaitOffset(prev => ({ ...prev, [frame]: { ...prev[frame], [key]: val } }))
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#08121c', display: 'flex', gap: 0 }}>
 
       {/* ── Phone preview ── */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {/* Mimic the game's max-w-md container at phone aspect ratio */}
         <div style={{ position: 'relative', width: 390, height: 720, overflow: 'hidden', borderRadius: 12, boxShadow: '0 0 0 1px rgba(255,255,255,0.1)' }}>
 
-          {/* Zone background — fills container like the real game */}
-          <img
-            src={ZONE_BG[zone]}
-            alt=""
+          <img src={ZONE_BG[zone]} alt=""
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
           />
 
-          {/* Character + overlays — positioned on background */}
           <div style={{
             position: 'absolute',
             bottom: `${cp.bottom}%`,
             left: `${cp.left}%`,
             width: `${cp.width}%`,
           }}>
-            {/* Character sprite */}
             <img src={FRAMES[frame]} alt="" style={{ width: '100%', display: 'block' }} />
 
-            {/* Rod overlay */}
             {rod.imageUrl && (
               <img src={rod.imageUrl} alt="rod" style={{
                 position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
-                width: `${rc.width}%`,
-                transform: `rotate(${rc.rotate}deg)`,
-                transformOrigin: 'bottom right',
-                pointerEvents: 'none',
+                width: `${rc.width}%`, transform: `rotate(${rc.rotate}deg)`,
+                transformOrigin: 'bottom right', pointerEvents: 'none',
               }} />
             )}
 
-            {/* Hook overlay */}
             {hook.imageUrl && !hc.hidden && (
               <img src={hook.imageUrl} alt="hook" style={{
                 position: 'absolute', top: `${hc.top}%`, left: `${hc.left}%`,
-                width: `${hc.width}%`,
-                transform: `rotate(${hc.rotate}deg)`,
-                transformOrigin: 'center center',
-                pointerEvents: 'none',
+                width: `${hc.width}%`, transform: `rotate(${hc.rotate}deg)`,
+                transformOrigin: 'center center', pointerEvents: 'none',
+              }} />
+            )}
+
+            {bait.imageUrl && (
+              <img src={bait.imageUrl} alt="bait" style={{
+                position: 'absolute', top: `${baitTop}%`, left: `${baitLeft}%`,
+                width: `${bb.width}%`, transform: `rotate(${bb.rotate}deg)`,
+                transformOrigin: 'center center', pointerEvents: 'none',
               }} />
             )}
           </div>
@@ -170,7 +191,7 @@ export default function FishingTestClient() {
         <p style={{ fontWeight: 700, marginBottom: 8, color: '#fff' }}>Frame</p>
         <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
           {(['rest', 'wait', 'cast'] as Frame[]).map(f => (
-            <button key={f} onClick={() => { setFrame(f) }} style={{
+            <button key={f} onClick={() => setFrame(f)} style={{
               flex: 1, padding: '4px 0', borderRadius: 6, cursor: 'pointer',
               background: frame === f ? '#3b82f6' : 'rgba(255,255,255,0.08)',
               border: 'none', color: '#fff', fontWeight: frame === f ? 700 : 400,
@@ -197,7 +218,6 @@ export default function FishingTestClient() {
             <option key={r.tier} value={r.tier}>{r.name}</option>
           ))}
         </select>
-
         <p style={{ fontWeight: 600, marginBottom: 4, color: '#93c5fd' }}>Rod overlay ({frame})</p>
         <Slider label="top %"    value={rc.top}    min={-80} max={100}  onChange={v => setRod('top',    v)} />
         <Slider label="left %"   value={rc.left}   min={-80} max={100}  onChange={v => setRod('left',   v)} />
@@ -212,17 +232,35 @@ export default function FishingTestClient() {
             <option key={h.tier} value={h.tier}>{h.name}</option>
           ))}
         </select>
-
         <p style={{ fontWeight: 600, marginBottom: 4, color: '#6ee7b7' }}>Hook overlay ({frame})</p>
         <Slider label="top %"    value={hc.top}    min={-80} max={150}  onChange={v => setHook('top',    v)} />
         <Slider label="left %"   value={hc.left}   min={-80} max={100}  onChange={v => setHook('left',   v)} />
         <Slider label="width %"  value={hc.width}  min={2}   max={60}   onChange={v => setHook('width',  v)} />
         <Slider label="rotate °" value={hc.rotate} min={-180} max={180} onChange={v => setHook('rotate', v)} />
 
+        {/* Bait picker */}
+        <p style={{ fontWeight: 700, marginTop: 14, marginBottom: 6, color: '#fff' }}>Bait</p>
+        <select value={selectedBaitType} onChange={e => setSelectedBaitType(e.target.value)}
+          style={{ width: '100%', marginBottom: 10, padding: '4px 6px', background: '#1e2d3e', color: '#fff', border: '1px solid #334', borderRadius: 6 }}>
+          {BAITS_WITH_IMAGES.map(b => (
+            <option key={b.type} value={b.type}>{b.name}</option>
+          ))}
+        </select>
+
+        <p style={{ fontWeight: 600, marginBottom: 4, color: '#fca5a5' }}>Bait base ({selectedBaitType})</p>
+        <Slider label="top %"    value={bb.top}    min={-20} max={120}  onChange={v => setBait('top',    v)} />
+        <Slider label="left %"   value={bb.left}   min={-20} max={100}  onChange={v => setBait('left',   v)} />
+        <Slider label="width %"  value={bb.width}  min={2}   max={40}   onChange={v => setBait('width',  v)} />
+        <Slider label="rotate °" value={bb.rotate} min={-180} max={180} onChange={v => setBait('rotate', v)} />
+
+        <p style={{ fontWeight: 600, marginBottom: 4, marginTop: 8, color: '#fca5a5', opacity: 0.7 }}>Frame offset ({frame})</p>
+        <Slider label="dTop %"  value={bo.dTop}  min={-15} max={15} onChange={v => setBaitOff('dTop',  v)} />
+        <Slider label="dLeft %" value={bo.dLeft} min={-15} max={15} onChange={v => setBaitOff('dLeft', v)} />
+
         {/* Config dump */}
         <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Current config</p>
         <pre style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
-{`CHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}`}
+{`CHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBAIT_BASE:\n${JSON.stringify(baitBase, null, 2)}\n\nBAIT_OFFSET:\n${JSON.stringify(baitOffset, null, 2)}`}
         </pre>
       </div>
     </div>
