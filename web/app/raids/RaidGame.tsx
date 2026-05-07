@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { claimRaidLoot } from './actions'
-import { awardRaidKillXP, RAID_KILL_XP } from './raidXPActions'
+import { awardRaidKill } from './raidXPActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
@@ -132,12 +132,13 @@ function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: numb
 const SHOT_LABEL: Record<string, string> = { critical: 'Critical!', hit: 'Hit!', graze: 'Graze', miss: 'Miss' }
 const SHOT_COLOR: Record<string, string> = { critical: '#fbbf24', hit: '#4ade80', graze: '#94a3b8', miss: '#6b7280' }
 
-const KILL_GOLD: Record<string, number> = { brute: 20, sniper: 25, corsair: 35, pete: 0 }
+const KILL_GOLD: Record<string, number> = { brute: 20, sniper: 25, corsair: 35, pete: 180 }
+const KILL_XP:   Record<string, number> = { brute: 20, sniper: 30, corsair: 45, pete: 180 }
 function killGold(round: number): number {
   return KILL_GOLD[getEnemyForRound(round).id] ?? 0
 }
 function killXP(round: number): number {
-  return RAID_KILL_XP[getEnemyForRound(round).id] ?? 0
+  return KILL_XP[getEnemyForRound(round).id] ?? 0
 }
 function fmtGold(n: number) { return n.toLocaleString() }
 
@@ -410,8 +411,10 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
   const [playerActionPct, setPlayerActionPct] = useState(0)
   const [streak, setStreak]             = useState(0)
   const [best, setBest]                 = useState(0)
-  const [pot, setPot]                   = useState(0)
-  const [lastEarned, setLastEarned]     = useState(0)
+  const [winGold, setWinGold]           = useState(0)
+  const [winXP, setWinXP]               = useState(0)
+  const [winPhase, setWinPhase]         = useState<'summary' | 'claimed'>('summary')
+  const [winIsBoss, setWinIsBoss]       = useState(false)
   const [shotResult, setShotResult]     = useState<ShotResult>(null)
   const [dodgePrimed, setDodgePrimed]   = useState(false)
   const [dodgeCooldown, setDodgeCooldown] = useState(false)
@@ -465,7 +468,6 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
   const zoneJitterRef         = useRef(0)
   const roundRef              = useRef(0)
   const streakRef             = useRef(0)
-  const potRef                = useRef(0)
   const playerHPRef           = useRef(playerHPMax)
   const enemyHPRef            = useRef(0)
   const enemyHPMaxRef         = useRef(0)
@@ -521,7 +523,6 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
     zonePosRef.current      = 0.5; zoneDirRef.current = Math.random() < 0.5 ? 1 : -1
     zoneJitterRef.current   = 0
     roundRef.current        = 0; streakRef.current  = 0
-    potRef.current          = 0
     playerHPRef.current          = playerHPMax
     playerActionElapsedRef.current = 0
     playerReadyRef.current        = false
@@ -542,7 +543,8 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
     setPhase('playing')
     setPlayerHP(playerHPMax)
     setCharges(0); setPlayerActionPct(0)
-    setStreak(0); setPot(0); setLastEarned(0)
+    setStreak(0)
+    setWinGold(0); setWinXP(0); setWinPhase('summary'); setWinIsBoss(false)
     setCannonJammed(false); setActionLocked(false)
     setShotResult(null); setDodgePrimed(false); setDodgeCooldown(false)
     setDodgePrimePct(1); setDodgeFlash(false); setDodgeShake(false); setShowDodgeVFX(false)
@@ -818,17 +820,8 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
       if (enemyHPRef.current <= 0) {
         streakRef.current++
         setStreak(streakRef.current)
-        const earned = killGold(roundRef.current)
-        potRef.current += earned
-        setPot(potRef.current)
-        setLastEarned(earned)
-        const xp = killXP(roundRef.current)
-        if (xp > 0) {
-          awardRaidKillXP(xp).then(res => {
-            setNavXP(res.newExpeditionXP)
-            setXpPopup({ value: xp, id: Date.now() })
-          })
-        }
+        const gold = killGold(roundRef.current)
+        const xp   = killXP(roundRef.current)
 
         roundEndingRef.current = true
         setEnemySinking(true)
@@ -839,6 +832,10 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
           roundEndingRef.current = false
           setShotResult(null)
 
+          setWinGold(gold)
+          setWinXP(xp)
+          setWinPhase('summary')
+
           if (isBossRound(roundRef.current)) {
             const elapsed = performance.now() - raidStartTimeRef.current
             const secs    = elapsed / 1000
@@ -847,20 +844,21 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
             setRaidTier(tier)
             if (tier) {
               const base  = Math.floor(Math.random() * 301 + 300)
-              const total = Math.floor(base * tier.mult * fortuneMult) + potRef.current
+              const total = Math.floor(base * tier.mult * fortuneMult)
               setLootBase(base)
               setLootAmount(total)
             }
-            phaseRef.current = 'loot'
-            setPhase('loot')
+            setWinIsBoss(true)
           } else {
             roundRef.current++
             resetEnemyForRound(roundRef.current)
             setRoundDisplay(roundRef.current + 1)
-            phaseRef.current = 'clear'
-            setPhase('clear')
-            setTimeout(() => setClearReady(true), 80)
+            setWinIsBoss(false)
           }
+
+          phaseRef.current = 'clear'
+          setPhase('clear')
+          setTimeout(() => setClearReady(true), 80)
         }, 920)
         return
       }
@@ -903,6 +901,20 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
     setPhase('ready')
   }, [])
 
+  const collectKill = useCallback(async () => {
+    if (isClaiming) return
+    setIsClaiming(true)
+    try {
+      const res = await awardRaidKill(winXP, winGold)
+      setNavXP(res.newExpeditionXP)
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+      if (winXP > 0) setXpPopup({ value: winXP, id: Date.now() })
+    } catch { /* save failed, still advance */ } finally {
+      setIsClaiming(false)
+      setWinPhase('claimed')
+    }
+  }, [isClaiming, winXP, winGold])
+
   const openFire = useCallback(() => {
     if (phaseRef.current === 'idle') { startGame(); return }
     if (phaseRef.current === 'ready') {
@@ -911,20 +923,9 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
     }
   }, [startGame])
 
-  const retreat = useCallback(async () => {
-    if (isClaiming) return
-    setIsClaiming(true)
-    try {
-      const res = await claimRaidLoot(potRef.current, [])
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
-    } finally { setIsClaiming(false) }
-    router.push('/expeditions')
-  }, [isClaiming, router])
-
   const isVolleyReady  = charges === MAX_CHARGES
   const playerReady    = playerActionPct >= 1
   const isActionLocked = actionLocked
-  const powerMax      = shipMinDamage + Math.floor(totalPower / 4)
 
   const actionBarColor     = enemyActionPct > 0.4 ? '#a78bfa' : enemyActionPct > 0.15 ? '#fbbf24' : '#ef4444'
 
@@ -1355,40 +1356,67 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
         )}
       </AnimatePresence>
 
-      {/* ── Round clear overlay ───────────────────────────────────────────────── */}
+      {/* ── Round clear / collect overlay ────────────────────────────────────── */}
       <AnimatePresence>
         {phase === 'clear' && clearReady && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', zIndex: 50 }}>
-            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>Enemy Sunk</p>
-            <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '1.5rem', marginBottom: 4 }}>Round {roundDisplay - 1} Clear</p>
-            <motion.p key={lastEarned} initial={{ opacity: 0, y: -4, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-              className="font-karla font-700" style={{ color: '#f0c040', fontSize: '1.05rem', marginBottom: 2 }}>
-              +{fmtGold(lastEarned)} ⟡
-            </motion.p>
-            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.38)', fontSize: '0.72rem', marginBottom: isBoss ? 10 : 32 }}>
-              Pot: {fmtGold(pot)} ⟡
-            </p>
-            {isBoss && (
-              <motion.p initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                className="font-cinzel font-700"
-                style={{ color: '#f97316', fontSize: '0.82rem', letterSpacing: '0.1em', marginBottom: 28 }}>
-                ⚔ BOSS INCOMING
-              </motion.p>
+
+            {winPhase === 'summary' ? (
+              <>
+                <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>Enemy Sunk</p>
+                <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '1.5rem', marginBottom: 20 }}>{winIsBoss ? 'Boss Defeated' : 'Round Clear'}</p>
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginBottom: 28 }}>
+                  <p className="font-karla font-700" style={{ fontSize: '1.6rem', color: '#f0c040', textShadow: '0 0 16px #f0c04066' }}>+{fmtGold(winGold)} ⟡</p>
+                  <p className="font-karla font-600" style={{ fontSize: '0.88rem', color: '#4ade80' }}>+{winXP} XP</p>
+                </motion.div>
+                <motion.button
+                  onPointerDown={collectKill}
+                  whileTap={{ scale: 0.96 }}
+                  disabled={isClaiming}
+                  animate={{ boxShadow: isClaiming ? undefined : ['0 0 0px #f0c04000', '0 0 18px #f0c04055', '0 0 0px #f0c04000'] }}
+                  transition={{ duration: 1.4, repeat: Infinity }}
+                  className="font-karla font-700"
+                  style={{ padding: '13px 48px', borderRadius: 14, cursor: isClaiming ? 'default' : 'pointer', background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', color: '#f0c040', fontSize: '0.95rem', letterSpacing: '0.06em', opacity: isClaiming ? 0.6 : 1 }}>
+                  {isClaiming ? 'Saving…' : 'Collect'}
+                </motion.button>
+              </>
+            ) : (
+              <>
+                <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.28)', fontSize: '0.58rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>Collected</p>
+                <p className="font-karla font-600" style={{ color: 'rgba(240,237,232,0.55)', fontSize: '0.82rem', marginBottom: 28 }}>
+                  +{fmtGold(winGold)} ⟡ · +{winXP} XP saved
+                </p>
+                <div style={{ display: 'flex', gap: 10, flexDirection: 'column', width: 240 }}>
+                  {winIsBoss ? (
+                    <motion.button
+                      onPointerDown={() => { phaseRef.current = 'loot'; setPhase('loot') }}
+                      whileTap={{ scale: 0.96 }}
+                      animate={{ boxShadow: ['0 0 0px #f0c04000', '0 0 18px #f0c04066', '0 0 0px #f0c04000'] }}
+                      transition={{ duration: 1.4, repeat: Infinity }}
+                      className="font-karla font-700"
+                      style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', color: '#f0c040', fontSize: '0.92rem', letterSpacing: '0.06em' }}>
+                      Open Loot Crate
+                    </motion.button>
+                  ) : (
+                    <motion.button onPointerDown={advance} whileTap={{ scale: 0.96 }}
+                      className="font-karla font-700"
+                      style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(239,68,68,0.16)', border: '1px solid rgba(239,68,68,0.45)', color: '#ef4444', fontSize: '0.92rem', letterSpacing: '0.06em' }}>
+                      Advance →
+                    </motion.button>
+                  )}
+                  <motion.button
+                    onPointerDown={() => router.push('/expeditions')}
+                    whileTap={{ scale: 0.96 }}
+                    className="font-karla font-600"
+                    style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#6a6764', fontSize: '0.82rem', letterSpacing: '0.04em' }}>
+                    Leave Raid
+                  </motion.button>
+                </div>
+              </>
             )}
-            <div style={{ display: 'flex', gap: 10, flexDirection: 'column', width: 240 }}>
-              <motion.button onPointerDown={advance} whileTap={{ scale: 0.96 }}
-                className="font-karla font-700"
-                style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(239,68,68,0.16)', border: '1px solid rgba(239,68,68,0.45)', color: '#ef4444', fontSize: '0.92rem', letterSpacing: '0.06em' }}>
-                Advance →
-              </motion.button>
-              <motion.button onPointerDown={retreat} whileTap={{ scale: 0.96 }} disabled={isClaiming}
-                className="font-karla font-600"
-                style={{ padding: '12px 0', borderRadius: 14, cursor: isClaiming ? 'default' : 'pointer', background: 'rgba(240,197,64,0.1)', border: '1px solid rgba(240,197,64,0.32)', color: '#f0c040', fontSize: '0.82rem', letterSpacing: '0.04em', opacity: isClaiming ? 0.6 : 1 }}>
-                {isClaiming ? 'Banking…' : `Retreat — Bank ${fmtGold(pot)} ⟡`}
-              </motion.button>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1404,7 +1432,6 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
             <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.28)', fontSize: '0.7rem', marginBottom: 4 }}>
               {streak === 1 ? '1 ship sunk' : `${streak} ships sunk`}
             </p>
-            {pot > 0 && <p className="font-karla font-400" style={{ color: 'rgba(239,68,68,0.5)', fontSize: '0.78rem', marginBottom: 4 }}>Lost {fmtGold(pot)} ⟡</p>}
             {best > 0 && <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.22)', fontSize: '0.68rem', marginBottom: 28 }}>Best: {best}</p>}
             {best === 0 && <div style={{ marginBottom: 28 }} />}
             <button className="font-karla font-700" style={{ padding: '11px 32px', background: 'rgba(56,189,248,0.14)', border: '1px solid rgba(56,189,248,0.38)', borderRadius: 12, color: '#38bdf8', fontSize: '0.88rem', cursor: 'pointer' }}>
@@ -1510,7 +1537,7 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
                           {fmtGold(lootAmount)} ⟡
                         </p>
                         <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.3)', fontSize: '0.6rem', marginBottom: 10 }}>
-                          {fmtGold(pot)} raid · {fmtGold(Math.floor(lootBase * raidTier.mult * fortuneMult))} crate ({raidTier.mult}× speed{fortuneMult > 1 ? ` · ${fortuneMult.toFixed(2)}× luck` : ''})
+                          {raidTier.mult}× speed{fortuneMult > 1 ? ` · ${fortuneMult.toFixed(2)}× luck` : ''}
                         </p>
                         <motion.button
                           onPointerDown={async () => {
