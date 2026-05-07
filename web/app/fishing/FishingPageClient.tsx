@@ -25,7 +25,7 @@ export default function FishingPageClient({
   initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
   holdCapacity, shipTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, activeSession, username, zoneRewardsClaimed,
-  initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, prestigeLevels, trophyCatches,
+  initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches,
 }: {
   hookTier: number
   rodTier: number
@@ -54,6 +54,7 @@ export default function FishingPageClient({
   initialTideTurnerSkipsLeft: number
   initialEquippedSpecial: string | null
   hasPhantomHook: boolean
+  hasAutoCaster: boolean
   prestigeLevels: Record<string, number>
   trophyCatches: number[]
 }) {
@@ -120,6 +121,7 @@ export default function FishingPageClient({
       initialTideTurnerSkipsLeft={initialTideTurnerSkipsLeft}
       initialEquippedSpecial={initialEquippedSpecial}
       hasPhantomHook={hasPhantomHook}
+      hasAutoCaster={hasAutoCaster}
       initialPrestigeLevels={prestigeLevels}
       initialTrophyCatches={trophyCatches}
     />

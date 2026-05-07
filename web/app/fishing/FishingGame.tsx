@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, useTideTurnerSkip, prestigeZone, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, type FishSpecies, type FishingBountyCompletion } from './actions'
 
 const CRATE_FISH_ID = -1
 import { claimDailyReward } from './dailyChallengeActions'
@@ -1412,7 +1412,7 @@ export default function FishingGame({
   hasSeenFishingTour, hasSeenFishingCatchTour,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
-  hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook,
+  hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster,
   initialPrestigeLevels, initialTrophyCatches,
 }: {
   hookTier: number
@@ -1443,6 +1443,7 @@ export default function FishingGame({
   initialTideTurnerSkipsLeft: number
   initialEquippedSpecial: string | null
   hasPhantomHook: boolean
+  hasAutoCaster: boolean
   initialPrestigeLevels: Record<string, number>
   initialTrophyCatches: number[]
 }) {
@@ -1514,6 +1515,7 @@ export default function FishingGame({
   const [newStreakRecord, setNewStreakRecord] = useState<number | null>(null)
   const [tideTurnerSkipsLeft, setTideTurnerSkipsLeft] = useState(initialTideTurnerSkipsLeft)
   const [equippedSpecial, setEquippedSpecial] = useState<string | null>(initialEquippedSpecial)
+  const [ownedAutoCaster, setOwnedAutoCaster] = useState(hasAutoCaster)
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
   const catchTourShownRef = useRef(false)
@@ -2150,6 +2152,19 @@ export default function FishingGame({
       .filter(i => i.quantity > 0)
     )
   }
+
+  // Auto Caster: fire cast again ~1.5s after a result when equipped and conditions allow
+  useEffect(() => {
+    if (equippedSpecial !== 'auto_caster' || !ownedAutoCaster) return
+    if (phase !== 'result') return
+    if (crateResult && cratePhase !== 'revealed') return
+    const currentBaitQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
+    const currentHoldCount = inventory.reduce((s, i) => s + i.quantity, 0)
+    if (currentBaitQty <= 0 || currentHoldCount >= holdCapacity) return
+    const t = setTimeout(() => { handleCastAgain() }, 1500)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, equippedSpecial, ownedAutoCaster, cratePhase])
 
   async function handleCastAgain() {
     if (phase !== 'result') return
@@ -3876,10 +3891,24 @@ export default function FishingGame({
               hasTideTurner={hasTideTurner}
               tideTurnerSkipsLeft={tideTurnerSkipsLeft}
               hasPhantomHook={hasPhantomHook}
+              hasAutoCaster={ownedAutoCaster}
               equippedSpecial={equippedSpecial}
               onEquipSpecial={async (itemId) => {
                 setEquippedSpecial(itemId)
                 await equipSpecialItem(itemId)
+              }}
+              onBuySpecialItem={async (itemId) => {
+                const res = await buySpecialItem(itemId)
+                if ('ok' in res) {
+                  if (itemId === 'auto_caster') {
+                    setOwnedAutoCaster(true)
+                    setDoubloons(d => {
+                      const next = d - 15000
+                      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: next }))
+                      return next
+                    })
+                  }
+                }
               }}
               onClose={() => setGearOpen(false)}
             />

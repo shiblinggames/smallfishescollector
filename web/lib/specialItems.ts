@@ -1,4 +1,4 @@
-export type SpecialItemId = 'tide_turner' | 'phantom_hook'
+export type SpecialItemId = 'tide_turner' | 'phantom_hook' | 'auto_caster'
 
 export type SpecialItemDef = {
   id: SpecialItemId
@@ -7,7 +7,8 @@ export type SpecialItemDef = {
   image?: string
   description: string
   effectLabel: string
-  obtainedFrom: string
+  obtainedFrom?: string
+  shopCost?: number
 }
 
 export const SPECIAL_ITEMS: SpecialItemDef[] = [
@@ -28,6 +29,14 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
     description: '25% chance to save your bait on every cast. Stacks with perfect-catch saves.',
     effectLabel: '25% bait save',
     obtainedFrom: 'The Bertuna Triangle voyage',
+  },
+  {
+    id: 'auto_caster',
+    name: 'Auto Caster',
+    color: '#f0c040',
+    description: 'Automatically casts again after each catch. Stops when your hold is full or you run out of bait.',
+    effectLabel: 'Auto cast',
+    shopCost: 15000,
   },
 ]
 

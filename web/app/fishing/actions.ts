@@ -10,6 +10,7 @@ import { recordChallengeScore } from '@/app/social/challengeActions'
 import { getWeekStart } from '@/lib/weekStart'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
 import { getLineForSpeciesCount } from '@/lib/lines'
+import { getSpecialItem } from '@/lib/specialItems'
 import { getDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 
 function today() {
@@ -712,6 +713,31 @@ export async function useTideTurnerSkip(): Promise<{ ok: true; skipsLeft: number
   const newUsed = usedToday + 1
   await admin.from('profiles').update({ tide_turner_used: newUsed, tide_turner_date: todayStr }).eq('id', user.id)
   return { ok: true, skipsLeft: 3 - newUsed }
+}
+
+export async function buySpecialItem(itemId: string): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const columnMap: Record<string, string> = {
+    auto_caster: 'has_auto_caster',
+  }
+  const column = columnMap[itemId]
+  if (!column) return { error: 'Unknown item' }
+
+  const def = getSpecialItem(itemId)
+  if (!def?.shopCost) return { error: 'Not for sale' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('doubloons, has_auto_caster').eq('id', user.id).single()
+  if (!profile) return { error: 'Profile not found' }
+  const alreadyOwned = column === 'has_auto_caster' ? profile.has_auto_caster : false
+  if (alreadyOwned) return { error: 'Already owned' }
+  if ((profile.doubloons ?? 0) < def.shopCost) return { error: 'Not enough doubloons' }
+
+  await admin.from('profiles').update({ doubloons: (profile.doubloons ?? 0) - def.shopCost, [column]: true }).eq('id', user.id)
+  return { ok: true }
 }
 
 export async function equipSpecialItem(itemId: string | null): Promise<{ ok: true } | { error: string }> {
