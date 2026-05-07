@@ -14,22 +14,22 @@ const FRAMES: Record<Frame, string> = {
 
 // Per-frame rod/hook overlay config — % relative to the character container
 const ROD_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
-  rest: { top: 6,   left: -1,  width: 68, rotate: -1  },
-  wait: { top: -5,  left: -10, width: 82, rotate: 0   },
-  cast: { top: -15, left: -8,  width: 72, rotate: -45 },
+  rest: { top: 35, left: 11, width: 51, rotate: -1  },
+  wait: { top: 22, left: 22, width: 51, rotate: -22 },
+  cast: { top: 28, left: 5,  width: 51, rotate: 49  },
 }
 
 const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number; hidden?: boolean }> = {
-  rest: { top: 76,  left: -6,  width: 25, rotate: -37 },
-  wait: { top: 58,  left: -4,  width: 25, rotate: 0,   hidden: true },
-  cast: { top: -8,  left: -2,  width: 12, rotate: 20  },
+  rest: { top: 84, left: 8,  width: 19, rotate: -37 },
+  wait: { top: 58, left: -4, width: 25, rotate: 0,   hidden: true },
+  cast: { top: 19, left: 3,  width: 19, rotate: 8   },
 }
 
 // Per-frame character position on the background — % of the phone preview container
 const CHAR_DEFAULT: Record<Frame, { bottom: number; left: number; width: number }> = {
-  rest: { bottom: 12, left: 5, width: 70 },
-  wait: { bottom: 12, left: 5, width: 70 },
-  cast: { bottom: 12, left: 5, width: 70 },
+  rest: { bottom: 60, left: 31, width: 70 },
+  wait: { bottom: 57, left: 26, width: 70 },
+  cast: { bottom: 60, left: 26, width: 70 },
 }
 
 function Slider({ label, value, min, max, step = 1, onChange }: {
