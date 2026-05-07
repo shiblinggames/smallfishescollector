@@ -506,7 +506,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
       {
         const hitW  = Math.max(0.03, 0.06 - roundRef.current * 0.004)
         const halfW = hitW + GRAZE_W
-        const zSpeed = (3000 / getActionMs(roundRef.current)) * 0.0028 * (dt / 16.67)
+        const zSpeed = (3000 / getActionMs(roundRef.current, config)) * 0.0028 * (dt / 16.67)
         if (isBossRound(roundRef.current, config.sequence.length)) {
           zoneJitterRef.current -= dt
           if (zoneJitterRef.current <= 0) {
