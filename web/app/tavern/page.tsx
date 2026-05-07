@@ -21,7 +21,7 @@ export default async function TavernPage() {
   const today = new Date().toISOString().split('T')[0]
 
   const [{ data: profile }, { data: fotdAttempt }, dailyWagered, slotsDailyWagered, chartState] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome, has_seen_setup, character_color, unlocked_character_colors, gems').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome, has_seen_setup, character_color, unlocked_character_colors, username, gems').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
     getSlotsDailyWagered(),
@@ -95,6 +95,7 @@ export default async function TavernPage() {
             currentColor={profile?.character_color ?? 'default'}
             unlockedColors={unlockedColors}
             showWelcomeAfter={!profile?.has_seen_welcome}
+            hasUsername={!!profile?.username}
           />
         : !profile?.has_seen_welcome
           ? <WelcomeModal />

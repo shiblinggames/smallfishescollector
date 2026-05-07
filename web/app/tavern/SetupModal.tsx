@@ -11,10 +11,11 @@ interface Props {
   currentColor: string
   unlockedColors: string[]
   showWelcomeAfter: boolean
+  hasUsername: boolean
 }
 
-export default function SetupModal({ currentColor, unlockedColors, showWelcomeAfter }: Props) {
-  const [step, setStep] = useState<'username' | 'color'>('username')
+export default function SetupModal({ currentColor, unlockedColors, showWelcomeAfter, hasUsername }: Props) {
+  const [step, setStep] = useState<'username' | 'color'>(hasUsername ? 'color' : 'username')
   const [done, setDone] = useState(false)
 
   const [usernameInput, setUsernameInput] = useState('')
@@ -247,7 +248,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
               {finishPending ? '…' : "Let's go →"}
             </button>
 
-            <p className="font-karla font-400 text-center" style={{ fontSize: '0.58rem', color: '#3a3835', marginTop: '1.25rem' }}>Step 2 of 2</p>
+            <p className="font-karla font-400 text-center" style={{ fontSize: '0.58rem', color: '#3a3835', marginTop: '1.25rem' }}>{hasUsername ? 'Step 1 of 1' : 'Step 2 of 2'}</p>
           </motion.div>
         )}
       </AnimatePresence>
