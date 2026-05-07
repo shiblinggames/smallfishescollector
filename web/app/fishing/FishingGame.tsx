@@ -85,13 +85,12 @@ const HABITAT_TAGLINE: Record<string, string> = {
   abyss:       'The unknown depths',
   ancient_deep: 'Before time. Beyond depth.',
 }
-// Background art — place images in public/fishing/
 const ZONE_BG: Record<string, string> = {
-  shallows:    '/fishing/shallows.jpg',
-  open_waters: '/fishing/open-waters.jpg',
-  deep:        '/fishing/deep.jpg',
-  abyss:       '/fishing/abyss.jpg',
-  ancient_deep: '/fishing/abyss.jpg',
+  shallows:     '/fishingbackground1.jpeg',
+  open_waters:  '/fishingbackground2.jpeg',
+  deep:         '/fishingbackground3.jpeg',
+  abyss:        '/fishingbackground4.jpeg',
+  ancient_deep: '/fishingbackground4.jpeg',
 }
 
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep'] as const
@@ -2352,7 +2351,7 @@ export default function FishingGame({
           style={{ position: 'absolute', inset: '-14px' }}
         >
           <img
-            src="/fishingbackground1.jpeg"
+            src={ZONE_BG[selectedZone] ?? '/fishingbackground1.jpeg'}
             alt=""
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
           />
