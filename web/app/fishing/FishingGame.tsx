@@ -1665,12 +1665,12 @@ export default function FishingGame({
       const delay = (15 + Math.random() * 5) * 60 * 1000
       eventTimerRef.current = setTimeout(() => {
         const type = EVENT_TYPES[Math.floor(Math.random() * EVENT_TYPES.length)]
-        const ev = { type, endsAt: Date.now() + 90_000 }
+        const ev = { type, endsAt: Date.now() + 120_000 }
         setActiveEvent(ev)
         activeEventRef.current = ev
         setEventAnnouncing(true)
         setTimeout(() => setEventAnnouncing(false), 5_000)
-        setTimeout(() => { setActiveEvent(null); activeEventRef.current = null }, 90_000)
+        setTimeout(() => { setActiveEvent(null); activeEventRef.current = null }, 120_000)
         scheduleNext()
       }, delay)
     }
