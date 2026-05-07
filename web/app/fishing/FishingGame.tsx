@@ -818,15 +818,15 @@ const CHAR_POS: Record<CharFrame, { bottom: number; left: number; width: number 
 }
 
 const CHAR_ROD_OVERLAY: Record<CharFrame, { top: number; left: number; width: number; rotate: number }> = {
-  rest: { top: 35, left: 11, width: 51, rotate: -1  },
-  wait: { top: 22, left: 22, width: 51, rotate: -22 },
-  cast: { top: 28, left: 5,  width: 51, rotate: 49  },
+  rest: { top: 33, left: 12, width: 51, rotate: -1  },
+  wait: { top: 24, left: 23, width: 51, rotate: -22 },
+  cast: { top: 24, left: 3,  width: 51, rotate: 49  },
 }
 
 const CHAR_HOOK_OVERLAY: Record<CharFrame, { top: number; left: number; width: number; rotate: number; hidden?: boolean }> = {
-  rest: { top: 84, left: 8,  width: 19, rotate: -37 },
+  rest: { top: 81, left: 9,  width: 16, rotate: -30 },
   wait: { top: 58, left: -4, width: 25, rotate: 0,   hidden: true },
-  cast: { top: 19, left: 3,  width: 19, rotate: 8   },
+  cast: { top: 18, left: 6,  width: 16, rotate: 8   },
 }
 
 function fishImageUrl(name: string) {
