@@ -211,6 +211,7 @@ export default function ProfileClient({
   const [modalOpen, setModalOpen] = useState(false)
   const [characterColor, setCharacterColor] = useState(initialCharacterColor)
   const [colorSaving, setColorSaving] = useState(false)
+  const [colorPickerOpen, setColorPickerOpen] = useState(false)
   const [hintSkinId, setHintSkinId] = useState<string | null>(null)
 
   const color = avatarColor(username || email)
@@ -360,6 +361,125 @@ export default function ProfileClient({
 
         {/* ── LEFT: Fishing — character + catches ── */}
         <div className="flex flex-col" style={{ gap: 28 }}>
+
+          {/* Compact color picker */}
+          <div>
+            <button
+              disabled={colorSaving}
+              onClick={() => { setColorPickerOpen(o => !o); setHintSkinId(null) }}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                display: 'flex', alignItems: 'center', gap: 10,
+              }}
+            >
+              <div style={{
+                width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+                backgroundImage: `url(${charSprites.rest})`,
+                backgroundSize: '280% auto', backgroundPosition: 'center 92%',
+                backgroundRepeat: 'no-repeat',
+                border: '2px solid rgba(96,165,250,0.4)',
+                boxShadow: '0 0 10px rgba(96,165,250,0.2)',
+              }} />
+              <div style={{ textAlign: 'left' }}>
+                <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#f0ede8', lineHeight: 1 }}>
+                  {CHARACTER_COLORS.find(c => c.id === characterColor)?.name ?? characterColor}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.58rem', color: '#6a6764', marginTop: 3 }}>Character color</p>
+              </div>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6a6764" strokeWidth="2.5" strokeLinecap="round"
+                style={{ transform: colorPickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', marginLeft: 2, flexShrink: 0 }}>
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </button>
+
+            {colorPickerOpen && (
+              <div style={{
+                marginTop: 10,
+                background: 'rgba(4,10,20,0.92)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 14, padding: '0.85rem',
+              }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {CHARACTER_COLORS.map(c => {
+                    const sprites = getCharacterSprites(c.id)
+                    const isActive = characterColor === c.id
+                    const isUnlocked = unlockedColors.includes(c.id)
+                    const isHinted = hintSkinId === c.id
+                    return (
+                      <button
+                        key={c.id}
+                        disabled={colorSaving}
+                        onClick={async () => {
+                          if (!isUnlocked) { setHintSkinId(isHinted ? null : c.id); return }
+                          if (isActive) { setColorPickerOpen(false); return }
+                          setHintSkinId(null)
+                          setColorSaving(true)
+                          setCharacterColor(c.id)
+                          setColorPickerOpen(false)
+                          await updateCharacterColor(c.id)
+                          setColorSaving(false)
+                        }}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                          opacity: !isUnlocked ? 0.45 : 1,
+                        }}
+                      >
+                        <div style={{
+                          width: 48, height: 48, borderRadius: '50%', overflow: 'hidden',
+                          backgroundImage: `url(${sprites.rest})`,
+                          backgroundSize: '280% auto', backgroundPosition: 'center 92%',
+                          backgroundRepeat: 'no-repeat',
+                          border: isActive ? '2px solid #60a5fa' : isHinted ? '2px solid rgba(255,255,255,0.35)' : '2px solid rgba(255,255,255,0.1)',
+                          boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.4)' : 'none',
+                          position: 'relative',
+                        }}>
+                          {!isUnlocked && (
+                            <div style={{
+                              position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              background: 'rgba(0,0,0,0.5)', borderRadius: '50%',
+                            }}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: isActive ? '#60a5fa' : '#6a6764' }}>
+                          {c.name}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+                {hintSkinId && (() => {
+                  const skin = CHARACTER_COLORS.find(c => c.id === hintSkinId)
+                  if (!skin?.unlockHint) return null
+                  return (
+                    <div style={{
+                      marginTop: '0.75rem',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 10, padding: '0.6rem 0.8rem',
+                      display: 'flex', alignItems: 'flex-start', gap: '0.55rem',
+                    }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                      <div>
+                        <p className="font-karla font-600" style={{ fontSize: '0.63rem', color: 'rgba(255,255,255,0.55)', marginBottom: 2 }}>
+                          {skin.name} — Locked
+                        </p>
+                        <p className="font-karla font-400" style={{ fontSize: '0.63rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.45 }}>
+                          {skin.unlockHint}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
+          </div>
 
           {/* Character Loadout */}
           <div style={{
@@ -532,92 +652,6 @@ export default function ProfileClient({
                 </button>
               </div>
             )}
-          </div>
-
-          {/* Character Color */}
-          <div>
-            <SectionLabel>Character</SectionLabel>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {CHARACTER_COLORS.map(c => {
-                const sprites = getCharacterSprites(c.id)
-                const isActive = characterColor === c.id
-                const isUnlocked = unlockedColors.includes(c.id)
-                const isHinted = hintSkinId === c.id
-                return (
-                  <button
-                    key={c.id}
-                    disabled={colorSaving}
-                    onClick={async () => {
-                      if (!isUnlocked) {
-                        setHintSkinId(isHinted ? null : c.id)
-                        return
-                      }
-                      if (isActive) return
-                      setHintSkinId(null)
-                      setColorSaving(true)
-                      setCharacterColor(c.id)
-                      await updateCharacterColor(c.id)
-                      setColorSaving(false)
-                    }}
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                      opacity: !isUnlocked ? 0.45 : 1,
-                    }}
-                  >
-                    <div style={{
-                      width: 72, height: 72, borderRadius: 12, overflow: 'hidden',
-                      border: isActive ? '2px solid #60a5fa' : isHinted ? '2px solid rgba(255,255,255,0.3)' : '2px solid rgba(255,255,255,0.08)',
-                      boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.35)' : 'none',
-                      backgroundImage: `url(${sprites.rest})`,
-                      backgroundSize: '280% auto', backgroundPosition: 'center 92%',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundColor: 'rgba(255,255,255,0.03)',
-                      position: 'relative',
-                    }}>
-                      {!isUnlocked && (
-                        <div style={{
-                          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: 'rgba(0,0,0,0.45)', borderRadius: 12,
-                        }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round">
-                            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                    <span className="font-karla font-600" style={{ fontSize: '0.65rem', color: isActive ? '#60a5fa' : '#6a6764' }}>
-                      {c.name}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-            {hintSkinId && (() => {
-              const skin = CHARACTER_COLORS.find(c => c.id === hintSkinId)
-              if (!skin?.unlockHint) return null
-              return (
-                <div style={{
-                  marginTop: '0.75rem',
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 10, padding: '0.65rem 0.85rem',
-                  display: 'flex', alignItems: 'flex-start', gap: '0.6rem',
-                }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}>
-                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                  <div>
-                    <p className="font-karla font-600" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.55)', marginBottom: 2 }}>
-                      {skin.name} — Locked
-                    </p>
-                    <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.45 }}>
-                      {skin.unlockHint}
-                    </p>
-                  </div>
-                </div>
-              )
-            })()}
           </div>
 
         </div>
