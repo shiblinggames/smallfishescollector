@@ -9,6 +9,8 @@ import { getChartState } from '@/app/charting/chartActions'
 import GameCard from './GameCard'
 import RecruitCard from './RecruitCard'
 import WelcomeModal from './WelcomeModal'
+import SetupModal from './SetupModal'
+import { CHARACTER_COLORS } from '@/lib/characters'
 
 export default async function TavernPage() {
   const supabase = await createClient()
@@ -19,7 +21,7 @@ export default async function TavernPage() {
   const today = new Date().toISOString().split('T')[0]
 
   const [{ data: profile }, { data: fotdAttempt }, dailyWagered, slotsDailyWagered, chartState] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome, gems').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome, has_seen_setup, character_color, unlocked_character_colors, gems').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
     getSlotsDailyWagered(),
@@ -82,10 +84,22 @@ export default async function TavernPage() {
   ]
   const bartenderLine = bartenderLines[Math.floor(Math.random() * bartenderLines.length)]
 
+  const freeColorIds = CHARACTER_COLORS.filter(c => c.free).map(c => c.id)
+  const unlockedColors = [...freeColorIds, ...(profile?.unlocked_character_colors ?? [])]
+
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
-      {!profile?.has_seen_welcome && <WelcomeModal />}
+      {!profile?.has_seen_setup
+        ? <SetupModal
+            currentColor={profile?.character_color ?? 'default'}
+            unlockedColors={unlockedColors}
+            showWelcomeAfter={!profile?.has_seen_welcome}
+          />
+        : !profile?.has_seen_welcome
+          ? <WelcomeModal />
+          : null
+      }
       <main className="min-h-screen">
         <div className="px-4 max-w-lg mx-auto pt-6 pb-16 flex flex-col gap-6" style={{ position: 'relative', zIndex: 1 }}>
 
