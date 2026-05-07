@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { claimRaidLoot } from './actions'
-import { markRaidTutorialSeen } from './tutorialActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
 
@@ -325,7 +324,7 @@ interface RaidCrewMember {
 
 export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
   shipImageUrl, shipName, playerHPMax, shipMinDamage, shipSpeed,
-  totalPower, totalDodge, totalFortune, crewCount, crewMembers, hasSeenRaidTutorial,
+  totalPower, totalDodge, totalFortune, crewCount, crewMembers,
 }: {
   shipImageUrl: string
   shipName: string
@@ -340,7 +339,6 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
   equippedShipSkin: string | null
   shipSkins: string[]
   equippedItems: string[]
-  hasSeenRaidTutorial: boolean
 }) {
   const router            = useRouter()
   const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
@@ -356,8 +354,6 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
     return () => { document.body.style.overflow = prev }
   }, [])
 
-  const [showTutorial, setShowTutorial] = useState(false)
-  const [tourStep, setTourStep]         = useState(0)
   const [phase, setPhase]               = useState<GamePhase>('idle')
   const [playerHP, setPlayerHP]         = useState(playerHPMax)
   const [enemyHP, setEnemyHP]           = useState(0)
@@ -857,25 +853,12 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
   }, [])
 
   const openFire = useCallback(() => {
-    if (phaseRef.current === 'idle') {
-      if (!hasSeenRaidTutorial) {
-        setShowTutorial(true)
-        return
-      }
-      startGame(); return
-    }
+    if (phaseRef.current === 'idle') { startGame(); return }
     if (phaseRef.current === 'ready') {
       phaseRef.current = 'playing'
       setPhase('playing')
     }
   }, [startGame])
-
-  function dismissTutorial() {
-    markRaidTutorialSeen()
-    setShowTutorial(false)
-    setTourStep(0)
-    startGame()
-  }
 
   const retreat = useCallback(async () => {
     if (isClaiming) return
@@ -1559,74 +1542,6 @@ export default function RaidGame({ equippedShipSkin, shipSkins, equippedItems,
         </div>
       )}
 
-      {/* ── First-time tutorial ── */}
-      {(() => {
-        const RAID_TOUR = [
-          { title: 'Hit the zone', body: "There's a marker that sweeps back and forth along the track. Fire when it lines up with the glowing zone. If you miss, your cannon jams briefly before you can fire again." },
-          { title: 'Reload between shots', body: 'Your cannon starts empty every round. Hit Reload to load a charge. You can stack up to 3 charges before firing.' },
-          { title: 'Volley', body: 'Fire with all 3 charges loaded and it becomes a Volley — double damage in one shot. Worth saving up for when the zone is wide.' },
-          { title: 'Dodge incoming fire', body: "Watch Pete's action bar at the top of the screen. When it fills, he's about to fire. Hit Dodge before he does and you'll take 80% less damage." },
-          { title: 'Boss rounds', body: "Every 7th round Pete gets aggressive. His zone moves faster and changes direction unpredictably. Don't get greedy — a clean hit beats a jammed cannon." },
-          { title: '5 minute clock', body: "You've got 5 minutes. Run out of time and the loot crate still opens — you just won't have built up as much bonus plunder from kills." },
-        ]
-        if (!showTutorial) return null
-        return (
-          <AnimatePresence>
-            <motion.div
-              key="raid-tour-backdrop"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => { if (tourStep < RAID_TOUR.length - 1) setTourStep(s => s + 1) }}
-              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 100, cursor: 'pointer' }}
-            />
-            <motion.div
-              key={`raid-tour-${tourStep}`}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.18 }}
-              style={{
-                position: 'fixed', zIndex: 101,
-                left: '1rem', right: '1rem',
-                top: '50%', transform: 'translateY(-50%)',
-                maxWidth: 340, margin: '0 auto',
-                background: '#0d1520',
-                border: '1px solid rgba(249,115,22,0.3)',
-                borderRadius: 14,
-                padding: '1rem 1.1rem',
-              }}
-            >
-              <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f97316', marginBottom: '0.4rem' }}>
-                {RAID_TOUR[tourStep].title}
-              </p>
-              <p className="font-karla font-400" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.55, marginBottom: '0.85rem' }}>
-                {RAID_TOUR[tourStep].body}
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845' }}>
-                  {tourStep + 1} / {RAID_TOUR.length}
-                </p>
-                <button
-                  onClick={e => {
-                    e.stopPropagation()
-                    if (tourStep < RAID_TOUR.length - 1) { setTourStep(s => s + 1) }
-                    else { dismissTutorial() }
-                  }}
-                  className="font-karla font-700 uppercase tracking-[0.12em]"
-                  style={{
-                    fontSize: '0.68rem', cursor: 'pointer', touchAction: 'manipulation',
-                    color: '#f97316',
-                    background: 'rgba(249,115,22,0.12)',
-                    border: '1px solid rgba(249,115,22,0.4)',
-                    borderRadius: 8, padding: '0.35rem 0.85rem',
-                  }}
-                >
-                  {tourStep === RAID_TOUR.length - 1 ? 'Got it' : 'Next →'}
-                </button>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        )
-      })()}
 
       <style>{`
         @keyframes hitsplat-pop {

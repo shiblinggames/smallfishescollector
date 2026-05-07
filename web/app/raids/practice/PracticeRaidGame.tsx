@@ -1,0 +1,1134 @@
+'use client'
+
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
+import { completePracticeRaid, markPracticeRaidTutorialSeen } from './practiceActions'
+import { getShipSkin } from '@/lib/shipSkins'
+
+type GamePhase  = 'idle' | 'playing' | 'win' | 'dead'
+type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
+
+// ── Enemy definitions ─────────────────────────────────────────────────────────
+
+const ENEMY_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/'
+
+interface PracticeEnemy {
+  id: string
+  name: string
+  hpBase: number
+  minDmg: number
+  maxDmg: number
+  actionMs: number
+  pattern: string[]
+  image: string
+  killGold: number
+}
+
+const PRACTICE_ENEMIES: Record<string, PracticeEnemy> = {
+  brute: {
+    id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 2, maxDmg: 5,
+    actionMs: 4500, pattern: ['reload', 'fire', 'reload', 'fire'],
+    image: ENEMY_IMG_BASE + 'enemytier1.png', killGold: 20,
+  },
+  sniper: {
+    id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
+    actionMs: 5500, pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
+    image: ENEMY_IMG_BASE + 'enemytier1.png', killGold: 25,
+  },
+  corsair: {
+    id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
+    actionMs: 3500, pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
+    image: ENEMY_IMG_BASE + 'enemytier1elite.png', killGold: 35,
+  },
+}
+const NON_BOSS_IDS = ['brute', 'sniper', 'corsair'] as const
+function pickRandomEnemy(): PracticeEnemy {
+  return PRACTICE_ENEMIES[NON_BOSS_IDS[Math.floor(Math.random() * NON_BOSS_IDS.length)]]
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const MAX_CHARGES         = 3
+const SPEED_BASE          = 0.006
+const CANNON_MISS_CD      = 2400
+const DODGE_PRIME_MS      = 750
+const DODGE_COOLDOWN_MISS = 2200
+const ENEMY_DODGE_MS      = 1400
+const GRAZE_W             = 0.038
+const PRACTICE_XP         = 25
+
+function getFireZones(zoneCenter = 0.5) {
+  const hitW  = 0.06
+  const critW = 0.007
+  return {
+    grazeL: zoneCenter - hitW - GRAZE_W, hitL: zoneCenter - hitW, critL: zoneCenter - critW,
+    critR: zoneCenter + critW, hitR: zoneCenter + hitW, grazeR: zoneCenter + hitW + GRAZE_W,
+  }
+}
+function getShotResult(pos: number, zoneCenter: number): ShotResult {
+  const z = getFireZones(zoneCenter)
+  if (pos >= z.critL && pos <= z.critR)   return 'critical'
+  if (pos >= z.hitL  && pos <= z.hitR)    return 'hit'
+  if (pos >= z.grazeL && pos <= z.grazeR) return 'graze'
+  return 'miss'
+}
+
+function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: number): number {
+  if (!res || res === 'miss') return 0
+  const powerMax = shipMinDamage + Math.floor(totalPower / 4)
+  const ranges: Record<string, [number, number]> = {
+    critical: [shipMinDamage * 2, Math.round(powerMax * 1.5)],
+    hit:      [shipMinDamage, powerMax],
+    graze:    [1, Math.max(1, Math.ceil(powerMax * 0.4))],
+  }
+  const [min, max] = ranges[res]
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+function rollIncomingDamage(enemy: PracticeEnemy): number {
+  return Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
+}
+
+const SHOT_LABEL: Record<string, string> = { critical: 'Critical!', hit: 'Hit!', graze: 'Graze', miss: 'Miss' }
+const SHOT_COLOR: Record<string, string> = { critical: '#fbbf24', hit: '#4ade80', graze: '#94a3b8', miss: '#6b7280' }
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function Hitsplat({ text, color, big, animKey }: { text: string; color: string; big?: boolean; animKey: number }) {
+  return (
+    <div key={animKey} style={{
+      position: 'absolute', top: '40%', left: '50%',
+      animation: 'hitsplat-pop 1.1s ease forwards',
+      pointerEvents: 'none', zIndex: 20, whiteSpace: 'nowrap',
+    }}>
+      <div style={{
+        background: color,
+        borderRadius: big ? '45% 55% 52% 48% / 48% 52% 55% 45%' : '50% 50% 48% 52% / 52% 48% 50% 50%',
+        padding: big ? '0.42rem 0.9rem' : '0.22rem 0.55rem',
+        boxShadow: big ? `0 3px 18px ${color}99, 0 0 10px ${color}66` : `0 2px 10px ${color}88`,
+        transform: big ? 'rotate(-4deg)' : 'rotate(2deg)',
+      }}>
+        <p className="font-cinzel font-700" style={{
+          fontSize: big ? '1.05rem' : '0.75rem', color: '#fff', lineHeight: 1,
+          textShadow: '0 1px 4px rgba(0,0,0,0.75)',
+        }}>{text}</p>
+      </div>
+    </div>
+  )
+}
+
+function HPBar({ current, max, color }: { current: number; max: number; color: string }) {
+  const pct = max > 0 ? (current / max) * 100 : 0
+  const barColor = pct < 30 ? '#f87171' : pct < 60 ? '#f0c040' : color
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+        <p className="font-karla" style={{ fontSize: '0.55rem', color: '#c0b8a8', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>HP</p>
+        <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: barColor, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>{current}/{max}</p>
+      </div>
+      <div style={{ height: 7, background: 'rgba(0,0,0,0.45)', borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 4, transition: 'width 0.35s ease, background 0.35s ease' }} />
+      </div>
+    </div>
+  )
+}
+
+function TimingBar({ indicatorRef, flashRef, zoneRef, hitHalfW, critHalfW }: {
+  indicatorRef: React.RefObject<HTMLDivElement | null>
+  flashRef:     React.RefObject<HTMLDivElement | null>
+  zoneRef:      React.RefObject<HTMLDivElement | null>
+  hitHalfW: number
+  critHalfW: number
+}) {
+  const totalW   = hitHalfW * 2 + GRAZE_W * 2
+  const hitPct   = (hitHalfW * 2 / totalW) * 100
+  const hitLeft  = (GRAZE_W / totalW) * 100
+  const critPct  = Math.max(8, (critHalfW * 2 / totalW) * 100)
+  const critLeft = (100 - critPct) / 2
+  return (
+    <div style={{ position: 'relative', height: 44, borderRadius: 8 }}>
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 8,
+        background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.35)',
+        overflow: 'hidden',
+      }}>
+        <div ref={zoneRef} style={{
+          position: 'absolute', top: 0, bottom: 0,
+          left: `${(0.5 - hitHalfW - GRAZE_W) * 100}%`,
+          width: `${totalW * 100}%`,
+        }}>
+          <div style={{
+            position: 'absolute', inset: '3px 0',
+            clipPath: 'polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%)',
+            background: 'rgba(148,163,184,0.12)',
+            filter: 'drop-shadow(0 0 3px rgba(148,163,184,0.3))',
+          }} />
+          <div style={{
+            position: 'absolute', top: '3px', bottom: '3px',
+            left: `${hitLeft}%`, width: `${hitPct}%`,
+            background: 'rgba(74,222,128,0.22)',
+          }} />
+          <div style={{
+            position: 'absolute', top: '25%', bottom: '25%',
+            left: 'calc(50% - 1px)', width: 1,
+            background: 'rgba(74,222,128,0.4)',
+          }} />
+          <motion.div
+            animate={{ opacity: [0.4, 0.75, 0.4] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+            style={{
+              position: 'absolute', top: '3px', bottom: '3px',
+              left: `${critLeft}%`, width: `${critPct}%`,
+              background: 'rgba(251,191,36,0.5)', borderRadius: 2,
+            }}
+          />
+        </div>
+        <div ref={flashRef} style={{ position: 'absolute', inset: 0, opacity: 0, pointerEvents: 'none' }} />
+      </div>
+      <div ref={indicatorRef} style={{
+        position: 'absolute', top: 3, bottom: 3, width: 3, borderRadius: 2,
+        background: 'rgba(240,237,232,0.3)', boxShadow: '0 0 4px rgba(240,237,232,0.12)',
+        left: '0%', pointerEvents: 'none', zIndex: 2,
+      }} />
+    </div>
+  )
+}
+
+function indicatorStyle(zone: ShotResult) {
+  if (zone === 'critical') return { bg: '#fbbf24', shadow: '0 0 18px rgba(251,191,36,1), 0 0 8px rgba(251,191,36,0.7)' }
+  if (zone === 'hit')      return { bg: '#4ade80', shadow: '0 0 12px rgba(74,222,128,0.85)' }
+  if (zone === 'graze')    return { bg: '#94a3b8', shadow: '0 0 8px rgba(148,163,184,0.6)' }
+  return { bg: 'rgba(240,237,232,0.3)', shadow: '0 0 4px rgba(240,237,232,0.12)' }
+}
+function flashBar(ref: React.RefObject<HTMLDivElement | null>, color: string) {
+  if (!ref.current) return
+  ref.current.style.background = color
+  ref.current.style.opacity = '0.3'
+  let start: number | null = null
+  const fade = (t: number) => {
+    if (start === null) start = t
+    const p = (t - start) / 260
+    if (ref.current) ref.current.style.opacity = String(Math.max(0, 0.3 * (1 - p)))
+    if (p < 1) requestAnimationFrame(fade)
+  }
+  requestAnimationFrame(fade)
+}
+function snapIndicator(ref: React.RefObject<HTMLDivElement | null>) {
+  const el = ref.current
+  if (!el) return
+  el.style.transition = 'transform 0s'
+  el.style.transform = 'scaleY(2.8)'
+  requestAnimationFrame(() => {
+    if (!el) return
+    el.style.transition = 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)'
+    el.style.transform = 'scaleY(1)'
+  })
+}
+
+// ── Tour steps ────────────────────────────────────────────────────────────────
+
+const PRACTICE_TOUR = [
+  { title: 'Hit the zone', body: "A marker sweeps back and forth along the bar. Fire when it lines up with the glowing target zone. Miss and your cannon jams briefly — so aim before you pull the trigger." },
+  { title: 'Reload first', body: "Your cannon starts empty. Hit Reload to load a charge. You can stack up to 3 charges before firing — but the enemy is shooting back, so don't wait too long." },
+  { title: 'Volley', body: "Fire with all 3 charges loaded and it fires as a Volley — double damage in one shot. Worth saving up when the hit zone is wide." },
+  { title: 'Dodge incoming shots', body: "Watch the enemy's action bar. When it fills, they fire. Hit Dodge just before they do and you'll take 80% less damage. Dodge too early and you're locked out for a moment." },
+]
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
+interface RaidCrewMember {
+  name: string
+  imageUrl: string
+  power: number
+  dodge: number
+  fortune: number
+}
+
+export default function PracticeRaidGame({
+  shipImageUrl, shipName, playerHPMax, shipMinDamage, shipSpeed,
+  totalPower, totalDodge, crewMembers, equippedShipSkin,
+  hasSeenTutorial, hasCompletedPractice,
+}: {
+  shipImageUrl: string
+  shipName: string
+  playerHPMax: number
+  shipMinDamage: number
+  shipSpeed: number
+  totalPower: number
+  totalDodge: number
+  crewMembers: RaidCrewMember[]
+  equippedShipSkin: string | null
+  hasSeenTutorial: boolean
+  hasCompletedPractice: boolean
+}) {
+  const router = useRouter()
+  const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
+  const shipFilter        = shipSkinDef?.filter ?? 'none'
+  const dodgeBonus        = totalDodge * 5
+  const playerActionMs    = Math.max(700, 2000 - shipSpeed * 100)
+  const dodgeCooldownUse  = Math.max(500, 1600 - dodgeBonus)
+
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
+
+  // Tour
+  const [showTour, setShowTour]   = useState(false)
+  const [tourStep, setTourStep]   = useState(0)
+
+  // Game state
+  const [phase, setPhase]           = useState<GamePhase>('idle')
+  const [playerHP, setPlayerHP]     = useState(playerHPMax)
+  const [enemyHP, setEnemyHP]       = useState(0)
+  const [enemyHPMax, setEnemyHPMax] = useState(0)
+  const [enemyName, setEnemyName]   = useState('')
+  const [enemyImage, setEnemyImage] = useState(PRACTICE_ENEMIES.brute.image)
+  const [enemyCharges, setEnemyCharges]   = useState(0)
+  const [enemyDodging, setEnemyDodging]   = useState(false)
+  const [enemyActionPct, setEnemyActionPct] = useState(1)
+  const [charges, setCharges]             = useState(0)
+  const [playerActionPct, setPlayerActionPct] = useState(0)
+  const [shotResult, setShotResult]       = useState<ShotResult>(null)
+  const [dodgePrimed, setDodgePrimed]     = useState(false)
+  const [dodgeCooldown, setDodgeCooldown] = useState(false)
+  const [dodgePrimePct, setDodgePrimePct] = useState(1)
+  const [actionLocked, setActionLocked]   = useState(false)
+  const [dodgeFlash, setDodgeFlash]       = useState(false)
+  const [dodgeShake, setDodgeShake]       = useState(false)
+  const [showDodgeVFX, setShowDodgeVFX]   = useState(false)
+  const [cannonJammed, setCannonJammed]   = useState(false)
+  const [enemySinking, setEnemySinking]   = useState(false)
+  const [showCannonShot, setShowCannonShot] = useState(false)
+  const [isVolleyShot, setIsVolleyShot]   = useState(false)
+  const [isCritShot, setIsCritShot]       = useState(false)
+  const [critShake, setCritShake]         = useState(false)
+  const [critFlash, setCritFlash]         = useState(false)
+  const [hitShake, setHitShake]           = useState(false)
+  const [playerRecoil, setPlayerRecoil]   = useState(false)
+  const [playerHitShake, setPlayerHitShake] = useState(false)
+  const [pHitsplat, setPHitsplat]         = useState({ key: 0, text: '', color: '', big: false })
+  const [eHitsplat, setEHitsplat]         = useState({ key: 0, text: '', color: '', big: false })
+  const [isClaiming, setIsClaiming]       = useState(false)
+  const [winGold, setWinGold]             = useState(0)
+
+  const fireIndicatorRef  = useRef<HTMLDivElement>(null)
+  const fireFlashRef      = useRef<HTMLDivElement>(null)
+  const zoneTargetRef     = useRef<HTMLDivElement>(null)
+  const critFreezeRef     = useRef(false)
+  const firePosRef        = useRef(0)
+  const fireDirRef        = useRef(1)
+  const zonePosRef        = useRef(0.5)
+  const zoneDirRef        = useRef(1)
+  const currentEnemyRef   = useRef<PracticeEnemy>(PRACTICE_ENEMIES.brute)
+  const phaseRef          = useRef<GamePhase>('idle')
+  const playerHPRef       = useRef(playerHPMax)
+  const enemyHPRef        = useRef(0)
+  const playerActionElapsedRef = useRef(0)
+  const playerReadyRef    = useRef(false)
+  const chargesRef        = useRef(0)
+  const dodgePrimedRef    = useRef(false)
+  const dodgeCooldownRef  = useRef(false)
+  const actionLockedRef   = useRef(false)
+  const dodgePrimeElapsedRef = useRef(0)
+  const dodgePrimeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const consecutiveDodgesRef = useRef(0)
+  const rafRef            = useRef(0)
+  const enemyChargesRef   = useRef(0)
+  const enemyDodgingRef   = useRef(false)
+  const enemyDodgeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const enemyPatternIdxRef = useRef(0)
+  const enemyActionElapsedRef = useRef(0)
+  const roundEndingRef    = useRef(false)
+
+  const startGame = useCallback((enemy: PracticeEnemy) => {
+    currentEnemyRef.current = enemy
+    firePosRef.current = 0; fireDirRef.current = 1
+    const halfW = 0.06 + GRAZE_W
+    zonePosRef.current = halfW + Math.random() * (1 - halfW * 2)
+    zoneDirRef.current = Math.random() < 0.5 ? 1 : -1
+    playerHPRef.current = playerHPMax
+    playerActionElapsedRef.current = 0
+    playerReadyRef.current = false
+    chargesRef.current = 0
+    if (dodgePrimeTimerRef.current) { clearTimeout(dodgePrimeTimerRef.current); dodgePrimeTimerRef.current = null }
+    dodgePrimedRef.current = false
+    dodgeCooldownRef.current = false
+    actionLockedRef.current = false
+    dodgePrimeElapsedRef.current = 0
+    consecutiveDodgesRef.current = 0
+    roundEndingRef.current = false
+    enemyHPRef.current = enemy.hpBase
+    enemyChargesRef.current = 0
+    enemyDodgingRef.current = false
+    if (enemyDodgeTimeoutRef.current) { clearTimeout(enemyDodgeTimeoutRef.current); enemyDodgeTimeoutRef.current = null }
+    enemyPatternIdxRef.current = 0
+    enemyActionElapsedRef.current = 0
+
+    phaseRef.current = 'playing'
+    setPhase('playing')
+    setPlayerHP(playerHPMax)
+    setEnemyHP(enemy.hpBase); setEnemyHPMax(enemy.hpBase)
+    setEnemyName(enemy.name); setEnemyImage(enemy.image)
+    setEnemyCharges(0); setEnemyDodging(false); setEnemyActionPct(1)
+    setCharges(0); setPlayerActionPct(0)
+    setCannonJammed(false); setActionLocked(false)
+    setShotResult(null); setDodgePrimed(false); setDodgeCooldown(false)
+    setDodgePrimePct(1); setDodgeFlash(false); setDodgeShake(false); setShowDodgeVFX(false)
+    setEnemySinking(false); setShowCannonShot(false)
+    setWinGold(0)
+  }, [playerHPMax])
+
+  function handleOpenFire() {
+    if (phaseRef.current !== 'idle') return
+    if (!hasSeenTutorial) { setShowTour(true); return }
+    const enemy = hasCompletedPractice ? pickRandomEnemy() : PRACTICE_ENEMIES.brute
+    startGame(enemy)
+  }
+
+  function dismissTour() {
+    markPracticeRaidTutorialSeen()
+    setShowTour(false)
+    setTourStep(0)
+    const enemy = hasCompletedPractice ? pickRandomEnemy() : PRACTICE_ENEMIES.brute
+    startGame(enemy)
+  }
+
+  // Combat loop
+  useEffect(() => {
+    if (phase !== 'playing') return
+    let lastTime = performance.now()
+    function loop(now: number) {
+      if (phaseRef.current !== 'playing') return
+      const dt = Math.min(now - lastTime, 50)
+      lastTime = now
+
+      // Fire indicator
+      if (!critFreezeRef.current) {
+        firePosRef.current += SPEED_BASE * (dt / 16.67) * fireDirRef.current
+      }
+      if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
+      if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current =  1 }
+
+      // Zone block
+      const halfW = 0.06 + GRAZE_W
+      const zSpeed = (3000 / currentEnemyRef.current.actionMs) * 0.0028 * (dt / 16.67)
+      zonePosRef.current += zSpeed * zoneDirRef.current
+      if (zonePosRef.current >= 1 - halfW) { zonePosRef.current = 1 - halfW; zoneDirRef.current = -1 }
+      if (zonePosRef.current <= halfW)      { zonePosRef.current = halfW;     zoneDirRef.current =  1 }
+
+      if (zoneTargetRef.current) {
+        zoneTargetRef.current.style.left  = `${(zonePosRef.current - halfW) * 100}%`
+        zoneTargetRef.current.style.width = `${halfW * 2 * 100}%`
+      }
+      if (fireIndicatorRef.current) {
+        const zone = getShotResult(firePosRef.current, zonePosRef.current)
+        const s = indicatorStyle(zone)
+        fireIndicatorRef.current.style.left       = `calc(${firePosRef.current * 100}% - 2px)`
+        fireIndicatorRef.current.style.background = s.bg
+        fireIndicatorRef.current.style.boxShadow  = s.shadow
+      }
+
+      if (roundEndingRef.current) { rafRef.current = requestAnimationFrame(loop); return }
+
+      // Player action bar
+      playerActionElapsedRef.current += dt
+      const pPct = Math.min(1, Math.max(0, playerActionElapsedRef.current / playerActionMs))
+      playerReadyRef.current = pPct >= 1
+      setPlayerActionPct(pPct)
+
+      // Dodge prime countdown
+      if (dodgePrimedRef.current) {
+        dodgePrimeElapsedRef.current += dt
+        setDodgePrimePct(Math.max(0, 1 - dodgePrimeElapsedRef.current / DODGE_PRIME_MS))
+      }
+
+      // Enemy action timer
+      const e = currentEnemyRef.current
+      enemyActionElapsedRef.current += dt
+      setEnemyActionPct(Math.max(0, 1 - enemyActionElapsedRef.current / e.actionMs))
+
+      if (enemyActionElapsedRef.current >= e.actionMs) {
+        enemyActionElapsedRef.current = 0
+        const action = e.pattern[enemyPatternIdxRef.current % e.pattern.length]
+        enemyPatternIdxRef.current++
+
+        if (action === 'reload') {
+          if (enemyChargesRef.current < MAX_CHARGES) {
+            enemyChargesRef.current++
+            setEnemyCharges(enemyChargesRef.current)
+          }
+        } else if (action === 'dodge') {
+          enemyDodgingRef.current = true
+          setEnemyDodging(true)
+          if (enemyDodgeTimeoutRef.current) clearTimeout(enemyDodgeTimeoutRef.current)
+          enemyDodgeTimeoutRef.current = setTimeout(() => {
+            enemyDodgingRef.current = false
+            setEnemyDodging(false)
+          }, ENEMY_DODGE_MS)
+        } else if (action === 'fire') {
+          if (enemyChargesRef.current > 0) {
+            enemyChargesRef.current--
+            setEnemyCharges(enemyChargesRef.current)
+
+            if (dodgePrimedRef.current) {
+              if (dodgePrimeTimerRef.current) { clearTimeout(dodgePrimeTimerRef.current); dodgePrimeTimerRef.current = null }
+              dodgePrimedRef.current = false
+              dodgePrimeElapsedRef.current = 0
+              setDodgePrimed(false); setDodgePrimePct(1)
+              const rawDmg    = rollIncomingDamage(e)
+              const dodgedDmg = Math.max(1, Math.round(rawDmg * 0.2))
+              playerHPRef.current = Math.max(0, playerHPRef.current - dodgedDmg)
+              setPlayerHP(playerHPRef.current)
+              playerActionElapsedRef.current = playerActionMs
+              setShotResult(null)
+              setPHitsplat(p => ({ key: p.key + 1, text: `-${dodgedDmg}`, color: '#38bdf8', big: false }))
+              setDodgeShake(true); setDodgeFlash(true); setShowDodgeVFX(true)
+              setTimeout(() => setDodgeShake(false), 520)
+              setTimeout(() => setDodgeFlash(false), 340)
+              setTimeout(() => setShowDodgeVFX(false), 650)
+              dodgeCooldownRef.current = true; setDodgeCooldown(true)
+              setTimeout(() => { dodgeCooldownRef.current = false; setDodgeCooldown(false) }, dodgeCooldownUse)
+              if (playerHPRef.current <= 0) { phaseRef.current = 'dead'; setPhase('dead'); return }
+            } else {
+              const dmg = rollIncomingDamage(e)
+              playerHPRef.current = Math.max(0, playerHPRef.current - dmg)
+              setPlayerHP(playerHPRef.current)
+              setPHitsplat(p => ({ key: p.key + 1, text: `-${dmg}`, color: '#f87171', big: true }))
+              setPlayerHitShake(true)
+              setTimeout(() => setPlayerHitShake(false), 520)
+              if (playerHPRef.current <= 0) { phaseRef.current = 'dead'; setPhase('dead'); return }
+              dodgeCooldownRef.current = true; setDodgeCooldown(true)
+              setTimeout(() => { dodgeCooldownRef.current = false; setDodgeCooldown(false) }, DODGE_COOLDOWN_MISS)
+            }
+          }
+        }
+      }
+
+      rafRef.current = requestAnimationFrame(loop)
+    }
+    rafRef.current = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [phase, playerActionMs, dodgeCooldownUse])
+
+  const doReload = useCallback(() => {
+    if (phaseRef.current !== 'playing' || !playerReadyRef.current || chargesRef.current >= MAX_CHARGES || actionLockedRef.current) return
+    consecutiveDodgesRef.current = 0
+    chargesRef.current = Math.min(MAX_CHARGES, chargesRef.current + 1)
+    setCharges(chargesRef.current)
+    playerActionElapsedRef.current = 0
+    setPlayerActionPct(0)
+  }, [])
+
+  const fire = useCallback(() => {
+    if (phaseRef.current !== 'playing' || !playerReadyRef.current || chargesRef.current < 1 || cannonJammed || actionLockedRef.current) return
+    consecutiveDodgesRef.current = 0
+
+    const isVolley = chargesRef.current === MAX_CHARGES
+    chargesRef.current -= isVolley ? MAX_CHARGES : 1
+    setCharges(chargesRef.current)
+
+    const res = getShotResult(firePosRef.current, zonePosRef.current)
+    setShotResult(res)
+    snapIndicator(fireIndicatorRef)
+    flashBar(fireFlashRef, res === 'critical' ? '#fbbf24' : res === 'hit' ? '#4ade80' : res === 'graze' ? '#94a3b8' : '#6b7280')
+
+    playerActionElapsedRef.current = res === 'miss' ? -CANNON_MISS_CD : 0
+    setPlayerActionPct(0)
+    if (res === 'miss') setCannonJammed(true)
+
+    const dmgMult = isVolley ? 2 : 1
+    const dmg = rollShotDamage(res, shipMinDamage, totalPower) * dmgMult
+
+    if (dmg > 0) {
+      setShowCannonShot(true); setIsVolleyShot(isVolley); setIsCritShot(res === 'critical')
+      setTimeout(() => setShowCannonShot(false), 700)
+      setPlayerRecoil(true)
+      setTimeout(() => setPlayerRecoil(false), 420)
+      if (res === 'critical') {
+        setCritShake(true); setCritFlash(true)
+        critFreezeRef.current = true
+        setTimeout(() => setCritShake(false), 620)
+        setTimeout(() => setCritFlash(false), 380)
+        setTimeout(() => { critFreezeRef.current = false }, 300)
+      } else if (res === 'hit' || res === 'graze') {
+        setHitShake(true)
+        setTimeout(() => setHitShake(false), 470)
+      }
+
+      const blocked = enemyDodgingRef.current && res !== 'critical'
+      const effectiveDmg = blocked ? Math.max(1, Math.round(dmg * 0.2)) : dmg
+      enemyHPRef.current = Math.max(0, enemyHPRef.current - effectiveDmg)
+      setEnemyHP(enemyHPRef.current)
+      setEHitsplat(p => ({
+        key: p.key + 1,
+        text: blocked ? `-${effectiveDmg}` : `-${dmg}`,
+        color: blocked ? '#38bdf8' : res === 'critical' ? '#fbbf24' : '#f87171',
+        big: res === 'critical',
+      }))
+
+      if (enemyHPRef.current <= 0) {
+        roundEndingRef.current = true
+        setEnemySinking(true)
+        const gold = currentEnemyRef.current.killGold
+        setWinGold(gold)
+        setTimeout(() => {
+          roundEndingRef.current = false
+          phaseRef.current = 'win'
+          setPhase('win')
+        }, 920)
+        return
+      }
+    }
+
+    if (res !== 'miss') setTimeout(() => setShotResult(null), 500)
+    else setTimeout(() => { setCannonJammed(false); setShotResult(null) }, CANNON_MISS_CD)
+  }, [shipMinDamage, totalPower, cannonJammed])
+
+  const primeDodge = useCallback(() => {
+    if (phaseRef.current !== 'playing') return
+    if (dodgeCooldownRef.current || dodgePrimedRef.current || actionLockedRef.current) return
+    if (!playerReadyRef.current) return
+    if (consecutiveDodgesRef.current >= 3) return
+
+    playerActionElapsedRef.current = 0
+    setPlayerActionPct(0)
+    consecutiveDodgesRef.current++
+    dodgePrimedRef.current = true
+    dodgePrimeElapsedRef.current = 0
+    setDodgePrimed(true); setDodgePrimePct(1)
+
+    if (dodgePrimeTimerRef.current) clearTimeout(dodgePrimeTimerRef.current)
+    dodgePrimeTimerRef.current = setTimeout(() => {
+      dodgePrimedRef.current = false
+      dodgePrimeElapsedRef.current = 0
+      setDodgePrimed(false); setDodgePrimePct(1)
+      actionLockedRef.current = true; setActionLocked(true)
+      setTimeout(() => { actionLockedRef.current = false; setActionLocked(false) }, 1200)
+    }, DODGE_PRIME_MS)
+  }, [])
+
+  const claimWin = useCallback(async () => {
+    if (isClaiming) return
+    setIsClaiming(true)
+    try {
+      const res = await completePracticeRaid(PRACTICE_XP, winGold)
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+    } finally { setIsClaiming(false) }
+    router.push('/expeditions')
+  }, [isClaiming, winGold, router])
+
+  const retryGame = useCallback(() => {
+    phaseRef.current = 'idle'
+    setPhase('idle')
+  }, [])
+
+  const isVolleyReady = charges === MAX_CHARGES
+  const playerReady   = playerActionPct >= 1
+  const isActionLocked = actionLocked
+  const actionBarColor = enemyActionPct > 0.4 ? '#a78bfa' : enemyActionPct > 0.15 ? '#fbbf24' : '#ef4444'
+
+  return (
+    <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
+
+      {/* ── Status header (hidden when idle) ─────────────────────────────────── */}
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', paddingBottom: 2, visibility: phase === 'idle' ? 'hidden' : 'visible' }}>
+        <span className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', textShadow: '0 2px 10px rgba(0,0,0,0.95)' }}>Skirmish</span>
+        <div style={{ position: 'absolute', right: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+          {enemyDodging && (
+            <motion.span
+              animate={{ opacity: [1, 0.4, 1] }}
+              transition={{ duration: 0.6, repeat: Infinity }}
+              className="font-karla font-700"
+              style={{ fontSize: '0.58rem', color: '#38bdf8', background: 'rgba(56,189,248,0.25)', border: '1px solid rgba(56,189,248,0.7)', borderRadius: 4, padding: '1px 5px', letterSpacing: '0.08em' }}>
+              EVADING
+            </motion.span>
+          )}
+        </div>
+      </div>
+
+      {/* ── Combat panels ─────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+
+        {/* Player */}
+        <div style={{
+          flex: 3, borderRadius: 14, padding: '0.65rem 0.55rem',
+          display: 'flex', flexDirection: 'column', gap: '0.3rem',
+          animation: dodgeShake ? 'dodge-slide 0.5s ease' : playerHitShake ? 'player-hit 0.5s ease' : playerRecoil ? 'player-recoil 0.4s ease' : 'none',
+        }}>
+          <div style={{ position: 'relative', height: 230, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+            <img src={shipImageUrl} alt={shipName} style={{ width: '100%', height: 230, objectFit: 'contain', objectPosition: 'bottom', filter: shipFilter }} />
+            {pHitsplat.key > 0 && <Hitsplat key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} animKey={pHitsplat.key} />}
+            {showDodgeVFX && (
+              <>
+                <span style={{ position: 'absolute', left: '60%', top: '15%', fontSize: '1.5rem', animation: 'cannon-shot 0.55s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💨</span>
+                <span style={{ position: 'absolute', left: '20%', top: '35%', fontSize: '1.2rem', animation: 'cannon-shot 0.5s 0.07s ease forwards', pointerEvents: 'none', zIndex: 10 }}>⚡</span>
+                <span style={{ position: 'absolute', left: '48%', top: '55%', fontSize: '1.0rem', animation: 'cannon-shot 0.6s 0.12s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💨</span>
+              </>
+            )}
+          </div>
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.75rem', color: '#f0ede8', lineHeight: 1.2, textShadow: '0 1px 6px rgba(0,0,0,0.95)' }}>{shipName}</p>
+          <HPBar current={playerHP} max={playerHPMax} color="#60a5fa" />
+        </div>
+
+        {/* Enemy */}
+        <div style={{
+          flex: 2, borderRadius: 14, padding: '0.65rem 0.55rem',
+          display: 'flex', flexDirection: 'column', gap: '0.3rem',
+          animation: critShake ? 'crit-shake 0.6s ease' : hitShake ? 'hit-shake 0.45s ease' : 'none',
+        }}>
+          <div style={{ position: 'relative', height: 230, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden', paddingBottom: 24 }}>
+            <img src={enemyImage} alt={enemyName} style={{
+              width: '100%', height: 90, objectFit: 'contain', objectPosition: 'bottom',
+              transform: 'scaleX(-1)',
+              animation: enemySinking ? 'enemy-sink 0.9s ease-in forwards' : 'none',
+              filter: 'hue-rotate(180deg) brightness(0.8)',
+            }} />
+            {eHitsplat.key > 0 && <Hitsplat key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} animKey={eHitsplat.key} />}
+            {showCannonShot && (
+              <>
+                <span style={{ position: 'absolute', left: '18%', top: '38%', fontSize: isCritShot ? '1.6rem' : isVolleyShot ? '1.3rem' : '0.9rem', animation: 'cannon-shot 0.55s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💥</span>
+                {isCritShot && (
+                  <>
+                    <span style={{ position: 'absolute', left: '42%', top: '20%', fontSize: '1.4rem', animation: 'cannon-shot 0.5s 0.06s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💥</span>
+                    <span style={{ position: 'absolute', left: '28%', top: '55%', fontSize: '1.2rem', animation: 'cannon-shot 0.55s 0.1s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💥</span>
+                    <span style={{ position: 'absolute', left: '55%', top: '42%', fontSize: '1.8rem', animation: 'cannon-shot 0.65s 0.04s ease forwards', pointerEvents: 'none', zIndex: 10 }}>⭐</span>
+                    <span style={{ position: 'absolute', left: '38%', top: '38%', fontSize: '1.5rem', animation: 'cannon-shot 0.7s 0.12s ease forwards', pointerEvents: 'none', zIndex: 10 }}>🔥</span>
+                  </>
+                )}
+                {isVolleyShot && !isCritShot && (
+                  <>
+                    <span style={{ position: 'absolute', left: '35%', top: '55%', fontSize: '1.2rem', animation: 'cannon-shot 0.5s 0.07s ease forwards', pointerEvents: 'none', zIndex: 10 }}>💥</span>
+                    <span style={{ position: 'absolute', left: '44%', top: '18%', fontSize: '1.4rem', animation: 'cannon-shot 0.6s 0.14s ease forwards', pointerEvents: 'none', zIndex: 10 }}>🔥</span>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.75rem', color: '#f0ede8', lineHeight: 1.2, textShadow: '0 1px 6px rgba(0,0,0,0.95)' }}>{enemyName || 'Reef Raider'}</p>
+          <HPBar current={enemyHP} max={enemyHPMax} color="#a78bfa" />
+        </div>
+      </div>
+
+      {/* ── Enemy action bar ──────────────────────────────────────────────────── */}
+      <div style={{ width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            {[0, 1, 2].map(i => (
+              <motion.div key={i}
+                animate={{ scale: i === enemyCharges - 1 ? [1, 1.5, 1] : 1 }}
+                transition={{ duration: 0.18 }}
+                style={{
+                  width: 10, height: 10, borderRadius: '50%',
+                  background: i < enemyCharges ? '#ef4444' : 'rgba(255,255,255,0.18)',
+                  boxShadow: i < enemyCharges ? '0 0 6px #ef444499' : 'none',
+                  border: `1.5px solid ${i < enemyCharges ? '#ef4444' : 'rgba(255,255,255,0.3)'}`,
+                  transition: 'background 0.15s, box-shadow 0.15s',
+                }} />
+            ))}
+          </div>
+          <p className="font-karla font-700" style={{ fontSize: '0.6rem', color: actionBarColor, letterSpacing: '0.14em', transition: 'color 0.3s', marginLeft: 'auto', textShadow: '0 1px 6px rgba(0,0,0,0.95)' }}>ENEMY</p>
+        </div>
+        <div style={{ height: 10, background: 'rgba(0,0,0,0.45)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%', width: `${enemyActionPct * 100}%`,
+            background: actionBarColor,
+            boxShadow: enemyActionPct < 0.25 ? `0 0 8px ${actionBarColor}88` : 'none',
+            transition: 'background 0.3s, box-shadow 0.3s', borderRadius: 4,
+          }} />
+        </div>
+      </div>
+
+      {/* ── Shot feedback ─────────────────────────────────────────────────────── */}
+      <div style={{ height: 18 }}>
+        <AnimatePresence mode="wait">
+          {shotResult && (
+            <motion.p key={shotResult} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: SHOT_COLOR[shotResult], textAlign: 'center' }}>
+              {SHOT_LABEL[shotResult]}
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ── Fire bar ─────────────────────────────────────────────────────────── */}
+      <div style={{ width: '100%' }}>
+        <div className="flex items-center justify-between px-1 mb-1.5">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            {[0, 1, 2].map(i => (
+              <motion.div key={i}
+                animate={{ scale: i === charges - 1 && charges > 0 ? [1, 1.45, 1] : 1 }}
+                transition={{ duration: 0.18 }}
+                style={{
+                  width: 10, height: 10, borderRadius: '50%',
+                  background: i < charges ? '#60a5fa' : 'rgba(255,255,255,0.2)',
+                  boxShadow: i < charges ? '0 0 7px rgba(96,165,250,0.75)' : 'none',
+                  border: `1.5px solid ${i < charges ? '#60a5fa' : 'rgba(255,255,255,0.35)'}`,
+                  transition: 'background 0.15s, box-shadow 0.15s, border-color 0.15s',
+                }}
+              />
+            ))}
+            <AnimatePresence>
+              {isVolleyReady && (
+                <motion.span
+                  initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -4 }}
+                  className="font-karla font-700"
+                  style={{ fontSize: '0.68rem', color: '#f0c040', letterSpacing: '0.1em', marginLeft: 2, textShadow: '0 0 8px #f0c04099' }}>
+                  VOLLEY
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+        <TimingBar
+          indicatorRef={fireIndicatorRef} flashRef={fireFlashRef}
+          zoneRef={zoneTargetRef}
+          hitHalfW={0.06}
+          critHalfW={0.007}
+        />
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 14, marginTop: 5 }}>
+          {[{ label: 'Graze', color: '#94a3b8' }, { label: 'Hit', color: '#4ade80' }, { label: '★ Crit', color: '#fbbf24' }].map(z => (
+            <div key={z.label} className="flex items-center gap-1">
+              <div style={{ width: 5, height: 5, borderRadius: '50%', background: z.color }} />
+              <span className="font-karla font-400" style={{ fontSize: '0.6rem', color: z.color, textShadow: '0 1px 5px rgba(0,0,0,0.95)' }}>{z.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Player action bar ─────────────────────────────────────────────────── */}
+      <div style={{ width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.6rem', color: playerReady ? '#4ade80' : '#5aaa6a', letterSpacing: '0.14em', transition: 'color 0.3s', textShadow: '0 1px 6px rgba(0,0,0,0.95)' }}>
+            YOUR ACTION
+          </p>
+          <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: playerReady ? '#a0f0b8' : '#5aaa6a', transition: 'color 0.3s', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
+            {playerReady ? 'READY' : 'charging…'}
+          </p>
+        </div>
+        <div style={{ height: 10, background: 'rgba(0,0,0,0.45)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%', width: `${playerActionPct * 100}%`,
+            background: playerReady ? '#4ade80' : '#3a8a50',
+            boxShadow: playerReady ? '0 0 10px rgba(74,222,128,0.6)' : 'none',
+            transition: 'background 0.2s, box-shadow 0.2s', borderRadius: 4,
+          }} />
+        </div>
+      </div>
+
+      {/* ── Action buttons ────────────────────────────────────────────────────── */}
+      {phase === 'playing' && (
+        <div style={{ display: 'flex', gap: 14, justifyContent: 'center', width: '100%' }}>
+          {/* RELOAD */}
+          <motion.button
+            onPointerDown={playerReady && charges < MAX_CHARGES && !isActionLocked ? doReload : undefined}
+            whileTap={playerReady && charges < MAX_CHARGES && !isActionLocked ? { scale: 0.88 } : {}}
+            style={{
+              width: 82, height: 82, borderRadius: '50%', cursor: playerReady && charges < MAX_CHARGES && !isActionLocked ? 'pointer' : 'default',
+              background: isActionLocked ? 'rgba(239,68,68,0.07)' : !playerReady || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.03)' : 'rgba(96,165,250,0.12)',
+              border: `2px solid ${isActionLocked ? 'rgba(239,68,68,0.22)' : !playerReady || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.1)' : 'rgba(96,165,250,0.45)'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: isActionLocked || !playerReady || charges >= MAX_CHARGES ? 0.4 : 1,
+              transition: 'all 0.12s',
+            }}>
+            <p className="font-karla font-700" style={{
+              fontSize: '0.72rem', letterSpacing: '0.06em',
+              color: isActionLocked ? '#7a2a2a' : !playerReady ? '#3a5a7a' : charges >= MAX_CHARGES ? '#4a4845' : '#60a5fa',
+            }}>
+              {isActionLocked ? '…' : charges >= MAX_CHARGES ? 'Full' : 'RELOAD'}
+            </p>
+          </motion.button>
+
+          {/* DODGE */}
+          <motion.button
+            onPointerDown={primeDodge}
+            whileTap={playerReady && !dodgeCooldown && !dodgePrimed && !isActionLocked ? { scale: 0.88 } : {}}
+            animate={dodgePrimed ? { boxShadow: ['0 0 0px #38bdf800', '0 0 20px #38bdf8aa', '0 0 8px #38bdf866'] } : {}}
+            transition={{ duration: 0.4, repeat: Infinity }}
+            style={{
+              width: 82, height: 82, borderRadius: '50%', cursor: playerReady && !dodgeCooldown && !dodgePrimed && !isActionLocked ? 'pointer' : 'default',
+              background: dodgePrimed ? 'rgba(56,189,248,0.18)' : isActionLocked ? 'rgba(239,68,68,0.07)' : dodgeCooldown ? 'rgba(255,255,255,0.03)' : !playerReady ? 'rgba(255,255,255,0.03)' : 'rgba(56,189,248,0.10)',
+              border: `2px solid ${dodgePrimed ? 'rgba(56,189,248,0.65)' : isActionLocked ? 'rgba(239,68,68,0.22)' : dodgeCooldown ? 'rgba(255,255,255,0.1)' : !playerReady ? 'rgba(255,255,255,0.1)' : 'rgba(56,189,248,0.35)'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: isActionLocked || dodgeCooldown || !playerReady ? 0.4 : 1,
+              transition: 'background 0.12s, border-color 0.12s, opacity 0.12s',
+            }}>
+            <p className="font-karla font-700" style={{
+              fontSize: '0.72rem', letterSpacing: '0.06em',
+              color: dodgePrimed ? '#38bdf8' : isActionLocked ? '#7a2a2a' : dodgeCooldown ? '#2a4050' : '#38bdf8',
+            }}>
+              {dodgePrimed ? 'PRIMED' : isActionLocked || dodgeCooldown ? '…' : 'DODGE'}
+            </p>
+          </motion.button>
+
+          {/* FIRE */}
+          <motion.button
+            onPointerDown={playerReady && !cannonJammed && charges > 0 && !isActionLocked ? fire : undefined}
+            whileTap={playerReady && !cannonJammed && charges > 0 && !isActionLocked ? { scale: 0.88 } : {}}
+            animate={isVolleyReady ? { boxShadow: ['0 0 0px #f0c04000', '0 0 20px #f0c04077', '0 0 0px #f0c04000'] } : {}}
+            transition={{ duration: 1.4, repeat: Infinity }}
+            style={{
+              width: 82, height: 82, borderRadius: '50%',
+              cursor: playerReady && !cannonJammed && charges > 0 && !isActionLocked ? 'pointer' : 'default',
+              background: cannonJammed ? 'rgba(251,146,60,0.1)' : !playerReady ? 'rgba(255,255,255,0.03)' : isVolleyReady ? 'rgba(240,192,64,0.18)' : charges === 0 ? 'rgba(255,255,255,0.03)' : 'rgba(239,68,68,0.14)',
+              border: `2px solid ${cannonJammed ? 'rgba(251,146,60,0.35)' : !playerReady ? 'rgba(255,255,255,0.1)' : isVolleyReady ? 'rgba(240,192,64,0.6)' : charges === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(239,68,68,0.45)'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: !playerReady && !cannonJammed ? 0.4 : charges === 0 && !cannonJammed ? 0.32 : cannonJammed ? 0.7 : 1,
+              transition: 'all 0.12s',
+            }}>
+            <p className="font-karla font-700" style={{
+              fontSize: cannonJammed ? '0.6rem' : '0.72rem', letterSpacing: '0.06em',
+              color: cannonJammed ? '#f97316' : !playerReady ? '#4a3535' : isVolleyReady ? '#f0c040' : charges === 0 ? '#4a4845' : '#ef4444',
+            }}>
+              {cannonJammed ? 'Jammed' : charges === 0 ? 'Empty' : isVolleyReady ? 'VOLLEY' : 'FIRE'}
+            </p>
+          </motion.button>
+        </div>
+      )}
+
+      {/* Placeholder buttons when idle */}
+      {phase === 'idle' && (
+        <div style={{ display: 'flex', gap: 14, justifyContent: 'center', width: '100%' }}>
+          <div style={{ width: 82, height: 82, flexShrink: 0 }} />
+          <div style={{ width: 82, height: 82, flexShrink: 0 }} />
+          <div style={{ width: 82, height: 82, flexShrink: 0 }} />
+        </div>
+      )}
+
+      {/* ── Crit flash ───────────────────────────────────────────────────────── */}
+      {critFlash && (
+        <div style={{
+          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 40,
+          background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.35) 0%, rgba(251,191,36,0.08) 60%, transparent 100%)',
+          animation: 'crit-flash 0.38s ease forwards',
+        }} />
+      )}
+
+      {/* ── Dodge flash ──────────────────────────────────────────────────────── */}
+      {dodgeFlash && (
+        <div style={{
+          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 40,
+          background: 'radial-gradient(ellipse at center, rgba(56,189,248,0.3) 0%, rgba(56,189,248,0.07) 60%, transparent 100%)',
+          animation: 'crit-flash 0.34s ease forwards',
+        }} />
+      )}
+
+      {/* ── Idle overlay ─────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {phase === 'idle' && (
+          <motion.div
+            key="idle-overlay"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.62)', zIndex: 50 }}>
+            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.45)', fontSize: '0.65rem', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>
+              Reef Skirmish
+            </p>
+            <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '3.2rem', lineHeight: 1, marginBottom: 8, textShadow: '0 2px 24px rgba(0,0,0,0.85)' }}>
+              ⚔
+            </p>
+            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.7rem', marginBottom: 32, textAlign: 'center', maxWidth: 220, lineHeight: 1.5 }}>
+              {hasCompletedPractice ? 'A random enemy awaits. Sink them for XP.' : 'Train your crew against a Reef Raider.'}
+            </p>
+            <motion.button
+              onPointerDown={handleOpenFire}
+              animate={{ boxShadow: ['0 0 0px #ef444400', '0 0 28px #ef444488', '0 0 0px #ef444400'] }}
+              transition={{ duration: 1.1, repeat: Infinity }}
+              whileTap={{ scale: 0.95 }}
+              className="font-karla font-700"
+              style={{ padding: '14px 48px', borderRadius: 14, cursor: 'pointer', background: 'rgba(239,68,68,0.18)', border: '1.5px solid rgba(239,68,68,0.55)', color: '#ef4444', fontSize: '1rem', letterSpacing: '0.1em' }}>
+              OPEN FIRE
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Win overlay ──────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {phase === 'win' && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.88)', zIndex: 50 }}>
+            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.6rem', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 6 }}>Enemy Sunk</p>
+            <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '1.6rem', marginBottom: 20 }}>{enemyName} Defeated</p>
+            <div style={{ display: 'flex', gap: 20, marginBottom: 28 }}>
+              <div style={{ textAlign: 'center' }}>
+                <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: '#5a5855', marginBottom: 4 }}>Navigation XP</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#4ade80', textShadow: '0 0 14px rgba(74,222,128,0.5)' }}>+{PRACTICE_XP}</p>
+              </div>
+              <div style={{ width: 1, background: 'rgba(255,255,255,0.08)' }} />
+              <div style={{ textAlign: 'center' }}>
+                <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: '#5a5855', marginBottom: 4 }}>Doubloons</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', textShadow: '0 0 14px rgba(240,192,64,0.5)' }}>+{winGold} ⟡</p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 240 }}>
+              <motion.button
+                onPointerDown={claimWin}
+                whileTap={{ scale: 0.96 }}
+                disabled={isClaiming}
+                className="font-karla font-700"
+                style={{ padding: '12px 0', borderRadius: 14, cursor: isClaiming ? 'default' : 'pointer', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.45)', color: '#4ade80', fontSize: '0.92rem', letterSpacing: '0.06em', opacity: isClaiming ? 0.6 : 1 }}>
+                {isClaiming ? 'Claiming…' : 'Claim & Return'}
+              </motion.button>
+              <motion.button
+                onPointerDown={() => { if (!isClaiming) retryGame() }}
+                whileTap={{ scale: 0.96 }}
+                className="font-karla font-600"
+                style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '0.82rem', letterSpacing: '0.04em' }}>
+                Fight Again
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Dead overlay ─────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {phase === 'dead' && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', zIndex: 50 }}
+            onPointerDown={retryGame}>
+            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.32)', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>Ship Sunk</p>
+            <p className="font-cinzel font-700" style={{ color: '#f87171', fontSize: '2rem', marginBottom: 24 }}>Defeated</p>
+            <button className="font-karla font-700" style={{ padding: '11px 32px', background: 'rgba(56,189,248,0.14)', border: '1px solid rgba(56,189,248,0.38)', borderRadius: 12, color: '#38bdf8', fontSize: '0.88rem', cursor: 'pointer' }}>
+              Try Again
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── First-time tour ───────────────────────────────────────────────────── */}
+      {showTour && (
+        <AnimatePresence>
+          <motion.div
+            key="practice-tour-backdrop"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => { if (tourStep < PRACTICE_TOUR.length - 1) setTourStep(s => s + 1) }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 100, cursor: 'pointer' }}
+          />
+          <motion.div
+            key={`practice-tour-${tourStep}`}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.18 }}
+            style={{
+              position: 'fixed', zIndex: 101,
+              left: '1rem', right: '1rem',
+              top: '50%', transform: 'translateY(-50%)',
+              maxWidth: 340, margin: '0 auto',
+              background: '#0d1520',
+              border: '1px solid rgba(239,68,68,0.3)',
+              borderRadius: 14,
+              padding: '1rem 1.1rem',
+            }}
+          >
+            <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.46rem', color: '#ef4444', marginBottom: '0.6rem' }}>
+              Reef Skirmish — Tutorial
+            </p>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8', marginBottom: '0.4rem' }}>
+              {PRACTICE_TOUR[tourStep].title}
+            </p>
+            <p className="font-karla font-400" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.55, marginBottom: '0.85rem' }}>
+              {PRACTICE_TOUR[tourStep].body}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845' }}>
+                {tourStep + 1} / {PRACTICE_TOUR.length}
+              </p>
+              <button
+                onClick={e => {
+                  e.stopPropagation()
+                  if (tourStep < PRACTICE_TOUR.length - 1) { setTourStep(s => s + 1) }
+                  else { dismissTour() }
+                }}
+                className="font-karla font-700 uppercase tracking-[0.12em]"
+                style={{
+                  fontSize: '0.68rem', cursor: 'pointer', touchAction: 'manipulation',
+                  color: '#ef4444',
+                  background: 'rgba(239,68,68,0.12)',
+                  border: '1px solid rgba(239,68,68,0.4)',
+                  borderRadius: 8, padding: '0.35rem 0.85rem',
+                }}
+              >
+                {tourStep === PRACTICE_TOUR.length - 1 ? 'Got it' : 'Next →'}
+              </button>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      )}
+
+      <style>{`
+        @keyframes hitsplat-pop {
+          0%   { opacity: 0; transform: translateX(-50%) translateY(-10%) scale(0.1) rotate(-18deg); }
+          18%  { opacity: 1; transform: translateX(-50%) translateY(-72%) scale(1.4) rotate(6deg); }
+          38%  { opacity: 1; transform: translateX(-50%) translateY(-65%) scale(1.08) rotate(-3deg); }
+          62%  { opacity: 1; transform: translateX(-50%) translateY(-68%) scale(1.02) rotate(2deg); }
+          100% { opacity: 0; transform: translateX(-50%) translateY(-84%) scale(0.82) rotate(0deg); }
+        }
+        @keyframes cannon-shot {
+          0%   { opacity: 0; transform: translate(-20px, 6px) scale(0.2) rotate(-20deg); }
+          30%  { opacity: 1; transform: translate(0) scale(1.2) rotate(5deg); }
+          65%  { opacity: 0.7; transform: translate(4px, -5px) scale(0.9); }
+          100% { opacity: 0; transform: translate(10px, -10px) scale(0.3); }
+        }
+        @keyframes crit-shake {
+          0%   { transform: translateX(0) rotate(0deg); }
+          12%  { transform: translateX(-10px) rotate(-1.5deg); }
+          25%  { transform: translateX(10px) rotate(1.5deg); }
+          38%  { transform: translateX(-8px) rotate(-1deg); }
+          52%  { transform: translateX(8px) rotate(1deg); }
+          65%  { transform: translateX(-4px) rotate(-0.5deg); }
+          78%  { transform: translateX(4px) rotate(0.3deg); }
+          90%  { transform: translateX(-2px); }
+          100% { transform: translateX(0) rotate(0deg); }
+        }
+        @keyframes crit-flash {
+          0%   { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        @keyframes dodge-slide {
+          0%   { transform: translateX(0) rotate(0deg); }
+          18%  { transform: translateX(14px) rotate(1deg); }
+          38%  { transform: translateX(-6px) rotate(-0.5deg); }
+          60%  { transform: translateX(4px) rotate(0.3deg); }
+          80%  { transform: translateX(-2px); }
+          100% { transform: translateX(0) rotate(0deg); }
+        }
+        @keyframes hit-shake {
+          0%   { transform: translateX(0) rotate(0deg); }
+          15%  { transform: translateX(-6px) rotate(-1deg); }
+          35%  { transform: translateX(6px) rotate(0.8deg); }
+          55%  { transform: translateX(-4px) rotate(-0.5deg); }
+          75%  { transform: translateX(3px) rotate(0.3deg); }
+          90%  { transform: translateX(-1px); }
+          100% { transform: translateX(0) rotate(0deg); }
+        }
+        @keyframes player-recoil {
+          0%   { transform: translateX(0) rotate(0deg); }
+          20%  { transform: translateX(-8px) rotate(-0.8deg); }
+          50%  { transform: translateX(4px) rotate(0.4deg); }
+          75%  { transform: translateX(-2px); }
+          100% { transform: translateX(0) rotate(0deg); }
+        }
+        @keyframes player-hit {
+          0%   { transform: translateX(0) scale(1); }
+          15%  { transform: translateX(-12px) scale(0.97); }
+          35%  { transform: translateX(10px) scale(1.01); }
+          55%  { transform: translateX(-6px) scale(0.99); }
+          75%  { transform: translateX(4px); }
+          90%  { transform: translateX(-2px); }
+          100% { transform: translateX(0) scale(1); }
+        }
+        @keyframes enemy-sink {
+          0%   { transform: scaleX(-1) translateY(0) rotate(0deg); opacity: 1; }
+          40%  { transform: scaleX(-1) translateY(4px) rotate(-6deg); opacity: 0.85; }
+          100% { transform: scaleX(-1) translateY(60px) rotate(-18deg); opacity: 0; }
+        }
+      `}</style>
+    </div>
+  )
+}

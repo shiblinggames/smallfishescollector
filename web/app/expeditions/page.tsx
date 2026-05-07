@@ -20,7 +20,7 @@ export default async function ExpeditionsPage() {
 
   const [{ data: profile }, { data: expeditionRows }, collection, dailyVoyageState, { data: voyageHistoryRows }] = await Promise.all([
     admin.from('profiles')
-      .select('packs_available, doubloons, ship_tier, gems, saved_crew, ship_name, expedition_xp, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items')
+      .select('packs_available, doubloons, ship_tier, gems, saved_crew, ship_name, expedition_xp, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, has_completed_practice_raid')
       .eq('id', user.id)
       .single(),
     admin.from('expeditions')
@@ -106,7 +106,7 @@ export default async function ExpeditionsPage() {
           {/* ── Raids ── */}
           <div style={{ marginBottom: '1.5rem' }}>
             <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Raids</p>
-            <RaidCard navLevel={navLevel} />
+            <RaidCard navLevel={navLevel} hasCompletedPracticeRaid={!!(profile?.has_completed_practice_raid)} />
           </div>
 
           <div className="pb-16" />

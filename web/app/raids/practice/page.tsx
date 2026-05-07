@@ -1,16 +1,17 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
-import RaidGame from './RaidGame'
-import { getRaidPlayerStats } from './actions'
+import PracticeRaidGame from './PracticeRaidGame'
+import { getRaidPlayerStats } from '../actions'
 
-export default async function RaidPage() {
+export default async function PracticeRaidPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
   const [{ data: profile }, stats] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, gems, has_seen_raid_tutorial, has_completed_practice_raid').eq('id', user.id).single(),
     getRaidPlayerStats(user.id),
   ])
 
@@ -23,7 +24,7 @@ export default async function RaidPage() {
       />
       <main>
         <div className="px-6 pt-4 pb-6 max-w-sm mx-auto md:[zoom:1.25] lg:[zoom:1.45]">
-          <RaidGame
+          <PracticeRaidGame
             shipImageUrl={stats.shipImageUrl}
             shipName={stats.shipName}
             playerHPMax={stats.playerHPMax}
@@ -31,12 +32,10 @@ export default async function RaidPage() {
             shipSpeed={stats.shipSpeed}
             totalPower={stats.totalPower}
             totalDodge={stats.totalDodge}
-            totalFortune={stats.totalFortune}
-            crewCount={stats.crewCount}
             crewMembers={stats.crewMembers}
             equippedShipSkin={stats.equippedShipSkin}
-            shipSkins={stats.shipSkins}
-            equippedItems={stats.equippedRaidItems}
+            hasSeenTutorial={stats.hasSeenRaidTutorial}
+            hasCompletedPractice={!!(profile?.has_completed_practice_raid)}
           />
         </div>
       </main>
