@@ -409,8 +409,9 @@ function DialSVG({
           </radialGradient>
         </defs>
         <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-        {/* Ring skin band — fills the gap between arcs and outer edge */}
-        <circle cx={CX} cy={CY} r={OUTER_R + 3} fill="none" stroke={fireLevel > 0 ? 'transparent' : (ringSkin?.stroke ?? 'transparent')} strokeWidth="6" strokeOpacity={ringSkin && ringSkin.stroke !== 'rgba(255,255,255,0.12)' ? 0.55 : 0} />
+        {ringSkin && ringSkin.stroke !== 'rgba(255,255,255,0.12)' && fireLevel === 0 && (
+          <circle cx={CX} cy={CY} r={OUTER_R + 6} fill={ringSkin.stroke} fillOpacity={0.07} stroke="none" />
+        )}
 <g transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
             <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
