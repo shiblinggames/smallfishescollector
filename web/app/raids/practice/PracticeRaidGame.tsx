@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { awardPracticeKill } from './practiceActions'
-import { RAID_KILL_XP } from '../raidXPActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
 
@@ -32,17 +31,17 @@ const PRACTICE_ENEMIES: Record<string, PracticeEnemy> = {
   brute: {
     id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 2, maxDmg: 5,
     actionMs: 4500, pattern: ['reload', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1.png', killGold: 20, killXP: RAID_KILL_XP.brute,
+    image: ENEMY_IMG_BASE + 'enemytier1.png', killGold: 20, killXP: 20,
   },
   sniper: {
     id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
     actionMs: 5500, pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1.png', killGold: 25, killXP: RAID_KILL_XP.sniper,
+    image: ENEMY_IMG_BASE + 'enemytier1.png', killGold: 25, killXP: 30,
   },
   corsair: {
     id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
     actionMs: 3500, pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1elite.png', killGold: 35, killXP: RAID_KILL_XP.corsair,
+    image: ENEMY_IMG_BASE + 'enemytier1elite.png', killGold: 35, killXP: 45,
   },
 }
 const NON_BOSS_IDS = ['brute', 'sniper', 'corsair'] as const
@@ -664,9 +663,9 @@ export default function PracticeRaidGame({
       setNavXP(res.newExpeditionXP)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
       if (winXP > 0) setXpPopup({ value: winXP, id: Date.now() })
-      setWinPhase('claimed')
-    } finally {
+    } catch { /* save failed, still advance */ } finally {
       setIsClaiming(false)
+      setWinPhase('claimed')
     }
   }, [isClaiming, winXP, winGold])
 
