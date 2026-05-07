@@ -3198,8 +3198,8 @@ export default function FishingGame({
                   }}
                 >
                   <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)' }}>Gear</p>
-                  <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#d4c09a', lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
-                    {rod.name}
+                  <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1 }}>
+                    Loadout
                   </p>
                 </button>
 
