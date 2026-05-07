@@ -73,6 +73,7 @@ export default function ProfileClient({
   const [modalOpen, setModalOpen] = useState(false)
   const [characterColor, setCharacterColor] = useState(initialCharacterColor)
   const [colorSaving, setColorSaving] = useState(false)
+  const [hintSkinId, setHintSkinId] = useState<string | null>(null)
 
   const color = avatarColor(username || email)
   const initial = (username || email).slice(0, 1).toUpperCase()
@@ -293,26 +294,32 @@ export default function ProfileClient({
             const sprites = getCharacterSprites(c.id)
             const isActive = characterColor === c.id
             const isUnlocked = unlockedColors.includes(c.id)
+            const isHinted = hintSkinId === c.id
             return (
               <button
                 key={c.id}
-                disabled={!isUnlocked || colorSaving}
+                disabled={colorSaving}
                 onClick={async () => {
-                  if (isActive || !isUnlocked) return
+                  if (!isUnlocked) {
+                    setHintSkinId(isHinted ? null : c.id)
+                    return
+                  }
+                  if (isActive) return
+                  setHintSkinId(null)
                   setColorSaving(true)
                   setCharacterColor(c.id)
                   await updateCharacterColor(c.id)
                   setColorSaving(false)
                 }}
                 style={{
-                  background: 'none', border: 'none', cursor: isUnlocked ? 'pointer' : 'default',
+                  background: 'none', border: 'none', cursor: 'pointer',
                   padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                  opacity: !isUnlocked ? 0.4 : 1,
+                  opacity: !isUnlocked ? 0.45 : 1,
                 }}
               >
                 <div style={{
                   width: 72, height: 72, borderRadius: 12, overflow: 'hidden',
-                  border: isActive ? '2px solid #60a5fa' : '2px solid rgba(255,255,255,0.08)',
+                  border: isActive ? '2px solid #60a5fa' : isHinted ? '2px solid rgba(255,255,255,0.3)' : '2px solid rgba(255,255,255,0.08)',
                   boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.35)' : 'none',
                   backgroundImage: `url(${sprites.rest})`,
                   backgroundSize: '280% auto',
@@ -335,15 +342,35 @@ export default function ProfileClient({
                 <span className="font-karla font-600" style={{ fontSize: '0.65rem', color: isActive ? '#60a5fa' : '#6a6764' }}>
                   {c.name}
                 </span>
-                {!isUnlocked && c.unlockHint && (
-                  <span className="font-karla" style={{ fontSize: '0.55rem', color: '#4a4845', textAlign: 'center', maxWidth: 72, lineHeight: 1.3 }}>
-                    {c.unlockHint}
-                  </span>
-                )}
               </button>
             )
           })}
         </div>
+        {hintSkinId && (() => {
+          const skin = CHARACTER_COLORS.find(c => c.id === hintSkinId)
+          if (!skin?.unlockHint) return null
+          return (
+            <div style={{
+              marginTop: '0.75rem',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 10, padding: '0.65rem 0.85rem',
+              display: 'flex', alignItems: 'flex-start', gap: '0.6rem',
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <div>
+                <p className="font-karla font-600" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.55)', marginBottom: 2 }}>
+                  {skin.name} — Locked
+                </p>
+                <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.45 }}>
+                  {skin.unlockHint}
+                </p>
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
       {/* ── Showcase ── */}
