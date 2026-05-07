@@ -15,6 +15,7 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'golden',  name: 'Golden', free: false, unlockHint: 'Catch all 6 Ancient Deep trophies' },
   { id: 'forest',  name: 'Forest', free: false, unlockHint: 'Reach Fishing Level 50' },
   { id: 'mint',    name: 'Mint',   free: false, unlockHint: 'Rare drop from fishing crates' },
+  { id: 'autumn',  name: 'Autumn', free: false, unlockHint: 'Premium skin' },
 ]
 
 export function getCharacterSprites(colorId: string) {
