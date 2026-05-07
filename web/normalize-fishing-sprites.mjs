@@ -9,7 +9,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const SRC = path.join(__dirname, 'public', 'newfishing2.png')
+const SRC = path.join(__dirname, 'public', 'newfishing3.png')
 const OUT = path.join(__dirname, 'public')
 
 const CROPS = [
