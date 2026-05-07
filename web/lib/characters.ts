@@ -7,6 +7,9 @@ export interface CharacterColor {
 export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'default', name: 'Green',  free: true  },
   { id: 'gray',    name: 'Gray',   free: true  },
+  { id: 'blue',    name: 'Blue',   free: true  },
+  { id: 'pink',    name: 'Pink',   free: true  },
+  { id: 'sand',    name: 'Sand',   free: false },
 ]
 
 export function getCharacterSprites(colorId: string) {
