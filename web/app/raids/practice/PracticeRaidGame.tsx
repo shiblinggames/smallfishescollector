@@ -316,6 +316,7 @@ export default function PracticeRaidGame({
   }, [])
 
   // Tour
+  const [seenTutorial, setSeenTutorial] = useState(hasSeenTutorial)
   const [showTour, setShowTour]   = useState(false)
   const [tourStep, setTourStep]   = useState(0)
 
@@ -425,13 +426,14 @@ export default function PracticeRaidGame({
 
   function handleOpenFire() {
     if (phaseRef.current !== 'idle') return
-    if (!hasSeenTutorial) { setShowTour(true); return }
+    if (!seenTutorial) { setShowTour(true); return }
     const enemy = hasCompletedPractice ? pickRandomEnemy() : PRACTICE_ENEMIES.brute
     startGame(enemy)
   }
 
   function dismissTour() {
     markPracticeRaidTutorialSeen()
+    setSeenTutorial(true)
     setShowTour(false)
     setTourStep(0)
     const enemy = hasCompletedPractice ? pickRandomEnemy() : PRACTICE_ENEMIES.brute
@@ -665,8 +667,10 @@ export default function PracticeRaidGame({
     try {
       const res = await claimPracticeWin(winGold)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
-    } finally { setIsClaiming(false) }
-    router.push('/expeditions')
+    } finally {
+      setIsClaiming(false)
+      router.push('/expeditions')
+    }
   }, [isClaiming, winGold, router])
 
   const retryGame = useCallback(() => {
