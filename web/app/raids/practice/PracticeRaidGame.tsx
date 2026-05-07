@@ -737,6 +737,18 @@ export default function PracticeRaidGame({
         }}>
           <div style={{ position: 'relative', height: 230, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
             <img src={shipImageUrl} alt={shipName} style={{ width: '100%', height: 230, objectFit: 'contain', objectPosition: 'bottom', filter: shipFilter }} />
+            {crewMembers.length > 0 && (
+              <div style={{
+                position: 'absolute', bottom: 4, left: 4,
+                width: 26, height: 26, borderRadius: '50%',
+                border: '2px solid rgba(96,165,250,0.65)',
+                overflow: 'hidden',
+                boxShadow: '0 0 8px rgba(96,165,250,0.35)',
+                background: 'rgba(0,0,0,0.3)',
+              }}>
+                <img src={crewMembers[0].imageUrl} alt={crewMembers[0].name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
+              </div>
+            )}
             {pHitsplat.key > 0 && <Hitsplat key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} animKey={pHitsplat.key} />}
             {showDodgeVFX && (
               <>
