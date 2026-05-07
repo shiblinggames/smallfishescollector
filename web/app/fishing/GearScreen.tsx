@@ -163,7 +163,7 @@ function SpecialItemRow({
             className="font-karla font-700 uppercase tracking-[0.08em]"
           >
             <span style={{ fontSize: '0.52rem', color: item.color, display: 'block', lineHeight: 1.2 }}>Buy</span>
-            <span style={{ fontSize: '0.58rem', color: '#f0c040', display: 'block', lineHeight: 1.3 }}>{item.shopCost.toLocaleString()} ⚓</span>
+            <span style={{ fontSize: '0.58rem', color: '#f0c040', display: 'block', lineHeight: 1.3 }}>{item.shopCost.toLocaleString()}</span>
           </button>
         )}
       </div>
