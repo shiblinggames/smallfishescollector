@@ -1356,8 +1356,6 @@ function XPBarDisplay({ xp, bestStreak }: { xp: number; bestStreak?: number }) {
   const fillPct = isMax ? 100 : progress * 100
   const toGo = xpForLevel - xpInLevel
   const c = isMax ? '#f0c040' : '#60a5fa'
-  const biteBonus = Math.round(((level - 1) / 99) * 33)
-
   return (
     <div className="flex items-center gap-2.5 px-3 py-2"
       style={{ background: 'rgba(4,10,18,0.72)', border: `1px solid ${c}28`, borderRadius: 20 }}>
@@ -1383,11 +1381,6 @@ function XPBarDisplay({ xp, bestStreak }: { xp: number; bestStreak?: number }) {
           style={{ fontSize: '0.6rem', color: isMax ? c : 'rgba(255,255,255,0.65)', textAlign: 'right', lineHeight: 1 }}>
           {isMax ? 'MAX' : `${toGo.toLocaleString()} xp`}
         </p>
-        {biteBonus > 0 && (
-          <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#34d399', lineHeight: 1, opacity: 0.85 }}>
-            ⚡{biteBonus}%
-          </span>
-        )}
         {(bestStreak ?? 0) > 0 && (
           <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: 'rgba(251,146,60,0.9)', lineHeight: 1 }}>
             🔥{bestStreak}
@@ -3892,6 +3885,7 @@ export default function FishingGame({
               tideTurnerSkipsLeft={tideTurnerSkipsLeft}
               hasPhantomHook={hasPhantomHook}
               hasAutoCaster={ownedAutoCaster}
+              fishingLevel={fishingLevel}
               equippedSpecial={equippedSpecial}
               onEquipSpecial={async (itemId) => {
                 setEquippedSpecial(itemId)

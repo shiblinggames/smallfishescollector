@@ -251,6 +251,7 @@ export default function GearScreen({
   equippedRingSkin, unlockedRingSkins, onEquipRingSkin,
   hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster,
   equippedSpecial, onEquipSpecial, onBuySpecialItem,
+  fishingLevel,
   onClose,
 }: {
   baitInventory: BaitItem[]
@@ -273,6 +274,7 @@ export default function GearScreen({
   equippedSpecial: string | null
   onEquipSpecial: (itemId: string | null) => void
   onBuySpecialItem: (itemId: string) => Promise<void>
+  fishingLevel: number
   onClose: () => void
 }) {
   const [openSlot, setOpenSlot] = useState<SlotKey | null>(null)
@@ -302,6 +304,8 @@ export default function GearScreen({
   if (rod.rarityBonus > 0) specialBonuses.push({ label: `+${Math.round(rod.rarityBonus * 100)}% rare fish`, color: rod.color })
   if (bait && bait.waitMult < 1) specialBonuses.push({ label: `${Math.round((1 - bait.waitMult) * 100)}% faster bite`, color: bait.color })
   if (bait && bait.waitMult > 1) specialBonuses.push({ label: `${Math.round((bait.waitMult - 1) * 100)}% slower bite`, color: '#f87171' })
+  const levelBiteBonus = Math.round(((fishingLevel - 1) / 99) * 33)
+  if (levelBiteBonus > 0) specialBonuses.push({ label: `+${levelBiteBonus}% faster bite (level)`, color: '#6a8a7a' })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative' }}>
