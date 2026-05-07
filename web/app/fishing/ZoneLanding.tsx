@@ -289,10 +289,12 @@ export default function ZoneLanding({
                     </div>
 
                     {/* Top catch — no spoilers, just the value */}
-                    <div style={{ padding: '0.3rem 1rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span className="font-karla font-400" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)' }}>Top catch worth up to</span>
-                      <span className="font-cinzel font-700" style={{ fontSize: '0.76rem', color: '#f59e0b' }}>{stats.topSell.toLocaleString()} ⟡</span>
-                    </div>
+                    {zone !== 'ancient_deep' && (
+                      <div style={{ padding: '0.3rem 1rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span className="font-karla font-400" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)' }}>Top catch worth up to</span>
+                        <span className="font-cinzel font-700" style={{ fontSize: '0.76rem', color: '#f59e0b' }}>{stats.topSell.toLocaleString()} ⟡</span>
+                      </div>
+                    )}
                   </>)}
                 </motion.div>
               )
