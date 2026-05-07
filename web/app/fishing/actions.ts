@@ -51,7 +51,7 @@ function fishWaitMs(catchScore: number, habitat: string, baitType: string, fishi
   const frac = Math.max(0, Math.min(1, (catchScore - 8) / 90))
   const base = zMin + frac * (zMax - zMin)
   const baitMult = getBait(baitType).waitMult
-  const levelMult = 1 - ((fishingLevel - 1) / 99) * 0.25
+  const levelMult = 1 - ((fishingLevel - 1) / 99) * 0.33
   return Math.max(3000, Math.min(60000, base * baitMult * levelMult))
 }
 
