@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -8,6 +8,11 @@ import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { updateUsername, updateShowcase, updateCharacterColor } from '@/app/u/actions'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
+import { getRod } from '@/lib/rods'
+import { getHook } from '@/lib/hooks'
+import { getShip } from '@/lib/ships'
+import { getShipSkin } from '@/lib/shipSkins'
+import { SPECIAL_ITEMS } from '@/lib/specialItems'
 
 type PickerCard = {
   variantId: number
@@ -30,18 +35,144 @@ interface Props {
   expeditionLevel: number
   navigatorTitle: string
   uniqueSpecies: number
+  shipTier: number
   shipName: string
   shipColor: string
+  customShipName: string | null
+  equippedShipSkin: string | null
+  rodTier: number
+  hookTier: number
+  equippedSpecialId: string | null
+  rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
   characterColor: string
   unlockedColors: string[]
 }
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
-
 function avatarColor(str: string) {
   let h = 0
   for (const c of str) h = c.charCodeAt(0) + ((h << 5) - h)
   return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
+}
+
+function fishImageUrl(name: string) {
+  return `/fish/${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.png`
+}
+
+const RARITY_COLOR: Record<number, string> = {
+  1: '#94a3b8', 2: '#4ade80', 3: '#60a5fa', 4: '#c084fc', 5: '#f59e0b',
+}
+const RARITY_LABEL: Record<number, string> = {
+  1: 'Common', 2: 'Uncommon', 3: 'Rare', 4: 'Epic', 5: 'Legendary',
+}
+
+const CARD_W = 140
+function getOff(idx: number, active: number, total: number) {
+  let d = idx - active
+  if (d > total / 2) d -= total
+  if (d < -total / 2) d += total
+  return d
+}
+function cardTransform(off: number): { tx: number; tz: number; ry: number; scale: number; brightness: number; zIdx: number } {
+  const abs = Math.abs(off)
+  const sign = Math.sign(off)
+  if (off === 0)  return { tx: 0,         tz: 50,  ry: 0,           scale: 1.00, brightness: 1.0,  zIdx: 10 }
+  if (abs === 1)  return { tx: sign * 90,  tz: -15, ry: -sign * 22,  scale: 0.80, brightness: 0.55, zIdx: 5  }
+  return            { tx: sign * 148, tz: -45, ry: -sign * 36,  scale: 0.60, brightness: 0.35, zIdx: 2  }
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.78rem', color: '#8a8782', marginBottom: 14 }}>
+      {children}
+    </p>
+  )
+}
+
+function ShowcaseCarousel({ cards, onEdit }: { cards: PickerCard[]; onEdit: () => void }) {
+  const [active, setActive] = useState(0)
+  const total = cards.length
+  const touchStartX = useRef<number | null>(null)
+  function prev() { setActive(i => (i - 1 + total) % total) }
+  function next() { setActive(i => (i + 1) % total) }
+
+  return (
+    <div>
+      <div
+        style={{ position: 'relative', height: 210, perspective: '800px', overflow: 'visible' }}
+        onTouchStart={e => { touchStartX.current = e.touches[0].clientX }}
+        onTouchEnd={e => {
+          if (touchStartX.current === null || total <= 1) return
+          const dx = e.changedTouches[0].clientX - touchStartX.current
+          if (dx > 40) prev(); else if (dx < -40) next()
+          touchStartX.current = null
+        }}
+      >
+        {cards.map((card, idx) => {
+          const off = getOff(idx, active, total)
+          if (Math.abs(off) > 2) return null
+          const { tx, tz, ry, scale, brightness, zIdx } = cardTransform(off)
+          return (
+            <div
+              key={card.variantId}
+              onClick={() => off !== 0 && setActive(idx)}
+              style={{
+                position: 'absolute', left: '50%', top: 0, marginLeft: -CARD_W / 2,
+                transform: `translateX(${tx}px) translateZ(${tz}px) rotateY(${ry}deg) scale(${scale})`,
+                transition: 'transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94), filter 0.38s',
+                filter: `brightness(${brightness})`,
+                zIndex: zIdx,
+                cursor: off !== 0 ? 'pointer' : 'default',
+              }}
+            >
+              <FishCard
+                name={card.name}
+                filename={card.filename}
+                borderStyle={card.borderStyle}
+                artEffect={card.artEffect}
+                variantName={card.variantName}
+                dropWeight={card.dropWeight}
+              />
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginTop: 10 }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0ede8', minHeight: '1.2em' }}>
+          {cards[active]?.name}
+        </p>
+        {total > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={prev} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a7775', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>‹</button>
+            <div style={{ display: 'flex', gap: 5 }}>
+              {cards.map((_, i) => (
+                <button key={i} onClick={() => setActive(i)} style={{
+                  width: i === active ? 18 : 6, height: 6, borderRadius: 3,
+                  background: i === active ? '#f0c040' : 'rgba(255,255,255,0.2)',
+                  border: 'none', cursor: 'pointer', padding: 0,
+                  transition: 'width 0.22s, background 0.22s',
+                }} />
+              ))}
+            </div>
+            <button onClick={next} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a7775', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>›</button>
+          </div>
+        )}
+        <button
+          onClick={onEdit}
+          style={{
+            marginTop: 4,
+            padding: '0.32rem 0.9rem', borderRadius: '2rem',
+            background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.28)',
+            cursor: 'pointer',
+          }}
+        >
+          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#f0c040', letterSpacing: '0.12em' }}>
+            Edit Showcase
+          </span>
+        </button>
+      </div>
+    </div>
+  )
 }
 
 export default function ProfileClient({
@@ -55,8 +186,15 @@ export default function ProfileClient({
   expeditionLevel,
   navigatorTitle,
   uniqueSpecies,
+  shipTier,
   shipName,
   shipColor,
+  customShipName,
+  equippedShipSkin,
+  rodTier,
+  hookTier,
+  equippedSpecialId,
+  rarestFish,
   characterColor: initialCharacterColor,
   unlockedColors,
 }: Props) {
@@ -77,6 +215,17 @@ export default function ProfileClient({
 
   const color = avatarColor(username || email)
   const initial = (username || email).slice(0, 1).toUpperCase()
+
+  const rod = getRod(rodTier)
+  const hook = getHook(hookTier)
+  const ship = getShip(shipTier)
+  const shipSkinDef = equippedShipSkin ? getShipSkin(equippedShipSkin) : null
+  const charSprites = getCharacterSprites(characterColor)
+  const equippedSpecial = equippedSpecialId ? SPECIAL_ITEMS.find(s => s.id === equippedSpecialId) ?? null : null
+
+  const showcaseCards = selectedShowcase
+    .map(id => pickerCards.find(c => c.variantId === id))
+    .filter((c): c is PickerCard => !!c)
 
   function handleSaveUsername(e: React.FormEvent) {
     e.preventDefault()
@@ -116,49 +265,27 @@ export default function ProfileClient({
     router.refresh()
   }
 
-  const showcaseCards = selectedShowcase
-    .map(id => pickerCards.find(c => c.variantId === id))
-    .filter((c): c is PickerCard => !!c)
-
   return (
-    <div style={{ maxWidth: 520, margin: '0 auto', padding: '0 1.25rem 3rem' }}>
+    <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 1.25rem 3rem' }}>
 
-      {/* ── Identity card ── */}
-      <div style={{
-        background: 'rgba(4,10,20,0.85)',
-        border: '1px solid rgba(255,255,255,0.09)',
-        borderRadius: 20,
-        padding: '2rem 1.5rem 1.5rem',
-        marginBottom: '0.75rem',
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        textAlign: 'center', gap: 10,
-        position: 'relative',
-      }}>
-        {/* Ocean depth glow behind avatar */}
+      {/* ── Identity header ── */}
+      <div className="flex flex-col items-center gap-3 pt-2 pb-7">
+        {/* Avatar */}
         <div style={{
-          position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-          width: 180, height: 120, borderRadius: '50%',
-          background: `radial-gradient(ellipse, ${color}22 0%, transparent 70%)`,
-          pointerEvents: 'none',
-        }} />
-
-        {/* Avatar circle */}
-        <div style={{
-          width: 80, height: 80, borderRadius: '50%',
+          width: 68, height: 68, borderRadius: '50%',
           background: `radial-gradient(circle at 38% 35%, ${color}ee 0%, ${color}77 100%)`,
           border: `2px solid ${color}55`,
-          boxShadow: `0 0 32px ${color}33, inset 0 1px 0 rgba(255,255,255,0.15)`,
+          boxShadow: `0 0 28px ${color}33, inset 0 1px 0 rgba(255,255,255,0.15)`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          position: 'relative', zIndex: 1,
         }}>
-          <span className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0ede8', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+          <span className="font-cinzel font-700" style={{ fontSize: '1.7rem', color: '#f0ede8', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
             {initial}
           </span>
         </div>
 
-        {/* Name + edit */}
+        {/* Username + rename */}
         {showUsernameForm ? (
-          <form onSubmit={handleSaveUsername} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', zIndex: 1 }}>
+          <form onSubmit={handleSaveUsername} style={{ width: '100%', maxWidth: 300, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <input
               type="text"
               value={usernameInput}
@@ -185,248 +312,319 @@ export default function ProfileClient({
             </div>
           </form>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, position: 'relative', zIndex: 1 }}>
+          <div className="flex flex-col items-center gap-1">
             <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>{username}</p>
             {!usernameChanged && (
-              <button
-                onClick={() => setShowUsernameForm(true)}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                }}
-              >
-                <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#6a6764', textDecoration: 'underline', textUnderlineOffset: 3 }}>Rename</span>
+              <button onClick={() => setShowUsernameForm(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                <span className="font-karla font-600" style={{ fontSize: '0.65rem', color: '#6a6764', textDecoration: 'underline', textUnderlineOffset: 3 }}>Rename</span>
               </button>
             )}
+            <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#4a4845' }}>{email}</p>
           </div>
         )}
 
-        {/* Email */}
-        <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#6a6764', position: 'relative', zIndex: 1 }}>{email}</p>
-
-        {/* Badges row */}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', position: 'relative', zIndex: 1 }}>
+        {/* Badge pills */}
+        <div className="flex items-center gap-2 flex-wrap justify-center">
           {isPremium && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              padding: '0.22rem 0.7rem', borderRadius: '2rem',
-              background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.3)',
-            }}>
-              <svg width="8" height="8" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.28)' }}>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
-              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', color: '#f0c040', letterSpacing: '0.12em' }}>Member</span>
+              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#f0c040' }}>Member</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.25)' }}>
+            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#60a5fa' }}>Fishing Lv {level}</span>
+          </div>
+          {expeditionLevel > 0 && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(112,144,192,0.08)', border: '1px solid rgba(112,144,192,0.25)' }}>
+              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#7090c0' }}>{navigatorTitle} · Lv {expeditionLevel}</span>
             </div>
           )}
           <Link
             href={`/u/${username}`}
             style={{
               display: 'flex', alignItems: 'center', gap: 4,
-              padding: '0.22rem 0.7rem', borderRadius: '2rem',
+              padding: '0.35rem 0.75rem', borderRadius: '2rem',
               background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
               textDecoration: 'none',
             }}
           >
-            <span className="font-karla font-600 uppercase" style={{ fontSize: '0.6rem', color: '#6a6764', letterSpacing: '0.1em' }}>Public Profile ↗</span>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#6a6764' }}>Public Profile ↗</span>
           </Link>
         </div>
       </div>
 
-      {/* ── Stats ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 6 }}>
-        {[
-          { value: String(level), label: 'Fishing Level', color: '#60a5fa' },
-          { value: String(uniqueSpecies), label: 'Species Found', color: '#34d399' },
-          { value: shipName, label: 'Vessel', color: shipColor },
-        ].map(({ value, label, color: c }) => (
-          <div key={label} style={{
-            background: 'rgba(4,10,20,0.85)',
-            border: `1px solid ${c}22`,
-            borderRadius: 14, padding: '0.9rem 0.5rem',
-            textAlign: 'center',
+      {/* ── Two-column body ── */}
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-8 md:gap-10 items-start">
+
+        {/* ── LEFT: Fishing — character + catches ── */}
+        <div className="flex flex-col" style={{ gap: 28 }}>
+
+          {/* Character Loadout */}
+          <div style={{
+            background: 'radial-gradient(ellipse at 50% 90%, rgba(20,50,100,0.22) 0%, transparent 70%)',
+            border: '1px solid rgba(80,120,200,0.18)',
+            borderRadius: 20,
+            overflow: 'hidden',
+            paddingBottom: 14,
           }}>
-            <p className="font-cinzel font-700" style={{
-              fontSize: value.length > 7 ? '0.78rem' : '1.25rem',
-              color: c, lineHeight: 1.15,
-            }}>
-              {value}
-            </p>
-            <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', color: '#6a6764', letterSpacing: '0.12em', marginTop: 5 }}>
-              {label}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Navigator title ── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: 'rgba(16,28,52,0.75)',
-        border: '1px solid rgba(112,144,192,0.22)',
-        borderRadius: 14, padding: '0.75rem 1rem',
-        marginBottom: '0.75rem',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>⚓</span>
-          <div>
-            <p className="font-karla font-600 uppercase" style={{ fontSize: '0.48rem', color: '#7090c0', letterSpacing: '0.14em', marginBottom: 2 }}>Navigator Rank</p>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#a8c4e8', lineHeight: 1 }}>{navigatorTitle}</p>
-          </div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#7090c0', lineHeight: 1 }}>Lv {expeditionLevel}</p>
-          <p className="font-karla font-400" style={{ fontSize: '0.48rem', color: '#4a6080', marginTop: 2 }}>expedition</p>
-        </div>
-      </div>
-
-      {/* ── Character color ── */}
-      <div style={{
-        background: 'rgba(4,10,20,0.85)',
-        border: '1px solid rgba(255,255,255,0.09)',
-        borderRadius: 16, padding: '1.1rem 1.25rem',
-        marginBottom: '0.75rem',
-      }}>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0ede8', marginBottom: 4 }}>Character</p>
-        <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#6a6764', marginBottom: '1rem' }}>
-          Choose your fisher's color. Reflects in-game and on your public profile.
-        </p>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {CHARACTER_COLORS.map(c => {
-            const sprites = getCharacterSprites(c.id)
-            const isActive = characterColor === c.id
-            const isUnlocked = unlockedColors.includes(c.id)
-            const isHinted = hintSkinId === c.id
-            return (
-              <button
-                key={c.id}
-                disabled={colorSaving}
-                onClick={async () => {
-                  if (!isUnlocked) {
-                    setHintSkinId(isHinted ? null : c.id)
-                    return
-                  }
-                  if (isActive) return
-                  setHintSkinId(null)
-                  setColorSaving(true)
-                  setCharacterColor(c.id)
-                  await updateCharacterColor(c.id)
-                  setColorSaving(false)
-                }}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                  opacity: !isUnlocked ? 0.45 : 1,
-                }}
-              >
-                <div style={{
-                  width: 72, height: 72, borderRadius: 12, overflow: 'hidden',
-                  border: isActive ? '2px solid #60a5fa' : isHinted ? '2px solid rgba(255,255,255,0.3)' : '2px solid rgba(255,255,255,0.08)',
-                  boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.35)' : 'none',
-                  backgroundImage: `url(${sprites.rest})`,
-                  backgroundSize: '280% auto',
-                  backgroundPosition: 'center 92%',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundColor: 'rgba(255,255,255,0.03)',
-                  position: 'relative',
-                }}>
-                  {!isUnlocked && (
-                    <div style={{
-                      position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'rgba(0,0,0,0.45)', borderRadius: 12,
-                    }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <span className="font-karla font-600" style={{ fontSize: '0.65rem', color: isActive ? '#60a5fa' : '#6a6764' }}>
-                  {c.name}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-        {hintSkinId && (() => {
-          const skin = CHARACTER_COLORS.find(c => c.id === hintSkinId)
-          if (!skin?.unlockHint) return null
-          return (
             <div style={{
-              marginTop: '0.75rem',
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 10, padding: '0.65rem 0.85rem',
-              display: 'flex', alignItems: 'flex-start', gap: '0.6rem',
+              position: 'relative', width: '100%', height: 200,
+              filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))',
             }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}>
-                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              <div>
-                <p className="font-karla font-600" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.55)', marginBottom: 2 }}>
-                  {skin.name} — Locked
-                </p>
-                <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.45 }}>
-                  {skin.unlockHint}
-                </p>
+              <div style={{ position: 'absolute', bottom: 0, left: '12%', width: '72%' }}>
+                <img src={charSprites.rest} alt="" style={{ width: '100%', display: 'block' }} />
+                {rod.imageUrl && (
+                  <img src={rod.imageUrl} alt="" style={{
+                    position: 'absolute', top: '33%', left: '12%', width: '51%',
+                    transform: 'rotate(-1deg)', transformOrigin: 'bottom right',
+                    pointerEvents: 'none',
+                  }} />
+                )}
+                {hook.imageUrl && (
+                  <img src={hook.imageUrl} alt="" style={{
+                    position: 'absolute', top: '81%', left: '9%', width: '16%',
+                    transform: 'rotate(-30deg)', transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                  }} />
+                )}
               </div>
             </div>
-          )
-        })()}
-      </div>
-
-      {/* ── Showcase ── */}
-      <div style={{
-        background: 'rgba(4,10,20,0.85)',
-        border: '1px solid rgba(255,255,255,0.09)',
-        borderRadius: 16, padding: '1.1rem 1.25rem',
-        marginBottom: '0.75rem',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
-          <div>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0ede8' }}>Showcase</p>
-            <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#6a6764', marginTop: 2 }}>
-              {showcaseCards.length > 0 ? `${showcaseCards.length} / 5 fish on your public profile` : 'Pin your best catches to your profile'}
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 0, padding: '0 20px' }}>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: rod.color + 'aa', marginBottom: 3 }}>Rod</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d8d5d0', lineHeight: 1.2 }}>{rod.name}</p>
+              </div>
+              <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: hook.color + 'aa', marginBottom: 3 }}>Hook</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d8d5d0', lineHeight: 1.2 }}>{hook.name}</p>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={() => setModalOpen(true)}
-            style={{
-              padding: '0.4rem 0.9rem', borderRadius: '2rem',
-              background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.3)',
-              cursor: 'pointer',
-            }}
-          >
-            <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#f0c040', letterSpacing: '0.12em' }}>
-              {showcaseCards.length > 0 ? 'Edit' : '+ Add'}
-            </span>
-          </button>
+
+          {/* Equipped Special */}
+          {equippedSpecial && (
+            <div style={{
+              background: `linear-gradient(130deg, ${equippedSpecial.color}12 0%, rgba(4,10,20,0.88) 55%)`,
+              border: `1px solid ${equippedSpecial.color}40`,
+              borderRadius: 16,
+              padding: '0.85rem 1rem',
+              display: 'flex', alignItems: 'center', gap: 14,
+              boxShadow: `0 0 20px ${equippedSpecial.color}14`,
+            }}>
+              {equippedSpecial.image
+                ? <img src={equippedSpecial.image} alt={equippedSpecial.name} style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 0 10px ${equippedSpecial.color}88)` }} />
+                : <div style={{ width: 44, height: 44, borderRadius: 10, background: equippedSpecial.color + '22', border: `1px solid ${equippedSpecial.color}44`, flexShrink: 0 }} />
+              }
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: equippedSpecial.color, lineHeight: 1.2, marginBottom: 4 }}>{equippedSpecial.name}</p>
+                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a8a5a0', lineHeight: 1.5 }}>{equippedSpecial.description}</p>
+                <span style={{
+                  display: 'inline-block', marginTop: 6,
+                  fontSize: '0.6rem', padding: '0.15rem 0.5rem', borderRadius: '2rem',
+                  background: equippedSpecial.color + '18', border: `1px solid ${equippedSpecial.color}40`, color: equippedSpecial.color,
+                  fontFamily: 'var(--font-karla)', fontWeight: 700,
+                  textTransform: 'uppercase', letterSpacing: '0.1em',
+                }}>
+                  {equippedSpecial.effectLabel}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Rarest Catches */}
+          {rarestFish.length > 0 && (
+            <div>
+              <SectionLabel>Rarest Catches</SectionLabel>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rarestFish.length}, 1fr)`, gap: 8 }}>
+                {rarestFish.map(fish => {
+                  const c = RARITY_COLOR[fish.bite_rarity]
+                  return (
+                    <div key={fish.id} style={{
+                      background: `${c}0a`, border: `1px solid ${c}38`,
+                      borderRadius: 12, padding: '0.85rem 0.6rem',
+                      textAlign: 'center', boxShadow: `0 0 18px ${c}18`,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                    }}>
+                      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img
+                          src={fishImageUrl(fish.name)}
+                          alt={fish.name}
+                          style={{ maxWidth: 52, maxHeight: 52, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${c}55)` }}
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                        />
+                      </div>
+                      <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#f0ede8', lineHeight: 1.2 }}>{fish.name}</p>
+                      <span style={{
+                        fontSize: '0.6rem', padding: '0.15rem 0.45rem', borderRadius: '2rem',
+                        background: `${c}14`, border: `1px solid ${c}38`, color: c,
+                        fontFamily: 'var(--font-karla)', fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: '0.1em',
+                      }}>
+                        {RARITY_LABEL[fish.bite_rarity] ?? 'Unknown'}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+              {uniqueSpecies > 0 && (
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#6a6764', marginTop: 10, textAlign: 'center' }}>
+                  {uniqueSpecies.toLocaleString()} species caught
+                </p>
+              )}
+            </div>
+          )}
+
         </div>
 
-        {showcaseCards.length > 0 ? (
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {showcaseCards.map(card => (
-              <div key={card.variantId} style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
-                <div style={{ transform: 'scale(0.457)', transformOrigin: 'top left', width: 140 }}>
-                  <FishCard
-                    name={card.name}
-                    filename={card.filename}
-                    borderStyle={card.borderStyle}
-                    artEffect={card.artEffect}
-                    variantName={card.variantName}
-                    dropWeight={card.dropWeight}
-                  />
-                </div>
-              </div>
-            ))}
+        {/* ── RIGHT: Expedition — ship + showcase + customise ── */}
+        <div className="flex flex-col" style={{ gap: 28 }}>
+
+          {/* Ship Hero */}
+          <div style={{
+            background: `radial-gradient(ellipse at 50% 65%, ${ship.color}1c 0%, transparent 68%)`,
+            border: `1px solid ${ship.color}20`,
+            borderRadius: 20,
+            padding: '24px 16px 16px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+          }}>
+            <img
+              src={ship.imageUrl}
+              alt={ship.name}
+              style={{
+                width: 200, height: 155, objectFit: 'contain',
+                filter: shipSkinDef ? shipSkinDef.filter : `drop-shadow(0 4px 28px ${ship.color}60)`,
+              }}
+            />
+            <div style={{ textAlign: 'center' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: ship.color, lineHeight: 1.2 }}>
+                {customShipName ?? shipName}
+              </p>
+              {customShipName && (
+                <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: ship.color + '70', marginTop: 5 }}>
+                  {shipName}
+                </p>
+              )}
+            </div>
           </div>
-        ) : (
-          <p className="font-karla font-600 text-center" style={{ fontSize: '0.7rem', color: '#3a3835', padding: '0.5rem 0' }}>
-            No fish selected
-          </p>
-        )}
+
+          {/* Showcase */}
+          <div>
+            <SectionLabel>Showcase</SectionLabel>
+            {showcaseCards.length > 0 ? (
+              <ShowcaseCarousel cards={showcaseCards} onEdit={() => setModalOpen(true)} />
+            ) : (
+              <div style={{ textAlign: 'center', paddingTop: 8 }}>
+                <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#3a3835', marginBottom: 12 }}>
+                  Pin your best catches to your profile
+                </p>
+                <button
+                  onClick={() => setModalOpen(true)}
+                  style={{
+                    padding: '0.4rem 1rem', borderRadius: '2rem',
+                    background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.3)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', color: '#f0c040', letterSpacing: '0.12em' }}>+ Add Cards</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Character Color */}
+          <div>
+            <SectionLabel>Character</SectionLabel>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {CHARACTER_COLORS.map(c => {
+                const sprites = getCharacterSprites(c.id)
+                const isActive = characterColor === c.id
+                const isUnlocked = unlockedColors.includes(c.id)
+                const isHinted = hintSkinId === c.id
+                return (
+                  <button
+                    key={c.id}
+                    disabled={colorSaving}
+                    onClick={async () => {
+                      if (!isUnlocked) {
+                        setHintSkinId(isHinted ? null : c.id)
+                        return
+                      }
+                      if (isActive) return
+                      setHintSkinId(null)
+                      setColorSaving(true)
+                      setCharacterColor(c.id)
+                      await updateCharacterColor(c.id)
+                      setColorSaving(false)
+                    }}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                      opacity: !isUnlocked ? 0.45 : 1,
+                    }}
+                  >
+                    <div style={{
+                      width: 72, height: 72, borderRadius: 12, overflow: 'hidden',
+                      border: isActive ? '2px solid #60a5fa' : isHinted ? '2px solid rgba(255,255,255,0.3)' : '2px solid rgba(255,255,255,0.08)',
+                      boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.35)' : 'none',
+                      backgroundImage: `url(${sprites.rest})`,
+                      backgroundSize: '280% auto', backgroundPosition: 'center 92%',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundColor: 'rgba(255,255,255,0.03)',
+                      position: 'relative',
+                    }}>
+                      {!isUnlocked && (
+                        <div style={{
+                          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'rgba(0,0,0,0.45)', borderRadius: 12,
+                        }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <span className="font-karla font-600" style={{ fontSize: '0.65rem', color: isActive ? '#60a5fa' : '#6a6764' }}>
+                      {c.name}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            {hintSkinId && (() => {
+              const skin = CHARACTER_COLORS.find(c => c.id === hintSkinId)
+              if (!skin?.unlockHint) return null
+              return (
+                <div style={{
+                  marginTop: '0.75rem',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 10, padding: '0.65rem 0.85rem',
+                  display: 'flex', alignItems: 'flex-start', gap: '0.6rem',
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                  <div>
+                    <p className="font-karla font-600" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.55)', marginBottom: 2 }}>
+                      {skin.name} — Locked
+                    </p>
+                    <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.45 }}>
+                      {skin.unlockHint}
+                    </p>
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+
+        </div>
       </div>
 
       {/* ── Quick links ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: '0.75rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 40, marginBottom: '0.75rem' }}>
         {[
           { href: '/achievements', label: 'Achievements', icon: (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -498,7 +696,6 @@ export default function ProfileClient({
             }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Modal header */}
             <div style={{ padding: '1.25rem 1.25rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
               <div>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>Pick Showcase</p>
@@ -514,7 +711,6 @@ export default function ProfileClient({
               <button onClick={() => setModalOpen(false)} style={{ color: '#4a4845', fontSize: '1.2rem', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1 }}>✕</button>
             </div>
 
-            {/* Card grid */}
             <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
               {pickerCards.length === 0 ? (
                 <p className="font-karla font-300 text-center" style={{ fontSize: '0.72rem', color: '#4a4845', padding: '2rem 0' }}>
@@ -553,7 +749,6 @@ export default function ProfileClient({
               )}
             </div>
 
-            {/* Modal footer */}
             <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid rgba(255,255,255,0.09)', flexShrink: 0 }}>
               <button onClick={handleSaveShowcase} disabled={pending} className="btn-ghost w-full" style={{ opacity: pending ? 0.5 : 1 }}>
                 {pending ? 'Saving…' : 'Save Showcase'}

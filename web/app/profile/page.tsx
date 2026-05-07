@@ -20,9 +20,10 @@ export default async function ProfilePage() {
     { data: profile },
     { count: uniqueSpecies },
     { data: ownedRows },
+    { data: rarestFishRows },
   ] = await Promise.all([
     supabase.from('profiles')
-      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, character_color, unlocked_character_colors')
+      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors')
       .eq('id', user.id)
       .single(),
     admin.from('fish_collection')
@@ -31,6 +32,11 @@ export default async function ProfilePage() {
     admin.from('user_collection')
       .select('card_variant_id, card_variants(id, variant_name, border_style, art_effect, drop_weight, cards(name, filename))')
       .eq('user_id', user.id),
+    admin.from('fish_collection')
+      .select('fish_species(id, name, bite_rarity, habitat)')
+      .eq('user_id', user.id)
+      .order('fish_species(bite_rarity)', { ascending: false })
+      .limit(3),
   ])
 
   const seen = new Set<number>()
@@ -53,6 +59,10 @@ export default async function ProfilePage() {
       filename:    cv.cards?.filename ?? '',
     })
   }
+
+  const rarestFish = ((rarestFishRows ?? []) as any[])
+    .map(r => r.fish_species)
+    .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
 
   const ship = getShip(profile?.ship_tier ?? 0)
   const level = getLevelFromXP(profile?.fishing_xp ?? 0)
@@ -86,8 +96,15 @@ export default async function ProfilePage() {
           expeditionLevel={expeditionLevel}
           navigatorTitle={navigatorTitle}
           uniqueSpecies={uniqueSpecies ?? 0}
+          shipTier={profile?.ship_tier ?? 0}
           shipName={ship.name}
           shipColor={ship.color}
+          customShipName={(profile?.ship_name as string | null) ?? null}
+          equippedShipSkin={(profile?.equipped_ship_skin as string | null) ?? null}
+          rodTier={profile?.rod_tier ?? 0}
+          hookTier={profile?.hook_tier ?? 0}
+          equippedSpecialId={(profile?.equipped_special as string | null) ?? null}
+          rarestFish={rarestFish}
           characterColor={profile?.character_color ?? 'default'}
           unlockedColors={unlockedColors}
         />
