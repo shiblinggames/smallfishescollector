@@ -1467,7 +1467,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                           onPointerDown={async () => {
                             if (lootClaimed) return
                             setLootClaimed(true)
-                            const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id])
+                            const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id], raidElapsedMs)
                             window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
                             router.push('/expeditions')
                           }}

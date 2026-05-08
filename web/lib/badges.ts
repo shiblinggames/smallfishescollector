@@ -16,7 +16,7 @@ export const BADGES: Badge[] = [
 
   // Expedition & combat
   { id: 'davy_jones',     name: "Davy Jones' Victor", description: "Complete Davy Jones' Locker",                     imageUrl: '/badges/davy_jones.png'     },
-  { id: 'corsairs_bane',  name: "Corsair's Bane",     description: 'Defeat Barnacle Pete in the raid',                imageUrl: '/badges/corsairs_bane.png'  },
+  { id: 'corsairs_bane',  name: "Corsair's Bane",     description: 'Defeat Barnacle Pete in under 2 minutes',         imageUrl: '/badges/corsairs_bane.png'  },
   { id: 'ghost_ship',     name: 'Ghost Ship',         description: 'Complete a full expedition without taking damage', imageUrl: '/badges/ghost_ship.png'     },
 
   // Economy & navigation
