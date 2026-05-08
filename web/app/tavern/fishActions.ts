@@ -10,7 +10,7 @@ const MAX_GUESSES  = 6
 
 // How many attribute tiles are revealed after N wrong guesses (0-indexed)
 // Guess 1 wrong → 1 tile, guess 2 → 2, ..., guess 4+ → all 4
-export function tilesRevealedAfterGuesses(wrongCount: number): number {
+function tilesRevealedAfterGuesses(wrongCount: number): number {
   return Math.min(wrongCount, 4)
 }
 
