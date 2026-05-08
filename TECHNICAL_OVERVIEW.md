@@ -61,6 +61,8 @@ All data lives in Supabase (PostgreSQL). Row Level Security (RLS) is enabled on 
 
 The DB is organized around a central `profiles` table (one row per player), with satellite tables hanging off it. Most game state (gear tiers, doubloons, flags) lives directly on `profiles` for fast single-row reads. Anything that grows unboundedly (inventory, collection, history) gets its own table.
 
+**`profiles` discipline rule:** The wide table is an intentional performance tradeoff — nearly every page load needs fishing XP, gear tiers, and cosmetics simultaneously, so a single row fetch beats multiple joins at this scale. The risk is that every new feature is tempted to bolt another column onto `profiles`. The rule: **if a new feature needs more than 2 new fields, it gets a satellite table.** Raid-specific flags like `has_seen_raid_tutorial` are acknowledged code smells — the natural trigger to extract them is when a second raid ships and they'd otherwise multiply. The discipline only works if future contributors know the rule exists, which is why it's written here.
+
 ### Core user data
 
 **`profiles`** — one row per player, the central record.
