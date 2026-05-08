@@ -113,7 +113,7 @@ function Die({ symbol, rolling }: { symbol: Symbol; rolling: boolean }) {
   )
 }
 
-const BET_PRESETS = [10, 25, 50, 100, 200]
+const BET_PRESETS = [10, 25, 50, 100, 250, 500]
 
 interface Props {
   doubloons: number
@@ -232,20 +232,22 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
         ))}
       </div>
 
-      {/* Result */}
-      {lastResult && !rolling && (
-        <div className="text-center" style={{ background: 'rgba(4,10,20,0.82)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '0.65rem 1.25rem' }}>
-          {lastResult.matches > 0 ? (
-            <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.1rem' }}>
-              {lastResult.matches === 3 ? '🎰 ' : ''}{lastResult.matches}× match — +{lastResult.payout} ⟡
-            </p>
-          ) : (
-            <p className="font-karla font-400 text-[#a0a09a] text-sm">No match — {lastResult.net} ⟡</p>
-          )}
-        </div>
-      )}
-
-      {error && <p className="font-karla font-400 text-[#f87171] text-sm text-center">{error}</p>}
+      {/* Result — fixed-height slot so the roll button never shifts */}
+      <div style={{ minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+        {error ? (
+          <p className="font-karla font-400 text-[#f87171] text-sm text-center">{error}</p>
+        ) : lastResult && !rolling ? (
+          <div className="text-center" style={{ background: 'rgba(4,10,20,0.82)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '0.65rem 1.25rem' }}>
+            {lastResult.matches > 0 ? (
+              <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.1rem' }}>
+                {lastResult.matches === 3 ? '🎰 ' : ''}{lastResult.matches}× match — +{lastResult.payout} ⟡
+              </p>
+            ) : (
+              <p className="font-karla font-400 text-[#a0a09a] text-sm">No match — {lastResult.net} ⟡</p>
+            )}
+          </div>
+        ) : null}
+      </div>
 
       {/* Bet selector */}
       <div className="flex flex-col items-center gap-3 w-full">
