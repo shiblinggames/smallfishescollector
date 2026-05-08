@@ -197,11 +197,12 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   ]
 
   const mobileMenuLinks = [
-    { href: '/profile', label: 'Profile', badge: false,
+    { href: '/leaderboard', label: 'Leaderboard', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="8" r="4"/>
-          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+          <rect x="2" y="14" width="5" height="7" rx="1"/>
+          <rect x="9.5" y="9" width="5" height="12" rx="1"/>
+          <rect x="17" y="4" width="5" height="17" rx="1"/>
         </svg>
       )
     },
