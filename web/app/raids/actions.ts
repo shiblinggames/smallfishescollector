@@ -147,10 +147,15 @@ export async function claimRaidLoot(
     }
   }
 
-  await admin
-    .from('profiles')
-    .update({ doubloons, gems, packs_available: packs, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems })
-    .eq('id', user.id)
+  await Promise.all([
+    admin
+      .from('profiles')
+      .update({ doubloons, gems, packs_available: packs, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems })
+      .eq('id', user.id),
+    admin
+      .from('raid_completions')
+      .insert({ user_id: user.id, elapsed_ms: elapsedMs }),
+  ])
 
   return {
     newShipSkins: newSkins.filter(s => !ownedSkins.includes(s)),
