@@ -659,7 +659,7 @@ export async function saveHighestPerfectStreak(streak: number, zone: string): Pr
   if ((profile?.highest_perfect_streak ?? 0) < streak) {
     await admin.from('profiles').update({ highest_perfect_streak: streak, highest_streak_set_at: new Date().toISOString(), best_streak_zone: zone }).eq('id', user.id)
   }
-  if (streak >= 30) unlockBadge('unbroken')
+  if (streak >= 10) unlockBadge('unbroken')
 }
 
 
