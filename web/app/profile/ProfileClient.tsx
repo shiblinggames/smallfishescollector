@@ -370,6 +370,17 @@ export default function ProfileClient({
           >
             <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#6a6764' }}>Public Profile ↗</span>
           </Link>
+          <Link
+            href="/leaderboard"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '0.35rem 0.75rem', borderRadius: '2rem',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              textDecoration: 'none',
+            }}
+          >
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#6a6764' }}>Leaderboard ↗</span>
+          </Link>
         </div>
       </div>
 
@@ -702,49 +713,11 @@ export default function ProfileClient({
         </div>
       </div>
 
-      {/* ── Quick links ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 40, marginBottom: '0.75rem' }}>
-        {[
-          { href: '/achievements', label: 'Achievements', icon: (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 9H4V4h16v5h-2"/><path d="M6 4v5a6 6 0 0 0 12 0V4"/>
-              <line x1="12" y1="15" x2="12" y2="19"/><line x1="8" y1="19" x2="16" y2="19"/>
-            </svg>
-          )},
-          { href: '/social', label: 'Crew & Friends', icon: (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/>
-            </svg>
-          )},
-          { href: '/leaderboard', label: 'Leaderboard', icon: (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="14" width="5" height="7" rx="1"/>
-              <rect x="9.5" y="9" width="5" height="12" rx="1"/>
-              <rect x="17" y="4" width="5" height="17" rx="1"/>
-            </svg>
-          )},
-        ].map(({ href, label, icon }) => (
-          <Link key={href} href={href} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '0.75rem 1rem',
-            background: 'rgba(4,10,20,0.85)', border: '1px solid rgba(255,255,255,0.07)',
-            borderRadius: 12, textDecoration: 'none',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ color: '#6a6764' }}>{icon}</span>
-              <span className="font-karla font-600" style={{ fontSize: '0.82rem', color: '#b8b8b2' }}>{label}</span>
-            </div>
-            <span style={{ color: '#5a5755', fontSize: '1rem' }}>›</span>
-          </Link>
-        ))}
-      </div>
-
       {/* ── Sign out ── */}
       <button
         onClick={signOut}
         style={{
-          width: '100%', padding: '0.8rem',
+          width: '100%', padding: '0.8rem', marginTop: 40,
           background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
           borderRadius: 12, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
