@@ -266,7 +266,6 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
             overflow: 'hidden',
             paddingBottom: 14,
           }}>
-            <div style={{ position: 'relative' }}>
             <div style={{
               position: 'relative',
               width: '100%',
@@ -291,16 +290,15 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                 )}
               </div>
             </div>
-            <div style={{ position: 'absolute', bottom: 10, left: 10 }}>
-              <div style={{ padding: '0.2rem 0.55rem', borderRadius: '2rem', background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(96,165,250,0.35)' }}>
-                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#60a5fa' }}>Fishing · Lv {fishingLevel}</span>
-              </div>
-            </div>
-            </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 0, padding: '0 20px' }}>
               <div style={{ textAlign: 'center', flex: 1 }}>
                 <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: rod.color + 'aa', marginBottom: 3 }}>Rod</p>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d8d5d0', lineHeight: 1.2 }}>{rod.name}</p>
+              </div>
+              <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#60a5fa88', marginBottom: 3 }}>Fishing Level</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#60a5fa', lineHeight: 1.2 }}>{fishingLevel}</p>
               </div>
               <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
               <div style={{ textAlign: 'center', flex: 1 }}>
@@ -397,26 +395,17 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
             padding: '24px 16px 16px',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
           }}>
-            <div style={{ position: 'relative' }}>
-              <img
-                src={ship.imageUrl}
-                alt={ship.name}
-                style={{
-                  width: 200, height: 155,
-                  objectFit: 'contain',
-                  filter: shipSkin
-                    ? shipSkin.filter
-                    : `drop-shadow(0 4px 28px ${ship.color}60)`,
-                }}
-              />
-              {expLevel > 0 && (
-                <div style={{ position: 'absolute', bottom: 6, left: 6 }}>
-                  <div style={{ padding: '0.2rem 0.55rem', borderRadius: '2rem', background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(112,144,192,0.35)' }}>
-                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#7090c0' }}>{expTitle} · Lv {expLevel}</span>
-                  </div>
-                </div>
-              )}
-            </div>
+            <img
+              src={ship.imageUrl}
+              alt={ship.name}
+              style={{
+                width: 200, height: 155,
+                objectFit: 'contain',
+                filter: shipSkin
+                  ? shipSkin.filter
+                  : `drop-shadow(0 4px 28px ${ship.color}60)`,
+              }}
+            />
             <div style={{ textAlign: 'center' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: ship.color, lineHeight: 1.2 }}>
                 {gear.shipName ?? ship.name}
@@ -424,6 +413,11 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
               <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: ship.color + '70', marginTop: 5 }}>
                 {ship.name}
               </p>
+              {expLevel > 0 && (
+                <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: '#7090c0', marginTop: 5 }}>
+                  {expTitle} · Lv {expLevel}
+                </p>
+              )}
               {shipSkin && (
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.25rem 0.65rem', borderRadius: '2rem', background: shipSkin.color + '18', border: `1px solid ${shipSkin.color}40` }}>
                   <svg width="9" height="9" viewBox="0 0 24 24" fill={shipSkin.color} stroke="none">
