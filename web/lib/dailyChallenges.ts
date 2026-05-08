@@ -78,6 +78,22 @@ export function getDailyChallenges(date: string): [DailyChallenge, DailyChalleng
   ]
 }
 
+// Server-side only: checks challenge_overrides first, falls back to deterministic.
+// Pass an admin Supabase client; the client-side game always uses getDailyChallenges.
+export async function getEffectiveDailyChallenges(
+  date: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  admin: any,
+): Promise<[DailyChallenge, DailyChallenge, DailyChallenge]> {
+  const { data } = await admin
+    .from('challenge_overrides')
+    .select('tier1, tier2, tier3')
+    .eq('date', date)
+    .maybeSingle()
+  if (data) return [data.tier1, data.tier2, data.tier3]
+  return getDailyChallenges(date)
+}
+
 export function getTodayUTC(): string {
   return new Date().toISOString().slice(0, 10)
 }

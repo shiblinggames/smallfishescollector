@@ -11,7 +11,7 @@ import { getWeekStart } from '@/lib/weekStart'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
 import { getLineForSpeciesCount } from '@/lib/lines'
 import { getSpecialItem } from '@/lib/specialItems'
-import { getDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
+import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -452,7 +452,7 @@ export async function reelIn(
 
   // Update daily challenge progress
   const dailyDate = getTodayUTC()
-  const dailyChallenges = getDailyChallenges(dailyDate)
+  const dailyChallenges = await getEffectiveDailyChallenges(dailyDate, admin)
   const isPerfect = result === 'perfect'
   const { data: dailyRow } = await admin
     .from('daily_challenge_progress')

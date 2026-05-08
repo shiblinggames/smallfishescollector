@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getDailyChallenges, getTodayUTC, type DailyChallengeState } from '@/lib/dailyChallenges'
+import { getEffectiveDailyChallenges, getTodayUTC, type DailyChallengeState } from '@/lib/dailyChallenges'
 
 export async function getDailyChallenge(): Promise<DailyChallengeState | null> {
   const supabase = await createClient()
@@ -10,8 +10,8 @@ export async function getDailyChallenge(): Promise<DailyChallengeState | null> {
   if (!user) return null
 
   const date = getTodayUTC()
-  const challenges = getDailyChallenges(date)
   const admin = createAdminClient()
+  const challenges = await getEffectiveDailyChallenges(date, admin)
 
   const { data: row } = await admin
     .from('daily_challenge_progress')
@@ -36,9 +36,9 @@ export async function claimDailyReward(
   if (!user) return { error: 'Unauthorized' }
 
   const date = getTodayUTC()
-  const challenges = getDailyChallenges(date)
-  const challenge = challenges[index]
   const admin = createAdminClient()
+  const challenges = await getEffectiveDailyChallenges(date, admin)
+  const challenge = challenges[index]
 
   const { data: row } = await admin
     .from('daily_challenge_progress')
