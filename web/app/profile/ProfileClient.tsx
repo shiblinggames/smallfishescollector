@@ -46,6 +46,7 @@ interface Props {
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
   characterColor: string
   unlockedColors: string[]
+  prestigeLevels: Record<string, number>
 }
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
@@ -57,6 +58,21 @@ function avatarColor(str: string) {
 
 function fishImageUrl(name: string) {
   return `/fish/${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.png`
+}
+
+function toRoman(n: number): string {
+  const table: [number, string][] = [[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']]
+  let result = ''
+  for (const [val, sym] of table) { while (n >= val) { result += sym; n -= val } }
+  return result
+}
+
+const ZONE_NAMES: Record<string, string> = {
+  shallows: 'Shallows',
+  open_waters: 'Open Waters',
+  deep: 'Deep',
+  abyss: 'Abyss',
+  ancient_deep: 'Ancient Deep',
 }
 
 const RARITY_COLOR: Record<number, string> = {
@@ -197,6 +213,7 @@ export default function ProfileClient({
   rarestFish,
   characterColor: initialCharacterColor,
   unlockedColors,
+  prestigeLevels,
 }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -588,6 +605,42 @@ export default function ProfileClient({
               )}
             </div>
           )}
+
+          {/* Prestige */}
+          {(() => {
+            const entries = Object.entries(prestigeLevels).filter(([, v]) => v > 0)
+            const total = entries.reduce((s, [, v]) => s + v, 0)
+            if (total === 0) return null
+            return (
+              <div style={{
+                background: 'rgba(251,146,60,0.07)',
+                border: '1px solid rgba(251,146,60,0.22)',
+                borderRadius: 16,
+                padding: '0.9rem 1rem',
+              }}>
+                <SectionLabel>Prestige</SectionLabel>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                  {entries.map(([zone, level]) => (
+                    <div key={zone} style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '0.28rem 0.65rem', borderRadius: '2rem',
+                      background: 'rgba(251,146,60,0.1)', border: '1px solid rgba(251,146,60,0.3)',
+                    }}>
+                      <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#fb923c' }}>
+                        {ZONE_NAMES[zone] ?? zone}
+                      </span>
+                      <span className="font-cinzel font-700" style={{ fontSize: '0.65rem', color: '#fdba74' }}>
+                        {toRoman(level)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9a7055' }}>
+                  +{total * 5}% sell bonus on all fish
+                </p>
+              </div>
+            )
+          })()}
 
         </div>
 

@@ -25,8 +25,8 @@ const LINKS = [
   { href: '/expeditions', label: 'Expeditions',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17c2 4 16 4 18 0"/><path d="M4 17L6 12l13 0 2 5"/><line x1="10" y1="12" x2="10" y2="4"/><path d="M10 4L17 9 10 12"/></svg>,
   },
-  { href: '/leaderboard', label: 'Ranks',
-    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="14" width="5" height="7" rx="1"/><rect x="9.5" y="9" width="5" height="12" rx="1"/><rect x="17" y="4" width="5" height="17" rx="1"/></svg>,
+  { href: '/profile', label: 'Profile',
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>,
   },
 ]
 
