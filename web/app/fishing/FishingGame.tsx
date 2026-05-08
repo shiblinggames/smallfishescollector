@@ -6,6 +6,10 @@ import Link from 'next/link'
 import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies, type FishingBountyCompletion } from './actions'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
+import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
+import { updateCharacterColor } from '@/app/u/actions'
+import { equipBadge, unequipBadge } from '@/app/achievements/badgeActions'
+import { BADGES, BADGE_MAP } from '@/lib/badges'
 
 const CRATE_FISH_ID = -1
 import { claimDailyReward } from './dailyChallengeActions'
@@ -1462,7 +1466,7 @@ export default function FishingGame({
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster,
-  initialPrestigeLevels, initialTrophyCatches, characterColor, equippedBadges,
+  initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges,
 }: {
   hookTier: number
   rodTier: number
@@ -1495,11 +1499,14 @@ export default function FishingGame({
   initialPrestigeLevels: Record<string, number>
   initialTrophyCatches: number[]
   characterColor: string
+  unlockedCharacterColors: string[]
   equippedBadges: string[]
   unlockedBadges: string[]
 }) {
 
-  const charSrc = getCharSrc(characterColor)
+  const [localCharacterColor, setLocalCharacterColor] = useState(characterColor)
+  const [localEquippedBadges, setLocalEquippedBadges] = useState(equippedBadges)
+  const charSrc = getCharSrc(localCharacterColor)
 
   const [currentFishHoldTier, setCurrentFishHoldTier] = useState(initialFishHoldTier)
   const holdCapacity = getFishHold(currentFishHoldTier).capacity
@@ -2445,7 +2452,7 @@ export default function FishingGame({
                     pointerEvents: 'none',
                   }} />
                 )}
-                {equippedBadges.map((badgeId, slot) => {
+                {localEquippedBadges.map((badgeId, slot) => {
                   if (!badgeId) return null
                   const badge = BADGE_MAP[badgeId]
                   if (!badge) return null
@@ -4096,9 +4103,32 @@ export default function FishingGame({
               reelTier={reelTier}
               hookTier={hookTier}
               lineTier={lineTier}
-              characterColor={characterColor}
+              characterColor={localCharacterColor}
               charSrc={charSrc}
-              equippedBadges={equippedBadges}
+              equippedBadges={localEquippedBadges}
+              unlockedCharacterColors={unlockedCharacterColors}
+              unlockedBadges={unlockedBadges}
+              onUpdateColor={async (colorId) => {
+                setLocalCharacterColor(colorId)
+                await updateCharacterColor(colorId)
+              }}
+              onEquipBadge={async (id) => {
+                const currentSlots = localEquippedBadges.slice()
+                const alreadyIdx = currentSlots.indexOf(id)
+                if (alreadyIdx >= 0) {
+                  const newSlots = currentSlots.map((b, i) => i === alreadyIdx ? '' : b)
+                  setLocalEquippedBadges(newSlots)
+                  await unequipBadge(alreadyIdx)
+                } else {
+                  const emptySlot = currentSlots.findIndex(b => !b)
+                  const slot = emptySlot >= 0 ? emptySlot : 0
+                  const newSlots = currentSlots.length < 3
+                    ? [...currentSlots, id]
+                    : currentSlots.map((b, i) => i === slot ? id : b)
+                  setLocalEquippedBadges(newSlots)
+                  await equipBadge(id, slot)
+                }
+              }}
               equippedRingSkin={equippedRingSkin}
               unlockedRingSkins={unlockedRingSkins}
               onEquipRingSkin={async (skin) => {
@@ -4642,17 +4672,13 @@ export default function FishingGame({
                   <div style={{ marginBottom: '1rem' }}>
                     {isMax ? (
                       <div style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '0.75rem 1rem',
-                        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                        padding: '1rem 1.1rem',
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
                         borderRadius: 14,
                       }}>
-                        <div>
-                          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#6a6764', marginBottom: 2 }}>Fish Hold</p>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>{getFishHold(currentFishHoldTier).name}</p>
-                          <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: 1 }}>Maximum capacity reached</p>
-                        </div>
-                        <span style={{ fontSize: '1.2rem', color: '#4a4845', marginLeft: '0.75rem' }}>🗃️</span>
+                        <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#6a6764', marginBottom: 4 }}>Fish Hold</p>
+                        <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1 }}>{getFishHold(currentFishHoldTier).name}</p>
+                        <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#4a4845', marginTop: 4 }}>Maximum capacity reached</p>
                       </div>
                     ) : (
                       <button
@@ -4667,18 +4693,29 @@ export default function FishingGame({
                         }}
                         style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          padding: '0.75rem 1rem', width: '100%',
-                          background: canAfford ? 'rgba(240,192,64,0.07)' : 'rgba(255,255,255,0.03)',
-                          border: `1px solid ${canAfford ? 'rgba(240,192,64,0.28)' : 'rgba(255,255,255,0.08)'}`,
+                          padding: '1rem 1.1rem', width: '100%',
+                          background: canAfford ? 'rgba(240,192,64,0.13)' : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${canAfford ? 'rgba(240,192,64,0.45)' : 'rgba(255,255,255,0.1)'}`,
                           borderRadius: 14, cursor: canAfford ? 'pointer' : 'default',
+                          textAlign: 'left',
                         }}
                       >
-                        <div style={{ textAlign: 'left' }}>
-                          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: canAfford ? '#f0c040' : '#6a6764', marginBottom: 2 }}>Upgrade Hold</p>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>{next!.name}</p>
-                          <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: canAfford ? '#f0c04088' : '#6a6764', marginTop: 1 }}>{next!.capacity} capacity · {next!.cost.toLocaleString()} ⟡</p>
+                        <div>
+                          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: canAfford ? '#f0c040' : '#5a5755', marginBottom: 4 }}>Upgrade Hold</p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: canAfford ? '#f0ede8' : '#6a6764', lineHeight: 1 }}>{next!.name}</p>
+                          <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: canAfford ? 'rgba(240,192,64,0.75)' : '#4a4845', marginTop: 5 }}>
+                            {next!.capacity} slots &nbsp;·&nbsp; {next!.cost.toLocaleString()} ⟡
+                          </p>
                         </div>
-                        <span style={{ fontSize: '1.2rem', color: canAfford ? '#f0c040' : '#4a4845', marginLeft: '0.75rem' }}>🗃️</span>
+                        {canAfford && (
+                          <div style={{
+                            flexShrink: 0, marginLeft: '0.75rem',
+                            background: 'rgba(240,192,64,0.18)', border: '1px solid rgba(240,192,64,0.4)',
+                            borderRadius: 8, padding: '0.3rem 0.65rem',
+                          }}>
+                            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#f0c040' }}>Buy</span>
+                          </div>
+                        )}
                       </button>
                     )}
                   </div>
@@ -4690,26 +4727,24 @@ export default function FishingGame({
                   No fish yet. Cast a line!
                 </p>
               ) : (
-                <div className="flex flex-col gap-1.5">
-                  {inventory.map(item => {
-                    const fish = item.fish_species
-                    const hColor = HABITAT_COLOR[fish.habitat] ?? '#888'
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {Object.entries(
+                    inventory.reduce((acc, item) => {
+                      const h = item.fish_species.habitat
+                      acc[h] = (acc[h] ?? 0) + item.quantity
+                      return acc
+                    }, {} as Record<string, number>)
+                  ).map(([habitat, count]) => {
+                    const hColor = HABITAT_COLOR[habitat] ?? '#888'
+                    const label = habitat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
                     return (
-                      <div key={item.fish_id}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                        style={{ background: `${hColor}0a`, border: `1px solid ${hColor}20` }}>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>{fish.name}</p>
-                            <span className="font-karla font-600 shrink-0" style={{ fontSize: '0.52rem', color: hColor, background: `${hColor}18`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
-                              ×{item.quantity}
-                            </span>
-                          </div>
-                          <p className="font-karla font-600 mt-0.5" style={{ fontSize: '0.58rem', color: '#f0c04088' }}>
-                            {fish.sell_value.toLocaleString()} ⟡ each
-                            {item.quantity > 1 && <span style={{ color: '#6a676488' }}> · {(fish.sell_value * item.quantity).toLocaleString()} ⟡</span>}
-                          </p>
-                        </div>
+                      <div key={habitat} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '0.55rem 0.85rem', borderRadius: 10,
+                        background: `${hColor}0a`, border: `1px solid ${hColor}1a`,
+                      }}>
+                        <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: hColor }}>{label}</p>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>{count}</p>
                       </div>
                     )
                   })}

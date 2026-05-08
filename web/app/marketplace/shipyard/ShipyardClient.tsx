@@ -170,14 +170,6 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
                   border: `1px solid ${owned ? `${c}22` : 'rgba(255,255,255,0.09)'}`,
                   borderRadius: 8, padding: '0.45rem 0.3rem', textAlign: 'center',
                 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? c : '#6a6764', lineHeight: 1 }}>{ship.holdCapacity}</p>
-                  <p className="font-karla font-600 uppercase" style={{ fontSize: '0.42rem', color: owned ? '#6a6764' : '#4a4845', letterSpacing: '0.08em', marginTop: 3 }}>Hold</p>
-                </div>
-                <div style={{
-                  flex: 1, background: owned ? `${c}0d` : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${owned ? `${c}22` : 'rgba(255,255,255,0.09)'}`,
-                  borderRadius: 8, padding: '0.45rem 0.3rem', textAlign: 'center',
-                }}>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? c : '#6a6764', lineHeight: 1 }}>{stats?.crewSlots ?? 1}</p>
                   <p className="font-karla font-600 uppercase" style={{ fontSize: '0.42rem', color: owned ? '#6a6764' : '#4a4845', letterSpacing: '0.08em', marginTop: 3 }}>Crew</p>
                 </div>
@@ -304,21 +296,14 @@ function ShipDetailModal({
             />
           </div>
 
-          {/* Primary stats — hold & crew */}
+          {/* Primary stats — crew */}
           <div>
             <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#4a6a8a', marginBottom: 10 }}>Capacity</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {[
-                { label: 'Fish Hold', value: ship.holdCapacity, unit: 'fish slots', color: c, icon: '🐟' },
-                { label: 'Crew', value: stats?.crewSlots ?? 1, unit: 'card slots', color: c, icon: '⚓' },
-              ].map(s => (
-                <div key={s.label} style={{ background: `${c}0c`, border: `1px solid ${c}28`, borderRadius: 12, padding: '1rem 0.75rem', textAlign: 'center' }}>
-                  <span style={{ fontSize: '1.3rem', lineHeight: 1, display: 'block', marginBottom: 6 }}>{s.icon}</span>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: s.color, lineHeight: 1 }}>{s.value}</p>
-                  <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.62rem', color: '#8a8784', marginTop: 6 }}>{s.label}</p>
-                  <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: '#4a4845', marginTop: 2 }}>{s.unit}</p>
-                </div>
-              ))}
+            <div style={{ background: `${c}0c`, border: `1px solid ${c}28`, borderRadius: 12, padding: '1rem 0.75rem', textAlign: 'center' }}>
+              <span style={{ fontSize: '1.3rem', lineHeight: 1, display: 'block', marginBottom: 6 }}>⚓</span>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: c, lineHeight: 1 }}>{stats?.crewSlots ?? 1}</p>
+              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.62rem', color: '#8a8784', marginTop: 6 }}>Crew</p>
+              <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: '#4a4845', marginTop: 2 }}>card slots</p>
             </div>
           </div>
 

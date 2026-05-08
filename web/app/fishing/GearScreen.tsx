@@ -9,11 +9,12 @@ import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
 import { RING_SKINS } from '@/lib/ringSkins'
-import { BADGE_MAP } from '@/lib/badges'
+import { BADGE_MAP, BADGES } from '@/lib/badges'
+import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 
 type BaitItem = { bait_type: string; quantity: number }
-type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'bait' | 'special' | 'cosmetic'
+type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'bait' | 'special' | 'cosmetic' | 'character' | 'badge'
 
 function ShopLink({ href, label, color, onClick }: { href: string; label: string; color: string; onClick: () => void }) {
   return (
@@ -248,7 +249,7 @@ export default function GearScreen({
   baitInventory, selectedBait, onSelectBait,
   equippedRodTier, ownedRods, onEquipRod,
   reelTier, hookTier, lineTier,
-  characterColor, charSrc, equippedBadges,
+  characterColor, charSrc, equippedBadges, unlockedCharacterColors, unlockedBadges, onUpdateColor, onEquipBadge,
   equippedRingSkin, unlockedRingSkins, onEquipRingSkin,
   hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster,
   equippedSpecial, onEquipSpecial, onBuySpecialItem,
@@ -267,6 +268,10 @@ export default function GearScreen({
   characterColor: string
   charSrc: Record<string, string>
   equippedBadges: string[]
+  unlockedCharacterColors: string[]
+  unlockedBadges: string[]
+  onUpdateColor: (colorId: string) => void
+  onEquipBadge: (id: string) => void
   equippedRingSkin: string
   unlockedRingSkins: string[]
   onEquipRingSkin: (skin: string) => void
@@ -323,41 +328,42 @@ export default function GearScreen({
         </div>
 
         {/* Center row 1: Character */}
-        <Link href="/profile" onClick={onClose} style={{
+        <button onClick={() => setOpenSlot('character')} style={{
           gridColumn: '2', gridRow: '1',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           background: 'rgba(4,10,20,0.75)',
           border: '1px solid rgba(255,255,255,0.12)',
           borderRadius: 20,
           padding: '0.6rem 0.5rem',
-          textDecoration: 'none',
           cursor: 'pointer',
           gap: 5,
+          width: '100%',
         }}>
           <img src={charSrc.rest} alt="Character" style={{ width: 52, height: 52, objectFit: 'contain', objectPosition: 'top', filter: 'drop-shadow(0 2px 8px rgba(240,237,232,0.15))' }} />
           <div style={{ textAlign: 'center' }}>
             <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.12em', lineHeight: 1 }}>Character</p>
-            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.25)', marginTop: 3 }}>Edit ↗</p>
+            <p className="font-karla font-600" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>{CHARACTER_COLORS.find(c => c.id === characterColor)?.name ?? characterColor}</p>
           </div>
-        </Link>
+        </button>
 
         {/* Center row 2: Badges */}
-        <Link href="/profile" onClick={onClose} style={{
+        <button onClick={() => setOpenSlot('badge')} style={{
           gridColumn: '2', gridRow: '2',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           background: 'rgba(4,10,20,0.75)',
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: 20,
           padding: '0.6rem 0.5rem',
-          textDecoration: 'none',
           cursor: 'pointer',
           gap: 5,
+          width: '100%',
         }}>
           <div style={{ display: 'flex', gap: 4, alignItems: 'center', justifyContent: 'center', minHeight: 32 }}>
-            {equippedBadges.length === 0 ? (
+            {equippedBadges.filter(Boolean).length === 0 ? (
               <span style={{ fontSize: '0.6rem', color: '#3a3835' }}>—</span>
             ) : (
               equippedBadges.slice(0, 3).map((id, i) => {
+                if (!id) return null
                 const badge = BADGE_MAP[id]
                 return badge ? (
                   <img key={i} src={badge.imageUrl} alt={badge.name} style={{ width: 22, height: 22, objectFit: 'contain' }} />
@@ -365,11 +371,8 @@ export default function GearScreen({
               })
             )}
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.12em', lineHeight: 1 }}>Badges</p>
-            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.25)', marginTop: 3 }}>Edit ↗</p>
-          </div>
-        </Link>
+          <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.12em', lineHeight: 1 }}>Badges</p>
+        </button>
 
         <div style={{ gridColumn: '3', gridRow: '1' }}>
           <GearSlot label="Reel" image={reel.imageUrl ?? null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} onClick={() => setOpenSlot('reel')} />
@@ -665,6 +668,93 @@ export default function GearScreen({
                       Unlock ring skins by completing voyages on the Expeditions page.
                     </p>
                   </div>
+                </div>
+              )}
+
+              {/* ── Character ── */}
+              {openSlot === 'character' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#d0cdc8' }}>Character Color</p>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {CHARACTER_COLORS.map(c => {
+                      const sprites = getCharacterSprites(c.id)
+                      const isActive = characterColor === c.id
+                      const isUnlocked = c.free || unlockedCharacterColors.includes(c.id)
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            if (!isUnlocked) return
+                            if (isActive) { setOpenSlot(null); return }
+                            onUpdateColor(c.id)
+                            setOpenSlot(null)
+                          }}
+                          style={{ background: 'none', border: 'none', cursor: isUnlocked ? 'pointer' : 'default', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: isUnlocked ? 1 : 0.4 }}
+                        >
+                          <div style={{
+                            width: 48, height: 48, borderRadius: '50%', overflow: 'hidden',
+                            backgroundImage: `url(${sprites.rest})`,
+                            backgroundSize: '280% auto', backgroundPosition: 'center 92%', backgroundRepeat: 'no-repeat',
+                            border: isActive ? '2px solid #60a5fa' : '2px solid rgba(255,255,255,0.12)',
+                            boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.4)' : 'none',
+                            position: 'relative',
+                          }}>
+                            {!isUnlocked && (
+                              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.52)', borderRadius: '50%' }}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round">
+                                  <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <p className="font-karla font-600" style={{ fontSize: '0.55rem', color: isActive ? '#60a5fa' : '#6a6764' }}>{c.name}</p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {CHARACTER_COLORS.filter(c => !c.free && !unlockedCharacterColors.includes(c.id)).length > 0 && (
+                    <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#4a4845', lineHeight: 1.5, marginTop: 4 }}>
+                      Locked skins are earned through gameplay.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Badge ── */}
+              {openSlot === 'badge' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#d0cdc8' }}>Badges</p>
+                  <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#5a5755', lineHeight: 1.4 }}>
+                    Tap to equip or remove. Up to 3 equipped at once.
+                  </p>
+                  {unlockedBadges.length === 0 ? (
+                    <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#4a4845' }}>No badges earned yet.</p>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                      {BADGES.filter(b => unlockedBadges.includes(b.id)).map(badge => {
+                        const isEquipped = equippedBadges.includes(badge.id)
+                        return (
+                          <button
+                            key={badge.id}
+                            onClick={() => { onEquipBadge(badge.id); setOpenSlot(null) }}
+                            style={{
+                              background: isEquipped ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.04)',
+                              border: `1px solid ${isEquipped ? 'rgba(240,192,64,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                              borderRadius: 12, padding: '0.65rem 0.4rem',
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <img src={badge.imageUrl} alt={badge.name} style={{ width: 32, height: 32, objectFit: 'contain' }} />
+                            <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: isEquipped ? '#f0c040' : '#a0a09a', textAlign: 'center', lineHeight: 1.2 }}>{badge.name}</p>
+                            {isEquipped && (
+                              <span className="font-karla font-700" style={{ fontSize: '0.48rem', color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.08em' }}>On</span>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 

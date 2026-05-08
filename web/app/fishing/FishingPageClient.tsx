@@ -25,7 +25,7 @@ export default function FishingPageClient({
   initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
   fishHoldTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, activeSession, username, zoneRewardsClaimed,
-  initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches, characterColor, equippedBadges, unlockedBadges,
+  initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
 }: {
   hookTier: number
   rodTier: number
@@ -57,6 +57,7 @@ export default function FishingPageClient({
   prestigeLevels: Record<string, number>
   trophyCatches: number[]
   characterColor: string
+  unlockedCharacterColors: string[]
   equippedBadges: string[]
   unlockedBadges: string[]
 }) {
@@ -127,6 +128,7 @@ export default function FishingPageClient({
       initialPrestigeLevels={prestigeLevels}
       initialTrophyCatches={trophyCatches}
       characterColor={characterColor}
+      unlockedCharacterColors={unlockedCharacterColors}
       equippedBadges={equippedBadges}
     />
   )
