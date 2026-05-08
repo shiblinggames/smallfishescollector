@@ -658,7 +658,6 @@ export async function claimZoneReward(
 
   const badgeTriggers: Promise<unknown>[] = []
   if (exp.zone === 'davy_jones_locker') badgeTriggers.push(unlockBadge('davy_jones'))
-  if ((exp.hull_damage ?? 0) === 0) badgeTriggers.push(unlockBadge('ghost_ship'))
 
   await Promise.all([
     admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),

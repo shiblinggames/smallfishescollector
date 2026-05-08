@@ -110,11 +110,13 @@ export async function claimRaidLoot(
   baseDoubloons: number,
   rolledItemIds: string[],
   elapsedMs: number,
+  damageTaken: number,
 ): Promise<{ newShipSkins: string[]; newDoubloonTotal: number; newRaidItems: string[] }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
   if (elapsedMs <= 120_000) unlockBadge('corsairs_bane')
+  if (damageTaken === 0) unlockBadge('ghost_ship')
 
   const admin = createAdminClient()
   const { data: profile } = await admin

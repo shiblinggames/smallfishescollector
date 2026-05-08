@@ -694,7 +694,7 @@ export default function GearScreen({
                             onUpdateColor(c.id)
                             setOpenSlot(null)
                           }}
-                          style={{ background: 'none', border: 'none', cursor: isUnlocked ? 'pointer' : 'default', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: isUnlocked ? 1 : 0.4 }}
+                          style={{ background: 'none', border: 'none', cursor: isUnlocked ? 'pointer' : 'default', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
                         >
                           <div style={{
                             width: 48, height: 48, borderRadius: '50%', overflow: 'hidden',
@@ -703,6 +703,7 @@ export default function GearScreen({
                             border: isActive ? '2px solid #60a5fa' : '2px solid rgba(255,255,255,0.12)',
                             boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.4)' : 'none',
                             position: 'relative',
+                            opacity: isUnlocked ? 1 : 0.35,
                           }}>
                             {!isUnlocked && (
                               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.52)', borderRadius: '50%' }}>
@@ -712,16 +713,14 @@ export default function GearScreen({
                               </div>
                             )}
                           </div>
-                          <p className="font-karla font-600" style={{ fontSize: '0.55rem', color: isActive ? '#60a5fa' : '#6a6764' }}>{c.name}</p>
+                          <p className="font-karla font-600" style={{ fontSize: '0.55rem', color: isActive ? '#60a5fa' : isUnlocked ? '#6a6764' : '#3a3835' }}>{c.name}</p>
+                          {!isUnlocked && c.unlockHint && (
+                            <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: '#4a4845', textAlign: 'center', lineHeight: 1.3, maxWidth: 52 }}>{c.unlockHint}</p>
+                          )}
                         </button>
                       )
                     })}
                   </div>
-                  {CHARACTER_COLORS.filter(c => !c.free && !unlockedCharacterColors.includes(c.id)).length > 0 && (
-                    <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#4a4845', lineHeight: 1.5, marginTop: 4 }}>
-                      Locked skins are earned through gameplay.
-                    </p>
-                  )}
                 </div>
               )}
 
@@ -760,6 +759,17 @@ export default function GearScreen({
                       })}
                     </div>
                   )}
+                  <Link href="/achievements" onClick={() => { setOpenSlot(null); onClose() }} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '0.7rem 0.9rem', borderRadius: 14, marginTop: 2,
+                    background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.18)',
+                    textDecoration: 'none',
+                  }}>
+                    <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: 'rgba(240,192,64,0.7)' }}>Want to earn more badges?</p>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(240,192,64,0.5)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </Link>
                 </div>
               )}
 

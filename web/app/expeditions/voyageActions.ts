@@ -278,6 +278,13 @@ export async function revealVoyageResults(voyageId: number): Promise<
     }
   }
 
+  const { count: completedVoyages } = await admin
+    .from('daily_voyages')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('status', 'revealed')
+  if ((completedVoyages ?? 0) + 1 >= 100) unlockBadge('fleet_admiral')
+
   await Promise.all([
     admin.from('profiles').update(profileUpdate).eq('id', user.id),
     admin.from('daily_voyages').update({ status: 'revealed' }).eq('id', voyageId),
