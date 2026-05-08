@@ -1465,7 +1465,7 @@ export default function FishingGame({
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster,
-  initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges,
+  initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
 }: {
   hookTier: number
   rodTier: number
