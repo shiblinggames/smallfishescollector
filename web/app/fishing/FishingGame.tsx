@@ -4117,7 +4117,7 @@ export default function FishingGame({
                 if (alreadyIdx >= 0) {
                   const newSlots = currentSlots.map((b, i) => i === alreadyIdx ? '' : b)
                   setLocalEquippedBadges(newSlots)
-                  await unequipBadge(alreadyIdx)
+                  await unequipBadge(alreadyIdx as 0 | 1 | 2)
                 } else {
                   const emptySlot = currentSlots.findIndex(b => !b)
                   const slot = emptySlot >= 0 ? emptySlot : 0
@@ -4125,7 +4125,7 @@ export default function FishingGame({
                     ? [...currentSlots, id]
                     : currentSlots.map((b, i) => i === slot ? id : b)
                   setLocalEquippedBadges(newSlots)
-                  await equipBadge(id, slot)
+                  await equipBadge(id, slot as 0 | 1 | 2)
                 }
               }}
               equippedRingSkin={equippedRingSkin}
