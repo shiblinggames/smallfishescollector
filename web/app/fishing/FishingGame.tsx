@@ -1474,7 +1474,6 @@ export default function FishingGame({
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
   fishHoldTier: number
-  unlockedBadges: string[]
   ownedRods: number[]
   allFishSpecies: FishSpeciesBasic[]
   initialCaughtFishIds: number[]
