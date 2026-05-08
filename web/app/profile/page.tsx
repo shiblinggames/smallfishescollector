@@ -23,7 +23,7 @@ export default async function ProfilePage() {
     { data: rarestFishRows },
   ] = await Promise.all([
     supabase.from('profiles')
-      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, prestige_levels')
+      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, prestige_levels, unlocked_badges, equipped_badges')
       .eq('id', user.id)
       .single(),
     admin.from('fish_collection')
@@ -108,6 +108,8 @@ export default async function ProfilePage() {
           characterColor={profile?.character_color ?? 'default'}
           unlockedColors={unlockedColors}
           prestigeLevels={(profile?.prestige_levels as Record<string, number> | null) ?? {}}
+          equippedBadges={(profile?.equipped_badges as string[] | null) ?? []}
+          unlockedBadges={(profile?.unlocked_badges as string[] | null) ?? []}
         />
       </main>
     </>

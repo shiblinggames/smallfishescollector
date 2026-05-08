@@ -7,7 +7,9 @@ import { createClient } from '@/lib/supabase/client'
 import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { updateUsername, updateShowcase, updateCharacterColor } from '@/app/u/actions'
+import { equipBadge, unequipBadge } from '@/app/achievements/badgeActions'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
+import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import { getRod } from '@/lib/rods'
 import { getHook } from '@/lib/hooks'
 import { getShip } from '@/lib/ships'
@@ -47,6 +49,8 @@ interface Props {
   characterColor: string
   unlockedColors: string[]
   prestigeLevels: Record<string, number>
+  equippedBadges: string[]
+  unlockedBadges: string[]
 }
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
@@ -214,6 +218,8 @@ export default function ProfileClient({
   characterColor: initialCharacterColor,
   unlockedColors,
   prestigeLevels,
+  equippedBadges: initialEquippedBadges,
+  unlockedBadges,
 }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -230,6 +236,9 @@ export default function ProfileClient({
   const [colorSaving, setColorSaving] = useState(false)
   const [colorPickerOpen, setColorPickerOpen] = useState(false)
   const [hintSkinId, setHintSkinId] = useState<string | null>(null)
+  const [equippedBadges, setEquippedBadges] = useState<string[]>(initialEquippedBadges)
+  const [badgePickerOpen, setBadgePickerOpen] = useState(false)
+  const [badgeSaving, setBadgeSaving] = useState(false)
 
   const color = avatarColor(username || email)
   const initial = (username || email).slice(0, 1).toUpperCase()
@@ -274,6 +283,26 @@ export default function ProfileClient({
       if (prev.length >= 5) return prev
       return [...prev, id]
     })
+  }
+
+  async function handleBadgeClick(badgeId: string) {
+    if (badgeSaving || !unlockedBadges.includes(badgeId)) return
+    const padded = [...equippedBadges]
+    while (padded.length < 3) padded.push('')
+    const currentSlot = padded.indexOf(badgeId)
+    setBadgeSaving(true)
+    if (currentSlot !== -1) {
+      const next = [...padded]; next[currentSlot] = ''
+      setEquippedBadges(next)
+      await unequipBadge(currentSlot as 0 | 1 | 2)
+    } else {
+      const emptySlot = padded.findIndex(b => !b)
+      const slot = (emptySlot === -1 ? 0 : emptySlot) as 0 | 1 | 2
+      const next = [...padded]; next[slot] = badgeId
+      setEquippedBadges(next)
+      await equipBadge(badgeId, slot)
+    }
+    setBadgeSaving(false)
   }
 
   async function signOut() {
@@ -500,6 +529,84 @@ export default function ProfileClient({
                   <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '0.75rem' }} />
                 </div>
               )}
+
+              {/* Badge picker */}
+              <button
+                disabled={badgeSaving}
+                onClick={() => setBadgePickerOpen(o => !o)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.6rem 0 0', display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
+              >
+                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                  {[0, 1, 2].map(slot => {
+                    const badge = BADGE_MAP[equippedBadges[slot] ?? '']
+                    return badge ? (
+                      <img key={slot} src={badge.imageUrl} alt={badge.name} style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 4 }} />
+                    ) : (
+                      <div key={slot} style={{ width: 26, height: 26, borderRadius: 4, border: '1px dashed rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.03)' }} />
+                    )
+                  })}
+                </div>
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#d8d5d0', lineHeight: 1 }}>
+                    {equippedBadges.filter(Boolean).length > 0
+                      ? equippedBadges.filter(Boolean).map(id => BADGE_MAP[id]?.name).join(', ')
+                      : 'None equipped'}
+                  </p>
+                  <p className="font-karla" style={{ fontSize: '0.56rem', color: '#5a5755', marginTop: 2 }}>Badges</p>
+                </div>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5a5755" strokeWidth="2.5" strokeLinecap="round"
+                  style={{ transform: badgePickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </button>
+
+              {badgePickerOpen && (
+                <div style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem' }}>
+                  {unlockedBadges.length === 0 ? (
+                    <p className="font-karla" style={{ fontSize: '0.68rem', color: '#4a4845' }}>Earn badges by completing achievements.</p>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {BADGES.map(b => {
+                        const isUnlocked = unlockedBadges.includes(b.id)
+                        const isEquipped = equippedBadges.includes(b.id)
+                        return (
+                          <button
+                            key={b.id}
+                            disabled={badgeSaving}
+                            onClick={() => handleBadgeClick(b.id)}
+                            title={b.name}
+                            style={{
+                              background: 'none', border: 'none', cursor: isUnlocked ? 'pointer' : 'default',
+                              padding: 0, opacity: isUnlocked ? 1 : 0.35,
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                            }}
+                          >
+                            <div style={{
+                              width: 44, height: 44, borderRadius: 8, overflow: 'hidden', position: 'relative',
+                              border: isEquipped ? '2px solid #f0c040' : '2px solid rgba(255,255,255,0.1)',
+                              boxShadow: isEquipped ? '0 0 10px rgba(240,192,64,0.35)' : 'none',
+                            }}>
+                              <img src={b.imageUrl} alt={b.name} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+                              {!isUnlocked && (
+                                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.52)' }}>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                  </svg>
+                                </div>
+                              )}
+                            </div>
+                            <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: isEquipped ? '#f0c040' : '#6a6764', textAlign: 'center', maxWidth: 44, lineHeight: 1.2 }}>
+                              {b.name}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '0.75rem' }} />
+                </div>
+              )}
+
             </div>
             <div style={{
               position: 'relative', width: '100%', height: 200,
@@ -521,6 +628,19 @@ export default function ProfileClient({
                     pointerEvents: 'none',
                   }} />
                 )}
+                {equippedBadges.map((badgeId, slot) => {
+                  if (!badgeId) return null
+                  const badge = BADGE_MAP[badgeId]
+                  const bp = BADGE_SLOT_POSITIONS[slot]?.['rest' as BadgeFrame]
+                  if (!badge || !bp) return null
+                  return (
+                    <img key={slot} src={badge.imageUrl} alt={badge.name} style={{
+                      position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
+                      width: `${bp.width}%`, transform: `rotate(${bp.rotate}deg)`,
+                      transformOrigin: 'center center', pointerEvents: 'none',
+                    }} />
+                  )
+                })}
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 0, padding: '0 20px' }}>

@@ -13,6 +13,7 @@ import { getShipSkin } from '@/lib/shipSkins'
 import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
 import { getCharacterSprites } from '@/lib/characters'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
+import { BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 
 interface CardVariant {
   id: number
@@ -67,6 +68,7 @@ interface Props {
   isInCrew?: boolean
   characterColor?: string
   equippedSpecialId?: string | null
+  equippedBadges?: string[]
 }
 
 function fishImageUrl(name: string) {
@@ -190,7 +192,7 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   )
 }
 
-export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId }: Props) {
+export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [] }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
@@ -288,6 +290,19 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                     pointerEvents: 'none',
                   }} />
                 )}
+                {equippedBadges.map((badgeId, slot) => {
+                  if (!badgeId) return null
+                  const badge = BADGE_MAP[badgeId]
+                  const bp = BADGE_SLOT_POSITIONS[slot]?.['rest' as BadgeFrame]
+                  if (!badge || !bp) return null
+                  return (
+                    <img key={slot} src={badge.imageUrl} alt={badge.name} style={{
+                      position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
+                      width: `${bp.width}%`, transform: `rotate(${bp.rotate}deg)`,
+                      transformOrigin: 'center center', pointerEvents: 'none',
+                    }} />
+                  )
+                })}
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 0, padding: '0 20px' }}>
