@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies, type FishingBountyCompletion } from './actions'
 
 const CRATE_FISH_ID = -1
 import { claimDailyReward } from './dailyChallengeActions'
@@ -1669,6 +1669,7 @@ export default function FishingGame({
         setActiveEvent(ev)
         activeEventRef.current = ev
         setEventAnnouncing(true)
+        activateEvent(type) // register server-side so effects are validated there
         setTimeout(() => setEventAnnouncing(false), 5_000)
         setTimeout(() => { setActiveEvent(null); activeEventRef.current = null }, 120_000)
         scheduleNext()
@@ -1813,7 +1814,7 @@ export default function FishingGame({
     setPhase('casting')
 
     try {
-      const res = await castLine(selectedBait, selectedZone, isBloom, isRedTide ? 0.25 : 0)
+      const res = await castLine(selectedBait, selectedZone)
 
       if ('error' in res) {
         if (!isBloom) setBaitInventory(prev => prev.map(b =>
@@ -2184,7 +2185,7 @@ export default function FishingGame({
 
   async function handleSell(fishId: number, qty: number) {
     setSellPending(fishId)
-    const res = await sellFish(fishId, qty, activeEvent?.type === 'fullmoon')
+    const res = await sellFish(fishId, qty)
     setSellPending(null)
     if ('error' in res) return
     setDoubloons(res.doubloons)

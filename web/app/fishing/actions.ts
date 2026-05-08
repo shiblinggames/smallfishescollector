@@ -94,7 +94,54 @@ function tierWeightedPick<T extends { bite_rarity: number }>(items: T[], habitat
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
-export async function castLine(baitType: string, habitat: string, noBait = false, eventRarityBonus = 0): Promise<
+// ── Server-side event validation ─────────────────────────────────────────────
+
+const EVENT_DURATION_MS = 120_000
+const EVENT_MIN_GAP_MS  = 600_000 // 10 minutes minimum between events
+
+function getActiveEvent(raw: unknown): { type: string } | null {
+  if (!raw || typeof raw !== 'object') return null
+  const e = raw as { type?: string; started_at?: string }
+  if (!e.type || !e.started_at) return null
+  if (Date.now() - new Date(e.started_at).getTime() > EVENT_DURATION_MS) return null
+  return { type: e.type }
+}
+
+export async function activateEvent(type: string): Promise<{ ok: true } | { error: string }> {
+  const VALID = new Set(['bloom', 'fullmoon', 'redtide', 'glassy'])
+  if (!VALID.has(type)) return { error: 'Invalid event type' }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('active_event, last_event_at')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+
+  const now = Date.now()
+
+  if (getActiveEvent(profile.active_event)) return { error: 'Event already active' }
+
+  if (profile.last_event_at) {
+    const lastAt = new Date(profile.last_event_at as string).getTime()
+    if (now - lastAt < EVENT_MIN_GAP_MS) return { error: 'Too soon' }
+  }
+
+  const started_at = new Date().toISOString()
+  await admin
+    .from('profiles')
+    .update({ active_event: { type, started_at }, last_event_at: started_at })
+    .eq('id', user.id)
+
+  return { ok: true }
+}
+
+export async function castLine(baitType: string, habitat: string): Promise<
   | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number }
   | { error: string }
 > {
@@ -106,7 +153,7 @@ export async function castLine(baitType: string, habitat: string, noBait = false
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, hook_tier, fishing_xp, ship_tier, trophy_catches')
+    .select('rod_tier, hook_tier, fishing_xp, ship_tier, trophy_catches, active_event')
     .eq('id', user.id)
     .single()
 
@@ -120,6 +167,11 @@ export async function castLine(baitType: string, habitat: string, noBait = false
   if (fishingLevel < minLevel) {
     return { error: `Reach Fishing Level ${minLevel} to fish here` }
   }
+
+  // Derive event effects server-side — never trust client flags
+  const activeEvent = getActiveEvent(profile.active_event)
+  const noBait = activeEvent?.type === 'bloom'
+  const eventRarityBonus = activeEvent?.type === 'redtide' ? 0.25 : 0
 
   // Fetch hold, bait, and candidates in parallel
   const ship = getShip(profile.ship_tier ?? 0)
@@ -539,7 +591,6 @@ export async function quickBuyWorms(): Promise<{ qty: number; doubloons: number 
 export async function sellFish(
   fishId: number,
   quantity: number,
-  fullPrice = false,
 ): Promise<{ earned: number; doubloons: number } | { error: string }> {
   if (quantity <= 0) return { error: 'Invalid quantity' }
 
@@ -552,12 +603,13 @@ export async function sellFish(
   const [{ data: invRow }, { data: fish }, { data: profile }] = await Promise.all([
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', fishId).single(),
     admin.from('fish_species').select('sell_value').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, active_event').eq('id', user.id).single(),
   ])
 
   if (!invRow || !fish || !profile) return { error: 'Data not found' }
   if (invRow.quantity < quantity) return { error: 'Not enough fish' }
 
+  const fullPrice = getActiveEvent(profile.active_event)?.type === 'fullmoon'
   const earned = Math.floor(fish.sell_value * (fullPrice ? 1.0 : 0.65)) * quantity
   const newDoubloons = (profile.doubloons ?? 0) + earned
 
