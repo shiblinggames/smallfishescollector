@@ -271,7 +271,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
             <div style={{
               position: 'relative',
               width: '100%',
-              height: 200,
+              height: 160,
               filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))',
             }}>
               <div style={{ position: 'absolute', bottom: 0, left: '12%', width: '72%' }}>
