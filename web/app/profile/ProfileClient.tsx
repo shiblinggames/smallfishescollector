@@ -351,14 +351,6 @@ export default function ProfileClient({
               <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#f0c040' }}>Member</span>
             </div>
           )}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.25)' }}>
-            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#60a5fa' }}>Fishing Lv {level}</span>
-          </div>
-          {expeditionLevel > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(112,144,192,0.08)', border: '1px solid rgba(112,144,192,0.25)' }}>
-              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#7090c0' }}>{navigatorTitle} · Lv {expeditionLevel}</span>
-            </div>
-          )}
           <Link
             href={`/u/${username}`}
             style={{
@@ -509,6 +501,7 @@ export default function ProfileClient({
                 </div>
               )}
             </div>
+            <div style={{ position: 'relative' }}>
             <div style={{
               position: 'relative', width: '100%', height: 200,
               filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))',
@@ -530,6 +523,12 @@ export default function ProfileClient({
                   }} />
                 )}
               </div>
+            </div>
+            <div style={{ position: 'absolute', bottom: 10, left: 10 }}>
+              <div style={{ padding: '0.2rem 0.55rem', borderRadius: '2rem', background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(96,165,250,0.35)' }}>
+                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#60a5fa' }}>Fishing · Lv {level}</span>
+              </div>
+            </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 0, padding: '0 20px' }}>
               <div style={{ textAlign: 'center', flex: 1 }}>
@@ -666,14 +665,23 @@ export default function ProfileClient({
             padding: '24px 16px 16px',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
           }}>
-            <img
-              src={ship.imageUrl}
-              alt={ship.name}
-              style={{
-                width: 200, height: 155, objectFit: 'contain',
-                filter: shipSkinDef ? shipSkinDef.filter : `drop-shadow(0 4px 28px ${ship.color}60)`,
-              }}
-            />
+            <div style={{ position: 'relative' }}>
+              <img
+                src={ship.imageUrl}
+                alt={ship.name}
+                style={{
+                  width: 200, height: 155, objectFit: 'contain',
+                  filter: shipSkinDef ? shipSkinDef.filter : `drop-shadow(0 4px 28px ${ship.color}60)`,
+                }}
+              />
+              {expeditionLevel > 0 && (
+                <div style={{ position: 'absolute', bottom: 6, left: 6 }}>
+                  <div style={{ padding: '0.2rem 0.55rem', borderRadius: '2rem', background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(112,144,192,0.35)' }}>
+                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#7090c0' }}>{navigatorTitle} · Lv {expeditionLevel}</span>
+                  </div>
+                </div>
+              )}
+            </div>
             <div style={{ textAlign: 'center' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: ship.color, lineHeight: 1.2 }}>
                 {customShipName ?? shipName}

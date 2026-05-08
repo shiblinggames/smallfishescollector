@@ -234,14 +234,6 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
               <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#f0c040' }}>Member</span>
             </div>
           )}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.25)' }}>
-            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#60a5fa' }}>Fishing Lv {fishingLevel}</span>
-          </div>
-          {stats.expeditionXP > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(112,144,192,0.08)', border: '1px solid rgba(112,144,192,0.25)' }}>
-              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#7090c0' }}>{expTitle} · Lv {expLevel}</span>
-            </div>
-          )}
           {!isOwnProfile && (
             <button
               onClick={toggleCrew}
@@ -274,6 +266,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
             overflow: 'hidden',
             paddingBottom: 14,
           }}>
+            <div style={{ position: 'relative' }}>
             <div style={{
               position: 'relative',
               width: '100%',
@@ -297,6 +290,12 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                   }} />
                 )}
               </div>
+            </div>
+            <div style={{ position: 'absolute', bottom: 10, left: 10 }}>
+              <div style={{ padding: '0.2rem 0.55rem', borderRadius: '2rem', background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(96,165,250,0.35)' }}>
+                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#60a5fa' }}>Fishing · Lv {fishingLevel}</span>
+              </div>
+            </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 0, padding: '0 20px' }}>
               <div style={{ textAlign: 'center', flex: 1 }}>
@@ -398,17 +397,26 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
             padding: '24px 16px 16px',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
           }}>
-            <img
-              src={ship.imageUrl}
-              alt={ship.name}
-              style={{
-                width: 200, height: 155,
-                objectFit: 'contain',
-                filter: shipSkin
-                  ? shipSkin.filter
-                  : `drop-shadow(0 4px 28px ${ship.color}60)`,
-              }}
-            />
+            <div style={{ position: 'relative' }}>
+              <img
+                src={ship.imageUrl}
+                alt={ship.name}
+                style={{
+                  width: 200, height: 155,
+                  objectFit: 'contain',
+                  filter: shipSkin
+                    ? shipSkin.filter
+                    : `drop-shadow(0 4px 28px ${ship.color}60)`,
+                }}
+              />
+              {expLevel > 0 && (
+                <div style={{ position: 'absolute', bottom: 6, left: 6 }}>
+                  <div style={{ padding: '0.2rem 0.55rem', borderRadius: '2rem', background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(112,144,192,0.35)' }}>
+                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#7090c0' }}>{expTitle} · Lv {expLevel}</span>
+                  </div>
+                </div>
+              )}
+            </div>
             <div style={{ textAlign: 'center' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: ship.color, lineHeight: 1.2 }}>
                 {gear.shipName ?? ship.name}
