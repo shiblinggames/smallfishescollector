@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import FishingPageClient from './FishingPageClient'
 import { getActiveChallengeSession } from '@/app/social/challengeActions'
-import { getShip } from '@/lib/ships'
 import { getDailyChallenge } from './dailyChallengeActions'
 
 export default async function FishingPage() {
@@ -28,7 +27,7 @@ export default async function FishingPage() {
     getActiveChallengeSession(),
     getDailyChallenge(),
     admin.from('profiles')
-      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, ship_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, ring_skin, unlocked_ring_skins, has_tide_turner, tide_turner_used, tide_turner_date, equipped_special, has_phantom_hook, has_auto_caster, prestige_levels, trophy_catches, character_color, equipped_badges')
+      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, fish_hold_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, ring_skin, unlocked_ring_skins, has_tide_turner, tide_turner_used, tide_turner_date, equipped_special, has_phantom_hook, has_auto_caster, prestige_levels, trophy_catches, character_color, equipped_badges, unlocked_badges')
       .eq('id', user.id)
       .single(),
     admin.from('bait_inventory')
@@ -54,7 +53,7 @@ export default async function FishingPage() {
 
   const ownedRods = (rodRows ?? []).map((r: { rod_tier: number }) => r.rod_tier)
   const caughtFishIds = (collectionRows ?? []).map((r: { fish_id: number }) => r.fish_id)
-  const holdCapacity = getShip(profile?.ship_tier ?? 0).holdCapacity
+  const fishHoldTier = profile?.fish_hold_tier ?? 0
 
   const todayStr = new Date().toISOString().split('T')[0]
   const hasTideTurner = profile?.has_tide_turner ?? false
@@ -85,8 +84,8 @@ export default async function FishingPage() {
               bite_rarity: number; catch_difficulty: number; catch_score: number; sell_value: number
             }
           }[]}
-          holdCapacity={holdCapacity}
-          shipTier={profile?.ship_tier ?? 0}
+          fishHoldTier={fishHoldTier}
+          unlockedBadges={(profile?.unlocked_badges as string[] | null) ?? []}
           uniqueSpeciesCaught={uniqueSpeciesCaught ?? 0}
           ownedRods={ownedRods}
           allFishSpecies={(allSpecies ?? []) as { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }[]}

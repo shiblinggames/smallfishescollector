@@ -8,8 +8,8 @@ import { getRod, RODS } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
-import { getShip } from '@/lib/ships'
 import { RING_SKINS } from '@/lib/ringSkins'
+import { BADGE_MAP } from '@/lib/badges'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 
 type BaitItem = { bait_type: string; quantity: number }
@@ -247,7 +247,8 @@ function GearSlot({
 export default function GearScreen({
   baitInventory, selectedBait, onSelectBait,
   equippedRodTier, ownedRods, onEquipRod,
-  reelTier, hookTier, lineTier, shipTier,
+  reelTier, hookTier, lineTier,
+  characterColor, charSrc, equippedBadges,
   equippedRingSkin, unlockedRingSkins, onEquipRingSkin,
   hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster,
   equippedSpecial, onEquipSpecial, onBuySpecialItem,
@@ -263,7 +264,9 @@ export default function GearScreen({
   reelTier: number
   hookTier: number
   lineTier: number
-  shipTier: number
+  characterColor: string
+  charSrc: Record<string, string>
+  equippedBadges: string[]
   equippedRingSkin: string
   unlockedRingSkins: string[]
   onEquipRingSkin: (skin: string) => void
@@ -283,7 +286,6 @@ export default function GearScreen({
   const reel = getReel(reelTier)
   const hook = getHook(hookTier)
   const line = getLine(lineTier)
-  const ship = getShip(shipTier)
   const bait = BAITS.find(b => b.type === selectedBait)
 
   const inventoryMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
@@ -320,26 +322,52 @@ export default function GearScreen({
           <GearSlot label="Hook" image={hook.imageUrl ?? null} itemName={hook.name} color={hook.color} onClick={() => setOpenSlot('hook')} />
         </div>
 
-        {/* Center: Ship — tap to go to Shipyard */}
-        <Link href="/marketplace/shipyard" onClick={onClose} style={{
-          gridColumn: '2', gridRow: '1 / 3',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
+        {/* Center row 1: Character */}
+        <Link href="/profile" onClick={onClose} style={{
+          gridColumn: '2', gridRow: '1',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           background: 'rgba(4,10,20,0.75)',
-          border: `1px solid ${ship.color}45`,
+          border: '1px solid rgba(255,255,255,0.12)',
           borderRadius: 20,
-          padding: '0.75rem 0.5rem 0.6rem',
+          padding: '0.6rem 0.5rem',
           textDecoration: 'none',
           cursor: 'pointer',
+          gap: 5,
         }}>
-          <img src={ship.imageUrl} alt={ship.name} style={{ width: '90%', maxHeight: 100, objectFit: 'contain', filter: `drop-shadow(0 4px 16px ${ship.color}44)` }} />
-          <div style={{ textAlign: 'center', marginTop: 6 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: ship.color, lineHeight: 1.2 }}>{ship.name}</p>
-            <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: ship.color + 'aa', marginTop: 3 }}>
-              {ship.holdCapacity} hold
-            </p>
-            <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: ship.color + '88', marginTop: 5, letterSpacing: '0.12em' }}>
-              Shipyard ↗
-            </p>
+          <img src={charSrc.rest} alt="Character" style={{ width: 52, height: 52, objectFit: 'contain', objectPosition: 'top', filter: 'drop-shadow(0 2px 8px rgba(240,237,232,0.15))' }} />
+          <div style={{ textAlign: 'center' }}>
+            <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.12em', lineHeight: 1 }}>Character</p>
+            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.25)', marginTop: 3 }}>Edit ↗</p>
+          </div>
+        </Link>
+
+        {/* Center row 2: Badges */}
+        <Link href="/profile" onClick={onClose} style={{
+          gridColumn: '2', gridRow: '2',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(4,10,20,0.75)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 20,
+          padding: '0.6rem 0.5rem',
+          textDecoration: 'none',
+          cursor: 'pointer',
+          gap: 5,
+        }}>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center', justifyContent: 'center', minHeight: 32 }}>
+            {equippedBadges.length === 0 ? (
+              <span style={{ fontSize: '0.6rem', color: '#3a3835' }}>—</span>
+            ) : (
+              equippedBadges.slice(0, 3).map((id, i) => {
+                const badge = BADGE_MAP[id]
+                return badge ? (
+                  <img key={i} src={badge.imageUrl} alt={badge.name} style={{ width: 22, height: 22, objectFit: 'contain' }} />
+                ) : null
+              })
+            )}
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.12em', lineHeight: 1 }}>Badges</p>
+            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.25)', marginTop: 3 }}>Edit ↗</p>
           </div>
         </Link>
 

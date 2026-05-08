@@ -23,9 +23,9 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
-  holdCapacity, shipTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
+  fishHoldTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, activeSession, username, zoneRewardsClaimed,
-  initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches, characterColor, equippedBadges,
+  initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches, characterColor, equippedBadges, unlockedBadges,
 }: {
   hookTier: number
   rodTier: number
@@ -36,8 +36,7 @@ export default function FishingPageClient({
   initialBait: BaitItem[]
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
-  holdCapacity: number
-  shipTier: number
+  fishHoldTier: number
   ownedRods: number[]
   allFishSpecies: FishSpeciesBasic[]
   caughtFishIds: number[]
@@ -59,6 +58,7 @@ export default function FishingPageClient({
   trophyCatches: number[]
   characterColor: string
   equippedBadges: string[]
+  unlockedBadges: string[]
 }) {
   const fishingLevel = getLevelFromXP(initialFishingXP)
 
@@ -104,8 +104,8 @@ export default function FishingPageClient({
       initialBait={initialBait}
       initialInventory={initialInventory}
       uniqueSpeciesCaught={uniqueSpeciesCaught}
-      holdCapacity={holdCapacity}
-      shipTier={shipTier}
+      fishHoldTier={fishHoldTier}
+      unlockedBadges={unlockedBadges}
       ownedRods={ownedRods}
       allFishSpecies={allFishSpecies}
       initialCaughtFishIds={caughtFishIds}

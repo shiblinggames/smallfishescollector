@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef, useTransition, useMemo } from 'reac
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { upgradeFishHold } from './holdActions'
+import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 
 const CRATE_FISH_ID = -1
 import { claimDailyReward } from './dailyChallengeActions'
@@ -1452,7 +1454,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 export default function FishingGame({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialInventory,
-  holdCapacity, shipTier,
+  fishHoldTier: initialFishHoldTier,
   ownedRods: initialOwnedRods,
   allFishSpecies, initialCaughtFishIds,
   initialHighestPerfectStreak,
@@ -1471,8 +1473,8 @@ export default function FishingGame({
   initialBait: BaitItem[]
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
-  holdCapacity: number
-  shipTier: number
+  fishHoldTier: number
+  unlockedBadges: string[]
   ownedRods: number[]
   allFishSpecies: FishSpeciesBasic[]
   initialCaughtFishIds: number[]
@@ -1495,9 +1497,13 @@ export default function FishingGame({
   initialTrophyCatches: number[]
   characterColor: string
   equippedBadges: string[]
+  unlockedBadges: string[]
 }) {
 
   const charSrc = getCharSrc(characterColor)
+
+  const [currentFishHoldTier, setCurrentFishHoldTier] = useState(initialFishHoldTier)
+  const holdCapacity = getFishHold(currentFishHoldTier).capacity
 
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
   const [ownedRods, setOwnedRods] = useState(initialOwnedRods)
@@ -4091,7 +4097,9 @@ export default function FishingGame({
               reelTier={reelTier}
               hookTier={hookTier}
               lineTier={lineTier}
-              shipTier={shipTier}
+              characterColor={characterColor}
+              charSrc={charSrc}
+              equippedBadges={equippedBadges}
               equippedRingSkin={equippedRingSkin}
               unlockedRingSkins={unlockedRingSkins}
               onEquipRingSkin={async (skin) => {
@@ -4625,23 +4633,58 @@ export default function FishingGame({
 
             {/* Scrollable content */}
             <div style={{ overflowY: 'auto', overscrollBehavior: 'contain', flex: 1, padding: '0 1rem 2rem' }}>
-              {/* Upgrade boat CTA */}
-              <Link href="/marketplace/shipyard" onClick={() => setHoldOpen(false)} style={{ textDecoration: 'none', display: 'block', marginBottom: '1rem' }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '0.75rem 1rem',
-                  background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.28)',
-                  borderRadius: 14, boxShadow: '0 0 14px rgba(96,165,250,0.07)',
-                  transition: 'box-shadow 0.2s',
-                }}>
-                  <div>
-                    <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#60a5fa', marginBottom: 2 }}>Shipyard</p>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>Upgrade your boat</p>
-                    <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#60a5faaa', marginTop: 1 }}>More storage · faster sail · bigger crew</p>
+              {/* Upgrade fish hold */}
+              {(() => {
+                const maxTier = FISH_HOLD_TIERS.length - 1
+                const isMax = currentFishHoldTier >= maxTier
+                const next = !isMax ? getFishHold(currentFishHoldTier + 1) : null
+                const canAfford = next ? doubloons >= next.cost : false
+                return (
+                  <div style={{ marginBottom: '1rem' }}>
+                    {isMax ? (
+                      <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '0.75rem 1rem',
+                        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 14,
+                      }}>
+                        <div>
+                          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#6a6764', marginBottom: 2 }}>Fish Hold</p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>{getFishHold(currentFishHoldTier).name}</p>
+                          <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: 1 }}>Maximum capacity reached</p>
+                        </div>
+                        <span style={{ fontSize: '1.2rem', color: '#4a4845', marginLeft: '0.75rem' }}>🗃️</span>
+                      </div>
+                    ) : (
+                      <button
+                        disabled={!canAfford}
+                        onClick={async () => {
+                          const res = await upgradeFishHold()
+                          if ('ok' in res) {
+                            setCurrentFishHoldTier(res.newTier)
+                            setDoubloons(res.doubloons)
+                            window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+                          }
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '0.75rem 1rem', width: '100%',
+                          background: canAfford ? 'rgba(240,192,64,0.07)' : 'rgba(255,255,255,0.03)',
+                          border: `1px solid ${canAfford ? 'rgba(240,192,64,0.28)' : 'rgba(255,255,255,0.08)'}`,
+                          borderRadius: 14, cursor: canAfford ? 'pointer' : 'default',
+                        }}
+                      >
+                        <div style={{ textAlign: 'left' }}>
+                          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: canAfford ? '#f0c040' : '#6a6764', marginBottom: 2 }}>Upgrade Hold</p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>{next!.name}</p>
+                          <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: canAfford ? '#f0c04088' : '#6a6764', marginTop: 1 }}>{next!.capacity} capacity · {next!.cost.toLocaleString()} ⟡</p>
+                        </div>
+                        <span style={{ fontSize: '1.2rem', color: canAfford ? '#f0c040' : '#4a4845', marginLeft: '0.75rem' }}>🗃️</span>
+                      </button>
+                    )}
                   </div>
-                  <span style={{ fontSize: '1.3rem', color: '#60a5fa', marginLeft: '0.75rem' }}>⛵</span>
-                </div>
-              </Link>
+                )
+              })()}
 
               {inventory.length === 0 ? (
                 <p className="font-karla font-300 text-center py-6" style={{ fontSize: '0.8rem', color: '#4a4845' }}>

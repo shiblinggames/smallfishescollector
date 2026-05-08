@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
 import { getRod } from '@/lib/rods'
-import { getShip } from '@/lib/ships'
+import { getFishHold } from '@/lib/fishHold'
 import { checkAchievements } from '@/lib/checkAchievements'
 import { unlockBadge } from '@/app/achievements/badgeActions'
 import { recordChallengeScore } from '@/app/social/challengeActions'
@@ -154,7 +154,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, hook_tier, fishing_xp, ship_tier, trophy_catches, active_event')
+    .select('rod_tier, hook_tier, fishing_xp, fish_hold_tier, trophy_catches, active_event')
     .eq('id', user.id)
     .single()
 
@@ -175,7 +175,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
   const eventRarityBonus = activeEvent?.type === 'redtide' ? 0.25 : 0
 
   // Fetch hold, bait, and candidates in parallel
-  const ship = getShip(profile.ship_tier ?? 0)
+  const fishHold = getFishHold(profile.fish_hold_tier ?? 0)
   const [{ data: holdRows }, { data: baitRow }, { data: candidates }] = await Promise.all([
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
     admin.from('bait_inventory').select('quantity').eq('user_id', user.id).eq('bait_type', baitType).single(),
@@ -183,8 +183,8 @@ export async function castLine(baitType: string, habitat: string): Promise<
   ])
 
   const totalFish = (holdRows ?? []).reduce((sum, r) => sum + (r.quantity ?? 0), 0)
-  if (habitat !== 'ancient_deep' && totalFish >= ship.holdCapacity) {
-    return { error: `Fish hold full (${ship.holdCapacity}/${ship.holdCapacity}). Sell some fish to make room.` }
+  if (habitat !== 'ancient_deep' && totalFish >= fishHold.capacity) {
+    return { error: `Fish hold full (${fishHold.capacity}/${fishHold.capacity}). Sell some fish to make room.` }
   }
 
   if (!noBait && (!baitRow || baitRow.quantity <= 0)) return { error: 'No bait remaining.' }
@@ -274,7 +274,7 @@ export async function reelIn(
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, ship_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches, unlocked_character_colors').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, fish_hold_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches, unlocked_character_colors').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -329,7 +329,7 @@ export async function reelIn(
   }
 
   // Upsert sellable inventory — cap at hold capacity
-  const holdCapacity = getShip(profile.ship_tier ?? 0).holdCapacity
+  const holdCapacity = getFishHold(profile.fish_hold_tier ?? 0).capacity
   const currentHoldCount = (holdRows ?? []).reduce((s: number, r: { quantity: number }) => s + (r.quantity ?? 0), 0)
   const desired = doubleCatch ? 2 : jackpotMultiplier
   const catchQty = Math.min(desired, Math.max(0, holdCapacity - currentHoldCount))
