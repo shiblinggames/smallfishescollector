@@ -271,7 +271,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
             <div style={{
               position: 'relative',
               width: '100%',
-              height: 160,
+              height: 160, marginTop: 8,
               filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))',
             }}>
               <div style={{ position: 'absolute', bottom: 0, left: '12%', width: '72%' }}>
@@ -305,7 +305,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                 })}
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 0, padding: '0 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 0, padding: '8px 20px 0' }}>
               <div style={{ textAlign: 'center', flex: 1 }}>
                 <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: rod.color + 'aa', marginBottom: 3 }}>Rod</p>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d8d5d0', lineHeight: 1.2 }}>{rod.name}</p>
@@ -326,30 +326,15 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
           {/* Equipped Special */}
           {equippedSpecial && (
             <div style={{
-              background: `linear-gradient(130deg, ${equippedSpecial.color}12 0%, rgba(4,10,20,0.88) 55%)`,
-              border: `1px solid ${equippedSpecial.color}40`,
-              borderRadius: 16,
-              padding: '0.85rem 1rem',
-              display: 'flex', alignItems: 'center', gap: 14,
-              boxShadow: `0 0 20px ${equippedSpecial.color}14`,
+              display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', gap: 8,
+              padding: '0.4rem 0.75rem 0.4rem 0.5rem', borderRadius: 20,
+              background: `${equippedSpecial.color}10`, border: `1px solid ${equippedSpecial.color}30`,
             }}>
               {equippedSpecial.image
-                ? <img src={equippedSpecial.image} alt={equippedSpecial.name} style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 0 10px ${equippedSpecial.color}88)` }} />
-                : <div style={{ width: 44, height: 44, borderRadius: 10, background: equippedSpecial.color + '22', border: `1px solid ${equippedSpecial.color}44`, flexShrink: 0 }} />
+                ? <img src={equippedSpecial.image} alt={equippedSpecial.name} style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 0 6px ${equippedSpecial.color}66)` }} />
+                : <div style={{ width: 26, height: 26, borderRadius: 6, background: equippedSpecial.color + '22', flexShrink: 0 }} />
               }
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: equippedSpecial.color, lineHeight: 1.2, marginBottom: 4 }}>{equippedSpecial.name}</p>
-                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a8a5a0', lineHeight: 1.5 }}>{equippedSpecial.description}</p>
-                <span style={{
-                  display: 'inline-block', marginTop: 6,
-                  fontSize: '0.6rem', padding: '0.15rem 0.5rem', borderRadius: '2rem',
-                  background: equippedSpecial.color + '18', border: `1px solid ${equippedSpecial.color}40`, color: equippedSpecial.color,
-                  fontFamily: 'var(--font-karla)', fontWeight: 700,
-                  textTransform: 'uppercase', letterSpacing: '0.1em',
-                }}>
-                  {equippedSpecial.effectLabel}
-                </span>
-              </div>
+              <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: equippedSpecial.color }}>{equippedSpecial.name}</span>
             </div>
           )}
 
