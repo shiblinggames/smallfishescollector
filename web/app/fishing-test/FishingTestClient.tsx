@@ -3,8 +3,7 @@
 import { useState, useRef } from 'react'
 import { RODS } from '@/lib/rods'
 import { HOOKS } from '@/lib/hooks'
-import { BAITS } from '@/lib/bait'
-import { BADGE_SLOT_POSITIONS, type BadgePos, type BadgeFrame } from '@/lib/badges'
+import { BADGES, BADGE_SLOT_POSITIONS, type BadgePos, type BadgeFrame } from '@/lib/badges'
 
 type Frame = 'rest' | 'wait' | 'cast'
 
@@ -39,20 +38,6 @@ const CHAR_DEFAULT: Record<Frame, { bottom: number; left: number; width: number 
   cast: { bottom: 60, left: 26, width: 70 },
 }
 
-const BAITS_WITH_IMAGES = BAITS.filter(b => b.imageUrl)
-
-// Default base position for all baits (tune per-bait)
-const makeBaitBase = () => ({ top: 78, left: 30, width: 10, rotate: 0 })
-const BAIT_BASE_DEFAULT: Record<string, { top: number; left: number; width: number; rotate: number }> =
-  Object.fromEntries(BAITS_WITH_IMAGES.map(b => [b.type, makeBaitBase()]))
-
-// Per-frame delta applied on top of base (same for all baits)
-const BAIT_FRAME_OFFSET_DEFAULT: Record<Frame, { dTop: number; dLeft: number }> = {
-  rest: { dTop: 0,  dLeft: 0  },
-  wait: { dTop: 0,  dLeft: 0  },
-  cast: { dTop: 0,  dLeft: 0  },
-}
-
 function Slider({ label, value, min, max, step = 1, onChange }: {
   label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void
 }) {
@@ -79,14 +64,15 @@ export default function FishingTestClient() {
   const [animating, setAnimating] = useState(false)
   const [rodTier, setRodTier] = useState(0)
   const [hookTier, setHookTier] = useState(0)
-  const [selectedBaitType, setSelectedBaitType] = useState(BAITS_WITH_IMAGES[0].type)
   const [rodCfg, setRodCfg] = useState(ROD_OVERLAY)
   const [hookCfg, setHookCfg] = useState(HOOK_OVERLAY)
   const [charCfg, setCharCfg] = useState(CHAR_DEFAULT)
-  const [baitBase, setBaitBase] = useState(BAIT_BASE_DEFAULT)
-  const [baitOffset, setBaitOffset] = useState(BAIT_FRAME_OFFSET_DEFAULT)
   const [badgeCfg, setBadgeCfg] = useState(BADGE_SLOT_POSITIONS)
   const [activeSlot, setActiveSlot] = useState(0)
+  // per-slot selected badge id (null = empty)
+  const [slotBadges, setSlotBadges] = useState<(string | null)[]>([
+    BADGES[0].id, BADGES[1].id, BADGES[2].id,
+  ])
   const animRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function playAnimation() {
@@ -104,14 +90,9 @@ export default function FishingTestClient() {
 
   const rod  = RODS.find(r => r.tier === rodTier) ?? RODS[0]
   const hook = HOOKS.find(h => h.tier === hookTier) ?? HOOKS[0]
-  const bait = BAITS_WITH_IMAGES.find(b => b.type === selectedBaitType) ?? BAITS_WITH_IMAGES[0]
   const rc = rodCfg[frame]
   const hc = hookCfg[frame]
   const cp = charCfg[frame]
-  const bb = baitBase[selectedBaitType]
-  const bo = baitOffset[frame]
-  const baitTop  = bb.top  + bo.dTop
-  const baitLeft = bb.left + bo.dLeft
 
   function setChar(key: keyof typeof cp, val: number) {
     setCharCfg(prev => ({ ...prev, [frame]: { ...prev[frame], [key]: val } }))
@@ -121,12 +102,6 @@ export default function FishingTestClient() {
   }
   function setHook(key: keyof typeof hc, val: number) {
     setHookCfg(prev => ({ ...prev, [frame]: { ...prev[frame], [key]: val } }))
-  }
-  function setBait(key: keyof typeof bb, val: number) {
-    setBaitBase(prev => ({ ...prev, [selectedBaitType]: { ...prev[selectedBaitType], [key]: val } }))
-  }
-  function setBaitOff(key: keyof typeof bo, val: number) {
-    setBaitOffset(prev => ({ ...prev, [frame]: { ...prev[frame], [key]: val } }))
   }
   function setBadge(key: keyof BadgePos, val: number) {
     setBadgeCfg(prev => ({
@@ -171,24 +146,27 @@ export default function FishingTestClient() {
               }} />
             )}
 
-            {bait.imageUrl && (
-              <img src={bait.imageUrl} alt="bait" style={{
-                position: 'absolute', top: `${baitTop}%`, left: `${baitLeft}%`,
-                width: `${bb.width}%`, transform: `rotate(${bb.rotate}deg)`,
-                transformOrigin: 'center center', pointerEvents: 'none',
-              }} />
-            )}
             {[0, 1, 2].map(slot => {
               const bp = badgeCfg[slot]?.[frame as BadgeFrame]
+              const badgeId = slotBadges[slot]
+              const badge = badgeId ? BADGES.find(b => b.id === badgeId) : null
               if (!bp) return null
-              return (
+              return badge ? (
+                <img key={slot} src={badge.imageUrl} alt={badge.name} style={{
+                  position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
+                  width: `${bp.width}%`, transform: `rotate(${bp.rotate}deg)`,
+                  transformOrigin: 'center center', pointerEvents: 'none',
+                  outline: slot === activeSlot ? '2px solid #fbbf24' : 'none',
+                  outlineOffset: 2,
+                }} />
+              ) : (
                 <div key={slot} style={{
                   position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
                   width: `${bp.width}%`, transform: `rotate(${bp.rotate}deg)`,
                   transformOrigin: 'center center', pointerEvents: 'none',
-                  background: slot === activeSlot ? 'rgba(251,191,36,0.5)' : 'rgba(255,255,255,0.2)',
+                  background: slot === activeSlot ? 'rgba(251,191,36,0.3)' : 'rgba(255,255,255,0.1)',
                   borderRadius: 4, aspectRatio: '1',
-                  border: slot === activeSlot ? '1px solid #fbbf24' : '1px dashed rgba(255,255,255,0.4)',
+                  border: slot === activeSlot ? '1px solid #fbbf24' : '1px dashed rgba(255,255,255,0.3)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <span style={{ fontSize: 8, color: '#fff', fontWeight: 700 }}>{slot + 1}</span>
@@ -265,25 +243,6 @@ export default function FishingTestClient() {
         <Slider label="width %"  value={hc.width}  min={2}   max={60}   onChange={v => setHook('width',  v)} />
         <Slider label="rotate °" value={hc.rotate} min={-180} max={180} onChange={v => setHook('rotate', v)} />
 
-        {/* Bait picker */}
-        <p style={{ fontWeight: 700, marginTop: 14, marginBottom: 6, color: '#fff' }}>Bait</p>
-        <select value={selectedBaitType} onChange={e => setSelectedBaitType(e.target.value)}
-          style={{ width: '100%', marginBottom: 10, padding: '4px 6px', background: '#1e2d3e', color: '#fff', border: '1px solid #334', borderRadius: 6 }}>
-          {BAITS_WITH_IMAGES.map(b => (
-            <option key={b.type} value={b.type}>{b.name}</option>
-          ))}
-        </select>
-
-        <p style={{ fontWeight: 600, marginBottom: 4, color: '#fca5a5' }}>Bait base ({selectedBaitType})</p>
-        <Slider label="top %"    value={bb.top}    min={-20} max={120}  onChange={v => setBait('top',    v)} />
-        <Slider label="left %"   value={bb.left}   min={-20} max={100}  onChange={v => setBait('left',   v)} />
-        <Slider label="width %"  value={bb.width}  min={2}   max={40}   onChange={v => setBait('width',  v)} />
-        <Slider label="rotate °" value={bb.rotate} min={-180} max={180} onChange={v => setBait('rotate', v)} />
-
-        <p style={{ fontWeight: 600, marginBottom: 4, marginTop: 8, color: '#fca5a5', opacity: 0.7 }}>Frame offset ({frame})</p>
-        <Slider label="dTop %"  value={bo.dTop}  min={-15} max={15} onChange={v => setBaitOff('dTop',  v)} />
-        <Slider label="dLeft %" value={bo.dLeft} min={-15} max={15} onChange={v => setBaitOff('dLeft', v)} />
-
         {/* Badge slots */}
         <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Badges</p>
         <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
@@ -296,7 +255,27 @@ export default function FishingTestClient() {
             }}>Slot {s + 1}</button>
           ))}
         </div>
-        <p style={{ fontWeight: 600, marginBottom: 4, color: '#fbbf24' }}>Slot {activeSlot + 1} ({frame})</p>
+
+        {/* Badge image picker for active slot */}
+        <p style={{ fontWeight: 600, marginBottom: 6, color: '#fbbf24', fontSize: 11 }}>Badge in slot {activeSlot + 1}</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+          {BADGES.map(b => {
+            const selected = slotBadges[activeSlot] === b.id
+            return (
+              <button key={b.id} onClick={() => setSlotBadges(prev => { const next = [...prev]; next[activeSlot] = selected ? null : b.id; return next })}
+                title={b.name}
+                style={{
+                  width: 36, height: 36, padding: 2, borderRadius: 6, cursor: 'pointer',
+                  background: selected ? 'rgba(251,191,36,0.25)' : 'rgba(255,255,255,0.05)',
+                  border: selected ? '2px solid #fbbf24' : '1px solid rgba(255,255,255,0.15)',
+                }}>
+                <img src={b.imageUrl} alt={b.name} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+              </button>
+            )
+          })}
+        </div>
+
+        <p style={{ fontWeight: 600, marginBottom: 4, color: '#fbbf24' }}>Slot {activeSlot + 1} position ({frame})</p>
         <Slider label="top %"    value={bc.top}    min={-20} max={120}  onChange={v => setBadge('top',    v)} />
         <Slider label="left %"   value={bc.left}   min={-20} max={100}  onChange={v => setBadge('left',   v)} />
         <Slider label="width %"  value={bc.width}  min={2}   max={60}   onChange={v => setBadge('width',  v)} />
@@ -305,7 +284,7 @@ export default function FishingTestClient() {
         {/* Config dump */}
         <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Current config</p>
         <pre style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
-{`CHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBAIT_BASE:\n${JSON.stringify(baitBase, null, 2)}\n\nBAIT_OFFSET:\n${JSON.stringify(baitOffset, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}`}
+{`CHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}`}
         </pre>
       </div>
     </div>
