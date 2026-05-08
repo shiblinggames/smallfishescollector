@@ -294,7 +294,7 @@ export default function ShipHero({
                 background: 'rgba(6,12,20,0.98)',
                 borderTop: '1px solid rgba(255,255,255,0.09)',
                 borderRadius: '18px 18px 0 0',
-                maxHeight: 'calc(100dvh - 60px)',
+                maxHeight: 'calc(100dvh - 80px)',
                 display: 'flex', flexDirection: 'column',
                 overflow: 'hidden',
               }}
@@ -520,11 +520,11 @@ export default function ShipHero({
             {sheetOpen && (
               <div
                 onClick={closeSheet}
-                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 60, paddingTop: '3rem' }}
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 60, paddingTop: '80px' }}
               >
                 <div
                   onClick={e => e.stopPropagation()}
-                  style={{ background: '#0d0d0c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 520, maxHeight: 'calc(100dvh - 3rem)', display: 'flex', flexDirection: 'column' }}
+                  style={{ background: '#0d0d0c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 520, maxHeight: 'calc(100dvh - 80px)', display: 'flex', flexDirection: 'column' }}
                 >
                   <div style={{ padding: '1rem 1.25rem 0.875rem', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
                     <div>
