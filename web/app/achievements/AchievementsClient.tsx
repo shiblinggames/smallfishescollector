@@ -26,7 +26,7 @@ export default function AchievementsClient({ badges, unlocked, equipped: initial
       const next = [...equipped]
       next[slotIndex] = ''
       setEquipped(next)
-      startTransition(() => unequipBadge(slotIndex as 0 | 1 | 2))
+      startTransition(() => { unequipBadge(slotIndex as 0 | 1 | 2) })
       return
     }
 
@@ -36,7 +36,7 @@ export default function AchievementsClient({ badges, unlocked, equipped: initial
     const next = [...equipped]
     next[emptySlot] = badgeId
     setEquipped(next)
-    startTransition(() => equipBadge(badgeId, emptySlot as 0 | 1 | 2))
+    startTransition(() => { equipBadge(badgeId, emptySlot as 0 | 1 | 2) })
   }
 
   function handleSlotTap(slot: number) {
@@ -44,7 +44,7 @@ export default function AchievementsClient({ badges, unlocked, equipped: initial
     const next = [...equipped]
     next[slot] = ''
     setEquipped(next)
-    startTransition(() => unequipBadge(slot as 0 | 1 | 2))
+    startTransition(() => { unequipBadge(slot as 0 | 1 | 2) })
   }
 
   return (
