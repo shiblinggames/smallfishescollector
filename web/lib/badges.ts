@@ -21,7 +21,7 @@ export const BADGES: Badge[] = [
 
   // Economy & navigation
   { id: 'fleet_admiral',  name: 'Fleet Admiral',      description: 'Own the Man-o-War',                               imageUrl: '/badges/fleet_admiral.png'  },
-  { id: 'deep_pockets',   name: 'Deep Pockets',       description: 'Hold 100,000 doubloons at once',                  imageUrl: '/badges/deep_pockets.png'   },
+  { id: 'deep_pockets',   name: 'Deep Pockets',       description: 'Hold 1,000,000 doubloons at once',                imageUrl: '/badges/deep_pockets.png'   },
   { id: 'navigator',      name: 'Navigator',          description: 'Reach Navigation Level 50',                       imageUrl: '/badges/navigator.png'      },
 ]
 

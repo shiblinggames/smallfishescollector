@@ -625,7 +625,7 @@ export async function sellFish(
     admin.from('doubloon_transactions').insert({
       user_id: user.id, amount: earned, reason: 'Sold fish (quick-sell)',
     }),
-    ...(newDoubloons >= 100_000 ? [unlockBadge('deep_pockets')] : []),
+    ...(newDoubloons >= 1_000_000 ? [unlockBadge('deep_pockets')] : []),
   ])
 
   return { earned, doubloons: newDoubloons }
