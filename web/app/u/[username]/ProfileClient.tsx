@@ -416,6 +416,16 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
               <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: ship.color + '70', marginTop: 5 }}>
                 {ship.name}
               </p>
+              {shipSkin && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.25rem 0.65rem', borderRadius: '2rem', background: shipSkin.color + '18', border: `1px solid ${shipSkin.color}40` }}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill={shipSkin.color} stroke="none">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                  <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: shipSkin.color }}>
+                    {shipSkin.name}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
