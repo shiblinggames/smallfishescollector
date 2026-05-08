@@ -459,39 +459,51 @@ export async function reelCrate(zone: string): Promise<
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()
 
-  // 3% chance: Mint skin rare drop (only if not already owned)
-  if (Math.random() < 0.03) {
-    const { data: profile } = await admin.from('profiles').select('unlocked_character_colors').eq('id', user.id).single()
+  const { data: profile } = await admin.from('profiles')
+    .select('doubloons, unlocked_character_colors')
+    .eq('id', user.id).single()
+
+  const alreadyHasMint = ((profile?.unlocked_character_colors as string[] | null) ?? []).includes('mint')
+
+  type Outcome = 'skin' | 'doubloons' | 'bait'
+  const pool: { outcome: Outcome; weight: number }[] = [
+    { outcome: 'doubloons', weight: 50 },
+    { outcome: 'bait',      weight: 50 },
+  ]
+  if (!alreadyHasMint) pool.push({ outcome: 'skin', weight: 3 })
+
+  const total = pool.reduce((s, o) => s + o.weight, 0)
+  let rand = Math.random() * total
+  let outcome: Outcome = 'doubloons'
+  for (const o of pool) { rand -= o.weight; if (rand <= 0) { outcome = o.outcome; break } }
+
+  if (outcome === 'skin') {
     const currentUnlocked = (profile?.unlocked_character_colors as string[] | null) ?? []
-    if (!currentUnlocked.includes('mint')) {
-      await admin.from('profiles').update({ unlocked_character_colors: [...currentUnlocked, 'mint'] }).eq('id', user.id)
-      return { type: 'skin', skinId: 'mint', skinName: 'Mint' }
-    }
+    await admin.from('profiles').update({ unlocked_character_colors: [...currentUnlocked, 'mint'] }).eq('id', user.id)
+    return { type: 'skin', skinId: 'mint', skinName: 'Mint' }
   }
 
-  if (Math.random() < 0.5) {
-    // Doubloons
+  if (outcome === 'doubloons') {
     const [min, max] = CRATE_DOUBLOON_RANGE[zone] ?? [50, 200]
     const amount = Math.floor(min + Math.random() * (max - min + 1))
-    const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
     await admin.from('profiles').update({ doubloons: (profile?.doubloons ?? 0) + amount }).eq('id', user.id)
     return { type: 'doubloons', amount }
-  } else {
-    // Bait — weighted random pick
-    const totalWeight = CRATE_BAIT_POOL.reduce((s, b) => s + b.weight, 0)
-    let rand = Math.random() * totalWeight
-    let picked = CRATE_BAIT_POOL[0]
-    for (const b of CRATE_BAIT_POOL) { rand -= b.weight; if (rand <= 0) { picked = b; break } }
-    const qty = 10
-    const { data: existing } = await admin.from('bait_inventory').select('quantity').eq('user_id', user.id).eq('bait_type', picked.type).single()
-    if (existing) {
-      await admin.from('bait_inventory').update({ quantity: existing.quantity + qty }).eq('user_id', user.id).eq('bait_type', picked.type)
-    } else {
-      await admin.from('bait_inventory').insert({ user_id: user.id, bait_type: picked.type, quantity: qty })
-    }
-    const baitName = getBait(picked.type).name
-    return { type: 'bait', baitType: picked.type, baitName, quantity: qty }
   }
+
+  // Bait — weighted random pick
+  const totalBaitWeight = CRATE_BAIT_POOL.reduce((s, b) => s + b.weight, 0)
+  let baitRand = Math.random() * totalBaitWeight
+  let picked = CRATE_BAIT_POOL[0]
+  for (const b of CRATE_BAIT_POOL) { baitRand -= b.weight; if (baitRand <= 0) { picked = b; break } }
+  const qty = 10
+  const { data: existing } = await admin.from('bait_inventory').select('quantity').eq('user_id', user.id).eq('bait_type', picked.type).single()
+  if (existing) {
+    await admin.from('bait_inventory').update({ quantity: existing.quantity + qty }).eq('user_id', user.id).eq('bait_type', picked.type)
+  } else {
+    await admin.from('bait_inventory').insert({ user_id: user.id, bait_type: picked.type, quantity: qty })
+  }
+  const baitName = getBait(picked.type).name
+  return { type: 'bait', baitType: picked.type, baitName, quantity: qty }
 }
 
 const QUICK_BUY_WORMS_QTY  = 10
