@@ -339,7 +339,12 @@ export default function GearScreen({
           gap: 5,
           width: '100%',
         }}>
-          <img src={charSrc.rest} alt="Character" style={{ width: 52, height: 52, objectFit: 'contain', objectPosition: 'top', filter: 'drop-shadow(0 2px 8px rgba(240,237,232,0.15))' }} />
+          <div style={{
+            width: 52, height: 52, borderRadius: '50%', overflow: 'hidden',
+            backgroundImage: `url(${charSrc.rest})`,
+            backgroundSize: '280% auto', backgroundPosition: 'center 92%', backgroundRepeat: 'no-repeat',
+            border: '2px solid rgba(255,255,255,0.15)',
+          }} />
           <div style={{ textAlign: 'center' }}>
             <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.12em', lineHeight: 1 }}>Character</p>
             <p className="font-karla font-600" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>{CHARACTER_COLORS.find(c => c.id === characterColor)?.name ?? characterColor}</p>
