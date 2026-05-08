@@ -146,8 +146,8 @@ export async function castLine(baitType: string, habitat: string, noBait = false
     if (pool.length === 0) return { error: 'You have caught all Ancient Deep trophies!' }
   }
 
-  // Crate encounter: 3% chance in all zones except ancient_deep
-  if (habitat !== 'ancient_deep' && Math.random() < 0.03) {
+  // Crate encounter: 2% chance in all zones except ancient_deep
+  if (habitat !== 'ancient_deep' && Math.random() < 0.02) {
     if (!noBait && baitRow) {
       await admin.from('bait_inventory').update({ quantity: baitRow.quantity - 1 }).eq('user_id', user.id).eq('bait_type', baitType)
     }
