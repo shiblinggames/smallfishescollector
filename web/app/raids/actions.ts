@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { applyVariantBoosts, EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
+import { unlockBadge } from '@/app/achievements/badgeActions'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
@@ -112,6 +113,7 @@ export async function claimRaidLoot(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
+  unlockBadge('corsairs_bane')
 
   const admin = createAdminClient()
   const { data: profile } = await admin

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { unlockBadge } from '@/app/achievements/badgeActions'
 import { RARITY_TIERS } from '@/lib/variants'
 import {
   ZONES, EXPEDITION_SHIP_STATS, ENEMIES, EXPEDITION_ITEMS, RUN_ITEMS,
@@ -655,6 +656,10 @@ export async function claimZoneReward(
   const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
   const newDoubloons = (profile?.doubloons ?? 0) + doubloons
 
+  const badgeTriggers: Promise<unknown>[] = []
+  if (exp.zone === 'davy_jones_locker') badgeTriggers.push(unlockBadge('davy_jones'))
+  if ((exp.hull_damage ?? 0) === 0) badgeTriggers.push(unlockBadge('ghost_ship'))
+
   await Promise.all([
     admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
@@ -667,6 +672,7 @@ export async function claimZoneReward(
       loot,
       completed_at: new Date().toISOString(),
     }).eq('id', expeditionId),
+    ...badgeTriggers,
   ])
 
   return loot

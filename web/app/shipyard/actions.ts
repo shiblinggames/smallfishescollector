@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SHIPS } from '@/lib/ships'
 import { revalidatePath } from 'next/cache'
+import { unlockBadge } from '@/app/achievements/badgeActions'
 
 export async function buyShip(): Promise<{ shipTier: number; doubloons: number } | { error: string }> {
   const supabase = await createClient()
@@ -38,6 +39,7 @@ export async function buyShip(): Promise<{ shipTier: number; doubloons: number }
     }),
   ])
 
+  if (nextTier === 6) unlockBadge('fleet_admiral')
   revalidatePath('/marketplace/shipyard')
   return { shipTier: nextTier, doubloons: newDoubloons }
 }

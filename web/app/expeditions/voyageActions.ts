@@ -4,6 +4,7 @@ import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { EXPEDITION_SHIP_STATS, applyVariantBoosts } from '@/lib/expeditions'
+import { unlockBadge } from '@/app/achievements/badgeActions'
 import { RARITY_TIERS } from '@/lib/variants'
 import { generateVoyageEvents, type VoyageEvent, type VoyageRoute } from '@/lib/voyageEvents'
 import { generateAndSaveVoyageLog, type VoyageCrewMember } from '@/lib/captains-log'
@@ -266,9 +267,10 @@ export async function revealVoyageResults(voyageId: number): Promise<
   if (newTideTurner) profileUpdate.has_tide_turner = true
   if (newPhantomHook) profileUpdate.has_phantom_hook = true
 
-  // Sky skin: unlock at navigation level 50
+  // Sky skin + Navigator badge: unlock at navigation level 50
   let unlockedSkinId: string | undefined
   if (oldExpeditionLevel < 50 && newExpeditionLevel >= 50) {
+    unlockBadge('navigator')
     const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
     if (!currentUnlocked.includes('sky')) {
       profileUpdate.unlocked_character_colors = [...currentUnlocked, 'sky']

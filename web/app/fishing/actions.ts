@@ -297,6 +297,7 @@ export async function reelIn(
         updates.unlocked_character_colors = [...currentUnlocked, 'golden']
         unlockedSkinId = 'golden'
       }
+      unlockBadge('ancient_ones')
     }
     await admin.from('profiles').update(updates).eq('id', user.id)
     const newAchievements = await checkAchievements(user.id, { type: 'fishing', result, depthId: 4, abyssStreak: 0 })
@@ -352,15 +353,16 @@ export async function reelIn(
 
   // Auto-upgrade line tier on new species unlock
   if (isNewSpecies) {
-    const { count } = await admin
-      .from('fish_collection')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-    const unique = count ?? 0
+    const [{ count: uniqueCount }, { count: totalCount }] = await Promise.all([
+      admin.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+      admin.from('fish_species').select('*', { count: 'exact', head: true }).neq('habitat', 'ancient_deep'),
+    ])
+    const unique = uniqueCount ?? 0
     const newLineTier = getLineForSpeciesCount(unique).tier
     if (newLineTier > (profile?.line_tier ?? 0)) {
       await admin.from('profiles').update({ line_tier: newLineTier }).eq('id', user.id)
     }
+    if (unique >= (totalCount ?? Infinity)) unlockBadge('full_collection')
   }
 
   // Track abyss streak for achievements
@@ -384,6 +386,7 @@ export async function reelIn(
       reelInUnlockedSkin = 'forest'
     }
   }
+  if (oldFishingLevel < 100 && newFishingLevel >= 100) unlockBadge('master_angler')
 
   const [, baitFetchResult] = await Promise.all([
     admin.from('profiles').update(profileUpdates).eq('id', user.id),
@@ -622,6 +625,7 @@ export async function sellFish(
     admin.from('doubloon_transactions').insert({
       user_id: user.id, amount: earned, reason: 'Sold fish (quick-sell)',
     }),
+    ...(newDoubloons >= 100_000 ? [unlockBadge('deep_pockets')] : []),
   ])
 
   return { earned, doubloons: newDoubloons }
@@ -655,6 +659,7 @@ export async function saveHighestPerfectStreak(streak: number, zone: string): Pr
   if ((profile?.highest_perfect_streak ?? 0) < streak) {
     await admin.from('profiles').update({ highest_perfect_streak: streak, highest_streak_set_at: new Date().toISOString(), best_streak_zone: zone }).eq('id', user.id)
   }
+  if (streak >= 30) unlockBadge('unbroken')
 }
 
 
@@ -794,10 +799,14 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
     }
   }
 
+  const allZones = ['shallows', 'open_waters', 'deep', 'abyss']
+  const allZonesPrestiged = allZones.every(z => (newLevels[z] ?? 0) >= 1)
+
   await Promise.all([
     admin.from('fish_collection').delete().eq('user_id', user.id).in('fish_id', zoneIds),
     admin.from('profiles').update(profileUpdate).eq('id', user.id),
     unlockBadge('prestige_i'),
+    ...(allZonesPrestiged ? [unlockBadge('zone_legend')] : []),
   ])
 
   return { prestigeLevel: newLevel, unlockedSkinId: prestigeUnlockedSkin }

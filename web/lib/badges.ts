@@ -6,12 +6,23 @@ export interface Badge {
 }
 
 export const BADGES: Badge[] = [
-  {
-    id: 'prestige_i',
-    name: 'Prestige I',
-    description: 'Reach Prestige in any fishing zone',
-    imageUrl: '/badges/prestige_i.png',
-  },
+  // Fishing mastery
+  { id: 'prestige_i',     name: 'Prestige I',        description: 'Reach Prestige in any fishing zone',              imageUrl: '/badges/prestige_i.png'     },
+  { id: 'master_angler',  name: 'Master Angler',      description: 'Reach Fishing Level 100',                         imageUrl: '/badges/master_angler.png'  },
+  { id: 'unbroken',       name: 'Unbroken',           description: 'Land 30 consecutive perfect catches in a session', imageUrl: '/badges/unbroken.png'       },
+  { id: 'ancient_ones',   name: 'Ancient Ones',       description: 'Catch all 6 Ancient Deep trophies',               imageUrl: '/badges/ancient_ones.png'   },
+  { id: 'full_collection',name: 'Full Collection',    description: 'Catch every fish species in the game',             imageUrl: '/badges/full_collection.png'},
+  { id: 'zone_legend',    name: 'Zone Legend',        description: 'Reach Prestige in all 4 fishing zones',           imageUrl: '/badges/zone_legend.png'    },
+
+  // Expedition & combat
+  { id: 'davy_jones',     name: "Davy Jones' Victor", description: "Complete Davy Jones' Locker",                     imageUrl: '/badges/davy_jones.png'     },
+  { id: 'corsairs_bane',  name: "Corsair's Bane",     description: 'Defeat Barnacle Pete in the raid',                imageUrl: '/badges/corsairs_bane.png'  },
+  { id: 'ghost_ship',     name: 'Ghost Ship',         description: 'Complete a full expedition without taking damage', imageUrl: '/badges/ghost_ship.png'     },
+
+  // Economy & navigation
+  { id: 'fleet_admiral',  name: 'Fleet Admiral',      description: 'Own the Man-o-War',                               imageUrl: '/badges/fleet_admiral.png'  },
+  { id: 'deep_pockets',   name: 'Deep Pockets',       description: 'Hold 100,000 doubloons at once',                  imageUrl: '/badges/deep_pockets.png'   },
+  { id: 'navigator',      name: 'Navigator',          description: 'Reach Navigation Level 50',                       imageUrl: '/badges/navigator.png'      },
 ]
 
 export const BADGE_MAP: Record<string, Badge> = Object.fromEntries(
