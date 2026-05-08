@@ -6,6 +6,7 @@ import { getBait } from '@/lib/bait'
 import { getRod } from '@/lib/rods'
 import { getShip } from '@/lib/ships'
 import { checkAchievements } from '@/lib/checkAchievements'
+import { unlockBadge } from '@/app/achievements/badgeActions'
 import { recordChallengeScore } from '@/app/social/challengeActions'
 import { getWeekStart } from '@/lib/weekStart'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
@@ -796,6 +797,7 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
   await Promise.all([
     admin.from('fish_collection').delete().eq('user_id', user.id).in('fish_id', zoneIds),
     admin.from('profiles').update(profileUpdate).eq('id', user.id),
+    unlockBadge('prestige_i'),
   ])
 
   return { prestigeLevel: newLevel, unlockedSkinId: prestigeUnlockedSkin }

@@ -232,6 +232,12 @@ Equipped via the Special slot in GearScreen. One item active at a time:
 | `phantom_hook` | Phantom Hook | +25% bait save on every cast | The Bertuna Triangle voyage |
 | `auto_caster` | Auto Caster | Auto-casts 1.5s after each result | Shop — 5,000 ⟡ |
 
+### Badge overlays
+
+Players can equip up to 3 badges on their boat, visible as absolute-positioned image overlays on the character sprite. Each badge slot has per-phase (rest/wait/cast) position configs (`top`, `left`, `width`, `rotate`), all tunable via `/fishing-test`.
+
+Badges are earned through the achievement system and equipped from the `/achievements` page. The `equipped_badges text[]` column on profiles holds up to 3 badge IDs in slot order. The badge registry lives in `lib/badges.ts`. Add a new badge there, add its PNG to `web/public/badges/`, and wire a trigger in the relevant server action.
+
 ### Ring skins (cosmetic dial skins)
 
 Equipped via the Cosmetic slot. Each skin has a `stroke` color that tints the dial interior subtly. Hidden during fire streaks. Most unlock via voyages.
@@ -356,6 +362,18 @@ Every day, all players share the same 3 challenges (Easy / Medium / Hard). They'
 Challenge types: catch any fish, catch in a specific zone, land perfects, catch a specific rarity, earn doubloon value from catches.
 
 Progress is tracked in `daily_challenge_progress` and updated on every `reelIn`. Rewards: ~150 / 350 / 700 ⟡ for Easy / Medium / Hard, plus gems. Reset at midnight UTC.
+
+### Badge & achievement system
+
+Achievements are meaningful milestones that unlock collectible badges. Badges are displayed on the player's boat in the fishing game as overlays. The `/achievements` page is the sole UI for viewing and equipping badges (not the gear screen).
+
+- `lib/badges.ts` — badge registry (`id`, `name`, `description`, `imageUrl`, per-slot per-frame positions)
+- `profiles.unlocked_badges text[]` — IDs of earned badges
+- `profiles.equipped_badges text[]` — up to 3 active badge IDs (index = slot 0/1/2)
+- `app/achievements/badgeActions.ts` — `unlockBadge`, `equipBadge`, `unequipBadge` server actions
+- Achievement triggers live in the relevant server actions (e.g., prestige badge unlocked inside `prestigeZone`)
+
+To add a new badge: add an entry to `BADGES` in `lib/badges.ts`, drop the PNG in `web/public/badges/`, and call `unlockBadge(id)` in the appropriate server action.
 
 **Override safety valve:** The `challenge_overrides` table (date PK, tier1/2/3 jsonb) lets admins manually set challenges for any date. All server-side call sites use `getEffectiveDailyChallenges(date, admin)` which checks this table first and falls back to the deterministic hash. The client-side display always uses the deterministic version — overrides only affect reward validation server-side.
 

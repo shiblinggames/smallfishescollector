@@ -1,179 +1,189 @@
 'use client'
 
-import { useState } from 'react'
-import type { Achievement } from '@/lib/achievements'
-
-const ICON_SVG: Record<string, React.ReactNode> = {
-  pack: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="7" width="20" height="15" rx="2"/>
-      <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
-      <line x1="12" y1="12" x2="12" y2="17"/><line x1="9.5" y1="14.5" x2="14.5" y2="14.5"/>
-    </svg>
-  ),
-  fish: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6.5 12c.94-3.46 4.94-6 10.5-6-3 3.46-3 8.54 0 12-5.56 0-9.56-2.54-10.5-6z"/>
-      <path d="M18 6L2 12l16 6"/>
-    </svg>
-  ),
-  star: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-    </svg>
-  ),
-  anchor: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="22"/>
-      <path d="M5 12H2a10 10 0 0 0 20 0h-3"/>
-    </svg>
-  ),
-  coin: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10"/>
-      <path d="M12 6v2m0 8v2m-3-7h6"/>
-    </svg>
-  ),
-  crown: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 19l3-10 4.5 4.5L12 4l2.5 9.5L19 9l3 10H2z"/>
-    </svg>
-  ),
-  scroll: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-      <polyline points="14 2 14 8 20 8"/>
-      <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/>
-    </svg>
-  ),
-  trophy: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 9H4V4h16v5h-2"/>
-      <path d="M6 4v5a6 6 0 0 0 12 0V4"/>
-      <line x1="12" y1="15" x2="12" y2="19"/><line x1="8" y1="19" x2="16" y2="19"/>
-    </svg>
-  ),
-  hook: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3v9"/>
-      <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
-      <circle cx="12" cy="3" r="1.2" fill="currentColor" stroke="none"/>
-    </svg>
-  ),
-  ship: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 17l1.5 3h15L21 17"/>
-      <path d="M3 17c2 1 4.5 1.5 9 1.5S19 18 21 17"/>
-      <path d="M12 2v11"/>
-      <path d="M5 10l7 4 7-4"/>
-      <path d="M8 6l4-4 4 4"/>
-    </svg>
-  ),
-}
-
-interface Category {
-  cat: string
-  label: string
-  achievements: Achievement[]
-}
+import { useState, useTransition } from 'react'
+import { type Badge, MAX_EQUIPPED_BADGES } from '@/lib/badges'
+import { equipBadge, unequipBadge } from './badgeActions'
 
 interface Props {
-  byCategory: Category[]
+  badges: Badge[]
   unlocked: string[]
+  equipped: string[]
 }
 
-function CategorySection({ cat, label, achievements, unlockedSet }: Category & { unlockedSet: Set<string> }) {
-  const catUnlocked = achievements.filter(a => unlockedSet.has(a.key)).length
-  const [open, setOpen] = useState(true)
+export default function AchievementsClient({ badges, unlocked, equipped: initialEquipped }: Props) {
+  const [equipped, setEquipped] = useState<string[]>(() => {
+    const e = [...initialEquipped]
+    while (e.length < MAX_EQUIPPED_BADGES) e.push('')
+    return e
+  })
+  const [pending, startTransition] = useTransition()
+
+  function handleBadgeTap(badgeId: string) {
+    if (!unlocked.includes(badgeId)) return
+
+    const slotIndex = equipped.indexOf(badgeId)
+    if (slotIndex !== -1) {
+      const next = [...equipped]
+      next[slotIndex] = ''
+      setEquipped(next)
+      startTransition(() => unequipBadge(slotIndex as 0 | 1 | 2))
+      return
+    }
+
+    const emptySlot = equipped.findIndex(s => !s)
+    if (emptySlot === -1) return
+
+    const next = [...equipped]
+    next[emptySlot] = badgeId
+    setEquipped(next)
+    startTransition(() => equipBadge(badgeId, emptySlot as 0 | 1 | 2))
+  }
+
+  function handleSlotTap(slot: number) {
+    if (!equipped[slot]) return
+    const next = [...equipped]
+    next[slot] = ''
+    setEquipped(next)
+    startTransition(() => unequipBadge(slot as 0 | 1 | 2))
+  }
 
   return (
-    <div>
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between mb-3"
-        style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
-      >
-        <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764]" style={{ fontSize: '0.6rem' }}>
-          {label}
-        </p>
-        <div className="flex items-center gap-2">
-          <p className="font-karla font-300 text-[#4a4845]" style={{ fontSize: '0.6rem' }}>
-            {catUnlocked} / {achievements.length}
-          </p>
-          <svg
-            width="10" height="10" viewBox="0 0 24 24" fill="none"
-            stroke="#4a4845" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-            style={{ transition: 'transform 0.2s ease', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)', flexShrink: 0 }}
-          >
-            <path d="M6 9l6 6 6-6"/>
-          </svg>
-        </div>
-      </button>
+    <div style={{ opacity: pending ? 0.7 : 1, transition: 'opacity 0.15s' }}>
 
-      {open && (
-        <div className="flex flex-col gap-2">
-          {achievements.map(a => {
-            const done = unlockedSet.has(a.key)
+      {/* Equip slots */}
+      <div style={{
+        background: 'rgba(4,10,18,0.72)', border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: 16, padding: '1rem', marginBottom: 24,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            Equipped
+          </p>
+          <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>
+            {equipped.filter(Boolean).length} / {MAX_EQUIPPED_BADGES}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 12 }}>
+          {Array.from({ length: MAX_EQUIPPED_BADGES }, (_, i) => {
+            const badgeId = equipped[i]
+            const badge = badges.find(b => b.id === badgeId)
             return (
-              <div
-                key={a.key}
+              <button
+                key={i}
+                onClick={() => handleSlotTap(i)}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.875rem',
-                  padding: '0.875rem 1rem',
-                  background: done ? 'rgba(240,192,64,0.05)' : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${done ? 'rgba(240,192,64,0.18)' : 'rgba(255,255,255,0.09)'}`,
-                  borderRadius: '12px',
-                  opacity: done ? 1 : 0.45,
+                  flex: 1, aspectRatio: '1', borderRadius: 12,
+                  background: badge ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
+                  border: badge ? '1px solid rgba(255,255,255,0.18)' : '1px dashed rgba(255,255,255,0.12)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: 6, cursor: badge ? 'pointer' : 'default', padding: 8,
                 }}
               >
-                <div style={{
-                  width: 36, height: 36, flexShrink: 0,
-                  background: done ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.08)',
-                  border: `1px solid ${done ? 'rgba(240,192,64,0.25)' : 'rgba(255,255,255,0.15)'}`,
-                  borderRadius: '9px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: done ? '#f0c040' : '#6a6764',
-                }}>
-                  {ICON_SVG[a.icon]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: done ? '#f0ede8' : '#a0a09a' }}>
-                    {a.name}
-                  </p>
-                  <p className="font-karla font-300 text-[#6a6764] mt-0.5" style={{ fontSize: '0.72rem', lineHeight: 1.45 }}>
-                    {a.description}
-                  </p>
-                </div>
-                {done && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                    <path d="M20 6L9 17l-5-5"/>
-                  </svg>
+                {badge ? (
+                  <>
+                    <img src={badge.imageUrl} alt={badge.name}
+                      style={{ width: '52%', aspectRatio: '1', objectFit: 'contain' }}
+                      onError={e => { (e.target as HTMLImageElement).style.opacity = '0' }}
+                    />
+                    <span className="font-karla" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: 1.2 }}>
+                      {badge.name}
+                    </span>
+                  </>
+                ) : (
+                  <span style={{ fontSize: '1.1rem', opacity: 0.2 }}>+</span>
                 )}
-              </div>
+              </button>
             )
           })}
         </div>
-      )}
-    </div>
-  )
-}
+        {equipped.filter(Boolean).length === 0 && (
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.25)', textAlign: 'center', marginTop: 10 }}>
+            Tap an earned badge below to equip it
+          </p>
+        )}
+      </div>
 
-export default function AchievementsClient({ byCategory, unlocked }: Props) {
-  const unlockedSet = new Set(unlocked)
+      {/* Progress line */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+          All Badges
+        </p>
+        <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#f0c040' }}>
+          {unlocked.length} <span style={{ color: 'rgba(255,255,255,0.25)' }}>/ {badges.length}</span>
+        </p>
+      </div>
 
-  return (
-    <div className="flex flex-col gap-8">
-      {byCategory.map(({ cat, label, achievements }) => (
-        <CategorySection
-          key={cat}
-          cat={cat}
-          label={label}
-          achievements={achievements}
-          unlockedSet={unlockedSet}
-        />
-      ))}
+      {/* Badge grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+        {badges.map(badge => {
+          const isUnlocked = unlocked.includes(badge.id)
+          const isEquipped = equipped.includes(badge.id)
+          return (
+            <button
+              key={badge.id}
+              onClick={() => handleBadgeTap(badge.id)}
+              disabled={!isUnlocked}
+              style={{
+                background: isEquipped
+                  ? 'rgba(240,192,64,0.12)'
+                  : isUnlocked
+                    ? 'rgba(255,255,255,0.06)'
+                    : 'rgba(255,255,255,0.02)',
+                border: isEquipped
+                  ? '1px solid rgba(240,192,64,0.4)'
+                  : isUnlocked
+                    ? '1px solid rgba(255,255,255,0.14)'
+                    : '1px solid rgba(255,255,255,0.06)',
+                borderRadius: 14, padding: '0.85rem 0.6rem',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                cursor: isUnlocked ? 'pointer' : 'default',
+                transition: 'all 0.15s',
+              }}
+            >
+              <div style={{
+                width: 52, height: 52, borderRadius: 10,
+                background: isUnlocked ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                filter: isUnlocked ? 'none' : 'grayscale(1)',
+                opacity: isUnlocked ? 1 : 0.35,
+              }}>
+                <img src={badge.imageUrl} alt={badge.name}
+                  style={{ width: 36, height: 36, objectFit: 'contain' }}
+                  onError={e => {
+                    const el = e.target as HTMLImageElement
+                    el.style.display = 'none'
+                    const parent = el.parentElement
+                    if (parent) parent.innerHTML = '<span style="font-size:1.3rem;opacity:0.4">🏅</span>'
+                  }}
+                />
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p className="font-karla font-700" style={{
+                  fontSize: '0.68rem', lineHeight: 1.2,
+                  color: isUnlocked ? '#f0ede8' : 'rgba(240,237,232,0.3)',
+                }}>
+                  {badge.name}
+                </p>
+                <p className="font-karla" style={{
+                  fontSize: '0.6rem', lineHeight: 1.3, marginTop: 3,
+                  color: isUnlocked ? 'rgba(240,237,232,0.5)' : 'rgba(240,237,232,0.22)',
+                }}>
+                  {badge.description}
+                </p>
+              </div>
+              {isEquipped && (
+                <span className="font-karla font-700" style={{
+                  fontSize: '0.55rem', color: '#f0c040',
+                  textTransform: 'uppercase', letterSpacing: '0.08em',
+                }}>
+                  Equipped
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
     </div>
   )
 }

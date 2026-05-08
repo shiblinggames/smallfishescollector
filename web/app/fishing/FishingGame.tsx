@@ -9,6 +9,7 @@ const CRATE_FISH_ID = -1
 import { claimDailyReward } from './dailyChallengeActions'
 import { getDailyChallenges, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
 import { getRingSkin } from '@/lib/ringSkins'
+import { BADGE_MAP, BADGE_SLOT_POSITIONS } from '@/lib/badges'
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import { finishSession, type ActiveSession } from '@/app/social/challengeActions'
 import { equipRod } from '@/app/marketplace/tackle-shop/actions'
@@ -1459,7 +1460,7 @@ export default function FishingGame({
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster,
-  initialPrestigeLevels, initialTrophyCatches, characterColor,
+  initialPrestigeLevels, initialTrophyCatches, characterColor, equippedBadges,
 }: {
   hookTier: number
   rodTier: number
@@ -1493,6 +1494,7 @@ export default function FishingGame({
   initialPrestigeLevels: Record<string, number>
   initialTrophyCatches: number[]
   characterColor: string
+  equippedBadges: string[]
 }) {
 
   const charSrc = getCharSrc(characterColor)
@@ -2438,6 +2440,22 @@ export default function FishingGame({
                     pointerEvents: 'none',
                   }} />
                 )}
+                {equippedBadges.map((badgeId, slot) => {
+                  if (!badgeId) return null
+                  const badge = BADGE_MAP[badgeId]
+                  if (!badge) return null
+                  const bp = BADGE_SLOT_POSITIONS[slot]?.[f]
+                  if (!bp) return null
+                  return (
+                    <img key={slot} src={badge.imageUrl} alt="" style={{
+                      position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
+                      width: `${bp.width}%`,
+                      transform: `rotate(${bp.rotate}deg)`,
+                      transformOrigin: 'center center',
+                      pointerEvents: 'none',
+                    }} />
+                  )
+                })}
               </div>
             )
           })}
