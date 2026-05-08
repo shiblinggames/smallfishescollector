@@ -3328,11 +3328,15 @@ export default function FishingGame({
                   ? `${Math.round((1 - selectedBaitDef!.waitMult) * 100)}% faster`
                   : 'Standard'
 
+            const tileInactiveBg = 'linear-gradient(160deg, rgba(14,26,44,0.92) 0%, rgba(4,10,18,0.82) 100%)'
+            const tileBevel = 'inset 0 1px 0 rgba(255,255,255,0.07)'
+
             const tile: React.CSSProperties = {
-              flex: 1, height: 60, borderRadius: 12,
+              flex: 1, height: 60, borderRadius: 16,
               display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center',
               gap: 2, padding: '0 0.65rem', minWidth: 0,
               cursor: 'pointer', touchAction: 'manipulation', transition: 'all 0.15s',
+              boxShadow: tileBevel,
             }
 
             return (
@@ -3343,12 +3347,12 @@ export default function FishingGame({
                   onClick={() => { setGearOpen(o => !o); setHoldOpen(false); setBaitOpen(false); setSellOpen(false) }}
                   style={{
                     ...tile,
-                    background: gearOpen ? 'rgba(240,192,64,0.10)' : 'rgba(4,10,18,0.72)',
-                    border: `1px solid ${gearOpen ? 'rgba(240,192,64,0.32)' : 'rgba(255,255,255,0.09)'}`,
+                    background: gearOpen ? 'rgba(240,192,64,0.10)' : tileInactiveBg,
+                    border: `1px solid ${gearOpen ? 'rgba(240,192,64,0.32)' : 'rgba(255,255,255,0.13)'}`,
                   }}
                 >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)' }}>Gear</p>
-                  <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.82)' }}>Gear</p>
+                  <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.3)', lineHeight: 1 }}>
                     Loadout
                   </p>
                 </button>
@@ -3358,14 +3362,19 @@ export default function FishingGame({
                   onClick={() => { setBaitOpen(o => !o); setGearOpen(false); setHoldOpen(false); setSellOpen(false) }}
                   style={{
                     ...tile,
-                    background: baitOpen ? `${baitAccent}10` : 'rgba(4,10,18,0.72)',
-                    border: `1px solid ${baitOpen ? baitAccent + '38' : outOfBait ? 'rgba(248,113,113,0.25)' : 'rgba(255,255,255,0.09)'}`,
+                    background: baitOpen ? `${baitAccent}10` : tileInactiveBg,
+                    border: `1px solid ${baitOpen ? baitAccent + '38' : outOfBait ? 'rgba(248,113,113,0.25)' : 'rgba(255,255,255,0.13)'}`,
                   }}
                 >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)' }}>Bait</p>
-                  <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: outOfBait ? '#f87171' : baitAccent, lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
-                    {selectedBaitDef?.name ?? '—'}{selectedBaitQty > 0 && <span style={{ opacity: 0.6, fontWeight: 400 }}> ×{selectedBaitQty}</span>}
-                  </p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.82)' }}>Bait</p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', width: '100%', gap: 4 }}>
+                    <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: outOfBait ? '#f87171' : baitAccent, lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
+                      {selectedBaitDef?.name ?? '—'}
+                    </p>
+                    {selectedBaitQty > 0 && (
+                      <p className="font-karla font-400" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', lineHeight: 1, flexShrink: 0 }}>×{selectedBaitQty}</p>
+                    )}
+                  </div>
                 </button>
 
                 {/* Hold */}
@@ -3375,13 +3384,13 @@ export default function FishingGame({
                     ...tile,
                     background: holdOpen
                       ? `${holdAccent}10`
-                      : holdFull ? 'rgba(248,113,113,0.06)' : 'rgba(4,10,18,0.72)',
+                      : holdFull ? 'rgba(248,113,113,0.06)' : tileInactiveBg,
                     border: `1px solid ${holdOpen
                       ? holdAccent + '45'
-                      : holdFull ? 'rgba(248,113,113,0.35)' : holdCritical ? 'rgba(251,146,60,0.28)' : holdWarning ? 'rgba(251,191,36,0.20)' : 'rgba(255,255,255,0.09)'}`,
+                      : holdFull ? 'rgba(248,113,113,0.35)' : holdCritical ? 'rgba(251,146,60,0.28)' : holdWarning ? 'rgba(251,191,36,0.20)' : 'rgba(255,255,255,0.13)'}`,
                   }}
                 >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)' }}>Hold</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.82)' }}>Hold</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', lineHeight: 1, color: holdTotalCount > 0 ? holdAccent : '#3a3835' }}>
                     {holdTotalCount}<span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.18)', fontWeight: 400 }}> /{holdCapacity}</span>
                   </p>
@@ -3392,11 +3401,11 @@ export default function FishingGame({
                   onClick={() => { setSellOpen(o => !o); setHoldOpen(false); setGearOpen(false); setBaitOpen(false) }}
                   style={{
                     ...tile,
-                    background: sellOpen ? 'rgba(240,192,64,0.08)' : 'rgba(4,10,18,0.72)',
-                    border: `1px solid ${sellOpen ? 'rgba(240,192,64,0.28)' : 'rgba(255,255,255,0.09)'}`,
+                    background: sellOpen ? 'rgba(240,192,64,0.08)' : tileInactiveBg,
+                    border: `1px solid ${sellOpen ? 'rgba(240,192,64,0.28)' : 'rgba(255,255,255,0.13)'}`,
                   }}
                 >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)' }}>Sell</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.82)' }}>Sell</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.72rem', lineHeight: 1, color: holdTotalValue > 0 ? '#f0c040' : '#3a3835' }}>
                     {holdTotalValue > 0 ? `${holdTotalValue.toLocaleString()} ⟡` : '—'}
                   </p>
