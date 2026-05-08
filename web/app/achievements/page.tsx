@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
-import { BADGES, MAX_EQUIPPED_BADGES } from '@/lib/badges'
+import { BADGES } from '@/lib/badges'
 import AchievementsClient from './AchievementsClient'
 
 export default async function AchievementsPage() {
@@ -13,13 +13,11 @@ export default async function AchievementsPage() {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('packs_available, doubloons, gems, unlocked_badges, equipped_badges')
+    .select('packs_available, doubloons, gems, unlocked_badges')
     .eq('id', user.id)
     .single()
 
   const unlocked: string[] = (profile?.unlocked_badges as string[]) ?? []
-  const equipped: string[] = profile?.equipped_badges as string[] ?? []
-  while (equipped.length < MAX_EQUIPPED_BADGES) equipped.push('')
 
   return (
     <>
@@ -31,14 +29,13 @@ export default async function AchievementsPage() {
             <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Honors</p>
             <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.4rem' }}>Badges</h1>
             <p className="font-karla" style={{ fontSize: '0.75rem', color: 'rgba(240,237,232,0.45)', marginTop: 4 }}>
-              Earned through meaningful achievements. Equip up to 3 to display on your boat.
+              Earned through meaningful achievements.
             </p>
           </div>
 
           <AchievementsClient
             badges={BADGES}
             unlocked={unlocked}
-            equipped={equipped}
           />
 
         </div>
