@@ -294,13 +294,13 @@ export default function ShipHero({
                 background: 'rgba(6,12,20,0.98)',
                 borderTop: '1px solid rgba(255,255,255,0.09)',
                 borderRadius: '18px 18px 0 0',
-                maxHeight: '85vh',
+                maxHeight: 'calc(100dvh - 60px)',
                 display: 'flex', flexDirection: 'column',
                 overflow: 'hidden',
               }}
             >
               <DrawerHandle />
-              <div style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain', padding: '0 1rem 3rem' }}>
+              <div style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain', padding: '0.5rem 1rem 5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                 <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: '#6a6764' }}>Loadout</p>
                 <button onClick={closeLoadout} style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
@@ -524,7 +524,7 @@ export default function ShipHero({
               >
                 <div
                   onClick={e => e.stopPropagation()}
-                  style={{ background: '#0d0d0c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 520, maxHeight: '100%', display: 'flex', flexDirection: 'column' }}
+                  style={{ background: '#0d0d0c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 520, maxHeight: 'calc(100dvh - 3rem)', display: 'flex', flexDirection: 'column' }}
                 >
                   <div style={{ padding: '1rem 1.25rem 0.875rem', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
                     <div>
