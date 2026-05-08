@@ -309,10 +309,9 @@ export default function GearScreen({
   if (rod.snagImmune) specialBonuses.push({ label: 'Snag immune', color: rod.color })
   if ((rod.jackpotChance ?? 0) > 0) specialBonuses.push({ label: `${Math.round(rod.jackpotChance! * 100)}% jackpot ×${rod.jackpotMultiplier}`, color: rod.color })
   if (rod.rarityBonus > 0) specialBonuses.push({ label: `+${Math.round(rod.rarityBonus * 100)}% rare fish`, color: rod.color })
-  if (bait && bait.waitMult < 1) specialBonuses.push({ label: `${Math.round((1 - bait.waitMult) * 100)}% faster bite`, color: bait.color })
-  if (bait && bait.waitMult > 1) specialBonuses.push({ label: `${Math.round((bait.waitMult - 1) * 100)}% slower bite`, color: '#f87171' })
   const levelBiteBonus = Math.round(((fishingLevel - 1) / 99) * 33)
-  if (levelBiteBonus > 0) specialBonuses.push({ label: `+${levelBiteBonus}% faster bite (level)`, color: '#6a8a7a' })
+  const baitBiteEffect = bait ? Math.round((1 - bait.waitMult) * 100) : 0
+  const totalBiteEffect = baitBiteEffect + levelBiteBonus
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative' }}>
@@ -439,10 +438,10 @@ export default function GearScreen({
             muted={catchZoneBonus === 0}
           />
           <StatCell
-            label="Perfect Zone"
-            value={rod.perfectZoneBonus > 0 ? `+${rod.perfectZoneBonus}°` : '—'}
-            color="#fbbf24"
-            muted={rod.perfectZoneBonus === 0}
+            label="Bite Speed"
+            value={totalBiteEffect > 0 ? `+${totalBiteEffect}%` : totalBiteEffect < 0 ? `${totalBiteEffect}%` : '—'}
+            color={totalBiteEffect < 0 ? '#f87171' : '#4ade80'}
+            muted={totalBiteEffect === 0}
           />
           <StatCell
             label="Reel Drag"
