@@ -144,7 +144,9 @@ Players sign up with email and password via Supabase Auth. On signup, a database
 
 Login produces a Supabase JWT stored in a cookie. Next.js middleware (`middleware.ts`) verifies this JWT before rendering any protected page. No valid session → redirect to `/login`.
 
-**Premium status** is controlled by `profiles.is_premium`, updated by a Shopify webhook when a player purchases a subscription. Premium players pay 0% market fee on fish sales (free players pay 3%).
+**Premium status** is controlled by `profiles.is_premium` and `profiles.premium_expires_at`, set by a Shopify webhook when a player purchases a subscription. Premium players pay 0% market fee on fish sales (free players pay 3%).
+
+**Reconciliation job:** Webhooks can silently drop (network failure, server restart). A Supabase Edge Function (`reconcile-premium`) runs daily at 4am UTC via pg_cron. It expires stale `is_premium` flags where `premium_expires_at` has passed, then replays the last 48h of Shopify orders via the Admin API to catch any missed webhooks and grant premium to affected players.
 
 ---
 
@@ -254,7 +256,7 @@ A Roman numeral badge (Prestige I, II, etc.) appears next to the zone name in th
 
 ### Random events
 
-Every 15–20 minutes during a session, one of four events can fire, lasting 90 seconds:
+Every 15–20 minutes during a session, one of four events can fire, lasting 120 seconds:
 
 | Event | Effect |
 |---|---|
@@ -263,7 +265,9 @@ Every 15–20 minutes during a session, one of four events can fire, lasting 90 
 | Red Tide | +0.25 rarity bias (rare fish more likely) (red) |
 | Glassy Waters | +12° to catch zone (purple) |
 
-Events are client-scheduled (no DB). An announcement banner fires on start; a persistent indicator shows the event name and tagline for the full duration.
+When an event fires on the client, it calls `activateEvent(type)` — a Server Action that writes `active_event jsonb` and `last_event_at` to `profiles`. The server enforces a 120-second event window and a 10-minute minimum gap between events. **All three economically meaningful event effects (free bait, sell rate, rarity boost) are applied server-side** inside `castLine` and `sellFish` by reading `profiles.active_event` — the client never passes these as parameters. This prevents a client from faking an event to get permanent Full Moon prices or infinite free bait.
+
+An announcement banner fires on start; a persistent indicator shows the event name and tagline for the duration.
 
 ---
 
@@ -352,6 +356,8 @@ Every day, all players share the same 3 challenges (Easy / Medium / Hard). They'
 Challenge types: catch any fish, catch in a specific zone, land perfects, catch a specific rarity, earn doubloon value from catches.
 
 Progress is tracked in `daily_challenge_progress` and updated on every `reelIn`. Rewards: ~150 / 350 / 700 ⟡ for Easy / Medium / Hard, plus gems. Reset at midnight UTC.
+
+**Override safety valve:** The `challenge_overrides` table (date PK, tier1/2/3 jsonb) lets admins manually set challenges for any date. All server-side call sites use `getEffectiveDailyChallenges(date, admin)` which checks this table first and falls back to the deterministic hash. The client-side display always uses the deterministic version — overrides only affect reward validation server-side.
 
 ### Random fishing events
 
