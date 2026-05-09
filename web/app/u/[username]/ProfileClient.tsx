@@ -274,7 +274,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
               height: 160, marginTop: 8,
               filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))',
             }}>
-              <div style={{ position: 'absolute', bottom: 0, left: '12%', width: '72%' }}>
+              <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '72%', maxWidth: 260 }}>
                 <img src={charSprites.rest} alt="" style={{ width: '100%', display: 'block' }} />
                 {rod.imageUrl && (
                   <img src={rod.imageUrl} alt="" style={{
