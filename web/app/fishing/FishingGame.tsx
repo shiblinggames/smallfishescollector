@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies, type FishingBountyCompletion } from './actions'
+import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -1582,7 +1582,6 @@ export default function FishingGame({
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
   const catchTourShownRef = useRef(false)
-  const [bountyNotif, setBountyNotif] = useState<FishingBountyCompletion | null>(null)
   const [perfectFlash, setPerfectFlash] = useState(false)
   const [perfectBurstKey, setPerfectBurstKey] = useState(0)
   const [waitMessage, setWaitMessage] = useState('')
@@ -2087,7 +2086,7 @@ export default function FishingGame({
       if ('error' in res || !res.caught) {
         setMissResult('miss')
       } else {
-        const { fish, baitSaved, isNewSpecies, bountyCompletion, xpGained, newXP, dailyProgress: newDailyP } = res
+        const { fish, baitSaved, isNewSpecies, xpGained, newXP, dailyProgress: newDailyP } = res
         if (newDailyP) {
           setDailyProgress(prev => {
             for (let i = 0; i < 3; i++) {
@@ -2157,7 +2156,6 @@ export default function FishingGame({
           }))
         } catch {}
 
-        if (bountyCompletion) setBountyNotif(bountyCompletion)
         if (res.unlockedSkinId) { setSkinUnlockToast(res.unlockedSkinId); setTimeout(() => setSkinUnlockToast(null), 6000) }
         const oldLevel = getLevelFromXP(fishingXP)
         const newLevel = getLevelFromXP(newXP)
@@ -3003,35 +3001,6 @@ export default function FishingGame({
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: '1rem', paddingBottom: '1rem' }}>
-
-                  {bountyNotif && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.97 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ type: 'spring', stiffness: 380, damping: 22, delay: 0.3 }}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl mb-3"
-                      style={{
-                        background: `rgba(4,10,20,0.88)`,
-                        border: `1px solid ${HABITAT_COLOR[bountyNotif.tier] ?? '#888'}90`,
-                        boxShadow: `0 0 18px ${HABITAT_COLOR[bountyNotif.tier] ?? '#888'}30`,
-                      }}
-                    >
-                      <div style={{ width: 36, height: 36, borderRadius: 8, background: `${HABITAT_COLOR[bountyNotif.tier] ?? '#888'}25`, border: `1px solid ${HABITAT_COLOR[bountyNotif.tier] ?? '#888'}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span style={{ fontSize: '1.1rem' }}>🎯</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: HABITAT_COLOR[bountyNotif.tier] ?? '#aaa', marginBottom: 2 }}>
-                          Weekly Bounty Complete
-                        </p>
-                        <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.88rem', color: '#ffffff' }}>
-                          {bountyNotif.fishName} caught!
-                        </p>
-                        <p className="font-karla font-600" style={{ fontSize: '0.65rem', color: '#d0cdc8' }}>
-                          +{bountyNotif.reward} ⟡{bountyNotif.packAwarded ? ' + 1 Pack' : ''} · visit Bounties to claim
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
 
                   {crateResult ? (
                     <motion.div
