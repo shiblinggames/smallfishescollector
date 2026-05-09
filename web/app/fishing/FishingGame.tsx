@@ -2603,33 +2603,6 @@ export default function FishingGame({
 
           </div>
 
-          {/* Active event indicator */}
-          <AnimatePresence>
-            {activeEvent && (() => {
-              const def = EVENT_DEFS[activeEvent.type]
-              return (
-                <motion.div
-                  key={activeEvent.type}
-                  initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.4 }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.45rem' }}
-                >
-                  <motion.div
-                    animate={{ opacity: [1, 0.4, 1] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                    style={{ width: 5, height: 5, borderRadius: '50%', background: def.color, boxShadow: `0 0 6px ${def.color}`, flexShrink: 0 }}
-                  />
-                  <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: def.color, letterSpacing: '0.04em' }}>
-                    {def.name}
-                  </span>
-                  <span className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.3)' }}>
-                    · {def.tagline}
-                  </span>
-                </motion.div>
-              )
-            })()}
-          </AnimatePresence>
-
           {/* XP bar */}
           <div style={{ marginBottom: '0.6rem' }}>
             <div style={{ position: 'relative' }}>
@@ -2658,6 +2631,39 @@ export default function FishingGame({
             </div>
           </div>
 
+
+          {/* Active event indicator — below XP bar, reserved height prevents layout shift */}
+          <div style={{ minHeight: 28, marginBottom: '0.3rem' }}>
+            <AnimatePresence>
+              {activeEvent && (() => {
+                const def = EVENT_DEFS[activeEvent.type]
+                return (
+                  <motion.div
+                    key={activeEvent.type}
+                    initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+                    transition={{ duration: 0.4 }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 7,
+                      background: 'rgba(4,10,18,0.82)', border: `1px solid ${def.color}50`,
+                      borderRadius: 20, padding: '0.3rem 0.65rem',
+                    }}
+                  >
+                    <motion.div
+                      animate={{ opacity: [1, 0.4, 1] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                      style={{ width: 5, height: 5, borderRadius: '50%', background: def.color, boxShadow: `0 0 6px ${def.color}`, flexShrink: 0 }}
+                    />
+                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: def.color, letterSpacing: '0.04em' }}>
+                      {def.name}
+                    </span>
+                    <span className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.72)' }}>
+                      · {def.tagline}
+                    </span>
+                  </motion.div>
+                )
+              })()}
+            </AnimatePresence>
+          </div>
 
           {/* Challenge session strip */}
           {activeSession && !sessionDone && sessionSecondsLeft !== null && (
