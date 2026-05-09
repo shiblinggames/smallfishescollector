@@ -2231,7 +2231,6 @@ export default function FishingGame({
     setCrateRollDisplay(null)
     setHookedFish(null)
     setPerfectFlash(false)
-    setBountyNotif(null)
     setLevelUpNotif(null)
     setHoldOpen(false)
     setGearOpen(false)
