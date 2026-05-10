@@ -2480,6 +2480,8 @@ export default function FishingGame({
   const selectedBaitQty  = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
   const selectedBaitDef  = BAITS.find(b => b.type === selectedBait)
   const holdTotalCount   = inventory.reduce((s, i) => s + i.quantity, 0)
+  const ancientSpecies   = allFishSpecies.filter(f => f.habitat === 'ancient_deep')
+  const allAncientCaught = selectedZone === 'ancient_deep' && ancientSpecies.length > 0 && ancientSpecies.every(f => trophyCatches.has(f.id))
   const isFullMoon = activeEvent?.type === 'fullmoon'
   const holdTotalValue   = inventory.reduce((s, i) => s + Math.floor(i.fish_species.sell_value * (isFullMoon ? 1.0 : 0.65)) * i.quantity, 0)
   const holdBaseValue    = inventory.reduce((s, i) => s + i.fish_species.sell_value * i.quantity, 0)
@@ -3335,7 +3337,31 @@ export default function FishingGame({
                   </Link>
                 </motion.div>
               )}
-              {phase === 'idle' && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && hasBait && selectedBaitQty > 0 && (
+              {(phase === 'idle' || phase === 'result') && allAncientCaught && (
+                <motion.div key="all-ancient-caught"
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="text-center"
+                  style={{
+                    padding: '0.85rem 1rem',
+                    borderRadius: 14,
+                    background: 'linear-gradient(135deg, rgba(36,12,56,0.92) 0%, rgba(8,18,40,0.96) 70%, rgba(8,32,40,0.92) 100%)',
+                    border: '1px solid rgba(167,139,250,0.45)',
+                    boxShadow: '0 0 26px rgba(167,139,250,0.22)',
+                    maxWidth: 280,
+                  }}
+                >
+                  <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.26em', color: '#67e8f9', marginBottom: 4 }}>
+                    The deep is silent
+                  </p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#e9d5ff', lineHeight: 1.2, marginBottom: 6, textShadow: '0 0 12px rgba(167,139,250,0.45)' }}>
+                    All Ancient Ones revealed
+                  </p>
+                  <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: 'rgba(233,213,255,0.65)', lineHeight: 1.5 }}>
+                    There is nothing more to catch here.
+                  </p>
+                </motion.div>
+              )}
+              {phase === 'idle' && !allAncientCaught && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && hasBait && selectedBaitQty > 0 && (
                 <motion.button key="cast" onClick={handleCast}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
@@ -3360,7 +3386,7 @@ export default function FishingGame({
                   Cast
                 </motion.button>
               )}
-              {phase === 'idle' && holdTotalCount < holdCapacity && (!hasBait || selectedBaitQty <= 0) && (
+              {phase === 'idle' && !allAncientCaught && holdTotalCount < holdCapacity && (!hasBait || selectedBaitQty <= 0) && (
                 <motion.div key="nobait"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="text-center">
