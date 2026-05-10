@@ -4,6 +4,20 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { BADGE_MAP, MAX_EQUIPPED_BADGES } from '@/lib/badges'
 
+export async function getUnlockedBadges(): Promise<string[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('unlocked_badges')
+    .eq('id', user.id)
+    .single()
+  return (profile?.unlocked_badges as string[] | null) ?? []
+}
+
 export async function unlockBadge(badgeId: string): Promise<{ ok: true } | { error: string }> {
   if (!BADGE_MAP[badgeId]) return { error: 'Unknown badge' }
 

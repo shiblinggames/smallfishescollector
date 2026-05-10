@@ -39,7 +39,7 @@ export async function buyShip(): Promise<{ shipTier: number; doubloons: number }
     }),
   ])
 
-  if (nextTier === 6) unlockBadge('fleet_admiral')
+  if (nextTier === 6) await unlockBadge('fleet_admiral')
   revalidatePath('/marketplace/shipyard')
   return { shipTier: nextTier, doubloons: newDoubloons }
 }

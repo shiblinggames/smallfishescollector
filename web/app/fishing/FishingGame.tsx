@@ -2103,7 +2103,10 @@ export default function FishingGame({
           if (newStreak > highestPerfectStreak) {
             setHighestPerfectStreak(newStreak)
             setNewStreakRecord(newStreak)
-            startTransition(() => { saveHighestPerfectStreak(newStreak, selectedZone) })
+            startTransition(async () => {
+              await saveHighestPerfectStreak(newStreak, selectedZone)
+              window.dispatchEvent(new Event('badges-may-have-changed'))
+            })
             checkLeaderboardPosition('perfectStreak').then(r => {
               const cur = r?.position ?? null
               if (cur === 1 && podiumPositionsRef.current.perfectStreak !== 1) setPodiumNotif({ category: 'Perfect Streak', position: 1 })
@@ -2186,6 +2189,7 @@ export default function FishingGame({
 
       phaseRef.current = 'result'
       setPhase('result')
+      window.dispatchEvent(new Event('badges-may-have-changed'))
       } catch {
         setMissResult('miss')
         phaseRef.current = 'result'
@@ -2326,6 +2330,7 @@ export default function FishingGame({
     setClaimedZones(prev => ({ ...prev, [zone]: false }))
     setPrestigeLevels(prev => ({ ...prev, [zone]: result.prestigeLevel }))
     setConfirmPrestigeZone(null)
+    window.dispatchEvent(new Event('badges-may-have-changed'))
   }
 
   async function handleClaimZoneReward(zone: string) {

@@ -270,7 +270,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
   // Sky skin + Navigator badge: unlock at navigation level 50
   let unlockedSkinId: string | undefined
   if (oldExpeditionLevel < 50 && newExpeditionLevel >= 50) {
-    unlockBadge('navigator')
+    await unlockBadge('navigator')
     const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
     if (!currentUnlocked.includes('sky')) {
       profileUpdate.unlocked_character_colors = [...currentUnlocked, 'sky']
@@ -283,7 +283,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
     .eq('status', 'revealed')
-  if ((completedVoyages ?? 0) + 1 >= 100) unlockBadge('fleet_admiral')
+  if ((completedVoyages ?? 0) + 1 >= 100) await unlockBadge('fleet_admiral')
 
   await Promise.all([
     admin.from('profiles').update(profileUpdate).eq('id', user.id),

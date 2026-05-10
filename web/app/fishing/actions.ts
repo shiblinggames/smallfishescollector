@@ -289,7 +289,7 @@ export async function reelIn(
         updates.unlocked_character_colors = [...currentUnlocked, 'golden']
         unlockedSkinId = 'golden'
       }
-      unlockBadge('ancient_ones')
+      await unlockBadge('ancient_ones')
     }
     await admin.from('profiles').update(updates).eq('id', user.id)
     const newAchievements = await checkAchievements(user.id, { type: 'fishing', result, depthId: 4, abyssStreak: 0 })
@@ -354,7 +354,7 @@ export async function reelIn(
     if (newLineTier > (profile?.line_tier ?? 0)) {
       await admin.from('profiles').update({ line_tier: newLineTier }).eq('id', user.id)
     }
-    if (unique >= (totalCount ?? Infinity)) unlockBadge('full_collection')
+    if (unique >= (totalCount ?? Infinity)) await unlockBadge('full_collection')
   }
 
   // Track abyss streak for achievements
@@ -378,7 +378,7 @@ export async function reelIn(
       reelInUnlockedSkin = 'forest'
     }
   }
-  if (oldFishingLevel < 100 && newFishingLevel >= 100) unlockBadge('master_angler')
+  if (oldFishingLevel < 100 && newFishingLevel >= 100) await unlockBadge('master_angler')
 
   const [, baitFetchResult] = await Promise.all([
     admin.from('profiles').update(profileUpdates).eq('id', user.id),
@@ -610,7 +610,7 @@ export async function saveHighestPerfectStreak(streak: number, zone: string): Pr
   if ((profile?.highest_perfect_streak ?? 0) < streak) {
     await admin.from('profiles').update({ highest_perfect_streak: streak, highest_streak_set_at: new Date().toISOString(), best_streak_zone: zone }).eq('id', user.id)
   }
-  if (streak >= 10) unlockBadge('unbroken')
+  if (streak >= 10) await unlockBadge('unbroken')
 }
 
 
