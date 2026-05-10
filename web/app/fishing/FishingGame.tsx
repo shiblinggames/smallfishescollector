@@ -1467,6 +1467,7 @@ export default function FishingGame({
   initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster,
   initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
+  marketMultipliers, isPremium,
 }: {
   hookTier: number
   rodTier: number
@@ -1502,6 +1503,8 @@ export default function FishingGame({
   unlockedCharacterColors: string[]
   equippedBadges: string[]
   unlockedBadges: string[]
+  marketMultipliers: Record<number, number>
+  isPremium: boolean
 }) {
 
   const [localCharacterColor, setLocalCharacterColor] = useState(characterColor)
@@ -2387,6 +2390,11 @@ export default function FishingGame({
   const isFullMoon = activeEvent?.type === 'fullmoon'
   const holdTotalValue   = inventory.reduce((s, i) => s + Math.floor(i.fish_species.sell_value * (isFullMoon ? 1.0 : 0.65)) * i.quantity, 0)
   const holdBaseValue    = inventory.reduce((s, i) => s + i.fish_species.sell_value * i.quantity, 0)
+  const liquidateFee     = isPremium ? 1.0 : 0.97
+  const holdLiquidateValue = inventory.reduce((s, i) => {
+    const mult = marketMultipliers[i.fish_id] ?? 1.0
+    return s + Math.floor(i.fish_species.sell_value * mult * 0.90 * liquidateFee) * i.quantity
+  }, 0)
 
   const isBobbing = charFrame === 'wait' && (phase === 'casting' || phase === 'hooked')
 
@@ -4415,8 +4423,11 @@ export default function FishingGame({
                     <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#f0c040' }}>Market Liquidate</p>
                     <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#bda05a', letterSpacing: '0.1em', padding: '0.15rem 0.45rem', borderRadius: 999, background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.25)' }}>1h delay</span>
                   </div>
-                  <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#bda05a', lineHeight: 1.45 }}>
-                    Sell all fish at <strong style={{ color: '#f0c040' }}>90% of current market value</strong>. Doubloons arrive after a 1-hour wait — price is locked at sale.
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1 }}>
+                    {holdLiquidateValue.toLocaleString()} ⟡
+                  </p>
+                  <p className="font-karla font-400 mt-1.5" style={{ fontSize: '0.68rem', color: '#bda05a', lineHeight: 1.4 }}>
+                    90% of current market value{isPremium ? '' : ' · 3% fee'} · price locked at sale, settles in 1h
                   </p>
                   {!liquidateConfirm ? (
                     <button

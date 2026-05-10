@@ -23,11 +23,12 @@ export default async function FishingPage() {
     { data: rodRows },
     { data: allSpecies },
     { data: collectionRows },
+    { data: marketRows },
   ] = await Promise.all([
     getActiveChallengeSession(),
     getDailyChallenge(),
     admin.from('profiles')
-      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, fish_hold_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, ring_skin, unlocked_ring_skins, has_tide_turner, tide_turner_used, tide_turner_date, equipped_special, has_phantom_hook, has_auto_caster, prestige_levels, trophy_catches, character_color, equipped_badges, unlocked_badges, unlocked_character_colors')
+      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, fish_hold_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, ring_skin, unlocked_ring_skins, has_tide_turner, tide_turner_used, tide_turner_date, equipped_special, has_phantom_hook, has_auto_caster, prestige_levels, trophy_catches, character_color, equipped_badges, unlocked_badges, unlocked_character_colors, is_premium, premium_expires_at')
       .eq('id', user.id)
       .single(),
     admin.from('bait_inventory')
@@ -49,7 +50,15 @@ export default async function FishingPage() {
     admin.from('fish_collection')
       .select('fish_id')
       .eq('user_id', user.id),
+    admin.from('fish_market')
+      .select('fish_id, multiplier'),
   ])
+
+  const marketMultipliers: Record<number, number> = {}
+  for (const row of (marketRows ?? []) as { fish_id: number; multiplier: number | string }[]) {
+    marketMultipliers[row.fish_id] = Number(row.multiplier)
+  }
+  const isPremium = !!profile?.is_premium && !!profile?.premium_expires_at && new Date(profile.premium_expires_at) > new Date()
 
   const ownedRods = (rodRows ?? []).map((r: { rod_tier: number }) => r.rod_tier)
   const caughtFishIds = (collectionRows ?? []).map((r: { fish_id: number }) => r.fish_id)
@@ -114,6 +123,8 @@ export default async function FishingPage() {
           characterColor={characterColor}
           unlockedCharacterColors={(profile?.unlocked_character_colors as string[] | null) ?? []}
           equippedBadges={(profile?.equipped_badges as string[] | null) ?? []}
+          marketMultipliers={marketMultipliers}
+          isPremium={isPremium}
         />
       </main>
     </>
