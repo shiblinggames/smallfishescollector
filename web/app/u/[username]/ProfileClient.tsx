@@ -344,7 +344,9 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
               <SectionLabel>Rarest Catches</SectionLabel>
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rarestFish.length}, 1fr)`, gap: 8 }}>
                 {rarestFish.map(fish => {
-                  const c = RARITY_COLOR[fish.bite_rarity]
+                  const isAncient = fish.habitat === 'ancient_deep'
+                  const c = isAncient ? '#a78bfa' : RARITY_COLOR[fish.bite_rarity]
+                  const label = isAncient ? 'Ancient' : (RARITY_LABEL[fish.bite_rarity] ?? 'Unknown')
                   return (
                     <div key={fish.id} style={{
                       background: `${c}0a`, border: `1px solid ${c}38`,
@@ -367,7 +369,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                         fontFamily: 'var(--font-karla)', fontWeight: 700,
                         textTransform: 'uppercase', letterSpacing: '0.1em',
                       }}>
-                        {RARITY_LABEL[fish.bite_rarity] ?? 'Unknown'}
+                        {label}
                       </span>
                     </div>
                   )
