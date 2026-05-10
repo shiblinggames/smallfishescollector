@@ -141,7 +141,7 @@ export default function FishingTestClient() {
             <img src={FRAMES[frame]} alt="" style={{ width: '100%', display: 'block' }} />
 
             {boatEnabled && (
-              <img src="/boat_oak.png" alt="boat" style={{
+              <img src={frame === 'cast' ? '/boat_oak_cast.png' : '/boat_oak_rest.png'} alt="boat" style={{
                 position: 'absolute',
                 top: `${boatCfg[frame].top}%`, left: `${boatCfg[frame].left}%`,
                 width: `${boatCfg[frame].width}%`,
