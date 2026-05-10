@@ -4085,21 +4085,34 @@ export default function FishingGame({
                 setLocalCharacterColor(colorId)
                 await updateCharacterColor(colorId)
               }}
-              onEquipBadge={async (id) => {
+              onEquipBadge={async (id, slot) => {
                 const currentSlots = localEquippedBadges.slice()
+                while (currentSlots.length < 3) currentSlots.push('')
                 const alreadyIdx = currentSlots.indexOf(id)
-                if (alreadyIdx >= 0) {
+                if (slot !== undefined) {
+                  if (currentSlots[slot] === id) {
+                    const newSlots = currentSlots.map((b, i) => i === slot ? '' : b)
+                    setLocalEquippedBadges(newSlots)
+                    await unequipBadge(slot)
+                  } else {
+                    const newSlots = currentSlots.map((b, i) => {
+                      if (i === slot) return id
+                      if (b === id) return ''
+                      return b
+                    })
+                    setLocalEquippedBadges(newSlots)
+                    await equipBadge(id, slot)
+                  }
+                } else if (alreadyIdx >= 0) {
                   const newSlots = currentSlots.map((b, i) => i === alreadyIdx ? '' : b)
                   setLocalEquippedBadges(newSlots)
                   await unequipBadge(alreadyIdx as 0 | 1 | 2)
                 } else {
                   const emptySlot = currentSlots.findIndex(b => !b)
-                  const slot = emptySlot >= 0 ? emptySlot : 0
-                  const newSlots = currentSlots.length < 3
-                    ? [...currentSlots, id]
-                    : currentSlots.map((b, i) => i === slot ? id : b)
+                  const targetSlot = (emptySlot >= 0 ? emptySlot : 0) as 0 | 1 | 2
+                  const newSlots = currentSlots.map((b, i) => i === targetSlot ? id : b)
                   setLocalEquippedBadges(newSlots)
-                  await equipBadge(id, slot as 0 | 1 | 2)
+                  await equipBadge(id, targetSlot)
                 }
               }}
               equippedRingSkin={equippedRingSkin}

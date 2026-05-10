@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getHook } from '@/lib/hooks'
@@ -271,7 +271,7 @@ export default function GearScreen({
   unlockedCharacterColors: string[]
   unlockedBadges: string[]
   onUpdateColor: (colorId: string) => void
-  onEquipBadge: (id: string) => void
+  onEquipBadge: (id: string, slot?: 0 | 1 | 2) => void
   equippedRingSkin: string
   unlockedRingSkins: string[]
   onEquipRingSkin: (skin: string) => void
@@ -286,6 +286,8 @@ export default function GearScreen({
   onClose: () => void
 }) {
   const [openSlot, setOpenSlot] = useState<SlotKey | null>(null)
+  const [selectedBadgeSlot, setSelectedBadgeSlot] = useState<0 | 1 | 2 | null>(null)
+  useEffect(() => { if (openSlot !== 'badge') setSelectedBadgeSlot(null) }, [openSlot])
 
   const rod  = getRod(equippedRodTier)
   const reel = getReel(reelTier)
@@ -728,8 +730,38 @@ export default function GearScreen({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#d0cdc8' }}>Badges</p>
                   <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#5a5755', lineHeight: 1.4 }}>
-                    Tap to equip or remove. Up to 3 equipped at once.
+                    {selectedBadgeSlot !== null
+                      ? `Slot ${selectedBadgeSlot + 1} selected — pick a badge to equip there. Tap the slot again to deselect.`
+                      : 'Pick a slot first, or tap a badge to fill the next empty slot. Tap an equipped badge to remove it.'}
                   </p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {[0, 1, 2].map(slot => {
+                      const id = equippedBadges[slot]
+                      const badge = id ? BADGE_MAP[id] : null
+                      const isSelected = selectedBadgeSlot === slot
+                      return (
+                        <button
+                          key={slot}
+                          onClick={() => setSelectedBadgeSlot(isSelected ? null : (slot as 0 | 1 | 2))}
+                          style={{
+                            flex: 1, aspectRatio: '1',
+                            background: isSelected ? 'rgba(240,192,64,0.12)' : 'rgba(255,255,255,0.04)',
+                            border: `2px solid ${isSelected ? '#f0c040' : 'rgba(255,255,255,0.12)'}`,
+                            borderRadius: 12, cursor: 'pointer', position: 'relative',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+                            boxShadow: isSelected ? '0 0 12px rgba(240,192,64,0.35)' : 'none',
+                          }}
+                        >
+                          {badge ? (
+                            <img src={badge.imageUrl} alt={badge.name} style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                          ) : (
+                            <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.3)' }}>Empty</span>
+                          )}
+                          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: isSelected ? '#f0c040' : 'rgba(255,255,255,0.4)' }}>Slot {slot + 1}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
                   {unlockedBadges.length === 0 ? (
                     <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#4a4845' }}>No badges earned yet.</p>
                   ) : (
@@ -739,7 +771,11 @@ export default function GearScreen({
                         return (
                           <button
                             key={badge.id}
-                            onClick={() => { onEquipBadge(badge.id); setOpenSlot(null) }}
+                            onClick={() => {
+                              onEquipBadge(badge.id, selectedBadgeSlot ?? undefined)
+                              setSelectedBadgeSlot(null)
+                              setOpenSlot(null)
+                            }}
                             style={{
                               background: isEquipped ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.04)',
                               border: `1px solid ${isEquipped ? 'rgba(240,192,64,0.4)' : 'rgba(255,255,255,0.1)'}`,

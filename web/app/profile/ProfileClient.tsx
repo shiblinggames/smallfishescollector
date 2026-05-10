@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import { useEffect, useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -239,6 +239,8 @@ export default function ProfileClient({
   const [equippedBadges, setEquippedBadges] = useState<string[]>(initialEquippedBadges)
   const [badgePickerOpen, setBadgePickerOpen] = useState(false)
   const [badgeSaving, setBadgeSaving] = useState(false)
+  const [selectedBadgeSlot, setSelectedBadgeSlot] = useState<0 | 1 | 2 | null>(null)
+  useEffect(() => { if (!badgePickerOpen) setSelectedBadgeSlot(null) }, [badgePickerOpen])
 
   const color = avatarColor(username || email)
   const initial = (username || email).slice(0, 1).toUpperCase()
@@ -290,8 +292,24 @@ export default function ProfileClient({
     const padded = [...equippedBadges]
     while (padded.length < 3) padded.push('')
     const currentSlot = padded.indexOf(badgeId)
+    const targetSlot = selectedBadgeSlot
     setBadgeSaving(true)
-    if (currentSlot !== -1) {
+    if (targetSlot !== null) {
+      if (padded[targetSlot] === badgeId) {
+        const next = [...padded]; next[targetSlot] = ''
+        setEquippedBadges(next)
+        await unequipBadge(targetSlot)
+      } else {
+        const next = padded.map((b, i) => {
+          if (i === targetSlot) return badgeId
+          if (b === badgeId) return ''
+          return b
+        })
+        setEquippedBadges(next)
+        await equipBadge(badgeId, targetSlot)
+      }
+      setSelectedBadgeSlot(null)
+    } else if (currentSlot !== -1) {
       const next = [...padded]; next[currentSlot] = ''
       setEquippedBadges(next)
       await unequipBadge(currentSlot as 0 | 1 | 2)
@@ -562,6 +580,40 @@ export default function ProfileClient({
 
               {badgePickerOpen && (
                 <div style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem' }}>
+                  <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#5a5755', lineHeight: 1.4, marginBottom: 8 }}>
+                    {selectedBadgeSlot !== null
+                      ? `Slot ${selectedBadgeSlot + 1} selected — pick a badge to equip there.`
+                      : 'Pick a slot first, or tap a badge to fill the next empty slot.'}
+                  </p>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                    {[0, 1, 2].map(slot => {
+                      const id = equippedBadges[slot]
+                      const badge = id ? BADGE_MAP[id] : null
+                      const isSelected = selectedBadgeSlot === slot
+                      return (
+                        <button
+                          key={slot}
+                          disabled={badgeSaving}
+                          onClick={() => setSelectedBadgeSlot(isSelected ? null : (slot as 0 | 1 | 2))}
+                          style={{
+                            flex: 1, aspectRatio: '1',
+                            background: isSelected ? 'rgba(240,192,64,0.12)' : 'rgba(255,255,255,0.04)',
+                            border: `2px solid ${isSelected ? '#f0c040' : 'rgba(255,255,255,0.1)'}`,
+                            borderRadius: 10, cursor: 'pointer',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                            boxShadow: isSelected ? '0 0 10px rgba(240,192,64,0.3)' : 'none',
+                          }}
+                        >
+                          {badge ? (
+                            <img src={badge.imageUrl} alt={badge.name} style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                          ) : (
+                            <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)' }}>Empty</span>
+                          )}
+                          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: isSelected ? '#f0c040' : 'rgba(255,255,255,0.4)' }}>Slot {slot + 1}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
                   {unlockedBadges.length === 0 ? (
                     <p className="font-karla" style={{ fontSize: '0.68rem', color: '#4a4845' }}>Earn badges by completing achievements.</p>
                   ) : (
