@@ -73,6 +73,7 @@ export default function FishingTestClient() {
   const [badgeCfg, setBadgeCfg] = useState(BADGE_SLOT_POSITIONS)
   const [boatCfg, setBoatCfg] = useState(BOAT_DEFAULT)
   const [boatEnabled, setBoatEnabled] = useState(true)
+  const [showLegacyControls, setShowLegacyControls] = useState(false)
   const [activeSlot, setActiveSlot] = useState(0)
   // per-slot selected badge id (null = empty)
   const [slotBadges, setSlotBadges] = useState<(string | null)[]>([
@@ -226,6 +227,36 @@ export default function FishingTestClient() {
           border: 'none', color: '#fff', fontWeight: 700, marginBottom: 16, fontSize: 12,
         }}>{animating ? 'casting...' : '▶ Play cast sequence'}</button>
 
+        {/* Boat overlay */}
+        <p style={{ fontWeight: 700, marginBottom: 6, color: '#fff' }}>
+          Boat overlay
+          <button onClick={() => setBoatEnabled(!boatEnabled)} style={{
+            marginLeft: 8, padding: '2px 8px', fontSize: 10, borderRadius: 4,
+            background: boatEnabled ? '#16a34a' : 'rgba(255,255,255,0.08)',
+            border: 'none', color: '#fff', cursor: 'pointer',
+          }}>{boatEnabled ? 'On' : 'Off'}</button>
+        </p>
+        {boatEnabled && (
+          <>
+            <p style={{ fontWeight: 600, marginBottom: 4, color: '#fb923c' }}>Boat (all frames)</p>
+            <Slider label="top %"    value={boatCfg.top}    min={-20} max={120} onChange={v => setBoatCfg(p => ({ ...p, top: v }))} />
+            <Slider label="left %"   value={boatCfg.left}   min={-50} max={100} onChange={v => setBoatCfg(p => ({ ...p, left: v }))} />
+            <Slider label="width %"  value={boatCfg.width}  min={20}  max={200} onChange={v => setBoatCfg(p => ({ ...p, width: v }))} />
+            <Slider label="rotate °" value={boatCfg.rotate} min={-30} max={30}  onChange={v => setBoatCfg(p => ({ ...p, rotate: v }))} />
+          </>
+        )}
+
+        {/* Toggle for production-tuned controls */}
+        <button onClick={() => setShowLegacyControls(s => !s)} style={{
+          width: '100%', padding: '6px 0', borderRadius: 6, cursor: 'pointer',
+          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+          color: '#94a3b8', fontWeight: 600, fontSize: 11, marginTop: 16, marginBottom: 14,
+        }}>
+          {showLegacyControls ? '▾ Hide' : '▸ Show'} character / rod / hook / badge controls
+        </button>
+
+        {showLegacyControls && (<>
+
         {/* Character position */}
         <p style={{ fontWeight: 700, marginBottom: 4, color: '#fbbf24' }}>Character position ({frame})</p>
         <Slider label="bottom %" value={cp.bottom} min={-20} max={60}  onChange={v => setChar('bottom', v)} />
@@ -245,25 +276,6 @@ export default function FishingTestClient() {
         <Slider label="left %"   value={rc.left}   min={-80} max={100}  onChange={v => setRod('left',   v)} />
         <Slider label="width %"  value={rc.width}  min={10}  max={150}  onChange={v => setRod('width',  v)} />
         <Slider label="rotate °" value={rc.rotate} min={-180} max={180} onChange={v => setRod('rotate', v)} />
-
-        {/* Boat overlay */}
-        <p style={{ fontWeight: 700, marginTop: 14, marginBottom: 6, color: '#fff' }}>
-          Boat overlay
-          <button onClick={() => setBoatEnabled(!boatEnabled)} style={{
-            marginLeft: 8, padding: '2px 8px', fontSize: 10, borderRadius: 4,
-            background: boatEnabled ? '#16a34a' : 'rgba(255,255,255,0.08)',
-            border: 'none', color: '#fff', cursor: 'pointer',
-          }}>{boatEnabled ? 'On' : 'Off'}</button>
-        </p>
-        {boatEnabled && (
-          <>
-            <p style={{ fontWeight: 600, marginBottom: 4, color: '#fb923c' }}>Boat (all frames)</p>
-            <Slider label="top %"    value={boatCfg.top}    min={-20} max={120} onChange={v => setBoatCfg(p => ({ ...p, top: v }))} />
-            <Slider label="left %"   value={boatCfg.left}   min={-50} max={100} onChange={v => setBoatCfg(p => ({ ...p, left: v }))} />
-            <Slider label="width %"  value={boatCfg.width}  min={20}  max={200} onChange={v => setBoatCfg(p => ({ ...p, width: v }))} />
-            <Slider label="rotate °" value={boatCfg.rotate} min={-30} max={30}  onChange={v => setBoatCfg(p => ({ ...p, rotate: v }))} />
-          </>
-        )}
 
         {/* Hook picker */}
         <p style={{ fontWeight: 700, marginTop: 14, marginBottom: 6, color: '#fff' }}>Hook</p>
@@ -317,10 +329,12 @@ export default function FishingTestClient() {
         <Slider label="width %"  value={bc.width}  min={2}   max={60}   onChange={v => setBadge('width',  v)} />
         <Slider label="rotate °" value={bc.rotate} min={-180} max={180} onChange={v => setBadge('rotate', v)} />
 
+        </>)}
+
         {/* Config dump */}
         <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Current config</p>
         <pre style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
-{`CHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBOAT:\n${JSON.stringify(boatCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}`}
+{`BOAT:\n${JSON.stringify(boatCfg, null, 2)}${showLegacyControls ? `\n\nCHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}` : ''}`}
         </pre>
       </div>
     </div>
