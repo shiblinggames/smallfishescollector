@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import ZoneLanding, { type ZoneKey } from './ZoneLanding'
 import FishingGame from './FishingGame'
 import type { FishSpecies } from './actions'
@@ -66,6 +66,15 @@ export default function FishingPageClient({
   unlockedBoats: string[]
 }) {
   const fishingLevel = getLevelFromXP(initialFishingXP)
+
+  // Boat state lives at this level so it persists across the
+  // ZoneLanding ↔ FishingGame remount when the player switches zones.
+  const [persistedEquippedBoat, setPersistedEquippedBoat] = useState<string | null>(equippedBoat)
+  const [persistedUnlockedBoats, setPersistedUnlockedBoats] = useState<string[]>(unlockedBoats)
+  const handleBoatStateChange = useCallback((equipped: string | null, unlocked: string[]) => {
+    setPersistedEquippedBoat(equipped)
+    setPersistedUnlockedBoats(unlocked)
+  }, [])
 
   const [selectedZone, setSelectedZone] = useState<ZoneKey | null>(() => {
     if (typeof window === 'undefined') return null
@@ -136,8 +145,9 @@ export default function FishingPageClient({
       equippedBadges={equippedBadges}
       marketMultipliers={marketMultipliers}
       isPremium={isPremium}
-      initialEquippedBoat={equippedBoat}
-      initialUnlockedBoats={unlockedBoats}
+      initialEquippedBoat={persistedEquippedBoat}
+      initialUnlockedBoats={persistedUnlockedBoats}
+      onBoatStateChange={handleBoatStateChange}
     />
   )
 }

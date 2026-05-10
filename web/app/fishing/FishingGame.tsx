@@ -1561,7 +1561,7 @@ export default function FishingGame({
   initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster,
   initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
-  marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats,
+  marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
 }: {
   hookTier: number
   rodTier: number
@@ -1601,6 +1601,7 @@ export default function FishingGame({
   isPremium: boolean
   initialEquippedBoat: string | null
   initialUnlockedBoats: string[]
+  onBoatStateChange?: (equipped: string | null, unlocked: string[]) => void
 }) {
 
   const [localCharacterColor, setLocalCharacterColor] = useState(characterColor)
@@ -4287,13 +4288,16 @@ export default function FishingGame({
               unlockedBoats={unlockedBoats}
               onEquipBoat={async (id) => {
                 setEquippedBoat(id)
+                onBoatStateChange?.(id, unlockedBoats)
                 await equipBoat(id)
               }}
               onBuyBoat={async (id) => {
                 const res = await buyBoat(id)
                 if ('ok' in res) {
-                  setUnlockedBoats(prev => prev.includes(id) ? prev : [...prev, id])
+                  const newUnlocked = unlockedBoats.includes(id) ? unlockedBoats : [...unlockedBoats, id]
+                  setUnlockedBoats(newUnlocked)
                   setEquippedBoat(id)
+                  onBoatStateChange?.(id, newUnlocked)
                   setDoubloons(res.doubloons)
                   window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
                 }
