@@ -59,7 +59,6 @@ interface Props {
   stats: Stats
   gear: Gear
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
-  ancientTrophies: { id: number; name: string }[]
   ownedSpecialIds?: string[]
   raidItemIds?: string[]
   equippedShipSkin?: string | null
@@ -193,7 +192,7 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   )
 }
 
-export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, ancientTrophies, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [] }: Props) {
+export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [] }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
@@ -339,55 +338,14 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
             </div>
           )}
 
-          {/* Ancient Trophies */}
-          {ancientTrophies.length > 0 && (
-            <div>
-              <SectionLabel>Ancient Trophies</SectionLabel>
-              <div style={{
-                background: 'rgba(167,139,250,0.06)',
-                border: '1px solid rgba(167,139,250,0.32)',
-                borderRadius: 14,
-                padding: '0.85rem 0.9rem',
-                boxShadow: '0 0 22px rgba(167,139,250,0.08)',
-              }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                  {ancientTrophies.map(t => (
-                    <div key={t.id} style={{
-                      background: 'rgba(8,4,20,0.6)',
-                      border: '1px solid rgba(167,139,250,0.35)',
-                      borderRadius: 10,
-                      padding: '0.55rem 0.4rem',
-                      textAlign: 'center',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                    }}>
-                      <div style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img
-                          src={fishImageUrl(t.name)}
-                          alt={t.name}
-                          style={{ maxWidth: 44, maxHeight: 44, objectFit: 'contain', filter: 'drop-shadow(0 2px 8px rgba(167,139,250,0.5))' }}
-                          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                        />
-                      </div>
-                      <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#e9d5ff', lineHeight: 1.2 }}>{t.name}</p>
-                    </div>
-                  ))}
-                </div>
-                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#8b5cf6', marginTop: 10, textAlign: 'center' }}>
-                  {ancientTrophies.length} of 6 ancient ones revealed
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* Rarest Catches */}
           {rarestFish.length > 0 && (
             <div>
               <SectionLabel>Rarest Catches</SectionLabel>
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rarestFish.length}, 1fr)`, gap: 8 }}>
                 {rarestFish.map(fish => {
-                  const isAncient = fish.habitat === 'ancient_deep'
-                  const c = isAncient ? '#a78bfa' : RARITY_COLOR[fish.bite_rarity]
-                  const label = isAncient ? 'Ancient' : (RARITY_LABEL[fish.bite_rarity] ?? 'Unknown')
+                  const c = RARITY_COLOR[fish.bite_rarity]
+                  const label = RARITY_LABEL[fish.bite_rarity] ?? 'Unknown'
                   return (
                     <div key={fish.id} style={{
                       background: `${c}0a`, border: `1px solid ${c}38`,

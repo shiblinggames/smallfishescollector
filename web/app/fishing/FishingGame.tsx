@@ -909,7 +909,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   const baseR = RARITY[rarity] ?? RARITY[1]
   // Ancient deep gets its own palette + label, overriding the gold legendary look
   const r = isAncient
-    ? { label: 'Ancient', color: '#a78bfa', hookedText: baseR.hookedText }
+    ? { label: 'Ancient', color: '#e11d48', hookedText: baseR.hookedText }
     : baseR
   const isLegendary = rarity === 5 && !isAncient
   const isEpicPlus  = rarity >= 4
@@ -938,9 +938,9 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             position: 'relative',
             padding: '0.7rem 0.95rem',
             borderRadius: 14,
-            background: 'linear-gradient(135deg, rgba(36,12,56,0.96) 0%, rgba(8,18,40,0.98) 70%, rgba(8,32,40,0.96) 100%)',
-            border: '1px solid rgba(167,139,250,0.5)',
-            boxShadow: '0 0 30px rgba(167,139,250,0.32), inset 0 1px 0 rgba(255,255,255,0.06)',
+            background: 'linear-gradient(135deg, rgba(50,8,18,0.96) 0%, rgba(20,6,8,0.98) 70%, rgba(40,18,4,0.96) 100%)',
+            border: '1px solid rgba(225,29,72,0.5)',
+            boxShadow: '0 0 30px rgba(225,29,72,0.32), inset 0 1px 0 rgba(255,255,255,0.06)',
             overflow: 'hidden',
           }}
         >
@@ -951,24 +951,24 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             transition={{ duration: 2.4, delay: 0.4, ease: 'easeOut', repeat: Infinity, repeatDelay: 4 }}
             style={{
               position: 'absolute', inset: 0,
-              background: 'linear-gradient(105deg, transparent 30%, rgba(167,139,250,0.22) 50%, rgba(103,232,249,0.18) 60%, transparent 75%)',
+              background: 'linear-gradient(105deg, transparent 30%, rgba(225,29,72,0.24) 50%, rgba(253,230,138,0.22) 60%, transparent 75%)',
               pointerEvents: 'none',
             }}
           />
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
             <div>
-              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.26em', color: '#67e8f9', marginBottom: 3 }}>
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.26em', color: '#fde68a', marginBottom: 3 }}>
                 Ancient One Discovered
               </p>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#e9d5ff', lineHeight: 1.1, textShadow: '0 0 14px rgba(167,139,250,0.5)' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#fee2e2', lineHeight: 1.1, textShadow: '0 0 14px rgba(225,29,72,0.5)' }}>
                 A relic from the deep
               </p>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#a78bfa', lineHeight: 1, textShadow: '0 0 12px rgba(167,139,250,0.55)' }}>
-                {ancientCount}<span style={{ color: '#5b4f7a' }}>/{ancientTotal}</span>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#e11d48', lineHeight: 1, textShadow: '0 0 12px rgba(225,29,72,0.55)' }}>
+                {ancientCount}<span style={{ color: '#7a2030' }}>/{ancientTotal}</span>
               </p>
-              <p className="font-karla font-600 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.15em', color: '#8b5cf6', marginTop: 2 }}>
+              <p className="font-karla font-600 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.15em', color: '#be123c', marginTop: 2 }}>
                 Revealed
               </p>
             </div>
@@ -1149,7 +1149,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             transition={{ duration: 1.2, delay: 0.1, ease: 'easeOut' }}
             style={{
               position: 'absolute', inset: -32, borderRadius: '2.4rem',
-              background: 'radial-gradient(ellipse at 50% 55%, rgba(167,139,250,0.55) 0%, rgba(103,232,249,0.28) 40%, transparent 75%)',
+              background: 'radial-gradient(ellipse at 50% 55%, rgba(225,29,72,0.55) 0%, rgba(253,230,138,0.28) 40%, transparent 75%)',
               pointerEvents: 'none', zIndex: 0,
             }}
           />
@@ -1203,7 +1203,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             transition={{ duration: 2.2, delay: 0.7, ease: 'easeOut', repeat: Infinity, repeatDelay: 3.0 }}
             style={{
               position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
-              background: 'linear-gradient(105deg, transparent 22%, rgba(167,139,250,0.32) 48%, rgba(103,232,249,0.28) 56%, transparent 78%)',
+              background: 'linear-gradient(105deg, transparent 22%, rgba(225,29,72,0.32) 48%, rgba(253,230,138,0.28) 56%, transparent 78%)',
             }}
           />
         )}
@@ -3344,19 +3344,19 @@ export default function FishingGame({
                   style={{
                     padding: '0.85rem 1rem',
                     borderRadius: 14,
-                    background: 'linear-gradient(135deg, rgba(36,12,56,0.92) 0%, rgba(8,18,40,0.96) 70%, rgba(8,32,40,0.92) 100%)',
-                    border: '1px solid rgba(167,139,250,0.45)',
-                    boxShadow: '0 0 26px rgba(167,139,250,0.22)',
+                    background: 'linear-gradient(135deg, rgba(50,8,18,0.92) 0%, rgba(20,6,8,0.96) 70%, rgba(40,18,4,0.92) 100%)',
+                    border: '1px solid rgba(225,29,72,0.45)',
+                    boxShadow: '0 0 26px rgba(225,29,72,0.22)',
                     maxWidth: 280,
                   }}
                 >
-                  <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.26em', color: '#67e8f9', marginBottom: 4 }}>
+                  <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.26em', color: '#fde68a', marginBottom: 4 }}>
                     The deep is silent
                   </p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#e9d5ff', lineHeight: 1.2, marginBottom: 6, textShadow: '0 0 12px rgba(167,139,250,0.45)' }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#fee2e2', lineHeight: 1.2, marginBottom: 6, textShadow: '0 0 12px rgba(225,29,72,0.45)' }}>
                     All Ancient Ones revealed
                   </p>
-                  <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: 'rgba(233,213,255,0.65)', lineHeight: 1.5 }}>
+                  <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: 'rgba(254,226,226,0.7)', lineHeight: 1.5 }}>
                     There is nothing more to catch here.
                   </p>
                 </motion.div>

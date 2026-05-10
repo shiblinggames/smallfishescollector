@@ -716,38 +716,102 @@ export default function ProfileClient({
           {/* Rarest Catches */}
           {ancientTrophies.length > 0 && (
             <div>
-              <SectionLabel>Ancient Trophies</SectionLabel>
+              <SectionLabel>Vault of the Ancients</SectionLabel>
               <div style={{
-                background: 'rgba(167,139,250,0.06)',
-                border: '1px solid rgba(167,139,250,0.32)',
-                borderRadius: 14,
-                padding: '0.85rem 0.9rem',
-                boxShadow: '0 0 22px rgba(167,139,250,0.08)',
+                position: 'relative',
+                background: 'radial-gradient(ellipse at 50% 0%, rgba(60,10,18,0.92) 0%, rgba(8,4,6,0.98) 70%)',
+                border: '1px solid rgba(225,29,72,0.4)',
+                borderRadius: 16,
+                padding: '1.1rem 0.95rem 1rem',
+                boxShadow: 'inset 0 1px 0 rgba(253,230,138,0.08), inset 0 0 32px rgba(225,29,72,0.06), 0 0 28px rgba(225,29,72,0.12)',
+                overflow: 'hidden',
               }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                {/* Faint vault crest watermark */}
+                <div style={{
+                  position: 'absolute', top: '-30%', left: '50%', transform: 'translateX(-50%)',
+                  width: 180, height: 180,
+                  background: 'radial-gradient(circle, rgba(253,230,138,0.06) 0%, transparent 60%)',
+                  pointerEvents: 'none',
+                }} />
+
+                {/* Ornamental divider with counter inset */}
+                <div style={{ position: 'relative', textAlign: 'center', marginBottom: '0.95rem' }}>
+                  <div style={{
+                    position: 'absolute', left: 8, right: 8, top: '50%',
+                    height: 1, background: 'linear-gradient(90deg, transparent 0%, rgba(253,230,138,0.45) 50%, transparent 100%)',
+                  }} />
+                  <span className="font-cinzel font-700 uppercase" style={{
+                    position: 'relative', display: 'inline-block',
+                    padding: '0 0.85rem',
+                    background: 'rgba(8,4,6,1)',
+                    fontSize: '0.56rem', letterSpacing: '0.32em',
+                    color: '#fde68a',
+                  }}>
+                    {ancientTrophies.length} of 6 sealed
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, position: 'relative' }}>
                   {ancientTrophies.map(t => (
                     <div key={t.id} style={{
-                      background: 'rgba(8,4,20,0.6)',
-                      border: '1px solid rgba(167,139,250,0.35)',
+                      position: 'relative',
+                      background: 'radial-gradient(ellipse at 50% 110%, rgba(225,29,72,0.22) 0%, rgba(20,6,10,0.7) 55%, rgba(8,4,6,0.95) 100%)',
+                      border: '1px solid rgba(225,29,72,0.5)',
                       borderRadius: 10,
-                      padding: '0.55rem 0.4rem',
-                      textAlign: 'center',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                      padding: '1rem 0.55rem 0.75rem',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                      boxShadow: 'inset 0 1px 0 rgba(253,230,138,0.06)',
                     }}>
-                      <div style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {/* Filigree corner brackets */}
+                      {[
+                        { top: 4, left: 4, borderTop: '1px solid rgba(253,230,138,0.55)', borderLeft: '1px solid rgba(253,230,138,0.55)' },
+                        { top: 4, right: 4, borderTop: '1px solid rgba(253,230,138,0.55)', borderRight: '1px solid rgba(253,230,138,0.55)' },
+                        { bottom: 4, left: 4, borderBottom: '1px solid rgba(253,230,138,0.55)', borderLeft: '1px solid rgba(253,230,138,0.55)' },
+                        { bottom: 4, right: 4, borderBottom: '1px solid rgba(253,230,138,0.55)', borderRight: '1px solid rgba(253,230,138,0.55)' },
+                      ].map((s, i) => (
+                        <div key={i} style={{ position: 'absolute', width: 9, height: 9, ...s }} />
+                      ))}
+
+                      {/* Pedestal glow + fish */}
+                      <div style={{ position: 'relative', width: 76, height: 76, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{
+                          position: 'absolute', inset: 6,
+                          borderRadius: '50%',
+                          background: 'radial-gradient(circle at 50% 38%, rgba(253,230,138,0.22) 0%, rgba(225,29,72,0.16) 50%, transparent 78%)',
+                          filter: 'blur(2px)',
+                        }} />
                         <img
                           src={fishImageUrl(t.name)}
                           alt={t.name}
-                          style={{ maxWidth: 44, maxHeight: 44, objectFit: 'contain', filter: 'drop-shadow(0 2px 8px rgba(167,139,250,0.5))' }}
+                          style={{
+                            position: 'relative',
+                            maxWidth: 68, maxHeight: 68, objectFit: 'contain',
+                            filter: 'drop-shadow(0 3px 14px rgba(225,29,72,0.65))',
+                          }}
                           onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
                         />
                       </div>
-                      <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#e9d5ff', lineHeight: 1.2 }}>{t.name}</p>
+
+                      <div style={{
+                        width: 28, height: 1,
+                        background: 'linear-gradient(90deg, transparent, rgba(253,230,138,0.55), transparent)',
+                      }} />
+
+                      <p className="font-cinzel font-700" style={{
+                        fontSize: '0.74rem', color: '#fee2e2', lineHeight: 1.15,
+                        textAlign: 'center', textShadow: '0 0 8px rgba(225,29,72,0.5)',
+                      }}>
+                        {t.name}
+                      </p>
                     </div>
                   ))}
                 </div>
-                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#8b5cf6', marginTop: 10, textAlign: 'center' }}>
-                  {ancientTrophies.length} of 6 ancient ones revealed
+
+                <p className="font-karla font-300 italic" style={{
+                  fontSize: '0.62rem', color: 'rgba(254,226,226,0.55)',
+                  marginTop: 12, textAlign: 'center', letterSpacing: '0.04em',
+                }}>
+                  &ldquo;From before the depth knew time.&rdquo;
                 </p>
               </div>
             </div>

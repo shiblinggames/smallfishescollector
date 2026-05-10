@@ -22,7 +22,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
     admin.from('profiles')
-      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, trophy_catches')
+      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges')
       .ilike('username', username)
       .single(),
   ])
@@ -96,18 +96,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     .filter(Boolean)
     .slice(0, 3) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
 
-  const trophyIds = ((profile.trophy_catches as number[] | null) ?? [])
-  const ancientTrophies: { id: number; name: string }[] = []
-  if (trophyIds.length > 0) {
-    const { data: trophyRows } = await admin
-      .from('fish_species')
-      .select('id, name')
-      .in('id', trophyIds)
-    for (const row of (trophyRows ?? []) as { id: number; name: string }[]) {
-      ancientTrophies.push({ id: row.id, name: row.name })
-    }
-  }
-
   const navProfile = navProfileData.data
 
   return (
@@ -143,7 +131,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             shipName: profile.ship_name ?? null,
           }}
           rarestFish={rarestFish}
-          ancientTrophies={ancientTrophies}
           ownedSpecialIds={[
             ...(profile.has_tide_turner ? ['tide_turner'] : []),
             ...(profile.has_phantom_hook ? ['phantom_hook'] : []),
