@@ -273,7 +273,24 @@ export default function MarketClient({
   const [selling, setSelling] = useState<number | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [tourStep, setTourStep] = useState<number | null>(null)
+  const [pendingSales, setPendingSales] = useState<{ id: string; amount: number; fishCount: number; reason: string; settlesAt: string }[]>([])
+  const [pendingNow, setPendingNow] = useState(() => Date.now())
   const [, startTransition] = useTransition()
+
+  useEffect(() => {
+    function onChange(e: Event) {
+      const list = (e as CustomEvent<{ id: string; amount: number; fishCount: number; reason: string; settlesAt: string }[]>).detail ?? []
+      setPendingSales(list)
+    }
+    window.addEventListener('pending-sales-changed', onChange)
+    return () => window.removeEventListener('pending-sales-changed', onChange)
+  }, [])
+
+  useEffect(() => {
+    if (pendingSales.length === 0) return
+    const t = setInterval(() => setPendingNow(Date.now()), 30_000)
+    return () => clearInterval(t)
+  }, [pendingSales.length])
 
   useEffect(() => {
     if (typeof window !== 'undefined' && !localStorage.getItem('market_tour_seen')) {
@@ -371,6 +388,45 @@ export default function MarketClient({
             <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8' }}>{countdown}</p>
           </div>
         </div>
+
+        {/* ── Pending Sales ── */}
+        {pendingSales.length > 0 && (
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.65rem', color: '#bda05a' }}>
+              Pending Sales
+            </p>
+            <div style={{
+              background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.28)',
+              borderRadius: 12, padding: '0.6rem 0.85rem',
+              display: 'flex', flexDirection: 'column', gap: 6,
+            }}>
+              {pendingSales.map(p => {
+                const minutes = Math.max(0, Math.ceil((new Date(p.settlesAt).getTime() - pendingNow) / 60_000))
+                const timeLabel = minutes < 60
+                  ? `${minutes}m`
+                  : `${Math.floor(minutes / 60)}h${minutes % 60 ? ` ${minutes % 60}m` : ''}`
+                return (
+                  <div key={p.id} className="flex items-center justify-between" style={{ padding: '0.25rem 0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      <span style={{ fontSize: '0.85rem', lineHeight: 1, color: '#bda05a' }}>⏳</span>
+                      <div style={{ minWidth: 0 }}>
+                        <p className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#f0ede8', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {p.reason}
+                        </p>
+                        <p className="font-karla font-300" style={{ fontSize: '0.6rem', color: '#8a7a4a' }}>
+                          settles in {timeLabel}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0c040', flexShrink: 0, marginLeft: 12 }}>
+                      +{p.amount.toLocaleString()} ⟡
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* ── Portfolio ── */}
         <div>

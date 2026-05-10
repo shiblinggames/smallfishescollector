@@ -43,8 +43,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   const [displayDoubloons, setDisplayDoubloons] = useState(doubloons)
   const [displayGems, setDisplayGems] = useState(gems)
   const [displayPacks, setDisplayPacks] = useState(packsAvailable)
-  const [pendingSales, setPendingSales] = useState<{ amount: number; settlesAt: string }[]>([])
-  const [pendingNow, setPendingNow] = useState(() => Date.now())
 
   const fetchBadge = useCallback(() => {
     const supabase = createClient()
@@ -125,49 +123,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
     window.addEventListener('packs-changed', handlePacksChanged)
     return () => window.removeEventListener('packs-changed', handlePacksChanged)
   }, [])
-
-  useEffect(() => {
-    function handlePendingSalesChanged(e: Event) {
-      const list = ((e as CustomEvent<{ amount: number; settlesAt: string }[]>).detail) ?? []
-      setPendingSales(list.map(s => ({ amount: s.amount, settlesAt: s.settlesAt })))
-    }
-    window.addEventListener('pending-sales-changed', handlePendingSalesChanged)
-    return () => window.removeEventListener('pending-sales-changed', handlePendingSalesChanged)
-  }, [])
-
-  useEffect(() => {
-    if (pendingSales.length === 0) return
-    const t = setInterval(() => setPendingNow(Date.now()), 30_000)
-    return () => clearInterval(t)
-  }, [pendingSales.length])
-
-  const earliestSettleMs = pendingSales.length > 0
-    ? Math.min(...pendingSales.map(p => new Date(p.settlesAt).getTime()))
-    : null
-  const minutesToNext = earliestSettleMs != null
-    ? Math.max(0, Math.ceil((earliestSettleMs - pendingNow) / 60_000))
-    : null
-  const pendingChip = pendingSales.length > 0 && minutesToNext !== null ? (
-    <Link
-      href="/tavern/market"
-      title={`${pendingSales.length} pending sale${pendingSales.length === 1 ? '' : 's'}`}
-      className="flex items-center gap-1 font-karla font-700"
-      style={{
-        fontSize: '0.62rem', color: '#bda05a',
-        background: 'rgba(240,192,64,0.08)',
-        border: '1px solid rgba(240,192,64,0.28)',
-        padding: '0.2rem 0.5rem',
-        borderRadius: 999,
-        textDecoration: 'none',
-        letterSpacing: '0.04em',
-      }}
-    >
-      <span style={{ fontSize: '0.7rem', lineHeight: 1 }}>⏳</span>
-      <span>{pendingSales.length}</span>
-      <span style={{ color: '#8a7a4a' }}>·</span>
-      <span>{minutesToNext < 60 ? `${minutesToNext}m` : `${Math.floor(minutesToNext / 60)}h${minutesToNext % 60 ? ` ${minutesToNext % 60}m` : ''}`}</span>
-    </Link>
-  ) : null
 
   // Close on outside tap
   useEffect(() => {
@@ -367,7 +322,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
               {displayDoubloons.toLocaleString()} ⟡
             </span>
           )}
-          {pendingChip}
           <Link
             href="/profile"
             className="flex items-center justify-center rounded-full transition-all duration-200"
@@ -417,7 +371,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
               {displayDoubloons.toLocaleString()} ⟡
             </span>
           )}
-          {pendingChip}
           {/* Hamburger */}
           <button
             onClick={() => setMenuOpen(o => !o)}
