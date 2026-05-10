@@ -51,6 +51,58 @@ export const BOATS: BoatDef[] = [
       cast: { top: 77, left: 37, width: 55, rotate: 0 },
     },
   },
+  {
+    id: 'desert',
+    name: 'Desert',
+    color: '#c8b378',
+    cost: 5000,
+    restImageUrl: '/boat_desert_rest.png',
+    castImageUrl: '/boat_desert_cast.png',
+    positions: {
+      rest: { top: 77, left: 31, width: 55, rotate: 0 },
+      wait: { top: 72, left: 38, width: 55, rotate: 0 },
+      cast: { top: 77, left: 37, width: 55, rotate: 0 },
+    },
+  },
+  {
+    id: 'mahogany',
+    name: 'Mahogany',
+    color: '#b5582f',
+    cost: 5000,
+    restImageUrl: '/boat_mahogany_rest.png',
+    castImageUrl: '/boat_mahogany_cast.png',
+    positions: {
+      rest: { top: 77, left: 31, width: 55, rotate: 0 },
+      wait: { top: 72, left: 38, width: 55, rotate: 0 },
+      cast: { top: 77, left: 37, width: 55, rotate: 0 },
+    },
+  },
+  {
+    id: 'pistachio',
+    name: 'Pistachio',
+    color: '#7d9170',
+    cost: 5000,
+    restImageUrl: '/boat_pistachio_rest.png',
+    castImageUrl: '/boat_pistachio_cast.png',
+    positions: {
+      rest: { top: 77, left: 31, width: 55, rotate: 0 },
+      wait: { top: 72, left: 38, width: 55, rotate: 0 },
+      cast: { top: 77, left: 37, width: 55, rotate: 0 },
+    },
+  },
+  {
+    id: 'taupe',
+    name: 'Taupe',
+    color: '#9a8a7e',
+    cost: 5000,
+    restImageUrl: '/boat_taupe_rest.png',
+    castImageUrl: '/boat_taupe_cast.png',
+    positions: {
+      rest: { top: 77, left: 31, width: 55, rotate: 0 },
+      wait: { top: 72, left: 38, width: 55, rotate: 0 },
+      cast: { top: 77, left: 37, width: 55, rotate: 0 },
+    },
+  },
 ]
 
 export const BOAT_MAP: Record<string, BoatDef> = Object.fromEntries(BOATS.map(b => [b.id, b]))
