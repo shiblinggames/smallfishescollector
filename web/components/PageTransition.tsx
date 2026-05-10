@@ -6,10 +6,7 @@ export default function PageTransition({ children }: { children: React.ReactNode
   const pathname = usePathname()
 
   return (
-    <div
-      key={pathname}
-      style={{ position: 'relative', zIndex: 1, animation: 'pageFadeIn 0.14s ease-out' }}
-    >
+    <div key={pathname} style={{ position: 'relative', zIndex: 1 }}>
       {children}
     </div>
   )
