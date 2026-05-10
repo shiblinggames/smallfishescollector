@@ -23,7 +23,7 @@ export default async function ProfilePage() {
     { data: rarestFishRows },
   ] = await Promise.all([
     supabase.from('profiles')
-      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges')
+      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges, trophy_catches')
       .eq('id', user.id)
       .single(),
     admin.from('fish_collection')
@@ -63,6 +63,18 @@ export default async function ProfilePage() {
   const rarestFish = ((rarestFishRows ?? []) as any[])
     .map(r => r.fish_species)
     .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
+
+  const trophyIds = ((profile?.trophy_catches as number[] | null) ?? [])
+  const ancientTrophies: { id: number; name: string }[] = []
+  if (trophyIds.length > 0) {
+    const { data: trophyRows } = await admin
+      .from('fish_species')
+      .select('id, name')
+      .in('id', trophyIds)
+    for (const row of (trophyRows ?? []) as { id: number; name: string }[]) {
+      ancientTrophies.push({ id: row.id, name: row.name })
+    }
+  }
 
   const ship = getShip(profile?.ship_tier ?? 0)
   const level = getLevelFromXP(profile?.fishing_xp ?? 0)
@@ -105,6 +117,7 @@ export default async function ProfilePage() {
           hookTier={profile?.hook_tier ?? 0}
           equippedSpecialId={(profile?.equipped_special as string | null) ?? null}
           rarestFish={rarestFish}
+          ancientTrophies={ancientTrophies}
           characterColor={profile?.character_color ?? 'default'}
           unlockedColors={unlockedColors}
           equippedBadges={(profile?.equipped_badges as string[] | null) ?? []}

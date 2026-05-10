@@ -1253,12 +1253,22 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           <p className="font-karla font-400 leading-relaxed mb-0" style={{ fontSize: '0.76rem', color: '#b0afa8' }}>
             {fish.fun_fact}
           </p>
-          <div className="flex items-center gap-1.5 mt-3">
-            <span style={{ width: 7, height: 7, borderRadius: 2, background: r.color, display: 'inline-block', flexShrink: 0 }} />
-            <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
-              Sells for <span style={{ color: '#f0c040' }}>{fish.sell_value.toLocaleString()} ⟡</span>
-            </p>
-          </div>
+          {!isAncient && (
+            <div className="flex items-center gap-1.5 mt-3">
+              <span style={{ width: 7, height: 7, borderRadius: 2, background: r.color, display: 'inline-block', flexShrink: 0 }} />
+              <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
+                Sells for <span style={{ color: '#f0c040' }}>{fish.sell_value.toLocaleString()} ⟡</span>
+              </p>
+            </div>
+          )}
+          {isAncient && (
+            <div className="flex items-center gap-1.5 mt-3">
+              <span style={{ width: 7, height: 7, borderRadius: 2, background: r.color, display: 'inline-block', flexShrink: 0 }} />
+              <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
+                Trophy — kept on display, never sold
+              </p>
+            </div>
+          )}
 
         </div>
       </motion.div>
@@ -3306,7 +3316,7 @@ export default function FishingGame({
           {/* ── Action button — same position every phase ── */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', paddingTop: '0.5rem', paddingBottom: '0.75rem' }}>
             <AnimatePresence mode="wait">
-              {(phase === 'idle' || phase === 'result') && holdTotalCount >= holdCapacity && (
+              {(phase === 'idle' || phase === 'result') && holdTotalCount >= holdCapacity && selectedZone !== 'ancient_deep' && (
                 <motion.div key="holdfull"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="text-center">
@@ -3325,7 +3335,7 @@ export default function FishingGame({
                   </Link>
                 </motion.div>
               )}
-              {phase === 'idle' && holdTotalCount < holdCapacity && hasBait && selectedBaitQty > 0 && (
+              {phase === 'idle' && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && hasBait && selectedBaitQty > 0 && (
                 <motion.button key="cast" onClick={handleCast}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
