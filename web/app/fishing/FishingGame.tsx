@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useTransition, useMemo } from 'reac
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
+import { liquidateAllFish } from '@/app/tavern/market/actions'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -1562,6 +1563,8 @@ export default function FishingGame({
   const [sessionNewSpecies, setSessionNewSpecies] = useState(0)
   const [sessionGems, setSessionGems] = useState(0)
   const [sellPending, setSellPending] = useState<number | null>(null)
+  const [liquidating, setLiquidating] = useState(false)
+  const [liquidateConfirm, setLiquidateConfirm] = useState(false)
   const [buyingWorms, setBuyingWorms] = useState(false)
   const [wormBuyMsg, setWormBuyMsg] = useState<string | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
@@ -2209,6 +2212,18 @@ export default function FishingGame({
       .map(i => i.fish_id === fishId ? { ...i, quantity: i.quantity - qty } : i)
       .filter(i => i.quantity > 0)
     )
+  }
+
+  async function handleLiquidate() {
+    if (liquidating) return
+    setLiquidating(true)
+    const res = await liquidateAllFish()
+    setLiquidating(false)
+    setLiquidateConfirm(false)
+    if ('error' in res) return
+    setInventory([])
+    window.dispatchEvent(new Event('pending-sales-may-have-changed'))
+    setSellOpen(false)
   }
 
   // Auto Caster: fire cast again ~1.5s after a result when equipped and conditions allow
@@ -4390,6 +4405,66 @@ export default function FishingGame({
                     </p>
                   </div>
                 </Link>
+
+                {/* Market Liquidate */}
+                <div style={{
+                  background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.28)',
+                  borderRadius: 16, padding: '1rem 1.1rem',
+                }}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#f0c040' }}>Market Liquidate</p>
+                    <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#bda05a', letterSpacing: '0.1em', padding: '0.15rem 0.45rem', borderRadius: 999, background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.25)' }}>1h delay</span>
+                  </div>
+                  <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#bda05a', lineHeight: 1.45 }}>
+                    Sell all fish at <strong style={{ color: '#f0c040' }}>90% of current market value</strong>. Doubloons arrive after a 1-hour wait — price is locked at sale.
+                  </p>
+                  {!liquidateConfirm ? (
+                    <button
+                      onClick={() => setLiquidateConfirm(true)}
+                      disabled={liquidating || inventory.length === 0}
+                      className="font-karla font-600 uppercase tracking-[0.1em] w-full"
+                      style={{
+                        fontSize: '0.65rem', padding: '0.65rem', borderRadius: 10, marginTop: 12,
+                        background: 'rgba(240,192,64,0.14)',
+                        border: '1px solid rgba(240,192,64,0.45)',
+                        color: '#f0c040', opacity: liquidating ? 0.5 : 1,
+                        cursor: liquidating ? 'default' : 'pointer',
+                      }}
+                    >
+                      Liquidate at Market
+                    </button>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                      <button
+                        onClick={() => setLiquidateConfirm(false)}
+                        disabled={liquidating}
+                        className="font-karla font-600 uppercase tracking-[0.1em]"
+                        style={{
+                          flex: 1, fontSize: '0.62rem', padding: '0.6rem', borderRadius: 10,
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.12)',
+                          color: '#a0a09a', cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleLiquidate}
+                        disabled={liquidating}
+                        className="font-karla font-700 uppercase tracking-[0.1em]"
+                        style={{
+                          flex: 2, fontSize: '0.62rem', padding: '0.6rem', borderRadius: 10,
+                          background: 'linear-gradient(180deg, rgba(240,192,64,0.28) 0%, rgba(240,192,64,0.14) 100%)',
+                          border: '1px solid rgba(240,192,64,0.55)',
+                          color: '#f0c040', cursor: liquidating ? 'default' : 'pointer',
+                          opacity: liquidating ? 0.6 : 1,
+                        }}
+                      >
+                        {liquidating ? 'Submitting…' : 'Confirm — Lock Price'}
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 {/* Quick Sell */}
                 <div style={{

@@ -2,9 +2,92 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+const PENDING_SALE_DELAY_MS = 60 * 60 * 1000 // 1 hour
+
+// Settles all matured pending sales for a user. Returns total newly credited.
+// Safe to call from any profile-reading path (server components, server actions).
+export async function settlePendingSales(
+  userId: string,
+  admin?: SupabaseClient,
+): Promise<number> {
+  const db = admin ?? createAdminClient()
+  const nowIso = new Date().toISOString()
+
+  const { data: matured } = await db
+    .from('pending_sales')
+    .select('id, amount')
+    .eq('user_id', userId)
+    .lte('settles_at', nowIso)
+
+  if (!matured || matured.length === 0) return 0
+
+  const totalCredit = matured.reduce((s, r) => s + (r.amount ?? 0), 0)
+  if (totalCredit <= 0) return 0
+
+  const { data: profile } = await db
+    .from('profiles')
+    .select('doubloons')
+    .eq('id', userId)
+    .single()
+  const newDoubloons = (profile?.doubloons ?? 0) + totalCredit
+
+  await Promise.all([
+    db.from('profiles').update({ doubloons: newDoubloons }).eq('id', userId),
+    db.from('pending_sales').delete().in('id', matured.map(r => r.id)),
+    db.from('doubloon_transactions').insert({
+      user_id: userId,
+      amount: totalCredit,
+      reason: `Pending sale${matured.length === 1 ? '' : 's'} settled`,
+    }),
+  ])
+
+  return totalCredit
+}
+
+export type PendingSale = {
+  id: string
+  amount: number
+  fishCount: number
+  reason: string
+  settlesAt: string
+}
+
+export async function getPendingSales(): Promise<{
+  pending: PendingSale[]
+  justSettled: number
+  doubloons: number
+}> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { pending: [], justSettled: 0, doubloons: 0 }
+
+  const admin = createAdminClient()
+  const justSettled = await settlePendingSales(user.id, admin)
+
+  const [{ data }, { data: profile }] = await Promise.all([
+    admin
+      .from('pending_sales')
+      .select('id, amount, fish_count, reason, settles_at')
+      .eq('user_id', user.id)
+      .order('settles_at', { ascending: true }),
+    admin.from('profiles').select('doubloons').eq('id', user.id).single(),
+  ])
+
+  const pending: PendingSale[] = (data ?? []).map(r => ({
+    id: r.id as string,
+    amount: r.amount as number,
+    fishCount: r.fish_count as number,
+    reason: r.reason as string,
+    settlesAt: r.settles_at as string,
+  }))
+
+  return { pending, justSettled, doubloons: (profile?.doubloons as number | null) ?? 0 }
+}
 
 export async function liquidateAllFish(): Promise<
-  { earned: number; doubloons: number; fishSold: number } | { error: string }
+  { earned: number; pendingId: string; settlesAt: string; fishSold: number; doubloons: number } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -46,24 +129,36 @@ export async function liquidateAllFish(): Promise<
     totalFishSold += item.quantity
   }
 
-  const newDoubloons = (profile.doubloons ?? 0) + totalEarned
+  if (totalEarned <= 0) return { error: 'Nothing to liquidate' }
 
-  await Promise.all([
+  const settlesAt = new Date(Date.now() + PENDING_SALE_DELAY_MS).toISOString()
+
+  const [, , pendingRes] = await Promise.all([
     ...inventory.map(item =>
       admin.from('fish_inventory')
         .update({ quantity: 0 })
         .eq('user_id', user.id)
         .eq('fish_id', item.fish_id)
     ),
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({
+    Promise.resolve(null),
+    admin.from('pending_sales').insert({
       user_id: user.id,
       amount: totalEarned,
-      reason: `Liquidated ${totalFishSold} fish (market)`,
-    }),
+      fish_count: totalFishSold,
+      reason: `Liquidated ${totalFishSold} fish`,
+      settles_at: settlesAt,
+    }).select('id').single(),
   ])
 
-  return { earned: totalEarned, doubloons: newDoubloons, fishSold: totalFishSold }
+  const pendingId = (pendingRes?.data?.id as string | undefined) ?? ''
+
+  return {
+    earned: totalEarned,
+    pendingId,
+    settlesAt,
+    fishSold: totalFishSold,
+    doubloons: profile.doubloons ?? 0,
+  }
 }
 
 export async function marketSellFish(
@@ -77,6 +172,7 @@ export async function marketSellFish(
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
+  await settlePendingSales(user.id, admin)
 
   const [{ data: invRow }, { data: fish }, { data: profile }, { data: market }] = await Promise.all([
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', fishId).single(),

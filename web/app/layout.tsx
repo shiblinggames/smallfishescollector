@@ -5,6 +5,7 @@ import PageTransition from '@/components/PageTransition'
 import ClientBackground from '@/components/ClientBackground'
 import MobileTabBar from '@/components/MobileTabBar'
 import BadgeWatcher from '@/components/BadgeWatcher'
+import PendingSalesWatcher from '@/components/PendingSalesWatcher'
 
 const cinzel = Cinzel({
   subsets: ['latin'],
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </PageTransition>
 <MobileTabBar />
         <BadgeWatcher />
+        <PendingSalesWatcher />
         <footer className="sm:pb-4 pt-3 text-center">
           <p className="font-karla font-300 text-[#3a3835]" style={{ fontSize: '0.65rem' }}>
             &copy; {new Date().getFullYear()} Shibling Games LLC

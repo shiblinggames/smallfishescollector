@@ -18,7 +18,7 @@ const TOUR_STEPS = [
   },
   {
     title: 'Your Portfolio',
-    body: 'Fish you\'re holding show up here with the live market price, sparkline history, and sell buttons. You can also Liquidate All at the bottom to instantly cash out everything at 90% market price.',
+    body: 'Fish you\'re holding show up here with the live market price, sparkline history, and sell buttons. You can also Liquidate All at the bottom to cash out everything at 90% market price — doubloons arrive 1 hour after you lock in the price.',
     color: '#4ade80',
   },
   {
@@ -342,9 +342,8 @@ export default function MarketClient({
       const res = await liquidateAllFish()
       setLiquidating(false)
       if ('error' in res) { showToast(res.error); return }
-      setDoubloons(res.doubloons)
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
-      showToast(`+${res.earned.toLocaleString()} ⟡ · ${res.fishSold} fish liquidated`)
+      window.dispatchEvent(new Event('pending-sales-may-have-changed'))
+      showToast(`+${res.earned.toLocaleString()} ⟡ pending · settles in 1h`)
       setPortfolio([])
     })
   }
@@ -405,7 +404,7 @@ export default function MarketClient({
                 {!liquidateConfirm ? (
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#6a6764' }}>Liquidate All · 90% market · 3% fee</p>
+                      <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#6a6764' }}>Liquidate All · 90% market · 3% fee · 1h delay</p>
                       <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f87171' }}>
                         {liquidateValue.toLocaleString()} ⟡
                       </p>
@@ -425,7 +424,7 @@ export default function MarketClient({
                 ) : (
                   <div>
                     <p className="font-karla font-400 mb-2" style={{ fontSize: '0.65rem', color: '#9a9488' }}>
-                      Sell all {totalCount} fish for {liquidateValue.toLocaleString()} ⟡?
+                      Lock in {liquidateValue.toLocaleString()} ⟡ for {totalCount} fish? Doubloons arrive in 1 hour.
                     </p>
                     <div className="flex gap-2">
                       <button
