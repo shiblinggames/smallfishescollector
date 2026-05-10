@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { RODS } from '@/lib/rods'
 import { HOOKS } from '@/lib/hooks'
 import { BADGES, BADGE_SLOT_POSITIONS, type BadgePos, type BadgeFrame } from '@/lib/badges'
+import { BOATS } from '@/lib/boats'
 
 type Frame = 'rest' | 'wait' | 'cast'
 
@@ -39,11 +40,8 @@ const CHAR_DEFAULT: Record<Frame, { bottom: number; left: number; width: number 
 }
 
 // Boat overlay — per-frame because the character bobs/shifts across rest/wait/cast.
-const BOAT_DEFAULT: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
-  rest: { top: 72, left: 38, width: 55, rotate: 0 },
-  wait: { top: 72, left: 38, width: 55, rotate: 0 },
-  cast: { top: 72, left: 38, width: 55, rotate: 0 },
-}
+// Defaults sourced from the BOATS registry so the test page mirrors production.
+const BOAT_DEFAULT: Record<Frame, { top: number; left: number; width: number; rotate: number }> = BOATS[0].positions
 
 function Slider({ label, value, min, max, step = 1, onChange }: {
   label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void
@@ -141,7 +139,7 @@ export default function FishingTestClient() {
             <img src={FRAMES[frame]} alt="" style={{ width: '100%', display: 'block' }} />
 
             {boatEnabled && (
-              <img src={frame === 'cast' ? '/boat_oak_cast.png' : '/boat_oak_rest.png'} alt="boat" style={{
+              <img src={frame === 'cast' ? BOATS[0].castImageUrl : BOATS[0].restImageUrl} alt="boat" style={{
                 position: 'absolute',
                 top: `${boatCfg[frame].top}%`, left: `${boatCfg[frame].left}%`,
                 width: `${boatCfg[frame].width}%`,
