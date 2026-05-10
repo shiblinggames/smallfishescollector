@@ -283,6 +283,9 @@ export default function MarketClient({
       setPendingSales(list)
     }
     window.addEventListener('pending-sales-changed', onChange)
+    // Ask the watcher to refetch and re-dispatch — covers the case where the
+    // watcher's initial fetch completed before this component mounted.
+    window.dispatchEvent(new Event('pending-sales-may-have-changed'))
     return () => window.removeEventListener('pending-sales-changed', onChange)
   }, [])
 
