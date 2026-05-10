@@ -25,7 +25,7 @@ export default function FishingPageClient({
   initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
   fishHoldTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, activeSession, username, zoneRewardsClaimed,
-  initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat,
+  initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats,
 }: {
   hookTier: number
   rodTier: number
@@ -63,6 +63,7 @@ export default function FishingPageClient({
   marketMultipliers: Record<number, number>
   isPremium: boolean
   equippedBoat: string | null
+  unlockedBoats: string[]
 }) {
   const fishingLevel = getLevelFromXP(initialFishingXP)
 
@@ -136,6 +137,7 @@ export default function FishingPageClient({
       marketMultipliers={marketMultipliers}
       isPremium={isPremium}
       initialEquippedBoat={equippedBoat}
+      initialUnlockedBoats={unlockedBoats}
     />
   )
 }

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipBoat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipBoat, buyBoat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
 import { liquidateAllFish } from '@/app/tavern/market/actions'
 import { BOATS, getBoat } from '@/lib/boats'
 import { upgradeFishHold } from './holdActions'
@@ -1561,7 +1561,7 @@ export default function FishingGame({
   initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster,
   initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
-  marketMultipliers, isPremium, initialEquippedBoat,
+  marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats,
 }: {
   hookTier: number
   rodTier: number
@@ -1600,10 +1600,12 @@ export default function FishingGame({
   marketMultipliers: Record<number, number>
   isPremium: boolean
   initialEquippedBoat: string | null
+  initialUnlockedBoats: string[]
 }) {
 
   const [localCharacterColor, setLocalCharacterColor] = useState(characterColor)
   const [equippedBoat, setEquippedBoat] = useState<string | null>(initialEquippedBoat)
+  const [unlockedBoats, setUnlockedBoats] = useState<string[]>(initialUnlockedBoats)
   const boatDef = getBoat(equippedBoat)
   const [localEquippedBadges, setLocalEquippedBadges] = useState(equippedBadges)
   const charSrc = getCharSrc(localCharacterColor)
@@ -4280,10 +4282,21 @@ export default function FishingGame({
                   await equipBadge(id, targetSlot)
                 }
               }}
+              doubloons={doubloons}
               equippedBoat={equippedBoat}
+              unlockedBoats={unlockedBoats}
               onEquipBoat={async (id) => {
                 setEquippedBoat(id)
                 await equipBoat(id)
+              }}
+              onBuyBoat={async (id) => {
+                const res = await buyBoat(id)
+                if ('ok' in res) {
+                  setUnlockedBoats(prev => prev.includes(id) ? prev : [...prev, id])
+                  setEquippedBoat(id)
+                  setDoubloons(res.doubloons)
+                  window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+                }
               }}
               equippedRingSkin={equippedRingSkin}
               unlockedRingSkins={unlockedRingSkins}

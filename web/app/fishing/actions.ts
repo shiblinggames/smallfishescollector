@@ -828,8 +828,43 @@ export async function equipBoat(boatId: string | null): Promise<{ ok: true } | {
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
+  if (boatId !== null) {
+    const { data: profile } = await admin.from('profiles').select('unlocked_boats').eq('id', user.id).single()
+    const unlocked = (profile?.unlocked_boats as string[] | null) ?? []
+    if (!unlocked.includes(boatId)) return { error: 'Boat not unlocked' }
+  }
   await admin.from('profiles').update({ equipped_boat: boatId }).eq('id', user.id)
   return { ok: true }
+}
+
+export async function buyBoat(boatId: string): Promise<{ ok: true; doubloons: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { BOAT_MAP } = await import('@/lib/boats')
+  const def = BOAT_MAP[boatId]
+  if (!def) return { error: 'Unknown boat' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('doubloons, unlocked_boats').eq('id', user.id).single()
+  if (!profile) return { error: 'Profile not found' }
+  const unlocked = (profile.unlocked_boats as string[] | null) ?? []
+  if (unlocked.includes(boatId)) return { error: 'Already owned' }
+  if ((profile.doubloons ?? 0) < def.cost) return { error: 'Not enough doubloons' }
+
+  const newDoubloons = (profile.doubloons ?? 0) - def.cost
+  await admin.from('profiles').update({
+    doubloons: newDoubloons,
+    unlocked_boats: [...unlocked, boatId],
+    equipped_boat: boatId,
+  }).eq('id', user.id)
+  await admin.from('doubloon_transactions').insert({
+    user_id: user.id,
+    amount: -def.cost,
+    reason: `Bought ${def.name} boat`,
+  })
+  return { ok: true, doubloons: newDoubloons }
 }
 
 export async function equipRingSkin(skin: string): Promise<{ ok: true } | { error: string }> {

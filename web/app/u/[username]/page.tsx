@@ -22,7 +22,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
     admin.from('profiles')
-      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges')
+      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat')
       .ilike('username', username)
       .single(),
   ])
@@ -142,6 +142,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           characterColor={profile?.character_color ?? 'default'}
           equippedSpecialId={(profile?.equipped_special as string | null) ?? null}
           equippedBadges={(profile?.equipped_badges as string[] | null) ?? []}
+          equippedBoat={(profile?.equipped_boat as string | null) ?? null}
         />
       </main>
     </>

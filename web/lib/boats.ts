@@ -9,6 +9,10 @@ export type BoatPos = { top: number; left: number; width: number; rotate: number
 export interface BoatDef {
   id: string
   name: string
+  /** Swatch color shown in the picker (not the rendered overlay) */
+  color: string
+  /** Doubloon cost in the gear-slot shop */
+  cost: number
   /** /public path to the rest+wait variant */
   restImageUrl: string
   /** /public path to the cast variant */
@@ -17,10 +21,15 @@ export interface BoatDef {
   positions: Record<BoatFrame, BoatPos>
 }
 
+/** Default "Driftwood" — no overlay; uses the base sprite's boat. */
+export const DEFAULT_BOAT_COLOR = '#a07858'
+
 export const BOATS: BoatDef[] = [
   {
     id: 'oak',
-    name: 'Oak Dinghy',
+    name: 'Oak',
+    color: '#bda05a',
+    cost: 1000,
     restImageUrl: '/boat_oak_rest.png',
     castImageUrl: '/boat_oak_cast.png',
     positions: {

@@ -12,6 +12,7 @@ import { getShip } from '@/lib/ships'
 import { getShipSkin } from '@/lib/shipSkins'
 import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
 import { getCharacterSprites } from '@/lib/characters'
+import { getBoat } from '@/lib/boats'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 import { BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 
@@ -59,6 +60,7 @@ interface Props {
   stats: Stats
   gear: Gear
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
+  equippedBoat?: string | null
   ownedSpecialIds?: string[]
   raidItemIds?: string[]
   equippedShipSkin?: string | null
@@ -192,7 +194,7 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   )
 }
 
-export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [] }: Props) {
+export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
@@ -276,6 +278,20 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
             }}>
               <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '72%', maxWidth: 260 }}>
                 <img src={charSprites.rest} alt="" style={{ width: '100%', display: 'block' }} />
+                {(() => {
+                  const bd = getBoat(equippedBoat)
+                  if (!bd) return null
+                  const bp = bd.positions.rest
+                  return (
+                    <img src={bd.restImageUrl} alt="" style={{
+                      position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
+                      width: `${bp.width}%`,
+                      transform: `rotate(${bp.rotate}deg)`,
+                      transformOrigin: 'center center',
+                      pointerEvents: 'none',
+                    }} />
+                  )
+                })()}
                 {rod.imageUrl && (
                   <img src={rod.imageUrl} alt="" className={rod.glow ? 'rod-glow' : undefined} style={{
                     position: 'absolute', top: '33%', left: '12%', width: '51%',

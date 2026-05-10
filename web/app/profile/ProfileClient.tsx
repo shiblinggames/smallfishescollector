@@ -9,6 +9,7 @@ import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { updateUsername, updateShowcase, updateCharacterColor } from '@/app/u/actions'
 import { equipBadge, unequipBadge } from '@/app/achievements/badgeActions'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
+import { getBoat } from '@/lib/boats'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import { getRod } from '@/lib/rods'
 import { getHook } from '@/lib/hooks'
@@ -47,6 +48,7 @@ interface Props {
   equippedSpecialId: string | null
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
   ancientTrophies: { id: number; name: string }[]
+  equippedBoat: string | null
   characterColor: string
   unlockedColors: string[]
   equippedBadges: string[]
@@ -201,6 +203,7 @@ export default function ProfileClient({
   equippedSpecialId,
   rarestFish,
   ancientTrophies,
+  equippedBoat,
   characterColor: initialCharacterColor,
   unlockedColors,
   equippedBadges: initialEquippedBadges,
@@ -651,6 +654,20 @@ export default function ProfileClient({
             }}>
               <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '72%', maxWidth: 260 }}>
                 <img src={charSprites.rest} alt="" style={{ width: '100%', display: 'block' }} />
+                {(() => {
+                  const bd = getBoat(equippedBoat)
+                  if (!bd) return null
+                  const bp = bd.positions.rest
+                  return (
+                    <img src={bd.restImageUrl} alt="" style={{
+                      position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
+                      width: `${bp.width}%`,
+                      transform: `rotate(${bp.rotate}deg)`,
+                      transformOrigin: 'center center',
+                      pointerEvents: 'none',
+                    }} />
+                  )
+                })()}
                 {rod.imageUrl && (
                   <img src={rod.imageUrl} alt="" className={rod.glow ? 'rod-glow' : undefined} style={{
                     position: 'absolute', top: '33%', left: '12%', width: '51%',
