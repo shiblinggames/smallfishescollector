@@ -19,6 +19,8 @@ export default function BadgeUnlockedCelebration({
 
   const badge = badgeId ? BADGE_MAP[badgeId] : null
 
+  if (!badge) return null
+
   return (
     <div
       style={{

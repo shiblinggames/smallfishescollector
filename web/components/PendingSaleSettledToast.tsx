@@ -20,6 +20,8 @@ export default function PendingSaleSettledToast({
     return () => { clearTimeout(t); clearTimeout(cleanup) }
   }, [amount, onDismiss])
 
+  if (amount === null && !visible) return null
+
   return (
     <div
       style={{
