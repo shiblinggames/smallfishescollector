@@ -888,7 +888,7 @@ function FishImg({ name, style }: { name: string; style?: React.CSSProperties })
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, ancientCount = 0, ancientTotal = 6 }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
@@ -899,12 +899,19 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   perfectStreak?: number
   streakBonusXP?: number
   jackpotMultiplier?: number
+  ancientCount?: number
+  ancientTotal?: number
 }) {
   const habitatColor = HABITAT_COLOR[fish.habitat] ?? '#888'
   const habitatLabel = HABITAT_LABEL[fish.habitat] ?? fish.habitat
+  const isAncient = fish.habitat === 'ancient_deep'
   const rarity = fish.bite_rarity ?? 1
-  const r = RARITY[rarity] ?? RARITY[1]
-  const isLegendary = rarity === 5
+  const baseR = RARITY[rarity] ?? RARITY[1]
+  // Ancient deep gets its own palette + label, overriding the gold legendary look
+  const r = isAncient
+    ? { label: 'Ancient', color: '#a78bfa', hookedText: baseR.hookedText }
+    : baseR
+  const isLegendary = rarity === 5 && !isAncient
   const isEpicPlus  = rarity >= 4
 
   const glowShadow: Record<number, string> = {
@@ -919,6 +926,55 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
 
   return (
     <div style={{ position: 'relative' }}>
+
+      {/* Ancient One discovery banner */}
+      {isAncient && (
+        <motion.div
+          initial={{ opacity: 0, y: -12, scale: 0.92 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 240, damping: 16, delay: 0.05 }}
+          className="mb-2"
+          style={{
+            position: 'relative',
+            padding: '0.7rem 0.95rem',
+            borderRadius: 14,
+            background: 'linear-gradient(135deg, rgba(36,12,56,0.96) 0%, rgba(8,18,40,0.98) 70%, rgba(8,32,40,0.96) 100%)',
+            border: '1px solid rgba(167,139,250,0.5)',
+            boxShadow: '0 0 30px rgba(167,139,250,0.32), inset 0 1px 0 rgba(255,255,255,0.06)',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Slow shimmer sweep across the banner */}
+          <motion.div
+            initial={{ x: '-100%' }}
+            animate={{ x: '220%' }}
+            transition={{ duration: 2.4, delay: 0.4, ease: 'easeOut', repeat: Infinity, repeatDelay: 4 }}
+            style={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(105deg, transparent 30%, rgba(167,139,250,0.22) 50%, rgba(103,232,249,0.18) 60%, transparent 75%)',
+              pointerEvents: 'none',
+            }}
+          />
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+            <div>
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.26em', color: '#67e8f9', marginBottom: 3 }}>
+                Ancient One Discovered
+              </p>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#e9d5ff', lineHeight: 1.1, textShadow: '0 0 14px rgba(167,139,250,0.5)' }}>
+                A relic from the deep
+              </p>
+            </div>
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#a78bfa', lineHeight: 1, textShadow: '0 0 12px rgba(167,139,250,0.55)' }}>
+                {ancientCount}<span style={{ color: '#5b4f7a' }}>/{ancientTotal}</span>
+              </p>
+              <p className="font-karla font-600 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.15em', color: '#8b5cf6', marginTop: 2 }}>
+                Revealed
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Perfect catch banner */}
       {isPerfect && (() => {
@@ -1057,15 +1113,15 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
       {/* Card + all its effects in one relative container */}
       <div style={{ position: 'relative' }}>
 
-        {/* Burst rings — epic gets 2, legendary gets 3 */}
-        {isEpicPlus && [0, 0.09, ...(isLegendary ? [0.18] : [])].map((delay, i) => (
+        {/* Burst rings — epic gets 2, legendary 3, ancient 5 */}
+        {isEpicPlus && (isAncient ? [0, 0.1, 0.22, 0.36, 0.52] : [0, 0.09, ...(isLegendary ? [0.18] : [])]).map((delay, i) => (
           <motion.div key={i}
-            initial={{ scale: 0.88, opacity: isLegendary ? 0.75 - i * 0.18 : 0.55 - i * 0.15 }}
-            animate={{ scale: isLegendary ? 1.9 - i * 0.18 : 1.55 - i * 0.12, opacity: 0 }}
-            transition={{ duration: isLegendary ? 0.7 : 0.5, ease: 'easeOut', delay: delay + (isLegendary ? 0.12 : 0.04) }}
+            initial={{ scale: 0.86, opacity: isAncient ? 0.85 - i * 0.13 : isLegendary ? 0.75 - i * 0.18 : 0.55 - i * 0.15 }}
+            animate={{ scale: isAncient ? 2.2 - i * 0.18 : isLegendary ? 1.9 - i * 0.18 : 1.55 - i * 0.12, opacity: 0 }}
+            transition={{ duration: isAncient ? 0.95 : isLegendary ? 0.7 : 0.5, ease: 'easeOut', delay: delay + (isAncient ? 0.16 : isLegendary ? 0.12 : 0.04) }}
             style={{
               position: 'absolute', inset: 0, borderRadius: '1rem',
-              border: `${isLegendary ? 1.5 - i * 0.3 : 1}px solid ${r.color}${isLegendary ? 'dd' : '99'}`,
+              border: `${isAncient ? 1.6 - i * 0.22 : isLegendary ? 1.5 - i * 0.3 : 1}px solid ${r.color}${isAncient ? 'cc' : isLegendary ? 'dd' : '99'}`,
               pointerEvents: 'none', zIndex: 2,
             }}
           />
@@ -1080,6 +1136,20 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             style={{
               position: 'absolute', inset: -24, borderRadius: '2rem',
               background: `radial-gradient(ellipse at 50% 55%, ${r.color}60 0%, transparent 68%)`,
+              pointerEvents: 'none', zIndex: 0,
+            }}
+          />
+        )}
+
+        {/* Ancient color bloom — violet to cyan iridescent */}
+        {isAncient && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0.32, 0.18, 0] }}
+            transition={{ duration: 1.2, delay: 0.1, ease: 'easeOut' }}
+            style={{
+              position: 'absolute', inset: -32, borderRadius: '2.4rem',
+              background: 'radial-gradient(ellipse at 50% 55%, rgba(167,139,250,0.55) 0%, rgba(103,232,249,0.28) 40%, transparent 75%)',
               pointerEvents: 'none', zIndex: 0,
             }}
           />
@@ -1102,9 +1172,9 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
 
       {/* Card */}
       <motion.div
-        initial={{ opacity: 0, y: isLegendary ? 40 : isEpicPlus ? 24 : 16, scale: isLegendary ? 0.84 : isEpicPlus ? 0.91 : 0.96 }}
+        initial={{ opacity: 0, y: isAncient ? 48 : isLegendary ? 40 : isEpicPlus ? 24 : 16, scale: isAncient ? 0.78 : isLegendary ? 0.84 : isEpicPlus ? 0.91 : 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: 'spring', stiffness: isLegendary ? 140 : isEpicPlus ? 210 : 280, damping: isLegendary ? 11 : isEpicPlus ? 16 : 22, delay: isLegendary ? 0.1 : 0 }}
+        transition={{ type: 'spring', stiffness: isAncient ? 110 : isLegendary ? 140 : isEpicPlus ? 210 : 280, damping: isAncient ? 10 : isLegendary ? 11 : isEpicPlus ? 16 : 22, delay: isAncient ? 0.18 : isLegendary ? 0.1 : 0 }}
         className="rounded-2xl overflow-hidden"
         style={{
           border: `1px solid ${r.color}${borderOpMap[rarity] ?? '55'}`,
@@ -1121,6 +1191,19 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             style={{
               position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
               background: 'linear-gradient(105deg, transparent 25%, rgba(255,210,80,0.30) 50%, transparent 75%)',
+            }}
+          />
+        )}
+
+        {/* Ancient iridescent sweep — slower, dual-tone */}
+        {isAncient && (
+          <motion.div
+            initial={{ x: '-100%' }}
+            animate={{ x: '220%' }}
+            transition={{ duration: 2.2, delay: 0.7, ease: 'easeOut', repeat: Infinity, repeatDelay: 3.0 }}
+            style={{
+              position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
+              background: 'linear-gradient(105deg, transparent 22%, rgba(167,139,250,0.32) 48%, rgba(103,232,249,0.28) 56%, transparent 78%)',
             }}
           />
         )}
@@ -3199,7 +3282,7 @@ export default function FishingGame({
                       )}
                     </motion.div>
                   ) : catchResult ? (
-                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} xpGained={catchResult.xpGained} doubleCatch={catchResult.doubleCatch} gemEarned={catchResult.gemEarned} perfectStreak={catchResult.perfectStreak} streakBonusXP={catchResult.streakBonusXP} jackpotMultiplier={catchResult.jackpotMultiplier} />
+                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} xpGained={catchResult.xpGained} doubleCatch={catchResult.doubleCatch} gemEarned={catchResult.gemEarned} perfectStreak={catchResult.perfectStreak} streakBonusXP={catchResult.streakBonusXP} jackpotMultiplier={catchResult.jackpotMultiplier} ancientCount={trophyCatches.size} ancientTotal={allFishSpecies.filter(f => f.habitat === 'ancient_deep').length || 6} />
                   ) : missResult ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
                       <p className="font-cinzel font-700 mb-1"
