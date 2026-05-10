@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipBoat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
 import { liquidateAllFish } from '@/app/tavern/market/actions'
+import { BOATS, getBoat } from '@/lib/boats'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -1560,7 +1561,7 @@ export default function FishingGame({
   initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster,
   initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
-  marketMultipliers, isPremium,
+  marketMultipliers, isPremium, initialEquippedBoat,
 }: {
   hookTier: number
   rodTier: number
@@ -1598,9 +1599,12 @@ export default function FishingGame({
   unlockedBadges: string[]
   marketMultipliers: Record<number, number>
   isPremium: boolean
+  initialEquippedBoat: string | null
 }) {
 
   const [localCharacterColor, setLocalCharacterColor] = useState(characterColor)
+  const [equippedBoat, setEquippedBoat] = useState<string | null>(initialEquippedBoat)
+  const boatDef = getBoat(equippedBoat)
   const [localEquippedBadges, setLocalEquippedBadges] = useState(equippedBadges)
   const charSrc = getCharSrc(localCharacterColor)
 
@@ -2553,6 +2557,19 @@ export default function FishingGame({
                 visibility: visible ? 'visible' : 'hidden',
               }}>
                 <img src={charSrc[f]} alt="" style={{ width: '100%', display: 'block' }} />
+                {boatDef && (() => {
+                  const bp = boatDef.positions[f]
+                  const src = f === 'cast' ? boatDef.castImageUrl : boatDef.restImageUrl
+                  return (
+                    <img src={src} alt="" style={{
+                      position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
+                      width: `${bp.width}%`,
+                      transform: `rotate(${bp.rotate}deg)`,
+                      transformOrigin: 'center center',
+                      pointerEvents: 'none',
+                    }} />
+                  )
+                })()}
                 {rod.imageUrl && (
                   <img src={rod.imageUrl} alt="" className={rod.glow ? 'rod-glow' : undefined} style={{
                     position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
@@ -4262,6 +4279,11 @@ export default function FishingGame({
                   setLocalEquippedBadges(newSlots)
                   await equipBadge(id, targetSlot)
                 }
+              }}
+              equippedBoat={equippedBoat}
+              onEquipBoat={async (id) => {
+                setEquippedBoat(id)
+                await equipBoat(id)
               }}
               equippedRingSkin={equippedRingSkin}
               unlockedRingSkins={unlockedRingSkins}

@@ -28,7 +28,7 @@ export default async function FishingPage() {
     getActiveChallengeSession(),
     getDailyChallenge(),
     admin.from('profiles')
-      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, fish_hold_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, ring_skin, unlocked_ring_skins, has_tide_turner, tide_turner_used, tide_turner_date, equipped_special, has_phantom_hook, has_auto_caster, prestige_levels, trophy_catches, character_color, equipped_badges, unlocked_badges, unlocked_character_colors, is_premium, premium_expires_at')
+      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, fish_hold_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, ring_skin, unlocked_ring_skins, has_tide_turner, tide_turner_used, tide_turner_date, equipped_special, has_phantom_hook, has_auto_caster, prestige_levels, trophy_catches, character_color, equipped_badges, unlocked_badges, unlocked_character_colors, equipped_boat, is_premium, premium_expires_at')
       .eq('id', user.id)
       .single(),
     admin.from('bait_inventory')
@@ -125,6 +125,7 @@ export default async function FishingPage() {
           equippedBadges={(profile?.equipped_badges as string[] | null) ?? []}
           marketMultipliers={marketMultipliers}
           isPremium={isPremium}
+          equippedBoat={(profile?.equipped_boat as string | null) ?? null}
         />
       </main>
     </>
