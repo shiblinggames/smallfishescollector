@@ -38,6 +38,9 @@ const CHAR_DEFAULT: Record<Frame, { bottom: number; left: number; width: number 
   cast: { bottom: 60, left: 26, width: 70 },
 }
 
+// Boat overlay is shared across all frames (boat doesn't move during cast).
+const BOAT_DEFAULT = { top: 65, left: 0, width: 100, rotate: 0 }
+
 function Slider({ label, value, min, max, step = 1, onChange }: {
   label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void
 }) {
@@ -68,6 +71,8 @@ export default function FishingTestClient() {
   const [hookCfg, setHookCfg] = useState(HOOK_OVERLAY)
   const [charCfg, setCharCfg] = useState(CHAR_DEFAULT)
   const [badgeCfg, setBadgeCfg] = useState(BADGE_SLOT_POSITIONS)
+  const [boatCfg, setBoatCfg] = useState(BOAT_DEFAULT)
+  const [boatEnabled, setBoatEnabled] = useState(true)
   const [activeSlot, setActiveSlot] = useState(0)
   // per-slot selected badge id (null = empty)
   const [slotBadges, setSlotBadges] = useState<(string | null)[]>([
@@ -129,6 +134,17 @@ export default function FishingTestClient() {
             width: `${cp.width}%`,
           }}>
             <img src={FRAMES[frame]} alt="" style={{ width: '100%', display: 'block' }} />
+
+            {boatEnabled && (
+              <img src="/boat_oak.png" alt="boat" style={{
+                position: 'absolute',
+                top: `${boatCfg.top}%`, left: `${boatCfg.left}%`,
+                width: `${boatCfg.width}%`,
+                transform: `rotate(${boatCfg.rotate}deg)`,
+                transformOrigin: 'center center',
+                pointerEvents: 'none',
+              }} />
+            )}
 
             {rod.imageUrl && (
               <img src={rod.imageUrl} alt="rod" className={rod.glow ? 'rod-glow' : undefined} style={{
@@ -230,6 +246,25 @@ export default function FishingTestClient() {
         <Slider label="width %"  value={rc.width}  min={10}  max={150}  onChange={v => setRod('width',  v)} />
         <Slider label="rotate °" value={rc.rotate} min={-180} max={180} onChange={v => setRod('rotate', v)} />
 
+        {/* Boat overlay */}
+        <p style={{ fontWeight: 700, marginTop: 14, marginBottom: 6, color: '#fff' }}>
+          Boat overlay
+          <button onClick={() => setBoatEnabled(!boatEnabled)} style={{
+            marginLeft: 8, padding: '2px 8px', fontSize: 10, borderRadius: 4,
+            background: boatEnabled ? '#16a34a' : 'rgba(255,255,255,0.08)',
+            border: 'none', color: '#fff', cursor: 'pointer',
+          }}>{boatEnabled ? 'On' : 'Off'}</button>
+        </p>
+        {boatEnabled && (
+          <>
+            <p style={{ fontWeight: 600, marginBottom: 4, color: '#fb923c' }}>Boat (all frames)</p>
+            <Slider label="top %"    value={boatCfg.top}    min={-20} max={120} onChange={v => setBoatCfg(p => ({ ...p, top: v }))} />
+            <Slider label="left %"   value={boatCfg.left}   min={-50} max={100} onChange={v => setBoatCfg(p => ({ ...p, left: v }))} />
+            <Slider label="width %"  value={boatCfg.width}  min={20}  max={200} onChange={v => setBoatCfg(p => ({ ...p, width: v }))} />
+            <Slider label="rotate °" value={boatCfg.rotate} min={-30} max={30}  onChange={v => setBoatCfg(p => ({ ...p, rotate: v }))} />
+          </>
+        )}
+
         {/* Hook picker */}
         <p style={{ fontWeight: 700, marginTop: 14, marginBottom: 6, color: '#fff' }}>Hook</p>
         <select value={hookTier} onChange={e => setHookTier(Number(e.target.value))}
@@ -285,7 +320,7 @@ export default function FishingTestClient() {
         {/* Config dump */}
         <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Current config</p>
         <pre style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
-{`CHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}`}
+{`CHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBOAT:\n${JSON.stringify(boatCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}`}
         </pre>
       </div>
     </div>
