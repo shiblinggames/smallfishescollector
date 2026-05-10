@@ -38,6 +38,19 @@ export const BOATS: BoatDef[] = [
       cast: { top: 77, left: 37, width: 55, rotate: 0 },
     },
   },
+  {
+    id: 'cherry',
+    name: 'Cherry',
+    color: '#c84a3a',
+    cost: 2000,
+    restImageUrl: '/boat_cherry_rest.png',
+    castImageUrl: '/boat_cherry_cast.png',
+    positions: {
+      rest: { top: 77, left: 31, width: 55, rotate: 0 },
+      wait: { top: 72, left: 38, width: 55, rotate: 0 },
+      cast: { top: 77, left: 37, width: 55, rotate: 0 },
+    },
+  },
 ]
 
 export const BOAT_MAP: Record<string, BoatDef> = Object.fromEntries(BOATS.map(b => [b.id, b]))
