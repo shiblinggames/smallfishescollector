@@ -2554,13 +2554,14 @@ export default function FishingGame({
               }}>
                 <img src={charSrc[f]} alt="" style={{ width: '100%', display: 'block' }} />
                 {rod.imageUrl && (
-                  <img src={rod.imageUrl} alt="" style={{
+                  <img src={rod.imageUrl} alt="" className={rod.glow ? 'rod-glow' : undefined} style={{
                     position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
                     width: `${rc.width}%`,
                     transform: `rotate(${rc.rotate}deg)`,
                     transformOrigin: 'bottom right',
                     pointerEvents: 'none',
-                  }} />
+                    ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
+                  } as React.CSSProperties} />
                 )}
                 {hook.imageUrl && !hc.hidden && (
                   <img src={hook.imageUrl} alt="" style={{

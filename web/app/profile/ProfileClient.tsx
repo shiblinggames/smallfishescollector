@@ -652,11 +652,12 @@ export default function ProfileClient({
               <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '72%', maxWidth: 260 }}>
                 <img src={charSprites.rest} alt="" style={{ width: '100%', display: 'block' }} />
                 {rod.imageUrl && (
-                  <img src={rod.imageUrl} alt="" style={{
+                  <img src={rod.imageUrl} alt="" className={rod.glow ? 'rod-glow' : undefined} style={{
                     position: 'absolute', top: '33%', left: '12%', width: '51%',
                     transform: 'rotate(-1deg)', transformOrigin: 'bottom right',
                     pointerEvents: 'none',
-                  }} />
+                    ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
+                  } as React.CSSProperties} />
                 )}
                 {hook.imageUrl && (
                   <img src={hook.imageUrl} alt="" style={{

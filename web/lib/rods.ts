@@ -15,6 +15,7 @@ export interface RodDef {
   jackpotChance?: number     // chance to catch jackpotMultiplier fish at once (0–1)
   jackpotMultiplier?: number // how many fish on a jackpot hit
   imageUrl?: string
+  glow?: boolean             // shared pulsing aura for marquee rods
 }
 
 export const RODS: RodDef[] = [
@@ -93,7 +94,7 @@ export const RODS: RodDef[] = [
     description: 'Forged from the mast of a sunken galleon. 40% faster bites — the rarest fish cannot resist.',
     color: '#ff6b35', rarityBonus: 0.50, biteIntervalMs: 2280, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/legendaryrod.png',
+    imageUrl: '/legendaryrod.png', glow: true,
   },
   {
     tier: 11, name: 'Twin-Strike', cost: 45000,
@@ -114,7 +115,7 @@ export const RODS: RodDef[] = [
     description: 'Hand-rolled in gold leaf. Every catch brings two.',
     color: '#f0c040', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
     doubleCatchChance: 1.0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/millionairesrod.png',
+    imageUrl: '/millionairesrod.png', glow: true,
   },
   {
     tier: 15, name: 'YOLO Rod', cost: 200000,
@@ -122,7 +123,7 @@ export const RODS: RodDef[] = [
     color: '#f97316', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     jackpotChance: 0.10, jackpotMultiplier: 100,
-    imageUrl: '/yolorod.png',
+    imageUrl: '/yolorod.png', glow: true,
   },
   {
     tier: 14, name: 'Completionist Rod', cost: 0, earnedOnly: true,

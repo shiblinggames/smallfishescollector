@@ -355,6 +355,21 @@ body {
   pointer-events: none;
 }
 
+/* ── Marquee rod glow (Legendary, Millionaire's, YOLO) ── */
+@keyframes rod-glow-pulse {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 4px var(--rod-glow-color, #f0c040))
+      drop-shadow(0 0 10px var(--rod-glow-color, #f0c040));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 8px var(--rod-glow-color, #f0c040))
+      drop-shadow(0 0 22px var(--rod-glow-color, #f0c040));
+  }
+}
+.rod-glow { animation: rod-glow-pulse 2.4s ease-in-out infinite; }
+
 /* ── Expeditions page zoom ── */
 .expeditions-content        { zoom: 1.35; }
 @media (min-width: 640px)   { .expeditions-content { zoom: 1.4; } }

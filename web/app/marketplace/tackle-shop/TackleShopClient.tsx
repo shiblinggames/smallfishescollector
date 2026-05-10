@@ -549,12 +549,13 @@ export default function TackleShopClient({
                       {rod.imageUrl
                         ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={rod.imageUrl} alt={rod.name} style={{
+                          <img src={rod.imageUrl} alt={rod.name} className={owned && rod.glow ? 'rod-glow' : undefined} style={{
                             height: '100%', maxWidth: '100%', objectFit: 'contain',
-                            filter: owned
-                              ? `drop-shadow(0 4px 18px ${c}60)`
-                              : 'grayscale(1) brightness(0.35)',
-                          }} />
+                            ...(owned && rod.glow
+                              ? { ['--rod-glow-color' as string]: rod.color }
+                              : { filter: owned ? `drop-shadow(0 4px 18px ${c}60)` : 'grayscale(1) brightness(0.35)' }
+                            ),
+                          } as React.CSSProperties} />
                         ) : (
                           <div style={{ width: 40, height: 40, borderRadius: '50%', background: `${c}22`, border: `1px solid ${c}44` }} />
                         )

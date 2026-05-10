@@ -205,7 +205,7 @@ function BaitIcon({ color }: { color: string }) {
 }
 
 function GearSlot({
-  label, image, icon, itemName, color, onClick, small, empty,
+  label, image, icon, itemName, color, onClick, small, empty, glow,
 }: {
   label: string
   image?: string | null
@@ -215,6 +215,7 @@ function GearSlot({
   onClick: () => void
   small?: boolean
   empty?: boolean
+  glow?: boolean
 }) {
   return (
     <button
@@ -233,7 +234,15 @@ function GearSlot({
     >
       <div style={{ width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         {image
-          ? <img src={image} alt={label} style={{ width: 36, height: 36, objectFit: 'contain', filter: `drop-shadow(0 2px 6px ${color}55)` }} />
+          ? <img
+              src={image}
+              alt={label}
+              className={glow ? 'rod-glow' : undefined}
+              style={{
+                width: 36, height: 36, objectFit: 'contain',
+                ...(glow ? { ['--rod-glow-color' as string]: color } : { filter: `drop-shadow(0 2px 6px ${color}55)` }),
+              } as React.CSSProperties}
+            />
           : icon
         }
       </div>
@@ -322,7 +331,7 @@ export default function GearScreen({
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gridTemplateRows: 'auto auto', gap: 6 }}>
 
         <div style={{ gridColumn: '1', gridRow: '1' }}>
-          <GearSlot label="Rod" image={rod.imageUrl ?? '/rod.png'} itemName={rod.name} color={rod.color} onClick={() => setOpenSlot('rod')} />
+          <GearSlot label="Rod" image={rod.imageUrl ?? '/rod.png'} itemName={rod.name} color={rod.color} glow={rod.glow} onClick={() => setOpenSlot('rod')} />
         </div>
         <div style={{ gridColumn: '1', gridRow: '2' }}>
           <GearSlot label="Hook" image={hook.imageUrl ?? null} itemName={hook.name} color={hook.color} onClick={() => setOpenSlot('hook')} />
