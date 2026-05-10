@@ -38,8 +38,12 @@ const CHAR_DEFAULT: Record<Frame, { bottom: number; left: number; width: number 
   cast: { bottom: 60, left: 26, width: 70 },
 }
 
-// Boat overlay is shared across all frames (boat doesn't move during cast).
-const BOAT_DEFAULT = { top: 65, left: 0, width: 100, rotate: 0 }
+// Boat overlay — per-frame because the character bobs/shifts across rest/wait/cast.
+const BOAT_DEFAULT: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
+  rest: { top: 72, left: 38, width: 55, rotate: 0 },
+  wait: { top: 72, left: 38, width: 55, rotate: 0 },
+  cast: { top: 72, left: 38, width: 55, rotate: 0 },
+}
 
 function Slider({ label, value, min, max, step = 1, onChange }: {
   label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void
@@ -139,9 +143,9 @@ export default function FishingTestClient() {
             {boatEnabled && (
               <img src="/boat_oak.png" alt="boat" style={{
                 position: 'absolute',
-                top: `${boatCfg.top}%`, left: `${boatCfg.left}%`,
-                width: `${boatCfg.width}%`,
-                transform: `rotate(${boatCfg.rotate}deg)`,
+                top: `${boatCfg[frame].top}%`, left: `${boatCfg[frame].left}%`,
+                width: `${boatCfg[frame].width}%`,
+                transform: `rotate(${boatCfg[frame].rotate}deg)`,
                 transformOrigin: 'center center',
                 pointerEvents: 'none',
               }} />
@@ -238,11 +242,16 @@ export default function FishingTestClient() {
         </p>
         {boatEnabled && (
           <>
-            <p style={{ fontWeight: 600, marginBottom: 4, color: '#fb923c' }}>Boat (all frames)</p>
-            <Slider label="top %"    value={boatCfg.top}    min={-20} max={120} onChange={v => setBoatCfg(p => ({ ...p, top: v }))} />
-            <Slider label="left %"   value={boatCfg.left}   min={-50} max={100} onChange={v => setBoatCfg(p => ({ ...p, left: v }))} />
-            <Slider label="width %"  value={boatCfg.width}  min={20}  max={200} onChange={v => setBoatCfg(p => ({ ...p, width: v }))} />
-            <Slider label="rotate °" value={boatCfg.rotate} min={-30} max={30}  onChange={v => setBoatCfg(p => ({ ...p, rotate: v }))} />
+            <p style={{ fontWeight: 600, marginBottom: 4, color: '#fb923c' }}>Boat overlay ({frame})</p>
+            <Slider label="top %"    value={boatCfg[frame].top}    min={-20} max={120} onChange={v => setBoatCfg(p => ({ ...p, [frame]: { ...p[frame], top: v } }))} />
+            <Slider label="left %"   value={boatCfg[frame].left}   min={-50} max={100} onChange={v => setBoatCfg(p => ({ ...p, [frame]: { ...p[frame], left: v } }))} />
+            <Slider label="width %"  value={boatCfg[frame].width}  min={20}  max={200} onChange={v => setBoatCfg(p => ({ ...p, [frame]: { ...p[frame], width: v } }))} />
+            <Slider label="rotate °" value={boatCfg[frame].rotate} min={-30} max={30}  onChange={v => setBoatCfg(p => ({ ...p, [frame]: { ...p[frame], rotate: v } }))} />
+            <button onClick={() => setBoatCfg(p => ({ rest: p[frame], wait: p[frame], cast: p[frame] }))} style={{
+              width: '100%', padding: '4px 0', borderRadius: 6, cursor: 'pointer', marginTop: 6,
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+              color: '#94a3b8', fontWeight: 600, fontSize: 10,
+            }}>Copy {frame} → all frames</button>
           </>
         )}
 
