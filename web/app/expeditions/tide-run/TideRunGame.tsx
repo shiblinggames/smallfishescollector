@@ -54,6 +54,19 @@ const SHOAL_MIN_WIDTH          = 80    // narrowest shoal, always tap-clearable
 const SHOAL_CLEARANCE_FRACTION = 0.70  // % of full-hold distance used as max width
 const SHOAL_AFTER_ROCK_TIME_SEC = 1.15 // min time from previous rock to shoal
 
+// Shoal clusters — multiple shoals in sequence with narrow safe gaps between
+// them. The safe gaps are the "rooftops" the player has to land on. This is
+// the precision-jump mechanic: under-jump → die in shoal, over-jump → die in
+// the next shoal, perfect hold → land on the safe strip.
+const SHOAL_CLUSTER_CHANCE         = 0.40   // % of shoal spawns that become clusters (else single)
+const SHOAL_CLUSTER_WARMUP_M       = 100    // clusters only appear past 100m
+const SHOAL_CLUSTER_MIN_COUNT      = 2      // shoals in a cluster (inclusive)
+const SHOAL_CLUSTER_MAX_COUNT      = 4
+const SHOAL_CLUSTER_MEMBER_MIN_PX  = 90     // each cluster shoal's min width
+const SHOAL_CLUSTER_MEMBER_MAX_PX  = 130    // each cluster shoal's max width
+const SHOAL_CLUSTER_SAFE_GAP_MIN_PX = 120   // safe-landing strip between shoals — min width
+const SHOAL_CLUSTER_SAFE_GAP_MAX_PX = 170   // safe-landing strip — max width
+
 // Wave surface modulation — long-period alternation between calm and rolling
 // sections so the run doesn't feel monotonous.
 const WAVE_FLATNESS_PERIOD = 2200  // world px per calm/rolling cycle
@@ -257,7 +270,7 @@ export default function TideRunGame() {
     // Base spacing scaled by speed (time-based floor for fairness)
     const baseSpacing = Math.max(HAZARD_SPAWN_SPACING, g.speed * MIN_REACTION_TIME_SEC)
 
-    // ── Maybe spawn a shoal instead of a rock ──
+    // ── Maybe spawn a shoal (or cluster of shoals) instead of a rock ──
     const canShoal = distance > SHOAL_WARMUP_M && g.lastSpawnType !== 'shoal'
     if (canShoal && Math.random() < SHOAL_CHANCE) {
       // Full-hold airtime ≈ 0.85s; shoal width is a fraction of that distance.
@@ -270,10 +283,35 @@ export default function TideRunGame() {
           const minBuffer = g.speed * SHOAL_AFTER_ROCK_TIME_SEC
           if (baseSpacing < minBuffer) g.nextSpawnAt += (minBuffer - baseSpacing)
         }
-        const wpWidth = SHOAL_MIN_WIDTH + Math.random() * (maxClearableWidth - SHOAL_MIN_WIDTH)
-        const wpX = g.nextSpawnAt
-        g.shoals.push({ x: wpX, width: wpWidth })
-        g.nextSpawnAt += wpWidth + baseSpacing  // pass the whole zone + base spacing before next
+
+        // Cluster vs single: clusters introduce the "narrow rooftop" precision
+        // mechanic — multiple shoals with safe-landing strips between them.
+        const wantCluster = distance > SHOAL_CLUSTER_WARMUP_M && Math.random() < SHOAL_CLUSTER_CHANCE
+        if (wantCluster) {
+          const count = SHOAL_CLUSTER_MIN_COUNT +
+            Math.floor(Math.random() * (SHOAL_CLUSTER_MAX_COUNT - SHOAL_CLUSTER_MIN_COUNT + 1))
+          // Cap member width to leave headroom for the safe-gap landings
+          const memberMax = Math.min(SHOAL_CLUSTER_MEMBER_MAX_PX, maxClearableWidth * 0.6)
+          let curX = g.nextSpawnAt
+          for (let i = 0; i < count; i++) {
+            const w = SHOAL_CLUSTER_MEMBER_MIN_PX +
+              Math.random() * Math.max(0, memberMax - SHOAL_CLUSTER_MEMBER_MIN_PX)
+            g.shoals.push({ x: curX, width: w })
+            curX += w
+            if (i < count - 1) {
+              const gap = SHOAL_CLUSTER_SAFE_GAP_MIN_PX +
+                Math.random() * (SHOAL_CLUSTER_SAFE_GAP_MAX_PX - SHOAL_CLUSTER_SAFE_GAP_MIN_PX)
+              curX += gap
+            }
+          }
+          g.nextSpawnAt = curX + baseSpacing
+        } else {
+          // Single shoal
+          const wpWidth = SHOAL_MIN_WIDTH + Math.random() * (maxClearableWidth - SHOAL_MIN_WIDTH)
+          g.shoals.push({ x: g.nextSpawnAt, width: wpWidth })
+          g.nextSpawnAt += wpWidth + baseSpacing
+        }
+
         g.lastSpawnType = 'shoal'
         return
       }
