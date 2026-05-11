@@ -11,325 +11,288 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
   const [shipName, setShipName] = useState(initialShipName)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [selectedTier, setSelectedTier] = useState<number | null>(null)
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState(initialShipName ?? '')
+  const [buying, setBuying] = useState<number | null>(null)
 
   const activeShip = SHIPS[shipTier]
+  const activeStats = EXPEDITION_SHIP_STATS[shipTier]
 
-  function handleBuyShip() {
+  function handleBuyShip(tier: number) {
     setError(null)
+    setBuying(tier)
     startTransition(async () => {
       const result = await buyShip()
+      setBuying(null)
       if ('error' in result) {
         setError(result.error)
       } else {
         setShipTier(result.shipTier)
         setDoubloons(result.doubloons)
-        setSelectedTier(result.shipTier)
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.doubloons }))
       }
-    })
-  }
-
-  function handleRename(name: string) {
-    startTransition(async () => {
-      const result = await renameShip(name)
-      if (!('error' in result)) setShipName(name.trim().slice(0, 32))
     })
   }
 
   function submitRename() {
     const trimmed = nameInput.trim().slice(0, 32)
-    if (trimmed) handleRename(trimmed)
+    if (!trimmed) { setEditingName(false); return }
+    startTransition(async () => {
+      const result = await renameShip(trimmed)
+      if (!('error' in result)) setShipName(trimmed)
+    })
     setEditingName(false)
   }
 
-  const nextShip = shipTier < SHIPS.length - 1 ? SHIPS[shipTier + 1] : null
-  const canAfford = nextShip ? doubloons >= nextShip.cost : false
-
   return (
-    <div className="px-4 sm:px-6 max-w-sm sm:max-w-2xl mx-auto pb-16">
-      <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-4 text-[0.65rem] sm:text-xs">
+    <div className="px-4 sm:px-6 max-w-md sm:max-w-2xl mx-auto pb-16">
+      <p className="font-karla font-600 uppercase tracking-[0.16em] text-[#6a6764] mb-4 text-[0.6rem] sm:text-xs">
         Shipyard
       </p>
 
-      {/* Ship name — prominent rename section */}
+      {/* ── Active ship hero ─────────────────────────────────────────── */}
       <div style={{
-        background: 'rgba(8,8,6,0.82)',
-        border: `1px solid ${activeShip.color}30`,
-        borderRadius: 16,
-        padding: '1.1rem 1.2rem',
-        marginBottom: 16,
-        display: 'flex', alignItems: 'center', gap: '1rem',
+        position: 'relative',
+        background: `radial-gradient(ellipse 110% 80% at 50% 100%, ${activeShip.color}1c 0%, rgba(8,8,6,0.95) 65%)`,
+        border: `1px solid ${activeShip.color}55`,
+        borderRadius: 20,
+        padding: '1.25rem 1rem 1.1rem',
+        marginBottom: 20,
+        boxShadow: `0 0 32px ${activeShip.color}1a, inset 0 1px 0 rgba(255,255,255,0.04)`,
+        overflow: 'hidden',
       }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={activeShip.imageUrl} alt={activeShip.name} style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 2px 10px ${activeShip.color}44)` }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: activeShip.color, marginBottom: 5 }}>Your Ship</p>
-          {editingName ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <input
-                autoFocus
-                value={nameInput}
-                onChange={e => setNameInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') submitRename(); if (e.key === 'Escape') setEditingName(false) }}
-                maxLength={32}
-                placeholder={activeShip.name}
-                style={{
-                  background: 'rgba(255,255,255,0.07)', border: `1px solid ${activeShip.color}55`,
-                  borderRadius: 8, padding: '0.4rem 0.7rem',
-                  color: '#f0ede8', fontSize: '1.15rem', fontFamily: 'Cinzel, serif', fontWeight: 700,
-                  outline: 'none', flex: 1, minWidth: 0,
-                }}
-              />
-              <button onClick={submitRename} style={{ background: `${activeShip.color}22`, border: `1px solid ${activeShip.color}55`, borderRadius: 7, padding: '0.38rem 0.8rem', color: activeShip.color, cursor: 'pointer', fontSize: '0.78rem', flexShrink: 0 }} className="font-karla font-700">Save</button>
-              <button onClick={() => setEditingName(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5a5248', fontSize: '0.78rem', flexShrink: 0 }} className="font-karla">Cancel</button>
-            </div>
-          ) : (
-            <button
-              onClick={() => { setNameInput(shipName ?? ''); setEditingName(true) }}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-            >
-              <span className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#f0ede8', lineHeight: 1 }}>
-                {shipName ?? activeShip.name}
-              </span>
-              <span style={{ fontSize: '0.75rem', color: '#5a4a30' }}>✎</span>
-            </button>
-          )}
+        <p className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.5rem', color: activeShip.color, marginBottom: 6, textAlign: 'center' }}>
+          Your Active Ship · Tier {shipTier}
+        </p>
+
+        {editingName ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center', marginBottom: 10 }}>
+            <input
+              autoFocus
+              value={nameInput}
+              onChange={e => setNameInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') submitRename(); if (e.key === 'Escape') setEditingName(false) }}
+              maxLength={32}
+              placeholder={activeShip.name}
+              style={{
+                background: 'rgba(255,255,255,0.08)', border: `1px solid ${activeShip.color}55`,
+                borderRadius: 8, padding: '0.4rem 0.7rem',
+                color: '#f0ede8', fontSize: '1.15rem', fontFamily: 'var(--font-cinzel), serif', fontWeight: 700,
+                outline: 'none', minWidth: 0, textAlign: 'center', maxWidth: 240,
+              }}
+            />
+            <button onClick={submitRename} className="font-karla font-700" style={{ background: `${activeShip.color}22`, border: `1px solid ${activeShip.color}55`, borderRadius: 7, padding: '0.38rem 0.8rem', color: activeShip.color, cursor: 'pointer', fontSize: '0.72rem' }}>Save</button>
+            <button onClick={() => setEditingName(false)} className="font-karla" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5a5248', fontSize: '0.72rem' }}>Cancel</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => { setNameInput(shipName ?? ''); setEditingName(true) }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: '100%', marginBottom: 10 }}
+          >
+            <span className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0ede8', lineHeight: 1, textShadow: `0 0 16px ${activeShip.color}40` }}>
+              {shipName ?? activeShip.name}
+            </span>
+            <span style={{ fontSize: '0.72rem', color: '#6a5840' }}>✎</span>
+          </button>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 130, marginBottom: 4 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={activeShip.imageUrl} alt={activeShip.name}
+            style={{ maxHeight: '100%', maxWidth: '85%', objectFit: 'contain', filter: `drop-shadow(0 8px 22px ${activeShip.color}66)` }}
+          />
+        </div>
+
+        {/* Active ship stats row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 5, marginTop: 10 }}>
+          <HeroStat label="Crew"  value={activeStats?.crewSlots ?? 1} color={activeShip.color} />
+          <HeroStat label="Hull"  value={activeStats?.durability ?? 0} color="#60a5fa" />
+          <HeroStat label="Armor" value={activeStats?.armor ?? 0}      color="#4ade80" />
+          <HeroStat label="Speed" value={activeStats?.speed ?? 0}      color="#f0c040" />
+          <HeroStat label="Min Dmg" value={activeStats?.minDamage ?? 0} color="#fb923c" />
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        {SHIPS.map((ship) => {
+      {/* ── Combat mechanics primer (small, collapsible feel) ── */}
+      <div style={{
+        background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)',
+        borderRadius: 12, padding: '0.65rem 0.85rem', marginBottom: 22,
+      }}>
+        <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#7a7775', lineHeight: 1.6 }}>
+          <strong style={{ color: '#a0a09a', fontWeight: 600 }}>Reload</strong> stockpiles charges (max 3). <strong style={{ color: '#a0a09a', fontWeight: 600 }}>Fire</strong> spends 1. <strong style={{ color: '#a0a09a', fontWeight: 600 }}>Volley</strong> spends all 3 for double damage. <strong style={{ color: '#a0a09a', fontWeight: 600 }}>Speed</strong> determines who fires first.
+        </p>
+      </div>
+
+      {/* ── Fleet ────────────────────────────────────────────────────── */}
+      <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.58rem', color: '#6a6764', marginBottom: 10 }}>
+        Fleet
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {SHIPS.map(ship => {
           const stats = EXPEDITION_SHIP_STATS[ship.tier]
           const owned = ship.tier <= shipTier
           const isActive = ship.tier === shipTier
-          const locked = ship.tier > shipTier + 1
           const isNext = ship.tier === shipTier + 1
+          const locked = ship.tier > shipTier + 1
+          const canAfford = doubloons >= ship.cost
           const c = ship.color
+          const purchasing = buying === ship.tier && isPending
 
           return (
-            <div
-              key={ship.tier}
-              onClick={() => !locked && setSelectedTier(ship.tier)}
-              style={{
-                background: isActive ? `rgba(8,8,6,0.95)` : 'rgba(8,8,6,0.82)',
-                border: `1px solid ${isActive ? `${c}60` : owned ? `${c}28` : 'rgba(255,255,255,0.1)'}`,
-                boxShadow: isActive ? `0 0 24px ${c}28` : 'none',
-                borderRadius: 16,
-                padding: '0.9rem 0.75rem 0.8rem',
-                opacity: 1,
-                cursor: locked ? 'default' : 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 0,
-                transition: 'box-shadow 0.2s ease',
-              }}
-            >
-              {/* Ship image */}
-              <div style={{ width: '100%', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={ship.imageUrl}
-                  alt={ship.name}
-                  style={{
-                    width: '85%', height: '100%', objectFit: 'contain',
-                    filter: owned
-                      ? `drop-shadow(0 4px 14px ${c}40)`
-                      : locked
-                        ? 'grayscale(1) brightness(0.25)'
-                        : 'grayscale(0.6) brightness(0.55)',
-                  }}
-                />
-              </div>
-
-              {/* Name + status */}
-              <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? '#f0ede8' : '#5a5755', lineHeight: 1.15, marginBottom: 4 }}>
-                {ship.name}
-              </p>
-
-              {isActive && (
-                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: c, marginBottom: 8 }}>⬤ Active</span>
-              )}
-              {owned && !isActive && (
-                <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#4ade8088', marginBottom: 8 }}>✓ Owned</span>
-              )}
-              {!owned && !locked && (
-                <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: canAfford && isNext ? c : '#4a4845', marginBottom: 8 }}>
-                  {ship.cost.toLocaleString()} ⟡
-                </p>
-              )}
-              {locked && (
-                <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#5a5755', marginBottom: 8 }}>🔒 Upgrade to unlock</span>
-              )}
-
-              {/* Key stats */}
-              <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
+            <div key={ship.tier} style={{
+              position: 'relative',
+              background: isActive
+                ? `linear-gradient(140deg, ${c}1c 0%, rgba(8,8,6,0.95) 70%)`
+                : owned
+                  ? `linear-gradient(140deg, ${c}10 0%, rgba(8,8,6,0.92) 70%)`
+                  : isNext
+                    ? `linear-gradient(140deg, ${c}10 0%, rgba(8,8,6,0.92) 70%)`
+                    : 'rgba(8,8,6,0.78)',
+              border: `1px solid ${isActive ? c + '70' : owned ? c + '30' : isNext ? c + '40' : 'rgba(255,255,255,0.06)'}`,
+              borderRadius: 16,
+              padding: '0.9rem 0.95rem 0.95rem',
+              boxShadow: isActive ? `0 0 22px ${c}1c` : 'none',
+              opacity: locked ? 0.7 : 1,
+              overflow: 'hidden',
+            }}>
+              {/* Top row: image + name/status */}
+              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 12 }}>
                 <div style={{
-                  flex: 1, background: owned ? `${c}0d` : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${owned ? `${c}22` : 'rgba(255,255,255,0.09)'}`,
-                  borderRadius: 8, padding: '0.45rem 0.3rem', textAlign: 'center',
+                  width: 96, height: 76, flexShrink: 0,
+                  background: `radial-gradient(ellipse at 50% 70%, ${c}18 0%, transparent 70%)`,
+                  borderRadius: 12,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? c : '#6a6764', lineHeight: 1 }}>{stats?.crewSlots ?? 1}</p>
-                  <p className="font-karla font-600 uppercase" style={{ fontSize: '0.42rem', color: owned ? '#6a6764' : '#4a4845', letterSpacing: '0.08em', marginTop: 3 }}>Crew</p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={ship.imageUrl} alt={ship.name}
+                    style={{
+                      maxWidth: '92%', maxHeight: '92%', objectFit: 'contain',
+                      filter: owned
+                        ? `drop-shadow(0 3px 10px ${c}55)`
+                        : locked
+                          ? 'grayscale(1) brightness(0.3)'
+                          : `grayscale(0.5) brightness(0.65)`,
+                    }}
+                  />
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6, marginBottom: 2 }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: owned ? '#f0ede8' : isNext ? '#c8c4bc' : '#6a6764', lineHeight: 1.1 }}>
+                      {ship.name}
+                    </p>
+                    <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.46rem', color: '#5a5755', flexShrink: 0 }}>
+                      T{ship.tier}
+                    </span>
+                  </div>
+                  <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: owned || isNext ? '#7a7775' : '#4a4845', lineHeight: 1.35, marginBottom: 8 }}>
+                    {ship.description}
+                  </p>
+                  {/* Status pill */}
+                  {isActive && (
+                    <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ display: 'inline-block', fontSize: '0.48rem', color: c, background: `${c}1c`, border: `1px solid ${c}55`, borderRadius: 999, padding: '0.18rem 0.55rem' }}>
+                      ⬤ Active
+                    </span>
+                  )}
+                  {owned && !isActive && (
+                    <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ display: 'inline-block', fontSize: '0.48rem', color: '#4ade80', background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.28)', borderRadius: 999, padding: '0.18rem 0.55rem' }}>
+                      ✓ Owned
+                    </span>
+                  )}
+                  {!owned && !locked && (
+                    <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ display: 'inline-block', fontSize: '0.48rem', color: '#f0c040', background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.28)', borderRadius: 999, padding: '0.18rem 0.55rem' }}>
+                      ⚓ Next Tier
+                    </span>
+                  )}
+                  {locked && (
+                    <span className="font-karla font-600 uppercase tracking-[0.14em]" style={{ display: 'inline-block', fontSize: '0.48rem', color: '#5a5755', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 999, padding: '0.18rem 0.55rem' }}>
+                      🔒 Locked
+                    </span>
+                  )}
                 </div>
               </div>
+
+              {/* Stats grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 5, marginBottom: isNext ? 12 : 0 }}>
+                <CardStat label="Crew"    value={stats?.crewSlots  ?? 1} accent={c}        owned={owned} />
+                <CardStat label="Hull"    value={stats?.durability ?? 0} accent="#60a5fa"  owned={owned} />
+                <CardStat label="Armor"   value={stats?.armor      ?? 0} accent="#4ade80"  owned={owned} />
+                <CardStat label="Speed"   value={stats?.speed      ?? 0} accent="#f0c040"  owned={owned} />
+                <CardStat label="Min Dmg" value={stats?.minDamage  ?? 0} accent="#fb923c"  owned={owned} />
+              </div>
+
+              {/* Buy button — only on the next purchasable tier */}
+              {isNext && (
+                <button
+                  onClick={() => handleBuyShip(ship.tier)}
+                  disabled={!canAfford || isPending}
+                  className="font-cinzel font-700"
+                  style={{
+                    width: '100%',
+                    padding: '0.72rem 0.5rem',
+                    borderRadius: 12,
+                    background: canAfford
+                      ? `linear-gradient(180deg, ${c}26 0%, ${c}12 100%)`
+                      : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${canAfford ? `${c}80` : 'rgba(255,255,255,0.1)'}`,
+                    color: canAfford ? c : '#5a5755',
+                    cursor: canAfford && !isPending ? 'pointer' : 'default',
+                    opacity: isPending ? 0.6 : 1,
+                    fontSize: '0.92rem',
+                    letterSpacing: '0.04em',
+                    boxShadow: canAfford ? `0 0 18px ${c}22` : 'none',
+                  }}
+                >
+                  {purchasing
+                    ? 'Upgrading…'
+                    : canAfford
+                      ? <>Upgrade <span style={{ color: '#f0ede8' }}>·</span> {ship.cost.toLocaleString()} ⟡</>
+                      : <>Need {(ship.cost - doubloons).toLocaleString()} more ⟡</>
+                  }
+                </button>
+              )}
             </div>
           )
         })}
       </div>
 
       {error && <p className="font-karla font-300 text-red-400 text-xs text-center mt-4">{error}</p>}
-      {!nextShip && (
-        <p className="font-karla font-300 text-[#a0a09a] text-sm text-center mt-6">
+      {shipTier === SHIPS.length - 1 && (
+        <p className="font-karla font-300 italic text-center mt-6" style={{ color: '#5a5755', fontSize: '0.78rem' }}>
           Your fleet commands the sea.
         </p>
-      )}
-
-      {selectedTier !== null && (
-        <ShipDetailModal
-          tier={selectedTier}
-          shipTier={shipTier}
-          doubloons={doubloons}
-          isPending={isPending}
-          onBuy={handleBuyShip}
-          onClose={() => setSelectedTier(null)}
-        />
       )}
     </div>
   )
 }
 
-function ShipDetailModal({
-  tier, shipTier, doubloons, isPending, onBuy, onClose,
-}: {
-  tier: number
-  shipTier: number
-  doubloons: number
-  isPending: boolean
-  onBuy: () => void
-  onClose: () => void
-}) {
-  const ship = SHIPS[tier]
-  const stats = EXPEDITION_SHIP_STATS[tier]
-  const c = ship.color
-  const owned = tier <= shipTier
-  const isActive = tier === shipTier
-  const isNext = tier === shipTier + 1
-  const canAfford = doubloons >= ship.cost
-
+function HeroStat({ label, value, color }: { label: string; value: number | string; color: string }) {
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          background: '#0c0c0a',
-          border: `1px solid ${c}30`,
-          borderTop: `2px solid ${c}50`,
-          borderRadius: '20px 20px 0 0',
-          width: '100%', maxWidth: 480, maxHeight: '90vh',
-          display: 'flex', flexDirection: 'column', overflow: 'hidden',
-          boxShadow: `0 -8px 40px ${c}18`,
-        }}
-      >
-        {/* Header */}
-        <div style={{ padding: '1.25rem 1.4rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-            <div>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', lineHeight: 1.1 }}>{ship.name}</p>
-              <p className="font-karla font-400" style={{ fontSize: '0.82rem', color: '#6a6764', marginTop: 5, lineHeight: 1.4 }}>{ship.description}</p>
-            </div>
-            <button onClick={onClose} style={{ color: '#5a5755', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, cursor: 'pointer', padding: '0.4rem', flexShrink: 0, marginTop: 2 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M18 6L6 18M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
+    <div style={{
+      background: 'rgba(8,8,6,0.55)',
+      border: `1px solid ${color}30`,
+      borderRadius: 9,
+      padding: '0.5rem 0.25rem',
+      textAlign: 'center',
+    }}>
+      <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color, lineHeight: 1 }}>{value}</p>
+      <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.46rem', color: '#7a7775', marginTop: 4 }}>{label}</p>
+    </div>
+  )
+}
 
-          {isActive && (
-            <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
-              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.68rem', color: c, background: `${c}14`, border: `1px solid ${c}35`, borderRadius: 20, padding: '0.3rem 0.9rem' }}>⬤ Your Active Ship</span>
-            </div>
-          )}
-          {owned && !isActive && (
-            <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
-              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.68rem', color: '#4ade80', background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.25)', borderRadius: 20, padding: '0.3rem 0.9rem' }}>✓ Owned</span>
-            </div>
-          )}
-          {isNext && (
-            <button
-              onClick={onBuy}
-              disabled={!canAfford || isPending}
-              style={{
-                width: '100%', marginTop: 14,
-                padding: '0.8rem', borderRadius: 10,
-                background: canAfford ? `${c}22` : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${canAfford ? `${c}55` : 'rgba(255,255,255,0.1)'}`,
-                color: canAfford ? c : '#4a4845',
-                cursor: canAfford ? 'pointer' : 'default',
-                opacity: isPending ? 0.5 : 1,
-              }}
-              className="font-cinzel font-700"
-            >
-              <span style={{ fontSize: '1.0rem' }}>
-                {isPending ? 'Upgrading…' : canAfford ? `Upgrade — ${ship.cost.toLocaleString()} ⟡` : `Need ${(ship.cost - doubloons).toLocaleString()} more ⟡`}
-              </span>
-            </button>
-          )}
-        </div>
-
-        <div style={{ overflowY: 'auto', flex: 1, padding: '1.25rem 1.4rem', paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-          {/* Ship image */}
-          <div style={{
-            background: `radial-gradient(ellipse at 50% 60%, ${c}10 0%, rgba(8,8,6,0.6) 70%)`,
-            border: `1px solid ${c}25`,
-            borderRadius: 16, padding: '1.5rem 1rem',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={ship.imageUrl} alt={ship.name}
-              style={{ width: 180, height: 180, objectFit: 'contain', filter: owned ? `drop-shadow(0 6px 20px ${c}55)` : 'grayscale(1) brightness(0.35)' }}
-            />
-          </div>
-
-          {/* Primary stats — crew */}
-          <div>
-            <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#4a6a8a', marginBottom: 10 }}>Capacity</p>
-            <div style={{ background: `${c}0c`, border: `1px solid ${c}28`, borderRadius: 12, padding: '1rem 0.75rem', textAlign: 'center' }}>
-              <span style={{ fontSize: '1.3rem', lineHeight: 1, display: 'block', marginBottom: 6 }}>⚓</span>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: c, lineHeight: 1 }}>{stats?.crewSlots ?? 1}</p>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.62rem', color: '#8a8784', marginTop: 6 }}>Crew</p>
-              <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: '#4a4845', marginTop: 2 }}>card slots</p>
-            </div>
-          </div>
-
-          {/* Combat stats */}
-          <div>
-            <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#4a6a8a', marginBottom: 10 }}>Combat</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-              {[
-                { label: 'Hull HP',   value: stats?.durability ?? '—', color: '#60a5fa' },
-                { label: 'Armor',     value: stats?.armor      ?? '—', color: '#4ade80' },
-                { label: 'Speed',     value: stats?.speed      ?? '—', color: '#f0c040' },
-                { label: 'Min Dmg',   value: stats?.minDamage  ?? '—', color: '#fb923c' },
-              ].map(s => (
-                <div key={s.label} style={{ background: `${s.color}08`, border: `1px solid ${s.color}28`, borderRadius: 10, padding: '0.75rem 0.4rem', textAlign: 'center' }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: s.color, lineHeight: 1 }}>{s.value}</p>
-                  <p className="font-karla font-600 uppercase tracking-[0.06em]" style={{ fontSize: '0.52rem', color: '#6a6764', marginTop: 6 }}>{s.label}</p>
-                </div>
-              ))}
-            </div>
-            <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#5a5755', marginTop: 12, lineHeight: 1.6 }}>
-              <strong style={{ color: '#8a8784', fontWeight: 600 }}>Reload</strong> to stockpile charges (max 3). <strong style={{ color: '#8a8784', fontWeight: 600 }}>Fire</strong> spends 1 charge. <strong style={{ color: '#8a8784', fontWeight: 600 }}>Volley</strong> spends all 3 for double damage. <strong style={{ color: '#8a8784', fontWeight: 600 }}>Speed</strong> determines who fires first.
-            </p>
-          </div>
-
-        </div>
-      </div>
+function CardStat({ label, value, accent, owned }: { label: string; value: number | string; accent: string; owned: boolean }) {
+  return (
+    <div style={{
+      background: owned ? `${accent}0c` : 'rgba(255,255,255,0.03)',
+      border: `1px solid ${owned ? accent + '24' : 'rgba(255,255,255,0.06)'}`,
+      borderRadius: 8,
+      padding: '0.4rem 0.2rem',
+      textAlign: 'center',
+    }}>
+      <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? accent : '#5a5755', lineHeight: 1 }}>{value}</p>
+      <p className="font-karla font-600 uppercase tracking-[0.06em]" style={{ fontSize: '0.42rem', color: owned ? '#6a6764' : '#4a4845', marginTop: 4 }}>{label}</p>
     </div>
   )
 }
