@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
-const SHIP_X_RATIO    = 0.24
-const SHIP_HEIGHT_PCT = 0.14   // ship height as fraction of canvas height
+const SHIP_X_RATIO    = 0.22
+const SHIP_HEIGHT_PCT = 0.095  // small Canabalt-style sprite (~9.5% of canvas height)
 const SHIP_ASPECT     = 1031 / 672   // trimmed boatrun.png
 
 // Ship physics — Canabalt feel. Boat rides the wave surface; press-and-hold
@@ -14,9 +14,9 @@ const GRAVITY                  = 1300  // px/s² full gravity (in-air, after hol
 const JUMP_IMPULSE             = 440   // px/s upward kick when press starts a jump
 const JUMP_HOLD_GRAVITY_MULT   = 0.36  // gravity multiplier while hold is active (sustained jump)
 const JUMP_MAX_HOLD_SEC        = 0.42  // hold beyond this no longer extends the jump
-const BASE_SPEED               = 240   // px/s horizontal scroll
-const SPEED_RAMP               = 13    // px/s² (linear time ramp)
-const MAX_SPEED                = 580   // px/s
+const BASE_SPEED               = 290   // px/s horizontal scroll (Canabalt rolls)
+const SPEED_RAMP               = 14    // px/s² (linear time ramp)
+const MAX_SPEED                = 660   // px/s
 
 // Sea surface — gentle long-period swells so the boat "runs" along the wave
 const SEA_BASE_Y_PCT      = 0.78
