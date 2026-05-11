@@ -8,16 +8,17 @@ const SHIP_X_RATIO    = 0.24
 const SHIP_HEIGHT_PCT = 0.14   // ship height as fraction of canvas height
 const SHIP_ASPECT     = 1031 / 672   // trimmed boatrun.png
 
-// Ship physics — boat locks to wave surface when grounded; launches at every
-// crest crossing with a discrete impulse. Gravity only matters in the air.
-const GRAVITY          = 1300  // px/s² (in-air pulldown)
-const TAP_DIVE         = 720   // px/s downward impulse on tap (anti-launch)
-const MIN_LAUNCH       = 340   // px/s base upward kick at every crest
-const MAX_LAUNCH       = 720   // px/s cap so max-speed launches don't fly off the top
-const WAVE_LIFT_FACTOR = 1.35  // additional launch scaled by max surface vy
-const BASE_SPEED       = 240   // px/s horizontal scroll
-const SPEED_RAMP       = 13    // px/s² (linear time ramp)
-const MAX_SPEED        = 580   // px/s
+// Ship physics — Tiny Wings ramp feel. Boat rides the swell, builds upward
+// velocity on the up-slope, and gets flung off at the crest with that exact
+// momentum (scaled by WAVE_LIFT_FACTOR). Big waves → big air. Small waves →
+// little hops. No artificial minimum.
+const GRAVITY            = 1300  // px/s² (in-air pulldown)
+const TAP_DIVE           = 760   // px/s downward impulse on tap (player-controlled descent)
+const WAVE_LIFT_FACTOR   = 1.55  // launch magnitude = peak up-slope vy × this
+const MAX_LAUNCH         = 800   // hard cap so max-speed launches stay on screen
+const BASE_SPEED         = 240   // px/s horizontal scroll
+const SPEED_RAMP         = 13    // px/s² (linear time ramp)
+const MAX_SPEED          = 580   // px/s
 
 // Sea surface — long-period sines for smooth rolling hills (Tiny Wings feel)
 const SEA_BASE_Y_PCT      = 0.74   // mean sea level (% of canvas height)
@@ -28,11 +29,12 @@ const WAVE_SECONDARY_AMP  = 14
 const WAVE_AMP_RAMP_DISTANCE = 6000
 const WAVE_AMP_RAMP_MAX   = 1.45   // peak amplitude multiplier
 
-// Spire spawning — height adaptively capped per-spawn so grounded boat always clears
-const SPAWN_SPACING       = 280
-const SPIRE_MIN_HEIGHT_PCT = 0.18
-const SPIRE_MAX_HEIGHT_PCT = 0.60  // upper ceiling; adaptive cap may reduce it
-const SPIRE_CLEARANCE_PCT  = 0.05  // safety margin between spire bottom and boat hitbox top at crest
+// Surface hazards — rocks/spikes poking out of the water. Boat clears them
+// by being airborne when crossing. Player times taps to control descent.
+const HAZARD_SPAWN_SPACING = 360   // world px between hazards
+const HAZARD_WARMUP        = 1200  // world px before the first hazard spawns
+const HAZARD_WIDTH_PCT     = 0.085 // % of canvas width
+const HAZARD_HEIGHT_PCT    = 0.05  // % of canvas height above the surface
 
 // Hitbox inset on the trimmed sprite
 const HITBOX_INSET = { top: 0.35, right: 0.12, bottom: 0.08, left: 0.08 }
@@ -43,10 +45,10 @@ const HIGH_SCORE_KEY = 'tide-run-best'
 // ── Types ────────────────────────────────────────────────────────────────────
 type GameState = 'ready' | 'playing' | 'dead'
 
-interface Spire {
-  x: number          // world x (left edge)
+interface Hazard {
+  x: number          // world x (left edge of hazard)
   width: number
-  height: number     // hangs down from y=0
+  height: number     // sticks up above the surface by this many px
 }
 
 // ── Sea surface helper ───────────────────────────────────────────────────────
@@ -79,12 +81,13 @@ export default function TideRunGame() {
     scrollX: 0,
     speed: BASE_SPEED,
     elapsed: 0,
-    spires: [] as Spire[],
+    hazards: [] as Hazard[],
     nextSpawnAt: 0,
     distance: 0,
     deathFlashUntil: 0,
     lastScoreUpdate: 0,
-    lastSlope: 0,  // previous frame's surface slope — used to detect crest crossings
+    lastSlope: 0,    // previous frame's surface slope — used to detect crest crossings
+    maxUpslope: 0,   // peak |surfaceVy| since last trough; consumed at crest crossing
   })
 
   const [uiState, setUiState] = useState<GameState>('ready')
@@ -139,14 +142,15 @@ export default function TideRunGame() {
     g.scrollX = 0
     g.speed = BASE_SPEED
     g.elapsed = 0
-    g.spires = []
-    g.nextSpawnAt = g.cw * 1.6       // ~2.5s grace before first spire at base speed
+    g.hazards = []
+    g.nextSpawnAt = HAZARD_WARMUP
     g.distance = 0
     g.deathFlashUntil = 0
     g.lastScoreUpdate = 0
     g.shipVy = 0
     g.airborne = false
     g.lastSlope = 0
+    g.maxUpslope = 0
     // Land ship on the sea at its screen x
     const cx = g.cw * SHIP_X_RATIO + g.shipW / 2
     const wy = seaSurfaceY(cx + g.scrollX, g.ch, 0)
@@ -173,55 +177,33 @@ export default function TideRunGame() {
     }
   }, [reset])
 
-  // ── Spawn one spire (height capped so grounded boat always clears) ────────
-  const spawnSpire = useCallback(() => {
+  // ── Spawn one surface hazard ──────────────────────────────────────────────
+  const spawnHazard = useCallback(() => {
     const g = gRef.current
-    const minH = g.ch * SPIRE_MIN_HEIGHT_PCT
-    const ceilingH = g.ch * SPIRE_MAX_HEIGHT_PCT
-    const spireWidth = g.cw * 0.13
-    const shipScreenX = g.cw * SHIP_X_RATIO
-
-    // When the boat reaches this spire, scrollX will be ≈ spire.x - shipScreenX - shipW/2.
-    // Use that future scrollX so we account for amplitude ramping.
-    const scrollXAtImpact = Math.max(0, g.nextSpawnAt - shipScreenX - g.shipW / 2)
-
-    // Find the highest crest in the spire's x-extent (worst case for the boat).
-    let minSurfY = Infinity
-    for (let dx = -10; dx <= spireWidth + 10; dx += 6) {
-      const wy = seaSurfaceY(g.nextSpawnAt + dx, g.ch, scrollXAtImpact)
-      if (wy < minSurfY) minSurfY = wy
-    }
-
-    // Boat hitbox top y when grounded at the highest crest in this region.
-    // hitbox top y = surface y - shipH * (1 - INSET.bottom - INSET.top)
-    const hitboxTopAtCrest = minSurfY - g.shipH * (1 - HITBOX_INSET.bottom - HITBOX_INSET.top)
-    const safeMaxH = hitboxTopAtCrest - g.ch * SPIRE_CLEARANCE_PCT
-
-    const maxH = Math.min(ceilingH, safeMaxH)
-    if (maxH > minH) {
-      g.spires.push({
-        x: g.nextSpawnAt,
-        width: spireWidth,
-        height: minH + Math.random() * (maxH - minH),
-      })
-    }
-    // else: no spire here — wave is too high to safely spawn one. Skip.
-
-    g.nextSpawnAt += SPAWN_SPACING
+    g.hazards.push({
+      x: g.nextSpawnAt,
+      width: g.cw * HAZARD_WIDTH_PCT,
+      height: g.ch * HAZARD_HEIGHT_PCT,
+    })
+    g.nextSpawnAt += HAZARD_SPAWN_SPACING
   }, [])
 
-  // ── Spire collision (sea is handled by airborne/grounded landing) ──────────
-  const collidesWithSpire = useCallback((shipScreenX: number) => {
+  // ── Surface hazard collision ──────────────────────────────────────────────
+  const collidesWithHazard = useCallback((shipScreenX: number) => {
     const g = gRef.current
     const hx = shipScreenX + g.shipW * HITBOX_INSET.left
     const hy = g.shipY + g.shipH * HITBOX_INSET.top
     const hw = g.shipW * (1 - HITBOX_INSET.left - HITBOX_INSET.right)
+    const hbot = hy + g.shipH * (1 - HITBOX_INSET.bottom - HITBOX_INSET.top)
 
-    for (const s of g.spires) {
-      const ox = s.x - g.scrollX
-      if (ox + s.width < hx) continue
+    for (const obs of g.hazards) {
+      const ox = obs.x - g.scrollX
+      if (ox + obs.width < hx) continue
       if (ox > hx + hw) break
-      if (hy < s.height) return true
+      const hazardSurfaceY = seaSurfaceY(obs.x + obs.width / 2, g.ch, g.scrollX)
+      const hazardTop = hazardSurfaceY - obs.height
+      // Collide if boat's hitbox bottom is below hazard's top
+      if (hbot > hazardTop) return true
     }
     return false
   }, [])
@@ -259,35 +241,39 @@ export default function TideRunGame() {
         }
       }
     } else {
-      // Grounded: locked to surface, no jitter
+      // Grounded: locked to surface
       g.shipY = surfaceY - g.shipH * (1 - HITBOX_INSET.bottom)
       g.shipVy = 0
 
-      // Crest crossing — slope just flipped from negative (ascending) to positive (descending)
+      // Track peak upward surface velocity during the current up-slope; this is
+      // the momentum the boat carries off the next crest.
+      if (slope < 0) {
+        const upVy = -slope * g.speed
+        if (upVy > g.maxUpslope) g.maxUpslope = upVy
+      }
+
+      // Crest crossing — slope flipped from negative (ascending) to positive
       if (g.lastSlope < 0 && slope >= 0) {
-        const ramp = 1 + Math.min(g.scrollX / WAVE_AMP_RAMP_DISTANCE, 1) * (WAVE_AMP_RAMP_MAX - 1)
-        const maxSlopeRad = (WAVE_PRIMARY_AMP * (Math.PI * 2 / WAVE_PRIMARY_PERIOD) +
-                             WAVE_SECONDARY_AMP * (Math.PI * 2 / WAVE_SECONDARY_PERIOD)) * ramp
-        const maxSurfVy = maxSlopeRad * g.speed
-        const launchMag = Math.min(MAX_LAUNCH, MIN_LAUNCH + maxSurfVy * WAVE_LIFT_FACTOR)
-        g.shipVy = -launchMag
-        g.airborne = true
+        const launchMag = Math.min(MAX_LAUNCH, g.maxUpslope * WAVE_LIFT_FACTOR)
+        g.maxUpslope = 0
+        if (launchMag > 1) {
+          g.shipVy = -launchMag
+          g.airborne = true
+        }
       }
     }
 
     g.lastSlope = slope
 
-    // Spire spawn + prune
-    while (g.nextSpawnAt < g.scrollX + g.cw * 1.05) spawnSpire()
-    while (g.spires.length > 0 && g.spires[0].x + g.spires[0].width < g.scrollX) {
-      g.spires.shift()
+    // Hazard spawn + prune
+    while (g.nextSpawnAt < g.scrollX + g.cw * 1.05) spawnHazard()
+    while (g.hazards.length > 0 && g.hazards[0].x + g.hazards[0].width < g.scrollX) {
+      g.hazards.shift()
     }
 
-    // Death checks
-    const hitboxTop = g.shipY + g.shipH * HITBOX_INSET.top
+    // Death check — only surface hazards (the sea itself is just a floor now)
     let dead = false
-    if (hitboxTop < 0) dead = true                                // flew off the top
-    else if (collidesWithSpire(shipScreenX)) dead = true          // hit a spire
+    if (collidesWithHazard(shipScreenX)) dead = true
 
     if (dead) {
       g.state = 'dead'
@@ -306,7 +292,7 @@ export default function TideRunGame() {
         setScore(Math.floor(g.distance))
       }
     }
-  }, [spawnSpire, collidesWithSpire, highScore])
+  }, [spawnHazard, collidesWithHazard, highScore])
 
   // ── Render ─────────────────────────────────────────────────────────────────
   const render = useCallback(() => {
@@ -352,11 +338,12 @@ export default function TideRunGame() {
     }
     ctx.stroke()
 
-    // ── Spires ──
-    for (const s of g.spires) {
-      const ox = s.x - g.scrollX
-      if (ox + s.width < 0 || ox > cw) continue
-      drawSpire(ctx, ox, 0, s.width, s.height)
+    // ── Surface hazards (rocks bobbing on the wave) ──
+    for (const obs of g.hazards) {
+      const ox = obs.x - g.scrollX
+      if (ox + obs.width < 0 || ox > cw) continue
+      const surfaceAtHazard = seaSurfaceY(obs.x + obs.width / 2, ch, g.scrollX)
+      drawHazard(ctx, ox, surfaceAtHazard, obs.width, obs.height)
     }
 
     // ── Ship ──
@@ -456,7 +443,7 @@ export default function TideRunGame() {
               Tide Run
             </p>
             <p className="font-karla font-300 mb-5" style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)', maxWidth: 260 }}>
-              The swells will launch you upward. Tap to dive back down before a spire catches you.
+              Every crest launches you skyward. Tap to dive faster and land between the rocks.
             </p>
             <div className="font-karla font-700 uppercase tracking-[0.18em]" style={{
               fontSize: '0.72rem',
@@ -506,23 +493,39 @@ export default function TideRunGame() {
 }
 
 // ── Drawing helpers ──────────────────────────────────────────────────────────
-function drawSpire(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
-  const g = ctx.createLinearGradient(x, y, x, y + h)
-  g.addColorStop(0, '#1a1410')
-  g.addColorStop(0.6, '#3a3128')
-  g.addColorStop(1, '#5a4a3a')
+// Hazard: jagged rock sticking up out of the water surface.
+// `surfaceY` is the water line at the hazard's x; `h` is how far above the water.
+function drawHazard(ctx: CanvasRenderingContext2D, x: number, surfaceY: number, w: number, h: number) {
+  const top = surfaceY - h
+  const g = ctx.createLinearGradient(x, top, x, surfaceY)
+  g.addColorStop(0, '#54453a')
+  g.addColorStop(0.55, '#33271f')
+  g.addColorStop(1, '#1a1410')
   ctx.fillStyle = g
   ctx.beginPath()
-  ctx.moveTo(x, y)
-  ctx.lineTo(x + w, y)
-  ctx.lineTo(x + w * 0.88, y + h)
-  ctx.lineTo(x + w * 0.68, y + h - h * 0.22)
-  ctx.lineTo(x + w * 0.50, y + h)
-  ctx.lineTo(x + w * 0.30, y + h - h * 0.16)
-  ctx.lineTo(x + w * 0.12, y + h)
+  // Anchor below the surface so the rock looks rooted in the water
+  ctx.moveTo(x, surfaceY + h * 0.3)
+  ctx.lineTo(x + w * 0.18, top + h * 0.22)
+  ctx.lineTo(x + w * 0.35, top)
+  ctx.lineTo(x + w * 0.55, top + h * 0.12)
+  ctx.lineTo(x + w * 0.74, top + h * 0.05)
+  ctx.lineTo(x + w * 0.9,  top + h * 0.30)
+  ctx.lineTo(x + w,        surfaceY + h * 0.3)
   ctx.closePath()
   ctx.fill()
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)'
+  // Edge highlight on the lit side
+  ctx.strokeStyle = 'rgba(255, 235, 200, 0.25)'
   ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(x + w * 0.18, top + h * 0.22)
+  ctx.lineTo(x + w * 0.35, top)
+  ctx.lineTo(x + w * 0.55, top + h * 0.12)
+  ctx.stroke()
+  // Tiny foam ring where rock meets water
+  ctx.strokeStyle = 'rgba(230, 245, 255, 0.6)'
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  ctx.moveTo(x - w * 0.05, surfaceY)
+  ctx.bezierCurveTo(x + w * 0.3, surfaceY - 1.5, x + w * 0.7, surfaceY - 1.5, x + w * 1.05, surfaceY)
   ctx.stroke()
 }
