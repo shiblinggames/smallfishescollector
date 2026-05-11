@@ -238,6 +238,19 @@ export default function TideRunGame() {
     if (tier === 'large' && g.lastHazardTier === 'large') {
       tier = 'medium'
     }
+
+    // Large rocks on a wave crest are unfair: the boat launches from a lower
+    // surface point and has to clear (waveDiff + rockHeight), eating most of
+    // the jump margin. Only allow large rocks where the local wave is at or
+    // below sea level (troughs and down-slopes). Crest-side spawns → medium.
+    if (tier === 'large') {
+      const probableX = g.nextSpawnAt + APPROACH_BUFFER_LRG + g.cw * 0.105 / 2
+      const surfaceAtRock = seaSurfaceY(probableX, g.ch, g.scrollX)
+      const baseY = g.ch * SEA_BASE_Y_PCT
+      if (surfaceAtRock < baseY - g.ch * 0.015) {
+        tier = 'medium'
+      }
+    }
     g.lastHazardTier = tier
 
     let height: number, width: number
