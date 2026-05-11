@@ -156,6 +156,13 @@ interface SplashParticle {
   age: number
 }
 
+interface SparkleParticle {
+  worldX: number     // anchored in world
+  y: number
+  age: number
+  life: number       // total lifetime in seconds
+}
+
 // ── Day/night palette stops ──────────────────────────────────────────────────
 // Each stop covers a quarter of the cycle. Lerps interpolate between adjacent
 // stops based on the local fraction. Order: midday → dusk → night → dawn → loop.
@@ -272,6 +279,8 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     wake: [] as WakeParticle[],
     wakeNextEmitX: 0,         // world x of next wake emit
     splashes: [] as SplashParticle[],
+    sparkles: [] as SparkleParticle[],
+    sparkleNextEmit: 0,       // performance.now() of next sparkle emit
     nextSpawnAt: 0,
     distance: 0,
     deathFlashUntil: 0,
@@ -399,6 +408,8 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     g.wake = []
     g.wakeNextEmitX = 0
     g.splashes = []
+    g.sparkles = []
+    g.sparkleNextEmit = 0
     g.nextSpawnAt = HAZARD_WARMUP
     g.distance = 0
     g.deathFlashUntil = 0
@@ -744,6 +755,24 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     if (g.splashes.length > 0 && g.splashes[0].age > SPLASH_MAX_AGE_SEC) {
       g.splashes = g.splashes.filter(p => p.age < SPLASH_MAX_AGE_SEC)
     }
+    // Sparkles: age + prune; ambient specular highlights drifting on the sea
+    for (const p of g.sparkles) p.age += dt
+    if (g.sparkles.length > 0) {
+      g.sparkles = g.sparkles.filter(s => s.age < s.life)
+    }
+    // Emit a new sparkle every 180-360ms at a random surface position
+    const nowMs = performance.now()
+    if (nowMs > g.sparkleNextEmit && g.cw > 0) {
+      const screenX = 40 + Math.random() * (g.cw - 80)
+      const surfY = seaSurfaceY(screenX + g.scrollX, g.ch, g.scrollX)
+      g.sparkles.push({
+        worldX: screenX + g.scrollX,
+        y: surfY,
+        age: 0,
+        life: 0.45 + Math.random() * 0.35,
+      })
+      g.sparkleNextEmit = nowMs + 180 + Math.random() * 180
+    }
 
     // Hazard spawn + prune
     while (g.nextSpawnAt < g.scrollX + g.cw * 1.05) spawnHazard()
@@ -895,6 +924,50 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       else ctx.lineTo(x, y)
     }
     ctx.stroke()
+
+    // ── Foam caps at wave peaks (detects local maxima) ──
+    ctx.fillStyle = pal.foam
+    for (let x = 12; x <= cw - 12; x += 12) {
+      const yL = seaSurfaceY(x - 12 + g.scrollX, ch, g.scrollX)
+      const yC = seaSurfaceY(x + g.scrollX, ch, g.scrollX)
+      const yR = seaSurfaceY(x + 12 + g.scrollX, ch, g.scrollX)
+      // Smaller y = higher on screen = peak
+      if (yC < yL - 0.4 && yC < yR - 0.4) {
+        ctx.beginPath()
+        ctx.ellipse(x, yC + 0.5, 7, 1.8, 0, 0, Math.PI * 2)
+        ctx.fill()
+        // Small highlight on top of the cap
+        ctx.beginPath()
+        ctx.ellipse(x - 1, yC - 0.5, 3, 0.9, 0, 0, Math.PI * 2)
+        ctx.fill()
+      }
+    }
+
+    // ── Ambient surface sparkles ──
+    for (const s of g.sparkles) {
+      const sx = s.worldX - g.scrollX
+      if (sx < -8 || sx > cw + 8) continue
+      const t = s.age / s.life
+      const alpha = Math.sin(t * Math.PI) * 0.85   // 0 → peak → 0
+      const size = 1.0 + Math.sin(t * Math.PI) * 1.4
+      ctx.save()
+      ctx.globalAlpha = alpha
+      ctx.fillStyle = '#ffffff'
+      ctx.beginPath()
+      ctx.arc(sx, s.y, size, 0, Math.PI * 2)
+      ctx.fill()
+      // Tiny cross-shaped flash
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 0.6
+      ctx.globalAlpha = alpha * 0.7
+      ctx.beginPath()
+      ctx.moveTo(sx - size * 2.3, s.y)
+      ctx.lineTo(sx + size * 2.3, s.y)
+      ctx.moveTo(sx, s.y - size * 2.3)
+      ctx.lineTo(sx, s.y + size * 2.3)
+      ctx.stroke()
+      ctx.restore()
+    }
 
     // ── Wake foam behind the boat ──
     for (const p of g.wake) {
