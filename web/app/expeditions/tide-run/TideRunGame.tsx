@@ -67,6 +67,14 @@ const SHOAL_CLUSTER_MEMBER_MAX_PX  = 130    // each cluster shoal's max width
 const SHOAL_CLUSTER_SAFE_GAP_MIN_PX = 120   // safe-landing strip between shoals — min width
 const SHOAL_CLUSTER_SAFE_GAP_MAX_PX = 170   // safe-landing strip — max width
 
+// Crumblers — rocks that LOOK like normal rocks but with a hidden overhead
+// trap. Grounded boat plows through (the rock shatters); jumping over it =
+// die. Subtle visual cue: visible cracks across the rock plus a small
+// pulsing glint hovering above. Tricks the "see rock → jump" reflex.
+const CRUMBLER_CHANCE              = 0.15  // probability a spawn becomes a crumbler
+const CRUMBLER_WARMUP_M            = 80    // crumblers only after 80m (player learns rocks first)
+const CRUMBLER_AFTER_ROCK_TIME_SEC = 1.05  // need to land from a previous jump before reaching one
+
 // Wave surface modulation — long-period alternation between calm and rolling
 // sections so the run doesn't feel monotonous.
 const WAVE_FLATNESS_PERIOD = 2200  // world px per calm/rolling cycle
@@ -107,6 +115,13 @@ interface Shoal {
   width: number      // width of deadly zone
 }
 
+interface Crumbler {
+  x: number          // world x (left edge)
+  width: number
+  height: number     // cosmetic rock height
+  shattered: boolean // visual flag after boat plows through
+}
+
 // ── Sea surface helper ───────────────────────────────────────────────────────
 // Multi-sine wave is multiplied by a long-period "flatness" modulator so the
 // sea alternates between calm stretches and rolling stretches.
@@ -144,7 +159,8 @@ export default function TideRunGame() {
     hazards: [] as Hazard[],
     currents: [] as Current[],
     shoals: [] as Shoal[],
-    lastSpawnType: null as 'rock' | 'shoal' | null,
+    crumblers: [] as Crumbler[],
+    lastSpawnType: null as 'rock' | 'shoal' | 'crumbler' | null,
     nextSpawnAt: 0,
     distance: 0,
     deathFlashUntil: 0,
@@ -210,6 +226,7 @@ export default function TideRunGame() {
     g.hazards = []
     g.currents = []
     g.shoals = []
+    g.crumblers = []
     g.lastSpawnType = null
     g.nextSpawnAt = HAZARD_WARMUP
     g.distance = 0
@@ -269,6 +286,24 @@ export default function TideRunGame() {
 
     // Base spacing scaled by speed (time-based floor for fairness)
     const baseSpacing = Math.max(HAZARD_SPAWN_SPACING, g.speed * MIN_REACTION_TIME_SEC)
+
+    // ── Maybe spawn a crumbler (looks like a rock, kills you if you jump) ──
+    const canCrumbler = distance > CRUMBLER_WARMUP_M && g.lastSpawnType !== 'crumbler'
+    if (canCrumbler && Math.random() < CRUMBLER_CHANCE) {
+      // Small or medium size only (large ones would be too obvious as traps)
+      const isSmall = Math.random() < 0.55
+      const height = isSmall ? g.ch * 0.035 : g.ch * 0.075
+      const width = isSmall ? g.cw * 0.06 : g.cw * 0.085
+      // After-rock buffer — player must be able to land before reaching it
+      if (g.lastSpawnType === 'rock') {
+        const minBuffer = g.speed * CRUMBLER_AFTER_ROCK_TIME_SEC
+        if (baseSpacing < minBuffer) g.nextSpawnAt += (minBuffer - baseSpacing)
+      }
+      g.crumblers.push({ x: g.nextSpawnAt, width, height, shattered: false })
+      g.nextSpawnAt += baseSpacing
+      g.lastSpawnType = 'crumbler'
+      return
+    }
 
     // ── Maybe spawn a shoal (or cluster of shoals) instead of a rock ──
     const canShoal = distance > SHOAL_WARMUP_M && g.lastSpawnType !== 'shoal'
@@ -494,17 +529,36 @@ export default function TideRunGame() {
     while (g.shoals.length > 0 && g.shoals[0].x + g.shoals[0].width < g.scrollX) {
       g.shoals.shift()
     }
+    while (g.crumblers.length > 0 && g.crumblers[0].x + g.crumblers[0].width < g.scrollX) {
+      g.crumblers.shift()
+    }
 
-    // Death checks: surface rocks, or being grounded inside a shoal
+    // Death checks
     let dead = false
+    const boatWorldX = shipScreenX + g.scrollX
+
     if (collidesWithHazard(shipScreenX)) {
       dead = true
     } else if (!g.airborne) {
-      const boatWorldX = shipScreenX + g.scrollX
+      // Grounded inside a shoal = die
       for (const wp of g.shoals) {
         if (boatWorldX >= wp.x && boatWorldX <= wp.x + wp.width) {
           dead = true
           break
+        }
+      }
+    }
+
+    // Crumblers: airborne over a crumbler = die (the trap). Grounded = pass
+    // through, mark shattered for visual.
+    if (!dead) {
+      for (const cr of g.crumblers) {
+        if (boatWorldX < cr.x || boatWorldX > cr.x + cr.width) continue
+        if (g.airborne) {
+          dead = true
+          break
+        } else if (!cr.shattered) {
+          cr.shattered = true
         }
       }
     }
@@ -597,6 +651,14 @@ export default function TideRunGame() {
       if (ox + obs.width < 0 || ox > cw) continue
       const surfaceAtHazard = seaSurfaceY(obs.x + obs.width / 2, ch, g.scrollX)
       drawHazard(ctx, ox, surfaceAtHazard, obs.width, obs.height)
+    }
+
+    // ── Crumblers (look like rocks, but you must run through them) ──
+    for (const cr of g.crumblers) {
+      const ox = cr.x - g.scrollX
+      if (ox + cr.width < 0 || ox > cw) continue
+      const surfaceAtCr = seaSurfaceY(cr.x + cr.width / 2, ch, g.scrollX)
+      drawCrumbler(ctx, ox, surfaceAtCr, cr.width, cr.height, cr.shattered, g.scrollX)
     }
 
     // ── Ship ──
@@ -809,6 +871,104 @@ function drawHazard(ctx: CanvasRenderingContext2D, x: number, surfaceY: number, 
   ctx.moveTo(x - w * 0.05, surfaceY)
   ctx.bezierCurveTo(x + w * 0.3, surfaceY - 1.5, x + w * 0.7, surfaceY - 1.5, x + w * 1.05, surfaceY)
   ctx.stroke()
+}
+
+// Crumbler: looks like a regular rock but with visible cracks + a few pebbles
+// at the base + a small pulsing glint hovering above. Grounded boat plows
+// through; jumping over it triggers a hidden overhead trap = die.
+function drawCrumbler(
+  ctx: CanvasRenderingContext2D,
+  x: number, surfaceY: number,
+  w: number, h: number,
+  shattered: boolean,
+  scrollX: number,
+) {
+  // Shattered: just a small scatter of pebbles fading away
+  if (shattered) {
+    ctx.save()
+    ctx.globalAlpha = 0.4
+    ctx.fillStyle = '#33271f'
+    for (let i = 0; i < 6; i++) {
+      const seed = ((i * 211 + Math.floor(x * 11)) % 1000) / 1000
+      const px = x + w * (i + 0.5) / 6 + (seed - 0.5) * 4
+      const py = surfaceY + 1 + (seed * 3)
+      ctx.beginPath()
+      ctx.arc(px, py, 1.5 + seed * 1, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    ctx.restore()
+    return
+  }
+
+  const top = surfaceY - h
+
+  // Same rock body geometry as drawHazard
+  const grad = ctx.createLinearGradient(x, top, x, surfaceY)
+  grad.addColorStop(0, '#54453a')
+  grad.addColorStop(0.55, '#33271f')
+  grad.addColorStop(1, '#1a1410')
+  ctx.fillStyle = grad
+  ctx.beginPath()
+  ctx.moveTo(x, surfaceY + h * 0.3)
+  ctx.lineTo(x + w * 0.18, top + h * 0.22)
+  ctx.lineTo(x + w * 0.35, top)
+  ctx.lineTo(x + w * 0.55, top + h * 0.12)
+  ctx.lineTo(x + w * 0.74, top + h * 0.05)
+  ctx.lineTo(x + w * 0.9,  top + h * 0.30)
+  ctx.lineTo(x + w,        surfaceY + h * 0.3)
+  ctx.closePath()
+  ctx.fill()
+
+  // Cracks — the visual cue that this rock isn't a normal rock
+  ctx.strokeStyle = 'rgba(230, 210, 180, 0.45)'
+  ctx.lineWidth = 0.9
+  ctx.beginPath()
+  ctx.moveTo(x + w * 0.20, top + h * 0.30)
+  ctx.lineTo(x + w * 0.45, top + h * 0.55)
+  ctx.lineTo(x + w * 0.60, top + h * 0.40)
+  ctx.moveTo(x + w * 0.55, top + h * 0.15)
+  ctx.lineTo(x + w * 0.78, top + h * 0.50)
+  ctx.moveTo(x + w * 0.30, top + h * 0.65)
+  ctx.lineTo(x + w * 0.70, top + h * 0.85)
+  ctx.stroke()
+
+  // A few loose pebbles at the base (already crumbling)
+  ctx.fillStyle = '#2a2018'
+  for (let i = 0; i < 4; i++) {
+    const seed = ((i * 137 + Math.floor(x * 13)) % 1000) / 1000
+    const px = x + w * (0.08 + 0.22 * i) + (seed - 0.5) * 3
+    const py = surfaceY + 2 + (i % 2)
+    ctx.beginPath()
+    ctx.arc(px, py, 1.4 + seed * 0.8, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  // Pulsing glint above — the subtle "trap" hint
+  const cx = x + w / 2
+  const glintY = top - 14
+  const pulse = 0.5 + 0.5 * Math.sin(scrollX * 0.05 + cx * 0.03)
+  const glintAlpha = 0.45 + pulse * 0.45
+  ctx.save()
+  ctx.globalAlpha = glintAlpha
+  ctx.fillStyle = '#ffe8a0'
+  // 4-point star
+  ctx.beginPath()
+  ctx.moveTo(cx,     glintY - 4)
+  ctx.lineTo(cx + 1, glintY - 1)
+  ctx.lineTo(cx + 4, glintY)
+  ctx.lineTo(cx + 1, glintY + 1)
+  ctx.lineTo(cx,     glintY + 4)
+  ctx.lineTo(cx - 1, glintY + 1)
+  ctx.lineTo(cx - 4, glintY)
+  ctx.lineTo(cx - 1, glintY - 1)
+  ctx.closePath()
+  ctx.fill()
+  // Soft outer glow
+  ctx.globalAlpha = glintAlpha * 0.35
+  ctx.beginPath()
+  ctx.arc(cx, glintY, 6, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
 }
 
 // Current: a flat patch of foamy/churning water on the surface. Boat slows
