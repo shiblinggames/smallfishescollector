@@ -37,6 +37,15 @@ const TIER_NO_LARGE_M      = 90    // 25–90m: small + medium; no large rocks y
 const APPROACH_BUFFER_MED  = 80    // extra world px of approach before a medium rock
 const APPROACH_BUFFER_LRG  = 240   // extra world px before a large rock (real reaction time)
 
+// Currents — slow-zones on the surface. Ride through to slow down (more
+// reaction time); jump over to skip the slowdown. Spawned in the gap
+// between hazards so they never overlap a rock.
+const CURRENT_CHANCE       = 0.22  // probability of a current spawning after each hazard
+const CURRENT_WIDTH_MIN    = 0.18  // % of canvas width
+const CURRENT_WIDTH_MAX    = 0.32  // % of canvas width
+const CURRENT_SPEED_MULT   = 0.55  // effective scroll speed when grounded inside a current
+const CURRENT_WARMUP_M     = 35    // currents don't appear until 35m into the run
+
 // Hitbox inset on the trimmed sprite
 const HITBOX_INSET = { top: 0.35, right: 0.12, bottom: 0.08, left: 0.08 }
 
@@ -50,6 +59,11 @@ interface Hazard {
   x: number          // world x (left edge of hazard)
   width: number
   height: number     // sticks up above the surface by this many px
+}
+
+interface Current {
+  x: number          // world x (left edge of current zone)
+  width: number      // width of slow-zone
 }
 
 // ── Sea surface helper ───────────────────────────────────────────────────────
@@ -83,6 +97,7 @@ export default function TideRunGame() {
     speed: BASE_SPEED,
     elapsed: 0,
     hazards: [] as Hazard[],
+    currents: [] as Current[],
     nextSpawnAt: 0,
     distance: 0,
     deathFlashUntil: 0,
@@ -145,6 +160,7 @@ export default function TideRunGame() {
     g.speed = BASE_SPEED
     g.elapsed = 0
     g.hazards = []
+    g.currents = []
     g.nextSpawnAt = HAZARD_WARMUP
     g.distance = 0
     g.deathFlashUntil = 0
@@ -236,8 +252,21 @@ export default function TideRunGame() {
     if (tier === 'medium') g.nextSpawnAt += APPROACH_BUFFER_MED
     else if (tier === 'large') g.nextSpawnAt += APPROACH_BUFFER_LRG
 
-    g.hazards.push({ x: g.nextSpawnAt, width, height })
+    const hazardX = g.nextSpawnAt
+    g.hazards.push({ x: hazardX, width, height })
     g.nextSpawnAt += HAZARD_SPAWN_SPACING
+
+    // Maybe drop a current in the gap before the NEXT hazard.
+    // Place it well clear of both this hazard and the next so it never overlaps.
+    if (distance > CURRENT_WARMUP_M && Math.random() < CURRENT_CHANCE) {
+      const cw = g.cw * (CURRENT_WIDTH_MIN + Math.random() * (CURRENT_WIDTH_MAX - CURRENT_WIDTH_MIN))
+      const gapStart = hazardX + width + g.cw * 0.05         // 5% of cw past this hazard
+      const gapEnd = g.nextSpawnAt - g.cw * 0.05              // 5% of cw before next hazard
+      if (gapEnd - gapStart > cw) {
+        const cx = gapStart + Math.random() * (gapEnd - gapStart - cw)
+        g.currents.push({ x: cx, width: cw })
+      }
+    }
   }, [])
 
   // ── Surface hazard collision ──────────────────────────────────────────────
@@ -267,11 +296,25 @@ export default function TideRunGame() {
 
     g.elapsed += dt
     g.speed = Math.min(BASE_SPEED + SPEED_RAMP * g.elapsed, MAX_SPEED)
-    g.scrollX += g.speed * dt
-    g.distance = g.scrollX * METERS_PER_PIXEL
 
     const shipScreenX = g.cw * SHIP_X_RATIO
     const cx = shipScreenX + g.shipW / 2
+
+    // If grounded inside a current zone, scroll at the slowdown multiplier.
+    // Jumping over (airborne) skips the slowdown entirely.
+    let scrollSpeed = g.speed
+    if (!g.airborne) {
+      const boatWorldX = shipScreenX + g.scrollX
+      for (const c of g.currents) {
+        if (boatWorldX >= c.x && boatWorldX <= c.x + c.width) {
+          scrollSpeed = g.speed * CURRENT_SPEED_MULT
+          break
+        }
+      }
+    }
+    g.scrollX += scrollSpeed * dt
+    g.distance = g.scrollX * METERS_PER_PIXEL
+
     const surfaceY = seaSurfaceY(cx + g.scrollX, g.ch, g.scrollX)
 
     if (g.airborne) {
@@ -310,6 +353,9 @@ export default function TideRunGame() {
     while (g.nextSpawnAt < g.scrollX + g.cw * 1.05) spawnHazard()
     while (g.hazards.length > 0 && g.hazards[0].x + g.hazards[0].width < g.scrollX) {
       g.hazards.shift()
+    }
+    while (g.currents.length > 0 && g.currents[0].x + g.currents[0].width < g.scrollX) {
+      g.currents.shift()
     }
 
     // Death check — only surface hazards (the sea itself is just a floor now)
@@ -353,6 +399,11 @@ export default function TideRunGame() {
     ctx.fillStyle = sky
     ctx.fillRect(0, 0, cw, ch)
 
+    // ── Parallax: distant clouds (40% scroll speed) ──
+    drawClouds(ctx, cw, ch, g.scrollX * 0.40)
+    // ── Parallax: distant islands at the horizon (15% scroll speed) ──
+    drawDistantIslands(ctx, cw, ch, g.scrollX * 0.15)
+
     // ── Dynamic sea surface ──
     ctx.beginPath()
     ctx.moveTo(0, ch)
@@ -378,6 +429,13 @@ export default function TideRunGame() {
       else ctx.lineTo(x, y)
     }
     ctx.stroke()
+
+    // ── Current zones (foam patches on the surface) ──
+    for (const c of g.currents) {
+      const ox = c.x - g.scrollX
+      if (ox + c.width < 0 || ox > cw) continue
+      drawCurrent(ctx, ox, c.width, g.scrollX, (x) => seaSurfaceY(x + g.scrollX, ch, g.scrollX))
+    }
 
     // ── Surface hazards (rocks bobbing on the wave) ──
     for (const obs of g.hazards) {
@@ -595,4 +653,101 @@ function drawHazard(ctx: CanvasRenderingContext2D, x: number, surfaceY: number, 
   ctx.moveTo(x - w * 0.05, surfaceY)
   ctx.bezierCurveTo(x + w * 0.3, surfaceY - 1.5, x + w * 0.7, surfaceY - 1.5, x + w * 1.05, surfaceY)
   ctx.stroke()
+}
+
+// Current: a flat patch of foamy/churning water on the surface. Boat slows
+// down while grounded inside it; jump over to skip.
+function drawCurrent(
+  ctx: CanvasRenderingContext2D,
+  x: number, width: number,
+  scrollX: number,
+  surfaceAt: (screenX: number) => number,
+) {
+  // Lighter water tint to read as a distinct zone
+  ctx.save()
+  ctx.fillStyle = 'rgba(180, 220, 240, 0.20)'
+  ctx.beginPath()
+  for (let dx = 0; dx <= width; dx += 4) {
+    const sx = x + dx
+    const sy = surfaceAt(sx)
+    if (dx === 0) ctx.moveTo(sx, sy)
+    else ctx.lineTo(sx, sy)
+  }
+  for (let dx = width; dx >= 0; dx -= 4) {
+    const sx = x + dx
+    ctx.lineTo(sx, surfaceAt(sx) + 9)
+  }
+  ctx.closePath()
+  ctx.fill()
+
+  // Animated foam streaks (use scrollX as phase so foam appears to swirl)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)'
+  ctx.lineWidth = 1.4
+  const streakCount = Math.max(3, Math.floor(width / 26))
+  for (let i = 0; i < streakCount; i++) {
+    const baseX = x + (i + 0.5) * (width / streakCount)
+    const phase = (scrollX * 0.6 + i * 80) * 0.025
+    const yOff = Math.sin(phase) * 2.5
+    const sy = surfaceAt(baseX)
+    ctx.beginPath()
+    ctx.moveTo(baseX - 6, sy + yOff + 1)
+    ctx.quadraticCurveTo(baseX, sy + yOff - 2, baseX + 6, sy + yOff + 1)
+    ctx.stroke()
+  }
+
+  // Edge chevrons signalling the slow-zone direction
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
+  ctx.lineWidth = 1.2
+  const drawChevron = (cx: number) => {
+    const sy = surfaceAt(cx) - 4
+    ctx.beginPath()
+    ctx.moveTo(cx - 4, sy)
+    ctx.lineTo(cx, sy + 4)
+    ctx.lineTo(cx + 4, sy)
+    ctx.stroke()
+  }
+  drawChevron(x + 8)
+  drawChevron(x + width - 8)
+  ctx.restore()
+}
+
+// Distant islands silhouetted at the horizon, parallax-scrolled slow.
+function drawDistantIslands(ctx: CanvasRenderingContext2D, cw: number, ch: number, scrollOffset: number) {
+  ctx.fillStyle = 'rgba(70, 100, 140, 0.32)'
+  const period = cw * 1.4
+  const offset = ((scrollOffset % period) + period) % period
+  const horizon = ch * 0.66
+  for (let i = -1; i <= 2; i++) {
+    const ix = i * period - offset
+    // Two soft hills per period
+    ctx.beginPath()
+    ctx.moveTo(ix, horizon + 4)
+    ctx.bezierCurveTo(ix + period * 0.15, horizon - 18, ix + period * 0.35, horizon - 22, ix + period * 0.5, horizon + 4)
+    ctx.lineTo(ix + period * 0.5, horizon + 4)
+    ctx.bezierCurveTo(ix + period * 0.6, horizon - 10, ix + period * 0.85, horizon - 14, ix + period, horizon + 4)
+    ctx.closePath()
+    ctx.fill()
+  }
+}
+
+// Wispy clouds drifting at mid speed.
+function drawClouds(ctx: CanvasRenderingContext2D, cw: number, ch: number, scrollOffset: number) {
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.42)'
+  const period = cw * 1.1
+  const offset = ((scrollOffset % period) + period) % period
+  const cloudYs = [ch * 0.10, ch * 0.18, ch * 0.28]
+  const cloudXs = [0.15, 0.45, 0.78]
+  for (let i = -1; i <= 2; i++) {
+    const ix = i * period - offset
+    for (let j = 0; j < cloudXs.length; j++) {
+      const cx = ix + cloudXs[j] * period
+      const cy = cloudYs[j]
+      const r = (j === 1 ? 14 : 11)
+      ctx.beginPath()
+      ctx.ellipse(cx,       cy,       r * 1.6, r * 0.55, 0, 0, Math.PI * 2)
+      ctx.ellipse(cx - r,   cy + 2,   r * 1.1, r * 0.45, 0, 0, Math.PI * 2)
+      ctx.ellipse(cx + r,   cy + 2,   r * 1.0, r * 0.42, 0, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
 }
