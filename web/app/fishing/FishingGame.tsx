@@ -3574,11 +3574,12 @@ export default function FishingGame({
                       : holdFull ? 'rgba(248,113,113,0.35)' : holdCritical ? 'rgba(251,146,60,0.28)' : holdWarning ? 'rgba(251,191,36,0.20)' : 'rgba(255,255,255,0.12)'}`,
                   }}
                 >
-                  <svg width="36" height="36" viewBox="0 0 32 32" style={{ flexShrink: 0, filter: `drop-shadow(0 2px 4px ${holdAccent}55)` }}>
-                    <path d="M5 16c0-3.5 4.5-7 11-7 4 0 7 2 9 5l5-3.5v11l-5-3.5c-2 3-5 5-9 5-6.5 0-11-3.5-11-7z" fill={holdTotalCount > 0 ? holdAccent : '#3a3835'} />
-                    <circle cx="22.5" cy="14" r="0.95" fill="#0a1018" />
-                    <path d="M5 16l-3 -3.5v7z" fill={holdTotalCount > 0 ? holdAccent : '#3a3835'} />
-                  </svg>
+                  <img src="/crateclosed.png" alt="" style={{
+                    width: 36, height: 36, objectFit: 'contain', flexShrink: 0,
+                    filter: holdTotalCount > 0
+                      ? `drop-shadow(0 2px 4px ${holdAccent}55)`
+                      : 'grayscale(1) brightness(0.5)',
+                  }} />
                   <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', lineHeight: 1, color: holdTotalCount > 0 ? holdAccent : '#3a3835' }}>
                     {holdTotalCount}<span className="font-karla font-400" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.3)' }}>/{holdCapacity}</span>
                   </p>
@@ -3596,18 +3597,11 @@ export default function FishingGame({
                     border: `1px solid ${sellOpen ? 'rgba(240,192,64,0.28)' : 'rgba(255,255,255,0.12)'}`,
                   }}
                 >
-                  <svg width="36" height="36" viewBox="0 0 32 32" style={{ flexShrink: 0, filter: 'drop-shadow(0 2px 4px rgba(240,192,64,0.5))' }}>
-                    <defs>
-                      <radialGradient id="coin-grad" cx="0.38" cy="0.38">
-                        <stop offset="0%" stopColor="#ffe580" />
-                        <stop offset="60%" stopColor="#f0c040" />
-                        <stop offset="100%" stopColor="#b88020" />
-                      </radialGradient>
-                    </defs>
-                    <circle cx="16" cy="16" r="13" fill="url(#coin-grad)" stroke="#8a6020" strokeWidth="1.2" />
-                    <circle cx="16" cy="16" r="9" fill="none" stroke="#8a6020" strokeWidth="0.6" opacity="0.5" />
-                    <text x="16" y="20.5" textAnchor="middle" fontSize="13" fontWeight="700" fill="#8a6020" fontFamily="serif">⟡</text>
-                  </svg>
+                  <span className="font-cinzel font-700" style={{
+                    width: 36, fontSize: '1.7rem', lineHeight: 1,
+                    color: holdTotalValue > 0 ? '#f0c040' : '#3a3835',
+                    textAlign: 'center', flexShrink: 0,
+                  }}>⟡</span>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', lineHeight: 1, color: holdTotalValue > 0 ? '#f0c040' : '#3a3835', whiteSpace: 'nowrap' }}>
                     {holdTotalValue > 0 ? holdTotalValue.toLocaleString() : '—'}
                   </p>
