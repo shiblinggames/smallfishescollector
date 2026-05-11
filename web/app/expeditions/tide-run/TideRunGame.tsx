@@ -8,22 +8,30 @@ const SHIP_X_RATIO    = 0.24
 const SHIP_HEIGHT_PCT = 0.14   // ship height as fraction of canvas height
 const SHIP_ASPECT     = 1031 / 672   // trimmed boatrun.png
 
-const GRAVITY      = 1900      // px/s²
+// Ship physics
+const GRAVITY      = 1900      // px/s² (only applies when airborne)
 const TAP_IMPULSE  = -560      // px/s (negative = upward)
-const BASE_SPEED   = 230       // px/s horizontal scroll
-const SPEED_RAMP   = 14        // px/s² (linear ramp)
-const MAX_SPEED    = 620       // px/s
+const BASE_SPEED   = 240       // px/s horizontal scroll
+const SPEED_RAMP   = 13        // px/s² (linear time ramp)
+const MAX_SPEED    = 600       // px/s
 
-const SPAWN_SPACING = 240      // world px between obstacle centers
-const MAX_GAP       = 290      // starting vertical gap (paired obstacles)
-const MIN_GAP       = 165      // narrowed gap floor
-const GAP_NARROW_DISTANCE = 12000  // world px to narrow from MAX → MIN
+// Sea surface — multi-sine in world space, amplitude ramps with distance
+const SEA_BASE_Y_PCT      = 0.80   // mean sea level (% of canvas height)
+const WAVE_PRIMARY_PERIOD = 300
+const WAVE_PRIMARY_AMP    = 18
+const WAVE_SECONDARY_PERIOD = 115
+const WAVE_SECONDARY_AMP  = 8
+const WAVE_TERTIARY_PERIOD = 520
+const WAVE_TERTIARY_AMP   = 12
+const WAVE_AMP_RAMP_DISTANCE = 8000
+const WAVE_AMP_RAMP_MAX   = 1.55   // peak amplitude multiplier
 
-const PAIR_PROBABILITY_START = 0.18  // pair frequency at start
-const PAIR_PROBABILITY_MAX   = 0.45  // pair frequency once ramped
-const PAIR_RAMP_DISTANCE     = 8000
+// Spire spawning
+const SPAWN_SPACING   = 260
+const SPIRE_MIN_HEIGHT_PCT = 0.08
+const SPIRE_MAX_HEIGHT_PCT = 0.36
 
-// Hitbox inset on the trimmed sprite (top / right / bottom / left as fractions)
+// Hitbox inset on the trimmed sprite
 const HITBOX_INSET = { top: 0.35, right: 0.12, bottom: 0.08, left: 0.08 }
 
 const METERS_PER_PIXEL = 1 / 60
@@ -31,14 +39,21 @@ const HIGH_SCORE_KEY = 'tide-run-best'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type GameState = 'ready' | 'playing' | 'dead'
-type ObstacleType = 'wave' | 'spire' | 'pair'
 
-interface Obstacle {
-  x: number              // world x (left edge)
+interface Spire {
+  x: number          // world x (left edge)
   width: number
-  type: ObstacleType
-  topHeight: number      // 0 if no spire
-  botHeight: number      // 0 if no wave
+  height: number     // hangs down from y=0
+}
+
+// ── Sea surface helper ───────────────────────────────────────────────────────
+function seaSurfaceY(worldX: number, ch: number, distanceScrolled: number): number {
+  const ramp = 1 + Math.min(distanceScrolled / WAVE_AMP_RAMP_DISTANCE, 1) * (WAVE_AMP_RAMP_MAX - 1)
+  const TAU = Math.PI * 2
+  const w1 = Math.sin(worldX / WAVE_PRIMARY_PERIOD * TAU) * WAVE_PRIMARY_AMP
+  const w2 = Math.sin(worldX / WAVE_SECONDARY_PERIOD * TAU + 1.3) * WAVE_SECONDARY_AMP
+  const w3 = Math.sin(worldX / WAVE_TERTIARY_PERIOD * TAU - 0.6) * WAVE_TERTIARY_AMP
+  return ch * SEA_BASE_Y_PCT - (w1 + w2 + w3) * ramp
 }
 
 // ── Game ─────────────────────────────────────────────────────────────────────
@@ -58,14 +73,15 @@ export default function TideRunGame() {
     shipW: 0,
     shipY: 0,
     shipVy: 0,
+    airborne: true,
     scrollX: 0,
     speed: BASE_SPEED,
     elapsed: 0,
-    obstacles: [] as Obstacle[],
+    spires: [] as Spire[],
     nextSpawnAt: 0,
-    distance: 0,        // meters
-    deathFlashUntil: 0, // timestamp for collision flash
-    lastScoreUpdate: 0, // timestamp of last React score state update
+    distance: 0,
+    deathFlashUntil: 0,
+    lastScoreUpdate: 0,
   })
 
   const [uiState, setUiState] = useState<GameState>('ready')
@@ -100,7 +116,11 @@ export default function TideRunGame() {
     g.shipH = rect.height * SHIP_HEIGHT_PCT
     g.shipW = g.shipH * SHIP_ASPECT
     if (g.state === 'ready') {
-      g.shipY = rect.height * 0.45
+      // Park the ship sitting on the sea surface at its screen x
+      const cx = rect.width * SHIP_X_RATIO + g.shipW / 2
+      const wy = seaSurfaceY(cx + g.scrollX, rect.height, 0)
+      g.shipY = wy - g.shipH * (1 - HITBOX_INSET.bottom)
+      g.airborne = false
     }
   }, [])
 
@@ -113,16 +133,20 @@ export default function TideRunGame() {
   // ── Reset game ─────────────────────────────────────────────────────────────
   const reset = useCallback(() => {
     const g = gRef.current
-    g.shipY = g.ch * 0.45
-    g.shipVy = 0
     g.scrollX = 0
     g.speed = BASE_SPEED
     g.elapsed = 0
-    g.obstacles = []
-    g.nextSpawnAt = g.cw * 1.6  // ~2.5s grace before first obstacle at base speed
+    g.spires = []
+    g.nextSpawnAt = g.cw * 1.6       // ~2.5s grace before first spire at base speed
     g.distance = 0
     g.deathFlashUntil = 0
     g.lastScoreUpdate = 0
+    g.shipVy = 0
+    g.airborne = false
+    // Land ship on the sea at its screen x
+    const cx = g.cw * SHIP_X_RATIO + g.shipW / 2
+    const wy = seaSurfaceY(cx + g.scrollX, g.ch, 0)
+    g.shipY = wy - g.shipH * (1 - HITBOX_INSET.bottom)
   }, [])
 
   // ── Tap handler ────────────────────────────────────────────────────────────
@@ -131,127 +155,107 @@ export default function TideRunGame() {
     if (g.state === 'ready') {
       reset()
       g.state = 'playing'
+      g.shipVy = TAP_IMPULSE
+      g.airborne = true
       setUiState('playing')
       setScore(0)
     } else if (g.state === 'playing') {
       g.shipVy = TAP_IMPULSE
+      g.airborne = true
     } else if (g.state === 'dead') {
-      // Brief grace period so you don't accidentally restart from a death tap
       if (performance.now() < g.deathFlashUntil + 350) return
       reset()
       g.state = 'playing'
+      g.shipVy = TAP_IMPULSE
+      g.airborne = true
       setUiState('playing')
       setScore(0)
     }
   }, [reset])
 
-  // ── Spawn an obstacle pair/single at the right edge ────────────────────────
-  const spawn = useCallback(() => {
+  // ── Spawn one spire ────────────────────────────────────────────────────────
+  const spawnSpire = useCallback(() => {
     const g = gRef.current
-
-    // Gap narrows linearly with distance scrolled
-    const gapProgress = Math.min(g.scrollX / GAP_NARROW_DISTANCE, 1)
-    const currentGap = MAX_GAP + (MIN_GAP - MAX_GAP) * gapProgress
-
-    // Pair probability ramps up early
-    const pairProgress = Math.min(g.scrollX / PAIR_RAMP_DISTANCE, 1)
-    const pairChance = PAIR_PROBABILITY_START + (PAIR_PROBABILITY_MAX - PAIR_PROBABILITY_START) * pairProgress
-
-    const obstacleWidth = g.cw * 0.13
-
-    let obs: Obstacle
-    const r = Math.random()
-    if (r < pairChance) {
-      // Paired top spire + bottom wave with a gap
-      const totalAvailable = g.ch - currentGap
-      const topH = totalAvailable * (0.25 + Math.random() * 0.5)
-      const botH = totalAvailable - topH
-      obs = {
-        x: g.nextSpawnAt,
-        width: obstacleWidth,
-        type: 'pair',
-        topHeight: topH,
-        botHeight: botH,
-      }
-    } else if (Math.random() < 0.5) {
-      // Single bottom wave
-      const minH = g.ch * 0.10
-      const maxH = g.ch * 0.42
-      obs = {
-        x: g.nextSpawnAt,
-        width: obstacleWidth,
-        type: 'wave',
-        topHeight: 0,
-        botHeight: minH + Math.random() * (maxH - minH),
-      }
-    } else {
-      // Single top spire
-      const minH = g.ch * 0.10
-      const maxH = g.ch * 0.40
-      obs = {
-        x: g.nextSpawnAt,
-        width: obstacleWidth,
-        type: 'spire',
-        topHeight: minH + Math.random() * (maxH - minH),
-        botHeight: 0,
-      }
-    }
-
-    g.obstacles.push(obs)
+    const minH = g.ch * SPIRE_MIN_HEIGHT_PCT
+    const maxH = g.ch * SPIRE_MAX_HEIGHT_PCT
+    g.spires.push({
+      x: g.nextSpawnAt,
+      width: g.cw * 0.13,
+      height: minH + Math.random() * (maxH - minH),
+    })
     g.nextSpawnAt += SPAWN_SPACING
   }, [])
 
-  // ── Collision check ────────────────────────────────────────────────────────
-  const collides = useCallback((shipScreenX: number) => {
+  // ── Spire collision (sea is handled by airborne/grounded landing) ──────────
+  const collidesWithSpire = useCallback((shipScreenX: number) => {
     const g = gRef.current
-    // Inner hitbox
     const hx = shipScreenX + g.shipW * HITBOX_INSET.left
     const hy = g.shipY + g.shipH * HITBOX_INSET.top
     const hw = g.shipW * (1 - HITBOX_INSET.left - HITBOX_INSET.right)
-    const hh = g.shipH * (1 - HITBOX_INSET.top - HITBOX_INSET.bottom)
 
-    // Ceiling / floor
-    if (hy < 0) return true
-    if (hy + hh > g.ch) return true
-
-    for (const obs of g.obstacles) {
-      const ox = obs.x - g.scrollX
-      if (ox + obs.width < hx) continue
-      if (ox > hx + hw) break  // obstacles sorted by x ascending → safe to break
-      // top spire
-      if (obs.topHeight > 0) {
-        if (hy < obs.topHeight && hx + hw > ox && hx < ox + obs.width) return true
-      }
-      // bottom wave
-      if (obs.botHeight > 0) {
-        const waveTop = g.ch - obs.botHeight
-        if (hy + hh > waveTop && hx + hw > ox && hx < ox + obs.width) return true
-      }
+    for (const s of g.spires) {
+      const ox = s.x - g.scrollX
+      if (ox + s.width < hx) continue
+      if (ox > hx + hw) break
+      if (hy < s.height) return true
     }
     return false
   }, [])
 
-  // ── Step physics + spawn + collisions ──────────────────────────────────────
+  // ── Step ──────────────────────────────────────────────────────────────────
   const step = useCallback((dt: number) => {
     const g = gRef.current
     if (g.state !== 'playing') return
 
     g.elapsed += dt
-    g.shipVy += GRAVITY * dt
-    g.shipY += g.shipVy * dt
     g.speed = Math.min(BASE_SPEED + SPEED_RAMP * g.elapsed, MAX_SPEED)
     g.scrollX += g.speed * dt
     g.distance = g.scrollX * METERS_PER_PIXEL
 
-    while (g.nextSpawnAt < g.scrollX + g.cw * 1.05) spawn()
+    const shipScreenX = g.cw * SHIP_X_RATIO
+    const cx = shipScreenX + g.shipW / 2
 
-    // Prune off-screen obstacles
-    while (g.obstacles.length > 0 && g.obstacles[0].x + g.obstacles[0].width < g.scrollX) {
-      g.obstacles.shift()
+    if (g.airborne) {
+      // Free-fall physics
+      g.shipVy += GRAVITY * dt
+      g.shipY += g.shipVy * dt
+
+      // Land check — sample wave surface across hitbox width
+      if (g.shipVy >= 0) {
+        const hitboxLeft = shipScreenX + g.shipW * HITBOX_INSET.left
+        const hitboxRight = shipScreenX + g.shipW * (1 - HITBOX_INSET.right)
+        let highestSurface = Infinity  // smallest y = highest wave crest
+        for (let i = 0; i <= 4; i++) {
+          const sx = hitboxLeft + (hitboxRight - hitboxLeft) * (i / 4)
+          const wy = seaSurfaceY(sx + g.scrollX, g.ch, g.scrollX)
+          if (wy < highestSurface) highestSurface = wy
+        }
+        const hitboxBottom = g.shipY + g.shipH * (1 - HITBOX_INSET.bottom)
+        if (hitboxBottom >= highestSurface) {
+          g.airborne = false
+          g.shipVy = 0
+          g.shipY = highestSurface - g.shipH * (1 - HITBOX_INSET.bottom)
+        }
+      }
+    } else {
+      // Grounded — locked to surface
+      const wy = seaSurfaceY(cx + g.scrollX, g.ch, g.scrollX)
+      g.shipY = wy - g.shipH * (1 - HITBOX_INSET.bottom)
     }
 
-    const shipScreenX = g.cw * SHIP_X_RATIO
-    if (collides(shipScreenX)) {
+    // Spire spawn + prune
+    while (g.nextSpawnAt < g.scrollX + g.cw * 1.05) spawnSpire()
+    while (g.spires.length > 0 && g.spires[0].x + g.spires[0].width < g.scrollX) {
+      g.spires.shift()
+    }
+
+    // Death checks
+    const hitboxTop = g.shipY + g.shipH * HITBOX_INSET.top
+    let dead = false
+    if (hitboxTop < 0) dead = true                                // flew off the top
+    else if (collidesWithSpire(shipScreenX)) dead = true          // hit a spire
+
+    if (dead) {
       g.state = 'dead'
       g.deathFlashUntil = performance.now() + 250
       const finalMeters = Math.floor(g.distance)
@@ -262,14 +266,13 @@ export default function TideRunGame() {
         if (typeof window !== 'undefined') window.localStorage.setItem(HIGH_SCORE_KEY, String(finalMeters))
       }
     } else {
-      // Throttle live score updates to ~5Hz to avoid React churn
       const now = performance.now()
       if (now - g.lastScoreUpdate > 180) {
         g.lastScoreUpdate = now
         setScore(Math.floor(g.distance))
       }
     }
-  }, [spawn, collides, highScore])
+  }, [spawnSpire, collidesWithSpire, highScore])
 
   // ── Render ─────────────────────────────────────────────────────────────────
   const render = useCallback(() => {
@@ -282,46 +285,62 @@ export default function TideRunGame() {
     if (cw === 0 || ch === 0) return
 
     // ── Sky ──
-    const sky = ctx.createLinearGradient(0, 0, 0, ch * 0.65)
+    const sky = ctx.createLinearGradient(0, 0, 0, ch * 0.7)
     sky.addColorStop(0, '#5da7d4')
     sky.addColorStop(1, '#a8d4ec')
     ctx.fillStyle = sky
-    ctx.fillRect(0, 0, cw, ch * 0.65)
+    ctx.fillRect(0, 0, cw, ch * 0.7)
 
-    // ── Sea ──
-    const sea = ctx.createLinearGradient(0, ch * 0.65, 0, ch)
-    sea.addColorStop(0, '#1a4d6e')
-    sea.addColorStop(1, '#062840')
-    ctx.fillStyle = sea
-    ctx.fillRect(0, ch * 0.65, cw, ch * 0.35)
-
-    // ── Distant wave silhouettes (parallax) ──
-    ctx.fillStyle = 'rgba(255,255,255,0.10)'
-    const parallax = g.scrollX * 0.25
-    for (let i = 0; i < 14; i++) {
-      const period = cw + 220
-      const wx = ((i * 180 - parallax) % period + period) % period - 110
-      ctx.beginPath()
-      ctx.ellipse(wx, ch * 0.66, 110, 7, 0, 0, Math.PI * 2)
-      ctx.fill()
+    // ── Dynamic sea surface ──
+    ctx.beginPath()
+    ctx.moveTo(0, ch)
+    for (let x = 0; x <= cw; x += 4) {
+      ctx.lineTo(x, seaSurfaceY(x + g.scrollX, ch, g.scrollX))
     }
+    ctx.lineTo(cw, ch)
+    ctx.closePath()
+    const sea = ctx.createLinearGradient(0, ch * SEA_BASE_Y_PCT - 30, 0, ch)
+    sea.addColorStop(0, '#1f5b80')
+    sea.addColorStop(0.5, '#0e3a5c')
+    sea.addColorStop(1, '#03182a')
+    ctx.fillStyle = sea
+    ctx.fill()
 
-    // ── Obstacles ──
-    for (const obs of g.obstacles) {
-      const ox = obs.x - g.scrollX
-      if (ox + obs.width < 0 || ox > cw) continue
-      if (obs.topHeight > 0) drawSpire(ctx, ox, 0, obs.width, obs.topHeight)
-      if (obs.botHeight > 0) drawWave(ctx, ox, ch - obs.botHeight, obs.width, obs.botHeight)
+    // ── Foam crest ──
+    ctx.strokeStyle = 'rgba(220, 240, 255, 0.7)'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    for (let x = 0; x <= cw; x += 4) {
+      const y = seaSurfaceY(x + g.scrollX, ch, g.scrollX)
+      if (x === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    }
+    ctx.stroke()
+
+    // ── Spires ──
+    for (const s of g.spires) {
+      const ox = s.x - g.scrollX
+      if (ox + s.width < 0 || ox > cw) continue
+      drawSpire(ctx, ox, 0, s.width, s.height)
     }
 
     // ── Ship ──
     const img = shipImgRef.current
     if (img && img.complete) {
       const shipX = cw * SHIP_X_RATIO
-      const tilt = Math.max(-0.4, Math.min(0.6, g.shipVy * 0.0008))
+      let pitch = 0
+      if (g.airborne) {
+        pitch = Math.max(-0.4, Math.min(0.6, g.shipVy * 0.0008))
+      } else {
+        // Pitch to wave slope at ship center
+        const cx = shipX + g.shipW / 2 + g.scrollX
+        const dx = 10
+        const dy = seaSurfaceY(cx + dx, ch, g.scrollX) - seaSurfaceY(cx - dx, ch, g.scrollX)
+        pitch = Math.atan2(dy, dx * 2)
+      }
       ctx.save()
       ctx.translate(shipX + g.shipW / 2, g.shipY + g.shipH / 2)
-      ctx.rotate(tilt)
+      ctx.rotate(pitch)
       ctx.drawImage(img, -g.shipW / 2, -g.shipH / 2, g.shipW, g.shipH)
       ctx.restore()
     }
@@ -337,7 +356,7 @@ export default function TideRunGame() {
   useEffect(() => {
     const loop = (ts: number) => {
       const last = lastTsRef.current
-      const dt = last === 0 ? 0 : Math.min((ts - last) / 1000, 0.05)  // clamp dt to avoid tunneling on tab switch
+      const dt = last === 0 ? 0 : Math.min((ts - last) / 1000, 0.05)
       lastTsRef.current = ts
       step(dt)
       render()
@@ -352,7 +371,7 @@ export default function TideRunGame() {
   // ── Pause on tab hide ──────────────────────────────────────────────────────
   useEffect(() => {
     const onVis = () => {
-      if (document.hidden) lastTsRef.current = 0  // reset dt so we don't tunnel
+      if (document.hidden) lastTsRef.current = 0
     }
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
@@ -383,7 +402,6 @@ export default function TideRunGame() {
       >
         <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
 
-        {/* Live score */}
         {uiState === 'playing' && (
           <div className="absolute top-3 left-0 right-0 flex justify-center pointer-events-none">
             <p className="font-cinzel font-700" style={{
@@ -397,14 +415,13 @@ export default function TideRunGame() {
           </div>
         )}
 
-        {/* Ready overlay */}
         {uiState === 'ready' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none">
             <p className="font-cinzel font-700 mb-2" style={{ fontSize: '1.6rem', color: '#ffffff', textShadow: '0 2px 8px rgba(0,0,0,0.55)' }}>
               Tide Run
             </p>
             <p className="font-karla font-300 mb-5" style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)', maxWidth: 260 }}>
-              Tap to surge over waves and under spires. Survive as long as you can.
+              Ride the swell. Tap to leap off a crest and clear the spires.
             </p>
             <div className="font-karla font-700 uppercase tracking-[0.18em]" style={{
               fontSize: '0.72rem',
@@ -424,7 +441,6 @@ export default function TideRunGame() {
           </div>
         )}
 
-        {/* Death overlay */}
         {uiState === 'dead' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none">
             <div style={{
@@ -441,7 +457,7 @@ export default function TideRunGame() {
                 {score}<span style={{ fontSize: '1rem', marginLeft: 4, opacity: 0.75 }}>m</span>
               </p>
               <p className="font-karla font-300 mt-2" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)' }}>
-                {score > highScore - 1 && score === highScore ? 'New best!' : `Best ${highScore}m`}
+                {score === highScore && score > 0 ? 'New best!' : `Best ${highScore}m`}
               </p>
               <p className="font-karla font-700 uppercase tracking-[0.18em] mt-4" style={{ fontSize: '0.7rem', color: '#bda05a' }}>
                 Tap to retry
@@ -455,28 +471,6 @@ export default function TideRunGame() {
 }
 
 // ── Drawing helpers ──────────────────────────────────────────────────────────
-function drawWave(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
-  const g = ctx.createLinearGradient(x, y, x, y + h)
-  g.addColorStop(0, '#2a6a90')
-  g.addColorStop(0.4, '#0e3a5c')
-  g.addColorStop(1, '#03182a')
-  ctx.fillStyle = g
-  ctx.beginPath()
-  ctx.moveTo(x, y + h)
-  ctx.lineTo(x, y + 10)
-  ctx.bezierCurveTo(x + w * 0.25, y - 6, x + w * 0.75, y - 6, x + w, y + 10)
-  ctx.lineTo(x + w, y + h)
-  ctx.closePath()
-  ctx.fill()
-  // foam crest
-  ctx.strokeStyle = 'rgba(220, 240, 255, 0.85)'
-  ctx.lineWidth = 2
-  ctx.beginPath()
-  ctx.moveTo(x + 2, y + 10)
-  ctx.bezierCurveTo(x + w * 0.25, y - 6, x + w * 0.75, y - 6, x + w - 2, y + 10)
-  ctx.stroke()
-}
-
 function drawSpire(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
   const g = ctx.createLinearGradient(x, y, x, y + h)
   g.addColorStop(0, '#1a1410')
@@ -493,7 +487,6 @@ function drawSpire(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.lineTo(x + w * 0.12, y + h)
   ctx.closePath()
   ctx.fill()
-  // edge highlight
   ctx.strokeStyle = 'rgba(255,255,255,0.08)'
   ctx.lineWidth = 1
   ctx.stroke()
