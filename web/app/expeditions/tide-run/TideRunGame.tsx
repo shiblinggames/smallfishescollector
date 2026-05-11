@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { commitTideRun, submitTideRunBest } from './actions'
+import TideRunTour, { hasCompletedTideRunTour } from './TideRunTour'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
 const SHIP_X_RATIO    = 0.22
@@ -285,6 +286,14 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
   const [committing, setCommitting] = useState(false)
   const [commitReward, setCommitReward] = useState<{ doubloons: number; xp: number } | null>(null)
   const [commitError, setCommitError] = useState<string | null>(null)
+  const [showTour, setShowTour] = useState(false)
+
+  // First-time tour: show modal on mount if the player hasn't completed it
+  useEffect(() => {
+    if (!hasCompletedTideRunTour()) {
+      setShowTour(true)
+    }
+  }, [])
 
   // Reset commit reward feedback when a new run starts
   useEffect(() => {
@@ -1015,8 +1024,29 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
           ← Expeditions
         </Link>
         <p className="font-cinzel font-700 text-base" style={{ color: '#f0ede8' }}>Tide Run</p>
-        <div style={{ width: 84 }} />
+        <button
+          onClick={() => setShowTour(true)}
+          aria-label="How to play"
+          className="font-karla font-700"
+          style={{
+            width: 26,
+            height: 26,
+            borderRadius: '50%',
+            border: '1px solid rgba(189,160,90,0.45)',
+            background: 'rgba(189,160,90,0.10)',
+            color: '#bda05a',
+            fontSize: '0.78rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          ?
+        </button>
       </div>
+
+      {showTour && <TideRunTour onClose={() => setShowTour(false)} />}
 
       <div
         ref={wrapperRef}
