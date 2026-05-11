@@ -109,35 +109,6 @@ export default async function ExpeditionsPage() {
             <RaidCard navLevel={navLevel} hasCompletedPracticeRaid={!!(profile?.has_completed_practice_raid)} />
           </div>
 
-          {/* ── Tide Run ── */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Tide Run</p>
-            <a
-              href="/expeditions/tide-run"
-              className="block"
-              style={{
-                padding: '14px 16px',
-                borderRadius: 12,
-                background: 'rgba(8, 18, 32, 0.78)',
-                border: '1px solid rgba(189,160,90,0.35)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                textDecoration: 'none',
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/boatrun.png" alt="" style={{ width: 64, height: 'auto', flexShrink: 0, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))' }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.0rem', color: '#f0ede8', marginBottom: 2 }}>Tide Run</p>
-                <p className="font-karla font-300" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.7)', lineHeight: 1.35 }}>
-                  Tap to surge over waves and under spires. Sub-minute runs, pure dodge.
-                </p>
-              </div>
-              <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: '#bda05a' }}>Play →</span>
-            </a>
-          </div>
-
           <div className="pb-16" />
         </div>
       </main>
