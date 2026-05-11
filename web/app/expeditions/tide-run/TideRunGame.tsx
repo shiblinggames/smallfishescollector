@@ -268,6 +268,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     lastSpawnType: null as 'rock' | 'shoal' | 'beacon' | null,
     detectingUntil: 0,        // performance.now() timestamp; while > now() the detection beam is playing
     detectingBeaconX: 0,      // world x center of the beacon that triggered detection
+    pitch: 0,                 // smoothed ship pitch (radians); eases toward target each frame
     wake: [] as WakeParticle[],
     wakeNextEmitX: 0,         // world x of next wake emit
     splashes: [] as SplashParticle[],
@@ -389,6 +390,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     g.lastSpawnType = null
     g.detectingUntil = 0
     g.detectingBeaconX = 0
+    g.pitch = 0
     g.wake = []
     g.wakeNextEmitX = 0
     g.splashes = []
@@ -819,6 +821,22 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
         setScore(Math.floor(g.distance))
       }
     }
+
+    // Smooth the ship pitch toward its instantaneous target so jumps don't
+    // snap-tilt — gives the boat a sense of mass.
+    let targetPitch = 0
+    if (g.airborne) {
+      const raw = g.shipVy * 0.00055
+      targetPitch = Math.max(-0.40, Math.min(0.28, raw))
+    } else {
+      const cxp = shipScreenX + g.shipW / 2 + g.scrollX
+      const dxp = 10
+      const dyp = seaSurfaceY(cxp + dxp, g.ch, g.scrollX) - seaSurfaceY(cxp - dxp, g.ch, g.scrollX)
+      targetPitch = Math.atan2(dyp, dxp * 2)
+    }
+    const PITCH_LERP_RATE = 12
+    const pk = 1 - Math.exp(-PITCH_LERP_RATE * dt)
+    g.pitch += (targetPitch - g.pitch) * pk
   }, [spawnHazard, collidesWithHazard, highScore])
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -953,21 +971,9 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     const img = shipImgRef.current
     if (img && img.complete) {
       const shipX = cw * SHIP_X_RATIO
-      let pitch = 0
-      if (g.airborne) {
-        // Asymmetric: rise tilts up more than fall tilts down (less aggressive nose-dive)
-        const raw = g.shipVy * 0.00055
-        pitch = Math.max(-0.40, Math.min(0.28, raw))
-      } else {
-        // Pitch to wave slope at ship center
-        const cx = shipX + g.shipW / 2 + g.scrollX
-        const dx = 10
-        const dy = seaSurfaceY(cx + dx, ch, g.scrollX) - seaSurfaceY(cx - dx, ch, g.scrollX)
-        pitch = Math.atan2(dy, dx * 2)
-      }
       ctx.save()
       ctx.translate(shipX + g.shipW / 2, g.shipY + g.shipH / 2)
-      ctx.rotate(pitch)
+      ctx.rotate(g.pitch)
       ctx.drawImage(img, -g.shipW / 2, -g.shipH / 2, g.shipW, g.shipH)
       ctx.restore()
     }
