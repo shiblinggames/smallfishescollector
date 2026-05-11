@@ -20,8 +20,10 @@ const BASE_SPEED               = 290   // px/s horizontal scroll (Canabalt rolls
 const SPEED_RAMP               = 7     // px/s² — gentle, unbounded climb (Canabalt-style)
 const MAX_SPEED                = 1500  // soft safety cap; reached only after ~3 min of perfect play
 
-// Sea surface — gentle long-period swells so the boat "runs" along the wave
-const SEA_BASE_Y_PCT      = 0.78
+// Sea surface — gentle long-period swells so the boat "runs" along the wave.
+// Sea baseline is pulled up so the action lives in the upper two-thirds of the
+// canvas, leaving the lower third as comfortable thumb-tap space on phones.
+const SEA_BASE_Y_PCT      = 0.60
 const WAVE_PRIMARY_PERIOD = 560
 const WAVE_PRIMARY_AMP    = 18
 const WAVE_SECONDARY_PERIOD = 940
@@ -1484,7 +1486,9 @@ function drawDistantIslands(ctx: CanvasRenderingContext2D, cw: number, ch: numbe
   ctx.globalAlpha = 0.4
   const period = cw * 1.4
   const offset = ((scrollOffset % period) + period) % period
-  const horizon = ch * 0.66
+  // Horizon stays ~12% of canvas height above the sea baseline so the islands
+  // visually anchor on the water line.
+  const horizon = ch * 0.48
   for (let i = -1; i <= 2; i++) {
     const ix = i * period - offset
     // Two soft hills per period
