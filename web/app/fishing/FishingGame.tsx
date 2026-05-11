@@ -3604,9 +3604,17 @@ export default function FishingGame({
                     color: holdTotalValue > 0 ? '#f0c040' : '#3a3835',
                     textAlign: 'center', flexShrink: 0,
                   }}>⟡</span>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', lineHeight: 1, color: holdTotalValue > 0 ? '#f0c040' : '#3a3835', whiteSpace: 'nowrap' }}>
-                    {holdTotalValue > 0 ? holdTotalValue.toLocaleString() : '—'}
-                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, lineHeight: 1 }}>
+                    <span className="font-karla font-700 uppercase" style={{
+                      fontSize: '0.52rem',
+                      letterSpacing: '0.18em',
+                      color: holdTotalValue > 0 ? '#f0c040' : '#8a8784',
+                      lineHeight: 1,
+                    }}>Sell</span>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', lineHeight: 1, color: holdTotalValue > 0 ? '#f0c040' : '#3a3835', whiteSpace: 'nowrap' }}>
+                      {holdTotalValue > 0 ? holdTotalValue.toLocaleString() : '—'}
+                    </p>
+                  </div>
                 </button>
 
               </div>
