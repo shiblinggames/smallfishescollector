@@ -24,6 +24,15 @@ export interface BoatDef {
 /** Default "Driftwood" — no overlay; uses the base sprite's boat. */
 export const DEFAULT_BOAT_COLOR = '#a07858'
 
+// All boats share the same per-frame anchor relative to the character div.
+// Sprites are normalized by web/normalize-fishing-sprites.mjs so every
+// character color has the boat hull seat at the same Y on each frame.
+const SHARED_POSITIONS: Record<BoatFrame, BoatPos> = {
+  rest: { top: 77, left: 31, width: 55, rotate: 0 },
+  wait: { top: 73, left: 38, width: 55, rotate: 0 },
+  cast: { top: 77, left: 37, width: 55, rotate: 0 },
+}
+
 export const BOATS: BoatDef[] = [
   {
     id: 'oak',
@@ -32,11 +41,7 @@ export const BOATS: BoatDef[] = [
     cost: 1000,
     restImageUrl: '/boat_oak_rest.png',
     castImageUrl: '/boat_oak_cast.png',
-    positions: {
-      rest: { top: 77, left: 31, width: 55, rotate: 0 },
-      wait: { top: 72, left: 38, width: 55, rotate: 0 },
-      cast: { top: 77, left: 37, width: 55, rotate: 0 },
-    },
+    positions: SHARED_POSITIONS,
   },
   {
     id: 'cherry',
@@ -45,11 +50,7 @@ export const BOATS: BoatDef[] = [
     cost: 2000,
     restImageUrl: '/boat_cherry_rest.png',
     castImageUrl: '/boat_cherry_cast.png',
-    positions: {
-      rest: { top: 77, left: 31, width: 55, rotate: 0 },
-      wait: { top: 72, left: 38, width: 55, rotate: 0 },
-      cast: { top: 77, left: 37, width: 55, rotate: 0 },
-    },
+    positions: SHARED_POSITIONS,
   },
   {
     id: 'desert',
@@ -58,11 +59,7 @@ export const BOATS: BoatDef[] = [
     cost: 5000,
     restImageUrl: '/boat_desert_rest.png',
     castImageUrl: '/boat_desert_cast.png',
-    positions: {
-      rest: { top: 77, left: 31, width: 55, rotate: 0 },
-      wait: { top: 72, left: 38, width: 55, rotate: 0 },
-      cast: { top: 77, left: 37, width: 55, rotate: 0 },
-    },
+    positions: SHARED_POSITIONS,
   },
   {
     id: 'mahogany',
@@ -71,11 +68,7 @@ export const BOATS: BoatDef[] = [
     cost: 5000,
     restImageUrl: '/boat_mahogany_rest.png',
     castImageUrl: '/boat_mahogany_cast.png',
-    positions: {
-      rest: { top: 77, left: 31, width: 55, rotate: 0 },
-      wait: { top: 72, left: 38, width: 55, rotate: 0 },
-      cast: { top: 77, left: 37, width: 55, rotate: 0 },
-    },
+    positions: SHARED_POSITIONS,
   },
   {
     id: 'pistachio',
@@ -84,11 +77,7 @@ export const BOATS: BoatDef[] = [
     cost: 5000,
     restImageUrl: '/boat_pistachio_rest.png',
     castImageUrl: '/boat_pistachio_cast.png',
-    positions: {
-      rest: { top: 77, left: 31, width: 55, rotate: 0 },
-      wait: { top: 72, left: 38, width: 55, rotate: 0 },
-      cast: { top: 77, left: 37, width: 55, rotate: 0 },
-    },
+    positions: SHARED_POSITIONS,
   },
   {
     id: 'taupe',
@@ -97,11 +86,7 @@ export const BOATS: BoatDef[] = [
     cost: 5000,
     restImageUrl: '/boat_taupe_rest.png',
     castImageUrl: '/boat_taupe_cast.png',
-    positions: {
-      rest: { top: 77, left: 31, width: 55, rotate: 0 },
-      wait: { top: 72, left: 38, width: 55, rotate: 0 },
-      cast: { top: 77, left: 37, width: 55, rotate: 0 },
-    },
+    positions: SHARED_POSITIONS,
   },
 ]
 
@@ -110,22 +95,4 @@ export const BOAT_MAP: Record<string, BoatDef> = Object.fromEntries(BOATS.map(b 
 export function getBoat(id: string | null | undefined): BoatDef | null {
   if (!id) return null
   return BOAT_MAP[id] ?? null
-}
-
-/**
- * Returns the boat overlay position for a given frame, applying any character-
- * color anchor adjustment. Non-default character color sprites have their
- * body framed 1% lower on the `wait` frame than the default green sprites, so
- * the boat overlay needs to shift down to stay seated on the hull.
- */
-export function getBoatPosition(
-  boat: BoatDef,
-  frame: BoatFrame,
-  characterColor: string,
-): BoatPos {
-  const base = boat.positions[frame]
-  if (frame === 'wait' && characterColor !== 'default') {
-    return { ...base, top: base.top + 1 }
-  }
-  return base
 }

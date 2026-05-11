@@ -3,7 +3,7 @@
 // lands at the same Y coordinate on the canvas.
 //
 // Usage:
-//   node normalize-fishing-sprites.mjs                   (default variant from newfishing4.png)
+//   node normalize-fishing-sprites.mjs                   (default variant from defaultfishing.png)
 //   node normalize-fishing-sprites.mjs gray              (gray variant from newfishinggray.png)
 //   node normalize-fishing-sprites.mjs coral             (coral variant from newfishingcoral.png)
 
@@ -15,7 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const OUT = path.join(__dirname, 'public')
 
 const variant = process.argv[2] ?? 'default'
-const srcFile = variant === 'default' ? 'newfishing4.png' : `newfishing${variant}.png`
+const srcFile = variant === 'default' ? 'defaultfishing.png' : `newfishing${variant}.png`
 const SRC = path.join(__dirname, 'public', srcFile)
 const prefix = variant === 'default' ? 'fishing' : `fishing_${variant}`
 

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipBoat, buyBoat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
 import { liquidateAllFish } from '@/app/tavern/market/actions'
-import { BOATS, getBoat, getBoatPosition } from '@/lib/boats'
+import { BOATS, getBoat } from '@/lib/boats'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -2561,7 +2561,7 @@ export default function FishingGame({
               }}>
                 <img src={charSrc[f]} alt="" style={{ width: '100%', display: 'block' }} />
                 {boatDef && (() => {
-                  const bp = getBoatPosition(boatDef, f, localCharacterColor)
+                  const bp = boatDef.positions[f]
                   const src = f === 'cast' ? boatDef.castImageUrl : boatDef.restImageUrl
                   return (
                     <img src={src} alt="" style={{
