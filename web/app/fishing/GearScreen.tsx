@@ -345,59 +345,47 @@ export default function GearScreen({
         </div>
 
         {/* Center row 1: Character */}
-        <button onClick={() => setOpenSlot('character')} style={{
-          gridColumn: '2', gridRow: '1',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(4,10,20,0.75)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: 20,
-          padding: '0.6rem 0.5rem',
-          cursor: 'pointer',
-          gap: 5,
-          width: '100%',
-        }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: '50%', overflow: 'hidden',
-            backgroundImage: `url(${charSrc.rest})`,
-            backgroundSize: '280% auto', backgroundPosition: 'center 92%', backgroundRepeat: 'no-repeat',
-            border: '2px solid rgba(255,255,255,0.15)',
-          }} />
-          <div style={{ textAlign: 'center' }}>
-            <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.12em', lineHeight: 1 }}>Character</p>
-            <p className="font-karla font-600" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>{CHARACTER_COLORS.find(c => c.id === characterColor)?.name ?? characterColor}</p>
-          </div>
-        </button>
+        <div style={{ gridColumn: '2', gridRow: '1' }}>
+          <GearSlot
+            label="Character"
+            color="#a0a09a"
+            itemName={CHARACTER_COLORS.find(c => c.id === characterColor)?.name ?? characterColor}
+            onClick={() => setOpenSlot('character')}
+            icon={
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%', overflow: 'hidden',
+                backgroundImage: `url(${charSrc.rest})`,
+                backgroundSize: '280% auto', backgroundPosition: 'center 92%', backgroundRepeat: 'no-repeat',
+                border: '1px solid rgba(255,255,255,0.2)',
+              }} />
+            }
+          />
+        </div>
 
         {/* Center row 2: Cosmetic (boat swatch) */}
-        {(() => {
-          const activeBoat = equippedBoat ? BOATS.find(b => b.id === equippedBoat) : null
-          const swatchColor = activeBoat?.color ?? DEFAULT_BOAT_COLOR
-          const cosmeticName = activeBoat?.name ?? 'Driftwood'
-          return (
-            <button onClick={() => setOpenSlot('cosmetic')} style={{
-              gridColumn: '2', gridRow: '2',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(4,10,20,0.75)',
-              border: `1px solid ${swatchColor}40`,
-              borderRadius: 20,
-              padding: '0.6rem 0.5rem',
-              cursor: 'pointer',
-              gap: 5,
-              width: '100%',
-            }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                background: swatchColor,
-                border: `1px solid ${swatchColor}cc`,
-                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2), 0 0 12px ${swatchColor}40`,
-              }} />
-              <div style={{ textAlign: 'center' }}>
-                <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.12em', lineHeight: 1 }}>Cosmetic</p>
-                <p className="font-karla font-600" style={{ fontSize: '0.52rem', color: swatchColor + 'cc', marginTop: 2 }}>{cosmeticName}</p>
-              </div>
-            </button>
-          )
-        })()}
+        <div style={{ gridColumn: '2', gridRow: '2' }}>
+          {(() => {
+            const activeBoat = equippedBoat ? BOATS.find(b => b.id === equippedBoat) : null
+            const swatchColor = activeBoat?.color ?? DEFAULT_BOAT_COLOR
+            const cosmeticName = activeBoat?.name ?? 'Driftwood'
+            return (
+              <GearSlot
+                label="Cosmetic"
+                color={swatchColor}
+                itemName={cosmeticName}
+                onClick={() => setOpenSlot('cosmetic')}
+                icon={
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 9,
+                    background: swatchColor,
+                    border: `1px solid ${swatchColor}cc`,
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 0 12px ${swatchColor}40`,
+                  }} />
+                }
+              />
+            )
+          })()}
+        </div>
 
         <div style={{ gridColumn: '3', gridRow: '1' }}>
           <GearSlot label="Reel" image={reel.imageUrl ?? null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} onClick={() => setOpenSlot('reel')} />
@@ -431,32 +419,34 @@ export default function GearScreen({
           color={bait?.color ?? '#94a3b8'}
           onClick={() => setOpenSlot('bait')}
         />
-        {/* Badges (moved here from center) */}
-        <button onClick={() => setOpenSlot('badge')} style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(4,10,20,0.75)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: 20,
-          padding: '0.55rem 0.4rem',
-          cursor: 'pointer',
-          gap: 5,
-          width: '100%',
-        }}>
-          <div style={{ display: 'flex', gap: 3, alignItems: 'center', justifyContent: 'center', minHeight: 26 }}>
-            {equippedBadges.filter(Boolean).length === 0 ? (
-              <span style={{ fontSize: '0.85rem', color: '#3a3835' }}>—</span>
-            ) : (
-              equippedBadges.slice(0, 3).map((id, i) => {
-                if (!id) return null
-                const badge = BADGE_MAP[id]
-                return badge ? (
-                  <img key={i} src={badge.imageUrl} alt={badge.name} style={{ width: 18, height: 18, objectFit: 'contain' }} />
-                ) : null
-              })
-            )}
-          </div>
-          <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.12em', lineHeight: 1 }}>Badges</p>
-        </button>
+        {/* Badges */}
+        {(() => {
+          const equipped = equippedBadges.filter(Boolean)
+          const itemName = equipped.length === 0 ? 'None' : `${equipped.length} equipped`
+          return (
+            <GearSlot
+              label="Badges"
+              color="#f0c040"
+              itemName={itemName}
+              onClick={() => setOpenSlot('badge')}
+              empty={equipped.length === 0}
+              icon={
+                equipped.length === 0
+                  ? <span style={{ fontSize: '1.1rem', color: '#3a3835' }}>—</span>
+                  : (
+                    <div style={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'center' }}>
+                      {equipped.slice(0, 3).map((id, i) => {
+                        const badge = BADGE_MAP[id!]
+                        return badge ? (
+                          <img key={i} src={badge.imageUrl} alt={badge.name} style={{ width: 11, height: 11, objectFit: 'contain' }} />
+                        ) : null
+                      })}
+                    </div>
+                  )
+              }
+            />
+          )
+        })()}
       </div>
 
       {/* ── Loadout stats ── */}
