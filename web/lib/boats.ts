@@ -6,6 +6,8 @@
 export type BoatFrame = 'rest' | 'wait' | 'cast'
 export type BoatPos = { top: number; left: number; width: number; rotate: number }
 
+export type BoatEffect = 'ghost-ship' | 'krakenbound' | 'sun-forged' | 'stormcaller' | 'bloodtide'
+
 export interface BoatDef {
   id: string
   name: string
@@ -19,6 +21,10 @@ export interface BoatDef {
   castImageUrl: string
   /** Per-frame placement of the overlay on the character container */
   positions: Record<BoatFrame, BoatPos>
+  /** Optional cosmetic effect class applied via CSS (see globals.css) */
+  effect?: BoatEffect
+  /** Short tagline shown in the picker for effect boats */
+  flavor?: string
 }
 
 /** Default "Driftwood" — no overlay; uses the base sprite's boat. */
@@ -123,6 +129,62 @@ export const BOATS: BoatDef[] = [
     restImageUrl: '/boat_periwinkle_rest.png',
     castImageUrl: '/boat_periwinkle_cast.png',
     positions: SHARED_POSITIONS,
+  },
+  // ── Special cosmetic boats (effect-based, reuse existing hulls) ──
+  {
+    id: 'ghost_ship',
+    name: 'Ghost Ship',
+    color: '#7be38e',
+    cost: 100000,
+    restImageUrl: '/boat_charcoal_rest.png',
+    castImageUrl: '/boat_charcoal_cast.png',
+    positions: SHARED_POSITIONS,
+    effect: 'ghost-ship',
+    flavor: 'Spectral green pulse, slow flicker.',
+  },
+  {
+    id: 'krakenbound',
+    name: 'Krakenbound',
+    color: '#22d3ee',
+    cost: 100000,
+    restImageUrl: '/boat_pistachio_rest.png',
+    castImageUrl: '/boat_pistachio_cast.png',
+    positions: SHARED_POSITIONS,
+    effect: 'krakenbound',
+    flavor: 'Cyan bio-glow with drifting tendril shadows.',
+  },
+  {
+    id: 'sun_forged',
+    name: 'Sun-Forged',
+    color: '#fbbf24',
+    cost: 100000,
+    restImageUrl: '/boat_golden_rest.png',
+    castImageUrl: '/boat_golden_cast.png',
+    positions: SHARED_POSITIONS,
+    effect: 'sun-forged',
+    flavor: 'Sun-glint sweeps across the hull.',
+  },
+  {
+    id: 'stormcaller',
+    name: 'Stormcaller',
+    color: '#8b5cf6',
+    cost: 100000,
+    restImageUrl: '/boat_periwinkle_rest.png',
+    castImageUrl: '/boat_periwinkle_cast.png',
+    positions: SHARED_POSITIONS,
+    effect: 'stormcaller',
+    flavor: 'Rain, dark clouds, occasional lightning.',
+  },
+  {
+    id: 'bloodtide',
+    name: 'Bloodtide',
+    color: '#ef4444',
+    cost: 100000,
+    restImageUrl: '/boat_cherry_rest.png',
+    castImageUrl: '/boat_cherry_cast.png',
+    positions: SHARED_POSITIONS,
+    effect: 'bloodtide',
+    flavor: 'Crimson aura. Something is bleeding into the tide.',
   },
 ]
 

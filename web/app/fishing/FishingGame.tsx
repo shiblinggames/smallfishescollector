@@ -2556,16 +2556,19 @@ export default function FishingGame({
                   const src = f === 'cast' ? boatDef.castImageUrl : boatDef.restImageUrl
                   // iOS subpixel rounding through the motion.div + drop-shadow filter
                   // nudges the rest-frame boat overlay 1px to the right in production
-                  // compared to fishing-test. Compensate with a translateX(-1px).
+                  // compared to fishing-test. Compensate with a translateX(-2px).
                   const restPxOffset = f === 'rest' ? ' translateX(-2px)' : ''
+                  const fxClass = boatDef.effect ? `boat-fx boat-fx-${boatDef.effect}` : undefined
                   return (
-                    <img src={src} alt="" style={{
+                    <div className={fxClass} style={{
                       position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
                       width: `${bp.width}%`,
                       transform: `rotate(${bp.rotate}deg)${restPxOffset}`,
                       transformOrigin: 'center center',
                       pointerEvents: 'none',
-                    }} />
+                    }}>
+                      <img src={src} alt="" style={{ width: '100%', display: 'block' }} />
+                    </div>
                   )
                 })()}
                 {rod.imageUrl && (

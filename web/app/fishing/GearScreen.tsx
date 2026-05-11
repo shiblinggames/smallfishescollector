@@ -700,12 +700,29 @@ export default function GearScreen({
                             position: 'relative',
                           }}
                         >
-                          <div style={{
-                            width: 48, height: 48, borderRadius: 12,
-                            background: b.color,
-                            border: `1px solid ${b.color}cc`,
-                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), 0 0 16px ${b.color}50`,
-                          }} />
+                          {b.effect ? (
+                            <div className={`boat-fx boat-fx-${b.effect}`} style={{
+                              position: 'relative',
+                              width: 48, height: 48, borderRadius: 12,
+                              overflow: 'hidden',
+                              background: 'rgba(4,10,18,0.85)',
+                              border: `1px solid ${b.color}cc`,
+                              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 18px ${b.color}55`,
+                            }}>
+                              <img src={b.restImageUrl} alt="" style={{
+                                width: '170%', height: 'auto', display: 'block',
+                                position: 'absolute', top: '50%', left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                              }} />
+                            </div>
+                          ) : (
+                            <div style={{
+                              width: 48, height: 48, borderRadius: 12,
+                              background: b.color,
+                              border: `1px solid ${b.color}cc`,
+                              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), 0 0 16px ${b.color}50`,
+                            }} />
+                          )}
                           <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: owned ? '#f0ede8' : '#a0a09a', lineHeight: 1.1, textAlign: 'center' }}>{b.name}</p>
                           {isEquipped ? (
                             <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: b.color }}>✓ Equipped</span>

@@ -282,15 +282,18 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                   const bd = getBoat(equippedBoat)
                   if (!bd) return null
                   const bp = bd.positions.rest
+                  const fxClass = bd.effect ? `boat-fx boat-fx-${bd.effect}` : undefined
                   return (
-                    <img src={bd.restImageUrl} alt="" style={{
+                    <div className={fxClass} style={{
                       position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
                       width: `${bp.width}%`,
                       // Match the iOS rest-frame nudge applied in FishingGame
                       transform: `rotate(${bp.rotate}deg) translateX(-2px)`,
                       transformOrigin: 'center center',
                       pointerEvents: 'none',
-                    }} />
+                    }}>
+                      <img src={bd.restImageUrl} alt="" style={{ width: '100%', display: 'block' }} />
+                    </div>
                   )
                 })()}
                 {rod.imageUrl && (
