@@ -2559,6 +2559,7 @@ export default function FishingGame({
                   // compared to fishing-test. Compensate with a translateX(-2px).
                   const restPxOffset = f === 'rest' ? ' translateX(-2px)' : ''
                   const fxClass = boatDef.effect ? `boat-fx boat-fx-${boatDef.effect}` : undefined
+                  const fxVars = boatDef.effect ? { ['--boat-mask' as string]: `url('${src}')` } : {}
                   return (
                     <div className={fxClass} style={{
                       position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
@@ -2566,7 +2567,8 @@ export default function FishingGame({
                       transform: `rotate(${bp.rotate}deg)${restPxOffset}`,
                       transformOrigin: 'center center',
                       pointerEvents: 'none',
-                    }}>
+                      ...fxVars,
+                    } as React.CSSProperties}>
                       <img src={src} alt="" style={{ width: '100%', display: 'block' }} />
                     </div>
                   )

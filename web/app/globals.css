@@ -373,71 +373,85 @@ body {
 /* ════════════════════════════════════════
    BOAT COSMETIC EFFECTS
    Wrapper div .boat-fx-* sits where the boat <img> used to sit;
-   the <img> renders inside, pseudo-elements layer overlays on top.
+   the <img> renders inside; pseudo-elements layer overlays on top,
+   masked to the boat silhouette via --boat-mask (the boat PNG url).
+   Outer halo glow comes from drop-shadow on the <img>.
    ════════════════════════════════════════ */
 .boat-fx { position: absolute; }
 .boat-fx > img { width: 100%; display: block; position: relative; z-index: 1; }
 
+/* Mask every effect overlay to the hull silhouette so nothing shows
+   in the empty corners of the wrapper rect. If --boat-mask is unset
+   (e.g. swatches) the mask falls back to none → full rectangle. */
+.boat-fx-ghost-ship::after,
+.boat-fx-krakenbound::after,
+.boat-fx-sun-forged::after,
+.boat-fx-stormcaller::before,
+.boat-fx-stormcaller::after,
+.boat-fx-bloodtide::after {
+  mask-image: var(--boat-mask, none);
+  -webkit-mask-image: var(--boat-mask, none);
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-position: center;
+}
+
 /* ── Ghost Ship (spectral green pulse, slow flicker) ── */
 @keyframes ghostFlicker {
   0%, 100% { opacity: 1; }
-  46%      { opacity: 0.82; }
+  46%      { opacity: 0.78; }
   50%      { opacity: 0.92; }
-  54%      { opacity: 0.85; }
+  54%      { opacity: 0.82; }
 }
 @keyframes ghostPulse {
-  0%, 100% { opacity: 0.40; }
-  50%      { opacity: 0.78; }
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.85; }
 }
 .boat-fx-ghost-ship > img {
   animation: ghostFlicker 4.5s ease-in-out infinite;
-  filter: drop-shadow(0 0 6px rgba(123, 227, 142, 0.65)) drop-shadow(0 0 14px rgba(74, 222, 128, 0.45));
+  filter:
+    drop-shadow(0 0 6px rgba(123, 227, 142, 0.70))
+    drop-shadow(0 0 16px rgba(74, 222, 128, 0.50));
 }
 .boat-fx-ghost-ship::after {
   content: '';
   position: absolute; inset: 0;
-  background: radial-gradient(ellipse at 50% 60%, rgba(140, 240, 160, 0.55) 0%, rgba(60, 180, 90, 0.30) 40%, transparent 75%);
+  background: radial-gradient(ellipse at 50% 55%, rgba(140, 240, 160, 0.60) 0%, rgba(60, 180, 90, 0.32) 45%, transparent 80%);
   mix-blend-mode: screen;
   animation: ghostPulse 3.2s ease-in-out infinite;
   pointer-events: none;
   z-index: 2;
 }
 
-/* ── Krakenbound (cyan bio-glow + drifting tendril shadows) ── */
+/* ── Krakenbound (cyan bio-glow, pulsing halo via drop-shadow) ── */
 @keyframes krakenPulse {
-  0%, 100% { opacity: 0.45; }
-  50%      { opacity: 0.85; }
+  0%, 100% { opacity: 0.50; }
+  50%      { opacity: 0.90; }
 }
-@keyframes krakenWisp {
-  0%   { transform: rotate(0deg)   scale(1);   }
-  50%  { transform: rotate(180deg) scale(1.10); }
-  100% { transform: rotate(360deg) scale(1);   }
+@keyframes krakenHaloPulse {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 6px rgba(34, 211, 238, 0.6))
+      drop-shadow(0 0 18px rgba(34, 211, 238, 0.45))
+      drop-shadow(0 0 30px rgba(8, 145, 178, 0.35));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 10px rgba(34, 211, 238, 0.85))
+      drop-shadow(0 0 28px rgba(34, 211, 238, 0.65))
+      drop-shadow(0 0 44px rgba(8, 145, 178, 0.50));
+  }
 }
 .boat-fx-krakenbound > img {
-  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.6)) drop-shadow(0 0 16px rgba(34, 211, 238, 0.4));
-}
-.boat-fx-krakenbound::before {
-  content: '';
-  position: absolute; inset: -12% -8%;
-  background: conic-gradient(from 0deg,
-    transparent 0deg,
-    rgba(34, 211, 238, 0.35) 55deg,
-    transparent 130deg,
-    rgba(8, 145, 178, 0.28) 200deg,
-    transparent 270deg,
-    rgba(34, 211, 238, 0.25) 330deg,
-    transparent 360deg
-  );
-  mix-blend-mode: screen;
-  filter: blur(10px);
-  animation: krakenWisp 11s linear infinite;
-  pointer-events: none;
-  z-index: 0;
+  animation: krakenHaloPulse 3.6s ease-in-out infinite;
 }
 .boat-fx-krakenbound::after {
   content: '';
   position: absolute; inset: 0;
-  background: radial-gradient(ellipse at 50% 55%, rgba(56, 220, 244, 0.55) 0%, rgba(8, 145, 178, 0.32) 40%, transparent 75%);
+  background: radial-gradient(ellipse at 50% 55%, rgba(56, 220, 244, 0.65) 0%, rgba(8, 145, 178, 0.38) 45%, transparent 80%);
   mix-blend-mode: screen;
   animation: krakenPulse 3.6s ease-in-out infinite;
   pointer-events: none;
@@ -455,7 +469,9 @@ body {
   100% { --sun-glint: 130%; }
 }
 .boat-fx-sun-forged > img {
-  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.65)) drop-shadow(0 0 16px rgba(245, 158, 11, 0.45));
+  filter:
+    drop-shadow(0 0 6px rgba(251, 191, 36, 0.70))
+    drop-shadow(0 0 18px rgba(245, 158, 11, 0.50));
 }
 .boat-fx-sun-forged::after {
   content: '';
@@ -476,7 +492,7 @@ body {
   z-index: 2;
 }
 
-/* ── Stormcaller (overcast tint + diagonal rain + lightning flash) ── */
+/* ── Stormcaller (dark tint + diagonal rain + lightning flash) ── */
 @keyframes stormRain {
   0%   { background-position: 0% 0%; }
   100% { background-position: -40% 100%; }
@@ -487,14 +503,17 @@ body {
   85.25%, 86.2%                         { opacity: 0.4; }
 }
 .boat-fx-stormcaller > img {
-  filter: brightness(0.92) drop-shadow(0 0 5px rgba(139, 92, 246, 0.55)) drop-shadow(0 0 12px rgba(67, 56, 202, 0.45));
+  filter:
+    brightness(0.82) saturate(0.7)
+    drop-shadow(0 0 5px rgba(139, 92, 246, 0.55))
+    drop-shadow(0 0 16px rgba(67, 56, 202, 0.50));
 }
 .boat-fx-stormcaller::before {
   content: '';
   position: absolute; inset: 0;
   background:
-    radial-gradient(ellipse at 50% 25%, rgba(60, 50, 110, 0.55) 0%, rgba(30, 25, 70, 0.38) 50%, transparent 80%),
-    repeating-linear-gradient(108deg, transparent 0 6px, rgba(180, 200, 255, 0.20) 6px 7px);
+    linear-gradient(to bottom, rgba(40, 35, 80, 0.30), rgba(20, 18, 48, 0.45)),
+    repeating-linear-gradient(108deg, transparent 0 6px, rgba(180, 200, 255, 0.28) 6px 7px);
   background-size: 100% 100%, 28% 38%;
   mix-blend-mode: screen;
   animation: stormRain 1.6s linear infinite;
@@ -504,7 +523,7 @@ body {
 .boat-fx-stormcaller::after {
   content: '';
   position: absolute; inset: 0;
-  background: radial-gradient(ellipse at 45% 22%, rgba(230, 240, 255, 0.95) 0%, rgba(180, 160, 255, 0.55) 32%, transparent 65%);
+  background: radial-gradient(ellipse at 50% 45%, rgba(255, 255, 255, 0.98) 0%, rgba(220, 230, 255, 0.7) 40%, transparent 75%);
   mix-blend-mode: hard-light;
   opacity: 0;
   animation: stormLightning 8s linear infinite;
@@ -512,38 +531,25 @@ body {
   z-index: 3;
 }
 
-/* ── Bloodtide (crimson aura + downward blood seep) ── */
+/* ── Bloodtide (crimson hull tint, pulsing) ── */
 @keyframes bloodPulse {
-  0%, 100% { opacity: 0.45; }
-  50%      { opacity: 0.78; }
-}
-@keyframes bloodDrip {
-  0%, 100% { opacity: 0.55; transform: translateY(0%); }
-  50%      { opacity: 0.85; transform: translateY(8%); }
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.88; }
 }
 .boat-fx-bloodtide > img {
-  filter: drop-shadow(0 0 5px rgba(220, 38, 38, 0.55)) drop-shadow(0 0 14px rgba(127, 29, 29, 0.5));
-}
-.boat-fx-bloodtide::before {
-  content: '';
-  position: absolute; inset: 55% 6% -28% 6%;
-  background: linear-gradient(to bottom,
-    rgba(220, 38, 38, 0.0) 0%,
-    rgba(190, 25, 25, 0.50) 30%,
-    rgba(140, 12, 12, 0.65) 65%,
-    rgba(80, 6, 6, 0.0) 100%
-  );
-  mix-blend-mode: multiply;
-  filter: blur(3px);
-  animation: bloodDrip 4.5s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 0;
+  filter:
+    drop-shadow(0 0 6px rgba(220, 38, 38, 0.65))
+    drop-shadow(0 0 16px rgba(127, 29, 29, 0.55));
 }
 .boat-fx-bloodtide::after {
   content: '';
   position: absolute; inset: 0;
-  background: radial-gradient(ellipse at 50% 55%, rgba(220, 38, 38, 0.50) 0%, rgba(127, 29, 29, 0.30) 42%, transparent 75%);
-  mix-blend-mode: screen;
+  background: linear-gradient(to bottom,
+    rgba(220, 38, 38, 0.18) 0%,
+    rgba(190, 25, 25, 0.45) 55%,
+    rgba(110, 10, 10, 0.78) 100%
+  );
+  mix-blend-mode: multiply;
   animation: bloodPulse 3.2s ease-in-out infinite;
   pointer-events: none;
   z-index: 2;
