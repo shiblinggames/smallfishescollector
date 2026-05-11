@@ -45,6 +45,8 @@ const CURRENT_WIDTH_MIN    = 0.18  // % of canvas width
 const CURRENT_WIDTH_MAX    = 0.32  // % of canvas width
 const CURRENT_SPEED_MULT   = 0.55  // effective scroll speed when grounded inside a current
 const CURRENT_WARMUP_M     = 35    // currents don't appear until 35m into the run
+const CURRENT_ENTER_RATE   = 5.0   // 1/s — how fast the boat slows entering a current
+const CURRENT_EXIT_RATE    = 1.6   // 1/s — how slow the boat re-accelerates leaving one
 
 // Hitbox inset on the trimmed sprite
 const HITBOX_INSET = { top: 0.35, right: 0.12, bottom: 0.08, left: 0.08 }
@@ -105,6 +107,7 @@ export default function TideRunGame() {
     holding: false,         // is the player currently holding to extend a jump?
     jumpHoldStart: 0,       // performance.now() of current jump's start
     lastHazardTier: null as 'small' | 'medium' | 'large' | null,
+    speedMult: 1,           // smoothed effective scroll multiplier (current slowdown eases in/out)
   })
 
   const [uiState, setUiState] = useState<GameState>('ready')
@@ -170,6 +173,7 @@ export default function TideRunGame() {
     g.holding = false
     g.jumpHoldStart = 0
     g.lastHazardTier = null
+    g.speedMult = 1
     // Land ship on the sea at its screen x
     const cx = g.cw * SHIP_X_RATIO + g.shipW / 2
     const wy = seaSurfaceY(cx + g.scrollX, g.ch, 0)
@@ -300,19 +304,22 @@ export default function TideRunGame() {
     const shipScreenX = g.cw * SHIP_X_RATIO
     const cx = shipScreenX + g.shipW / 2
 
-    // If grounded inside a current zone, scroll at the slowdown multiplier.
-    // Jumping over (airborne) skips the slowdown entirely.
-    let scrollSpeed = g.speed
+    // Effective scroll speed eases in/out of currents — asymmetric so the boat
+    // gets grabbed fast but re-accelerates gradually (water resistance).
+    let targetMult = 1
     if (!g.airborne) {
       const boatWorldX = shipScreenX + g.scrollX
       for (const c of g.currents) {
         if (boatWorldX >= c.x && boatWorldX <= c.x + c.width) {
-          scrollSpeed = g.speed * CURRENT_SPEED_MULT
+          targetMult = CURRENT_SPEED_MULT
           break
         }
       }
     }
-    g.scrollX += scrollSpeed * dt
+    const rate = targetMult < g.speedMult ? CURRENT_ENTER_RATE : CURRENT_EXIT_RATE
+    const k = 1 - Math.exp(-rate * dt)
+    g.speedMult += (targetMult - g.speedMult) * k
+    g.scrollX += g.speed * g.speedMult * dt
     g.distance = g.scrollX * METERS_PER_PIXEL
 
     const surfaceY = seaSurfaceY(cx + g.scrollX, g.ch, g.scrollX)
