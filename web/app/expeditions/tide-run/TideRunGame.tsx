@@ -925,6 +925,53 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     ctx.fillStyle = sea
     ctx.fill()
 
+    // ── Underwater caustics — wavy bright lines drifting independently of
+    // scroll, suggests sunlight refracting through the surface. Two layers
+    // at different depths and phase rates so they don't look mechanical.
+    {
+      const t = performance.now() / 1000
+      ctx.save()
+      ctx.globalCompositeOperation = 'screen'
+      for (let i = 0; i < 2; i++) {
+        const yOffset = 16 + i * 22
+        const phase = t * (0.6 + i * 0.35) + i * 1.7
+        const ampX = 0.045 - i * 0.012
+        const ampY = 4 - i * 1.5
+        ctx.strokeStyle = `rgba(150, 200, 230, ${0.18 - i * 0.05})`
+        ctx.lineWidth = 1.2 + i * 0.3
+        ctx.beginPath()
+        for (let x = 0; x <= cw; x += 6) {
+          const surfY = seaSurfaceY(x + g.scrollX, ch, g.scrollX)
+          const y = surfY + yOffset + Math.sin(x * ampX + phase) * ampY
+          if (x === 0) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
+        }
+        ctx.stroke()
+      }
+      ctx.restore()
+    }
+
+    // ── Sub-surface shimmer — a thin lighter band right below the foam line
+    // suggests water translucency / shallow depth.
+    {
+      ctx.save()
+      ctx.globalCompositeOperation = 'screen'
+      ctx.fillStyle = 'rgba(140, 195, 225, 0.18)'
+      ctx.beginPath()
+      for (let x = 0; x <= cw; x += 4) {
+        const y = seaSurfaceY(x + g.scrollX, ch, g.scrollX)
+        if (x === 0) ctx.moveTo(x, y + 1)
+        else ctx.lineTo(x, y + 1)
+      }
+      for (let x = cw; x >= 0; x -= 4) {
+        const y = seaSurfaceY(x + g.scrollX, ch, g.scrollX)
+        ctx.lineTo(x, y + 6)
+      }
+      ctx.closePath()
+      ctx.fill()
+      ctx.restore()
+    }
+
     // ── Foam crest ──
     ctx.strokeStyle = pal.foam
     ctx.lineWidth = 2
