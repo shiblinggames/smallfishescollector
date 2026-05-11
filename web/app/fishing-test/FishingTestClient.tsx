@@ -5,14 +5,10 @@ import { RODS } from '@/lib/rods'
 import { HOOKS } from '@/lib/hooks'
 import { BADGES, BADGE_SLOT_POSITIONS, type BadgePos, type BadgeFrame } from '@/lib/badges'
 import { BOATS } from '@/lib/boats'
+import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 
 type Frame = 'rest' | 'wait' | 'cast'
 
-const FRAMES: Record<Frame, string> = {
-  rest: '/fishing_rest.png',
-  wait: '/fishing_wait.png',
-  cast: '/fishing_cast.png',
-}
 
 const ROD_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
   rest: { top: 33, left: 12, width: 51, rotate: -1  },
@@ -76,6 +72,8 @@ export default function FishingTestClient() {
   const [boatCfg, setBoatCfg] = useState(BOAT_DEFAULT)
   const [boatEnabled, setBoatEnabled] = useState(true)
   const [showLegacyControls, setShowLegacyControls] = useState(false)
+  const [characterColor, setCharacterColor] = useState('default')
+  const FRAMES = getCharacterSprites(characterColor) as Record<Frame, string>
   const [activeSlot, setActiveSlot] = useState(0)
   // per-slot selected badge id (null = empty)
   const [slotBadges, setSlotBadges] = useState<(string | null)[]>([
@@ -215,6 +213,18 @@ export default function FishingTestClient() {
             }}>{z.replace('_', ' ')}</button>
           ))}
         </div>
+
+        {/* Character color picker */}
+        <p style={{ fontWeight: 700, marginBottom: 6, color: '#fff' }}>Character color</p>
+        <select
+          value={characterColor}
+          onChange={e => setCharacterColor(e.target.value)}
+          style={{ width: '100%', marginBottom: 14, padding: '4px 6px', background: '#1e2d3e', color: '#fff', border: '1px solid #334', borderRadius: 6 }}
+        >
+          {CHARACTER_COLORS.map(c => (
+            <option key={c.id} value={c.id}>{c.name}{c.id === 'default' ? ' (default)' : ''}</option>
+          ))}
+        </select>
 
         {/* Frame picker + animate */}
         <p style={{ fontWeight: 700, marginBottom: 8, color: '#fff' }}>Frame</p>
