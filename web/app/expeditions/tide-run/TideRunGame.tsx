@@ -1046,16 +1046,31 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
         onPointerUp={onRelease}
         onPointerCancel={onRelease}
         onPointerLeave={onRelease}
+        onContextMenu={(e) => e.preventDefault()}
         className="relative w-full overflow-hidden rounded-xl"
         style={{
-          aspectRatio: '9 / 14',
+          // Fill available viewport above the mobile tab bar. The subtraction
+          // accounts for: top nav (~56) + main pt-3 (12) + game header + gap
+          // (~52) + clearance above tab bar (~64). Min/max keep it sane on
+          // very short or very tall displays.
+          height: 'min(900px, max(480px, calc(100dvh - 184px)))',
           background: '#062840',
           border: '1px solid rgba(255,255,255,0.10)',
           touchAction: 'none',
           userSelect: 'none',
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none',
+          WebkitTapHighlightColor: 'transparent',
         }}
       >
-        <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+        <canvas ref={canvasRef} style={{
+          display: 'block',
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',           // wrapper catches all input
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+        }} />
 
         {uiState === 'playing' && (
           <>
