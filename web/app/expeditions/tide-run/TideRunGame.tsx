@@ -67,13 +67,16 @@ const SHOAL_CLUSTER_MEMBER_MAX_PX  = 130    // each cluster shoal's max width
 const SHOAL_CLUSTER_SAFE_GAP_MIN_PX = 120   // safe-landing strip between shoals — min width
 const SHOAL_CLUSTER_SAFE_GAP_MAX_PX = 170   // safe-landing strip — max width
 
-// Crumblers — rocks that LOOK like normal rocks but with a hidden overhead
-// trap. Grounded boat plows through (the rock shatters); jumping over it =
-// die. Subtle visual cue: visible cracks across the rock plus a small
-// pulsing glint hovering above. Tricks the "see rock → jump" reflex.
-const CRUMBLER_CHANCE              = 0.15  // probability a spawn becomes a crumbler
-const CRUMBLER_WARMUP_M            = 80    // crumblers only after 80m (player learns rocks first)
-const CRUMBLER_AFTER_ROCK_TIME_SEC = 1.05  // need to land from a previous jump before reaching one
+// Beacons — disguised detection devices that look like rocks. Smash through
+// grounded to disable the beacon and stay hidden; jumping over it lets the
+// signal go off and your ship is spotted. Subtle visual cues: faint rust on
+// the cracks, a thin antenna, a pulsing amber signal light. Tricks the
+// "see rock → jump" reflex. On airborne contact, the game pauses for
+// BEACON_DETECT_FLASH_SEC while a beam of light fires upward, then wreck.
+const BEACON_CHANCE              = 0.15  // probability a spawn becomes a beacon
+const BEACON_WARMUP_M            = 80    // beacons only after 80m (player learns rocks first)
+const BEACON_AFTER_ROCK_TIME_SEC = 1.05  // need to land from a previous jump before reaching one
+const BEACON_DETECT_FLASH_SEC    = 0.55  // duration the detection beam plays before wrecked screen
 
 // Wave surface modulation — long-period alternation between calm and rolling
 // sections so the run doesn't feel monotonous.
@@ -115,11 +118,11 @@ interface Shoal {
   width: number      // width of deadly zone
 }
 
-interface Crumbler {
+interface Beacon {
   x: number          // world x (left edge)
   width: number
   height: number     // cosmetic rock height
-  shattered: boolean // visual flag after boat plows through
+  shatteredAt: number // performance.now() when smashed, 0 = intact
 }
 
 // ── Sea surface helper ───────────────────────────────────────────────────────
@@ -159,8 +162,10 @@ export default function TideRunGame() {
     hazards: [] as Hazard[],
     currents: [] as Current[],
     shoals: [] as Shoal[],
-    crumblers: [] as Crumbler[],
-    lastSpawnType: null as 'rock' | 'shoal' | 'crumbler' | null,
+    beacons: [] as Beacon[],
+    lastSpawnType: null as 'rock' | 'shoal' | 'beacon' | null,
+    detectingUntil: 0,        // performance.now() timestamp; while > now() the detection beam is playing
+    detectingBeaconX: 0,      // world x center of the beacon that triggered detection
     nextSpawnAt: 0,
     distance: 0,
     deathFlashUntil: 0,
@@ -226,8 +231,10 @@ export default function TideRunGame() {
     g.hazards = []
     g.currents = []
     g.shoals = []
-    g.crumblers = []
+    g.beacons = []
     g.lastSpawnType = null
+    g.detectingUntil = 0
+    g.detectingBeaconX = 0
     g.nextSpawnAt = HAZARD_WARMUP
     g.distance = 0
     g.deathFlashUntil = 0
@@ -287,21 +294,21 @@ export default function TideRunGame() {
     // Base spacing scaled by speed (time-based floor for fairness)
     const baseSpacing = Math.max(HAZARD_SPAWN_SPACING, g.speed * MIN_REACTION_TIME_SEC)
 
-    // ── Maybe spawn a crumbler (looks like a rock, kills you if you jump) ──
-    const canCrumbler = distance > CRUMBLER_WARMUP_M && g.lastSpawnType !== 'crumbler'
-    if (canCrumbler && Math.random() < CRUMBLER_CHANCE) {
+    // ── Maybe spawn a beacon (looks like a rock, kills you if you jump) ──
+    const canBeacon = distance > BEACON_WARMUP_M && g.lastSpawnType !== 'beacon'
+    if (canBeacon && Math.random() < BEACON_CHANCE) {
       // Small or medium size only (large ones would be too obvious as traps)
       const isSmall = Math.random() < 0.55
       const height = isSmall ? g.ch * 0.035 : g.ch * 0.075
       const width = isSmall ? g.cw * 0.06 : g.cw * 0.085
       // After-rock buffer — player must be able to land before reaching it
       if (g.lastSpawnType === 'rock') {
-        const minBuffer = g.speed * CRUMBLER_AFTER_ROCK_TIME_SEC
+        const minBuffer = g.speed * BEACON_AFTER_ROCK_TIME_SEC
         if (baseSpacing < minBuffer) g.nextSpawnAt += (minBuffer - baseSpacing)
       }
-      g.crumblers.push({ x: g.nextSpawnAt, width, height, shattered: false })
+      g.beacons.push({ x: g.nextSpawnAt, width, height, shatteredAt: 0 })
       g.nextSpawnAt += baseSpacing
-      g.lastSpawnType = 'crumbler'
+      g.lastSpawnType = 'beacon'
       return
     }
 
@@ -458,6 +465,23 @@ export default function TideRunGame() {
   // ── Step ──────────────────────────────────────────────────────────────────
   const step = useCallback((dt: number) => {
     const g = gRef.current
+
+    // Detection flash in progress: freeze gameplay, wait it out, then wreck.
+    if (g.detectingUntil > 0) {
+      if (performance.now() >= g.detectingUntil) {
+        g.detectingUntil = 0
+        g.state = 'dead'
+        g.deathFlashUntil = performance.now() + 250
+        setUiState('dead')
+        const finalMeters = Math.floor(g.distance)
+        if (finalMeters > highScore) {
+          setHighScore(finalMeters)
+          if (typeof window !== 'undefined') window.localStorage.setItem(HIGH_SCORE_KEY, String(finalMeters))
+        }
+      }
+      return
+    }
+
     if (g.state !== 'playing') return
 
     g.elapsed += dt
@@ -529,8 +553,8 @@ export default function TideRunGame() {
     while (g.shoals.length > 0 && g.shoals[0].x + g.shoals[0].width < g.scrollX) {
       g.shoals.shift()
     }
-    while (g.crumblers.length > 0 && g.crumblers[0].x + g.crumblers[0].width < g.scrollX) {
-      g.crumblers.shift()
+    while (g.beacons.length > 0 && g.beacons[0].x + g.beacons[0].width < g.scrollX) {
+      g.beacons.shift()
     }
 
     // Death checks
@@ -549,16 +573,22 @@ export default function TideRunGame() {
       }
     }
 
-    // Crumblers: airborne over a crumbler = die (the trap). Grounded = pass
-    // through, mark shattered for visual.
+    // Beacons: airborne over an intact beacon = detected → die (after the
+    // detection beam plays). Grounded = smash through, mark shatteredAt for
+    // the satisfying break-apart animation.
     if (!dead) {
-      for (const cr of g.crumblers) {
+      for (const cr of g.beacons) {
+        if (cr.shatteredAt > 0) continue
         if (boatWorldX < cr.x || boatWorldX > cr.x + cr.width) continue
         if (g.airborne) {
-          dead = true
+          // Start detection flash — gameplay freezes, beam plays, then death
+          g.detectingUntil = performance.now() + BEACON_DETECT_FLASH_SEC * 1000
+          g.detectingBeaconX = cr.x + cr.width / 2
+          // Lock in the final score now (distance is frozen during flash)
+          setScore(Math.floor(g.distance))
           break
-        } else if (!cr.shattered) {
-          cr.shattered = true
+        } else {
+          cr.shatteredAt = performance.now()
         }
       }
     }
@@ -653,12 +683,45 @@ export default function TideRunGame() {
       drawHazard(ctx, ox, surfaceAtHazard, obs.width, obs.height)
     }
 
-    // ── Crumblers (look like rocks, but you must run through them) ──
-    for (const cr of g.crumblers) {
+    // ── Beacons (look like rocks, but you must run through them) ──
+    for (const cr of g.beacons) {
       const ox = cr.x - g.scrollX
       if (ox + cr.width < 0 || ox > cw) continue
       const surfaceAtCr = seaSurfaceY(cr.x + cr.width / 2, ch, g.scrollX)
-      drawCrumbler(ctx, ox, surfaceAtCr, cr.width, cr.height, cr.shattered, g.scrollX)
+      drawBeacon(ctx, ox, surfaceAtCr, cr.width, cr.height, cr.shatteredAt, g.scrollX)
+    }
+
+    // ── Detection beam (active while beacon detection flash plays) ──
+    if (g.detectingUntil > 0) {
+      const remaining = g.detectingUntil - performance.now()
+      if (remaining > 0) {
+        const totalMs = BEACON_DETECT_FLASH_SEC * 1000
+        const t = 1 - remaining / totalMs            // 0 → 1 over flash duration
+        const beamX = g.detectingBeaconX - g.scrollX
+        const surfaceAtBeam = seaSurfaceY(g.detectingBeaconX, ch, g.scrollX)
+
+        // A few flicker pulses across the duration for "Whoop! Whoop!" detection feel
+        const flick = 0.7 + 0.3 * Math.sin(t * Math.PI * 6)
+        const beamW = 38 * flick
+
+        ctx.save()
+        // Wide soft halo
+        const halo = ctx.createLinearGradient(beamX, 0, beamX, surfaceAtBeam)
+        halo.addColorStop(0, 'rgba(255, 220, 130, 0)')
+        halo.addColorStop(0.4, `rgba(255, 220, 130, ${0.55 * flick})`)
+        halo.addColorStop(1, `rgba(255, 200, 90, ${0.85 * flick})`)
+        ctx.fillStyle = halo
+        ctx.fillRect(beamX - beamW / 2, 0, beamW, surfaceAtBeam + 4)
+
+        // Sharp white core
+        ctx.strokeStyle = `rgba(255, 252, 230, ${0.95 * flick})`
+        ctx.lineWidth = 3
+        ctx.beginPath()
+        ctx.moveTo(beamX, 0)
+        ctx.lineTo(beamX, surfaceAtBeam + 4)
+        ctx.stroke()
+        ctx.restore()
+      }
     }
 
     // ── Ship ──
@@ -873,29 +936,65 @@ function drawHazard(ctx: CanvasRenderingContext2D, x: number, surfaceY: number, 
   ctx.stroke()
 }
 
-// Crumbler: looks like a regular rock but with visible cracks + a few pebbles
-// at the base + a small pulsing glint hovering above. Grounded boat plows
-// through; jumping over it triggers a hidden overhead trap = die.
-function drawCrumbler(
+// Beacon: a detection device disguised as a rock. The rock body matches
+// real rocks (cracks, pebbles, same silhouette) so reflexive jumpers eat
+// it. Subtle cues: a thin antenna emerging from the top, a pulsing amber
+// signal light, faint rust hue on the cracks. Smash through grounded to
+// disable it; jumping triggers detection (handled by the calling render).
+function drawBeacon(
   ctx: CanvasRenderingContext2D,
   x: number, surfaceY: number,
   w: number, h: number,
-  shattered: boolean,
+  shatteredAt: number,
   scrollX: number,
 ) {
-  // Shattered: just a small scatter of pebbles fading away
-  if (shattered) {
+  // Smashed: fragments fly outward with gravity + expanding shockwave ring.
+  // Makes the "boat smashes a beacon" moment feel like an impact.
+  if (shatteredAt > 0) {
+    const elapsed = (performance.now() - shatteredAt) / 1000
+    if (elapsed > 0.9) return                          // fully faded
+    const fadeT = Math.max(0, 1 - elapsed / 0.9)
+    const cx = x + w / 2
+
     ctx.save()
-    ctx.globalAlpha = 0.4
-    ctx.fillStyle = '#33271f'
-    for (let i = 0; i < 6; i++) {
-      const seed = ((i * 211 + Math.floor(x * 11)) % 1000) / 1000
-      const px = x + w * (i + 0.5) / 6 + (seed - 0.5) * 4
-      const py = surfaceY + 1 + (seed * 3)
+
+    // Shockwave ring — pops in the first 0.25s
+    if (elapsed < 0.28) {
+      const ringT = elapsed / 0.28
+      const ringR = 8 + ringT * 60
+      ctx.globalAlpha = (1 - ringT) * 0.75
+      ctx.strokeStyle = '#ffeaa8'
+      ctx.lineWidth = 2.4 * (1 - ringT * 0.6)
       ctx.beginPath()
-      ctx.arc(px, py, 1.5 + seed * 1, 0, Math.PI * 2)
+      ctx.ellipse(cx, surfaceY - 4, ringR, ringR * 0.45, 0, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+
+    // Flying fragments (8 stones) with outward velocity + gravity
+    ctx.fillStyle = '#2a2018'
+    for (let i = 0; i < 8; i++) {
+      const seed = ((i * 211 + Math.floor(x * 11)) % 1000) / 1000
+      // Upward-biased outward angle
+      const angle = (i / 8) * Math.PI - Math.PI / 2 + (seed - 0.5) * 0.6
+      const speed = 110 + seed * 70
+      const dx = Math.cos(angle) * speed * elapsed
+      const dy = Math.sin(angle) * speed * elapsed + 0.5 * 600 * elapsed * elapsed
+      const px = cx + dx
+      const py = (surfaceY - 6) + dy
+      ctx.globalAlpha = fadeT
+      ctx.beginPath()
+      ctx.arc(px, py, 2 + seed * 1.4, 0, Math.PI * 2)
       ctx.fill()
     }
+
+    // A small fading amber spark at the original light position — the beacon
+    // going dark.
+    ctx.globalAlpha = Math.max(0, 1 - elapsed / 0.35) * 0.9
+    ctx.fillStyle = '#ffd070'
+    ctx.beginPath()
+    ctx.arc(cx, surfaceY - h - 12, 5, 0, Math.PI * 2)
+    ctx.fill()
+
     ctx.restore()
     return
   }
@@ -919,8 +1018,9 @@ function drawCrumbler(
   ctx.closePath()
   ctx.fill()
 
-  // Cracks — the visual cue that this rock isn't a normal rock
-  ctx.strokeStyle = 'rgba(230, 210, 180, 0.45)'
+  // Cracks / weathered seams — subtle "this isn't natural rock" cue.
+  // Tinted slightly warm (rust-like) for the beacon-disguised-as-rock feel.
+  ctx.strokeStyle = 'rgba(210, 165, 110, 0.50)'
   ctx.lineWidth = 0.9
   ctx.beginPath()
   ctx.moveTo(x + w * 0.20, top + h * 0.30)
@@ -943,14 +1043,23 @@ function drawCrumbler(
     ctx.fill()
   }
 
-  // Pulsing glint above — the subtle "trap" hint
+  // Thin dark antenna emerging from the top of the rock — the structural
+  // cue that this isn't just a rock. Subtle but visible on close look.
   const cx = x + w / 2
-  const glintY = top - 14
+  const glintY = top - 16
+  ctx.strokeStyle = '#1a1410'
+  ctx.lineWidth = 1.2
+  ctx.beginPath()
+  ctx.moveTo(cx, top - 1)
+  ctx.lineTo(cx, glintY + 2)
+  ctx.stroke()
+
+  // Pulsing amber signal light at the antenna tip — the "live" cue
   const pulse = 0.5 + 0.5 * Math.sin(scrollX * 0.05 + cx * 0.03)
-  const glintAlpha = 0.45 + pulse * 0.45
+  const glintAlpha = 0.50 + pulse * 0.45
   ctx.save()
   ctx.globalAlpha = glintAlpha
-  ctx.fillStyle = '#ffe8a0'
+  ctx.fillStyle = '#ffb84d'
   // 4-point star
   ctx.beginPath()
   ctx.moveTo(cx,     glintY - 4)
