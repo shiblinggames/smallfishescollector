@@ -37,6 +37,18 @@ const TIER_NO_LARGE_M      = 90    // 25–90m: small + medium; no large rocks y
 const APPROACH_BUFFER_MED  = 80    // extra world px of approach before a medium rock
 const APPROACH_BUFFER_LRG  = 240   // extra world px before a large rock (real reaction time)
 
+// Time-based floors so high speeds don't outpace human reaction. Spacing and
+// tier buffers scale with current speed once these times become more
+// constraining than the world-px constants above.
+const MIN_REACTION_TIME_SEC = 0.55  // floor on time between consecutive hazards
+const MED_EXTRA_TIME_SEC    = 0.10  // extra reaction time for medium rocks
+const LRG_EXTRA_TIME_SEC    = 0.30  // extra reaction time for large rocks
+
+// Telegraph — fade-in marker at the right edge of the canvas previewing
+// upcoming hazards before they actually scroll into view.
+const TELEGRAPH_TIME_SEC    = 0.55  // how far ahead (in time) to preview hazards
+const TELEGRAPH_MAX_ALPHA   = 0.55  // max opacity at edge of viewport
+
 // Currents — slow-zones on the surface. Ride through to slow down (more
 // reaction time); jump over to skip the slowdown. Spawned in the gap
 // between hazards so they never overlap a rock.
@@ -265,13 +277,20 @@ export default function TideRunGame() {
       width = g.cw * 0.105
     }
 
+    // Spacing scales with current speed past a threshold so the time between
+    // hazards never drops below MIN_REACTION_TIME_SEC. At low speeds, the
+    // fixed world-px constants govern; at high speeds, time-based floors take over.
+    const baseSpacing = Math.max(HAZARD_SPAWN_SPACING, g.speed * MIN_REACTION_TIME_SEC)
+    const medBuffer = Math.max(APPROACH_BUFFER_MED, g.speed * MED_EXTRA_TIME_SEC)
+    const lrgBuffer = Math.max(APPROACH_BUFFER_LRG, g.speed * LRG_EXTRA_TIME_SEC)
+
     // Push this hazard further out if it's a hard one — gives reaction time
-    if (tier === 'medium') g.nextSpawnAt += APPROACH_BUFFER_MED
-    else if (tier === 'large') g.nextSpawnAt += APPROACH_BUFFER_LRG
+    if (tier === 'medium') g.nextSpawnAt += medBuffer
+    else if (tier === 'large') g.nextSpawnAt += lrgBuffer
 
     const hazardX = g.nextSpawnAt
     g.hazards.push({ x: hazardX, width, height })
-    g.nextSpawnAt += HAZARD_SPAWN_SPACING
+    g.nextSpawnAt += baseSpacing
 
     // Maybe drop a current in the gap before the NEXT hazard.
     // Place it well clear of both this hazard and the next so it never overlaps.
@@ -466,6 +485,19 @@ export default function TideRunGame() {
       drawCurrent(ctx, ox, c.width, g.scrollX, (x) => seaSurfaceY(x + g.scrollX, ch, g.scrollX))
     }
 
+    // ── Telegraph: fade-in warnings at the right edge for upcoming hazards ──
+    // (Drawn behind hazards so the live rock takes precedence as it scrolls in.)
+    const telegraphDist = g.speed * TELEGRAPH_TIME_SEC
+    for (const obs of g.hazards) {
+      const ox = obs.x - g.scrollX
+      if (ox <= cw) continue                                  // already on or past screen
+      if (ox - cw > telegraphDist) continue                   // too far ahead
+      const t = (ox - cw) / telegraphDist                     // 0 = just entering, 1 = far
+      const alpha = (1 - t) * TELEGRAPH_MAX_ALPHA
+      const surfaceAtRight = seaSurfaceY(cw + g.scrollX, ch, g.scrollX)
+      drawTelegraph(ctx, cw, surfaceAtRight, obs.height, alpha)
+    }
+
     // ── Surface hazards (rocks bobbing on the wave) ──
     for (const obs of g.hazards) {
       const ox = obs.x - g.scrollX
@@ -480,7 +512,9 @@ export default function TideRunGame() {
       const shipX = cw * SHIP_X_RATIO
       let pitch = 0
       if (g.airborne) {
-        pitch = Math.max(-0.4, Math.min(0.6, g.shipVy * 0.0008))
+        // Asymmetric: rise tilts up more than fall tilts down (less aggressive nose-dive)
+        const raw = g.shipVy * 0.00055
+        pitch = Math.max(-0.40, Math.min(0.28, raw))
       } else {
         // Pitch to wave slope at ship center
         const cx = shipX + g.shipW / 2 + g.scrollX
@@ -779,4 +813,32 @@ function drawClouds(ctx: CanvasRenderingContext2D, cw: number, ch: number, scrol
       ctx.fill()
     }
   }
+}
+
+// Telegraph: a fading vertical bar at the right edge of the canvas
+// previewing the height of an upcoming rock.
+function drawTelegraph(
+  ctx: CanvasRenderingContext2D,
+  rightX: number, surfaceY: number,
+  hazardHeight: number, alpha: number,
+) {
+  const top = surfaceY - hazardHeight
+  const barW = 6
+  const barX = rightX - barW - 2
+  ctx.save()
+  ctx.globalAlpha = alpha
+  const g = ctx.createLinearGradient(barX, top, barX, surfaceY)
+  g.addColorStop(0, '#5a4a3a')
+  g.addColorStop(1, '#1a1410')
+  ctx.fillStyle = g
+  ctx.fillRect(barX, top, barW, hazardHeight)
+  // Small chevron pointing left to signal "incoming"
+  ctx.fillStyle = 'rgba(255, 200, 130, 0.9)'
+  ctx.beginPath()
+  ctx.moveTo(barX - 2, top + hazardHeight * 0.5)
+  ctx.lineTo(barX + 3, top + hazardHeight * 0.5 - 4)
+  ctx.lineTo(barX + 3, top + hazardHeight * 0.5 + 4)
+  ctx.closePath()
+  ctx.fill()
+  ctx.restore()
 }
