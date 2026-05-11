@@ -286,7 +286,8 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                     <img src={bd.restImageUrl} alt="" style={{
                       position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
                       width: `${bp.width}%`,
-                      transform: `rotate(${bp.rotate}deg)`,
+                      // Match the iOS rest-frame nudge applied in FishingGame
+                      transform: `rotate(${bp.rotate}deg) translateX(-2px)`,
                       transformOrigin: 'center center',
                       pointerEvents: 'none',
                     }} />
