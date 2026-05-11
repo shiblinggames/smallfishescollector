@@ -101,7 +101,7 @@ export const BOATS: BoatDef[] = [
     id: 'golden',
     name: 'Golden',
     color: '#f0c040',
-    cost: 15000,
+    cost: 50000,
     restImageUrl: '/boat_golden_rest.png',
     castImageUrl: '/boat_golden_cast.png',
     positions: SHARED_POSITIONS,
