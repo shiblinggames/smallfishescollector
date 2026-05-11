@@ -10,10 +10,10 @@ const SHIP_ASPECT     = 1031 / 672   // trimmed boatrun.png
 
 // Ship physics — Canabalt feel. Boat rides the wave surface; press-and-hold
 // to jump (longer hold → higher jump). No automatic launches off crests.
-const GRAVITY                  = 1300  // px/s² full gravity (in-air, after hold release)
-const JUMP_IMPULSE             = 440   // px/s upward kick when press starts a jump
-const JUMP_HOLD_GRAVITY_MULT   = 0.36  // gravity multiplier while hold is active (sustained jump)
-const JUMP_MAX_HOLD_SEC        = 0.42  // hold beyond this no longer extends the jump
+const GRAVITY                  = 1750  // px/s² full gravity (in-air, after hold release)
+const JUMP_IMPULSE             = 520   // px/s upward kick when press starts a jump
+const JUMP_HOLD_GRAVITY_MULT   = 0.40  // gravity multiplier while hold is active (sustained jump)
+const JUMP_MAX_HOLD_SEC        = 0.40  // hold beyond this no longer extends the jump
 const BASE_SPEED               = 290   // px/s horizontal scroll (Canabalt rolls)
 const SPEED_RAMP               = 7     // px/s² — gentle, unbounded climb (Canabalt-style)
 const MAX_SPEED                = 1500  // soft safety cap; reached only after ~3 min of perfect play
