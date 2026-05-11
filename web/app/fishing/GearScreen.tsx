@@ -8,7 +8,6 @@ import { getRod, RODS } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
-import { RING_SKINS } from '@/lib/ringSkins'
 import { BOATS, DEFAULT_BOAT_COLOR } from '@/lib/boats'
 import { BADGE_MAP, BADGES } from '@/lib/badges'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -184,16 +183,6 @@ function SpecialItemRow({
   )
 }
 
-function CosmeticIcon({ color }: { color: string }) {
-  return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round">
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="4.5" />
-      <circle cx="12" cy="12" r="1.5" fill={color} stroke="none" />
-    </svg>
-  )
-}
-
 function BaitIcon({ color }: { color: string }) {
   return (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -261,7 +250,6 @@ export default function GearScreen({
   reelTier, hookTier, lineTier,
   characterColor, charSrc, equippedBadges, unlockedCharacterColors, unlockedBadges, onUpdateColor, onEquipBadge,
   equippedBoat, unlockedBoats, onEquipBoat, onBuyBoat, doubloons,
-  equippedRingSkin, unlockedRingSkins, onEquipRingSkin,
   hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster,
   equippedSpecial, onEquipSpecial, onBuySpecialItem,
   fishingLevel,
@@ -288,9 +276,6 @@ export default function GearScreen({
   onEquipBoat: (id: string | null) => void
   onBuyBoat: (id: string) => void
   doubloons: number
-  equippedRingSkin: string
-  unlockedRingSkins: string[]
-  onEquipRingSkin: (skin: string) => void
   hasTideTurner: boolean
   tideTurnerSkipsLeft: number
   hasPhantomHook: boolean
@@ -347,7 +332,7 @@ export default function GearScreen({
         {/* Center row 1: Character */}
         <div style={{ gridColumn: '2', gridRow: '1' }}>
           <GearSlot
-            label="Character"
+            label="Skin"
             color="#a0a09a"
             itemName={CHARACTER_COLORS.find(c => c.id === characterColor)?.name ?? characterColor}
             onClick={() => setOpenSlot('character')}
@@ -370,7 +355,7 @@ export default function GearScreen({
             const cosmeticName = activeBoat?.name ?? 'Driftwood'
             return (
               <GearSlot
-                label="Cosmetic"
+                label="Boat Color"
                 color={swatchColor}
                 itemName={cosmeticName}
                 onClick={() => setOpenSlot('cosmetic')}
@@ -728,59 +713,6 @@ export default function GearScreen({
                     })}
                   </div>
 
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#4a9a9a', marginTop: 14 }}>Dial Ring Skins</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {RING_SKINS.filter(s => !['gilded_compass', 'abyssal_sigil'].includes(s.id)).map(skin => {
-                      const isNone = skin.id === 'standard'
-                      const owned = isNone || unlockedRingSkins.includes(skin.id)
-                      const isEquipped = equippedRingSkin === skin.id
-                      return (
-                        <div key={skin.id} style={{
-                          display: 'flex', alignItems: 'center', gap: 10,
-                          padding: '0.55rem 0.7rem', borderRadius: 10,
-                          background: isEquipped ? `${skin.color}12` : 'rgba(4,10,18,0.72)',
-                          border: `1px solid ${isEquipped ? skin.color + '50' : owned ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.04)'}`,
-                          opacity: owned ? 1 : 0.45,
-                        }}>
-                          {/* Ring preview */}
-                          {isNone
-                            ? <div style={{ width: 24, height: 24, flexShrink: 0 }} />
-                            : skin.imageUrl
-                              ? <img src={skin.imageUrl} alt={skin.name} style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0, opacity: owned ? 1 : 0.3 }} />
-                              : <div style={{
-                                  width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-                                  border: `2px solid ${skin.stroke}`,
-                                  background: 'rgba(4,10,20,0.8)',
-                                  boxShadow: skin.glow ? skin.glow.replace('drop-shadow', '').replace(/[()]/g, '').trim() : 'none',
-                                }} />
-                          }
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: owned ? '#f0ede8' : '#3a3835' }}>
-                              {isNone ? 'None' : skin.name}
-                            </p>
-                            <p className="font-karla" style={{ fontSize: '0.56rem', color: owned ? '#5a5856' : '#2e2c2a', marginTop: 1 }}>
-                              {isNone ? 'Default dial ring' : owned ? skin.description : skin.source}
-                            </p>
-                          </div>
-                          {owned
-                            ? isEquipped
-                              ? <span className="font-karla font-700" style={{ fontSize: '0.52rem', color: skin.color, whiteSpace: 'nowrap' }}>✓ On</span>
-                              : <button onClick={() => { onEquipRingSkin(skin.id); setOpenSlot(null) }} className="font-karla font-700"
-                                  style={{ fontSize: '0.55rem', padding: '0.28rem 0.6rem', borderRadius: 7, whiteSpace: 'nowrap',
-                                    background: `${skin.color}16`, border: `1px solid ${skin.color}44`, color: skin.color, cursor: 'pointer' }}>
-                                  Equip
-                                </button>
-                            : <span className="font-karla" style={{ fontSize: '0.5rem', color: '#3a3835', whiteSpace: 'nowrap' }}>Locked</span>
-                          }
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <div style={{ background: 'rgba(74,154,154,0.07)', border: '1px solid rgba(74,154,154,0.15)', borderRadius: 10, padding: '0.6rem 0.8rem', marginTop: 2 }}>
-                    <p className="font-karla font-300" style={{ fontSize: '0.65rem', color: '#4a6a6a', lineHeight: 1.5 }}>
-                      Unlock ring skins by completing voyages on the Expeditions page.
-                    </p>
-                  </div>
                 </div>
               )}
 

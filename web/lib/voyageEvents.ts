@@ -194,7 +194,6 @@ export interface VoyageResult {
   totalDoubloons: number
   totalGems: number
   crewLost: number[]  // variantIds permanently lost
-  ringSkinDrops: string[]
   baitDrops: { type: string; qty: number }[]
   tideTurnerDrop: boolean
   phantomHookDrop: boolean
@@ -257,8 +256,6 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
       case 'discovery': {
         const success = rollFortune()
         const gemDrop = success && Math.random() * 55 < fortune ? Math.round(rand(1, 3) * rc.gemScale) : 0
-        const skinPool: Partial<Record<VoyageRoute, string>> = { coastal: 'whale_bone', deep: 'coral_spire' }
-        const skinDrop = success && Math.random() < 0.05 ? (skinPool[route] ?? null) : null
         const baitDrop = !success ? null
           : route === 'coastal' && Math.random() < 0.07 ? 'luminous'
           : route === 'deep'    && Math.random() < 0.04 ? 'luminous'
@@ -273,7 +270,6 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
           doubloonDelta: success ? payout(50, 140) : 0,
           gemDelta: gemDrop,
           crewVariantLost: null,
-          ringSkinDrop: skinDrop,
           baitDrop,
         }
         break
@@ -286,7 +282,6 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
           const gemDrop = crush
             ? Math.round(rand(2, 5) * rc.gemScale)
             : (Math.random() * 55 < power ? Math.round(rand(1, 3) * rc.gemScale) : 0)
-          const crushSkinDrop = crush && route === 'open' && Math.random() < 0.05 ? 'navigators_silver' : null
           const baitDrop = crush
             ? (route === 'deep' && Math.random() < 0.12 ? 'golden'
               : route === 'open' && Math.random() < 0.10 ? 'golden'
@@ -307,7 +302,6 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
             doubloonDelta: crush ? payout(80, 160, true) : payout(20, 55, true),
             gemDelta: gemDrop,
             crewVariantLost: null,
-            ringSkinDrop: crushSkinDrop,
             baitDrop,
           }
         } else {
@@ -324,14 +318,14 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
             event = {
               type, outcome: 'failure',
               title: template.title, narrative,
-              doubloonDelta: 0, gemDelta: 0, crewVariantLost: victim.variantId, ringSkinDrop: null, baitDrop: null,
+              doubloonDelta: 0, gemDelta: 0, crewVariantLost: victim.variantId, baitDrop: null,
             }
           } else {
             const template = pick(ENCOUNTER_LOSS)
             event = {
               type, outcome: 'failure',
               title: template.title, narrative: fill(template.narrative),
-              doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, ringSkinDrop: null, baitDrop: null,
+              doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, baitDrop: null,
             }
           }
         }
@@ -345,7 +339,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
           event = {
             type, outcome: 'neutral',
             title: template.title, narrative: template.narrative,
-            doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, ringSkinDrop: null, baitDrop: null,
+            doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, baitDrop: null,
           }
         } else {
           const availableDanger = crew.slice(1).filter(c => !crewLost.includes(c.variantId))
@@ -360,14 +354,14 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
             event = {
               type, outcome: 'failure',
               title: template.title, narrative,
-              doubloonDelta: 0, gemDelta: 0, crewVariantLost: victim.variantId, ringSkinDrop: null, baitDrop: null,
+              doubloonDelta: 0, gemDelta: 0, crewVariantLost: victim.variantId, baitDrop: null,
             }
           } else {
             const template = pick(DANGER_SETBACK)
             event = {
               type, outcome: 'failure',
               title: template.title, narrative: template.narrative,
-              doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, ringSkinDrop: null, baitDrop: null,
+              doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, baitDrop: null,
             }
           }
         }
@@ -381,7 +375,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
           type, outcome: safe ? (Math.random() < 0.35 ? 'success' : 'neutral') : 'neutral',
           title: template.title, narrative: template.narrative,
           doubloonDelta: safe && Math.random() < 0.35 ? payout(20, 50) : 0,
-          gemDelta: 0, crewVariantLost: null, ringSkinDrop: null, baitDrop: null,
+          gemDelta: 0, crewVariantLost: null, baitDrop: null,
         }
         break
       }
@@ -396,7 +390,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
           type, outcome: 'neutral',
           title: template.title,
           narrative: captainPeacefulTrait ? `${peacefulNarrative}\n\n${captainPeacefulTrait}` : peacefulNarrative,
-          doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, ringSkinDrop: null, baitDrop: null,
+          doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, baitDrop: null,
         }
         break
       }
@@ -407,7 +401,6 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
 
   const totalDoubloons = rc.baseDoubloons + events.reduce((sum, e) => sum + e.doubloonDelta, 0)
   const totalGems = events.reduce((sum, e) => sum + e.gemDelta, 0)
-  const ringSkinDrops = events.map(e => e.ringSkinDrop).filter((s): s is string => s !== null)
   const baitDropMap = new Map<string, number>()
   for (const e of events) {
     if (e.baitDrop) baitDropMap.set(e.baitDrop, (baitDropMap.get(e.baitDrop) ?? 0) + 1)
@@ -416,13 +409,11 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
   // Triangle voyage-level bonus drops
   if (route === 'triangle' && Math.random() < 0.20)
     baitDropMap.set('luminous', (baitDropMap.get('luminous') ?? 0) + 1)
-  if (route === 'triangle' && Math.random() < 0.05)
-    ringSkinDrops.push('abyssal_sigil')
 
   const baitDrops = Array.from(baitDropMap.entries()).map(([type, qty]) => ({ type, qty }))
   const tideTurnerDrop = route === 'deep' && Math.random() < 0.02
   const phantomHookDrop = route === 'triangle' && Math.random() < 0.02
-  return { events, totalDoubloons, totalGems, crewLost, ringSkinDrops, baitDrops, tideTurnerDrop, phantomHookDrop }
+  return { events, totalDoubloons, totalGems, crewLost, baitDrops, tideTurnerDrop, phantomHookDrop }
 }
 
 // ── Event text pools ──────────────────────────────────────────────────────────

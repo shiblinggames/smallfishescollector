@@ -25,7 +25,7 @@ export default function FishingPageClient({
   initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
   fishHoldTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, activeSession, username, zoneRewardsClaimed,
-  initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats,
+  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats,
 }: {
   hookTier: number
   rodTier: number
@@ -46,8 +46,6 @@ export default function FishingPageClient({
   activeSession?: ActiveSession
   username: string
   zoneRewardsClaimed: Record<string, boolean>
-  initialRingSkin: string
-  initialUnlockedRingSkins: string[]
   initialDailyChallenge: DailyChallengeState | null
   hasTideTurner: boolean
   initialTideTurnerSkipsLeft: number
@@ -130,8 +128,6 @@ export default function FishingPageClient({
       onBack={goBack}
       activeSession={activeSession}
       zoneRewardsClaimed={zoneRewardsClaimed}
-      initialRingSkin={initialRingSkin}
-      initialUnlockedRingSkins={initialUnlockedRingSkins}
       initialDailyChallenge={initialDailyChallenge}
       hasTideTurner={hasTideTurner}
       initialTideTurnerSkipsLeft={initialTideTurnerSkipsLeft}

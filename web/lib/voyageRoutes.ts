@@ -64,6 +64,5 @@ export interface VoyageEvent {
   doubloonDelta: number
   gemDelta: number
   crewVariantLost: number | null
-  ringSkinDrop: string | null
   baitDrop: string | null
 }

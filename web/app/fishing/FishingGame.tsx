@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipRingSkin, equipBoat, buyBoat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
 import { liquidateAllFish } from '@/app/tavern/market/actions'
 import { BOATS, getBoat } from '@/lib/boats'
 import { upgradeFishHold } from './holdActions'
@@ -16,7 +16,6 @@ import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS } from '@/lib/badges'
 const CRATE_FISH_ID = -1
 import { claimDailyReward } from './dailyChallengeActions'
 import { getDailyChallenges, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
-import { getRingSkin } from '@/lib/ringSkins'
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import { finishSession, type ActiveSession } from '@/app/social/challengeActions'
 import { equipRod } from '@/app/marketplace/tackle-shop/actions'
@@ -404,7 +403,7 @@ function getZone(zones: ZoneDef[], deg: number, rotation = 0): ZoneDef {
 // ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 function DialSVG({
-  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0, ringSkin,
+  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0,
 }: {
   zones: ZoneDef[]
   angle: number
@@ -414,7 +413,6 @@ function DialSVG({
   fireLevel?: 0 | 1 | 2
   snapKey?: number
   perfectBurstKey?: number
-  ringSkin?: { stroke: string; glow: string | null }
 }) {
   const needleTipY  = CY - (INNER_R - 8)
   const perfectZone = zones.find(z => z.type === 'perfect')
@@ -452,9 +450,6 @@ function DialSVG({
           </radialGradient>
         </defs>
         <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-        {ringSkin && ringSkin.stroke !== 'rgba(255,255,255,0.12)' && fireLevel === 0 && (
-          <circle cx={CX} cy={CY} r={OUTER_R + 6} fill={ringSkin.stroke} fillOpacity={0.07} stroke="none" />
-        )}
 <g transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
             <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
@@ -1558,7 +1553,7 @@ export default function FishingGame({
   initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
-  initialRingSkin, initialUnlockedRingSkins, initialDailyChallenge,
+  initialDailyChallenge,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster,
   initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
@@ -1583,8 +1578,6 @@ export default function FishingGame({
   onBack: () => void
   activeSession?: ActiveSession
   zoneRewardsClaimed: Record<string, boolean>
-  initialRingSkin: string
-  initialUnlockedRingSkins: string[]
   initialDailyChallenge: DailyChallengeState | null
   hasTideTurner: boolean
   initialTideTurnerSkipsLeft: number
@@ -1616,8 +1609,6 @@ export default function FishingGame({
 
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
   const [ownedRods, setOwnedRods] = useState(initialOwnedRods)
-  const [equippedRingSkin, setEquippedRingSkin] = useState(initialRingSkin)
-  const [unlockedRingSkins, setUnlockedRingSkins] = useState(initialUnlockedRingSkins)
   const [caughtFishIds, setCaughtFishIds] = useState(() => new Set(initialCaughtFishIds))
   const rod  = getRod(equippedRodTier)
   const reel = getReel(reelTier)
@@ -3107,8 +3098,7 @@ export default function FishingGame({
                     <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}
                       needleColor={needleColor()} zoneOpacityFn={zoneOpacity}
                       fireLevel={perfectStreak >= 3 ? 2 : perfectStreak === 2 ? 1 : 0}
-                      snapKey={snapKey} perfectBurstKey={perfectBurstKey}
-                      ringSkin={getRingSkin(equippedRingSkin)} />
+                      snapKey={snapKey} perfectBurstKey={perfectBurstKey} />
                     {equippedSpecial === 'tide_turner' && tideTurnerSkipsLeft > 0 && phase === 'catching' && (
                       <button
                         onClick={handleTideTurnerSkip}
@@ -4301,12 +4291,6 @@ export default function FishingGame({
                   setDoubloons(res.doubloons)
                   window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
                 }
-              }}
-              equippedRingSkin={equippedRingSkin}
-              unlockedRingSkins={unlockedRingSkins}
-              onEquipRingSkin={async (skin) => {
-                setEquippedRingSkin(skin)
-                await equipRingSkin(skin)
               }}
               hasTideTurner={hasTideTurner}
               tideTurnerSkipsLeft={tideTurnerSkipsLeft}

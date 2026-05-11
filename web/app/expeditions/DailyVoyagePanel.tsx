@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { EXPEDITION_SHIP_STATS, RARITY_COLORS, computeTotalCrewStats, type CrewCard } from '@/lib/expeditions'
 import type { VoyageEvent } from '@/lib/voyageRoutes'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
-import { getRingSkin, type RingSkinId } from '@/lib/ringSkins'
 import { getBait } from '@/lib/bait'
 import { getSpecialItem } from '@/lib/specialItems'
 import { sendDailyVoyage, revealVoyageResults, type DailyVoyage } from './voyageActions'
@@ -69,28 +68,23 @@ const ROUTE_NODES: Record<VoyageRoute, { x: number; y: number }> = {
 }
 
 type DropEntry =
-  | { kind: 'skin';    id: RingSkinId; rate: string }
   | { kind: 'bait';    type: string;   rate: string }
   | { kind: 'special'; id: 'tide_turner' | 'phantom_hook'; rate: string }
 
 const ROUTE_DROPS: Record<VoyageRoute, DropEntry[]> = {
   coastal: [
-    { kind: 'skin', id: 'whale_bone',        rate: '~5%' },
     { kind: 'bait', type: 'luminous',        rate: '~5%' },
   ],
   open: [
     { kind: 'bait', type: 'luminous',        rate: '~10%' },
     { kind: 'bait', type: 'golden',          rate: '~5%' },
-    { kind: 'skin', id: 'navigators_silver', rate: '~2%' },
   ],
   deep: [
     { kind: 'special', id: 'tide_turner',    rate: '~2%' },
-    { kind: 'skin',    id: 'coral_spire',    rate: '~5%' },
     { kind: 'bait',    type: 'golden',       rate: '~8%' },
   ],
   triangle: [
     { kind: 'bait',    type: 'luminous',       rate: '~20%' },
-    { kind: 'skin',    id: 'abyssal_sigil',    rate: '~5%' },
     { kind: 'special', id: 'phantom_hook',     rate: '~2%' },
   ],
 }
@@ -169,7 +163,6 @@ export default function DailyVoyagePanel({
   const [activeVoyage, setActiveVoyage] = useState<DailyVoyage | null>(readyVoyage ?? todayVoyage)
   const [error, setError] = useState<string | null>(null)
   const [selectedRoute, setSelectedRoute] = useState<VoyageRoute | null>(null)
-  const [claimedRingSkins, setClaimedRingSkins] = useState<string[]>([])
   const [claimedBait, setClaimedBait] = useState<{ type: string; qty: number }[]>([])
   const [claimedTideTurner, setClaimedTideTurner] = useState(false)
   const [claimedPhantomHook, setClaimedPhantomHook] = useState(false)
@@ -235,7 +228,6 @@ export default function DailyVoyagePanel({
       if ('error' in res) { setError(res.error); return }
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
       if (res.earnedGems > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.newGemTotal }))
-      setClaimedRingSkins(res.newRingSkins)
       setClaimedBait(res.earnedBait)
       if (res.newTideTurner) setClaimedTideTurner(true)
       if (res.newPhantomHook) setClaimedPhantomHook(true)
@@ -541,22 +533,20 @@ export default function DailyVoyagePanel({
                             </span>
                             {drops.map(drop => {
                               const specialDef = drop.kind === 'special' ? getSpecialItem(drop.id) : null
-                              const dropKey = drop.kind === 'skin' ? drop.id : drop.kind === 'bait' ? drop.type : drop.id
-                              const color   = specialDef ? specialDef.color : drop.kind === 'skin' ? getRingSkin(drop.id).color : getBait((drop as { type: string }).type).color
-                              const name    = specialDef ? specialDef.name : drop.kind === 'skin' ? getRingSkin(drop.id).name : getBait((drop as { type: string }).type).name
-                              const image   = specialDef?.image ?? (drop.kind === 'skin' ? getRingSkin(drop.id).imageUrl ?? null : drop.kind === 'bait' ? getBait((drop as { type: string }).type).imageUrl ?? null : null)
-                              const label   = specialDef ? `Special item · ${specialDef.effectLabel}` : drop.kind === 'skin' ? 'Ring cosmetic' : 'Fishing bait'
+                              const dropKey = drop.kind === 'bait' ? drop.type : drop.id
+                              const color   = specialDef ? specialDef.color : getBait((drop as { type: string }).type).color
+                              const name    = specialDef ? specialDef.name : getBait((drop as { type: string }).type).name
+                              const image   = specialDef?.image ?? (drop.kind === 'bait' ? getBait((drop as { type: string }).type).imageUrl ?? null : null)
+                              const label   = specialDef ? `Special item · ${specialDef.effectLabel}` : 'Fishing bait'
                               const detail  = specialDef
                                 ? specialDef.description
-                                : drop.kind === 'skin'
-                                  ? getRingSkin(drop.id).description
-                                  : (() => {
-                                      const b = getBait((drop as { type: string }).type) as import('@/lib/bait').BaitDef
-                                      const parts: string[] = []
-                                      if (b.waitMult < 1) parts.push(`${Math.round((1 - b.waitMult) * 100)}% faster bite`)
-                                      if (b.catchZoneBonus > 0) parts.push(`+${b.catchZoneBonus}° catch zone`)
-                                      return parts.join(' · ')
-                                    })()
+                                : (() => {
+                                    const b = getBait((drop as { type: string }).type) as import('@/lib/bait').BaitDef
+                                    const parts: string[] = []
+                                    if (b.waitMult < 1) parts.push(`${Math.round((1 - b.waitMult) * 100)}% faster bite`)
+                                    if (b.catchZoneBonus > 0) parts.push(`+${b.catchZoneBonus}° catch zone`)
+                                    return parts.join(' · ')
+                                  })()
                               const isExpanded = expandedDropKey === dropKey
                               return (
                                 <div key={dropKey}>
@@ -829,20 +819,6 @@ export default function DailyVoyagePanel({
                           {lostCard.name} — lost at sea.
                         </p>
                       )}
-                      {e.ringSkinDrop && (() => {
-                        const skin = getRingSkin(e.ringSkinDrop)
-                        return (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.3rem' }}>
-                            {skin.imageUrl
-                              ? <img src={skin.imageUrl} alt={skin.name} style={{ width: 16, height: 16, objectFit: 'contain', flexShrink: 0 }} />
-                              : <div style={{ width: 10, height: 10, borderRadius: '50%', border: `1.5px solid ${skin.stroke}`, flexShrink: 0 }} />
-                            }
-                            <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: skin.color }}>
-                              Ring skin found: {skin.name}
-                            </p>
-                          </div>
-                        )
-                      })()}
                       {e.baitDrop && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.3rem' }}>
                           <div style={{ width: 8, height: 8, borderRadius: '50%', background: e.baitDrop === 'golden' ? '#fde68a' : '#4ade80', flexShrink: 0 }} />
@@ -916,32 +892,6 @@ export default function DailyVoyagePanel({
               <span style={{ fontSize: '0.58rem' }}>Done</span>
             </button>
           </div>
-
-          {claimedRingSkins.length > 0 && (
-            <div style={{
-              background: 'rgba(74,154,154,0.07)',
-              border: '1px solid rgba(74,154,154,0.22)',
-              borderRadius: 8, padding: '0.55rem 0.8rem',
-            }}>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4a9a9a', marginBottom: '0.3rem' }}>
-                New cosmetic{claimedRingSkins.length > 1 ? 's' : ''} unlocked
-              </p>
-              {claimedRingSkins.map(id => {
-                const skin = getRingSkin(id)
-                return (
-                  <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
-                    {skin.imageUrl
-                      ? <img src={skin.imageUrl} alt={skin.name} style={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }} />
-                      : <div style={{ width: 10, height: 10, borderRadius: '50%', border: `1.5px solid ${skin.stroke}`, flexShrink: 0 }} />
-                    }
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: skin.color, lineHeight: 1.3 }}>
-                      {skin.name}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
-          )}
 
           {claimedBait.length > 0 && (
             <div style={{
