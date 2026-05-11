@@ -459,16 +459,39 @@ export default function TideRunGame() {
         <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
 
         {uiState === 'playing' && (
-          <div className="absolute top-3 left-0 right-0 flex justify-center pointer-events-none">
-            <p className="font-cinzel font-700" style={{
-              fontSize: '2.2rem',
-              color: '#ffffff',
-              textShadow: '0 2px 8px rgba(0,0,0,0.55)',
-              letterSpacing: '0.02em',
-            }}>
-              {score}<span style={{ fontSize: '1rem', marginLeft: 4, opacity: 0.75 }}>m</span>
-            </p>
-          </div>
+          <>
+            <div className="absolute top-3 left-0 right-0 flex justify-center pointer-events-none">
+              <p className="font-cinzel font-700" style={{
+                fontSize: '2.2rem',
+                color: '#ffffff',
+                textShadow: '0 2px 8px rgba(0,0,0,0.55)',
+                letterSpacing: '0.02em',
+              }}>
+                {score}<span style={{ fontSize: '1rem', marginLeft: 4, opacity: 0.75 }}>m</span>
+              </p>
+            </div>
+            {highScore > 0 && (
+              <div className="absolute top-3 right-3 pointer-events-none text-right">
+                <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{
+                  fontSize: '0.55rem',
+                  color: 'rgba(255,255,255,0.65)',
+                  textShadow: '0 1px 4px rgba(0,0,0,0.55)',
+                  lineHeight: 1,
+                }}>
+                  Best
+                </p>
+                <p className="font-cinzel font-700" style={{
+                  fontSize: '0.95rem',
+                  color: score > highScore ? '#ffd56b' : 'rgba(255,255,255,0.85)',
+                  textShadow: '0 1px 4px rgba(0,0,0,0.55)',
+                  lineHeight: 1.1,
+                  marginTop: 2,
+                }}>
+                  {Math.max(score, highScore)}<span style={{ fontSize: '0.6rem', marginLeft: 2, opacity: 0.7 }}>m</span>
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         {uiState === 'ready' && (
