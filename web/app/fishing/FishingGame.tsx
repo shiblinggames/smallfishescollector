@@ -3482,14 +3482,6 @@ export default function FishingGame({
             const baitAccent   = selectedBaitDef?.color ?? '#94a3b8'
             const outOfBait    = selectedBaitQty === 0
 
-            const baitStat = outOfBait
-              ? 'Out of bait'
-              : (selectedBaitDef?.catchZoneBonus ?? 0) > 0
-                ? `+${selectedBaitDef!.catchZoneBonus}° zone`
-                : (selectedBaitDef?.waitMult ?? 1) < 1.0
-                  ? `${Math.round((1 - selectedBaitDef!.waitMult) * 100)}% faster`
-                  : 'Standard'
-
             const tile: React.CSSProperties = {
               flex: 1, height: 60, borderRadius: 20,
               display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center',
@@ -3500,39 +3492,72 @@ export default function FishingGame({
             return (
               <div style={{ display: 'flex', gap: '0.45rem', paddingTop: '0.75rem' }}>
 
-                {/* Gear */}
+                {/* Gear — visual character composition (boat + rod + hook on character) */}
                 <button
                   onClick={() => { setGearOpen(o => !o); setHoldOpen(false); setBaitOpen(false); setSellOpen(false) }}
                   style={{
                     ...tile,
+                    flexDirection: 'row',
+                    alignItems: 'center', justifyContent: 'center',
+                    padding: 0,
                     background: gearOpen ? 'rgba(240,192,64,0.10)' : 'rgba(4,10,18,0.72)',
                     border: `1px solid ${gearOpen ? 'rgba(240,192,64,0.32)' : 'rgba(255,255,255,0.12)'}`,
                   }}
                 >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1 }}>Gear</p>
-                  <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1 }}>
-                    Loadout
-                  </p>
+                  <div style={{ position: 'relative', width: '78%', height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <div style={{ position: 'relative', width: '100%', paddingBottom: '4%' }}>
+                      <img src={charSrc.rest} alt="" style={{ width: '100%', display: 'block', filter: 'drop-shadow(0 2px 4px rgba(0,15,35,0.5))' }} />
+                      {boatDef && (
+                        <img src={boatDef.restImageUrl} alt="" style={{
+                          position: 'absolute', top: '77%', left: '31%', width: '55%',
+                          pointerEvents: 'none',
+                        }} />
+                      )}
+                      {rod.imageUrl && (
+                        <img src={rod.imageUrl} alt="" className={rod.glow ? 'rod-glow' : undefined} style={{
+                          position: 'absolute', top: '33%', left: '12%', width: '51%',
+                          transform: 'rotate(-1deg)', transformOrigin: 'bottom right',
+                          pointerEvents: 'none',
+                          ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
+                        } as React.CSSProperties} />
+                      )}
+                      {hook.imageUrl && (
+                        <img src={hook.imageUrl} alt="" style={{
+                          position: 'absolute', top: '81%', left: '9%', width: '16%',
+                          transform: 'rotate(-30deg)', transformOrigin: 'center center',
+                          pointerEvents: 'none',
+                        }} />
+                      )}
+                    </div>
+                  </div>
                 </button>
 
-                {/* Bait */}
+                {/* Bait — image + readable count */}
                 <button
                   onClick={() => { setBaitOpen(o => !o); setGearOpen(false); setHoldOpen(false); setSellOpen(false) }}
                   style={{
                     ...tile,
+                    flexDirection: 'row',
+                    alignItems: 'center', justifyContent: 'center',
+                    gap: 8, padding: '0 0.5rem',
                     background: baitOpen ? `${baitAccent}10` : 'rgba(4,10,18,0.72)',
-                    border: `1px solid ${baitOpen ? baitAccent + '38' : outOfBait ? 'rgba(248,113,113,0.25)' : 'rgba(255,255,255,0.12)'}`,
+                    border: `1px solid ${baitOpen ? baitAccent + '38' : outOfBait ? 'rgba(248,113,113,0.35)' : 'rgba(255,255,255,0.12)'}`,
                   }}
                 >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1 }}>Bait</p>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', width: '100%', gap: 4 }}>
-                    <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: outOfBait ? '#f87171' : baitAccent, lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
-                      {selectedBaitDef?.name ?? '—'}
-                    </p>
-                    {selectedBaitQty > 0 && (
-                      <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', lineHeight: 1, flexShrink: 0 }}>×{selectedBaitQty}</p>
-                    )}
-                  </div>
+                  {selectedBaitDef?.imageUrl ? (
+                    <img src={selectedBaitDef.imageUrl} alt={selectedBaitDef.name} style={{
+                      width: 36, height: 36, objectFit: 'contain', flexShrink: 0,
+                      filter: outOfBait ? 'grayscale(1) brightness(0.45)' : `drop-shadow(0 2px 6px ${baitAccent}55)`,
+                    }} />
+                  ) : (
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: baitAccent + '33', border: `1px solid ${baitAccent}66`, flexShrink: 0 }} />
+                  )}
+                  <p className="font-cinzel font-700" style={{
+                    fontSize: '1.05rem', lineHeight: 1,
+                    color: outOfBait ? '#f87171' : '#f0ede8',
+                  }}>
+                    {outOfBait ? '0' : `×${selectedBaitQty.toLocaleString()}`}
+                  </p>
                 </button>
 
                 {/* Hold */}
