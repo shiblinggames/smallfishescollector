@@ -130,6 +130,9 @@ export default function FishingTestClient() {
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
           />
 
+          {/* Character container — mirrors real game: position:absolute inset:0 with drop-shadow filter
+              applied to all descendant overlays (char, boat, rod, hook, badges). */}
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))' }}>
           <div style={{
             position: 'absolute',
             bottom: `${cp.bottom}%`,
@@ -193,6 +196,7 @@ export default function FishingTestClient() {
                 </div>
               )
             })}
+          </div>
           </div>
         </div>
       </div>
