@@ -39,10 +39,11 @@ export default async function LeaderboardPage() {
 
   const admin = createAdminClient()
 
-  const [profile, fishingData, perfectStreakData, fishSlotsData, expeditionData] = await Promise.all([
+  const [profile, fishingData, perfectStreakData, tideRunData, fishSlotsData, expeditionData] = await Promise.all([
     admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     fetchBoard(admin, 'leaderboard_fishing', user.id),
     fetchPerfectStreakBoard(admin, user.id),
+    fetchBoard(admin, 'leaderboard_tide_run', user.id),
     fetchBoard(admin, 'leaderboard_fish_slots', user.id),
     fetchBoard(admin, 'leaderboard_expedition', user.id),
   ])
@@ -57,11 +58,13 @@ export default async function LeaderboardPage() {
           <LeaderboardClient
             fishing={fishingData.top}
             perfectStreak={perfectStreakData.top}
+            tideRun={tideRunData.top}
             fishSlots={fishSlotsData.top}
             expedition={expeditionData.top}
             myScores={{
               fishing: fishingData.myScore,
               perfectStreak: perfectStreakData.myScore,
+              tideRun: tideRunData.myScore,
               fishSlots: fishSlotsData.myScore,
               expedition: expeditionData.myScore,
             }}

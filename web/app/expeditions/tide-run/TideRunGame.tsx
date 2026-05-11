@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { commitTideRun } from './actions'
+import { commitTideRun, submitTideRunBest } from './actions'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
 const SHIP_X_RATIO    = 0.22
@@ -93,8 +93,9 @@ const SPLASH_MAX_AGE_SEC = 0.55
 const SPLASH_GRAVITY     = 900    // particle gravity (px/s²)
 
 // Day/night cycle — palette interpolates over CYCLE_DISTANCE_M of distance.
-// Stops are: midday → dusk → night → dawn → loop
-const CYCLE_DISTANCE_M = 400
+// Stops are: midday → dusk → night → dawn → loop. Long enough that typical
+// runs only drift partway through one transition (visible but not distracting).
+const CYCLE_DISTANCE_M = 2400
 
 // Currents — slow-zones on the surface. Ride through to slow down (more
 // reaction time); jump over to skip the slowdown. Spawned in the gap
@@ -321,7 +322,13 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
     img.src = '/boatrun.png'
     img.onload = () => { shipImgRef.current = img }
     const stored = typeof window !== 'undefined' ? window.localStorage.getItem(HIGH_SCORE_KEY) : null
-    if (stored) setHighScore(parseInt(stored, 10) || 0)
+    if (stored) {
+      const localBest = parseInt(stored, 10) || 0
+      setHighScore(localBest)
+      // Backfill server side — server compares and only updates if higher,
+      // so this is safe to call every mount.
+      if (localBest > 0) submitTideRunBest(localBest).catch(() => {})
+    }
   }, [])
 
   // ── Canvas sizing ──────────────────────────────────────────────────────────
@@ -615,6 +622,7 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
         if (finalMeters > highScore) {
           setHighScore(finalMeters)
           if (typeof window !== 'undefined') window.localStorage.setItem(HIGH_SCORE_KEY, String(finalMeters))
+          submitTideRunBest(finalMeters).catch(() => {})
         }
       }
       return
@@ -792,6 +800,7 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
       if (finalMeters > highScore) {
         setHighScore(finalMeters)
         if (typeof window !== 'undefined') window.localStorage.setItem(HIGH_SCORE_KEY, String(finalMeters))
+        submitTideRunBest(finalMeters).catch(() => {})
       }
     } else {
       const now = performance.now()

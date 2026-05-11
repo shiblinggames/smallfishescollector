@@ -15,6 +15,7 @@ export interface LeaderboardEntry {
 interface MyScores {
   fishing: number
   perfectStreak: number
+  tideRun: number
   fishSlots: number
   expedition: number
 }
@@ -22,17 +23,19 @@ interface MyScores {
 interface Props {
   fishing: LeaderboardEntry[]
   perfectStreak: LeaderboardEntry[]
+  tideRun: LeaderboardEntry[]
   fishSlots: LeaderboardEntry[]
   expedition: LeaderboardEntry[]
   myScores: MyScores
   currentUserId: string
 }
 
-type TabKey = 'fishingLevel' | 'perfectStreak' | 'fishSlots' | 'expedition'
+type TabKey = 'fishingLevel' | 'perfectStreak' | 'tideRun' | 'fishSlots' | 'expedition'
 
 const TABS: { key: TabKey; label: string; accent: string }[] = [
   { key: 'fishingLevel',  label: 'Fishing Level',     accent: '#f0c040' },
   { key: 'perfectStreak', label: 'Perfect Streak',    accent: '#fb923c' },
+  { key: 'tideRun',       label: 'Tide Run',          accent: '#5da7d4' },
   { key: 'fishSlots',     label: 'Fish Slots',        accent: '#34d399' },
   { key: 'expedition',    label: 'Navigator Level',   accent: '#7090c0' },
 ]
@@ -224,7 +227,7 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
   )
 }
 
-export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, expedition, myScores, currentUserId }: Props) {
+export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fishSlots, expedition, myScores, currentUserId }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>('fishingLevel')
 
   return (
@@ -287,6 +290,17 @@ export default function LeaderboardClient({ fishing, perfectStreak, fishSlots, e
           myScore={myScores.perfectStreak}
           currentUserId={currentUserId}
           showZone
+        />
+      )}
+      {activeTab === 'tideRun' && (
+        <LeaderboardSection
+          label="Tide Run — Longest Distance"
+          accent="#5da7d4"
+          unit={n => `${n.toLocaleString()} m`}
+          subUnit={() => 'best run'}
+          data={tideRun}
+          myScore={myScores.tideRun}
+          currentUserId={currentUserId}
         />
       )}
       {activeTab === 'fishSlots' && (

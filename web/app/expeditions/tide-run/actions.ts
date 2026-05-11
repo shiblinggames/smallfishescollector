@@ -3,6 +3,43 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+/**
+ * Record the player's distance for the all-time best (leaderboard). Only
+ * updates `profiles.tide_run_best_distance` if the new distance is higher.
+ * Called from the client after every death (and on mount with localStorage
+ * best, to backfill old scores).
+ */
+export async function submitTideRunBest(distance: number): Promise<{ ok: true; best: number } | { error: string }> {
+  if (typeof distance !== 'number' || !isFinite(distance) || distance < 0) {
+    return { error: 'Invalid distance' }
+  }
+  const meters = Math.floor(distance)
+  if (meters < 1 || meters > 100000) return { error: 'Invalid distance' }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('tide_run_best_distance')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+
+  const currentBest = (profile.tide_run_best_distance as number | null) ?? 0
+  if (meters <= currentBest) return { ok: true, best: currentBest }
+
+  const { error: updateErr } = await admin
+    .from('profiles')
+    .update({ tide_run_best_distance: meters })
+    .eq('id', user.id)
+  if (updateErr) return { error: 'Update failed' }
+
+  return { ok: true, best: meters }
+}
+
 /** Today's date in UTC as YYYY-MM-DD — keyed against profiles.tide_run_committed_date. */
 function todayUTCDate(): string {
   return new Date().toISOString().slice(0, 10)
