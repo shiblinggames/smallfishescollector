@@ -28,9 +28,14 @@ const WAVE_AMP_RAMP_DISTANCE = 8000
 const WAVE_AMP_RAMP_MAX   = 1.25
 
 // Surface hazards — rocks/spikes poking out of the water. Boat clears them
-// by being airborne when crossing. Size per spawn picks from three tiers.
-const HAZARD_SPAWN_SPACING = 360   // world px between hazards
+// by being airborne when crossing. Size per spawn picks from three tiers
+// with distance-based unlocks so early runs aren't punishingly hard.
+const HAZARD_SPAWN_SPACING = 360   // base world px between hazard centers
 const HAZARD_WARMUP        = 1200  // world px before the first hazard spawns
+const TIER_SMALL_ONLY_M    = 25    // first ~25m: only small rocks (tap-clearable)
+const TIER_NO_LARGE_M      = 90    // 25–90m: small + medium; no large rocks yet
+const APPROACH_BUFFER_MED  = 80    // extra world px of approach before a medium rock
+const APPROACH_BUFFER_LRG  = 240   // extra world px before a large rock (real reaction time)
 
 // Hitbox inset on the trimmed sprite
 const HITBOX_INSET = { top: 0.35, right: 0.12, bottom: 0.08, left: 0.08 }
@@ -185,25 +190,42 @@ export default function TideRunGame() {
     g.holding = false
   }, [])
 
-  // ── Spawn one surface hazard (size tier chosen randomly) ──────────────────
+  // ── Spawn one surface hazard ──────────────────────────────────────────────
+  // Tier is picked with distance-based gating so early game is forgiving;
+  // medium/large hazards also get an "approach buffer" of extra world distance
+  // so the player always has reaction time for the harder jumps.
   const spawnHazard = useCallback(() => {
     const g = gRef.current
+    const distance = g.distance
     const r = Math.random()
-    let height: number
-    let width: number
-    if (r < 0.45) {
-      // Small rock — quick tap clears it
+
+    let tier: 'small' | 'medium' | 'large'
+    if (distance < TIER_SMALL_ONLY_M) {
+      tier = 'small'
+    } else if (distance < TIER_NO_LARGE_M) {
+      tier = r < 0.55 ? 'small' : 'medium'
+    } else {
+      if (r < 0.40) tier = 'small'
+      else if (r < 0.75) tier = 'medium'
+      else tier = 'large'
+    }
+
+    let height: number, width: number
+    if (tier === 'small') {
       height = g.ch * 0.035
       width = g.cw * 0.06
-    } else if (r < 0.80) {
-      // Medium rock — short hold
+    } else if (tier === 'medium') {
       height = g.ch * 0.075
       width = g.cw * 0.085
     } else {
-      // Large rock — long hold needed
       height = g.ch * 0.115
       width = g.cw * 0.105
     }
+
+    // Push this hazard further out if it's a hard one — gives reaction time
+    if (tier === 'medium') g.nextSpawnAt += APPROACH_BUFFER_MED
+    else if (tier === 'large') g.nextSpawnAt += APPROACH_BUFFER_LRG
+
     g.hazards.push({ x: g.nextSpawnAt, width, height })
     g.nextSpawnAt += HAZARD_SPAWN_SPACING
   }, [])
