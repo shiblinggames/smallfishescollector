@@ -2554,11 +2554,15 @@ export default function FishingGame({
                 {boatDef && (() => {
                   const bp = boatDef.positions[f]
                   const src = f === 'cast' ? boatDef.castImageUrl : boatDef.restImageUrl
+                  // iOS subpixel rounding through the motion.div + drop-shadow filter
+                  // nudges the rest-frame boat overlay 1px to the right in production
+                  // compared to fishing-test. Compensate with a translateX(-1px).
+                  const restPxOffset = f === 'rest' ? ' translateX(-1px)' : ''
                   return (
                     <img src={src} alt="" style={{
                       position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
                       width: `${bp.width}%`,
-                      transform: `rotate(${bp.rotate}deg)`,
+                      transform: `rotate(${bp.rotate}deg)${restPxOffset}`,
                       transformOrigin: 'center center',
                       pointerEvents: 'none',
                     }} />
