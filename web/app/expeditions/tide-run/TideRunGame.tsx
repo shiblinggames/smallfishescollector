@@ -44,10 +44,19 @@ const MIN_REACTION_TIME_SEC = 0.55  // floor on time between consecutive hazards
 const MED_EXTRA_TIME_SEC    = 0.10  // extra reaction time for medium rocks
 const LRG_EXTRA_TIME_SEC    = 0.30  // extra reaction time for large rocks
 
-// Telegraph — fade-in marker at the right edge of the canvas previewing
-// upcoming hazards before they actually scroll into view.
-const TELEGRAPH_TIME_SEC    = 0.55  // how far ahead (in time) to preview hazards
-const TELEGRAPH_MAX_ALPHA   = 0.55  // max opacity at edge of viewport
+// Whirlpools — deadly horizontal zones on the wave. Boat dies if grounded
+// inside one. Player must hold-jump long enough to clear the zone's width.
+// Width auto-scales with current speed so the game can never spawn an
+// un-clearable whirlpool.
+const WHIRLPOOL_CHANCE             = 0.20  // probability a spawn slot becomes a whirlpool
+const WHIRLPOOL_WARMUP_M           = 50    // no whirlpools in the first 50m (rocks first)
+const WHIRLPOOL_MIN_WIDTH          = 80    // narrowest whirlpool, always tap-clearable
+const WHIRLPOOL_CLEARANCE_FRACTION = 0.70  // % of full-hold distance used as max width
+const WHIRLPOOL_AFTER_ROCK_TIME_SEC = 1.15 // min time from previous rock to whirlpool
+
+// Wave surface modulation — long-period alternation between calm and rolling
+// sections so the run doesn't feel monotonous.
+const WAVE_FLATNESS_PERIOD = 2200  // world px per calm/rolling cycle
 
 // Currents — slow-zones on the surface. Ride through to slow down (more
 // reaction time); jump over to skip the slowdown. Spawned in the gap
@@ -80,13 +89,22 @@ interface Current {
   width: number      // width of slow-zone
 }
 
+interface Whirlpool {
+  x: number          // world x (left edge of whirlpool)
+  width: number      // width of deadly zone
+}
+
 // ── Sea surface helper ───────────────────────────────────────────────────────
+// Multi-sine wave is multiplied by a long-period "flatness" modulator so the
+// sea alternates between calm stretches and rolling stretches.
 function seaSurfaceY(worldX: number, ch: number, distanceScrolled: number): number {
   const ramp = 1 + Math.min(distanceScrolled / WAVE_AMP_RAMP_DISTANCE, 1) * (WAVE_AMP_RAMP_MAX - 1)
   const TAU = Math.PI * 2
   const w1 = Math.sin(worldX / WAVE_PRIMARY_PERIOD * TAU) * WAVE_PRIMARY_AMP
   const w2 = Math.sin(worldX / WAVE_SECONDARY_PERIOD * TAU + 1.1) * WAVE_SECONDARY_AMP
-  return ch * SEA_BASE_Y_PCT - (w1 + w2) * ramp
+  // 0 = perfectly flat sea, 1 = full wave amplitude. Slow cosine modulation.
+  const flatness = (Math.cos(worldX / WAVE_FLATNESS_PERIOD * TAU) + 1) / 2
+  return ch * SEA_BASE_Y_PCT - (w1 + w2) * ramp * flatness
 }
 
 // ── Game ─────────────────────────────────────────────────────────────────────
@@ -112,6 +130,8 @@ export default function TideRunGame() {
     elapsed: 0,
     hazards: [] as Hazard[],
     currents: [] as Current[],
+    whirlpools: [] as Whirlpool[],
+    lastSpawnType: null as 'rock' | 'whirlpool' | null,
     nextSpawnAt: 0,
     distance: 0,
     deathFlashUntil: 0,
@@ -176,6 +196,8 @@ export default function TideRunGame() {
     g.elapsed = 0
     g.hazards = []
     g.currents = []
+    g.whirlpools = []
+    g.lastSpawnType = null
     g.nextSpawnAt = HAZARD_WARMUP
     g.distance = 0
     g.deathFlashUntil = 0
@@ -225,12 +247,39 @@ export default function TideRunGame() {
   }, [])
 
   // ── Spawn one surface hazard ──────────────────────────────────────────────
-  // Tier is picked with distance-based gating so early game is forgiving;
-  // medium/large hazards also get an "approach buffer" of extra world distance
-  // so the player always has reaction time for the harder jumps.
+  // Each spawn slot picks either a rock (with tier) or a whirlpool. Tier is
+  // gated by distance so early game is forgiving. Whirlpool widths auto-scale
+  // with current speed so the game can never spawn an unclearable one.
   const spawnHazard = useCallback(() => {
     const g = gRef.current
     const distance = g.distance
+
+    // Base spacing scaled by speed (time-based floor for fairness)
+    const baseSpacing = Math.max(HAZARD_SPAWN_SPACING, g.speed * MIN_REACTION_TIME_SEC)
+
+    // ── Maybe spawn a whirlpool instead of a rock ──
+    const canWhirlpool = distance > WHIRLPOOL_WARMUP_M && g.lastSpawnType !== 'whirlpool'
+    if (canWhirlpool && Math.random() < WHIRLPOOL_CHANCE) {
+      // Full-hold airtime ≈ 0.85s; whirlpool width is a fraction of that distance.
+      const fullHoldDistance = g.speed * 0.85
+      const maxClearableWidth = Math.min(fullHoldDistance * WHIRLPOOL_CLEARANCE_FRACTION, g.cw * 0.55)
+      if (maxClearableWidth > WHIRLPOOL_MIN_WIDTH) {
+        // After a rock, the player needs time to land + react before they can
+        // jump again to clear the whirlpool.
+        if (g.lastSpawnType === 'rock') {
+          const minBuffer = g.speed * WHIRLPOOL_AFTER_ROCK_TIME_SEC
+          if (baseSpacing < minBuffer) g.nextSpawnAt += (minBuffer - baseSpacing)
+        }
+        const wpWidth = WHIRLPOOL_MIN_WIDTH + Math.random() * (maxClearableWidth - WHIRLPOOL_MIN_WIDTH)
+        const wpX = g.nextSpawnAt
+        g.whirlpools.push({ x: wpX, width: wpWidth })
+        g.nextSpawnAt += wpWidth + baseSpacing  // pass the whole zone + base spacing before next
+        g.lastSpawnType = 'whirlpool'
+        return
+      }
+      // else: too slow to clear even the min — fall through and spawn a rock
+    }
+
     const r = Math.random()
 
     let tier: 'small' | 'medium' | 'large'
@@ -278,9 +327,7 @@ export default function TideRunGame() {
     }
 
     // Spacing scales with current speed past a threshold so the time between
-    // hazards never drops below MIN_REACTION_TIME_SEC. At low speeds, the
-    // fixed world-px constants govern; at high speeds, time-based floors take over.
-    const baseSpacing = Math.max(HAZARD_SPAWN_SPACING, g.speed * MIN_REACTION_TIME_SEC)
+    // hazards never drops below MIN_REACTION_TIME_SEC.
     const medBuffer = Math.max(APPROACH_BUFFER_MED, g.speed * MED_EXTRA_TIME_SEC)
     const lrgBuffer = Math.max(APPROACH_BUFFER_LRG, g.speed * LRG_EXTRA_TIME_SEC)
 
@@ -291,6 +338,7 @@ export default function TideRunGame() {
     const hazardX = g.nextSpawnAt
     g.hazards.push({ x: hazardX, width, height })
     g.nextSpawnAt += baseSpacing
+    g.lastSpawnType = 'rock'
 
     // Maybe drop a current in the gap before the NEXT hazard.
     // Place it well clear of both this hazard and the next so it never overlaps.
@@ -405,10 +453,23 @@ export default function TideRunGame() {
     while (g.currents.length > 0 && g.currents[0].x + g.currents[0].width < g.scrollX) {
       g.currents.shift()
     }
+    while (g.whirlpools.length > 0 && g.whirlpools[0].x + g.whirlpools[0].width < g.scrollX) {
+      g.whirlpools.shift()
+    }
 
-    // Death check — only surface hazards (the sea itself is just a floor now)
+    // Death checks: surface rocks, or being grounded inside a whirlpool
     let dead = false
-    if (collidesWithHazard(shipScreenX)) dead = true
+    if (collidesWithHazard(shipScreenX)) {
+      dead = true
+    } else if (!g.airborne) {
+      const boatWorldX = shipScreenX + g.scrollX
+      for (const wp of g.whirlpools) {
+        if (boatWorldX >= wp.x && boatWorldX <= wp.x + wp.width) {
+          dead = true
+          break
+        }
+      }
+    }
 
     if (dead) {
       g.state = 'dead'
@@ -485,17 +546,11 @@ export default function TideRunGame() {
       drawCurrent(ctx, ox, c.width, g.scrollX, (x) => seaSurfaceY(x + g.scrollX, ch, g.scrollX))
     }
 
-    // ── Telegraph: fade-in warnings at the right edge for upcoming hazards ──
-    // (Drawn behind hazards so the live rock takes precedence as it scrolls in.)
-    const telegraphDist = g.speed * TELEGRAPH_TIME_SEC
-    for (const obs of g.hazards) {
-      const ox = obs.x - g.scrollX
-      if (ox <= cw) continue                                  // already on or past screen
-      if (ox - cw > telegraphDist) continue                   // too far ahead
-      const t = (ox - cw) / telegraphDist                     // 0 = just entering, 1 = far
-      const alpha = (1 - t) * TELEGRAPH_MAX_ALPHA
-      const surfaceAtRight = seaSurfaceY(cw + g.scrollX, ch, g.scrollX)
-      drawTelegraph(ctx, cw, surfaceAtRight, obs.height, alpha)
+    // ── Whirlpools (deadly dark spirals on the surface) ──
+    for (const wp of g.whirlpools) {
+      const ox = wp.x - g.scrollX
+      if (ox + wp.width < 0 || ox > cw) continue
+      drawWhirlpool(ctx, ox, wp.width, g.scrollX, (x) => seaSurfaceY(x + g.scrollX, ch, g.scrollX))
     }
 
     // ── Surface hazards (rocks bobbing on the wave) ──
@@ -815,30 +870,58 @@ function drawClouds(ctx: CanvasRenderingContext2D, cw: number, ch: number, scrol
   }
 }
 
-// Telegraph: a fading vertical bar at the right edge of the canvas
-// previewing the height of an upcoming rock.
-function drawTelegraph(
+// Whirlpool: a dark animated spiral that kills the boat if it lands inside.
+// Drawn on top of the wave surface — visually distinct from currents
+// (currents are pale foam; whirlpools are dark vortexes).
+function drawWhirlpool(
   ctx: CanvasRenderingContext2D,
-  rightX: number, surfaceY: number,
-  hazardHeight: number, alpha: number,
+  x: number, width: number,
+  scrollX: number,
+  surfaceAt: (screenX: number) => number,
 ) {
-  const top = surfaceY - hazardHeight
-  const barW = 6
-  const barX = rightX - barW - 2
+  const cx = x + width / 2
+  const surfY = surfaceAt(cx)
+  const rxOuter = width * 0.52
+  const ryOuter = 18
+  const cy = surfY + 2
+
   ctx.save()
-  ctx.globalAlpha = alpha
-  const g = ctx.createLinearGradient(barX, top, barX, surfaceY)
-  g.addColorStop(0, '#5a4a3a')
-  g.addColorStop(1, '#1a1410')
-  ctx.fillStyle = g
-  ctx.fillRect(barX, top, barW, hazardHeight)
-  // Small chevron pointing left to signal "incoming"
-  ctx.fillStyle = 'rgba(255, 200, 130, 0.9)'
+  // Outer dark ellipse — the "danger" patch
+  ctx.fillStyle = 'rgba(6, 12, 22, 0.85)'
   ctx.beginPath()
-  ctx.moveTo(barX - 2, top + hazardHeight * 0.5)
-  ctx.lineTo(barX + 3, top + hazardHeight * 0.5 - 4)
-  ctx.lineTo(barX + 3, top + hazardHeight * 0.5 + 4)
-  ctx.closePath()
+  ctx.ellipse(cx, cy, rxOuter, ryOuter, 0, 0, Math.PI * 2)
   ctx.fill()
+
+  // Inner darker center
+  ctx.fillStyle = 'rgba(2, 6, 12, 0.95)'
+  ctx.beginPath()
+  ctx.ellipse(cx, cy + 1, rxOuter * 0.55, ryOuter * 0.55, 0, 0, Math.PI * 2)
+  ctx.fill()
+
+  // Animated swirl arms — 4 spirals rotating with scroll
+  const phase = scrollX * 0.05
+  ctx.strokeStyle = 'rgba(150, 200, 230, 0.65)'
+  ctx.lineWidth = 1.6
+  for (let i = 0; i < 4; i++) {
+    const baseAngle = phase + i * (Math.PI / 2)
+    ctx.beginPath()
+    for (let t = 0; t <= 1; t += 0.08) {
+      const r = rxOuter * (0.18 + 0.72 * t)
+      const a = baseAngle + t * Math.PI * 1.3   // spiral curl
+      const px = cx + Math.cos(a) * r
+      const py = cy + Math.sin(a) * r * (ryOuter / rxOuter)   // flatten vertically
+      if (t === 0) ctx.moveTo(px, py)
+      else ctx.lineTo(px, py)
+    }
+    ctx.stroke()
+  }
+
+  // Bright foam rim (warning ring)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)'
+  ctx.lineWidth = 1.2
+  ctx.beginPath()
+  ctx.ellipse(cx, cy - 2, rxOuter, ryOuter * 0.85, 0, 0, Math.PI * 2)
+  ctx.stroke()
+
   ctx.restore()
 }
