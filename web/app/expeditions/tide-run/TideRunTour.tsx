@@ -14,8 +14,8 @@ const STEPS: TourStep[] = [
     title: 'The Cargo Run',
     body: (
       <>
-        You&apos;ve made off with a hold full of stolen gold and the navy is on
-        your tail. Sail as far as you can before they catch you.
+        You&apos;ve made off with a hold full of stolen gold and there&apos;s
+        trouble on your tail. Stay ahead of it for as long as you can.
         <br />
         <br />
         The further you get, the bigger your haul.
@@ -59,30 +59,30 @@ const STEPS: TourStep[] = [
     body: (
       <>
         Some rocks have a small antenna and a pulsing amber light — those are
-        enemy <span style={{ color: '#ffb84d', fontWeight: 700 }}>beacons</span>.
+        <span style={{ color: '#ffb84d', fontWeight: 700 }}> beacons</span>.
         <br />
         <br />
         <span style={{ color: '#9ae6b4', fontWeight: 700 }}>Smash through them
-        grounded</span> to disable them.
+        grounded</span> to take them out.
         <br />
         <span style={{ color: '#fda4a4', fontWeight: 700 }}>Jumping over one</span>
-        {' '}lets the beacon detect you — instant wreck.
+        {' '}trips its alarm — instant wreck.
       </>
     ),
   },
   {
     eyebrow: 'Rewards',
-    title: 'Commit One Run a Day',
+    title: 'Pick Your Run',
     body: (
       <>
-        After each run you can <span style={{ color: '#bda05a', fontWeight: 700 }}>commit</span>
-        {' '}it for <span style={{ color: '#bda05a' }}>⟡</span> + XP based on
-        your distance. <span style={{ color: '#bda05a', fontWeight: 700 }}>Once per day</span>,
-        resets at midnight UTC.
+        Play as much as you want — every run&apos;s distance counts toward your
+        personal best and the global leaderboard.
         <br />
         <br />
-        Practice runs are unlimited and free. All new best scores still climb
-        the personal and global leaderboards — even after committing.
+        Once a day you can <span style={{ color: '#bda05a', fontWeight: 700 }}>commit</span>
+        {' '}one run for <span style={{ color: '#bda05a' }}>⟡</span> + XP based
+        on its distance. Pick the run you want to count;
+        <span style={{ color: '#bda05a', fontWeight: 700 }}> resets at midnight UTC</span>.
       </>
     ),
   },

@@ -110,7 +110,7 @@ export default async function ExpeditionsPage() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.0rem', color: '#f0ede8', marginBottom: 2 }}>Tide Run</p>
                 <p className="font-karla font-300" style={{ fontSize: '0.74rem', color: 'rgba(240,237,232,0.7)', lineHeight: 1.4 }}>
-                  Make off with the cargo and outrun the navy. One commit a day for <span style={{ color: '#bda05a' }}>⟡</span> + XP — practice runs are free.
+                  Make off with the cargo and stay ahead of pursuit. Play as much as you want — pick one run a day to commit for <span style={{ color: '#bda05a' }}>⟡</span> + XP.
                 </p>
               </div>
               <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: '#bda05a', flexShrink: 0 }}>Play →</span>
