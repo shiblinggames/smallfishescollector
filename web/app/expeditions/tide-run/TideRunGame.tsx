@@ -502,6 +502,14 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
           if (baseSpacing < minBuffer) g.nextSpawnAt += (minBuffer - baseSpacing)
         }
 
+        // Sweep out any currents placed by the previous rock-spawn that
+        // sit too close to where this shoal will land. The boat exits a
+        // current still recovering speed (over ~1s); a wide shoal right
+        // after that would be unclearable.
+        const shoalStartX = g.nextSpawnAt
+        const minCurrentGap = g.cw * 0.32
+        g.currents = g.currents.filter(c => (c.x + c.width + minCurrentGap) < shoalStartX)
+
         // Cluster vs single: clusters introduce the "narrow rooftop" precision
         // mechanic — multiple shoals with safe-landing strips between them.
         const wantCluster = distance > SHOAL_CLUSTER_WARMUP_M && Math.random() < SHOAL_CLUSTER_CHANCE
@@ -510,7 +518,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
             Math.floor(Math.random() * (SHOAL_CLUSTER_MAX_COUNT - SHOAL_CLUSTER_MIN_COUNT + 1))
           // Cap member width to leave headroom for the safe-gap landings
           const memberMax = Math.min(SHOAL_CLUSTER_MEMBER_MAX_PX, maxClearableWidth * 0.6)
-          let curX = g.nextSpawnAt
+          let curX = shoalStartX
           for (let i = 0; i < count; i++) {
             const w = SHOAL_CLUSTER_MEMBER_MIN_PX +
               Math.random() * Math.max(0, memberMax - SHOAL_CLUSTER_MEMBER_MIN_PX)
@@ -526,7 +534,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
         } else {
           // Single shoal
           const wpWidth = SHOAL_MIN_WIDTH + Math.random() * (maxClearableWidth - SHOAL_MIN_WIDTH)
-          g.shoals.push({ x: g.nextSpawnAt, width: wpWidth })
+          g.shoals.push({ x: shoalStartX, width: wpWidth })
           g.nextSpawnAt += wpWidth + baseSpacing
         }
 
