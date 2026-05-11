@@ -356,7 +356,12 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     canvas.style.width = `${rect.width}px`
     canvas.style.height = `${rect.height}px`
     const ctx = canvas.getContext('2d')
-    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    if (ctx) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      // High-quality image scaling for the boat sprite on sub-pixel positions
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
+    }
     const g = gRef.current
     g.cw = rect.width
     g.ch = rect.height
