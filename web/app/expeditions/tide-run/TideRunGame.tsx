@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { commitTideRun } from './actions'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
 const SHIP_X_RATIO    = 0.22
@@ -139,7 +140,11 @@ function seaSurfaceY(worldX: number, ch: number, distanceScrolled: number): numb
 }
 
 // ── Game ─────────────────────────────────────────────────────────────────────
-export default function TideRunGame() {
+interface TideRunGameProps {
+  initialCommittedToday?: boolean
+}
+
+export default function TideRunGame({ initialCommittedToday = false }: TideRunGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number | null>(null)
@@ -179,6 +184,40 @@ export default function TideRunGame() {
   const [uiState, setUiState] = useState<GameState>('ready')
   const [score, setScore] = useState(0)
   const [highScore, setHighScore] = useState(0)
+  const [committedToday, setCommittedToday] = useState(initialCommittedToday)
+  const [committing, setCommitting] = useState(false)
+  const [commitReward, setCommitReward] = useState<{ doubloons: number; xp: number } | null>(null)
+  const [commitError, setCommitError] = useState<string | null>(null)
+
+  // Reset commit reward feedback when a new run starts
+  useEffect(() => {
+    if (uiState === 'playing') {
+      setCommitReward(null)
+      setCommitError(null)
+    }
+  }, [uiState])
+
+  const handleCommit = useCallback(async () => {
+    if (committing || committedToday) return
+    if (score < 1) return
+    setCommitting(true)
+    setCommitError(null)
+    const distance = score
+    const result = await commitTideRun(distance)
+    setCommitting(false)
+    if ('ok' in result) {
+      setCommittedToday(true)
+      setCommitReward({ doubloons: result.doubloons, xp: result.xp })
+      // Tell the nav to refresh the doubloon count
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('doubloons-changed'))
+      }
+    } else {
+      setCommitError(result.error)
+      // If the server says "already committed", lock the UI to match
+      if (result.error.includes('Already')) setCommittedToday(true)
+    }
+  }, [committing, committedToday, score])
 
   // ── Load sprite + best score ───────────────────────────────────────────────
   useEffect(() => {
@@ -877,6 +916,7 @@ export default function TideRunGame() {
               background: 'rgba(6, 18, 34, 0.86)',
               border: '1px solid rgba(189,160,90,0.5)',
               backdropFilter: 'blur(6px)',
+              maxWidth: 320,
             }}>
               <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.65rem', color: '#bda05a', marginBottom: 6 }}>
                 Wrecked
@@ -887,8 +927,62 @@ export default function TideRunGame() {
               <p className="font-karla font-300 mt-2" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)' }}>
                 {score === highScore && score > 0 ? 'New best!' : `Best ${highScore}m`}
               </p>
+
+              {/* ── Commit run for daily reward ── */}
+              {commitReward ? (
+                <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(189,160,90,0.18)', border: '1px solid rgba(189,160,90,0.55)' }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#bda05a', marginBottom: 4 }}>
+                    Run Committed
+                  </p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#ffd56b' }}>
+                    +{commitReward.doubloons} ⟡ &nbsp; +{commitReward.xp} XP
+                  </p>
+                  <p className="font-karla font-300 mt-1" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)' }}>
+                    Next commit resets at midnight UTC.
+                  </p>
+                </div>
+              ) : committedToday ? (
+                <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)' }}>
+                    Already Committed Today
+                  </p>
+                  <p className="font-karla font-300 mt-1" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.5)' }}>
+                    Keep practicing — resets at midnight UTC.
+                  </p>
+                </div>
+              ) : score >= 1 ? (
+                <button
+                  onPointerDown={(e) => { e.stopPropagation() }}
+                  onClick={(e) => { e.stopPropagation(); handleCommit() }}
+                  disabled={committing}
+                  className="font-cinzel font-700"
+                  style={{
+                    pointerEvents: 'auto',
+                    marginTop: 14,
+                    padding: '10px 18px',
+                    borderRadius: 999,
+                    background: 'linear-gradient(180deg, rgba(189,160,90,0.95), rgba(150,120,55,0.95))',
+                    border: '1px solid rgba(220,190,120,0.85)',
+                    color: '#1a0f02',
+                    fontSize: '0.85rem',
+                    letterSpacing: '0.04em',
+                    boxShadow: '0 4px 12px rgba(189,160,90,0.4)',
+                    cursor: committing ? 'wait' : 'pointer',
+                    opacity: committing ? 0.7 : 1,
+                  }}
+                >
+                  {committing ? 'Committing…' : `Commit · +${score} ⟡ +${Math.floor(score / 2)} XP`}
+                </button>
+              ) : null}
+
+              {commitError && !commitReward && (
+                <p className="font-karla font-700 mt-2" style={{ fontSize: '0.66rem', color: '#f08a8a' }}>
+                  {commitError}
+                </p>
+              )}
+
               <p className="font-karla font-700 uppercase tracking-[0.18em] mt-4" style={{ fontSize: '0.7rem', color: '#bda05a' }}>
-                Tap to retry
+                Tap canvas to retry
               </p>
             </div>
           </div>
