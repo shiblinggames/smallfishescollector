@@ -402,7 +402,7 @@ export default function TackleShopClient({
                   }}
                 >
                   <div className="flex items-start gap-3 sm:gap-5">
-                    <HookIcon tier={hook.tier} color={c} owned={owned} isActive={isActive} imageUrl={hook.imageUrl} />
+                    <HookIcon tier={hook.tier} color={c} owned={owned} isActive={isActive} imageUrl={hook.imageUrl} glow={hook.glow} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <p className="font-cinzel font-700 text-sm sm:text-base" style={{ color: owned ? '#f0ede8' : '#6a6764' }}>
@@ -855,7 +855,7 @@ export default function TackleShopClient({
   )
 }
 
-function HookIcon({ tier, color, owned, isActive, imageUrl }: { tier: number; color: string; owned: boolean; isActive: boolean; imageUrl?: string }) {
+function HookIcon({ tier, color, owned, isActive, imageUrl, glow }: { tier: number; color: string; owned: boolean; isActive: boolean; imageUrl?: string; glow?: boolean }) {
   const stroke = owned ? color : '#4a4845'
   const fill   = owned ? color : '#4a4845'
   const bg     = owned ? `${color}12` : 'rgba(255,255,255,0.06)'
@@ -936,11 +936,14 @@ function HookIcon({ tier, color, owned, isActive, imageUrl }: { tier: number; co
       {imageUrl ? (
         <img
           src={imageUrl} alt=""
+          className={owned && glow ? 'rod-glow' : undefined}
           style={{
             width: '100%', height: '100%', objectFit: 'contain',
             opacity: owned ? 1 : 0.28,
-            filter: owned ? `drop-shadow(0 0 5px ${color}70)` : 'grayscale(80%)',
-          }}
+            ...(owned && glow
+              ? { ['--rod-glow-color' as string]: color }
+              : { filter: owned ? `drop-shadow(0 0 5px ${color}70)` : 'grayscale(80%)' }),
+          } as React.CSSProperties}
         />
       ) : (
         icons[tier] ?? icons[0]

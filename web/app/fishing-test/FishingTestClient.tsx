@@ -160,11 +160,12 @@ export default function FishingTestClient() {
             )}
 
             {hook.imageUrl && !hc.hidden && (
-              <img src={hook.imageUrl} alt="hook" style={{
+              <img src={hook.imageUrl} alt="hook" className={hook.glow ? 'rod-glow' : undefined} style={{
                 position: 'absolute', top: `${hc.top}%`, left: `${hc.left}%`,
                 width: `${hc.width}%`, transform: `rotate(${hc.rotate}deg)`,
                 transformOrigin: 'center center', pointerEvents: 'none',
-              }} />
+                ...(hook.glow ? { ['--rod-glow-color' as string]: hook.color } : {}),
+              } as React.CSSProperties} />
             )}
 
             {[0, 1, 2].map(slot => {

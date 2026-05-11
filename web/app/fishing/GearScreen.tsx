@@ -326,7 +326,7 @@ export default function GearScreen({
           <GearSlot label="Rod" image={rod.imageUrl ?? '/rod.png'} itemName={rod.name} color={rod.color} glow={rod.glow} onClick={() => setOpenSlot('rod')} />
         </div>
         <div style={{ gridColumn: '1', gridRow: '2' }}>
-          <GearSlot label="Hook" image={hook.imageUrl ?? null} itemName={hook.name} color={hook.color} onClick={() => setOpenSlot('hook')} />
+          <GearSlot label="Hook" image={hook.imageUrl ?? null} itemName={hook.name} color={hook.color} glow={hook.glow} onClick={() => setOpenSlot('hook')} />
         </div>
 
         {/* Center row 1: Character */}
@@ -570,7 +570,15 @@ export default function GearScreen({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     {hook.imageUrl && (
-                      <img src={hook.imageUrl} alt={hook.name} style={{ width: 44, height: 44, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${hook.color}66)` }} />
+                      <img
+                        src={hook.imageUrl}
+                        alt={hook.name}
+                        className={hook.glow ? 'rod-glow' : undefined}
+                        style={{
+                          width: 44, height: 44, objectFit: 'contain',
+                          ...(hook.glow ? { ['--rod-glow-color' as string]: hook.color } : { filter: `drop-shadow(0 2px 8px ${hook.color}66)` }),
+                        } as React.CSSProperties}
+                      />
                     )}
                     <div>
                       <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: hook.color }}>{hook.name}</p>

@@ -302,11 +302,12 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                   } as React.CSSProperties} />
                 )}
                 {hook.imageUrl && (
-                  <img src={hook.imageUrl} alt="" style={{
+                  <img src={hook.imageUrl} alt="" className={hook.glow ? 'rod-glow' : undefined} style={{
                     position: 'absolute', top: '81%', left: '9%', width: '16%',
                     transform: 'rotate(-30deg)', transformOrigin: 'center center',
                     pointerEvents: 'none',
-                  }} />
+                    ...(hook.glow ? { ['--rod-glow-color' as string]: hook.color } : {}),
+                  } as React.CSSProperties} />
                 )}
                 {equippedBadges.map((badgeId, slot) => {
                   if (!badgeId) return null

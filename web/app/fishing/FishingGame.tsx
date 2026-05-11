@@ -2579,13 +2579,14 @@ export default function FishingGame({
                   } as React.CSSProperties} />
                 )}
                 {hook.imageUrl && !hc.hidden && (
-                  <img src={hook.imageUrl} alt="" style={{
+                  <img src={hook.imageUrl} alt="" className={hook.glow ? 'rod-glow' : undefined} style={{
                     position: 'absolute', top: `${hc.top}%`, left: `${hc.left}%`,
                     width: `${hc.width}%`,
                     transform: `rotate(${hc.rotate}deg)`,
                     transformOrigin: 'center center',
                     pointerEvents: 'none',
-                  }} />
+                    ...(hook.glow ? { ['--rod-glow-color' as string]: hook.color } : {}),
+                  } as React.CSSProperties} />
                 )}
                 {localEquippedBadges.map((badgeId, slot) => {
                   if (!badgeId) return null
