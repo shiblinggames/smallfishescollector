@@ -44,15 +44,15 @@ const MIN_REACTION_TIME_SEC = 0.55  // floor on time between consecutive hazards
 const MED_EXTRA_TIME_SEC    = 0.10  // extra reaction time for medium rocks
 const LRG_EXTRA_TIME_SEC    = 0.30  // extra reaction time for large rocks
 
-// Whirlpools — deadly horizontal zones on the wave. Boat dies if grounded
+// Shoals — deadly horizontal zones on the wave. Boat dies if grounded
 // inside one. Player must hold-jump long enough to clear the zone's width.
 // Width auto-scales with current speed so the game can never spawn an
-// un-clearable whirlpool.
-const WHIRLPOOL_CHANCE             = 0.20  // probability a spawn slot becomes a whirlpool
-const WHIRLPOOL_WARMUP_M           = 50    // no whirlpools in the first 50m (rocks first)
-const WHIRLPOOL_MIN_WIDTH          = 80    // narrowest whirlpool, always tap-clearable
-const WHIRLPOOL_CLEARANCE_FRACTION = 0.70  // % of full-hold distance used as max width
-const WHIRLPOOL_AFTER_ROCK_TIME_SEC = 1.15 // min time from previous rock to whirlpool
+// un-clearable shoal.
+const SHOAL_CHANCE             = 0.20  // probability a spawn slot becomes a shoal
+const SHOAL_WARMUP_M           = 50    // no shoals in the first 50m (rocks first)
+const SHOAL_MIN_WIDTH          = 80    // narrowest shoal, always tap-clearable
+const SHOAL_CLEARANCE_FRACTION = 0.70  // % of full-hold distance used as max width
+const SHOAL_AFTER_ROCK_TIME_SEC = 1.15 // min time from previous rock to shoal
 
 // Wave surface modulation — long-period alternation between calm and rolling
 // sections so the run doesn't feel monotonous.
@@ -89,8 +89,8 @@ interface Current {
   width: number      // width of slow-zone
 }
 
-interface Whirlpool {
-  x: number          // world x (left edge of whirlpool)
+interface Shoal {
+  x: number          // world x (left edge of shoal)
   width: number      // width of deadly zone
 }
 
@@ -130,8 +130,8 @@ export default function TideRunGame() {
     elapsed: 0,
     hazards: [] as Hazard[],
     currents: [] as Current[],
-    whirlpools: [] as Whirlpool[],
-    lastSpawnType: null as 'rock' | 'whirlpool' | null,
+    shoals: [] as Shoal[],
+    lastSpawnType: null as 'rock' | 'shoal' | null,
     nextSpawnAt: 0,
     distance: 0,
     deathFlashUntil: 0,
@@ -196,7 +196,7 @@ export default function TideRunGame() {
     g.elapsed = 0
     g.hazards = []
     g.currents = []
-    g.whirlpools = []
+    g.shoals = []
     g.lastSpawnType = null
     g.nextSpawnAt = HAZARD_WARMUP
     g.distance = 0
@@ -247,8 +247,8 @@ export default function TideRunGame() {
   }, [])
 
   // ── Spawn one surface hazard ──────────────────────────────────────────────
-  // Each spawn slot picks either a rock (with tier) or a whirlpool. Tier is
-  // gated by distance so early game is forgiving. Whirlpool widths auto-scale
+  // Each spawn slot picks either a rock (with tier) or a shoal. Tier is
+  // gated by distance so early game is forgiving. Shoal widths auto-scale
   // with current speed so the game can never spawn an unclearable one.
   const spawnHazard = useCallback(() => {
     const g = gRef.current
@@ -257,24 +257,24 @@ export default function TideRunGame() {
     // Base spacing scaled by speed (time-based floor for fairness)
     const baseSpacing = Math.max(HAZARD_SPAWN_SPACING, g.speed * MIN_REACTION_TIME_SEC)
 
-    // ── Maybe spawn a whirlpool instead of a rock ──
-    const canWhirlpool = distance > WHIRLPOOL_WARMUP_M && g.lastSpawnType !== 'whirlpool'
-    if (canWhirlpool && Math.random() < WHIRLPOOL_CHANCE) {
-      // Full-hold airtime ≈ 0.85s; whirlpool width is a fraction of that distance.
+    // ── Maybe spawn a shoal instead of a rock ──
+    const canShoal = distance > SHOAL_WARMUP_M && g.lastSpawnType !== 'shoal'
+    if (canShoal && Math.random() < SHOAL_CHANCE) {
+      // Full-hold airtime ≈ 0.85s; shoal width is a fraction of that distance.
       const fullHoldDistance = g.speed * 0.85
-      const maxClearableWidth = Math.min(fullHoldDistance * WHIRLPOOL_CLEARANCE_FRACTION, g.cw * 0.55)
-      if (maxClearableWidth > WHIRLPOOL_MIN_WIDTH) {
+      const maxClearableWidth = Math.min(fullHoldDistance * SHOAL_CLEARANCE_FRACTION, g.cw * 0.55)
+      if (maxClearableWidth > SHOAL_MIN_WIDTH) {
         // After a rock, the player needs time to land + react before they can
-        // jump again to clear the whirlpool.
+        // jump again to clear the shoal.
         if (g.lastSpawnType === 'rock') {
-          const minBuffer = g.speed * WHIRLPOOL_AFTER_ROCK_TIME_SEC
+          const minBuffer = g.speed * SHOAL_AFTER_ROCK_TIME_SEC
           if (baseSpacing < minBuffer) g.nextSpawnAt += (minBuffer - baseSpacing)
         }
-        const wpWidth = WHIRLPOOL_MIN_WIDTH + Math.random() * (maxClearableWidth - WHIRLPOOL_MIN_WIDTH)
+        const wpWidth = SHOAL_MIN_WIDTH + Math.random() * (maxClearableWidth - SHOAL_MIN_WIDTH)
         const wpX = g.nextSpawnAt
-        g.whirlpools.push({ x: wpX, width: wpWidth })
+        g.shoals.push({ x: wpX, width: wpWidth })
         g.nextSpawnAt += wpWidth + baseSpacing  // pass the whole zone + base spacing before next
-        g.lastSpawnType = 'whirlpool'
+        g.lastSpawnType = 'shoal'
         return
       }
       // else: too slow to clear even the min — fall through and spawn a rock
@@ -453,17 +453,17 @@ export default function TideRunGame() {
     while (g.currents.length > 0 && g.currents[0].x + g.currents[0].width < g.scrollX) {
       g.currents.shift()
     }
-    while (g.whirlpools.length > 0 && g.whirlpools[0].x + g.whirlpools[0].width < g.scrollX) {
-      g.whirlpools.shift()
+    while (g.shoals.length > 0 && g.shoals[0].x + g.shoals[0].width < g.scrollX) {
+      g.shoals.shift()
     }
 
-    // Death checks: surface rocks, or being grounded inside a whirlpool
+    // Death checks: surface rocks, or being grounded inside a shoal
     let dead = false
     if (collidesWithHazard(shipScreenX)) {
       dead = true
     } else if (!g.airborne) {
       const boatWorldX = shipScreenX + g.scrollX
-      for (const wp of g.whirlpools) {
+      for (const wp of g.shoals) {
         if (boatWorldX >= wp.x && boatWorldX <= wp.x + wp.width) {
           dead = true
           break
@@ -546,11 +546,11 @@ export default function TideRunGame() {
       drawCurrent(ctx, ox, c.width, g.scrollX, (x) => seaSurfaceY(x + g.scrollX, ch, g.scrollX))
     }
 
-    // ── Whirlpools (deadly dark spirals on the surface) ──
-    for (const wp of g.whirlpools) {
+    // ── Shoals (deadly shallow water — dark patch with submerged rocks) ──
+    for (const wp of g.shoals) {
       const ox = wp.x - g.scrollX
       if (ox + wp.width < 0 || ox > cw) continue
-      drawWhirlpool(ctx, ox, wp.width, g.scrollX, (x) => seaSurfaceY(x + g.scrollX, ch, g.scrollX))
+      drawShoal(ctx, ox, wp.width, g.scrollX, (x) => seaSurfaceY(x + g.scrollX, ch, g.scrollX))
     }
 
     // ── Surface hazards (rocks bobbing on the wave) ──
@@ -870,58 +870,64 @@ function drawClouds(ctx: CanvasRenderingContext2D, cw: number, ch: number, scrol
   }
 }
 
-// Whirlpool: a dark animated spiral that kills the boat if it lands inside.
-// Drawn on top of the wave surface — visually distinct from currents
-// (currents are pale foam; whirlpools are dark vortexes).
-function drawWhirlpool(
+// Shoal: deadly shallow water — a dark patch with submerged rocklets just
+// breaking the surface. Static (no animation). Reads as "hull-tearing
+// shallows". Visually distinct from currents (pale foam) and rocks (jagged
+// shapes above water).
+function drawShoal(
   ctx: CanvasRenderingContext2D,
   x: number, width: number,
-  scrollX: number,
+  _scrollX: number,
   surfaceAt: (screenX: number) => number,
 ) {
-  const cx = x + width / 2
-  const surfY = surfaceAt(cx)
-  const rxOuter = width * 0.52
-  const ryOuter = 18
-  const cy = surfY + 2
-
   ctx.save()
-  // Outer dark ellipse — the "danger" patch
-  ctx.fillStyle = 'rgba(6, 12, 22, 0.85)'
-  ctx.beginPath()
-  ctx.ellipse(cx, cy, rxOuter, ryOuter, 0, 0, Math.PI * 2)
-  ctx.fill()
 
-  // Inner darker center
-  ctx.fillStyle = 'rgba(2, 6, 12, 0.95)'
+  // Dark water patch following the wave curve
+  ctx.fillStyle = 'rgba(2, 8, 18, 0.55)'
   ctx.beginPath()
-  ctx.ellipse(cx, cy + 1, rxOuter * 0.55, ryOuter * 0.55, 0, 0, Math.PI * 2)
-  ctx.fill()
-
-  // Animated swirl arms — 4 spirals rotating with scroll
-  const phase = scrollX * 0.05
-  ctx.strokeStyle = 'rgba(150, 200, 230, 0.65)'
-  ctx.lineWidth = 1.6
-  for (let i = 0; i < 4; i++) {
-    const baseAngle = phase + i * (Math.PI / 2)
-    ctx.beginPath()
-    for (let t = 0; t <= 1; t += 0.08) {
-      const r = rxOuter * (0.18 + 0.72 * t)
-      const a = baseAngle + t * Math.PI * 1.3   // spiral curl
-      const px = cx + Math.cos(a) * r
-      const py = cy + Math.sin(a) * r * (ryOuter / rxOuter)   // flatten vertically
-      if (t === 0) ctx.moveTo(px, py)
-      else ctx.lineTo(px, py)
-    }
-    ctx.stroke()
+  for (let dx = 0; dx <= width; dx += 4) {
+    const sx = x + dx
+    const sy = surfaceAt(sx)
+    if (dx === 0) ctx.moveTo(sx, sy - 1)
+    else ctx.lineTo(sx, sy - 1)
   }
+  for (let dx = width; dx >= 0; dx -= 4) {
+    const sx = x + dx
+    ctx.lineTo(sx, surfaceAt(sx) + 16)
+  }
+  ctx.closePath()
+  ctx.fill()
 
-  // Bright foam rim (warning ring)
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)'
-  ctx.lineWidth = 1.2
-  ctx.beginPath()
-  ctx.ellipse(cx, cy - 2, rxOuter, ryOuter * 0.85, 0, 0, Math.PI * 2)
-  ctx.stroke()
+  // Submerged rocklets — deterministic positions (no jitter frame-to-frame)
+  const rocklets = Math.max(3, Math.floor(width / 34))
+  for (let i = 0; i < rocklets; i++) {
+    // Deterministic pseudo-random from index + width (stable per shoal)
+    const seed = ((i * 311 + Math.floor(width * 7)) % 1000) / 1000
+    const t = (i + 0.5) / rocklets
+    const rx = x + width * (0.08 + t * 0.84) + (seed - 0.5) * 4
+    const sy = surfaceAt(rx)
+    const w = 5 + seed * 3
+    const h = 3 + seed * 1.5
+
+    // Foam ripple around the rocklet (drawn first, behind stone)
+    ctx.strokeStyle = 'rgba(220, 240, 255, 0.55)'
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.ellipse(rx, sy + 0.5, w * 1.45, h * 1.1, 0, 0, Math.PI * 2)
+    ctx.stroke()
+
+    // Stone body — sits with top just at/below the surface
+    ctx.fillStyle = '#2a2018'
+    ctx.beginPath()
+    ctx.ellipse(rx, sy + 1, w, h, 0, 0, Math.PI * 2)
+    ctx.fill()
+
+    // Tiny highlight on the lit side of the stone
+    ctx.fillStyle = 'rgba(120, 90, 70, 0.55)'
+    ctx.beginPath()
+    ctx.ellipse(rx - 1.2, sy - 0.5, w * 0.45, h * 0.4, 0, 0, Math.PI * 2)
+    ctx.fill()
+  }
 
   ctx.restore()
 }
