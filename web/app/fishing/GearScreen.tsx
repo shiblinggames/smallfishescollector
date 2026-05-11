@@ -654,7 +654,7 @@ export default function GearScreen({
               {openSlot === 'cosmetic' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {/* ── Boats ── */}
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Boats</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Boat Colors</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {/* Default — no overlay */}
                     {(() => {
