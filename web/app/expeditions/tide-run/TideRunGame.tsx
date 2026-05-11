@@ -1126,8 +1126,11 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
                   <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#ffd56b' }}>
                     +{commitReward.doubloons} ⟡ &nbsp; +{commitReward.xp} XP
                   </p>
-                  <p className="font-karla font-300 mt-1" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)' }}>
-                    Next commit resets at midnight UTC.
+                  <p className="font-karla font-300 mt-2" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.72)', lineHeight: 1.45 }}>
+                    No more <span style={{ color: '#bda05a' }}>⟡</span> or XP today — resets at midnight UTC.
+                  </p>
+                  <p className="font-karla font-300 mt-1" style={{ fontSize: '0.65rem', color: 'rgba(180, 220, 240, 0.75)', lineHeight: 1.45 }}>
+                    Keep playing — new best scores still count for the leaderboard.
                   </p>
                 </div>
               ) : committedToday ? (
@@ -1135,8 +1138,11 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
                   <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)' }}>
                     Already Committed Today
                   </p>
-                  <p className="font-karla font-300 mt-1" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.5)' }}>
-                    Keep practicing — resets at midnight UTC.
+                  <p className="font-karla font-300 mt-1" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.45 }}>
+                    No more <span style={{ color: '#bda05a' }}>⟡</span> or XP today — resets at midnight UTC.
+                  </p>
+                  <p className="font-karla font-300 mt-1" style={{ fontSize: '0.65rem', color: 'rgba(180, 220, 240, 0.72)', lineHeight: 1.45 }}>
+                    New best scores still count for the leaderboard.
                   </p>
                 </div>
               ) : score >= 1 ? (
