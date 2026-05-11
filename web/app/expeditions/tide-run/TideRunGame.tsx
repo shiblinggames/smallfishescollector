@@ -309,19 +309,26 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     setCommitting(true)
     setCommitError(null)
     const distance = score
-    const result = await commitTideRun(distance)
-    setCommitting(false)
-    if ('ok' in result) {
-      setCommittedToday(true)
-      setCommitReward({ doubloons: result.doubloons, xp: result.xp })
-      // Tell the nav to refresh the doubloon count
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('doubloons-changed'))
+    try {
+      const result = await commitTideRun(distance)
+      if ('ok' in result) {
+        setCommittedToday(true)
+        setCommitReward({ doubloons: result.doubloons, xp: result.xp })
+        // Defer the nav refresh event so any listener-side re-fetches don't
+        // race with our local state flush.
+        if (typeof window !== 'undefined') {
+          setTimeout(() => {
+            try { window.dispatchEvent(new CustomEvent('doubloons-changed')) } catch {}
+          }, 0)
+        }
+      } else {
+        setCommitError(result.error)
+        if (result.error.includes('Already')) setCommittedToday(true)
       }
-    } else {
-      setCommitError(result.error)
-      // If the server says "already committed", lock the UI to match
-      if (result.error.includes('Already')) setCommittedToday(true)
+    } catch (err) {
+      setCommitError('Connection hiccup — please try again.')
+    } finally {
+      setCommitting(false)
     }
   }, [committing, committedToday, score])
 
