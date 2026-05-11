@@ -368,33 +368,36 @@ export default function GearScreen({
           </div>
         </button>
 
-        {/* Center row 2: Badges */}
-        <button onClick={() => setOpenSlot('badge')} style={{
-          gridColumn: '2', gridRow: '2',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(4,10,20,0.75)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 20,
-          padding: '0.6rem 0.5rem',
-          cursor: 'pointer',
-          gap: 5,
-          width: '100%',
-        }}>
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center', justifyContent: 'center', minHeight: 32 }}>
-            {equippedBadges.filter(Boolean).length === 0 ? (
-              <span style={{ fontSize: '0.6rem', color: '#3a3835' }}>—</span>
-            ) : (
-              equippedBadges.slice(0, 3).map((id, i) => {
-                if (!id) return null
-                const badge = BADGE_MAP[id]
-                return badge ? (
-                  <img key={i} src={badge.imageUrl} alt={badge.name} style={{ width: 22, height: 22, objectFit: 'contain' }} />
-                ) : null
-              })
-            )}
-          </div>
-          <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.12em', lineHeight: 1 }}>Badges</p>
-        </button>
+        {/* Center row 2: Cosmetic (boat swatch) */}
+        {(() => {
+          const activeBoat = equippedBoat ? BOATS.find(b => b.id === equippedBoat) : null
+          const swatchColor = activeBoat?.color ?? DEFAULT_BOAT_COLOR
+          const cosmeticName = activeBoat?.name ?? 'Driftwood'
+          return (
+            <button onClick={() => setOpenSlot('cosmetic')} style={{
+              gridColumn: '2', gridRow: '2',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(4,10,20,0.75)',
+              border: `1px solid ${swatchColor}40`,
+              borderRadius: 20,
+              padding: '0.6rem 0.5rem',
+              cursor: 'pointer',
+              gap: 5,
+              width: '100%',
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                background: swatchColor,
+                border: `1px solid ${swatchColor}cc`,
+                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2), 0 0 12px ${swatchColor}40`,
+              }} />
+              <div style={{ textAlign: 'center' }}>
+                <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.12em', lineHeight: 1 }}>Cosmetic</p>
+                <p className="font-karla font-600" style={{ fontSize: '0.52rem', color: swatchColor + 'cc', marginTop: 2 }}>{cosmeticName}</p>
+              </div>
+            </button>
+          )
+        })()}
 
         <div style={{ gridColumn: '3', gridRow: '1' }}>
           <GearSlot label="Reel" image={reel.imageUrl ?? null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} onClick={() => setOpenSlot('reel')} />
@@ -428,19 +431,32 @@ export default function GearScreen({
           color={bait?.color ?? '#94a3b8'}
           onClick={() => setOpenSlot('bait')}
         />
-        {(() => {
-          const activeSkin = RING_SKINS.find(s => s.id === equippedRingSkin) ?? RING_SKINS[0]
-          return (
-            <GearSlot
-              label="Cosmetic"
-              icon={<CosmeticIcon color={activeSkin.id === 'standard' ? '#3a6a6a' : activeSkin.color} />}
-              itemName={activeSkin.name}
-              color={activeSkin.id === 'standard' ? '#3a6a6a' : activeSkin.color}
-              onClick={() => setOpenSlot('cosmetic')}
-              empty={activeSkin.id === 'standard'}
-            />
-          )
-        })()}
+        {/* Badges (moved here from center) */}
+        <button onClick={() => setOpenSlot('badge')} style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(4,10,20,0.75)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: 20,
+          padding: '0.55rem 0.4rem',
+          cursor: 'pointer',
+          gap: 5,
+          width: '100%',
+        }}>
+          <div style={{ display: 'flex', gap: 3, alignItems: 'center', justifyContent: 'center', minHeight: 26 }}>
+            {equippedBadges.filter(Boolean).length === 0 ? (
+              <span style={{ fontSize: '0.85rem', color: '#3a3835' }}>—</span>
+            ) : (
+              equippedBadges.slice(0, 3).map((id, i) => {
+                if (!id) return null
+                const badge = BADGE_MAP[id]
+                return badge ? (
+                  <img key={i} src={badge.imageUrl} alt={badge.name} style={{ width: 18, height: 18, objectFit: 'contain' }} />
+                ) : null
+              })
+            )}
+          </div>
+          <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.12em', lineHeight: 1 }}>Badges</p>
+        </button>
       </div>
 
       {/* ── Loadout stats ── */}
