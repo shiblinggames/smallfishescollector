@@ -89,6 +89,7 @@ export default function TideRunGame() {
     lastScoreUpdate: 0,
     holding: false,         // is the player currently holding to extend a jump?
     jumpHoldStart: 0,       // performance.now() of current jump's start
+    lastHazardTier: null as 'small' | 'medium' | 'large' | null,
   })
 
   const [uiState, setUiState] = useState<GameState>('ready')
@@ -152,6 +153,7 @@ export default function TideRunGame() {
     g.airborne = false
     g.holding = false
     g.jumpHoldStart = 0
+    g.lastHazardTier = null
     // Land ship on the sea at its screen x
     const cx = g.cw * SHIP_X_RATIO + g.shipW / 2
     const wy = seaSurfaceY(cx + g.scrollX, g.ch, 0)
@@ -209,6 +211,14 @@ export default function TideRunGame() {
       else if (r < 0.75) tier = 'medium'
       else tier = 'large'
     }
+
+    // Never spawn two large rocks in a row — the gap can be unclearable at
+    // mid speeds (boat lands a hair before the second rock arrives but can't
+    // reach 80px of clearance in time). Demote to medium when this would happen.
+    if (tier === 'large' && g.lastHazardTier === 'large') {
+      tier = 'medium'
+    }
+    g.lastHazardTier = tier
 
     let height: number, width: number
     if (tier === 'small') {
