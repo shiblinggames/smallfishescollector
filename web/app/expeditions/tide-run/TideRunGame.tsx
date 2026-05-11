@@ -83,6 +83,19 @@ const BEACON_DETECT_FLASH_SEC    = 0.55  // duration the detection beam plays be
 // sections so the run doesn't feel monotonous.
 const WAVE_FLATNESS_PERIOD = 2200  // world px per calm/rolling cycle
 
+// Wake foam trail behind the grounded boat
+const WAKE_EMIT_DISTANCE = 7      // emit one wake particle every N world-px of scroll
+const WAKE_MAX_AGE_SEC   = 0.65   // particle lifetime
+const WAKE_PARTICLE_DRIFT_VY = 12 // px/s downward drift as wake settles
+
+// Splash bursts on landing / hit events
+const SPLASH_MAX_AGE_SEC = 0.55
+const SPLASH_GRAVITY     = 900    // particle gravity (px/s²)
+
+// Day/night cycle — palette interpolates over CYCLE_DISTANCE_M of distance.
+// Stops are: midday → dusk → night → dawn → loop
+const CYCLE_DISTANCE_M = 400
+
 // Currents — slow-zones on the surface. Ride through to slow down (more
 // reaction time); jump over to skip the slowdown. Spawned in the gap
 // between hazards so they never overlap a rock.
@@ -124,6 +137,86 @@ interface Beacon {
   width: number
   height: number     // cosmetic rock height
   shatteredAt: number // performance.now() when smashed, 0 = intact
+}
+
+interface WakeParticle {
+  worldX: number     // anchored in world; scrolls past with the wave
+  y: number          // initial screen y at emission
+  age: number        // seconds since emit
+}
+
+interface SplashParticle {
+  worldX: number
+  y: number
+  vx: number         // world-space px/s
+  vy: number         // screen px/s (negative = up)
+  age: number
+}
+
+// ── Day/night palette stops ──────────────────────────────────────────────────
+// Each stop covers a quarter of the cycle. Lerps interpolate between adjacent
+// stops based on the local fraction. Order: midday → dusk → night → dawn → loop.
+const PALETTE_STOPS = [
+  // midday
+  { skyTop: '#5da7d4', skyBot: '#a8d4ec', seaTop: '#1f5b80', seaMid: '#0e3a5c', seaBot: '#03182a',
+    island: '#46648c', cloud: 'rgba(255,255,255,0.42)', foam: 'rgba(220,240,255,0.70)' },
+  // dusk
+  { skyTop: '#c66a4a', skyBot: '#f0b388', seaTop: '#3b3a5c', seaMid: '#1e2240', seaBot: '#0a0e1f',
+    island: '#3c3a5a', cloud: 'rgba(255,210,180,0.45)', foam: 'rgba(255,230,200,0.65)' },
+  // night
+  { skyTop: '#1a2548', skyBot: '#3a4d7a', seaTop: '#0c1830', seaMid: '#060d20', seaBot: '#020510',
+    island: '#1a2540', cloud: 'rgba(180,200,230,0.28)', foam: 'rgba(180,200,230,0.55)' },
+  // dawn
+  { skyTop: '#7a5a82', skyBot: '#f3b298', seaTop: '#2a3854', seaMid: '#13203a', seaBot: '#070d1c',
+    island: '#3a3852', cloud: 'rgba(255,220,200,0.40)', foam: 'rgba(255,225,205,0.62)' },
+] as const
+
+// Hex (or rgb string) → number triple
+function rgbOf(c: string): [number, number, number] {
+  if (c.startsWith('#')) {
+    return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)]
+  }
+  // rgb(r,g,b) — used as fallback
+  const m = c.match(/\d+/g)
+  if (!m) return [0, 0, 0]
+  return [parseInt(m[0], 10), parseInt(m[1], 10), parseInt(m[2], 10)]
+}
+
+function lerpColor(a: string, b: string, t: number): string {
+  const [ar, ag, ab] = rgbOf(a)
+  const [br, bg, bb] = rgbOf(b)
+  return `rgb(${Math.round(ar + (br - ar) * t)}, ${Math.round(ag + (bg - ag) * t)}, ${Math.round(ab + (bb - ab) * t)})`
+}
+
+// rgba string lerp — strings are "rgba(r,g,b,a)"
+function lerpRGBA(a: string, b: string, t: number): string {
+  const ma = a.match(/[\d.]+/g)!
+  const mb = b.match(/[\d.]+/g)!
+  const r = Math.round(+ma[0] + (+mb[0] - +ma[0]) * t)
+  const g = Math.round(+ma[1] + (+mb[1] - +ma[1]) * t)
+  const b1 = Math.round(+ma[2] + (+mb[2] - +ma[2]) * t)
+  const al = +ma[3] + (+mb[3] - +ma[3]) * t
+  return `rgba(${r}, ${g}, ${b1}, ${al})`
+}
+
+function currentPalette(distanceMeters: number) {
+  const cycle = ((distanceMeters / CYCLE_DISTANCE_M) % 1 + 1) % 1   // 0..1
+  const seg = cycle * PALETTE_STOPS.length                          // 0..N
+  const i = Math.floor(seg) % PALETTE_STOPS.length
+  const j = (i + 1) % PALETTE_STOPS.length
+  const t = seg - Math.floor(seg)
+  const A = PALETTE_STOPS[i]
+  const B = PALETTE_STOPS[j]
+  return {
+    skyTop: lerpColor(A.skyTop, B.skyTop, t),
+    skyBot: lerpColor(A.skyBot, B.skyBot, t),
+    seaTop: lerpColor(A.seaTop, B.seaTop, t),
+    seaMid: lerpColor(A.seaMid, B.seaMid, t),
+    seaBot: lerpColor(A.seaBot, B.seaBot, t),
+    island: lerpColor(A.island, B.island, t),
+    cloud:  lerpRGBA (A.cloud,  B.cloud,  t),
+    foam:   lerpRGBA (A.foam,   B.foam,   t),
+  }
 }
 
 // ── Sea surface helper ───────────────────────────────────────────────────────
@@ -171,6 +264,9 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
     lastSpawnType: null as 'rock' | 'shoal' | 'beacon' | null,
     detectingUntil: 0,        // performance.now() timestamp; while > now() the detection beam is playing
     detectingBeaconX: 0,      // world x center of the beacon that triggered detection
+    wake: [] as WakeParticle[],
+    wakeNextEmitX: 0,         // world x of next wake emit
+    splashes: [] as SplashParticle[],
     nextSpawnAt: 0,
     distance: 0,
     deathFlashUntil: 0,
@@ -274,6 +370,9 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
     g.lastSpawnType = null
     g.detectingUntil = 0
     g.detectingBeaconX = 0
+    g.wake = []
+    g.wakeNextEmitX = 0
+    g.splashes = []
     g.nextSpawnAt = HAZARD_WARMUP
     g.distance = 0
     g.deathFlashUntil = 0
@@ -568,6 +667,20 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
       if (g.shipVy >= 0) {
         const hitboxBottom = g.shipY + g.shipH * (1 - HITBOX_INSET.bottom)
         if (hitboxBottom >= surfaceY) {
+          // Landing splash — burst of droplets from the landing point
+          const landingVy = g.shipVy
+          const splashCount = Math.max(4, Math.min(10, Math.round(landingVy / 110)))
+          for (let i = 0; i < splashCount; i++) {
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.6
+            const speed = 70 + Math.random() * 100
+            g.splashes.push({
+              worldX: shipScreenX + g.shipW / 2 + g.scrollX + (Math.random() - 0.5) * g.shipW * 0.3,
+              y: surfaceY,
+              vx: Math.cos(angle) * speed * 0.5,
+              vy: Math.sin(angle) * speed,
+              age: 0,
+            })
+          }
           g.shipY = surfaceY - g.shipH * (1 - HITBOX_INSET.bottom)
           g.shipVy = 0
           g.airborne = false
@@ -579,6 +692,31 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
       // Grounded — locked to wave surface (Canabalt-style auto-run)
       g.shipY = surfaceY - g.shipH * (1 - HITBOX_INSET.bottom)
       g.shipVy = 0
+
+      // Emit wake foam every WAKE_EMIT_DISTANCE px of scroll
+      while (g.scrollX >= g.wakeNextEmitX) {
+        g.wake.push({
+          worldX: g.wakeNextEmitX + shipScreenX - 4,
+          y: surfaceY + 2,
+          age: 0,
+        })
+        g.wakeNextEmitX += WAKE_EMIT_DISTANCE
+      }
+    }
+
+    // Age + prune particles
+    for (const p of g.wake) p.age += dt
+    if (g.wake.length > 0 && g.wake[0].age > WAKE_MAX_AGE_SEC) {
+      g.wake = g.wake.filter(p => p.age < WAKE_MAX_AGE_SEC)
+    }
+    for (const p of g.splashes) {
+      p.age += dt
+      p.worldX += p.vx * dt
+      p.y += p.vy * dt
+      p.vy += SPLASH_GRAVITY * dt
+    }
+    if (g.splashes.length > 0 && g.splashes[0].age > SPLASH_MAX_AGE_SEC) {
+      g.splashes = g.splashes.filter(p => p.age < SPLASH_MAX_AGE_SEC)
     }
 
     // Hazard spawn + prune
@@ -628,6 +766,19 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
           break
         } else {
           cr.shatteredAt = performance.now()
+          // Burst of splash droplets at the beacon — makes the smash feel impactful
+          const beaconSurface = seaSurfaceY(cr.x + cr.width / 2, g.ch, g.scrollX)
+          for (let i = 0; i < 10; i++) {
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.8
+            const speed = 130 + Math.random() * 100
+            g.splashes.push({
+              worldX: cr.x + cr.width / 2 + (Math.random() - 0.5) * cr.width * 0.6,
+              y: beaconSurface,
+              vx: Math.cos(angle) * speed * 0.6,
+              vy: Math.sin(angle) * speed,
+              age: 0,
+            })
+          }
         }
       }
     }
@@ -661,18 +812,21 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
     const { cw, ch } = g
     if (cw === 0 || ch === 0) return
 
+    // ── Cycle palette (day → dusk → night → dawn) ──
+    const pal = currentPalette(g.distance)
+
     // ── Sky (full canvas — sea path will overpaint below the surface) ──
     const sky = ctx.createLinearGradient(0, 0, 0, ch)
-    sky.addColorStop(0, '#5da7d4')
-    sky.addColorStop(0.7, '#a8d4ec')
-    sky.addColorStop(1, '#a8d4ec')
+    sky.addColorStop(0, pal.skyTop)
+    sky.addColorStop(0.7, pal.skyBot)
+    sky.addColorStop(1, pal.skyBot)
     ctx.fillStyle = sky
     ctx.fillRect(0, 0, cw, ch)
 
     // ── Parallax: distant clouds (40% scroll speed) ──
-    drawClouds(ctx, cw, ch, g.scrollX * 0.40)
+    drawClouds(ctx, cw, ch, g.scrollX * 0.40, pal.cloud)
     // ── Parallax: distant islands at the horizon (15% scroll speed) ──
-    drawDistantIslands(ctx, cw, ch, g.scrollX * 0.15)
+    drawDistantIslands(ctx, cw, ch, g.scrollX * 0.15, pal.island)
 
     // ── Dynamic sea surface ──
     ctx.beginPath()
@@ -683,14 +837,14 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
     ctx.lineTo(cw, ch)
     ctx.closePath()
     const sea = ctx.createLinearGradient(0, ch * SEA_BASE_Y_PCT - 30, 0, ch)
-    sea.addColorStop(0, '#1f5b80')
-    sea.addColorStop(0.5, '#0e3a5c')
-    sea.addColorStop(1, '#03182a')
+    sea.addColorStop(0, pal.seaTop)
+    sea.addColorStop(0.5, pal.seaMid)
+    sea.addColorStop(1, pal.seaBot)
     ctx.fillStyle = sea
     ctx.fill()
 
     // ── Foam crest ──
-    ctx.strokeStyle = 'rgba(220, 240, 255, 0.7)'
+    ctx.strokeStyle = pal.foam
     ctx.lineWidth = 2
     ctx.beginPath()
     for (let x = 0; x <= cw; x += 4) {
@@ -699,6 +853,19 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
       else ctx.lineTo(x, y)
     }
     ctx.stroke()
+
+    // ── Wake foam behind the boat ──
+    for (const p of g.wake) {
+      const screenX = p.worldX - g.scrollX
+      if (screenX < -8 || screenX > cw + 8) continue
+      const lifeFrac = p.age / WAKE_MAX_AGE_SEC
+      const alpha = (1 - lifeFrac) * 0.65
+      const radius = 2 + lifeFrac * 4
+      ctx.fillStyle = `rgba(245, 252, 255, ${alpha})`
+      ctx.beginPath()
+      ctx.ellipse(screenX, p.y + p.age * WAKE_PARTICLE_DRIFT_VY, radius, radius * 0.4, 0, 0, Math.PI * 2)
+      ctx.fill()
+    }
 
     // ── Current zones (foam patches on the surface) ──
     for (const c of g.currents) {
@@ -784,6 +951,19 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
       ctx.rotate(pitch)
       ctx.drawImage(img, -g.shipW / 2, -g.shipH / 2, g.shipW, g.shipH)
       ctx.restore()
+    }
+
+    // ── Splash droplets (drawn over the ship for visibility) ──
+    for (const p of g.splashes) {
+      const screenX = p.worldX - g.scrollX
+      if (screenX < -10 || screenX > cw + 10) continue
+      const lifeFrac = p.age / SPLASH_MAX_AGE_SEC
+      const alpha = (1 - lifeFrac) * 0.85
+      const r = 2 + (1 - lifeFrac) * 2
+      ctx.fillStyle = `rgba(220, 240, 255, ${alpha})`
+      ctx.beginPath()
+      ctx.arc(screenX, p.y, r, 0, Math.PI * 2)
+      ctx.fill()
     }
 
     // ── Collision flash ──
@@ -1239,8 +1419,10 @@ function drawCurrent(
 }
 
 // Distant islands silhouetted at the horizon, parallax-scrolled slow.
-function drawDistantIslands(ctx: CanvasRenderingContext2D, cw: number, ch: number, scrollOffset: number) {
-  ctx.fillStyle = 'rgba(70, 100, 140, 0.32)'
+function drawDistantIslands(ctx: CanvasRenderingContext2D, cw: number, ch: number, scrollOffset: number, color: string) {
+  // Apply a constant alpha overlay regardless of base palette color
+  ctx.fillStyle = color
+  ctx.globalAlpha = 0.4
   const period = cw * 1.4
   const offset = ((scrollOffset % period) + period) % period
   const horizon = ch * 0.66
@@ -1255,11 +1437,12 @@ function drawDistantIslands(ctx: CanvasRenderingContext2D, cw: number, ch: numbe
     ctx.closePath()
     ctx.fill()
   }
+  ctx.globalAlpha = 1
 }
 
 // Wispy clouds drifting at mid speed.
-function drawClouds(ctx: CanvasRenderingContext2D, cw: number, ch: number, scrollOffset: number) {
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.42)'
+function drawClouds(ctx: CanvasRenderingContext2D, cw: number, ch: number, scrollOffset: number, color: string) {
+  ctx.fillStyle = color
   const period = cw * 1.1
   const offset = ((scrollOffset % period) + period) % period
   const cloudYs = [ch * 0.10, ch * 0.18, ch * 0.28]
