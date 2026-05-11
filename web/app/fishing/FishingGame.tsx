@@ -2557,7 +2557,7 @@ export default function FishingGame({
                   // iOS subpixel rounding through the motion.div + drop-shadow filter
                   // nudges the rest-frame boat overlay 1px to the right in production
                   // compared to fishing-test. Compensate with a translateX(-1px).
-                  const restPxOffset = f === 'rest' ? ' translateX(-1px)' : ''
+                  const restPxOffset = f === 'rest' ? ' translateX(-2px)' : ''
                   return (
                     <img src={src} alt="" style={{
                       position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
