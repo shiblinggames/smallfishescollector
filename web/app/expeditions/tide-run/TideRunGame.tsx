@@ -287,6 +287,12 @@ export default function TideRunGame() {
   }, [])
 
   // ── Surface hazard collision ──────────────────────────────────────────────
+  // The drawn rock has a wider base (the anchor flare) and a much narrower
+  // spike above the surface. Use only the visible spike's x-range for
+  // collision so grazing past the visual edges doesn't trigger a death.
+  const ROCK_COLLISION_LEFT_PCT  = 0.22  // % of width before collision starts
+  const ROCK_COLLISION_RIGHT_PCT = 0.18  // % of width past which no collision
+
   const collidesWithHazard = useCallback((shipScreenX: number) => {
     const g = gRef.current
     const hx = shipScreenX + g.shipW * HITBOX_INSET.left
@@ -295,8 +301,11 @@ export default function TideRunGame() {
     const hbot = hy + g.shipH * (1 - HITBOX_INSET.bottom - HITBOX_INSET.top)
 
     for (const obs of g.hazards) {
-      const ox = obs.x - g.scrollX
-      if (ox + obs.width < hx) continue
+      const colLeft = obs.x + obs.width * ROCK_COLLISION_LEFT_PCT
+      const colRight = obs.x + obs.width * (1 - ROCK_COLLISION_RIGHT_PCT)
+      const ox = colLeft - g.scrollX
+      const cw = colRight - colLeft
+      if (ox + cw < hx) continue
       if (ox > hx + hw) break
       const hazardSurfaceY = seaSurfaceY(obs.x + obs.width / 2, g.ch, g.scrollX)
       const hazardTop = hazardSurfaceY - obs.height
