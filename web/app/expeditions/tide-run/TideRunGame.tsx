@@ -1397,39 +1397,63 @@ function drawBeacon(
     ctx.fill()
   }
 
-  // Thin dark antenna emerging from the top of the rock — the structural
-  // cue that this isn't just a rock. Subtle but visible on close look.
+  // Tall metal antenna emerging from the rock — main visual identifier.
+  // Made noticeably bigger and added a base flange so it reads as built,
+  // not natural.
   const cx = x + w / 2
-  const glintY = top - 16
-  ctx.strokeStyle = '#1a1410'
-  ctx.lineWidth = 1.2
+  const antennaH = 22
+  const glintY = top - antennaH
+  ctx.strokeStyle = '#15110d'
+  ctx.lineWidth = 2.2
   ctx.beginPath()
-  ctx.moveTo(cx, top - 1)
+  ctx.moveTo(cx, top + 1)
   ctx.lineTo(cx, glintY + 2)
   ctx.stroke()
+  // Small support flange where the antenna meets the rock
+  ctx.fillStyle = '#3a2820'
+  ctx.fillRect(cx - 3, top - 1, 6, 3)
 
-  // Pulsing amber signal light at the antenna tip — the "live" cue
-  const pulse = 0.5 + 0.5 * Math.sin(scrollX * 0.05 + cx * 0.03)
-  const glintAlpha = 0.50 + pulse * 0.45
+  // Animated radar ring expanding outward from the light — distinct from
+  // anything else in the game. Time-based so it pulses at a steady rate
+  // regardless of scroll speed.
+  const ringPhase = ((performance.now() / 1000) % 1.4) / 1.4   // 0..1
+  const ringR = 5 + ringPhase * 22
+  const ringAlpha = (1 - ringPhase) * 0.7
+  ctx.save()
+  ctx.globalAlpha = ringAlpha
+  ctx.strokeStyle = '#ffb84d'
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  ctx.arc(cx, glintY, ringR, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.restore()
+
+  // Pulsing amber signal light at the antenna tip — bigger + brighter
+  const pulse = 0.5 + 0.5 * Math.sin(scrollX * 0.06 + cx * 0.03)
+  const glintAlpha = 0.65 + pulse * 0.35
   ctx.save()
   ctx.globalAlpha = glintAlpha
-  ctx.fillStyle = '#ffb84d'
-  // 4-point star
+  // Outer glow halo
+  const glow = ctx.createRadialGradient(cx, glintY, 0, cx, glintY, 14)
+  glow.addColorStop(0, 'rgba(255, 200, 110, 0.85)')
+  glow.addColorStop(0.4, 'rgba(255, 170, 70, 0.45)')
+  glow.addColorStop(1, 'rgba(255, 150, 60, 0)')
+  ctx.fillStyle = glow
   ctx.beginPath()
-  ctx.moveTo(cx,     glintY - 4)
-  ctx.lineTo(cx + 1, glintY - 1)
-  ctx.lineTo(cx + 4, glintY)
-  ctx.lineTo(cx + 1, glintY + 1)
-  ctx.lineTo(cx,     glintY + 4)
-  ctx.lineTo(cx - 1, glintY + 1)
-  ctx.lineTo(cx - 4, glintY)
-  ctx.lineTo(cx - 1, glintY - 1)
-  ctx.closePath()
+  ctx.arc(cx, glintY, 14, 0, Math.PI * 2)
   ctx.fill()
-  // Soft outer glow
-  ctx.globalAlpha = glintAlpha * 0.35
+  // Bright core star — bigger 4-point shape
+  ctx.fillStyle = '#fff0c0'
   ctx.beginPath()
-  ctx.arc(cx, glintY, 6, 0, Math.PI * 2)
+  ctx.moveTo(cx,       glintY - 6)
+  ctx.lineTo(cx + 1.5, glintY - 1.5)
+  ctx.lineTo(cx + 6,   glintY)
+  ctx.lineTo(cx + 1.5, glintY + 1.5)
+  ctx.lineTo(cx,       glintY + 6)
+  ctx.lineTo(cx - 1.5, glintY + 1.5)
+  ctx.lineTo(cx - 6,   glintY)
+  ctx.lineTo(cx - 1.5, glintY - 1.5)
+  ctx.closePath()
   ctx.fill()
   ctx.restore()
 }
