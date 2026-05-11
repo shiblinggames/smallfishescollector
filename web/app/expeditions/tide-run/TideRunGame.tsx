@@ -980,16 +980,41 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       ctx.restore()
     }
 
-    // ── Wake foam (emitted at bow, trails back as world scrolls past) ──
-    for (const p of g.wake) {
-      const screenX = p.worldX - g.scrollX
-      if (screenX < -8 || screenX > cw + 8) continue
-      const lifeFrac = p.age / WAKE_MAX_AGE_SEC
-      const alpha = (1 - lifeFrac) * 0.75
-      const radius = 1.5 + lifeFrac * 4
-      ctx.fillStyle = `rgba(245, 252, 255, ${alpha})`
+    // ── Wake foam (smooth ribbon: emitted at bow, fades out toward stern) ──
+    // Particles are anchored in world; the array is ordered oldest → newest
+    // by emission order. Drawing them as a single tapered path produces a
+    // continuous foam trail instead of a chain of dots.
+    if (g.wake.length >= 2) {
+      const oldest = g.wake[0]
+      const newest = g.wake[g.wake.length - 1]
+      const oldestSx = oldest.worldX - g.scrollX
+      const newestSx = newest.worldX - g.scrollX
+      const grad = ctx.createLinearGradient(oldestSx, 0, newestSx, 0)
+      grad.addColorStop(0, 'rgba(245, 252, 255, 0)')
+      grad.addColorStop(0.25, 'rgba(245, 252, 255, 0.35)')
+      grad.addColorStop(1, 'rgba(255, 255, 255, 0.85)')
+      ctx.fillStyle = grad
       ctx.beginPath()
-      ctx.ellipse(screenX, p.y + p.age * WAKE_PARTICLE_DRIFT_VY, radius, radius * 0.4, 0, 0, Math.PI * 2)
+      // Top edge: oldest (left) → newest (right)
+      for (let i = 0; i < g.wake.length; i++) {
+        const p = g.wake[i]
+        const sx = p.worldX - g.scrollX
+        const lifeFrac = p.age / WAKE_MAX_AGE_SEC
+        const half = (1.2 + lifeFrac * 3.6) * 0.45     // half-thickness
+        const py = p.y + p.age * WAKE_PARTICLE_DRIFT_VY
+        if (i === 0) ctx.moveTo(sx, py - half)
+        else ctx.lineTo(sx, py - half)
+      }
+      // Bottom edge: newest (right) → oldest (left)
+      for (let i = g.wake.length - 1; i >= 0; i--) {
+        const p = g.wake[i]
+        const sx = p.worldX - g.scrollX
+        const lifeFrac = p.age / WAKE_MAX_AGE_SEC
+        const half = (1.2 + lifeFrac * 3.6) * 0.45
+        const py = p.y + p.age * WAKE_PARTICLE_DRIFT_VY
+        ctx.lineTo(sx, py + half)
+      }
+      ctx.closePath()
       ctx.fill()
     }
 
