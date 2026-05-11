@@ -8,13 +8,16 @@ const SHIP_X_RATIO    = 0.24
 const SHIP_HEIGHT_PCT = 0.14   // ship height as fraction of canvas height
 const SHIP_ASPECT     = 1031 / 672   // trimmed boatrun.png
 
-// Ship physics — gravity always pulls down, swells push up, tap dives.
-const GRAVITY      = 1100      // px/s² (mild — boat hangs in air after crest launch)
-const TAP_DIVE     = 620       // px/s downward impulse on tap
-const WAVE_LIFT_FACTOR = 1.55  // boat is yeeted off crests at >1× surface velocity
-const BASE_SPEED   = 240       // px/s horizontal scroll
-const SPEED_RAMP   = 13        // px/s² (linear time ramp)
-const MAX_SPEED    = 600       // px/s
+// Ship physics — boat locks to wave surface when grounded; launches at every
+// crest crossing with a discrete impulse. Gravity only matters in the air.
+const GRAVITY          = 1300  // px/s² (in-air pulldown)
+const TAP_DIVE         = 720   // px/s downward impulse on tap (anti-launch)
+const MIN_LAUNCH       = 340   // px/s base upward kick at every crest
+const MAX_LAUNCH       = 720   // px/s cap so max-speed launches don't fly off the top
+const WAVE_LIFT_FACTOR = 1.35  // additional launch scaled by max surface vy
+const BASE_SPEED       = 240   // px/s horizontal scroll
+const SPEED_RAMP       = 13    // px/s² (linear time ramp)
+const MAX_SPEED        = 580   // px/s
 
 // Sea surface — long-period sines for smooth rolling hills (Tiny Wings feel)
 const SEA_BASE_Y_PCT      = 0.74   // mean sea level (% of canvas height)
@@ -81,6 +84,7 @@ export default function TideRunGame() {
     distance: 0,
     deathFlashUntil: 0,
     lastScoreUpdate: 0,
+    lastSlope: 0,  // previous frame's surface slope — used to detect crest crossings
   })
 
   const [uiState, setUiState] = useState<GameState>('ready')
@@ -142,6 +146,7 @@ export default function TideRunGame() {
     g.lastScoreUpdate = 0
     g.shipVy = 0
     g.airborne = false
+    g.lastSlope = 0
     // Land ship on the sea at its screen x
     const cx = g.cw * SHIP_X_RATIO + g.shipW / 2
     const wy = seaSurfaceY(cx + g.scrollX, g.ch, 0)
@@ -233,32 +238,44 @@ export default function TideRunGame() {
 
     const shipScreenX = g.cw * SHIP_X_RATIO
     const cx = shipScreenX + g.shipW / 2
-
-    // Gravity always pulls down. Tap impulse was already added to shipVy.
-    g.shipVy += GRAVITY * dt
-    g.shipY += g.shipVy * dt
-
-    // Surface check — if the boat is at or below the surface, snap to it
-    // and inherit the wave's vertical velocity (amplified upward by lift on up-slopes).
     const surfaceY = seaSurfaceY(cx + g.scrollX, g.ch, g.scrollX)
-    const hitboxBottom = g.shipY + g.shipH * (1 - HITBOX_INSET.bottom)
 
-    if (hitboxBottom >= surfaceY) {
-      g.shipY = surfaceY - g.shipH * (1 - HITBOX_INSET.bottom)
-      const dx = 5
-      const slope = (seaSurfaceY(cx + g.scrollX + dx, g.ch, g.scrollX) - seaSurfaceY(cx + g.scrollX - dx, g.ch, g.scrollX)) / (dx * 2)
-      const surfaceVy = slope * g.speed
-      if (surfaceVy < 0) {
-        // Up-slope: amplify upward velocity so boat launches off crests
-        g.shipVy = surfaceVy * WAVE_LIFT_FACTOR
-      } else {
-        // Down-slope: ride with the surface
-        g.shipVy = surfaceVy
+    // Slope at boat (positive = surface descending forward, negative = ascending)
+    const dx = 5
+    const slope = (seaSurfaceY(cx + g.scrollX + dx, g.ch, g.scrollX) - seaSurfaceY(cx + g.scrollX - dx, g.ch, g.scrollX)) / (dx * 2)
+
+    if (g.airborne) {
+      // In the air: gravity + tap impulse (already added to shipVy)
+      g.shipVy += GRAVITY * dt
+      g.shipY += g.shipVy * dt
+
+      // Land when falling onto surface
+      if (g.shipVy >= 0) {
+        const hitboxBottom = g.shipY + g.shipH * (1 - HITBOX_INSET.bottom)
+        if (hitboxBottom >= surfaceY) {
+          g.shipY = surfaceY - g.shipH * (1 - HITBOX_INSET.bottom)
+          g.shipVy = 0
+          g.airborne = false
+        }
       }
-      g.airborne = false
     } else {
-      g.airborne = true
+      // Grounded: locked to surface, no jitter
+      g.shipY = surfaceY - g.shipH * (1 - HITBOX_INSET.bottom)
+      g.shipVy = 0
+
+      // Crest crossing — slope just flipped from negative (ascending) to positive (descending)
+      if (g.lastSlope < 0 && slope >= 0) {
+        const ramp = 1 + Math.min(g.scrollX / WAVE_AMP_RAMP_DISTANCE, 1) * (WAVE_AMP_RAMP_MAX - 1)
+        const maxSlopeRad = (WAVE_PRIMARY_AMP * (Math.PI * 2 / WAVE_PRIMARY_PERIOD) +
+                             WAVE_SECONDARY_AMP * (Math.PI * 2 / WAVE_SECONDARY_PERIOD)) * ramp
+        const maxSurfVy = maxSlopeRad * g.speed
+        const launchMag = Math.min(MAX_LAUNCH, MIN_LAUNCH + maxSurfVy * WAVE_LIFT_FACTOR)
+        g.shipVy = -launchMag
+        g.airborne = true
+      }
     }
+
+    g.lastSlope = slope
 
     // Spire spawn + prune
     while (g.nextSpawnAt < g.scrollX + g.cw * 1.05) spawnSpire()
