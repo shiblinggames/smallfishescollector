@@ -3576,9 +3576,7 @@ export default function FishingGame({
                 >
                   <img src="/crateclosed.png" alt="" style={{
                     width: 36, height: 36, objectFit: 'contain', flexShrink: 0,
-                    filter: holdTotalCount > 0
-                      ? `drop-shadow(0 2px 4px ${holdAccent}55)`
-                      : 'grayscale(1) brightness(0.5)',
+                    filter: holdTotalCount > 0 ? undefined : 'grayscale(1) brightness(0.5)',
                   }} />
                   <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', lineHeight: 1, color: holdTotalCount > 0 ? holdAccent : '#3a3835' }}>
                     {holdTotalCount}<span className="font-karla font-400" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.3)' }}>/{holdCapacity}</span>
