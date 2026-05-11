@@ -88,6 +88,42 @@ export const BOATS: BoatDef[] = [
     castImageUrl: '/boat_taupe_cast.png',
     positions: SHARED_POSITIONS,
   },
+  {
+    id: 'charcoal',
+    name: 'Charcoal',
+    color: '#3a3a40',
+    cost: 5000,
+    restImageUrl: '/boat_charcoal_rest.png',
+    castImageUrl: '/boat_charcoal_cast.png',
+    positions: SHARED_POSITIONS,
+  },
+  {
+    id: 'golden',
+    name: 'Golden',
+    color: '#f0c040',
+    cost: 5000,
+    restImageUrl: '/boat_golden_rest.png',
+    castImageUrl: '/boat_golden_cast.png',
+    positions: SHARED_POSITIONS,
+  },
+  {
+    id: 'offwhite',
+    name: 'Offwhite',
+    color: '#e8e2d0',
+    cost: 5000,
+    restImageUrl: '/boat_offwhite_rest.png',
+    castImageUrl: '/boat_offwhite_cast.png',
+    positions: SHARED_POSITIONS,
+  },
+  {
+    id: 'periwinkle',
+    name: 'Periwinkle',
+    color: '#8095c8',
+    cost: 5000,
+    restImageUrl: '/boat_periwinkle_rest.png',
+    castImageUrl: '/boat_periwinkle_cast.png',
+    positions: SHARED_POSITIONS,
+  },
 ]
 
 export const BOAT_MAP: Record<string, BoatDef> = Object.fromEntries(BOATS.map(b => [b.id, b]))
