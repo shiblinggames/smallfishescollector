@@ -86,10 +86,11 @@ const BEACON_DETECT_FLASH_SEC    = 0.55  // duration the detection beam plays be
 // sections so the run doesn't feel monotonous.
 const WAVE_FLATNESS_PERIOD = 2200  // world px per calm/rolling cycle
 
-// Wake foam trail behind the grounded boat
-const WAKE_EMIT_DISTANCE = 7      // emit one wake particle every N world-px of scroll
-const WAKE_MAX_AGE_SEC   = 0.65   // particle lifetime
-const WAKE_PARTICLE_DRIFT_VY = 12 // px/s downward drift as wake settles
+// Wake foam — emitted at the boat's bow and trails back as the world scrolls
+const WAKE_EMIT_DISTANCE = 5      // emit one wake particle every N world-px of scroll (denser = more foam)
+const WAKE_MAX_AGE_SEC   = 0.85   // particle lifetime (longer trail)
+const WAKE_PARTICLE_DRIFT_VY = 10 // px/s downward drift as wake settles
+const WAKE_BOW_OFFSET    = 0.80   // emit at this fraction of ship width (bow contact with water)
 
 // Splash bursts on landing / hit events
 const SPLASH_MAX_AGE_SEC = 0.55
@@ -730,11 +731,21 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       g.shipY = surfaceY - g.shipH * (1 - HITBOX_INSET.bottom)
       g.shipVy = 0
 
-      // Emit wake foam every WAKE_EMIT_DISTANCE px of scroll
+      // Emit wake foam at the bow — particles are anchored in world, so as
+      // the boat moves forward (world scrolls), each particle drifts back
+      // relative to the boat: bright spray right at the bow, then trailing
+      // foam under and behind the stern.
       while (g.scrollX >= g.wakeNextEmitX) {
+        const bowWorldX = g.wakeNextEmitX + shipScreenX + g.shipW * WAKE_BOW_OFFSET
         g.wake.push({
-          worldX: g.wakeNextEmitX + shipScreenX - 4,
-          y: surfaceY + 2,
+          worldX: bowWorldX,
+          y: surfaceY + 1,
+          age: 0,
+        })
+        // Second particle slightly off the centerline for a fanned look
+        g.wake.push({
+          worldX: bowWorldX - 4,
+          y: surfaceY + 2.5,
           age: 0,
         })
         g.wakeNextEmitX += WAKE_EMIT_DISTANCE
@@ -969,16 +980,33 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       ctx.restore()
     }
 
-    // ── Wake foam behind the boat ──
+    // ── Wake foam (emitted at bow, trails back as world scrolls past) ──
     for (const p of g.wake) {
       const screenX = p.worldX - g.scrollX
       if (screenX < -8 || screenX > cw + 8) continue
       const lifeFrac = p.age / WAKE_MAX_AGE_SEC
-      const alpha = (1 - lifeFrac) * 0.65
-      const radius = 2 + lifeFrac * 4
+      const alpha = (1 - lifeFrac) * 0.75
+      const radius = 1.5 + lifeFrac * 4
       ctx.fillStyle = `rgba(245, 252, 255, ${alpha})`
       ctx.beginPath()
       ctx.ellipse(screenX, p.y + p.age * WAKE_PARTICLE_DRIFT_VY, radius, radius * 0.4, 0, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    // ── Persistent bow spray (foam at the boat's cutting point) ──
+    if (!g.airborne) {
+      const bowScreenX = cw * SHIP_X_RATIO + g.shipW * WAKE_BOW_OFFSET
+      const bowSurfY = seaSurfaceY(bowScreenX + g.scrollX, ch, g.scrollX)
+      const sprayPulse = 0.7 + 0.3 * Math.sin(performance.now() * 0.012)
+      // Main waterline foam
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.55 * sprayPulse})`
+      ctx.beginPath()
+      ctx.ellipse(bowScreenX, bowSurfY + 1, 6, 1.7, 0, 0, Math.PI * 2)
+      ctx.fill()
+      // Small upward spray hint
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.35 * sprayPulse})`
+      ctx.beginPath()
+      ctx.ellipse(bowScreenX - 1, bowSurfY - 2, 3.5, 1.2, 0, 0, Math.PI * 2)
       ctx.fill()
     }
 
