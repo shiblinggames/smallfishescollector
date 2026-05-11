@@ -59,14 +59,14 @@ const SHOAL_AFTER_ROCK_TIME_SEC = 1.15 // min time from previous rock to shoal
 // them. The safe gaps are the "rooftops" the player has to land on. This is
 // the precision-jump mechanic: under-jump → die in shoal, over-jump → die in
 // the next shoal, perfect hold → land on the safe strip.
-const SHOAL_CLUSTER_CHANCE         = 0.40   // % of shoal spawns that become clusters (else single)
-const SHOAL_CLUSTER_WARMUP_M       = 100    // clusters only appear past 100m
+const SHOAL_CLUSTER_CHANCE         = 0.35   // % of shoal spawns that become clusters (else single)
+const SHOAL_CLUSTER_WARMUP_M       = 140    // clusters only appear past 140m
 const SHOAL_CLUSTER_MIN_COUNT      = 2      // shoals in a cluster (inclusive)
-const SHOAL_CLUSTER_MAX_COUNT      = 4
-const SHOAL_CLUSTER_MEMBER_MIN_PX  = 90     // each cluster shoal's min width
-const SHOAL_CLUSTER_MEMBER_MAX_PX  = 130    // each cluster shoal's max width
-const SHOAL_CLUSTER_SAFE_GAP_MIN_PX = 120   // safe-landing strip between shoals — min width
-const SHOAL_CLUSTER_SAFE_GAP_MAX_PX = 170   // safe-landing strip — max width
+const SHOAL_CLUSTER_MAX_COUNT      = 3      // capped at 3 (was 4) so chains stay readable
+const SHOAL_CLUSTER_MEMBER_MIN_PX  = 80     // each cluster shoal's min width
+const SHOAL_CLUSTER_MEMBER_MAX_PX  = 120    // each cluster shoal's max width
+const SHOAL_CLUSTER_SAFE_GAP_MIN_PX = 165   // safe-landing strip between shoals — min width
+const SHOAL_CLUSTER_SAFE_GAP_MAX_PX = 235   // safe-landing strip — max width
 
 // Beacons — disguised detection devices that look like rocks. Smash through
 // grounded to disable the beacon and stay hidden; jumping over it lets the
@@ -955,23 +955,31 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
                   onPointerDown={(e) => { e.stopPropagation() }}
                   onClick={(e) => { e.stopPropagation(); handleCommit() }}
                   disabled={committing}
-                  className="font-cinzel font-700"
                   style={{
                     pointerEvents: 'auto',
                     marginTop: 14,
-                    padding: '10px 18px',
-                    borderRadius: 999,
+                    padding: '11px 22px 12px',
+                    borderRadius: 12,
                     background: 'linear-gradient(180deg, rgba(189,160,90,0.95), rgba(150,120,55,0.95))',
                     border: '1px solid rgba(220,190,120,0.85)',
                     color: '#1a0f02',
-                    fontSize: '0.85rem',
-                    letterSpacing: '0.04em',
                     boxShadow: '0 4px 12px rgba(189,160,90,0.4)',
                     cursor: committing ? 'wait' : 'pointer',
                     opacity: committing ? 0.7 : 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 2,
                   }}
                 >
-                  {committing ? 'Committing…' : `Commit · +${score} ⟡ +${Math.floor(score / 2)} XP`}
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', letterSpacing: '0.06em' }}>
+                    {committing ? 'Saving…' : 'Save Run'}
+                  </span>
+                  {!committing && (
+                    <span className="font-karla font-700" style={{ fontSize: '0.7rem', opacity: 0.82 }}>
+                      {score} ⟡ &nbsp; {Math.floor(score / 2)} XP
+                    </span>
+                  )}
                 </button>
               ) : null}
 
@@ -982,7 +990,7 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
               )}
 
               <p className="font-karla font-700 uppercase tracking-[0.18em] mt-4" style={{ fontSize: '0.7rem', color: '#bda05a' }}>
-                Tap canvas to retry
+                Tap to try again
               </p>
             </div>
           </div>
