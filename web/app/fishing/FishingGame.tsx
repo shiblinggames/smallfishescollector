@@ -3492,44 +3492,24 @@ export default function FishingGame({
             return (
               <div style={{ display: 'flex', gap: '0.45rem', paddingTop: '0.75rem' }}>
 
-                {/* Gear — visual character composition (boat + rod + hook on character) */}
+                {/* Gear — zoomed-in default character + boat thumbnail */}
                 <button
                   onClick={() => { setGearOpen(o => !o); setHoldOpen(false); setBaitOpen(false); setSellOpen(false) }}
                   style={{
                     ...tile,
-                    flexDirection: 'row',
                     alignItems: 'center', justifyContent: 'center',
                     padding: 0,
                     background: gearOpen ? 'rgba(240,192,64,0.10)' : 'rgba(4,10,18,0.72)',
                     border: `1px solid ${gearOpen ? 'rgba(240,192,64,0.32)' : 'rgba(255,255,255,0.12)'}`,
                   }}
                 >
-                  <div style={{ position: 'relative', width: '78%', height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-                    <div style={{ position: 'relative', width: '100%', paddingBottom: '4%' }}>
-                      <img src={charSrc.rest} alt="" style={{ width: '100%', display: 'block', filter: 'drop-shadow(0 2px 4px rgba(0,15,35,0.5))' }} />
-                      {boatDef && (
-                        <img src={boatDef.restImageUrl} alt="" style={{
-                          position: 'absolute', top: '77%', left: '31%', width: '55%',
-                          pointerEvents: 'none',
-                        }} />
-                      )}
-                      {rod.imageUrl && (
-                        <img src={rod.imageUrl} alt="" className={rod.glow ? 'rod-glow' : undefined} style={{
-                          position: 'absolute', top: '33%', left: '12%', width: '51%',
-                          transform: 'rotate(-1deg)', transformOrigin: 'bottom right',
-                          pointerEvents: 'none',
-                          ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
-                        } as React.CSSProperties} />
-                      )}
-                      {hook.imageUrl && (
-                        <img src={hook.imageUrl} alt="" style={{
-                          position: 'absolute', top: '81%', left: '9%', width: '16%',
-                          transform: 'rotate(-30deg)', transformOrigin: 'center center',
-                          pointerEvents: 'none',
-                        }} />
-                      )}
-                    </div>
-                  </div>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: '50%',
+                    backgroundImage: 'url(/fishing_rest.png)',
+                    backgroundSize: '220% auto',
+                    backgroundPosition: 'center 88%',
+                    backgroundRepeat: 'no-repeat',
+                  }} />
                 </button>
 
                 {/* Bait — image + readable count */}
