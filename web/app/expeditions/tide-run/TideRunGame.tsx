@@ -6,7 +6,7 @@ import { commitTideRun, submitTideRunBest } from './actions'
 import TideRunTour, { hasCompletedTideRunTour } from './TideRunTour'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
-const SHIP_X_RATIO    = 0.18   // boat sits ~18% from the left, giving ~82% lookahead
+const SHIP_X_RATIO    = 0.13   // boat sits ~13% from the left, giving ~87% lookahead
 const SHIP_HEIGHT_PCT = 0.095  // small Canabalt-style sprite (~9.5% of canvas height)
 const SHIP_ASPECT     = 1031 / 672   // trimmed boatrun.png
 
