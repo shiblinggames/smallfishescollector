@@ -12,12 +12,13 @@ export default async function TideRunPage() {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('packs_available, doubloons, gems, tide_run_committed_date')
+    .select('packs_available, doubloons, gems, tide_run_committed_date, tide_run_best_distance')
     .eq('id', user.id)
     .single()
 
   const todayUTC = new Date().toISOString().slice(0, 10)
   const committedToday = profile?.tide_run_committed_date === todayUTC
+  const initialBestDistance = (profile?.tide_run_best_distance as number | null) ?? 0
 
   return (
     <>
@@ -27,7 +28,10 @@ export default async function TideRunPage() {
         gems={profile?.gems ?? 0}
       />
       <main className="max-w-md mx-auto px-3 pt-3 pb-6 relative" style={{ zIndex: 1 }}>
-        <TideRunGame initialCommittedToday={committedToday} />
+        <TideRunGame
+          initialCommittedToday={committedToday}
+          initialBestDistance={initialBestDistance}
+        />
       </main>
     </>
   )

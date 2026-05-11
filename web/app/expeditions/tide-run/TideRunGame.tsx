@@ -113,7 +113,6 @@ const CURRENT_EXIT_RATE    = 1.6   // 1/s — how slow the boat re-accelerates l
 const HITBOX_INSET = { top: 0.35, right: 0.12, bottom: 0.08, left: 0.08 }
 
 const METERS_PER_PIXEL = 1 / 60
-const HIGH_SCORE_KEY = 'tide-run-best'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type GameState = 'ready' | 'playing' | 'dead'
@@ -237,9 +236,10 @@ function seaSurfaceY(worldX: number, ch: number, distanceScrolled: number): numb
 // ── Game ─────────────────────────────────────────────────────────────────────
 interface TideRunGameProps {
   initialCommittedToday?: boolean
+  initialBestDistance?: number
 }
 
-export default function TideRunGame({ initialCommittedToday = false }: TideRunGameProps) {
+export default function TideRunGame({ initialCommittedToday = false, initialBestDistance = 0 }: TideRunGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number | null>(null)
@@ -281,7 +281,7 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
 
   const [uiState, setUiState] = useState<GameState>('ready')
   const [score, setScore] = useState(0)
-  const [highScore, setHighScore] = useState(0)
+  const [highScore, setHighScore] = useState(initialBestDistance)
   const [committedToday, setCommittedToday] = useState(initialCommittedToday)
   const [committing, setCommitting] = useState(false)
   const [commitReward, setCommitReward] = useState<{ doubloons: number; xp: number } | null>(null)
@@ -325,19 +325,13 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
     }
   }, [committing, committedToday, score])
 
-  // ── Load sprite + best score ───────────────────────────────────────────────
+  // ── Load sprite ────────────────────────────────────────────────────────────
+  // The high score is server-authoritative — passed in as initialBestDistance.
+  // We no longer backfill from localStorage on mount (it would undo admin resets).
   useEffect(() => {
     const img = new Image()
     img.src = '/boatrun.png'
     img.onload = () => { shipImgRef.current = img }
-    const stored = typeof window !== 'undefined' ? window.localStorage.getItem(HIGH_SCORE_KEY) : null
-    if (stored) {
-      const localBest = parseInt(stored, 10) || 0
-      setHighScore(localBest)
-      // Backfill server side — server compares and only updates if higher,
-      // so this is safe to call every mount.
-      if (localBest > 0) submitTideRunBest(localBest).catch(() => {})
-    }
   }, [])
 
   // ── Canvas sizing ──────────────────────────────────────────────────────────
@@ -630,7 +624,6 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
         const finalMeters = Math.floor(g.distance)
         if (finalMeters > highScore) {
           setHighScore(finalMeters)
-          if (typeof window !== 'undefined') window.localStorage.setItem(HIGH_SCORE_KEY, String(finalMeters))
           submitTideRunBest(finalMeters).catch(() => {})
         }
       }
@@ -808,7 +801,6 @@ export default function TideRunGame({ initialCommittedToday = false }: TideRunGa
       setUiState('dead')
       if (finalMeters > highScore) {
         setHighScore(finalMeters)
-        if (typeof window !== 'undefined') window.localStorage.setItem(HIGH_SCORE_KEY, String(finalMeters))
         submitTideRunBest(finalMeters).catch(() => {})
       }
     } else {
