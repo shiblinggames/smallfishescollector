@@ -8,33 +8,29 @@ const SHIP_X_RATIO    = 0.24
 const SHIP_HEIGHT_PCT = 0.14   // ship height as fraction of canvas height
 const SHIP_ASPECT     = 1031 / 672   // trimmed boatrun.png
 
-// Ship physics — Tiny Wings ramp feel. Boat rides the swell, builds upward
-// velocity on the up-slope, and gets flung off at the crest with that exact
-// momentum (scaled by WAVE_LIFT_FACTOR). Big waves → big air. Small waves →
-// little hops. No artificial minimum.
-const GRAVITY            = 1300  // px/s² (in-air pulldown)
-const TAP_DIVE           = 760   // px/s downward impulse on tap (player-controlled descent)
-const WAVE_LIFT_FACTOR   = 1.55  // launch magnitude = peak up-slope vy × this
-const MAX_LAUNCH         = 800   // hard cap so max-speed launches stay on screen
-const BASE_SPEED         = 240   // px/s horizontal scroll
-const SPEED_RAMP         = 13    // px/s² (linear time ramp)
-const MAX_SPEED          = 580   // px/s
+// Ship physics — Canabalt feel. Boat rides the wave surface; press-and-hold
+// to jump (longer hold → higher jump). No automatic launches off crests.
+const GRAVITY                  = 1300  // px/s² full gravity (in-air, after hold release)
+const JUMP_IMPULSE             = 440   // px/s upward kick when press starts a jump
+const JUMP_HOLD_GRAVITY_MULT   = 0.36  // gravity multiplier while hold is active (sustained jump)
+const JUMP_MAX_HOLD_SEC        = 0.42  // hold beyond this no longer extends the jump
+const BASE_SPEED               = 240   // px/s horizontal scroll
+const SPEED_RAMP               = 13    // px/s² (linear time ramp)
+const MAX_SPEED                = 580   // px/s
 
-// Sea surface — long-period sines for smooth rolling hills (Tiny Wings feel)
-const SEA_BASE_Y_PCT      = 0.74   // mean sea level (% of canvas height)
-const WAVE_PRIMARY_PERIOD = 440
-const WAVE_PRIMARY_AMP    = 28
-const WAVE_SECONDARY_PERIOD = 760  // very long swell, no high-frequency chop
-const WAVE_SECONDARY_AMP  = 14
-const WAVE_AMP_RAMP_DISTANCE = 6000
-const WAVE_AMP_RAMP_MAX   = 1.45   // peak amplitude multiplier
+// Sea surface — gentle long-period swells so the boat "runs" along the wave
+const SEA_BASE_Y_PCT      = 0.78
+const WAVE_PRIMARY_PERIOD = 560
+const WAVE_PRIMARY_AMP    = 18
+const WAVE_SECONDARY_PERIOD = 940
+const WAVE_SECONDARY_AMP  = 7
+const WAVE_AMP_RAMP_DISTANCE = 8000
+const WAVE_AMP_RAMP_MAX   = 1.25
 
 // Surface hazards — rocks/spikes poking out of the water. Boat clears them
-// by being airborne when crossing. Player times taps to control descent.
+// by being airborne when crossing. Size per spawn picks from three tiers.
 const HAZARD_SPAWN_SPACING = 360   // world px between hazards
 const HAZARD_WARMUP        = 1200  // world px before the first hazard spawns
-const HAZARD_WIDTH_PCT     = 0.085 // % of canvas width
-const HAZARD_HEIGHT_PCT    = 0.05  // % of canvas height above the surface
 
 // Hitbox inset on the trimmed sprite
 const HITBOX_INSET = { top: 0.35, right: 0.12, bottom: 0.08, left: 0.08 }
@@ -86,8 +82,8 @@ export default function TideRunGame() {
     distance: 0,
     deathFlashUntil: 0,
     lastScoreUpdate: 0,
-    lastSlope: 0,    // previous frame's surface slope — used to detect crest crossings
-    maxUpslope: 0,   // peak |surfaceVy| since last trough; consumed at crest crossing
+    holding: false,         // is the player currently holding to extend a jump?
+    jumpHoldStart: 0,       // performance.now() of current jump's start
   })
 
   const [uiState, setUiState] = useState<GameState>('ready')
@@ -149,42 +145,66 @@ export default function TideRunGame() {
     g.lastScoreUpdate = 0
     g.shipVy = 0
     g.airborne = false
-    g.lastSlope = 0
-    g.maxUpslope = 0
+    g.holding = false
+    g.jumpHoldStart = 0
     // Land ship on the sea at its screen x
     const cx = g.cw * SHIP_X_RATIO + g.shipW / 2
     const wy = seaSurfaceY(cx + g.scrollX, g.ch, 0)
     g.shipY = wy - g.shipH * (1 - HITBOX_INSET.bottom)
   }, [])
 
-  // ── Tap handler ────────────────────────────────────────────────────────────
-  const onTap = useCallback(() => {
+  // ── Press / release handlers ───────────────────────────────────────────────
+  const onPress = useCallback(() => {
     const g = gRef.current
     if (g.state === 'ready') {
       reset()
       g.state = 'playing'
       setUiState('playing')
       setScore(0)
-    } else if (g.state === 'playing') {
-      // Dive impulse — only matters when airborne; grounded snap will override
-      g.shipVy += TAP_DIVE
-    } else if (g.state === 'dead') {
+      return
+    }
+    if (g.state === 'dead') {
       if (performance.now() < g.deathFlashUntil + 350) return
       reset()
       g.state = 'playing'
       setUiState('playing')
       setScore(0)
+      return
+    }
+    if (g.state === 'playing' && !g.airborne) {
+      // Start a jump — initial impulse + open the hold window
+      g.shipVy = -JUMP_IMPULSE
+      g.airborne = true
+      g.holding = true
+      g.jumpHoldStart = performance.now()
     }
   }, [reset])
 
-  // ── Spawn one surface hazard ──────────────────────────────────────────────
+  const onRelease = useCallback(() => {
+    const g = gRef.current
+    g.holding = false
+  }, [])
+
+  // ── Spawn one surface hazard (size tier chosen randomly) ──────────────────
   const spawnHazard = useCallback(() => {
     const g = gRef.current
-    g.hazards.push({
-      x: g.nextSpawnAt,
-      width: g.cw * HAZARD_WIDTH_PCT,
-      height: g.ch * HAZARD_HEIGHT_PCT,
-    })
+    const r = Math.random()
+    let height: number
+    let width: number
+    if (r < 0.45) {
+      // Small rock — quick tap clears it
+      height = g.ch * 0.035
+      width = g.cw * 0.06
+    } else if (r < 0.80) {
+      // Medium rock — short hold
+      height = g.ch * 0.075
+      width = g.cw * 0.085
+    } else {
+      // Large rock — long hold needed
+      height = g.ch * 0.115
+      width = g.cw * 0.105
+    }
+    g.hazards.push({ x: g.nextSpawnAt, width, height })
     g.nextSpawnAt += HAZARD_SPAWN_SPACING
   }, [])
 
@@ -222,13 +242,19 @@ export default function TideRunGame() {
     const cx = shipScreenX + g.shipW / 2
     const surfaceY = seaSurfaceY(cx + g.scrollX, g.ch, g.scrollX)
 
-    // Slope at boat (positive = surface descending forward, negative = ascending)
-    const dx = 5
-    const slope = (seaSurfaceY(cx + g.scrollX + dx, g.ch, g.scrollX) - seaSurfaceY(cx + g.scrollX - dx, g.ch, g.scrollX)) / (dx * 2)
-
     if (g.airborne) {
-      // In the air: gravity + tap impulse (already added to shipVy)
-      g.shipVy += GRAVITY * dt
+      // Variable-height jump: reduced gravity while the player is holding,
+      // up to JUMP_MAX_HOLD_SEC and only while still rising.
+      let gravityNow = GRAVITY
+      if (g.holding && g.shipVy < 0) {
+        const heldFor = (performance.now() - g.jumpHoldStart) / 1000
+        if (heldFor < JUMP_MAX_HOLD_SEC) {
+          gravityNow = GRAVITY * JUMP_HOLD_GRAVITY_MULT
+        } else {
+          g.holding = false
+        }
+      }
+      g.shipVy += gravityNow * dt
       g.shipY += g.shipVy * dt
 
       // Land when falling onto surface
@@ -238,32 +264,15 @@ export default function TideRunGame() {
           g.shipY = surfaceY - g.shipH * (1 - HITBOX_INSET.bottom)
           g.shipVy = 0
           g.airborne = false
+          // Holding through a landing doesn't auto-jump; require a release+press
+          g.holding = false
         }
       }
     } else {
-      // Grounded: locked to surface
+      // Grounded — locked to wave surface (Canabalt-style auto-run)
       g.shipY = surfaceY - g.shipH * (1 - HITBOX_INSET.bottom)
       g.shipVy = 0
-
-      // Track peak upward surface velocity during the current up-slope; this is
-      // the momentum the boat carries off the next crest.
-      if (slope < 0) {
-        const upVy = -slope * g.speed
-        if (upVy > g.maxUpslope) g.maxUpslope = upVy
-      }
-
-      // Crest crossing — slope flipped from negative (ascending) to positive
-      if (g.lastSlope < 0 && slope >= 0) {
-        const launchMag = Math.min(MAX_LAUNCH, g.maxUpslope * WAVE_LIFT_FACTOR)
-        g.maxUpslope = 0
-        if (launchMag > 1) {
-          g.shipVy = -launchMag
-          g.airborne = true
-        }
-      }
     }
-
-    g.lastSlope = slope
 
     // Hazard spawn + prune
     while (g.nextSpawnAt < g.scrollX + g.cw * 1.05) spawnHazard()
@@ -412,7 +421,10 @@ export default function TideRunGame() {
 
       <div
         ref={wrapperRef}
-        onPointerDown={(e) => { e.preventDefault(); onTap() }}
+        onPointerDown={(e) => { e.preventDefault(); onPress() }}
+        onPointerUp={onRelease}
+        onPointerCancel={onRelease}
+        onPointerLeave={onRelease}
         className="relative w-full overflow-hidden rounded-xl"
         style={{
           aspectRatio: '9 / 14',
@@ -443,7 +455,7 @@ export default function TideRunGame() {
               Tide Run
             </p>
             <p className="font-karla font-300 mb-5" style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)', maxWidth: 260 }}>
-              Every crest launches you skyward. Tap to dive faster and land between the rocks.
+              Hold to jump. The longer you hold, the higher you go. Time it for the rock ahead.
             </p>
             <div className="font-karla font-700 uppercase tracking-[0.18em]" style={{
               fontSize: '0.72rem',
