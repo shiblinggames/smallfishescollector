@@ -653,86 +653,87 @@ export default function GearScreen({
               {/* ── Cosmetic ── */}
               {openSlot === 'cosmetic' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {/* ── Boats ── */}
+                  {/* ── Boat Colors ── */}
                   <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Boat Colors</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                     {/* Default — no overlay */}
                     {(() => {
                       const isEquipped = !equippedBoat
                       return (
-                        <div style={{
-                          display: 'flex', alignItems: 'center', gap: 10,
-                          padding: '0.55rem 0.7rem', borderRadius: 10,
-                          background: isEquipped ? `${DEFAULT_BOAT_COLOR}1f` : 'rgba(4,10,18,0.72)',
-                          border: `1px solid ${isEquipped ? DEFAULT_BOAT_COLOR + '70' : 'rgba(255,255,255,0.09)'}`,
-                        }}>
+                        <button
+                          key="default"
+                          onClick={() => { if (!isEquipped) { onEquipBoat(null); setOpenSlot(null) } }}
+                          className="font-karla font-700"
+                          style={{
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                            padding: '0.6rem 0.4rem 0.5rem',
+                            borderRadius: 10,
+                            background: isEquipped ? `${DEFAULT_BOAT_COLOR}1f` : 'rgba(4,10,18,0.72)',
+                            border: `1px solid ${isEquipped ? DEFAULT_BOAT_COLOR + '90' : 'rgba(255,255,255,0.09)'}`,
+                            boxShadow: isEquipped ? `0 0 14px ${DEFAULT_BOAT_COLOR}33` : 'none',
+                            cursor: isEquipped ? 'default' : 'pointer',
+                            position: 'relative',
+                          }}
+                        >
                           <div style={{
-                            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                            width: 48, height: 48, borderRadius: 12,
                             background: DEFAULT_BOAT_COLOR,
-                            border: `1px solid ${DEFAULT_BOAT_COLOR}aa`,
-                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 8px ${DEFAULT_BOAT_COLOR}33`,
+                            border: `1px solid ${DEFAULT_BOAT_COLOR}cc`,
+                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 0 14px ${DEFAULT_BOAT_COLOR}40`,
                           }} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>Driftwood</p>
-                            <p className="font-karla" style={{ fontSize: '0.56rem', color: '#5a5856', marginTop: 1 }}>Default fishing boat</p>
-                          </div>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>Driftwood</p>
                           {isEquipped
-                            ? <span className="font-karla font-700" style={{ fontSize: '0.52rem', color: DEFAULT_BOAT_COLOR, whiteSpace: 'nowrap' }}>✓ On</span>
-                            : <button onClick={() => { onEquipBoat(null); setOpenSlot(null) }} className="font-karla font-700"
-                                style={{ fontSize: '0.55rem', padding: '0.28rem 0.6rem', borderRadius: 7, whiteSpace: 'nowrap',
-                                  background: `${DEFAULT_BOAT_COLOR}16`, border: `1px solid ${DEFAULT_BOAT_COLOR}44`, color: DEFAULT_BOAT_COLOR, cursor: 'pointer' }}>
-                                Equip
-                              </button>
+                            ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: DEFAULT_BOAT_COLOR }}>✓ Equipped</span>
+                            : <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#5a5856' }}>Default</span>
                           }
-                        </div>
+                        </button>
                       )
                     })()}
                     {BOATS.map(b => {
                       const owned = unlockedBoats.includes(b.id)
                       const isEquipped = equippedBoat === b.id
                       const canAfford = doubloons >= b.cost
+                      const tappable = isEquipped ? false : (owned || canAfford)
+                      const onTap = () => {
+                        if (isEquipped) return
+                        if (owned) { onEquipBoat(b.id); setOpenSlot(null) }
+                        else if (canAfford) { onBuyBoat(b.id); setOpenSlot(null) }
+                      }
                       return (
-                        <div key={b.id} style={{
-                          display: 'flex', alignItems: 'center', gap: 10,
-                          padding: '0.55rem 0.7rem', borderRadius: 10,
-                          background: isEquipped ? `${b.color}1f` : 'rgba(4,10,18,0.72)',
-                          border: `1px solid ${isEquipped ? b.color + '70' : owned ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.05)'}`,
-                          opacity: owned ? 1 : 0.85,
-                        }}>
+                        <button
+                          key={b.id}
+                          onClick={onTap}
+                          disabled={!tappable}
+                          className="font-karla font-700"
+                          style={{
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                            padding: '0.6rem 0.4rem 0.5rem',
+                            borderRadius: 10,
+                            background: isEquipped ? `${b.color}1f` : 'rgba(4,10,18,0.72)',
+                            border: `1px solid ${isEquipped ? b.color + '90' : owned ? 'rgba(255,255,255,0.09)' : `${b.color}30`}`,
+                            boxShadow: isEquipped ? `0 0 14px ${b.color}33` : 'none',
+                            cursor: tappable ? 'pointer' : 'default',
+                            opacity: !owned && !canAfford ? 0.55 : 1,
+                            position: 'relative',
+                          }}
+                        >
                           <div style={{
-                            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                            width: 48, height: 48, borderRadius: 12,
                             background: b.color,
                             border: `1px solid ${b.color}cc`,
-                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.22), 0 0 10px ${b.color}40`,
+                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), 0 0 16px ${b.color}50`,
                           }} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>{b.name}</p>
-                            <p className="font-karla" style={{ fontSize: '0.56rem', color: owned ? '#5a5856' : b.color + 'cc', marginTop: 1 }}>
-                              {owned ? 'Wooden hull' : `${b.cost.toLocaleString()} ⟡`}
-                            </p>
-                          </div>
-                          {owned
-                            ? isEquipped
-                              ? <span className="font-karla font-700" style={{ fontSize: '0.52rem', color: b.color, whiteSpace: 'nowrap' }}>✓ On</span>
-                              : <button onClick={() => { onEquipBoat(b.id); setOpenSlot(null) }} className="font-karla font-700"
-                                  style={{ fontSize: '0.55rem', padding: '0.28rem 0.6rem', borderRadius: 7, whiteSpace: 'nowrap',
-                                    background: `${b.color}16`, border: `1px solid ${b.color}55`, color: b.color, cursor: 'pointer' }}>
-                                  Equip
-                                </button>
-                            : <button
-                                onClick={() => { if (canAfford) { onBuyBoat(b.id); setOpenSlot(null) } }}
-                                disabled={!canAfford}
-                                className="font-karla font-700"
-                                style={{ fontSize: '0.55rem', padding: '0.28rem 0.6rem', borderRadius: 7, whiteSpace: 'nowrap',
-                                  background: canAfford ? `${b.color}1f` : 'rgba(255,255,255,0.04)',
-                                  border: `1px solid ${canAfford ? b.color + '70' : 'rgba(255,255,255,0.1)'}`,
-                                  color: canAfford ? b.color : '#5a5856',
-                                  cursor: canAfford ? 'pointer' : 'default' }}
-                              >
-                                Buy
-                              </button>
-                          }
-                        </div>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: owned ? '#f0ede8' : '#a0a09a', lineHeight: 1.1, textAlign: 'center' }}>{b.name}</p>
+                          {isEquipped ? (
+                            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: b.color }}>✓ Equipped</span>
+                          ) : owned ? (
+                            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Owned · Tap to equip</span>
+                          ) : (
+                            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: canAfford ? b.color : '#5a5856' }}>
+                              {b.cost.toLocaleString()} ⟡
+                            </span>
+                          )}
+                        </button>
                       )
                     })}
                   </div>
