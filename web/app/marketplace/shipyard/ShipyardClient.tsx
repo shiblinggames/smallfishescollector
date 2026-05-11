@@ -46,7 +46,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
 
   return (
     <div className="px-4 sm:px-6 max-w-md sm:max-w-2xl mx-auto pb-16">
-      <p className="font-karla font-600 uppercase tracking-[0.16em] text-[#6a6764] mb-4 text-[0.6rem] sm:text-xs">
+      <p className="font-karla font-700 uppercase tracking-[0.16em] mb-4 text-[0.7rem] sm:text-xs" style={{ color: '#a0a09a' }}>
         Shipyard
       </p>
 
@@ -113,18 +113,18 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
         </div>
       </div>
 
-      {/* ── Combat mechanics primer (small, collapsible feel) ── */}
+      {/* ── Combat mechanics primer ── */}
       <div style={{
-        background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)',
-        borderRadius: 12, padding: '0.65rem 0.85rem', marginBottom: 22,
+        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
+        borderRadius: 12, padding: '0.7rem 0.9rem', marginBottom: 22,
       }}>
-        <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#7a7775', lineHeight: 1.6 }}>
-          <strong style={{ color: '#a0a09a', fontWeight: 600 }}>Reload</strong> stockpiles charges (max 3). <strong style={{ color: '#a0a09a', fontWeight: 600 }}>Fire</strong> spends 1. <strong style={{ color: '#a0a09a', fontWeight: 600 }}>Volley</strong> spends all 3 for double damage. <strong style={{ color: '#a0a09a', fontWeight: 600 }}>Speed</strong> determines who fires first.
+        <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#b5b3ae', lineHeight: 1.6 }}>
+          <strong style={{ color: '#f0ede8', fontWeight: 700 }}>Reload</strong> stockpiles charges (max 3). <strong style={{ color: '#f0ede8', fontWeight: 700 }}>Fire</strong> spends 1. <strong style={{ color: '#f0ede8', fontWeight: 700 }}>Volley</strong> spends all 3 for double damage. <strong style={{ color: '#f0ede8', fontWeight: 700 }}>Speed</strong> determines who fires first.
         </p>
       </div>
 
       {/* ── Fleet ────────────────────────────────────────────────────── */}
-      <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.58rem', color: '#6a6764', marginBottom: 10 }}>
+      <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.7rem', color: '#a0a09a', marginBottom: 12 }}>
         Fleet
       </p>
 
@@ -143,83 +143,85 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
             <div key={ship.tier} style={{
               position: 'relative',
               background: isActive
-                ? `linear-gradient(140deg, ${c}1c 0%, rgba(8,8,6,0.95) 70%)`
+                ? `linear-gradient(160deg, ${c}1f 0%, rgba(8,8,6,0.95) 65%)`
                 : owned
-                  ? `linear-gradient(140deg, ${c}10 0%, rgba(8,8,6,0.92) 70%)`
+                  ? `linear-gradient(160deg, ${c}12 0%, rgba(8,8,6,0.92) 70%)`
                   : isNext
-                    ? `linear-gradient(140deg, ${c}10 0%, rgba(8,8,6,0.92) 70%)`
-                    : 'rgba(8,8,6,0.78)',
-              border: `1px solid ${isActive ? c + '70' : owned ? c + '30' : isNext ? c + '40' : 'rgba(255,255,255,0.06)'}`,
+                    ? `linear-gradient(160deg, ${c}12 0%, rgba(8,8,6,0.92) 70%)`
+                    : 'rgba(10,10,8,0.85)',
+              border: `1px solid ${isActive ? c + '7a' : owned ? c + '38' : isNext ? c + '4a' : 'rgba(255,255,255,0.08)'}`,
               borderRadius: 16,
               padding: '0.9rem 0.95rem 0.95rem',
               boxShadow: isActive ? `0 0 22px ${c}1c` : 'none',
-              opacity: locked ? 0.7 : 1,
+              opacity: locked ? 0.78 : 1,
               overflow: 'hidden',
             }}>
-              {/* Top row: image + name/status */}
-              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 12 }}>
-                <div style={{
-                  width: 96, height: 76, flexShrink: 0,
-                  background: `radial-gradient(ellipse at 50% 70%, ${c}18 0%, transparent 70%)`,
-                  borderRadius: 12,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+              {/* Hero image strip */}
+              <div style={{
+                width: '100%', height: 140, marginBottom: 10,
+                background: `radial-gradient(ellipse at 50% 70%, ${c}1c 0%, transparent 65%)`,
+                borderRadius: 12,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                position: 'relative',
+              }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={ship.imageUrl} alt={ship.name}
+                  style={{
+                    maxWidth: '88%', maxHeight: '92%', objectFit: 'contain',
+                    filter: owned
+                      ? `drop-shadow(0 6px 18px ${c}66)`
+                      : locked
+                        ? 'grayscale(1) brightness(0.32)'
+                        : `grayscale(0.45) brightness(0.7)`,
+                  }}
+                />
+                <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{
+                  position: 'absolute', top: 8, right: 10,
+                  fontSize: '0.46rem', color: '#8a8784',
+                  background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 999, padding: '0.16rem 0.5rem',
                 }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={ship.imageUrl} alt={ship.name}
-                    style={{
-                      maxWidth: '92%', maxHeight: '92%', objectFit: 'contain',
-                      filter: owned
-                        ? `drop-shadow(0 3px 10px ${c}55)`
-                        : locked
-                          ? 'grayscale(1) brightness(0.3)'
-                          : `grayscale(0.5) brightness(0.65)`,
-                    }}
-                  />
-                </div>
-
-                <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6, marginBottom: 2 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: owned ? '#f0ede8' : isNext ? '#c8c4bc' : '#6a6764', lineHeight: 1.1 }}>
-                      {ship.name}
-                    </p>
-                    <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.46rem', color: '#5a5755', flexShrink: 0 }}>
-                      T{ship.tier}
-                    </span>
-                  </div>
-                  <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: owned || isNext ? '#7a7775' : '#4a4845', lineHeight: 1.35, marginBottom: 8 }}>
-                    {ship.description}
-                  </p>
-                  {/* Status pill */}
-                  {isActive && (
-                    <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ display: 'inline-block', fontSize: '0.48rem', color: c, background: `${c}1c`, border: `1px solid ${c}55`, borderRadius: 999, padding: '0.18rem 0.55rem' }}>
-                      ⬤ Active
-                    </span>
-                  )}
-                  {owned && !isActive && (
-                    <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ display: 'inline-block', fontSize: '0.48rem', color: '#4ade80', background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.28)', borderRadius: 999, padding: '0.18rem 0.55rem' }}>
-                      ✓ Owned
-                    </span>
-                  )}
-                  {!owned && !locked && (
-                    <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ display: 'inline-block', fontSize: '0.48rem', color: '#f0c040', background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.28)', borderRadius: 999, padding: '0.18rem 0.55rem' }}>
-                      ⚓ Next Tier
-                    </span>
-                  )}
-                  {locked && (
-                    <span className="font-karla font-600 uppercase tracking-[0.14em]" style={{ display: 'inline-block', fontSize: '0.48rem', color: '#5a5755', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 999, padding: '0.18rem 0.55rem' }}>
-                      🔒 Locked
-                    </span>
-                  )}
-                </div>
+                  T{ship.tier}
+                </span>
+                {/* Status pill, overlaid */}
+                <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{
+                  position: 'absolute', bottom: 6, left: 10,
+                  fontSize: '0.5rem',
+                  ...(isActive
+                    ? { color: c, background: `${c}22`, border: `1px solid ${c}66` }
+                    : owned
+                      ? { color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.36)' }
+                      : isNext
+                        ? { color: '#f0c040', background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.36)' }
+                        : { color: '#7a7775', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }
+                  ),
+                  borderRadius: 999, padding: '0.2rem 0.6rem',
+                }}>
+                  {isActive ? '⬤ Active' : owned ? '✓ Owned' : isNext ? 'Next Tier' : '🔒 Locked'}
+                </span>
               </div>
 
-              {/* Stats grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 5, marginBottom: isNext ? 12 : 0 }}>
-                <CardStat label="Crew"    value={stats?.crewSlots  ?? 1} accent={c}        owned={owned} />
-                <CardStat label="Hull"    value={stats?.durability ?? 0} accent="#60a5fa"  owned={owned} />
-                <CardStat label="Armor"   value={stats?.armor      ?? 0} accent="#4ade80"  owned={owned} />
-                <CardStat label="Speed"   value={stats?.speed      ?? 0} accent="#f0c040"  owned={owned} />
-                <CardStat label="Min Dmg" value={stats?.minDamage  ?? 0} accent="#fb923c"  owned={owned} />
+              {/* Name + description */}
+              <div style={{ marginBottom: 10 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: owned || isNext ? '#f0ede8' : '#a0a09a', lineHeight: 1.15, marginBottom: 4 }}>
+                  {ship.name}
+                </p>
+                <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: owned || isNext ? '#b5b3ae' : '#7a7775', lineHeight: 1.45 }}>
+                  {ship.description}
+                </p>
+              </div>
+
+              {/* Compact stats row */}
+              <div style={{
+                display: 'flex', flexWrap: 'wrap', gap: 6,
+                marginBottom: isNext ? 12 : 0,
+                fontSize: '0.7rem',
+              }}>
+                <StatChip label="Crew"  value={stats?.crewSlots  ?? 1} accent={c}       owned={owned} />
+                <StatChip label="Hull"  value={stats?.durability ?? 0} accent="#60a5fa" owned={owned} />
+                <StatChip label="Armor" value={stats?.armor      ?? 0} accent="#4ade80" owned={owned} />
+                <StatChip label="Speed" value={stats?.speed      ?? 0} accent="#f0c040" owned={owned} />
+                <StatChip label="Dmg"   value={stats?.minDamage  ?? 0} accent="#fb923c" owned={owned} />
               </div>
 
               {/* Buy button — only on the next purchasable tier */}
@@ -271,28 +273,30 @@ function HeroStat({ label, value, color }: { label: string; value: number | stri
   return (
     <div style={{
       background: 'rgba(8,8,6,0.55)',
-      border: `1px solid ${color}30`,
+      border: `1px solid ${color}40`,
       borderRadius: 9,
       padding: '0.5rem 0.25rem',
       textAlign: 'center',
     }}>
       <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color, lineHeight: 1 }}>{value}</p>
-      <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.46rem', color: '#7a7775', marginTop: 4 }}>{label}</p>
+      <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#b5b3ae', marginTop: 4 }}>{label}</p>
     </div>
   )
 }
 
-function CardStat({ label, value, accent, owned }: { label: string; value: number | string; accent: string; owned: boolean }) {
+function StatChip({ label, value, accent, owned }: { label: string; value: number | string; accent: string; owned: boolean }) {
   return (
-    <div style={{
-      background: owned ? `${accent}0c` : 'rgba(255,255,255,0.03)',
-      border: `1px solid ${owned ? accent + '24' : 'rgba(255,255,255,0.06)'}`,
-      borderRadius: 8,
-      padding: '0.4rem 0.2rem',
-      textAlign: 'center',
+    <span className="font-karla font-600" style={{
+      display: 'inline-flex', alignItems: 'baseline', gap: 4,
+      background: owned ? `${accent}12` : 'rgba(255,255,255,0.04)',
+      border: `1px solid ${owned ? accent + '38' : 'rgba(255,255,255,0.08)'}`,
+      borderRadius: 999,
+      padding: '0.22rem 0.55rem',
+      fontSize: '0.7rem',
+      lineHeight: 1,
     }}>
-      <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? accent : '#5a5755', lineHeight: 1 }}>{value}</p>
-      <p className="font-karla font-600 uppercase tracking-[0.06em]" style={{ fontSize: '0.42rem', color: owned ? '#6a6764' : '#4a4845', marginTop: 4 }}>{label}</p>
-    </div>
+      <span className="font-cinzel font-700" style={{ color: owned ? accent : '#8a8784' }}>{value}</span>
+      <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: owned ? '#b5b3ae' : '#6a6764' }}>{label}</span>
+    </span>
   )
 }
