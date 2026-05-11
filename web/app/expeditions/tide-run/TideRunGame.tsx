@@ -15,21 +15,19 @@ const BASE_SPEED   = 240       // px/s horizontal scroll
 const SPEED_RAMP   = 13        // px/s² (linear time ramp)
 const MAX_SPEED    = 600       // px/s
 
-// Sea surface — multi-sine in world space, amplitude ramps with distance
-const SEA_BASE_Y_PCT      = 0.80   // mean sea level (% of canvas height)
-const WAVE_PRIMARY_PERIOD = 300
-const WAVE_PRIMARY_AMP    = 18
-const WAVE_SECONDARY_PERIOD = 115
-const WAVE_SECONDARY_AMP  = 8
-const WAVE_TERTIARY_PERIOD = 520
-const WAVE_TERTIARY_AMP   = 12
-const WAVE_AMP_RAMP_DISTANCE = 8000
-const WAVE_AMP_RAMP_MAX   = 1.55   // peak amplitude multiplier
+// Sea surface — long-period sines for smooth rolling hills (Tiny Wings feel)
+const SEA_BASE_Y_PCT      = 0.74   // mean sea level (% of canvas height)
+const WAVE_PRIMARY_PERIOD = 440
+const WAVE_PRIMARY_AMP    = 32
+const WAVE_SECONDARY_PERIOD = 760  // very long swell, no high-frequency chop
+const WAVE_SECONDARY_AMP  = 18
+const WAVE_AMP_RAMP_DISTANCE = 6000
+const WAVE_AMP_RAMP_MAX   = 1.8    // peak amplitude multiplier
 
-// Spire spawning
+// Spire spawning — extends into the wave-ride zone so tall ones force a launch
 const SPAWN_SPACING   = 260
-const SPIRE_MIN_HEIGHT_PCT = 0.08
-const SPIRE_MAX_HEIGHT_PCT = 0.36
+const SPIRE_MIN_HEIGHT_PCT = 0.34
+const SPIRE_MAX_HEIGHT_PCT = 0.58
 
 // Hitbox inset on the trimmed sprite
 const HITBOX_INSET = { top: 0.35, right: 0.12, bottom: 0.08, left: 0.08 }
@@ -51,9 +49,8 @@ function seaSurfaceY(worldX: number, ch: number, distanceScrolled: number): numb
   const ramp = 1 + Math.min(distanceScrolled / WAVE_AMP_RAMP_DISTANCE, 1) * (WAVE_AMP_RAMP_MAX - 1)
   const TAU = Math.PI * 2
   const w1 = Math.sin(worldX / WAVE_PRIMARY_PERIOD * TAU) * WAVE_PRIMARY_AMP
-  const w2 = Math.sin(worldX / WAVE_SECONDARY_PERIOD * TAU + 1.3) * WAVE_SECONDARY_AMP
-  const w3 = Math.sin(worldX / WAVE_TERTIARY_PERIOD * TAU - 0.6) * WAVE_TERTIARY_AMP
-  return ch * SEA_BASE_Y_PCT - (w1 + w2 + w3) * ramp
+  const w2 = Math.sin(worldX / WAVE_SECONDARY_PERIOD * TAU + 1.1) * WAVE_SECONDARY_AMP
+  return ch * SEA_BASE_Y_PCT - (w1 + w2) * ramp
 }
 
 // ── Game ─────────────────────────────────────────────────────────────────────
@@ -284,12 +281,13 @@ export default function TideRunGame() {
     const { cw, ch } = g
     if (cw === 0 || ch === 0) return
 
-    // ── Sky ──
-    const sky = ctx.createLinearGradient(0, 0, 0, ch * 0.7)
+    // ── Sky (full canvas — sea path will overpaint below the surface) ──
+    const sky = ctx.createLinearGradient(0, 0, 0, ch)
     sky.addColorStop(0, '#5da7d4')
+    sky.addColorStop(0.7, '#a8d4ec')
     sky.addColorStop(1, '#a8d4ec')
     ctx.fillStyle = sky
-    ctx.fillRect(0, 0, cw, ch * 0.7)
+    ctx.fillRect(0, 0, cw, ch)
 
     // ── Dynamic sea surface ──
     ctx.beginPath()
