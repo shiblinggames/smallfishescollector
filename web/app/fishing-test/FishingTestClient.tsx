@@ -139,16 +139,21 @@ export default function FishingTestClient() {
           }}>
             <img src={FRAMES[frame]} alt="" style={{ width: '100%', display: 'block' }} />
 
-            {boatEnabled && (
-              <img src={frame === 'cast' ? BOATS[0].castImageUrl : BOATS[0].restImageUrl} alt="boat" style={{
-                position: 'absolute',
-                top: `${boatCfg[frame].top}%`, left: `${boatCfg[frame].left}%`,
-                width: `${boatCfg[frame].width}%`,
-                transform: `rotate(${boatCfg[frame].rotate}deg)`,
-                transformOrigin: 'center center',
-                pointerEvents: 'none',
-              }} />
-            )}
+            {boatEnabled && (() => {
+              // Non-default character color sprites have their body framed 1%
+              // lower on the wait frame, so the boat overlay shifts to match.
+              const colorOffset = frame === 'wait' && characterColor !== 'default' ? 1 : 0
+              return (
+                <img src={frame === 'cast' ? BOATS[0].castImageUrl : BOATS[0].restImageUrl} alt="boat" style={{
+                  position: 'absolute',
+                  top: `${boatCfg[frame].top + colorOffset}%`, left: `${boatCfg[frame].left}%`,
+                  width: `${boatCfg[frame].width}%`,
+                  transform: `rotate(${boatCfg[frame].rotate}deg)`,
+                  transformOrigin: 'center center',
+                  pointerEvents: 'none',
+                }} />
+              )
+            })()}
 
             {rod.imageUrl && (
               <img src={rod.imageUrl} alt="rod" className={rod.glow ? 'rod-glow' : undefined} style={{

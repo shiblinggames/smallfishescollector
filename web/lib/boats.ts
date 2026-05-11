@@ -111,3 +111,21 @@ export function getBoat(id: string | null | undefined): BoatDef | null {
   if (!id) return null
   return BOAT_MAP[id] ?? null
 }
+
+/**
+ * Returns the boat overlay position for a given frame, applying any character-
+ * color anchor adjustment. Non-default character color sprites have their
+ * body framed 1% lower on the `wait` frame than the default green sprites, so
+ * the boat overlay needs to shift down to stay seated on the hull.
+ */
+export function getBoatPosition(
+  boat: BoatDef,
+  frame: BoatFrame,
+  characterColor: string,
+): BoatPos {
+  const base = boat.positions[frame]
+  if (frame === 'wait' && characterColor !== 'default') {
+    return { ...base, top: base.top + 1 }
+  }
+  return base
+}
