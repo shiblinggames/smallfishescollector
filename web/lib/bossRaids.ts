@@ -1,13 +1,19 @@
 export const ENEMY_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/'
 
+export type EnemyAction = 'reload' | 'fire' | 'volley' | 'dodge'
+
 export interface BroadsideEnemy {
   id: string
   name: string
   hpBase: number
   minDmg: number
   maxDmg: number
+  /** Ship speed: used in the speed roll for turn order, dodge roll, and aim-bar target speed. */
+  shipSpeed: number
+  /** Legacy: real-time action interval. Kept for backwards-compat readouts; no longer drives combat. */
   actionMs: number
-  pattern: string[]
+  /** Scripted action loop. Cycles in order every turn. */
+  pattern: EnemyAction[]
   image: string
   portrait?: string
 }
@@ -48,28 +54,28 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
   enemies: {
     brute: {
       id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 2, maxDmg: 5,
-      actionMs: 4500,
+      shipSpeed: 4, actionMs: 4500,
       pattern: ['reload', 'fire', 'reload', 'fire'],
       image: ENEMY_IMG_BASE + 'enemytier1.png',
       portrait: ENEMY_IMG_BASE + 'reefraider.png',
     },
     sniper: {
       id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
-      actionMs: 5500,
+      shipSpeed: 3, actionMs: 5500,
       pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
       image: ENEMY_IMG_BASE + 'enemytier1.png',
       portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png',
     },
     corsair: {
       id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
-      actionMs: 3500,
+      shipSpeed: 7, actionMs: 3500,
       pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
       image: ENEMY_IMG_BASE + 'enemytier1elite.png',
       portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png',
     },
     pete: {
       id: 'pete', name: 'Barnacle Pete', hpBase: 55, minDmg: 8, maxDmg: 15,
-      actionMs: 4500,
+      shipSpeed: 6, actionMs: 4500,
       pattern: ['reload', 'reload', 'dodge', 'fire', 'reload', 'fire'],
       image: ENEMY_IMG_BASE + 'enemytier1boss.png',
       portrait: ENEMY_IMG_BASE + 'barnacle_pete.png',
