@@ -296,6 +296,19 @@ export default function GearScreen({
   const [selectedBadgeSlot, setSelectedBadgeSlot] = useState<0 | 1 | 2 | null>(null)
   useEffect(() => { if (openSlot !== 'badge') setSelectedBadgeSlot(null) }, [openSlot])
 
+  // Transient confirmation banner for cosmetic purchases. Clears itself after
+  // 2.5s so the player gets a clear "you bought + equipped X" moment instead
+  // of the menu silently closing.
+  const [cosmeticToast, setCosmeticToast] = useState<{ id: number; name: string; color: string; cost: number } | null>(null)
+  useEffect(() => {
+    if (!cosmeticToast) return
+    const t = setTimeout(() => setCosmeticToast(null), 2500)
+    return () => clearTimeout(t)
+  }, [cosmeticToast])
+  function flashPurchase(name: string, color: string, cost: number) {
+    setCosmeticToast({ id: Date.now(), name, color, cost })
+  }
+
   const rod  = getRod(equippedRodTier)
   const reel = getReel(reelTier)
   const hook = getHook(hookTier)
@@ -642,6 +655,32 @@ export default function GearScreen({
               {/* ── Cosmetic ── */}
               {openSlot === 'cosmetic' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <AnimatePresence>
+                    {cosmeticToast && (
+                      <motion.div
+                        key={cosmeticToast.id}
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.22 }}
+                        style={{
+                          padding: '0.55rem 0.85rem',
+                          borderRadius: 10,
+                          background: `linear-gradient(90deg, ${cosmeticToast.color}26, ${cosmeticToast.color}10)`,
+                          border: `1px solid ${cosmeticToast.color}80`,
+                          boxShadow: `0 0 14px ${cosmeticToast.color}40`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                        }}
+                      >
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>
+                          ✓ Bought <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span> — now equipped
+                        </p>
+                        <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: cosmeticToast.color }}>
+                          −{cosmeticToast.cost.toLocaleString()} ⟡
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                   {/* ── Boat Colors ── */}
                   <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Boat Colors</p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
@@ -686,7 +725,7 @@ export default function GearScreen({
                       const onTap = () => {
                         if (isEquipped) return
                         if (owned) { onEquipBoat(b.id); setOpenSlot(null) }
-                        else if (canAfford) { onBuyBoat(b.id); setOpenSlot(null) }
+                        else if (canAfford) { onBuyBoat(b.id); flashPurchase(b.name, b.color, b.cost) }
                       }
                       return (
                         <button
@@ -790,7 +829,7 @@ export default function GearScreen({
                       const onTap = () => {
                         if (isEquipped) return
                         if (owned) { onEquipHat(h.id); setOpenSlot(null) }
-                        else if (canAfford) { onBuyHat(h.id); setOpenSlot(null) }
+                        else if (canAfford) { onBuyHat(h.id); flashPurchase(`${h.name} Bandana`, h.color, h.cost) }
                       }
                       return (
                         <button
