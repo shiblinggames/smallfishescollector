@@ -1085,7 +1085,7 @@ export default function DailyVoyagePanel({
                     style={{
                       width: 64, height: 64, borderRadius: 12, flexShrink: 0,
                       backgroundImage: `url(/${prefix}_rest.png)`,
-                      backgroundSize: '340% auto', backgroundPosition: 'center 18%',
+                      backgroundSize: '320% auto', backgroundPosition: 'center 45%',
                       backgroundRepeat: 'no-repeat',
                       border: '2px solid rgba(74,222,128,0.4)',
                       boxShadow: '0 0 20px rgba(74,222,128,0.3)',
