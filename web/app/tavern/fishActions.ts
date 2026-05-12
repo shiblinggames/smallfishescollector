@@ -8,15 +8,15 @@ import { getTodaysFishPuzzle } from './fish-of-the-day/generate'
 const MAX_GUESSES    = 4
 const STARTING_GEMS  = 100
 
-export type HintType = 'picture' | 'length' | 'first_letter' | 'attribute' | 'letter' | 'eliminate'
+export type HintType = 'picture' | 'length' | 'first_letter' | 'attribute' | 'letter' | 'next_clue'
 
 const HINT_COSTS: Record<HintType, number> = {
   picture:      40,
+  next_clue:    25,
   length:       15,
-  first_letter:  8,
   attribute:    10,
+  first_letter:  8,
   letter:        5,
-  eliminate:     3,
 }
 
 const ATTRIBUTE_KEYS = ['water_type', 'region', 'is_edible', 'size_category'] as const
@@ -50,9 +50,9 @@ export interface HintsUsed {
   picture?: boolean
   length?: boolean
   first_letter?: boolean
-  attributes?: string[]   // attribute keys, e.g. ['water_type', 'size_category']
-  letters?: number[]      // character indices revealed in common_name
-  eliminated?: string[]   // species names eliminated
+  attributes?: string[]      // attribute keys, e.g. ['water_type', 'size_category']
+  letters?: number[]         // character indices revealed in common_name
+  next_clue_count?: number   // how many extra clues purchased (clue 1 is free)
 }
 
 export interface RevealedHints {
@@ -61,16 +61,16 @@ export interface RevealedHints {
   first_letter: string | null
   attributes: { key: string; label: string; value: string }[]
   letters: { position: number; char: string }[]
-  eliminated: string[]
 }
 
 export interface FishPuzzleState {
   date: string
-  clues: string[]               // drip-fed by wrong-guess count
+  clues: string[]               // unlocked clues only — clue 1 free, rest bought
   cluesTotal: number
   guesses: string[]
   maxGuesses: number
   hintsUsed: HintsUsed
+  hintBuysTotal: number         // total hints purchased; gates 1-per-round
   revealed: RevealedHints
   gemsRemaining: number
   hintCosts: Record<HintType, number>
@@ -98,10 +98,21 @@ function gemsSpent(hints: HintsUsed): number {
   if (hints.picture)      spent += HINT_COSTS.picture
   if (hints.length)       spent += HINT_COSTS.length
   if (hints.first_letter) spent += HINT_COSTS.first_letter
-  spent += (hints.attributes?.length ?? 0) * HINT_COSTS.attribute
-  spent += (hints.letters?.length    ?? 0) * HINT_COSTS.letter
-  spent += (hints.eliminated?.length ?? 0) * HINT_COSTS.eliminate
+  spent += (hints.attributes?.length    ?? 0) * HINT_COSTS.attribute
+  spent += (hints.letters?.length       ?? 0) * HINT_COSTS.letter
+  spent += (hints.next_clue_count       ?? 0) * HINT_COSTS.next_clue
   return spent
+}
+
+function hintBuysTotal(hints: HintsUsed): number {
+  let n = 0
+  if (hints.picture)      n += 1
+  if (hints.length)       n += 1
+  if (hints.first_letter) n += 1
+  n += (hints.attributes?.length    ?? 0)
+  n += (hints.letters?.length       ?? 0)
+  n += (hints.next_clue_count       ?? 0)
+  return n
 }
 
 function buildRevealed(hints: HintsUsed, answerName: string, answerAttrs: SpeciesAttrs | null): RevealedHints {
@@ -111,7 +122,6 @@ function buildRevealed(hints: HintsUsed, answerName: string, answerAttrs: Specie
     first_letter: hints.first_letter ? answerName.charAt(0) : null,
     attributes:   [],
     letters:      [],
-    eliminated:   hints.eliminated ?? [],
   }
   if (hints.attributes && answerAttrs) {
     for (const key of hints.attributes) {
@@ -150,8 +160,7 @@ export async function getDailyFishPuzzle(): Promise<FishPuzzleState | { error: s
   const solved: boolean = attempt?.solved ?? false
   const isOver = solved || guesses.length >= MAX_GUESSES
   const hintsUsed: HintsUsed = (attempt?.hints_used as HintsUsed | null) ?? {}
-  const wrongCount = solved ? guesses.length - 1 : guesses.length
-  const cluesVisible = Math.min(wrongCount + 1, 4)
+  const cluesUnlocked = Math.min(1 + (hintsUsed.next_clue_count ?? 0), 4)
   const allClues = [fish.clue_1, fish.clue_2, fish.clue_3, fish.clue_4]
 
   // Resolve answer attrs (needed for revealed hints + once-over)
@@ -170,11 +179,12 @@ export async function getDailyFishPuzzle(): Promise<FishPuzzleState | { error: s
 
   return {
     date: today,
-    clues: allClues.slice(0, isOver ? 4 : cluesVisible),
+    clues: allClues.slice(0, isOver ? 4 : cluesUnlocked),
     cluesTotal: 4,
     guesses,
     maxGuesses: MAX_GUESSES,
     hintsUsed,
+    hintBuysTotal: hintBuysTotal(hintsUsed),
     revealed,
     gemsRemaining,
     hintCosts: HINT_COSTS,
@@ -205,7 +215,6 @@ export async function submitFishGuess(guessName: string): Promise<{
   newAchievements?: string[]
   answer?: FishAnswer
   gemsRemaining: number
-  nextClue?: string
 } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -234,9 +243,6 @@ export async function submitFishGuess(guessName: string): Promise<{
   const isOver = correct || newGuesses.length >= MAX_GUESSES
   const remaining = Math.max(0, STARTING_GEMS - gemsSpent(hintsUsed))
   const guessGems = correct ? remaining : 0
-  // After a wrong non-final guess, surface the next clue (clue index = wrongCount, 0-based)
-  const allClues = [fish.clue_1, fish.clue_2, fish.clue_3, fish.clue_4]
-  const nextClue = !correct && !isOver ? allClues[newGuesses.length] : undefined
 
   const payload = { guesses: newGuesses, solved: correct, gems_awarded: guessGems }
   if (existing) {
@@ -311,7 +317,6 @@ export async function submitFishGuess(guessName: string): Promise<{
         newAchievements,
         answer,
         gemsRemaining: remaining,
-        nextClue,
       }
     }
   }
@@ -322,12 +327,11 @@ export async function submitFishGuess(guessName: string): Promise<{
     isOver,
     answer: isOver ? answer : undefined,
     gemsRemaining: remaining,
-    nextClue,
   }
 }
 
 export async function purchaseHint(type: HintType): Promise<
-  | { ok: true; hintsUsed: HintsUsed; revealed: RevealedHints; gemsRemaining: number }
+  | { ok: true; hintsUsed: HintsUsed; revealed: RevealedHints; gemsRemaining: number; hintBuysTotal: number; unlockedClue?: string }
   | { error: string }
 > {
   const supabase = await createClient()
@@ -350,9 +354,12 @@ export async function purchaseHint(type: HintType): Promise<
     .single()
 
   if (existing?.solved) return { error: 'Already solved' }
-  if ((existing?.guesses?.length ?? 0) >= MAX_GUESSES) return { error: 'Out of guesses' }
+  const guessCount = existing?.guesses?.length ?? 0
+  if (guessCount >= MAX_GUESSES) return { error: 'Out of guesses' }
 
   const hints: HintsUsed = (existing?.hints_used as HintsUsed | null) ?? {}
+  // One hint per round: hint count must not exceed (current guess count + 1)
+  if (hintBuysTotal(hints) > guessCount) return { error: 'Make a guess first' }
   const spentSoFar = gemsSpent(hints)
   if (spentSoFar + cost > STARTING_GEMS) return { error: 'Not enough gems remaining' }
 
@@ -388,20 +395,10 @@ export async function purchaseHint(type: HintType): Promise<
     if (remaining.length === 0) return { error: 'All letters already revealed' }
     const pick = remaining[Math.floor(Math.random() * remaining.length)]
     next.letters = [...(hints.letters ?? []), pick.i]
-  } else if (type === 'eliminate') {
-    const { data: pool } = await admin
-      .from('fish_species')
-      .select('name')
-      .eq('fotd_eligible', true)
-    const taken = new Set([
-      ...(hints.eliminated ?? []),
-      ...(existing?.guesses ?? []),
-      fish.common_name,
-    ])
-    const candidates = (pool ?? []).map(r => r.name as string).filter(n => !taken.has(n))
-    if (candidates.length === 0) return { error: 'No species left to eliminate' }
-    const pick = candidates[Math.floor(Math.random() * candidates.length)]
-    next.eliminated = [...(hints.eliminated ?? []), pick]
+  } else if (type === 'next_clue') {
+    const current = hints.next_clue_count ?? 0
+    if (current >= 3) return { error: 'All clues already unlocked' }
+    next.next_clue_count = current + 1
   }
 
   const payload = { hints_used: next }
@@ -415,7 +412,9 @@ export async function purchaseHint(type: HintType): Promise<
 
   const revealed = buildRevealed(next, fish.common_name, answerAttrs)
   const gemsRemaining = Math.max(0, STARTING_GEMS - gemsSpent(next))
-  return { ok: true, hintsUsed: next, revealed, gemsRemaining }
+  const allClues = [fish.clue_1, fish.clue_2, fish.clue_3, fish.clue_4]
+  const unlockedClue = type === 'next_clue' ? allClues[next.next_clue_count!] : undefined
+  return { ok: true, hintsUsed: next, revealed, gemsRemaining, hintBuysTotal: hintBuysTotal(next), unlockedClue }
 }
 
 export async function getAllFishNames(): Promise<string[]> {
