@@ -217,8 +217,11 @@ export default function RaidCombat({
     function tick(now: number) {
       const dt = Math.min(now - last, 50)
       last = now
-      // Freeze frame on a critical lock: bar holds at the lock moment so the impact reads
-      if (critFreeze) { rafRef.current = requestAnimationFrame(tick); return }
+      // Freeze the needle + target zone the moment the player locks a shot so
+      // they can clearly see where the indicator landed. Reads from a ref so
+      // the freeze takes effect on the next frame (the state closure here is
+      // stale once subPhase stays 'aiming').
+      if (critFreezeRef.current) { rafRef.current = requestAnimationFrame(tick); return }
       const frames = dt / 16.67
 
       firePosRef.current += INDICATOR_SPEED * frames * fireDirRef.current
