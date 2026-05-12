@@ -63,7 +63,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
       shipSpeed: 3, actionMs: 5500,
       pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
-      image: '/enemytier1.png',
+      image: '/enemytier1scout.png',
       portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png',
     },
     corsair: {

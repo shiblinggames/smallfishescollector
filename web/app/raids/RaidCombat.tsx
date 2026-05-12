@@ -325,10 +325,10 @@ export default function RaidCombat({
       }
     }
 
-    setTimeout(() => { setCritFreeze(false); advanceToReveal(playerAction!) }, dur)
+    setTimeout(() => { setCritFreeze(false); advanceToReveal(playerAction!, res) }, dur)
   }
 
-  function advanceToReveal(pAction: EnemyAction) {
+  function advanceToReveal(pAction: EnemyAction, res: ShotResult | null = null) {
     const eAction = pickEnemyAction()
     setEnemyAction(eAction)
 
@@ -341,11 +341,11 @@ export default function RaidCombat({
 
     // Short beat to register both actions visually, then resolve
     setTimeout(() => {
-      resolveTurn(pAction, eAction, first, pSpeedRoll, eSpeedRoll)
+      resolveTurn(pAction, eAction, first, pSpeedRoll, eSpeedRoll, res)
     }, 380)
   }
 
-  function resolveTurn(pAction: EnemyAction, eAction: EnemyAction, first: Actor, pSpeedRoll: number, eSpeedRoll: number) {
+  function resolveTurn(pAction: EnemyAction, eAction: EnemyAction, first: Actor, pSpeedRoll: number, eSpeedRoll: number, lockedAimResult: ShotResult | null) {
     setSubPhase('resolving')
     const log: string[] = [`Speed: you ${pSpeedRoll} vs enemy ${eSpeedRoll} → ${first} first`]
 
@@ -397,7 +397,7 @@ export default function RaidCombat({
             ? getActiveEffects(equippedRaidItems).filter(e => e.type === 'boss_damage_mult').reduce((a, e) => a * e.value, 1)
             : 1
           const mult = (action === 'volley' ? 2 : 1) * bossMult
-          dmg = Math.floor(rollShotDamage(aimResult ?? 'miss', shipMinDamage, totalPower) * mult)
+          dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower) * mult)
         } else {
           const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
           dmg = base * (action === 'volley' ? 2 : 1)
@@ -421,9 +421,9 @@ export default function RaidCombat({
 
         if (isAttackerPlayer) {
           eHp = Math.max(0, eHp - dmg)
-          log.push(`You ${action === 'volley' ? 'volley' : 'fire'}${aimResult === 'critical' ? ' — CRITICAL!' : ''} for ${dmg}`)
+          log.push(`You ${action === 'volley' ? 'volley' : 'fire'}${lockedAimResult === 'critical' ? ' — CRITICAL!' : ''} for ${dmg}`)
           splatText = `-${dmg}`
-          splatColor = aimResult === 'critical' ? '#fbbf24' : '#ef4444'
+          splatColor = lockedAimResult === 'critical' ? '#fbbf24' : '#ef4444'
         } else {
           pHp = Math.max(0, pHp - dmg)
           log.push(`Enemy ${action === 'volley' ? 'volleys' : 'fires'} for ${dmg}`)
@@ -432,7 +432,7 @@ export default function RaidCombat({
         }
       }
 
-      steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, big: who === 'player' && aimResult === 'critical' })
+      steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, big: who === 'player' && lockedAimResult === 'critical' })
     }
 
     setResolveLog(log)
