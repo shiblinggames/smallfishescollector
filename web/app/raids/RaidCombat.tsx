@@ -293,33 +293,38 @@ export default function RaidCombat({
     if (subPhase !== 'aiming' || critFreeze) return
     const res = getShotResult(firePosRef.current, zonePosRef.current)
     setAimResult(res)
+    setCritFreeze(true)  // freezes the aim bar at the lock position regardless of result
 
-    // INSTANT impact feedback — fire ALL player visuals right now, while the
-    // aim bar is still visible. This matches the existing raid's "tap = boom"
-    // feel. The damage itself is applied at resolution but the visuals are
-    // already out the door.
-    if (res !== 'miss') {
-      setPlayerRecoilKey(k => k + 1)
-      const cannonKind: 'normal' | 'volley' | 'crit' =
-        res === 'critical' ? 'crit' :
-        playerAction === 'volley' ? 'volley' : 'normal'
-      setCannonShot({ key: Date.now(), kind: cannonKind })
-      setTimeout(() => setCannonShot(null), 700)
-    }
+    // LOCK MOMENT = aim quality feedback only.
+    // No cannon shot, no damage splat — those fire together at resolution time
+    // so cannon-fire and impact read as one tight beat. The cancel-on-kill
+    // mechanic (faster ship's killing blow cancels the slower's shot) stays
+    // intact.
+    //
+    // Feedback that matches a fishing-perfect / current-raid-crit:
+    //   - aim bar freezes with the locked indicator pulsing
+    //   - center-screen aim-result badge ("CRITICAL!", "HIT!", etc.)
+    //   - on crit: full-screen gold flash + haptic burst
+    //   - on hit: short haptic
+    const dur =
+      res === 'critical' ? 720 :
+      res === 'hit'      ? 460 :
+      res === 'graze'    ? 320 :
+                           220
 
     if (res === 'critical') {
-      // Crit moment: freeze the aim bar AND fire the full-screen flash now.
-      setCritFreeze(true)
       setCritFlash(true)
       setTimeout(() => setCritFlash(false), 380)
-      setTimeout(() => { setCritFreeze(false); advanceToReveal(playerAction!) }, 780)
-    } else if (res !== 'miss') {
-      // Non-crit hit: let the cannon shot fly before we move on.
-      setTimeout(() => advanceToReveal(playerAction!), 480)
-    } else {
-      // Pure miss — nothing to celebrate, advance quickly.
-      setTimeout(() => advanceToReveal(playerAction!), 160)
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try { navigator.vibrate([40, 60, 80]) } catch {}
+      }
+    } else if (res === 'hit') {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try { navigator.vibrate([30]) } catch {}
+      }
     }
+
+    setTimeout(() => { setCritFreeze(false); advanceToReveal(playerAction!) }, dur)
   }
 
   function advanceToReveal(pAction: EnemyAction) {
@@ -333,10 +338,10 @@ export default function RaidCombat({
     setFirstActor(first)
     setSubPhase('revealing')
 
-    // After a brief reveal pause, resolve in order
+    // Short beat to register both actions visually, then resolve
     setTimeout(() => {
       resolveTurn(pAction, eAction, first, pSpeedRoll, eSpeedRoll)
-    }, 900)
+    }, 380)
   }
 
   function resolveTurn(pAction: EnemyAction, eAction: EnemyAction, first: Actor, pSpeedRoll: number, eSpeedRoll: number) {
@@ -436,8 +441,11 @@ export default function RaidCombat({
     //   2. Show hitsplat (if applicable)
     //   3. Clear hitsplat after ~600ms so it exits cleanly
     //   4. Wait ~800ms total before next step (so the second hitsplat starts ~200ms after the first clears)
-    const STEP_GAP_MS    = 750
-    const SPLAT_HOLD_MS  = 400
+    // Tight timing: cannon shot + splat fire as one beat. Step gap is sized
+    // to fit (cannon flight 220ms + splat hold 480ms + small buffer 200ms).
+    const PROJECTILE_FLIGHT_MS = 220
+    const SPLAT_HOLD_MS        = 480
+    const STEP_GAP_MS          = 980
 
     function playStep(i: number) {
       if (i >= steps.length) {
@@ -452,37 +460,49 @@ export default function RaidCombat({
       }
 
       const step = steps[i]
-      // Apply state snapshot for this step
-      setPlayerHp(step.pHp); setEnemyHp(step.eHp)
+      const isAttack  = step.action === 'fire' || step.action === 'volley'
+      const isDodged  = isAttack && step.splatText === 'Dodged'
+
+      // Charges always update at the start of the step (reloads visible right
+      // away; spending charges visible the moment the cannon fires).
       setPlayerCharges(step.pCharges); setEnemyCharges(step.eCharges)
 
-      const isAttack = step.action === 'fire' || step.action === 'volley'
-      const isDodged = isAttack && step.splatText === 'Dodged'
+      if (isAttack && step.who === 'player') {
+        // Player firing: cannon shot + recoil immediately, projectile flies,
+        // then splat + shake + HP update + crit flash all together.
+        setPlayerRecoilKey(k => k + 1)
+        const cannonKind: 'normal' | 'volley' | 'crit' =
+          step.big ? 'crit' : step.action === 'volley' ? 'volley' : 'normal'
+        setCannonShot({ key: Date.now() + i, kind: cannonKind })
+        setTimeout(() => setCannonShot(null), 700)
 
-      // Player attacker visuals (recoil, cannon, crit flash) ALREADY played at
-      // lockShot — don't re-fire them here. Just apply the damage outcome.
-      // Enemy attacker has no "lock" moment, so visuals fire here.
-
-      // Defender hitsplat + shake.
-      if (step.splatTarget === 'enemy') {
-        setEHitsplat({ key: Date.now() + i, text: step.splatText, color: step.splatColor, big: step.big })
-        if (!isDodged) {
-          setEnemyShakeKind(step.big ? 'crit' : 'hit')
-          setEnemyShakeKey(k => k + 1)
-        }
-      }
-      if (step.splatTarget === 'player') {
-        setPHitsplat({ key: Date.now() + i, text: step.splatText, color: step.splatColor, big: step.big })
-        if (!isDodged) setPlayerShakeKey(k => k + 1)
-      }
-
-      // Clear the hitsplat after a short hold so it exits and doesn't linger
-      if (step.splatTarget) {
         setTimeout(() => {
-          if (step.splatTarget === 'enemy') setEHitsplat(null)
-          else                              setPHitsplat(null)
-        }, SPLAT_HOLD_MS)
+          setEnemyHp(step.eHp)
+          if (step.splatTarget === 'enemy') {
+            setEHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: step.big })
+            if (!isDodged) {
+              setEnemyShakeKind(step.big ? 'crit' : 'hit')
+              setEnemyShakeKey(k => k + 1)
+            }
+            if (step.big) {
+              setCritFlash(true)
+              setTimeout(() => setCritFlash(false), 380)
+            }
+            setTimeout(() => setEHitsplat(null), SPLAT_HOLD_MS)
+          }
+        }, PROJECTILE_FLIGHT_MS)
+      } else if (isAttack && step.who === 'enemy') {
+        // Enemy firing at player — brief beat, then splat + shake + HP update.
+        setTimeout(() => {
+          setPlayerHp(step.pHp)
+          if (step.splatTarget === 'player') {
+            setPHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: step.big })
+            if (!isDodged) setPlayerShakeKey(k => k + 1)
+            setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
+          }
+        }, PROJECTILE_FLIGHT_MS)
       }
+      // reload / dodge: state already updated via charges above. No splat.
 
       setTimeout(() => playStep(i + 1), STEP_GAP_MS)
     }
@@ -561,7 +581,7 @@ export default function RaidCombat({
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           style={{
-            position: 'absolute', right: '7%', top: '48%', zIndex: 2,
+            position: 'absolute', right: '7%', top: '42%', zIndex: 2,
             width: '38%', maxWidth: 185,
           }}
         >
@@ -574,7 +594,7 @@ export default function RaidCombat({
               style={{
                 width: '100%', display: 'block',
                 transform: 'scaleX(-1)',  // face the player
-                filter: `drop-shadow(0 10px 22px rgba(0,0,0,0.55)) ${isBoss ? 'hue-rotate(20deg) brightness(0.95)' : 'hue-rotate(180deg) brightness(0.85)'}`,
+                filter: `drop-shadow(0 3px 6px rgba(0,0,0,0.35)) ${isBoss ? 'hue-rotate(20deg) brightness(0.95)' : 'hue-rotate(180deg) brightness(0.85)'}`,
                 pointerEvents: 'none',
               }}
             />
@@ -603,7 +623,7 @@ export default function RaidCombat({
                 transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
                 style={{
                   width: '100%', display: 'block',
-                  filter: 'drop-shadow(0 10px 22px rgba(74,222,128,0.3))',
+                  filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
                 }}
               />
               {cannonShot && (
@@ -615,6 +635,45 @@ export default function RaidCombat({
             </AnimatePresence>
           </motion.div>
         </motion.div>
+
+        {/* Aim-result badge — pops up during the lock freeze, before resolution */}
+        <AnimatePresence>
+          {aimResult && critFreeze && (
+            <motion.div
+              key={`aim-badge-${aimResult}`}
+              initial={{ scale: 0.4, opacity: 0, rotate: -8 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 480, damping: 16 }}
+              style={{
+                position: 'absolute', top: '38%', left: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 11, pointerEvents: 'none',
+                padding: aimResult === 'critical' ? '0.55rem 1.2rem' : '0.4rem 0.95rem',
+                borderRadius: 999,
+                background:
+                  aimResult === 'critical' ? '#fbbf24' :
+                  aimResult === 'hit'      ? '#4ade80' :
+                  aimResult === 'graze'    ? '#94a3b8' :
+                                             '#6b7280',
+                color: '#0a1422',
+                fontFamily: 'var(--font-cinzel)', fontWeight: 700,
+                fontSize: aimResult === 'critical' ? '1.55rem' : '1.05rem',
+                letterSpacing: '0.06em',
+                boxShadow:
+                  aimResult === 'critical'
+                    ? '0 6px 30px rgba(251,191,36,0.7), 0 0 18px rgba(251,191,36,0.55)'
+                    : aimResult === 'hit'
+                    ? '0 4px 18px rgba(74,222,128,0.5)'
+                    : '0 2px 10px rgba(0,0,0,0.4)',
+                textShadow: aimResult === 'critical' ? '0 1px 4px rgba(0,0,0,0.4)' : 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {aimResult === 'critical' ? 'CRITICAL!' : aimResult.toUpperCase()}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Player HP box — bottom-right */}
         <div style={{
