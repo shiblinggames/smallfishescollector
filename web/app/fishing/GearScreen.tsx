@@ -238,7 +238,7 @@ function GearSlot({
         }
       </div>
       <div style={{ textAlign: 'center' }}>
-        <p className="font-karla font-600 uppercase" style={{ fontSize: '0.62rem', color: color + 'cc', letterSpacing: '0.14em', marginBottom: 1 }}>{label}</p>
+        <p className="font-karla font-600 uppercase" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.14em', marginBottom: 1 }}>{label}</p>
         <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: empty ? '#2e2c2a' : '#d0cdc8', lineHeight: 1.2 }}>{itemName}</p>
       </div>
     </button>
@@ -353,28 +353,23 @@ export default function GearScreen({
           {(() => {
             const activeHat = equippedHat ? HATS.find(h => h.id === equippedHat) : null
             const swatchColor = activeHat?.color ?? '#6a6764'
-            const hatName = activeHat?.name ?? 'None'
+            const hatName = activeHat?.name ?? 'Default'
             return (
               <GearSlot
                 label="Hat Color"
                 color={swatchColor}
                 itemName={hatName}
                 onClick={() => setOpenSlot('hat')}
-                empty={!activeHat}
                 icon={
-                  activeHat
-                    ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={activeHat.restImageUrl}
-                        alt={activeHat.name}
-                        style={{
-                          width: 36, height: 36, objectFit: 'contain',
-                          filter: `drop-shadow(0 0 6px ${swatchColor}55)`,
-                        }}
-                      />
-                    )
-                    : <span style={{ fontSize: '1.1rem', color: '#3a3835' }}>—</span>
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={activeHat?.restImageUrl ?? '/defaulthat_rest.png'}
+                    alt={activeHat?.name ?? 'Default'}
+                    style={{
+                      width: 36, height: 36, objectFit: 'contain',
+                      filter: activeHat ? `drop-shadow(0 0 6px ${swatchColor}55)` : 'none',
+                    }}
+                  />
                 }
               />
             )
@@ -434,29 +429,20 @@ export default function GearScreen({
               itemName={boatName}
               onClick={() => setOpenSlot('cosmetic')}
               icon={
-                activeBoat ? (
-                  <div style={{
-                    position: 'relative',
-                    width: 36, height: 36, borderRadius: 9, overflow: 'hidden',
-                    background: 'rgba(4,10,18,0.85)',
-                    border: `1px solid ${swatchColor}cc`,
-                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 12px ${swatchColor}40`,
-                  }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={activeBoat.restImageUrl} alt="" style={{
-                      width: '170%', height: 'auto', display: 'block',
-                      position: 'absolute', top: '50%', left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                    }} />
-                  </div>
-                ) : (
-                  <div style={{
-                    width: 32, height: 32, borderRadius: 9,
-                    background: swatchColor,
-                    border: `1px solid ${swatchColor}cc`,
-                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 0 12px ${swatchColor}40`,
+                <div style={{
+                  position: 'relative',
+                  width: 36, height: 36, borderRadius: 9, overflow: 'hidden',
+                  background: 'rgba(4,10,18,0.85)',
+                  border: `1px solid ${swatchColor}cc`,
+                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 12px ${swatchColor}40`,
+                }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={activeBoat?.restImageUrl ?? '/boat_default_rest.png'} alt="" style={{
+                    width: '170%', height: 'auto', display: 'block',
+                    position: 'absolute', top: '50%', left: '50%',
+                    transform: 'translate(-50%, -50%)',
                   }} />
-                )
+                </div>
               }
             />
           )
@@ -742,11 +728,20 @@ export default function GearScreen({
                           }}
                         >
                           <div style={{
+                            position: 'relative',
                             width: 48, height: 48, borderRadius: 12,
-                            background: DEFAULT_BOAT_COLOR,
+                            overflow: 'hidden',
+                            background: 'rgba(4,10,18,0.85)',
                             border: `1px solid ${DEFAULT_BOAT_COLOR}cc`,
-                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 0 14px ${DEFAULT_BOAT_COLOR}40`,
-                          }} />
+                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 18px ${DEFAULT_BOAT_COLOR}55`,
+                          }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src="/boat_default_rest.png" alt="" style={{
+                              width: '170%', height: 'auto', display: 'block',
+                              position: 'absolute', top: '50%', left: '50%',
+                              transform: 'translate(-50%, -50%)',
+                            }} />
+                          </div>
                           <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>Driftwood</p>
                           {isEquipped
                             ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: DEFAULT_BOAT_COLOR }}>✓ Equipped</span>
@@ -870,14 +865,21 @@ export default function GearScreen({
                           <div style={{
                             width: 48, height: 48, borderRadius: 12,
                             background: 'rgba(255,255,255,0.04)',
-                            border: '1px dashed rgba(255,255,255,0.18)',
+                            border: `1px solid ${isEquipped ? noneColor + '90' : 'rgba(255,255,255,0.09)'}`,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: '#5a5856', fontSize: '0.7rem',
-                          }}>—</div>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>None</p>
+                            overflow: 'hidden',
+                          }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src="/defaulthat_rest.png"
+                              alt="Default"
+                              style={{ width: 38, height: 38, objectFit: 'contain' }}
+                            />
+                          </div>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>Default</p>
                           {isEquipped
                             ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: noneColor }}>✓ Equipped</span>
-                            : <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#5a5856' }}>Bareheaded</span>
+                            : <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#5a5856' }}>Built-in</span>
                           }
                         </button>
                       )
