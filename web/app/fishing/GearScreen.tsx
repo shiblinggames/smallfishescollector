@@ -392,7 +392,7 @@ export default function GearScreen({
               <div style={{
                 width: 36, height: 36, borderRadius: '50%', overflow: 'hidden',
                 backgroundImage: `url(${charSrc.rest})`,
-                backgroundSize: '420% auto', backgroundPosition: '60% 60%', backgroundRepeat: 'no-repeat',
+                backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat',
                 border: '1px solid rgba(255,255,255,0.2)',
               }} />
             }
@@ -779,29 +779,25 @@ export default function GearScreen({
                             position: 'relative',
                           }}
                         >
-                          {b.effect ? (
-                            <div className={`boat-fx boat-fx-${b.effect}`} style={{
+                          <div
+                            className={b.effect ? `boat-fx boat-fx-${b.effect}` : undefined}
+                            style={{
                               position: 'relative',
                               width: 48, height: 48, borderRadius: 12,
                               overflow: 'hidden',
                               background: 'rgba(4,10,18,0.85)',
                               border: `1px solid ${b.color}cc`,
                               boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 18px ${b.color}55`,
-                            }}>
-                              <img src={b.restImageUrl} alt="" style={{
-                                width: '170%', height: 'auto', display: 'block',
-                                position: 'absolute', top: '50%', left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                              }} />
-                            </div>
-                          ) : (
-                            <div style={{
-                              width: 48, height: 48, borderRadius: 12,
-                              background: b.color,
-                              border: `1px solid ${b.color}cc`,
-                              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), 0 0 16px ${b.color}50`,
+                              ...(b.effect ? { ['--boat-mask' as string]: `url('${b.restImageUrl}')` } : {}),
+                            } as React.CSSProperties}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={b.restImageUrl} alt="" style={{
+                              width: '170%', height: 'auto', display: 'block',
+                              position: 'absolute', top: '50%', left: '50%',
+                              transform: 'translate(-50%, -50%)',
                             }} />
-                          )}
+                          </div>
                           <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: owned ? '#f0ede8' : '#a0a09a', lineHeight: 1.1, textAlign: 'center' }}>{b.name}</p>
                           {isEquipped ? (
                             <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: b.color }}>✓ Equipped</span>
@@ -959,7 +955,7 @@ export default function GearScreen({
                           <div style={{
                             width: 48, height: 48, borderRadius: '50%', overflow: 'hidden',
                             backgroundImage: `url(${sprites.rest})`,
-                            backgroundSize: '420% auto', backgroundPosition: '60% 60%', backgroundRepeat: 'no-repeat',
+                            backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat',
                             border: isActive ? '2px solid #60a5fa' : '2px solid rgba(255,255,255,0.12)',
                             boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.4)' : 'none',
                             position: 'relative',
