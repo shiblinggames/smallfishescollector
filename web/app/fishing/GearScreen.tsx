@@ -436,15 +436,19 @@ export default function GearScreen({
               icon={
                 activeBoat ? (
                   <div style={{
+                    position: 'relative',
                     width: 36, height: 36, borderRadius: 9, overflow: 'hidden',
-                    backgroundImage: `url(${activeBoat.restImageUrl})`,
-                    backgroundSize: 'auto 220%',
-                    backgroundPosition: '75% 65%',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundColor: 'rgba(4,10,18,0.6)',
+                    background: 'rgba(4,10,18,0.85)',
                     border: `1px solid ${swatchColor}cc`,
                     boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 12px ${swatchColor}40`,
-                  }} />
+                  }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={activeBoat.restImageUrl} alt="" style={{
+                      width: '170%', height: 'auto', display: 'block',
+                      position: 'absolute', top: '50%', left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                    }} />
+                  </div>
                 ) : (
                   <div style={{
                     width: 32, height: 32, borderRadius: 9,
