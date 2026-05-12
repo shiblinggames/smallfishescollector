@@ -27,7 +27,6 @@ import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS, getBait } from '@/lib/bait'
 import GearScreen from './GearScreen'
-import ShallowsAmbient from './ShallowsAmbient'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -2530,7 +2529,6 @@ export default function FishingGame({
             alt=""
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
           />
-          {selectedZone === 'shallows' && <ShallowsAmbient />}
         </motion.div>
 
         {/* Character + rod + hook overlay — all 3 frames always in DOM so sprites are pre-decoded */}

@@ -370,17 +370,6 @@ body {
 }
 .rod-glow { animation: rod-glow-pulse 2.4s ease-in-out infinite; }
 
-/* ── Shallows ambient (caustics + sunlight godrays) ── */
-@keyframes shallowsCaustics {
-  0%   { transform: translateX(-3%) scale(1.04); opacity: 0.45; }
-  50%  { transform: translateX(2%)  scale(1.08); opacity: 0.65; }
-  100% { transform: translateX(4%)  scale(1.05); opacity: 0.50; }
-}
-@keyframes shallowsGodray {
-  0%, 100% { opacity: calc(var(--ray-peak, 0.2) * 0.88); }
-  50%      { opacity: var(--ray-peak, 0.2); }
-}
-
 /* ════════════════════════════════════════
    BOAT COSMETIC EFFECTS
    Wrapper div .boat-fx-* sits where the boat <img> used to sit;
