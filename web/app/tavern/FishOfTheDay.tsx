@@ -167,17 +167,17 @@ export default function FishOfTheDay({
       {puzzle.streak > 0 && !puzzle.isOver && (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0.55rem 0.8rem',
-          background: 'rgba(251,146,60,0.06)',
-          border: '1px solid rgba(251,146,60,0.18)',
+          padding: '0.6rem 0.85rem',
+          background: '#3a1f08',
+          border: '2px solid #c2410c',
           borderRadius: 10,
         }}>
-          <p className="font-karla" style={{ fontSize: '0.7rem', color: '#fb923c' }}>
-            <span style={{ fontWeight: 700 }}>{puzzle.streak}</span>
-            <span style={{ color: 'rgba(251,146,60,0.65)' }}> day streak</span>
+          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#fbbf24' }}>
+            <span style={{ fontWeight: 800, fontSize: '0.82rem' }}>{puzzle.streak}</span>
+            <span style={{ color: '#fb923c' }}> day streak</span>
           </p>
-          <p className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(251,146,60,0.7)' }}>
-            Next: Day {next.day} → +{next.reward} ◆ {daysToNext === 1 ? '(tomorrow!)' : `(${daysToNext} days)`}
+          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#fb923c' }}>
+            Day {next.day} → +{next.reward} ◆ {daysToNext === 1 ? '(tomorrow!)' : `(${daysToNext} days)`}
           </p>
         </div>
       )}
@@ -196,23 +196,24 @@ export default function FishOfTheDay({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
               style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 12, padding: '0.85rem 1rem',
-                display: 'flex', gap: 12,
+                background: '#11243a',
+                border: '2px solid #1f3a5a',
+                borderLeft: '5px solid #6c4cd6',
+                borderRadius: 10, padding: '0.85rem 0.95rem',
+                display: 'flex', gap: 11, alignItems: 'flex-start',
               }}
             >
               <div style={{
-                width: 24, height: 24, borderRadius: 6, flexShrink: 0,
+                width: 26, height: 26, borderRadius: 6, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(167,139,250,0.12)',
-                border: '1px solid rgba(167,139,250,0.3)',
-                fontFamily: 'var(--font-cinzel)', fontSize: '0.72rem',
-                color: '#a78bfa', fontWeight: 700,
+                background: '#6c4cd6',
+                fontFamily: 'var(--font-cinzel)', fontSize: '0.8rem',
+                color: '#ffffff', fontWeight: 700,
+                marginTop: 1,
               }}>
                 {i + 1}
               </div>
-              <p className="font-karla" style={{ fontSize: '0.92rem', lineHeight: 1.5, color: '#e8e4de', flex: 1 }}>
+              <p className="font-karla" style={{ fontSize: '0.92rem', lineHeight: 1.55, color: '#e8e4de', flex: 1 }}>
                 {clue}
               </p>
             </motion.div>
@@ -222,20 +223,20 @@ export default function FishOfTheDay({
 
       {/* Guess history pips */}
       {puzzle.guesses.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '0.55rem 0.75rem', background: 'rgba(0,0,0,0.22)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '0.6rem 0.85rem', background: '#0a1422', border: '2px solid #1f3a5a', borderRadius: 10 }}>
           {puzzle.guesses.map((g, i) => {
             const isCorrect = puzzle.solved && i === puzzle.guesses.length - 1
             return (
-              <div key={i} className="flex items-center gap-2">
+              <div key={i} className="flex items-center gap-2.5">
                 <span style={{
-                  width: 14, height: 14, borderRadius: 3,
-                  background: isCorrect ? '#22c55e' : 'rgba(239,68,68,0.85)',
+                  width: 16, height: 16, borderRadius: 3,
+                  background: isCorrect ? '#22c55e' : '#ef4444',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '0.6rem', color: '#0a0a0a', fontWeight: 800, flexShrink: 0,
+                  fontSize: '0.7rem', color: '#0a0a0a', fontWeight: 800, flexShrink: 0,
                 }}>
                   {isCorrect ? '✓' : '✕'}
                 </span>
-                <span className="font-karla" style={{ fontSize: '0.78rem', color: isCorrect ? '#22c55e' : 'rgba(255,255,255,0.55)' }}>
+                <span className="font-karla font-600" style={{ fontSize: '0.82rem', color: isCorrect ? '#22c55e' : '#9ab0c8' }}>
                   {g}
                 </span>
               </div>
@@ -247,28 +248,28 @@ export default function FishOfTheDay({
       {/* Hint shop */}
       {!puzzle.isOver && (
         <div style={{
-          padding: '0.55rem 0.65rem 0.7rem',
-          background: 'rgba(167,139,250,0.04)',
-          border: '1px solid rgba(167,139,250,0.18)',
+          padding: '0.65rem 0.7rem 0.75rem',
+          background: '#1c104a',
+          border: '2px solid #4a3494',
           borderRadius: 12,
         }}>
-          <div className="flex items-center justify-between" style={{ padding: '0 0.2rem 0.5rem' }}>
-            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: 'rgba(167,139,250,0.75)' }}>
-              {roundHintUsed ? 'Locked — Guess to Continue' : 'Hint Shop · 1 per round'}
+          <div className="flex items-center justify-between" style={{ padding: '0 0.2rem 0.55rem' }}>
+            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.58rem', color: roundHintUsed ? '#fbbf24' : '#c4b5fd' }}>
+              {roundHintUsed ? '🔒 Locked — Guess to Continue' : 'Hint Shop · 1 per round'}
             </p>
             <AnimatePresence>
               {hintError && (
                 <motion.p
                   key={hintError}
                   initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                  className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#f87171' }}
+                  className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#f87171' }}
                 >
                   {hintError}
                 </motion.p>
               )}
             </AnimatePresence>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
             {HINT_META.map(({ type, label, icon }) => {
               const cost = puzzle.hintCosts[type]
               const exhausted = isHintExhausted(type, puzzle.hintsUsed)
@@ -276,21 +277,23 @@ export default function FishOfTheDay({
               const lockedRound = roundHintUsed && !exhausted
               const disabled = exhausted || !canAfford || lockedRound || hintPending !== null
               const loading = hintPending === type
+              const bg = exhausted ? '#0f3a23' : lockedRound ? '#15103a' : canAfford ? '#3a2598' : '#15103a'
+              const borderColor = exhausted ? '#22c55e' : lockedRound ? '#3a2870' : canAfford ? '#7c5dde' : '#3a2870'
+              const color = exhausted ? '#4ade80' : lockedRound ? '#5a4a8a' : canAfford ? '#ffffff' : '#5a4a8a'
               return (
                 <motion.button
                   key={type}
                   onClick={() => handleHint(type)}
                   disabled={disabled}
-                  whileTap={disabled ? {} : { scale: 0.95 }}
+                  whileTap={disabled ? {} : { scale: 0.94 }}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    gap: 4, padding: '0.55rem 0.3rem 0.45rem',
-                    background: exhausted ? 'rgba(34,197,94,0.06)' : (canAfford && !lockedRound) ? 'rgba(167,139,250,0.1)' : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${exhausted ? 'rgba(34,197,94,0.25)' : (canAfford && !lockedRound) ? 'rgba(167,139,250,0.32)' : 'rgba(255,255,255,0.07)'}`,
+                    gap: 5, padding: '0.6rem 0.3rem 0.5rem',
+                    background: bg,
+                    border: `2px solid ${borderColor}`,
                     borderRadius: 9,
-                    color: exhausted ? '#22c55e' : (canAfford && !lockedRound) ? '#a78bfa' : '#5a5856',
+                    color,
                     cursor: disabled ? 'default' : 'pointer',
-                    opacity: lockedRound ? 0.4 : (!canAfford && !exhausted ? 0.55 : 1),
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 20 }}>
@@ -298,11 +301,11 @@ export default function FishOfTheDay({
                       <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block', fontSize: '0.75rem' }}>◆</motion.span>
                     ) : icon}
                   </div>
-                  <p className="font-karla font-700" style={{ fontSize: '0.56rem', color: '#f0ede8', textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1.2, textAlign: 'center' }}>
+                  <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: exhausted ? '#86efac' : '#ffffff', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1.2, textAlign: 'center' }}>
                     {label}
                   </p>
-                  <p className="font-karla font-700" style={{ fontSize: '0.6rem', lineHeight: 1 }}>
-                    {exhausted ? '✓ Got' : `${cost} ◆`}
+                  <p className="font-karla font-700" style={{ fontSize: '0.65rem', lineHeight: 1, color: exhausted ? '#22c55e' : '#fbbf24' }}>
+                    {exhausted ? '✓ GOT' : `${cost} ◆`}
                   </p>
                 </motion.button>
               )
@@ -341,13 +344,12 @@ export default function FishOfTheDay({
               <div style={{
                 position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
                 maxHeight: 200, overflowY: 'auto',
-                background: '#0d0d0b',
-                border: '1px solid rgba(255,255,255,0.1)',
+                background: '#0a1422',
+                border: '2px solid #1f3a5a',
                 borderRadius: 10, zIndex: 20,
-                boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
               }}>
                 {filteredFish.length === 0 ? (
-                  <p className="font-karla" style={{ padding: '0.75rem 1rem', color: '#a0a09a', fontSize: '0.875rem' }}>
+                  <p className="font-karla" style={{ padding: '0.75rem 1rem', color: '#9ab0c8', fontSize: '0.875rem' }}>
                     No fish found
                   </p>
                 ) : filteredFish.map(name => (
@@ -356,10 +358,10 @@ export default function FishOfTheDay({
                     onMouseDown={() => handleSelect(name)}
                     style={{
                       display: 'block', width: '100%', textAlign: 'left',
-                      padding: '0.6rem 1rem',
-                      fontFamily: 'var(--font-karla)', fontSize: '0.86rem',
+                      padding: '0.65rem 1rem',
+                      fontFamily: 'var(--font-karla)', fontSize: '0.88rem',
                       color: '#f0ede8', background: 'transparent',
-                      borderBottom: '1px solid rgba(255,255,255,0.06)',
+                      borderBottom: '1px solid #1f3a5a',
                       cursor: 'pointer',
                     }}
                   >
@@ -374,20 +376,14 @@ export default function FishOfTheDay({
             onClick={handleGuess}
             disabled={!selected || isPending}
             whileTap={!selected || isPending ? {} : { scale: 0.97 }}
-            animate={selected && !isPending ? {
-              boxShadow: ['0 0 0 rgba(34,197,94,0)', '0 0 20px rgba(34,197,94,0.4)', '0 0 0 rgba(34,197,94,0)'],
-            } : { boxShadow: '0 0 0 rgba(34,197,94,0)' }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
             className="font-karla font-700 uppercase tracking-[0.14em]"
             style={{
-              width: '100%', padding: '0.8rem',
+              width: '100%', padding: '0.9rem',
               borderRadius: 10,
-              fontSize: '0.78rem',
-              background: selected && !isPending
-                ? 'linear-gradient(135deg, rgba(34,197,94,0.22), rgba(34,197,94,0.08))'
-                : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${selected && !isPending ? 'rgba(34,197,94,0.45)' : 'rgba(255,255,255,0.1)'}`,
-              color: selected && !isPending ? '#86efac' : 'rgba(255,255,255,0.4)',
+              fontSize: '0.82rem',
+              background: selected && !isPending ? '#22c55e' : '#0a1422',
+              border: `2px solid ${selected && !isPending ? '#22c55e' : '#1f3a5a'}`,
+              color: selected && !isPending ? '#0a1422' : '#5a7a9a',
               cursor: !selected || isPending ? 'not-allowed' : 'pointer',
               transition: 'background 0.18s, border 0.18s, color 0.18s',
             }}
@@ -405,49 +401,48 @@ function HeaderStrip({ gems, guesses, maxGuesses, solved }: { gems: number; gues
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       gap: 14,
-      padding: '0.8rem 1rem',
-      background: 'linear-gradient(135deg, rgba(167,139,250,0.16), rgba(167,139,250,0.04))',
-      border: '1px solid rgba(167,139,250,0.32)',
+      padding: '0.85rem 1.05rem',
+      background: '#2a1b5e',
+      border: '2px solid #6c4cd6',
       borderRadius: 14,
-      boxShadow: '0 0 22px rgba(167,139,250,0.08)',
     }}>
       <div>
-        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: 'rgba(167,139,250,0.7)', marginBottom: 2 }}>
+        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: '#c4b5fd', marginBottom: 3 }}>
           Banked Payout
         </p>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
           <motion.p
             key={gems}
-            initial={{ scale: 1.18, color: '#c4b5fd' }}
-            animate={{ scale: 1, color: '#a78bfa' }}
+            initial={{ scale: 1.18, color: '#fde68a' }}
+            animate={{ scale: 1, color: '#f0c040' }}
             transition={{ duration: 0.35 }}
             className="font-cinzel font-700"
-            style={{ fontSize: '1.8rem', lineHeight: 1 }}
+            style={{ fontSize: '1.9rem', lineHeight: 1 }}
           >
             {gems}
           </motion.p>
-          <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: 'rgba(167,139,250,0.6)' }}>◆</span>
+          <span className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0c040' }}>◆</span>
         </div>
       </div>
       <div style={{ textAlign: 'right' }}>
-        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.45)', marginBottom: 5 }}>
+        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: '#c4b5fd', marginBottom: 5 }}>
           Guesses
         </p>
-        <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end' }}>
           {Array.from({ length: maxGuesses }).map((_, i) => {
             const used = i < guesses
             const isLastUsed = i === guesses - 1
             const isCurrent = i === guesses && !solved
             return (
               <motion.div key={i}
-                animate={isCurrent ? { opacity: [0.4, 1, 0.4] } : { opacity: 1 }}
+                animate={isCurrent ? { opacity: [0.45, 1, 0.45] } : { opacity: 1 }}
                 transition={isCurrent ? { duration: 1.4, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.2 }}
                 style={{
-                  width: 14, height: 14, borderRadius: 3,
+                  width: 16, height: 16, borderRadius: 4,
                   background: used
-                    ? (solved && isLastUsed ? '#22c55e' : 'rgba(239,68,68,0.85)')
-                    : 'rgba(255,255,255,0.06)',
-                  border: `1px solid ${used ? 'transparent' : 'rgba(255,255,255,0.18)'}`,
+                    ? (solved && isLastUsed ? '#22c55e' : '#ef4444')
+                    : '#1c104a',
+                  border: `2px solid ${used ? (solved && isLastUsed ? '#22c55e' : '#ef4444') : '#6c4cd6'}`,
                 }}
               />
             )
@@ -465,13 +460,13 @@ function RevealedPanel({ revealed }: { revealed: RevealedHints }) {
       initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.22 }}
       style={{
-        background: 'rgba(34,197,94,0.04)',
-        border: '1px solid rgba(34,197,94,0.18)',
-        borderRadius: 12, padding: '0.8rem 0.85rem',
-        display: 'flex', flexDirection: 'column', gap: 10,
+        background: '#0a2417',
+        border: '2px solid #15803d',
+        borderRadius: 12, padding: '0.85rem 0.9rem',
+        display: 'flex', flexDirection: 'column', gap: 11,
       }}
     >
-      <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: 'rgba(34,197,94,0.7)' }}>
+      <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.58rem', color: '#4ade80' }}>
         Revealed
       </p>
 
@@ -505,15 +500,15 @@ function RevealedPanel({ revealed }: { revealed: RevealedHints }) {
           {attributes.map(a => (
             <div key={a.key} style={{
               display: 'inline-flex', flexDirection: 'column',
-              padding: '0.25rem 0.6rem',
-              background: 'rgba(34,197,94,0.1)',
-              border: '1px solid rgba(34,197,94,0.28)',
+              padding: '0.3rem 0.65rem',
+              background: '#15803d',
+              border: '2px solid #22c55e',
               borderRadius: 7,
             }}>
-              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: 'rgba(34,197,94,0.7)' }}>
+              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#bbf7d0' }}>
                 {a.label}
               </span>
-              <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#86efac', lineHeight: 1.1, marginTop: 1 }}>
+              <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#ffffff', lineHeight: 1.1, marginTop: 1 }}>
                 {capitalize(a.value)}
               </span>
             </div>
@@ -529,15 +524,15 @@ function LetterChip({ label, value }: { label: string; value: string }) {
   return (
     <div style={{
       display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
-      padding: '0.22rem 0.5rem',
-      background: 'rgba(34,197,94,0.1)',
-      border: '1px solid rgba(34,197,94,0.28)',
+      padding: '0.28rem 0.55rem',
+      background: '#15803d',
+      border: '2px solid #22c55e',
       borderRadius: 7,
     }}>
-      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: 'rgba(34,197,94,0.7)' }}>
+      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#bbf7d0' }}>
         {label}
       </span>
-      <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#86efac', lineHeight: 1 }}>
+      <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffffff', lineHeight: 1 }}>
         {value}
       </span>
     </div>
@@ -573,19 +568,19 @@ function Blanks({ wordLengths, letters, firstLetter }: {
             <motion.div key={`${wi}-${ci}`}
               initial={false}
               animate={{
-                backgroundColor: ch ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.04)',
-                borderColor:     ch ? 'rgba(34,197,94,0.55)' : 'rgba(255,255,255,0.14)',
+                backgroundColor: ch ? '#15803d' : '#0a1422',
+                borderColor:     ch ? '#22c55e' : '#1f3a5a',
                 rotateY:         ch ? [0, 180, 360] : 0,
               }}
               transition={{ duration: ch ? 0.42 : 0, ease: 'easeOut' }}
               style={{
-                width: 30, height: 34,
+                width: 32, height: 36,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 borderRadius: 5,
-                border: '1px solid rgba(255,255,255,0.14)',
-                fontFamily: 'var(--font-cinzel)', fontSize: '1.08rem',
+                border: '2px solid #1f3a5a',
+                fontFamily: 'var(--font-cinzel)', fontSize: '1.12rem',
                 fontWeight: 700,
-                color: ch ? '#86efac' : 'transparent',
+                color: ch ? '#ffffff' : 'transparent',
                 textTransform: 'uppercase',
               }}
             >
@@ -617,79 +612,77 @@ function AnswerCard({ answer, solved, gemsAwarded, streak, milestoneReward }: {
   streak: number
   milestoneReward?: number
 }) {
-  const accent = solved ? '#22c55e' : '#f87171'
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.97, y: 6 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ duration: 0.32, ease: [0.34, 1.56, 0.64, 1] }}
       style={{
-        background: solved ? 'rgba(34,197,94,0.05)' : 'rgba(248,113,113,0.04)',
-        border: `1px solid ${solved ? 'rgba(34,197,94,0.3)' : 'rgba(248,113,113,0.22)'}`,
+        background: solved ? '#0a2417' : '#2a0d0d',
+        border: `2px solid ${solved ? '#22c55e' : '#dc2626'}`,
         borderRadius: 14, overflow: 'hidden',
-        boxShadow: solved ? '0 0 30px rgba(34,197,94,0.12)' : 'none',
       }}
     >
-      <div style={{ padding: '1rem 1.05rem 0.85rem' }}>
-        <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: accent + 'bb', marginBottom: 4 }}>
-          {solved ? `Solved in ${gemsAwarded > 0 ? `${gemsAwarded} ◆` : 'time'}` : 'Out of guesses'}
+      <div style={{ padding: '1rem 1.05rem 0.9rem' }}>
+        <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.58rem', color: solved ? '#4ade80' : '#f87171', marginBottom: 5 }}>
+          {solved ? `Solved · +${gemsAwarded} ◆ Earned` : 'Out of Guesses'}
         </p>
-        <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '1.32rem', lineHeight: 1.1, marginBottom: 4 }}>
+        <p className="font-cinzel font-700" style={{ color: '#ffffff', fontSize: '1.4rem', lineHeight: 1.1, marginBottom: 4 }}>
           {answer.common_name}
         </p>
         {answer.scientific_name && (
-          <p className="font-karla" style={{ fontStyle: 'italic', color: '#a0a09a', fontSize: '0.72rem', marginBottom: '0.7rem' }}>
+          <p className="font-karla" style={{ fontStyle: 'italic', color: '#9ab0c8', fontSize: '0.72rem', marginBottom: '0.75rem' }}>
             {answer.scientific_name}
           </p>
         )}
-        <p className="font-karla" style={{ color: '#d4d0c8', fontSize: '0.88rem', lineHeight: 1.6 }}>
+        <p className="font-karla" style={{ color: '#e8e4dc', fontSize: '0.9rem', lineHeight: 1.6 }}>
           {answer.fun_fact}
         </p>
         {solved && gemsAwarded > 0 && (
           <div style={{
-            marginTop: 12, padding: '0.55rem 0.75rem', borderRadius: 8,
-            background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.3)',
+            marginTop: 12, padding: '0.6rem 0.8rem', borderRadius: 8,
+            background: '#2a1b5e', border: '2px solid #6c4cd6',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
-            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: 'rgba(167,139,250,0.75)' }}>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#c4b5fd' }}>
               Banked Payout
             </span>
-            <span className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#a78bfa' }}>
+            <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0c040' }}>
               +{gemsAwarded} ◆
             </span>
           </div>
         )}
         {milestoneReward && (
           <div style={{
-            marginTop: 6, padding: '0.5rem 0.75rem', borderRadius: 8,
-            background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.28)',
+            marginTop: 6, padding: '0.55rem 0.8rem', borderRadius: 8,
+            background: '#3a1f08', border: '2px solid #c2410c',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
-            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: 'rgba(34,197,94,0.75)' }}>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#fbbf24' }}>
               {streak}-day streak
             </span>
-            <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#86efac' }}>
+            <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#fbbf24' }}>
               +{milestoneReward} ◆
             </span>
           </div>
         )}
         {!solved && (
-          <p className="font-karla font-600" style={{ color: '#f87171', fontSize: '0.74rem', marginTop: 10 }}>
+          <p className="font-karla font-700" style={{ color: '#f87171', fontSize: '0.76rem', marginTop: 10 }}>
             Banked gems forfeited. Try again tomorrow.
           </p>
         )}
       </div>
 
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.18)' }}>
+      <div style={{ background: '#06141f', borderTop: `2px solid ${solved ? '#15803d' : '#7a1d1d'}` }}>
         {DETAIL_ROWS.map(({ key, label }) => {
           const val = answer[key]
           if (!val) return null
           return (
-            <div key={key} className="flex gap-3" style={{ padding: '0.55rem 1.05rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <p className="font-karla font-700 uppercase tracking-[0.12em] shrink-0" style={{ fontSize: '0.55rem', color: '#9a9488', width: 78, paddingTop: 2 }}>
+            <div key={key} className="flex gap-3" style={{ padding: '0.6rem 1.05rem', borderBottom: '1px solid #1f3a5a' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.12em] shrink-0" style={{ fontSize: '0.58rem', color: '#7a8aa0', width: 78, paddingTop: 2 }}>
                 {label}
               </p>
-              <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c8c4bc', lineHeight: 1.55 }}>
+              <p className="font-karla" style={{ fontSize: '0.82rem', color: '#d4d0c8', lineHeight: 1.55 }}>
                 {val}
               </p>
             </div>
@@ -697,8 +690,8 @@ function AnswerCard({ answer, solved, gemsAwarded, streak, milestoneReward }: {
         })}
       </div>
 
-      <p className="font-karla" style={{ color: '#6a6764', fontSize: '0.65rem', padding: '0.65rem 1.05rem', textAlign: 'center' }}>
-        New fish drops at midnight ·
+      <p className="font-karla font-600" style={{ color: '#7a8aa0', fontSize: '0.66rem', padding: '0.7rem 1.05rem', textAlign: 'center' }}>
+        New fish drops at midnight
       </p>
     </motion.div>
   )
