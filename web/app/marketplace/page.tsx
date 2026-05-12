@@ -62,16 +62,17 @@ export default async function MarketplacePage() {
           {/* ── Upgrades ── */}
           <section>
             <Label>Upgrades</Label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div className="grid grid-cols-2 gap-3">
 
               <Link href="/marketplace/tackle-shop" style={{ textDecoration: 'none', display: 'block' }}>
                 <DestCard
                   accent="#22d3ee"
                   art="/legendaryrod.png"
-                  eyebrow="Hooks · Rods · Reels · Bait"
+                  eyebrow="Tackle"
                   title="Tackle Shop"
-                  description="Every piece of gear changes how you fish. Rods have unique abilities, reels slow the needle, hooks widen your catch zone."
-                  tags={['Widen catch zone', 'Slow the needle', 'Rod abilities']}
+                  description="Rods, reels, hooks, and bait. Each piece changes how you fish."
+                  tags={['Catch zone', 'Reel speed', 'Rod skills']}
+                  variant="compact"
                 />
               </Link>
 
@@ -80,10 +81,11 @@ export default async function MarketplacePage() {
                   accent="#fb923c"
                   art="/models/man-o-war.png"
                   artWidth={145}
-                  eyebrow="Ship · Hold · Crew"
+                  eyebrow="Ship"
                   title="Shipyard"
-                  description="A bigger ship means a bigger haul. Upgrade your vessel for more hold capacity, crew slots, and expedition power."
-                  tags={['Bigger fish hold', 'More crew slots', 'Combat power']}
+                  description="Bigger vessel means a bigger haul, more crew, and more expedition power."
+                  tags={['Fish hold', 'Crew slots', 'Combat']}
+                  variant="compact"
                 />
               </Link>
 
@@ -93,19 +95,20 @@ export default async function MarketplacePage() {
           {/* ── Shop ── */}
           <section>
             <Label>Shop</Label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div className="grid grid-cols-2 gap-3">
 
               <a href="https://shiblingshop.com/products/small-fishes-premium-membership" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block' }}>
                 <DestCard
                   accent="#f0c040"
                   art="/goldenlure.png"
-                  eyebrow={isPremium ? 'Active membership' : 'Support us'}
+                  eyebrow={isPremium ? 'Active' : 'Support'}
                   title={isPremium ? "You're a Member" : 'Membership'}
-                  description={isPremium ? "Thanks for your support. Your daily perks are active." : "Support the game and get daily perks — a free pack, bonus doubloons, and no market fees."}
+                  description={isPremium ? "Daily perks active. Thanks for your support." : "Daily pack, bonus doubloons, no market fees."}
                   tags={isPremium
-                    ? ['Daily pack active', '100 ⟡ daily', 'No market fees']
-                    : ['1 free pack/day', '100 ⟡ daily bonus', 'No market fees']}
+                    ? ['Pack/day', '100 ⟡/day', 'No fees']
+                    : ['Pack/day', '100 ⟡/day', 'No fees']}
                   badge={isPremium ? 'Member' : undefined}
+                  variant="compact"
                 />
               </a>
 
@@ -114,10 +117,11 @@ export default async function MarketplacePage() {
                   accent="#a78bfa"
                   art="/physicalboardgame.png"
                   artWidth={145}
-                  eyebrow="Physical board game"
+                  eyebrow="Board game"
                   title="Seas the Booty"
-                  description="A strategy card game for 2–6 players featuring the same art. Every purchase includes 20 digital packs."
-                  tags={['2–6 players', '$29.99', '20 digital packs']}
+                  description="Strategy card game for 2–6 players. Includes 20 digital packs."
+                  tags={['2–6 players', '$29.99', '20 packs']}
+                  variant="compact"
                 />
               </a>
 
@@ -164,7 +168,7 @@ function Tag({ label, color }: { label: string; color: string }) {
 }
 
 function DestCard({
-  accent, art, artStyle, artWidth, eyebrow, title, description, tags, badge, extra,
+  accent, art, artStyle, artWidth, eyebrow, title, description, tags, badge, extra, variant = 'default',
 }: {
   accent: string
   art: string | null
@@ -176,7 +180,62 @@ function DestCard({
   tags: string[]
   badge?: string
   extra?: React.ReactNode
+  variant?: 'default' | 'compact'
 }) {
+  if (variant === 'compact') {
+    return (
+      <div style={{
+        position: 'relative', overflow: 'hidden',
+        background: 'rgba(6,12,20,0.92)',
+        border: `1px solid ${accent}30`,
+        borderTop: `1px solid ${accent}55`,
+        borderRadius: 18,
+        padding: '0.95rem 0.95rem 1.05rem',
+        display: 'flex', flexDirection: 'column',
+        minHeight: 220,
+        cursor: 'pointer',
+        transition: 'transform 0.15s, border-color 0.15s',
+      }}>
+        {art && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 110, marginBottom: 10 }}>
+            <img
+              src={art}
+              alt=""
+              style={{
+                maxWidth: '100%', maxHeight: 110, objectFit: 'contain',
+                filter: `drop-shadow(0 4px 14px ${accent}55)`,
+                opacity: 0.94, ...artStyle,
+              }}
+            />
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <p className="font-karla font-700 uppercase tracking-[0.12em]"
+            style={{ fontSize: '0.54rem', color: accent + 'dd', flex: 1, lineHeight: 1.2 }}>
+            {eyebrow}
+          </p>
+          {badge && (
+            <span className="font-karla font-700 uppercase tracking-[0.1em]"
+              style={{ fontSize: '0.46rem', color: '#f0c040', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.28)', padding: '0.1rem 0.35rem', borderRadius: '2rem' }}>
+              {badge}
+            </span>
+          )}
+        </div>
+        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#ffffff', lineHeight: 1.15, marginBottom: 5 }}>
+          {title}
+        </p>
+        <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#a8a5a0', lineHeight: 1.45, flex: 1 }}>
+          {description}
+        </p>
+        {tags.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+            {tags.slice(0, 3).map((t, i) => <Tag key={i} label={t} color={accent} />)}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div style={{
       position: 'relative', overflow: 'hidden',
@@ -209,9 +268,15 @@ function DestCard({
           {title}
         </p>
 
-        <p className="font-karla font-400" style={{ fontSize: '0.76rem', color: '#b0ada8', lineHeight: 1.55 }}>
+        <p className="font-karla font-400" style={{ fontSize: '0.76rem', color: '#b0ada8', lineHeight: 1.55, marginBottom: tags.length > 0 ? '0.7rem' : 0 }}>
           {description}
         </p>
+
+        {tags.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {tags.map((t, i) => <Tag key={i} label={t} color={accent} />)}
+          </div>
+        )}
       </div>
 
       {/* Right: image container */}

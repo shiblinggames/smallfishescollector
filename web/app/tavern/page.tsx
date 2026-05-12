@@ -112,7 +112,7 @@ export default async function TavernPage() {
 
         <div>
           <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Daily</p>
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3">
           <GameCard
             href="/tavern/daily-bonus"
             eyebrow="Daily"
@@ -121,6 +121,7 @@ export default async function TavernPage() {
             info={[]}
             icon={<CoinIcon />}
             completed={allClaimed}
+            variant="compact"
             art="/dailybonus.png"
             accent="#f0c040"
           />
@@ -133,6 +134,7 @@ export default async function TavernPage() {
             icon={<FishIcon />}
             completed={fotdDone}
             streak={profile?.fotd_streak ?? 0}
+            variant="compact"
             art={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/Hammerhead_Shark.png`}
             accent="#60a5fa"
           />
@@ -143,6 +145,7 @@ export default async function TavernPage() {
             statusText={tideRunCommitted ? 'Today’s run committed — play freely' : 'Outrun pursuit, commit one run a day'}
             info={[]}
             icon={<BoatIcon />}
+            variant="compact"
             art="/boatrun.png"
             accent="#5da7d4"
           />
@@ -174,7 +177,7 @@ export default async function TavernPage() {
 
         <div>
           <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Games</p>
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3">
           <GameCard
             href="/tavern/crown-and-anchor"
             eyebrow="Game"
@@ -183,6 +186,7 @@ export default async function TavernPage() {
             info={[]}
             icon={<AnchorIcon />}
             completed={crownCapReached}
+            variant="compact"
             art="/crownandanchor.png"
             accent="#fb923c"
           />
@@ -194,6 +198,7 @@ export default async function TavernPage() {
             info={[]}
             icon={<SlotsIcon />}
             completed={slotsCapReached}
+            variant="compact"
             art="/fishslots.png"
             accent="#a78bfa"
           />

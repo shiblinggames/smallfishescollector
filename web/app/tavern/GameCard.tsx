@@ -11,15 +11,78 @@ interface Props {
   icon: React.ReactNode
   completed?: boolean
   streak?: number
-  variant?: 'default' | 'featured'
+  variant?: 'default' | 'featured' | 'compact'
   art?: string
   accent?: string
 }
 
-export default function GameCard({ href, eyebrow, title, statusText, icon, completed, streak, variant = 'default', art, accent = '#f0c040' }: Props) {
+export default function GameCard({ href, eyebrow, title, statusText, completed, streak, variant = 'default', art, accent = '#f0c040' }: Props) {
   const router = useRouter()
   const done = !!completed
   const featured = variant === 'featured'
+  const compact = variant === 'compact'
+
+  if (compact) {
+    return (
+      <div
+        role="link"
+        tabIndex={0}
+        onClick={() => router.push(href)}
+        onKeyDown={(e) => e.key === 'Enter' && router.push(href)}
+        style={{
+          display: 'flex', flexDirection: 'column',
+          background: 'rgba(6,12,20,0.92)',
+          border: `1px solid ${done ? 'rgba(255,255,255,0.08)' : `${accent}30`}`,
+          borderTop: `1px solid ${done ? 'rgba(255,255,255,0.08)' : `${accent}55`}`,
+          borderRadius: 18,
+          padding: '0.9rem 0.9rem 1rem',
+          cursor: 'pointer',
+          opacity: done ? 0.55 : 1,
+          userSelect: 'none',
+          transition: 'opacity 0.15s',
+          minHeight: 200,
+        }}
+      >
+        {/* Top: art */}
+        {art && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 96, marginBottom: 8 }}>
+            <img
+              src={art}
+              alt=""
+              style={{
+                maxWidth: '100%',
+                maxHeight: 96,
+                objectFit: 'contain',
+                opacity: done ? 0.4 : 0.92,
+                filter: `drop-shadow(0 4px 14px ${accent}55)`,
+              }}
+            />
+          </div>
+        )}
+        {/* Eyebrow + done */}
+        <div className="flex items-center gap-2 mb-1">
+          <p className="font-karla font-700 uppercase tracking-[0.12em]"
+            style={{ fontSize: '0.52rem', color: accent + 'cc', flex: 1 }}>
+            {eyebrow}
+          </p>
+          {done && (
+            <span className="font-karla font-700" style={{ fontSize: '0.55rem', color: '#4ade80', whiteSpace: 'nowrap' }}>✓ Done</span>
+          )}
+        </div>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffffff', lineHeight: 1.15, marginBottom: '0.3rem' }}>
+          {title}
+        </p>
+        <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#a8a5a0', lineHeight: 1.45 }}>
+          {statusText}
+        </p>
+        {!done && streak != null && streak > 0 && (
+          <p className="font-karla font-700 mt-1.5" style={{ fontSize: '0.58rem', color: accent }}>
+            {streak}d streak
+          </p>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div
@@ -29,7 +92,7 @@ export default function GameCard({ href, eyebrow, title, statusText, icon, compl
       onKeyDown={(e) => e.key === 'Enter' && router.push(href)}
       style={{
         display: 'flex', alignItems: 'stretch', gap: '1rem',
-        background: featured ? 'rgba(6,12,20,0.92)' : 'rgba(6,12,20,0.92)',
+        background: 'rgba(6,12,20,0.92)',
         border: `1px solid ${done ? 'rgba(255,255,255,0.08)' : featured ? `${accent}40` : `${accent}28`}`,
         borderTop: `1px solid ${done ? 'rgba(255,255,255,0.08)' : featured ? `${accent}66` : `${accent}44`}`,
         borderRadius: 20,
