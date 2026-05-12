@@ -750,7 +750,31 @@ export async function saveCrew(variantIds: number[]): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
   const admin = createAdminClient()
-  await admin.from('profiles').update({ saved_crew: variantIds }).eq('id', user.id)
+
+  // Resolve each variant to its card name so we can dedup by name. Two
+  // variants of the same character (e.g. standard + foil) must never both
+  // sit in the crew loadout — they're the same person.
+  const unique = Array.from(new Set(variantIds))
+  const { data: variants } = await admin
+    .from('card_variants')
+    .select('id, cards(name)')
+    .in('id', unique)
+  type VRow = { id: number; cards: { name: string } | null }
+  const nameByVariant = new Map<number, string>()
+  for (const row of ((variants ?? []) as unknown as VRow[])) {
+    if (row.cards?.name) nameByVariant.set(row.id, row.cards.name)
+  }
+
+  const seenNames = new Set<string>()
+  const cleaned: number[] = []
+  for (const vid of variantIds) {
+    const name = nameByVariant.get(vid)
+    if (!name || seenNames.has(name)) continue
+    seenNames.add(name)
+    cleaned.push(vid)
+  }
+
+  await admin.from('profiles').update({ saved_crew: cleaned }).eq('id', user.id)
 }
 
 export async function saveEquippedRaidItems(itemIds: string[]): Promise<void> {
