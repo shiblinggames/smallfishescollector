@@ -518,79 +518,66 @@ export default function RaidCombat({
           background: 'linear-gradient(180deg, rgba(20,40,60,0.4) 0%, rgba(8,16,28,0.85) 100%)',
         }} />
 
-        {/* Enemy HP box — top-left */}
+        {/* Enemy HP nameplate — top-left, with circular portrait badge */}
         <div style={{
           position: 'absolute', top: 10, left: 10, zIndex: 4,
-          padding: '0.45rem 0.65rem',
+          padding: '0.45rem 0.6rem 0.5rem 0.45rem',
           background: 'rgba(6,12,20,0.9)',
           border: `1px solid ${isBoss ? '#fbbf24' : '#2a3548'}`,
-          borderRadius: 10, minWidth: 150,
+          borderRadius: 12,
+          display: 'flex', alignItems: 'center', gap: 8,
+          minWidth: 160,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.7rem', color: '#ffffff', lineHeight: 1, flex: 1 }}>
-              {enemy.name}
-            </p>
-            {isBoss && (
-              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.45rem', color: '#fbbf24', letterSpacing: '0.1em' }}>BOSS</span>
-            )}
+          {enemy.portrait && (
+            <div style={{
+              flexShrink: 0, width: 44, height: 44, borderRadius: '50%',
+              border: `2px solid ${isBoss ? '#fbbf24' : ENEMY_COLOR}`,
+              overflow: 'hidden',
+              boxShadow: `0 0 10px ${isBoss ? 'rgba(251,191,36,0.45)' : 'rgba(239,68,68,0.4)'}`,
+              background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.08) 0%, rgba(20,40,60,0.85) 70%)',
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={enemy.portrait} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.7rem', color: '#ffffff', lineHeight: 1, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {enemy.name}
+              </p>
+              {isBoss && (
+                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.45rem', color: '#fbbf24', letterSpacing: '0.1em' }}>BOSS</span>
+              )}
+            </div>
+            <HPBar current={enemyHp} max={enemy.hpBase} accent={ENEMY_COLOR} compact />
+            <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small />
           </div>
-          <HPBar current={enemyHp} max={enemy.hpBase} accent={ENEMY_COLOR} compact />
-          <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small />
         </div>
 
-        {/* Enemy ship — upper right area. Outer = slide-in mount, inner = hit shake. */}
+        {/* Enemy boat — sits in the water (below the horizon), farther away than the player */}
         <motion.div
           key={`enemy-${enemy.id}`}
           initial={{ x: 80, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           style={{
-            position: 'absolute', right: '8%', top: '14%', zIndex: 2,
-            width: '38%', maxWidth: 180,
+            position: 'absolute', right: '6%', top: '46%', zIndex: 2,
+            width: '40%', maxWidth: 190,
           }}
         >
           <motion.div animate={enemyShakeCtrl} style={{ position: 'relative' }}>
-            <motion.div
+            <motion.img
+              src={enemy.image}
+              alt={enemy.name}
               animate={{ y: [0, -4, 0] }}
               transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
               style={{
-                width: '100%', aspectRatio: '1 / 1',
-                borderRadius: '50%', overflow: 'hidden',
-                border: `3px solid ${isBoss ? '#fbbf24' : ENEMY_COLOR}`,
-                boxShadow: `0 8px 24px ${isBoss ? 'rgba(251,191,36,0.4)' : 'rgba(239,68,68,0.4)'}, inset 0 -8px 22px rgba(0,0,0,0.35)`,
-                background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.08) 0%, rgba(20,40,60,0.85) 70%)',
-                position: 'relative',
+                width: '100%', display: 'block',
+                transform: 'scaleX(-1)',  // face the player
+                filter: `drop-shadow(0 10px 22px rgba(0,0,0,0.55)) ${isBoss ? 'hue-rotate(20deg) brightness(0.95)' : 'hue-rotate(180deg) brightness(0.85)'}`,
+                pointerEvents: 'none',
               }}
-            >
-              {/* Enemy boat — primary visual */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={enemy.image}
-                alt={enemy.name}
-                style={{
-                  position: 'absolute', left: '-8%', right: '-8%', top: '15%',
-                  width: '116%', height: '70%',
-                  objectFit: 'contain', objectPosition: 'center',
-                  transform: 'scaleX(-1)',
-                  filter: isBoss ? 'hue-rotate(20deg) brightness(0.95)' : 'hue-rotate(180deg) brightness(0.85)',
-                  pointerEvents: 'none',
-                }}
-              />
-              {/* Captain portrait — small badge bottom-right of the medallion */}
-              {enemy.portrait && (
-                <div style={{
-                  position: 'absolute', bottom: '4%', right: '4%',
-                  width: '32%', aspectRatio: '1 / 1', borderRadius: '50%',
-                  border: `2px solid ${isBoss ? '#fbbf24' : ENEMY_COLOR}`,
-                  overflow: 'hidden',
-                  boxShadow: `0 0 10px ${isBoss ? 'rgba(251,191,36,0.5)' : 'rgba(239,68,68,0.45)'}`,
-                  background: 'rgba(10,20,34,0.85)',
-                }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={enemy.portrait} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-              )}
-            </motion.div>
+            />
             <AnimatePresence>
               {eHitsplat && <HitsplatOverlay key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} />}
             </AnimatePresence>
