@@ -293,14 +293,32 @@ export default function RaidCombat({
     if (subPhase !== 'aiming' || critFreeze) return
     const res = getShotResult(firePosRef.current, zonePosRef.current)
     setAimResult(res)
+
+    // INSTANT impact feedback — fire ALL player visuals right now, while the
+    // aim bar is still visible. This matches the existing raid's "tap = boom"
+    // feel. The damage itself is applied at resolution but the visuals are
+    // already out the door.
+    if (res !== 'miss') {
+      setPlayerRecoilKey(k => k + 1)
+      const cannonKind: 'normal' | 'volley' | 'crit' =
+        res === 'critical' ? 'crit' :
+        playerAction === 'volley' ? 'volley' : 'normal'
+      setCannonShot({ key: Date.now(), kind: cannonKind })
+      setTimeout(() => setCannonShot(null), 700)
+    }
+
     if (res === 'critical') {
-      // Lock-moment emphasis: brief freeze so the player feels they nailed it.
-      // The big boom (flash + cascade + shake) fires at resolution time, matching
-      // the existing raid's instant feedback feel.
+      // Crit moment: freeze the aim bar AND fire the full-screen flash now.
       setCritFreeze(true)
-      setTimeout(() => { setCritFreeze(false); advanceToReveal(playerAction!) }, 260)
+      setCritFlash(true)
+      setTimeout(() => setCritFlash(false), 380)
+      setTimeout(() => { setCritFreeze(false); advanceToReveal(playerAction!) }, 780)
+    } else if (res !== 'miss') {
+      // Non-crit hit: let the cannon shot fly before we move on.
+      setTimeout(() => advanceToReveal(playerAction!), 480)
     } else {
-      advanceToReveal(playerAction!)
+      // Pure miss — nothing to celebrate, advance quickly.
+      setTimeout(() => advanceToReveal(playerAction!), 160)
     }
   }
 
@@ -438,26 +456,19 @@ export default function RaidCombat({
       setPlayerHp(step.pHp); setEnemyHp(step.eHp)
       setPlayerCharges(step.pCharges); setEnemyCharges(step.eCharges)
 
-      // Trigger attacker visuals (recoil + cannon shot emojis)
       const isAttack = step.action === 'fire' || step.action === 'volley'
       const isDodged = isAttack && step.splatText === 'Dodged'
-      if (isAttack && step.who === 'player') {
-        setPlayerRecoilKey(k => k + 1)
-        const cannonKind: 'normal' | 'volley' | 'crit' = step.big ? 'crit' : step.action === 'volley' ? 'volley' : 'normal'
-        setCannonShot({ key: Date.now() + i, kind: cannonKind })
-        setTimeout(() => setCannonShot(null), 700)
-      }
 
-      // Defender hitsplat + shake. Crit triggers full-screen flash + bigger shake.
+      // Player attacker visuals (recoil, cannon, crit flash) ALREADY played at
+      // lockShot — don't re-fire them here. Just apply the damage outcome.
+      // Enemy attacker has no "lock" moment, so visuals fire here.
+
+      // Defender hitsplat + shake.
       if (step.splatTarget === 'enemy') {
         setEHitsplat({ key: Date.now() + i, text: step.splatText, color: step.splatColor, big: step.big })
         if (!isDodged) {
           setEnemyShakeKind(step.big ? 'crit' : 'hit')
           setEnemyShakeKey(k => k + 1)
-        }
-        if (step.big) {
-          setCritFlash(true)
-          setTimeout(() => setCritFlash(false), 380)
         }
       }
       if (step.splatTarget === 'player') {
