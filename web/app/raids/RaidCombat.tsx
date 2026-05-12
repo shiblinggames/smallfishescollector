@@ -561,8 +561,8 @@ export default function RaidCombat({
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           style={{
-            position: 'absolute', right: '8%', top: '50%', zIndex: 2,
-            width: '28%', maxWidth: 140,
+            position: 'absolute', right: '7%', top: '48%', zIndex: 2,
+            width: '38%', maxWidth: 185,
           }}
         >
           <motion.div animate={enemyShakeCtrl} style={{ position: 'relative' }}>
