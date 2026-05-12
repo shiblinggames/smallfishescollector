@@ -37,7 +37,7 @@ export default async function FishOfTheDayPage() {
             Fish of the Day
           </h1>
           <p className="font-karla font-300 text-[#a0a09a] text-xs mt-1">
-            Four clues. Six guesses. One fish.
+            100 gems. Four guesses. Spend wisely.
           </p>
         </div>
 
