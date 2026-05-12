@@ -505,16 +505,16 @@ export default function RaidCombat({
       <div style={{
         position: 'relative',
         aspectRatio: '5 / 4',
-        background: 'linear-gradient(180deg, #1e3a5f 0%, #234567 45%, #2a5274 55%, #0a1c2e 100%)',
+        background: 'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)',
         overflow: 'hidden',
       }}>
-        {/* Sky gradient already on parent. Add a horizon line + subtle wave hint */}
+        {/* Horizon line + water tint — sits higher so the ships have more water under them */}
         <div style={{
-          position: 'absolute', left: 0, right: 0, top: '52%', height: 1,
+          position: 'absolute', left: 0, right: 0, top: '38%', height: 1,
           background: 'rgba(255,255,255,0.12)', boxShadow: '0 0 24px rgba(140,180,210,0.18)',
         }} />
         <div style={{
-          position: 'absolute', left: 0, right: 0, top: '52%', bottom: 0,
+          position: 'absolute', left: 0, right: 0, top: '38%', bottom: 0,
           background: 'linear-gradient(180deg, rgba(20,40,60,0.4) 0%, rgba(8,16,28,0.85) 100%)',
         }} />
 
