@@ -127,6 +127,7 @@ export default function RaidCombat({
   const [playerShakeKey, setPlayerShakeKey] = useState(0)
   const [playerRecoilKey, setPlayerRecoilKey] = useState(0)
   const [cannonShot, setCannonShot]   = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
+  const [enemyImpact, setEnemyImpact] = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
 
   // Aim bar state — RAF driven during 'aiming' subphase
   const firePosRef  = useRef(0)
@@ -484,9 +485,19 @@ export default function RaidCombat({
               setEnemyShakeKind(step.big ? 'crit' : 'hit')
               setEnemyShakeKey(k => k + 1)
             }
+            if (!isDodged) {
+              // Show impact burst exploding on the enemy ship (crit cascade is huge)
+              const impactKind: 'normal' | 'volley' | 'crit' =
+                step.big ? 'crit' : step.action === 'volley' ? 'volley' : 'normal'
+              setEnemyImpact({ key: Date.now() + i + 2, kind: impactKind })
+              setTimeout(() => setEnemyImpact(null), 700)
+            }
             if (step.big) {
               setCritFlash(true)
               setTimeout(() => setCritFlash(false), 380)
+              // Retrigger the player's recoil with the impact so the kickback
+              // lines up with the big enemy explosion, not just the cannon fire
+              setPlayerRecoilKey(k => k + 1)
             }
             setTimeout(() => setEHitsplat(null), SPLAT_HOLD_MS)
           }
@@ -598,6 +609,10 @@ export default function RaidCombat({
                 pointerEvents: 'none',
               }}
             />
+            {/* Explosion burst on impact — overlays the enemy hull */}
+            {enemyImpact && (
+              <ImpactBurst key={`ei-${enemyImpact.key}`} kind={enemyImpact.kind} />
+            )}
             <AnimatePresence>
               {eHitsplat && <HitsplatOverlay key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} />}
             </AnimatePresence>
@@ -636,9 +651,78 @@ export default function RaidCombat({
           </motion.div>
         </motion.div>
 
-        {/* Aim-result badge — pops up during the lock freeze, before resolution */}
+        {/* Aim-result feedback during the lock freeze — critical gets the full fishing-perfect treatment */}
         <AnimatePresence>
-          {aimResult && critFreeze && (
+          {aimResult === 'critical' && critFreeze && (
+            <motion.div
+              key="crit-burst"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              style={{
+                position: 'absolute', inset: 0, zIndex: 11,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                pointerEvents: 'none',
+                background: 'radial-gradient(ellipse 90% 60% at 50% 50%, rgba(245,158,11,0.32) 0%, transparent 70%)',
+              }}
+            >
+              {/* Expanding ring burst */}
+              <motion.div
+                initial={{ scale: 0.2, opacity: 0.9 }}
+                animate={{ scale: 3.2, opacity: 0 }}
+                transition={{ duration: 0.7, ease: 'easeOut' }}
+                style={{
+                  position: 'absolute',
+                  width: 140, height: 140, borderRadius: '50%',
+                  border: '2px solid rgba(245,158,11,0.7)',
+                  left: '50%', top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              />
+              <motion.div
+                initial={{ scale: 0.2, opacity: 0.6 }}
+                animate={{ scale: 2.4, opacity: 0 }}
+                transition={{ duration: 0.65, ease: 'easeOut', delay: 0.1 }}
+                style={{
+                  position: 'absolute',
+                  width: 140, height: 140, borderRadius: '50%',
+                  border: '1px solid rgba(253,230,138,0.5)',
+                  left: '50%', top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              />
+              {/* Floating sparks */}
+              {([
+                { x: -55, delay: 0.08 }, { x: 55, delay: 0.12 },
+                { x: -28, delay: 0.18 }, { x: 32, delay: 0.05 },
+              ] as { x: number; delay: number }[]).map((s, i) => (
+                <motion.span key={i}
+                  initial={{ opacity: 0, y: 0, x: s.x, scale: 0 }}
+                  animate={{ opacity: [0, 1, 0], y: -70 - i * 12, x: s.x * 1.3, scale: [0, 1.2, 0.6] }}
+                  transition={{ duration: 1.0, delay: s.delay, ease: 'easeOut' }}
+                  style={{ position: 'absolute', color: '#fde68a', fontSize: '0.85rem', pointerEvents: 'none' }}
+                >✦</motion.span>
+              ))}
+              {/* Main text */}
+              <motion.div
+                initial={{ scale: 0.45, y: 12, opacity: 0 }}
+                animate={{ scale: 1, y: 0, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 18, delay: 0.04 }}
+                style={{ textAlign: 'center', position: 'relative' }}
+              >
+                <p className="font-cinzel font-700 uppercase tracking-[0.28em]"
+                  style={{
+                    fontSize: '2.4rem', color: '#fff',
+                    textShadow: '0 0 18px #fff, 0 0 40px rgba(245,158,11,1), 0 0 80px rgba(245,158,11,0.75), 0 0 140px rgba(245,158,11,0.35)',
+                  }}>
+                  Critical!
+                </p>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {aimResult && aimResult !== 'critical' && critFreeze && (
             <motion.div
               key={`aim-badge-${aimResult}`}
               initial={{ scale: 0.4, opacity: 0, rotate: -8 }}
@@ -649,28 +733,24 @@ export default function RaidCombat({
                 position: 'absolute', top: '38%', left: '50%',
                 transform: 'translate(-50%, -50%)',
                 zIndex: 11, pointerEvents: 'none',
-                padding: aimResult === 'critical' ? '0.55rem 1.2rem' : '0.4rem 0.95rem',
+                padding: '0.4rem 0.95rem',
                 borderRadius: 999,
                 background:
-                  aimResult === 'critical' ? '#fbbf24' :
-                  aimResult === 'hit'      ? '#4ade80' :
-                  aimResult === 'graze'    ? '#94a3b8' :
-                                             '#6b7280',
+                  aimResult === 'hit'   ? '#4ade80' :
+                  aimResult === 'graze' ? '#94a3b8' :
+                                          '#6b7280',
                 color: '#0a1422',
                 fontFamily: 'var(--font-cinzel)', fontWeight: 700,
-                fontSize: aimResult === 'critical' ? '1.55rem' : '1.05rem',
+                fontSize: '1.05rem',
                 letterSpacing: '0.06em',
                 boxShadow:
-                  aimResult === 'critical'
-                    ? '0 6px 30px rgba(251,191,36,0.7), 0 0 18px rgba(251,191,36,0.55)'
-                    : aimResult === 'hit'
+                  aimResult === 'hit'
                     ? '0 4px 18px rgba(74,222,128,0.5)'
                     : '0 2px 10px rgba(0,0,0,0.4)',
-                textShadow: aimResult === 'critical' ? '0 1px 4px rgba(0,0,0,0.4)' : 'none',
                 whiteSpace: 'nowrap',
               }}
             >
-              {aimResult === 'critical' ? 'CRITICAL!' : aimResult.toUpperCase()}
+              {aimResult.toUpperCase()}
             </motion.div>
           )}
         </AnimatePresence>
@@ -742,6 +822,12 @@ export default function RaidCombat({
           65%  { opacity: 0.7; transform: translate(4px, -5px) scale(0.9); }
           100% { opacity: 0; transform: translate(10px, -10px) scale(0.3); }
         }
+        @keyframes rc-impact-pop {
+          0%   { opacity: 0; transform: scale(0.2) rotate(-12deg); }
+          25%  { opacity: 1; transform: scale(1.4) rotate(6deg); }
+          55%  { opacity: 0.85; transform: scale(1.1) rotate(-2deg); }
+          100% { opacity: 0; transform: scale(0.55) rotate(0); }
+        }
         @keyframes rc-crit-flash {
           0%   { opacity: 1; }
           100% { opacity: 0; }
@@ -801,6 +887,69 @@ function CannonShotBurst({ kind }: { kind: 'normal' | 'volley' | 'crit' }) {
             pointerEvents: 'none', zIndex: 10,
           }}>🔥</span>
         </>
+      )}
+    </>
+  )
+}
+
+function ImpactBurst({ kind }: { kind: 'normal' | 'volley' | 'crit' }) {
+  // Explosion centered on the target. Crit erupts with a cascade of emojis +
+  // a brief expanding shockwave ring around the impact site.
+  const big = kind === 'crit'
+  const volley = kind === 'volley'
+  return (
+    <>
+      {big && (
+        <motion.div
+          initial={{ scale: 0.3, opacity: 0.9 }}
+          animate={{ scale: 2.6, opacity: 0 }}
+          transition={{ duration: 0.55, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', left: '50%', top: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 70, height: 70, borderRadius: '50%',
+            border: '3px solid rgba(251,191,36,0.85)',
+            boxShadow: '0 0 30px rgba(251,191,36,0.7)',
+            pointerEvents: 'none', zIndex: 9,
+          }}
+        />
+      )}
+      <span style={{
+        position: 'absolute', left: '38%', top: '32%',
+        fontSize: big ? '2.4rem' : volley ? '1.7rem' : '1.3rem',
+        animation: 'rc-impact-pop 0.55s ease forwards',
+        pointerEvents: 'none', zIndex: 11, filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.6))',
+      }}>💥</span>
+      {big && (
+        <>
+          <span style={{
+            position: 'absolute', left: '62%', top: '42%', fontSize: '1.9rem',
+            animation: 'rc-impact-pop 0.55s 0.05s ease forwards',
+            pointerEvents: 'none', zIndex: 11, filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.6))',
+          }}>💥</span>
+          <span style={{
+            position: 'absolute', left: '48%', top: '18%', fontSize: '1.7rem',
+            animation: 'rc-impact-pop 0.6s 0.1s ease forwards',
+            pointerEvents: 'none', zIndex: 11, filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.6))',
+          }}>⭐</span>
+          <span style={{
+            position: 'absolute', left: '32%', top: '55%', fontSize: '1.8rem',
+            animation: 'rc-impact-pop 0.65s 0.07s ease forwards',
+            pointerEvents: 'none', zIndex: 11, filter: 'drop-shadow(0 0 6px rgba(251,113,36,0.6))',
+          }}>🔥</span>
+          <span style={{
+            position: 'absolute', left: '58%', top: '60%', fontSize: '1.6rem',
+            animation: 'rc-impact-pop 0.7s 0.14s ease forwards',
+            pointerEvents: 'none', zIndex: 11, filter: 'drop-shadow(0 0 6px rgba(251,113,36,0.6))',
+          }}>🔥</span>
+        </>
+      )}
+      {volley && !big && (
+        <span style={{
+          position: 'absolute', left: '55%', top: '50%', fontSize: '1.5rem',
+          animation: 'rc-impact-pop 0.5s 0.08s ease forwards',
+          pointerEvents: 'none', zIndex: 11,
+        }}>💥</span>
       )}
     </>
   )
