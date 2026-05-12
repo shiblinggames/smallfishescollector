@@ -36,17 +36,7 @@ export default function MobileTabBar() {
   const tint = PAGE_TINTS.find(([p]) => pathname === p || pathname.startsWith(p + '/'))?.[1]
   const bg = tint ? `linear-gradient(${tint}, ${tint}), black` : 'black'
 
-  const [tavernBadge, setTavernBadge] = useState(0)
   const [voyageBadge, setVoyageBadge] = useState(false)
-
-  useEffect(() => {
-    setTavernBadge(parseInt(localStorage.getItem('tavernBadge') ?? '0', 10) || 0)
-    function onCompleted() {
-      setTavernBadge(parseInt(localStorage.getItem('tavernBadge') ?? '0', 10) || 0)
-    }
-    window.addEventListener('tavern-daily-completed', onCompleted)
-    return () => window.removeEventListener('tavern-daily-completed', onCompleted)
-  }, [])
 
   useEffect(() => {
     const { createClient } = require('@/lib/supabase/client')
@@ -83,8 +73,7 @@ export default function MobileTabBar() {
     >
       {LINKS.map(({ href, label, icon }) => {
         const active = pathname === href || pathname.startsWith(href + '/')
-        const badge = href === '/tavern' && tavernBadge > 0 ? tavernBadge
-          : href === '/expeditions' && voyageBadge ? true : null
+        const badge = href === '/expeditions' && voyageBadge ? true : null
         return (
           <Link
             key={href}

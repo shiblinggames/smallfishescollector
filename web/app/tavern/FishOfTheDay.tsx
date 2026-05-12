@@ -168,7 +168,7 @@ export default function FishOfTheDay({
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '0.55rem 0.85rem',
-          background: '#10182a',
+          background: '#060c14',
           border: '1px solid #2a3548',
           borderRadius: 10,
         }}>
@@ -196,7 +196,7 @@ export default function FishOfTheDay({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
               style={{
-                background: '#10182a',
+                background: '#060c14',
                 border: '1px solid #2a3548',
                 borderRadius: 10, padding: '0.85rem 0.95rem',
                 display: 'flex', gap: 11, alignItems: 'flex-start',
@@ -223,7 +223,7 @@ export default function FishOfTheDay({
 
       {/* Guess history pips */}
       {puzzle.guesses.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '0.55rem 0.85rem', background: '#0a1422', border: '1px solid #2a3548', borderRadius: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '0.55rem 0.85rem', background: '#04080e', border: '1px solid #2a3548', borderRadius: 10 }}>
           {puzzle.guesses.map((g, i) => {
             const isCorrect = puzzle.solved && i === puzzle.guesses.length - 1
             return (
@@ -249,7 +249,7 @@ export default function FishOfTheDay({
       {!puzzle.isOver && (
         <div style={{
           padding: '0.65rem 0.7rem 0.75rem',
-          background: '#10182a',
+          background: '#060c14',
           border: '1px solid #2a3548',
           borderRadius: 12,
         }}>
@@ -277,7 +277,7 @@ export default function FishOfTheDay({
               const lockedRound = roundHintUsed && !exhausted
               const disabled = exhausted || !canAfford || lockedRound || hintPending !== null
               const loading = hintPending === type
-              const bg = exhausted ? '#1a2820' : lockedRound ? '#0a1422' : canAfford ? '#1c2540' : '#0a1422'
+              const bg = exhausted ? '#1a2820' : lockedRound ? '#04080e' : canAfford ? '#1c2540' : '#04080e'
               const borderColor = exhausted ? '#3d7349' : lockedRound ? '#2a3548' : canAfford ? '#3a4a78' : '#2a3548'
               return (
                 <motion.button
@@ -343,7 +343,7 @@ export default function FishOfTheDay({
               <div style={{
                 position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
                 maxHeight: 200, overflowY: 'auto',
-                background: '#0a1422',
+                background: '#04080e',
                 border: '1px solid #2a3548',
                 borderRadius: 10, zIndex: 20,
               }}>
@@ -380,7 +380,7 @@ export default function FishOfTheDay({
               width: '100%', padding: '0.85rem',
               borderRadius: 10,
               fontSize: '0.78rem',
-              background: selected && !isPending ? '#2d5a3a' : '#0a1422',
+              background: selected && !isPending ? '#2d5a3a' : '#04080e',
               border: `1px solid ${selected && !isPending ? '#3d7349' : '#2a3548'}`,
               color: selected && !isPending ? '#d4ecda' : '#5a6478',
               cursor: !selected || isPending ? 'not-allowed' : 'pointer',
@@ -401,7 +401,7 @@ function HeaderStrip({ gems, guesses, maxGuesses, solved }: { gems: number; gues
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       gap: 14,
       padding: '0.85rem 1.05rem',
-      background: '#10182a',
+      background: '#060c14',
       border: '1px solid #2a3548',
       borderRadius: 12,
     }}>
@@ -440,7 +440,7 @@ function HeaderStrip({ gems, guesses, maxGuesses, solved }: { gems: number; gues
                   width: 16, height: 16, borderRadius: 4,
                   background: used
                     ? (solved && isLastUsed ? '#3d7349' : '#9a4848')
-                    : '#0a1422',
+                    : '#04080e',
                   border: `1px solid ${used ? (solved && isLastUsed ? '#3d7349' : '#9a4848') : '#2a3548'}`,
                 }}
               />
@@ -459,7 +459,7 @@ function RevealedPanel({ revealed }: { revealed: RevealedHints }) {
       initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.22 }}
       style={{
-        background: '#10182a',
+        background: '#060c14',
         border: '1px solid #3d5e48',
         borderRadius: 12, padding: '0.85rem 0.9rem',
         display: 'flex', flexDirection: 'column', gap: 11,
@@ -567,7 +567,7 @@ function Blanks({ wordLengths, letters, firstLetter }: {
             <motion.div key={`${wi}-${ci}`}
               initial={false}
               animate={{
-                backgroundColor: ch ? '#2d5a3a' : '#0a1422',
+                backgroundColor: ch ? '#2d5a3a' : '#04080e',
                 borderColor:     ch ? '#3d7349' : '#2a3548',
                 rotateY:         ch ? [0, 180, 360] : 0,
               }}
@@ -617,7 +617,7 @@ function AnswerCard({ answer, solved, gemsAwarded, streak, milestoneReward }: {
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ duration: 0.32, ease: [0.34, 1.56, 0.64, 1] }}
       style={{
-        background: '#10182a',
+        background: '#060c14',
         border: `1px solid ${solved ? '#3d7349' : '#7a4848'}`,
         borderRadius: 12, overflow: 'hidden',
       }}
@@ -640,7 +640,7 @@ function AnswerCard({ answer, solved, gemsAwarded, streak, milestoneReward }: {
         {solved && gemsAwarded > 0 && (
           <div style={{
             marginTop: 12, padding: '0.55rem 0.8rem', borderRadius: 8,
-            background: '#0a1422', border: '1px solid #2a3548',
+            background: '#04080e', border: '1px solid #2a3548',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#7a8aa0' }}>
@@ -654,7 +654,7 @@ function AnswerCard({ answer, solved, gemsAwarded, streak, milestoneReward }: {
         {milestoneReward && (
           <div style={{
             marginTop: 6, padding: '0.5rem 0.8rem', borderRadius: 8,
-            background: '#0a1422', border: '1px solid #2a3548',
+            background: '#04080e', border: '1px solid #2a3548',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#7a8aa0' }}>
@@ -672,7 +672,7 @@ function AnswerCard({ answer, solved, gemsAwarded, streak, milestoneReward }: {
         )}
       </div>
 
-      <div style={{ background: '#0a1422', borderTop: '1px solid #2a3548' }}>
+      <div style={{ background: '#04080e', borderTop: '1px solid #2a3548' }}>
         {DETAIL_ROWS.map(({ key, label }) => {
           const val = answer[key]
           if (!val) return null

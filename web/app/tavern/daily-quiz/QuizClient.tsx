@@ -111,7 +111,6 @@ export default function QuizClient({ quiz, previousAnswer }: Props) {
     }
     setResult(res)
     if (res.correct && res.reward > 0) setShowRewardToast(true)
-    window.dispatchEvent(new Event('tavern-daily-completed'))
     setLoading(false)
   }
 

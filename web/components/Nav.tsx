@@ -29,10 +29,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   const tint = PAGE_TINTS.find(([p]) => pathname === p || pathname.startsWith(p + '/'))?.[1]
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-  const [tavernBadge, setTavernBadge] = useState(() => {
-    if (typeof window === 'undefined') return 0
-    return parseInt(localStorage.getItem('tavernBadge') ?? '0', 10) || 0
-  })
   const [achievementsBadge, setAchievementsBadge] = useState(false)
   const [voyageBadge, setVoyageBadge] = useState(false)
   const [showInstallEntry, setShowInstallEntry] = useState(false)
@@ -46,22 +42,13 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
 
   const fetchBadge = useCallback(() => {
     const supabase = createClient()
-    const today = new Date().toISOString().split('T')[0]
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       Promise.all([
-        supabase.from('profiles').select('last_daily_claim, last_viewed_achievements_at').eq('id', user.id).single(),
-        supabase.from('quiz_answers').select('date').order('date', { ascending: false }).limit(1).maybeSingle(),
-        supabase.from('daily_fish_attempts').select('solved, guesses, date').order('date', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('profiles').select('last_viewed_achievements_at').eq('id', user.id).single(),
         supabase.from('user_achievements').select('unlocked_at').eq('user_id', user.id).order('unlocked_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('daily_voyages').select('created_at, duration_ms').eq('user_id', user.id).eq('status', 'pending'),
-      ]).then(([{ data: profile }, { data: quiz }, { data: fotd }, { data: latestAchievement }, { data: voyages }]) => {
-        const bonusDone = profile?.last_daily_claim === today
-        const quizDone = quiz?.date === today
-        const fotdDone = fotd?.date === today && (fotd.solved || (fotd.guesses?.length ?? 0) >= 4)
-        const badge = [!bonusDone, !quizDone, !fotdDone].filter(Boolean).length
-        setTavernBadge(badge)
-        localStorage.setItem('tavernBadge', String(badge))
+      ]).then(([{ data: profile }, { data: latestAchievement }, { data: voyages }]) => {
         const lastViewed = profile?.last_viewed_achievements_at
         const latestUnlocked = latestAchievement?.unlocked_at
         setAchievementsBadge(!!latestUnlocked && (!lastViewed || latestUnlocked > lastViewed))
@@ -94,11 +81,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
     window.addEventListener('beforeinstallprompt', handlePrompt)
     return () => window.removeEventListener('beforeinstallprompt', handlePrompt)
   }, [])
-
-  useEffect(() => {
-    window.addEventListener('tavern-daily-completed', fetchBadge)
-    return () => window.removeEventListener('tavern-daily-completed', fetchBadge)
-  }, [fetchBadge])
 
   useEffect(() => {
     function handleDoubloonsChanged(e: Event) {
@@ -147,7 +129,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   }
 
   const mobileLinks = [
-    { href: '/tavern', label: 'Tavern', badge: tavernBadge > 0 ? tavernBadge : null,
+    { href: '/tavern', label: 'Tavern', badge: null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M5 3h14l-1 9H6L5 3z"/>
@@ -231,7 +213,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   ]
 
   const links = [
-    { href: '/tavern', label: 'Tavern', badge: tavernBadge > 0 ? tavernBadge : null,
+    { href: '/tavern', label: 'Tavern', badge: null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M5 3h14l-1 9H6L5 3z"/>
