@@ -20,7 +20,7 @@
 // Per-enemy AI follows BroadsideEnemy.pattern cycle.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
 import { getActiveEffects } from '@/lib/raidItems'
 
@@ -118,8 +118,12 @@ export default function RaidCombat({
   const [aimResult, setAimResult]     = useState<ShotResult | null>(null)
   const [firstActor, setFirstActor]   = useState<Actor | null>(null)
   const [resolveLog, setResolveLog]   = useState<string[]>([])  // human-readable resolution lines
-  const [pHitsplat, setPHitsplat]     = useState<{ key: number; text: string; color: string } | null>(null)
-  const [eHitsplat, setEHitsplat]     = useState<{ key: number; text: string; color: string } | null>(null)
+  const [pHitsplat, setPHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
+  const [eHitsplat, setEHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
+  const [critFlash, setCritFlash]     = useState(false)
+  const [critFreeze, setCritFreeze]   = useState(false)   // briefly freezes the aim bar at the lock moment
+  const [enemyShakeKey, setEnemyShakeKey] = useState(0)
+  const [playerShakeKey, setPlayerShakeKey] = useState(0)
 
   // Aim bar state — RAF driven during 'aiming' subphase
   const firePosRef  = useRef(0)
@@ -133,6 +137,18 @@ export default function RaidCombat({
   const enemyPatternIdxRef = useRef(0)
   const turnRef            = useRef(1)
   const [turn, setTurn]    = useState(1)
+  const critFreezeRef      = useRef(false)
+  useEffect(() => { critFreezeRef.current = critFreeze }, [critFreeze])
+
+  // Ship shake animation controls — fired when the ship takes a hit
+  const enemyShakeCtrl  = useAnimation()
+  const playerShakeCtrl = useAnimation()
+  useEffect(() => {
+    if (enemyShakeKey > 0) enemyShakeCtrl.start({ x: [0, -10, 9, -6, 5, 0], transition: { duration: 0.42 } })
+  }, [enemyShakeKey, enemyShakeCtrl])
+  useEffect(() => {
+    if (playerShakeKey > 0) playerShakeCtrl.start({ x: [0, -10, 9, -6, 5, 0], transition: { duration: 0.42 } })
+  }, [playerShakeKey, playerShakeCtrl])
 
   const playerHpRef = useRef(initialPlayerHp)
   const enemyHpRef  = useRef(enemy.hpBase)
@@ -166,6 +182,8 @@ export default function RaidCombat({
     function tick(now: number) {
       const dt = Math.min(now - last, 50)
       last = now
+      // Freeze frame on a critical lock: bar holds at the lock moment so the impact reads
+      if (critFreeze) { rafRef.current = requestAnimationFrame(tick); return }
       const frames = dt / 16.67
 
       firePosRef.current += INDICATOR_SPEED * frames * fireDirRef.current
@@ -238,10 +256,18 @@ export default function RaidCombat({
   }
 
   function lockShot() {
-    if (subPhase !== 'aiming') return
+    if (subPhase !== 'aiming' || critFreeze) return
     const res = getShotResult(firePosRef.current, zonePosRef.current)
     setAimResult(res)
-    advanceToReveal(playerAction!)
+    if (res === 'critical') {
+      // Crit impact: freeze the bar at the lock moment, flash the stage, then proceed.
+      setCritFreeze(true)
+      setCritFlash(true)
+      setTimeout(() => setCritFlash(false), 300)
+      setTimeout(() => { setCritFreeze(false); advanceToReveal(playerAction!) }, 380)
+    } else {
+      advanceToReveal(playerAction!)
+    }
   }
 
   function advanceToReveal(pAction: EnemyAction) {
@@ -267,35 +293,46 @@ export default function RaidCombat({
 
     const order: Actor[] = first === 'player' ? ['player', 'enemy'] : ['enemy', 'player']
 
-    // Track state through the turn locally so kill-mid-turn skips the second actor.
+    // Pre-compute the full sequence of state snapshots so we can animate them in order
+    type Step = {
+      who: Actor
+      action: EnemyAction
+      pHp: number; eHp: number
+      pCharges: number; eCharges: number
+      splatTarget: Actor | null  // which side gets the hitsplat
+      splatText: string
+      splatColor: string
+      big?: boolean
+    }
+
     let pHp = playerHpRef.current
     let eHp = enemyHpRef.current
     let pCharges = playerCharges
     let eCharges = enemyCharges
+    const steps: Step[] = []
 
     for (const who of order) {
       if (pHp <= 0 || eHp <= 0) break
       const action = who === 'player' ? pAction : eAction
+      let splatTarget: Actor | null = null
+      let splatText = ''
+      let splatColor = '#ef4444'
+
       if (action === 'reload') {
         if (who === 'player') { pCharges = Math.min(MAX_CHARGES, pCharges + 1); log.push(`You reload (+1 → ${pCharges})`) }
         else                  { eCharges = Math.min(MAX_CHARGES, eCharges + 1); log.push(`Enemy reloads (+1 → ${eCharges})`) }
       } else if (action === 'dodge') {
         log.push(`${who === 'player' ? 'You brace' : 'Enemy braces'} for evasion`)
       } else if (action === 'fire' || action === 'volley') {
-        // Charge cost (the attacker's charges drop in this resolution)
-        if (who === 'player') {
-          pCharges -= (action === 'volley' ? MAX_CHARGES : 1)
-        } else {
-          eCharges -= (action === 'volley' ? MAX_CHARGES : 1)
-        }
-        // Damage roll
+        if (who === 'player') pCharges -= (action === 'volley' ? MAX_CHARGES : 1)
+        else                  eCharges -= (action === 'volley' ? MAX_CHARGES : 1)
+
         const isAttackerPlayer = who === 'player'
-        const attackerSpeed = isAttackerPlayer ? shipSpeed       : enemy.shipSpeed
+        const attackerSpeed  = isAttackerPlayer ? shipSpeed       : enemy.shipSpeed
         const defenderAction = isAttackerPlayer ? eAction         : pAction
         const defenderSpeed  = isAttackerPlayer ? enemy.shipSpeed : shipSpeed
         const defenderNav    = isAttackerPlayer ? 0               : totalNavigation
 
-        // Compute base damage
         let dmg: number
         if (isAttackerPlayer) {
           const bossMult = isBoss
@@ -304,60 +341,91 @@ export default function RaidCombat({
           const mult = (action === 'volley' ? 2 : 1) * bossMult
           dmg = Math.floor(rollShotDamage(aimResult ?? 'miss', shipMinDamage, totalPower) * mult)
         } else {
-          // Enemy damage roll (no aim mechanic): random within enemy.min/max, ×2 for volley
           const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
           dmg = base * (action === 'volley' ? 2 : 1)
         }
 
-        // Defender dodge if they chose Dodge
+        splatTarget = isAttackerPlayer ? 'enemy' : 'player'
+
         if (defenderAction === 'dodge') {
           const def = rollDodge(defenderSpeed, defenderNav)
           const atk = rollAttackerVsDodge(attackerSpeed)
           if (def >= atk) {
-            log.push(`${isAttackerPlayer ? 'Enemy dodges' : 'You dodge'}! ${def} vs ${atk}`)
-            // Show dodge hitsplat as 0
-            if (isAttackerPlayer) setEHitsplat({ key: Date.now(), text: 'Dodged', color: '#38bdf8' })
-            else                  setPHitsplat({ key: Date.now(), text: 'Dodged', color: '#38bdf8' })
+            log.push(`${isAttackerPlayer ? 'Enemy dodges' : 'You dodge'} ${def} vs ${atk}`)
+            splatText = 'Dodged'
+            splatColor = '#38bdf8'
+            steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor })
             continue
           } else {
             log.push(`${isAttackerPlayer ? 'Enemy fails dodge' : 'You fail dodge'} ${def} vs ${atk}`)
           }
         }
 
-        // Apply damage
         if (isAttackerPlayer) {
           eHp = Math.max(0, eHp - dmg)
-          log.push(`You ${action === 'volley' ? 'volley' : 'fire'} for ${dmg} (${aimResult})`)
-          setEHitsplat({ key: Date.now(), text: `-${dmg}`, color: aimResult === 'critical' ? '#fbbf24' : '#ef4444' })
+          log.push(`You ${action === 'volley' ? 'volley' : 'fire'}${aimResult === 'critical' ? ' — CRITICAL!' : ''} for ${dmg}`)
+          splatText = `-${dmg}`
+          splatColor = aimResult === 'critical' ? '#fbbf24' : '#ef4444'
         } else {
           pHp = Math.max(0, pHp - dmg)
           log.push(`Enemy ${action === 'volley' ? 'volleys' : 'fires'} for ${dmg}`)
-          setPHitsplat({ key: Date.now(), text: `-${dmg}`, color: '#ef4444' })
+          splatText = `-${dmg}`
+          splatColor = '#ef4444'
         }
       }
+
+      steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, big: who === 'player' && aimResult === 'critical' })
     }
 
-    // Commit state
-    setPlayerHp(pHp); setEnemyHp(eHp); setPlayerCharges(pCharges); setEnemyCharges(eCharges)
     setResolveLog(log)
 
-    // Outcome check after a brief animation pause
-    setTimeout(() => {
-      if (pHp <= 0) {
-        setSubPhase('done')
-        onPlayerDefeated()
+    // Animate the pre-computed steps sequentially. Each step:
+    //   1. Update HP/charges
+    //   2. Show hitsplat (if applicable)
+    //   3. Clear hitsplat after ~600ms so it exits cleanly
+    //   4. Wait ~800ms total before next step (so the second hitsplat starts ~200ms after the first clears)
+    const STEP_GAP_MS    = 750
+    const SPLAT_HOLD_MS  = 400
+
+    function playStep(i: number) {
+      if (i >= steps.length) {
+        setTimeout(() => {
+          if (pHp <= 0)      { setSubPhase('done'); onPlayerDefeated(); return }
+          if (eHp <= 0)      { setSubPhase('done'); onEnemyDefeated(pHp); return }
+          turnRef.current++; setTurn(turnRef.current)
+          setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
+          setSubPhase('await_input')
+        }, 400)
         return
       }
-      if (eHp <= 0) {
-        setSubPhase('done')
-        onEnemyDefeated(pHp)
-        return
+
+      const step = steps[i]
+      // Apply state snapshot for this step
+      setPlayerHp(step.pHp); setEnemyHp(step.eHp)
+      setPlayerCharges(step.pCharges); setEnemyCharges(step.eCharges)
+
+      // Show hitsplat if this step had damage / dodge, and shake the receiving ship
+      if (step.splatTarget === 'enemy') {
+        setEHitsplat({ key: Date.now() + i, text: step.splatText, color: step.splatColor, big: step.big })
+        setEnemyShakeKey(k => k + 1)
       }
-      // Next turn
-      turnRef.current++; setTurn(turnRef.current)
-      setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
-      setSubPhase('await_input')
-    }, 1400)
+      if (step.splatTarget === 'player') {
+        setPHitsplat({ key: Date.now() + i, text: step.splatText, color: step.splatColor, big: step.big })
+        setPlayerShakeKey(k => k + 1)
+      }
+
+      // Clear the hitsplat after a short hold so it exits and doesn't linger
+      if (step.splatTarget) {
+        setTimeout(() => {
+          if (step.splatTarget === 'enemy') setEHitsplat(null)
+          else                              setPHitsplat(null)
+        }, SPLAT_HOLD_MS)
+      }
+
+      setTimeout(() => playStep(i + 1), STEP_GAP_MS)
+    }
+
+    playStep(0)
   }
 
   // ─── Render — Pokemon-style battle stage ──────────────────────────────────
@@ -408,7 +476,7 @@ export default function RaidCombat({
           <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small />
         </div>
 
-        {/* Enemy ship — upper right area */}
+        {/* Enemy ship — upper right area. Outer = slide-in mount, inner = hit shake. */}
         <motion.div
           key={`enemy-${enemy.id}`}
           initial={{ x: 80, opacity: 0 }}
@@ -419,23 +487,25 @@ export default function RaidCombat({
             width: '38%', maxWidth: 180,
           }}
         >
-          <motion.img
-            src={enemy.portrait || enemy.image}
-            alt={enemy.name}
-            animate={{ y: [0, -4, 0] }}
-            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-            style={{
-              width: '100%', display: 'block',
-              transform: 'scaleX(-1)',  // face the player
-              filter: 'drop-shadow(0 8px 20px rgba(239,68,68,0.35))',
-            }}
-          />
-          <AnimatePresence>
-            {eHitsplat && <HitsplatOverlay key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} />}
-          </AnimatePresence>
+          <motion.div animate={enemyShakeCtrl} style={{ position: 'relative' }}>
+            <motion.img
+              src={enemy.portrait || enemy.image}
+              alt={enemy.name}
+              animate={{ y: [0, -4, 0] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+              style={{
+                width: '100%', display: 'block',
+                transform: 'scaleX(-1)',  // face the player
+                filter: 'drop-shadow(0 8px 20px rgba(239,68,68,0.35))',
+              }}
+            />
+            <AnimatePresence>
+              {eHitsplat && <HitsplatOverlay key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} />}
+            </AnimatePresence>
+          </motion.div>
         </motion.div>
 
-        {/* Player ship — lower left area, larger ("closer") */}
+        {/* Player ship — lower left area, larger ("closer"). Outer mount, inner shake. */}
         <motion.div
           initial={{ x: -60, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
@@ -445,20 +515,39 @@ export default function RaidCombat({
             width: '52%', maxWidth: 240,
           }}
         >
-          <motion.img
-            src={shipImageUrl}
-            alt={shipName}
-            animate={{ y: [0, -3, 0] }}
-            transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
-            style={{
-              width: '100%', display: 'block',
-              filter: 'drop-shadow(0 10px 22px rgba(74,222,128,0.3))',
-            }}
-          />
-          <AnimatePresence>
-            {pHitsplat && <HitsplatOverlay key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} />}
-          </AnimatePresence>
+          <motion.div animate={playerShakeCtrl} style={{ position: 'relative' }}>
+            <motion.img
+              src={shipImageUrl}
+              alt={shipName}
+              animate={{ y: [0, -3, 0] }}
+              transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+              style={{
+                width: '100%', display: 'block',
+                filter: 'drop-shadow(0 10px 22px rgba(74,222,128,0.3))',
+              }}
+            />
+            <AnimatePresence>
+              {pHitsplat && <HitsplatOverlay key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} />}
+            </AnimatePresence>
+          </motion.div>
         </motion.div>
+
+        {/* Critical-hit flash overlay */}
+        <AnimatePresence>
+          {critFlash && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.55 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              style={{
+                position: 'absolute', inset: 0,
+                background: 'radial-gradient(circle at 50% 50%, rgba(251,191,36,0.85) 0%, rgba(251,191,36,0.0) 65%)',
+                pointerEvents: 'none', zIndex: 6,
+              }}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Player HP box — bottom-right */}
         <div style={{
@@ -475,40 +564,20 @@ export default function RaidCombat({
           <ChargesRow charges={playerCharges} max={MAX_CHARGES} small />
         </div>
 
-        {/* First-strike indicator overlay */}
-        <AnimatePresence>
-          {subPhase === 'revealing' && firstActor && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.32 }}
-              style={{
-                position: 'absolute', top: '46%', left: '50%', transform: 'translate(-50%, -50%)',
-                zIndex: 5,
-                padding: '0.55rem 1.1rem',
-                background: firstActor === 'player' ? 'rgba(74,222,128,0.95)' : 'rgba(239,68,68,0.95)',
-                color: '#0a1422', borderRadius: 999,
-                fontFamily: 'var(--font-cinzel)', fontSize: '0.85rem', fontWeight: 700,
-                letterSpacing: '0.12em',
-                boxShadow: `0 4px 18px ${firstActor === 'player' ? 'rgba(74,222,128,0.55)' : 'rgba(239,68,68,0.55)'}`,
-              }}
-            >
-              {firstActor === 'player' ? 'YOU STRIKE FIRST' : 'ENEMY STRIKES FIRST'}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
-      {/* Bottom panel — action menu / aim bar / log */}
+      {/* Bottom panel — persistent log + action UI */}
       <div style={{
         background: '#060c14',
         borderTop: '2px solid #2a3548',
-        padding: '0.85rem 0.9rem 1rem',
-        minHeight: 175,
+        padding: '0.7rem 0.85rem 0.95rem',
+        display: 'flex', flexDirection: 'column', gap: 8,
       }}>
+        {/* Action log — shows this turn's events (cleared at start of each resolve) */}
+        <LogBox lines={resolveLog} turn={turn} />
+
         {subPhase === 'await_input' && (
-          <ActionMenu canFire={canFire} canVolley={canVolley} onSelect={selectAction} turn={turn} />
+          <ActionMenu canFire={canFire} canVolley={canVolley} onSelect={selectAction} />
         )}
         {subPhase === 'aiming' && (
           <AimPanel
@@ -518,16 +587,15 @@ export default function RaidCombat({
           />
         )}
         {(subPhase === 'revealing' || subPhase === 'resolving') && (
-          <RevealPanel
+          <ActionTilesRow
             playerAction={playerAction}
             enemyAction={enemyAction}
             aimResult={aimResult}
             firstActor={firstActor}
-            log={resolveLog}
           />
         )}
         {subPhase === 'done' && (
-          <p className="font-karla" style={{ color: '#a8b8d0', textAlign: 'center', padding: '2rem 0' }}>Combat ended.</p>
+          <p className="font-karla" style={{ color: '#a8b8d0', textAlign: 'center', padding: '1.5rem 0' }}>Combat ended.</p>
         )}
       </div>
     </div>
@@ -575,21 +643,30 @@ function ChargesRow({ charges, max, small }: { charges: number; max: number; sma
   )
 }
 
-function HitsplatOverlay({ text, color }: { text: string; color: string }) {
+function HitsplatOverlay({ text, color, big }: { text: string; color: string; big?: boolean }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 0, scale: 0.6 }}
-      animate={{ opacity: 1, y: -32, scale: 1.05 }}
-      exit={{ opacity: 0, y: -48, scale: 1 }}
-      transition={{ duration: 0.95, ease: [0.34, 1.56, 0.64, 1] }}
+      initial={{ opacity: 0, y: 4, scale: big ? 0.5 : 0.6 }}
+      animate={{ opacity: 1, y: big ? -36 : -28, scale: big ? 1.25 : 1 }}
+      exit={{ opacity: 0, y: big ? -48 : -38, scale: big ? 1.3 : 1 }}
+      transition={{
+        opacity: { duration: 0.18 },
+        y:       { duration: 0.32, ease: [0.34, 1.56, 0.64, 1] },
+        scale:   { duration: 0.32, ease: [0.34, 1.56, 0.64, 1] },
+      }}
       style={{
         position: 'absolute', left: '50%', top: '40%', transform: 'translateX(-50%)',
         pointerEvents: 'none', zIndex: 10,
         background: color, color: '#ffffff',
-        padding: '0.3rem 0.7rem', borderRadius: 12,
-        fontFamily: 'var(--font-cinzel)', fontWeight: 700, fontSize: '0.95rem',
-        boxShadow: `0 4px 18px ${color}aa, 0 0 10px ${color}66`,
-        textShadow: '0 1px 4px rgba(0,0,0,0.6)',
+        padding: big ? '0.4rem 0.85rem' : '0.25rem 0.6rem',
+        borderRadius: big ? 14 : 10,
+        fontFamily: 'var(--font-cinzel)', fontWeight: 700,
+        fontSize: big ? '1.25rem' : '0.85rem',
+        boxShadow: big
+          ? `0 6px 26px ${color}cc, 0 0 14px ${color}aa`
+          : `0 3px 14px ${color}99, 0 0 8px ${color}55`,
+        textShadow: '0 1px 4px rgba(0,0,0,0.65)',
+        whiteSpace: 'nowrap',
       }}
     >
       {text}
@@ -597,11 +674,10 @@ function HitsplatOverlay({ text, color }: { text: string; color: string }) {
   )
 }
 
-function ActionMenu({ canFire, canVolley, onSelect, turn }: {
+function ActionMenu({ canFire, canVolley, onSelect }: {
   canFire: boolean
   canVolley: boolean
   onSelect: (a: EnemyAction) => void
-  turn: number
 }) {
   const btn = (action: EnemyAction, label: string, sub: string, enabled: boolean, color: string) => (
     <motion.button
@@ -609,30 +685,48 @@ function ActionMenu({ canFire, canVolley, onSelect, turn }: {
       disabled={!enabled}
       onClick={() => onSelect(action)}
       style={{
-        padding: '0.85rem 0.6rem',
+        padding: '0.7rem 0.5rem',
         background: enabled ? '#1c2540' : '#0a1422',
         border: `2px solid ${enabled ? color : '#2a3548'}`,
-        borderRadius: 14,
+        borderRadius: 12,
         cursor: enabled ? 'pointer' : 'not-allowed',
         opacity: enabled ? 1 : 0.45,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
       }}
     >
-      <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: enabled ? '#ffffff' : '#5a6478' }}>{label}</span>
-      <span className="font-karla" style={{ fontSize: '0.56rem', color: enabled ? color : '#4a5468', textAlign: 'center', lineHeight: 1.25 }}>{sub}</span>
+      <span className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: enabled ? '#ffffff' : '#5a6478' }}>{label}</span>
+      <span className="font-karla" style={{ fontSize: '0.54rem', color: enabled ? color : '#4a5468', textAlign: 'center', lineHeight: 1.2 }}>{sub}</span>
     </motion.button>
   )
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: '#7a8aa0', textAlign: 'center' }}>
-        Turn {turn} · Pick Your Action
-      </p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        {btn('fire',    'FIRE',    'Spend 1 ◆',         canFire,   '#4ade80')}
-        {btn('volley',  'VOLLEY',  'Spend 3 ◆ · ×2',    canVolley, '#fbbf24')}
-        {btn('reload',  'RELOAD',  '+1 ◆ (vulnerable)', true,      '#a8b8d0')}
-        {btn('dodge',   'DODGE',   'Evade incoming',    true,      '#38bdf8')}
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+      {btn('fire',    'FIRE',    'Spend 1 ◆',         canFire,   '#4ade80')}
+      {btn('volley',  'VOLLEY',  'Spend 3 ◆ · ×2',    canVolley, '#fbbf24')}
+      {btn('reload',  'RELOAD',  '+1 ◆ · vulnerable', true,      '#a8b8d0')}
+      {btn('dodge',   'DODGE',   'Evade incoming',    true,      '#38bdf8')}
+    </div>
+  )
+}
+
+function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
+  // Pokemon-style "battle text" box. Always visible, just current turn's events.
+  const visible = lines.length > 0 ? lines : ['What will you do?']
+  return (
+    <div style={{
+      background: '#04080e',
+      border: '1px solid #1f2e42',
+      borderRadius: 10,
+      padding: '0.5rem 0.7rem',
+      minHeight: 56,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 3 }}>
+        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#5a7a9a' }}>
+          Turn {turn}
+        </p>
       </div>
+      {visible.map((line, i) => (
+        <p key={i} className="font-karla" style={{ fontSize: '0.66rem', color: '#c8d4e0', lineHeight: 1.5 }}>{line}</p>
+      ))}
     </div>
   )
 }
@@ -673,28 +767,18 @@ function AimPanel({ indicatorRef, zoneRef, onLock, actionLabel }: {
   )
 }
 
-function RevealPanel({ playerAction, enemyAction, aimResult, firstActor, log }: {
+function ActionTilesRow({ playerAction, enemyAction, aimResult, firstActor }: {
   playerAction: EnemyAction | null
   enemyAction: EnemyAction | null
   aimResult: ShotResult | null
   firstActor: Actor | null
-  log: string[]
 }) {
   const labelFor = (a: EnemyAction | null) =>
     a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'dodge' ? 'Dodge' : '—'
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <ActionTile label="YOU" action={labelFor(playerAction)} aim={aimResult} first={firstActor === 'player'} color="#4ade80" />
-        <ActionTile label="ENEMY" action={labelFor(enemyAction)} first={firstActor === 'enemy'} color="#ef4444" />
-      </div>
-      {log.length > 0 && (
-        <div style={{ padding: '0.6rem 0.75rem', background: '#04080e', border: '1px solid #1f2e42', borderRadius: 10 }}>
-          {log.map((line, i) => (
-            <p key={i} className="font-karla" style={{ fontSize: '0.62rem', color: '#a8b8d0', lineHeight: 1.55 }}>{line}</p>
-          ))}
-        </div>
-      )}
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      <ActionTile label="YOU" action={labelFor(playerAction)} aim={aimResult} first={firstActor === 'player'} color="#4ade80" />
+      <ActionTile label="ENEMY" action={labelFor(enemyAction)} first={firstActor === 'enemy'} color="#ef4444" />
     </div>
   )
 }
