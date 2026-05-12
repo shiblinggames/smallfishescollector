@@ -561,8 +561,8 @@ export default function RaidCombat({
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           style={{
-            position: 'absolute', right: '6%', top: '46%', zIndex: 2,
-            width: '40%', maxWidth: 190,
+            position: 'absolute', right: '8%', top: '50%', zIndex: 2,
+            width: '28%', maxWidth: 140,
           }}
         >
           <motion.div animate={enemyShakeCtrl} style={{ position: 'relative' }}>
@@ -590,8 +590,8 @@ export default function RaidCombat({
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
           style={{
-            position: 'absolute', left: '4%', bottom: '6%', zIndex: 3,
-            width: '52%', maxWidth: 240,
+            position: 'absolute', left: '0%', bottom: '4%', zIndex: 3,
+            width: '68%', maxWidth: 340,
           }}
         >
           <motion.div animate={playerShakeCtrl} style={{ position: 'relative' }}>
