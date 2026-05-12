@@ -2771,6 +2771,41 @@ export default function FishingGame({
                 )}
               </AnimatePresence>
             </div>
+            {/* Special item action — chip docked under the XP bar.
+               Only renders when an equipped special has an activatable action
+               available in the current phase. */}
+            <AnimatePresence>
+              {equippedSpecial === 'tide_turner' && tideTurnerSkipsLeft > 0 && phase === 'catching' && (
+                <motion.button
+                  key="tide-turner-action"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18 }}
+                  onClick={handleTideTurnerSkip}
+                  className="font-karla font-700"
+                  style={{
+                    marginTop: '0.4rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: 'rgba(14,8,28,0.85)',
+                    border: '1px solid rgba(167,139,250,0.5)',
+                    borderRadius: 999,
+                    padding: '0.32rem 0.8rem',
+                    color: '#c4b5fd',
+                    fontSize: '0.64rem',
+                    cursor: 'pointer',
+                    letterSpacing: '0.05em',
+                    boxShadow: '0 2px 10px rgba(139,111,192,0.28)',
+                  }}
+                >
+                  <span style={{ textTransform: 'uppercase', color: 'rgba(196,181,253,0.7)', fontSize: '0.52rem', letterSpacing: '0.12em' }}>Tide Turner</span>
+                  <span style={{ color: '#e9e4ff' }}>Skip</span>
+                  <span style={{ opacity: 0.7 }}>· {tideTurnerSkipsLeft} left</span>
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
 
 
@@ -3109,31 +3144,6 @@ export default function FishingGame({
                       needleColor={needleColor()} zoneOpacityFn={zoneOpacity}
                       fireLevel={perfectStreak >= 3 ? 2 : perfectStreak === 2 ? 1 : 0}
                       snapKey={snapKey} perfectBurstKey={perfectBurstKey} />
-                    {equippedSpecial === 'tide_turner' && tideTurnerSkipsLeft > 0 && phase === 'catching' && (
-                      <button
-                        onClick={handleTideTurnerSkip}
-                        style={{
-                          position: 'absolute',
-                          bottom: '12%',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          zIndex: 20,
-                          background: 'rgba(14,8,28,0.88)',
-                          border: '1px solid rgba(167,139,250,0.55)',
-                          borderRadius: 10,
-                          padding: '0.35rem 0.85rem',
-                          cursor: 'pointer',
-                          color: '#c4b5fd',
-                          fontSize: '0.68rem',
-                          fontFamily: 'inherit',
-                          whiteSpace: 'nowrap',
-                          boxShadow: '0 2px 12px rgba(139,111,192,0.35)',
-                        }}
-                        className="font-karla font-700"
-                      >
-                        Skip — {tideTurnerSkipsLeft} left
-                      </button>
-                    )}
                   </div>
                 </motion.div>
               )}
