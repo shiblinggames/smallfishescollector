@@ -499,12 +499,12 @@ export default function RaidCombat({
       border: '2px solid #2a3548',
       borderRadius: 18,
       overflow: 'hidden',
-      maxWidth: 480, margin: '0 auto',
+      maxWidth: 580, margin: '0 auto',
     }}>
       {/* Battle stage — ocean scene with ships and HP boxes */}
       <div style={{
         position: 'relative',
-        aspectRatio: '4 / 3',
+        aspectRatio: '5 / 4',
         background: 'linear-gradient(180deg, #1e3a5f 0%, #234567 45%, #2a5274 55%, #0a1c2e 100%)',
         overflow: 'hidden',
       }}>

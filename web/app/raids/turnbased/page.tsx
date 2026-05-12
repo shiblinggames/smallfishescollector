@@ -17,7 +17,7 @@ export default async function TurnBasedRaidPage() {
     <>
       <Nav packsAvailable={0} doubloons={0} gems={0} />
       <main className="min-h-screen pt-6">
-        <div className="px-4 pb-12 max-w-md mx-auto">
+        <div className="px-3 pb-12 max-w-xl mx-auto">
           <Link href="/raids" className="font-karla text-[#6a6764] text-xs uppercase tracking-[0.12em] hover:text-[#a0a09a] transition-colors">
             ← Back to raids
           </Link>
