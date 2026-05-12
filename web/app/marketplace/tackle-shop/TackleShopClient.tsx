@@ -338,7 +338,7 @@ export default function TackleShopClient({
                           <span className="font-karla font-700" style={{ fontSize: '0.72rem', lineHeight: 1 }}>
                             {isBuying ? '…' : `×${buyQty}`}
                           </span>
-                          <span className="font-karla" style={{ fontSize: '0.52rem', color: canAfford ? 'rgba(255,255,255,0.38)' : '#3a3835', lineHeight: 1 }}>
+                          <span className="font-karla" style={{ fontSize: '0.52rem', color: canAfford ? 'rgba(255,255,255,0.55)' : '#f0c040', lineHeight: 1 }}>
                             {cost.toLocaleString()} ⟡
                           </span>
                         </button>
@@ -434,7 +434,7 @@ export default function TackleShopClient({
                       )}
 
                       {isNext && (
-                        <p className="font-karla font-600 mt-1 text-sm sm:text-base" style={{ color: canAffordHook ? c : '#6a6764' }}>
+                        <p className="font-karla font-600 mt-1 text-sm sm:text-base" style={{ color: canAffordHook ? c : '#f0c040' }}>
                           {isPending ? 'Upgrading…' : canAffordHook ? '↑ Tap to upgrade' : `${(hook.cost - doubloons).toLocaleString()} ⟡ short`}
                         </p>
                       )}
@@ -593,7 +593,7 @@ export default function TackleShopClient({
                               fontSize: '0.68rem', padding: '0.38rem 0.5rem', borderRadius: 8,
                               background: canAfford ? `${c}16` : 'rgba(255,255,255,0.06)',
                               border: `1px solid ${canAfford ? c + '44' : 'rgba(255,255,255,0.14)'}`,
-                              color: canAfford ? c : '#4a4845',
+                              color: canAfford ? c : '#f0c040',
                               cursor: canAfford && !isPending ? 'pointer' : 'default',
                               opacity: isBuying ? 0.5 : 1,
                             }}
@@ -765,7 +765,7 @@ export default function TackleShopClient({
                     )}
 
                     {isNext && (
-                      <p className="font-karla font-600 mt-1.5 text-sm" style={{ color: canAffordReel ? c : '#6a6764' }}>
+                      <p className="font-karla font-600 mt-1.5 text-sm" style={{ color: canAffordReel ? c : '#f0c040' }}>
                         {isPending ? 'Upgrading…' : canAffordReel ? '↑ Tap to upgrade' : `${(reel.cost - doubloons).toLocaleString()} ⟡ short`}
                       </p>
                     )}

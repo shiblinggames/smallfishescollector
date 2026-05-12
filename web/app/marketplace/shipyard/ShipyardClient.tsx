@@ -238,7 +238,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
                       ? `linear-gradient(180deg, ${c}26 0%, ${c}12 100%)`
                       : 'rgba(255,255,255,0.04)',
                     border: `1px solid ${canAfford ? `${c}80` : 'rgba(255,255,255,0.1)'}`,
-                    color: canAfford ? c : '#5a5755',
+                    color: canAfford ? c : '#f0c040',
                     cursor: canAfford && !isPending ? 'pointer' : 'default',
                     opacity: isPending ? 0.6 : 1,
                     fontSize: '0.92rem',

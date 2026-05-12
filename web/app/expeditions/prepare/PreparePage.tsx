@@ -324,11 +324,11 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
             transition: 'opacity 0.2s',
           }}
         >
-          <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.75rem', color: canAfford ? '#f0c040' : '#4a4845' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.75rem', color: '#f0c040' }}>
             {isPending ? 'Setting sail...' : `Set Sail — ${zoneConfig.entryCost} ⟡`}
           </p>
           {!canAfford && (
-            <p className="font-karla" style={{ fontSize: '0.62rem', color: '#4a4845', marginTop: 3 }}>
+            <p className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(240,192,64,0.75)', marginTop: 3 }}>
               Need {(zoneConfig.entryCost - doubloons).toLocaleString()} more ⟡
             </p>
           )}

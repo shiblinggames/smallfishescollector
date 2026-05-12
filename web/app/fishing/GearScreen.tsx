@@ -431,10 +431,7 @@ export default function GearScreen({
               icon={
                 <div style={{
                   position: 'relative',
-                  width: 36, height: 36, borderRadius: 9, overflow: 'hidden',
-                  background: 'rgba(4,10,18,0.85)',
-                  border: `1px solid ${swatchColor}cc`,
-                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 12px ${swatchColor}40`,
+                  width: 36, height: 36, overflow: 'hidden',
                 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={activeBoat?.restImageUrl ?? '/boat_default_rest.png'} alt="" style={{
@@ -729,11 +726,7 @@ export default function GearScreen({
                         >
                           <div style={{
                             position: 'relative',
-                            width: 48, height: 48, borderRadius: 12,
-                            overflow: 'hidden',
-                            background: 'rgba(4,10,18,0.85)',
-                            border: `1px solid ${DEFAULT_BOAT_COLOR}cc`,
-                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 18px ${DEFAULT_BOAT_COLOR}55`,
+                            width: 48, height: 48, overflow: 'hidden',
                           }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src="/boat_default_rest.png" alt="" style={{
@@ -774,17 +767,13 @@ export default function GearScreen({
                             border: `1px solid ${isEquipped ? b.color + '90' : owned ? 'rgba(255,255,255,0.09)' : `${b.color}30`}`,
                             boxShadow: isEquipped ? `0 0 14px ${b.color}33` : 'none',
                             cursor: tappable ? 'pointer' : 'default',
-                            opacity: !owned && !canAfford ? 0.55 : 1,
+                            opacity: !owned && !canAfford ? 0.72 : 1,
                             position: 'relative',
                           }}
                         >
                           <div style={{
                             position: 'relative',
-                            width: 48, height: 48, borderRadius: 12,
-                            overflow: 'hidden',
-                            background: 'rgba(4,10,18,0.85)',
-                            border: `1px solid ${b.color}cc`,
-                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 18px ${b.color}55`,
+                            width: 48, height: 48, overflow: 'hidden',
                           }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={b.restImageUrl} alt="" style={{
@@ -799,7 +788,7 @@ export default function GearScreen({
                           ) : owned ? (
                             <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Owned · Tap to equip</span>
                           ) : (
-                            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: canAfford ? b.color : '#5a5856' }}>
+                            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: canAfford ? b.color : '#f0c040' }}>
                               {b.cost.toLocaleString()} ⟡
                             </span>
                           )}
@@ -908,23 +897,32 @@ export default function GearScreen({
                             border: `1px solid ${isEquipped ? h.color + '90' : owned ? 'rgba(255,255,255,0.09)' : `${h.color}30`}`,
                             boxShadow: isEquipped ? `0 0 14px ${h.color}33` : 'none',
                             cursor: tappable ? 'pointer' : 'default',
-                            opacity: !owned && !canAfford ? 0.55 : 1,
+                            opacity: !owned && !canAfford ? 0.72 : 1,
                             position: 'relative',
                           }}
                         >
                           <div style={{
                             width: 48, height: 48, borderRadius: 12,
-                            background: h.color,
+                            background: 'rgba(4,10,18,0.85)',
                             border: `1px solid ${h.color}cc`,
-                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), 0 0 16px ${h.color}50`,
-                          }} />
+                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 16px ${h.color}55`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            overflow: 'hidden',
+                          }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={h.restImageUrl}
+                              alt={h.name}
+                              style={{ width: 38, height: 38, objectFit: 'contain' }}
+                            />
+                          </div>
                           <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: owned ? '#f0ede8' : '#a0a09a', lineHeight: 1.1, textAlign: 'center' }}>{h.name}</p>
                           {isEquipped ? (
                             <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: h.color }}>✓ Equipped</span>
                           ) : owned ? (
                             <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Owned · Tap to equip</span>
                           ) : (
-                            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: canAfford ? h.color : '#5a5856' }}>
+                            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: canAfford ? h.color : '#f0c040' }}>
                               {h.cost.toLocaleString()} ⟡
                             </span>
                           )}

@@ -4490,7 +4490,7 @@ export default function FishingGame({
                       ×10 · 2× price
                     </span>
                   </div>
-                  <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: wormBuyMsg ? (wormBuyMsg.startsWith('+') ? '#4ade80' : '#f87171') : (canAfford ? '#d4a96a' : 'rgba(255,255,255,0.2)') }}>
+                  <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: wormBuyMsg ? (wormBuyMsg.startsWith('+') ? '#4ade80' : '#f87171') : (canAfford ? '#d4a96a' : '#f0c040') }}>
                     {wormBuyMsg ?? '200 ⟡'}
                   </span>
                 </button>
@@ -5023,7 +5023,7 @@ export default function FishingGame({
                         <div>
                           <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: canAfford ? '#f0c040' : '#5a5755', marginBottom: 4 }}>Upgrade Hold</p>
                           <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: canAfford ? '#f0ede8' : '#6a6764', lineHeight: 1 }}>{next!.name}</p>
-                          <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: canAfford ? 'rgba(240,192,64,0.75)' : '#4a4845', marginTop: 5 }}>
+                          <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: canAfford ? 'rgba(240,192,64,0.75)' : '#f0c040', marginTop: 5 }}>
                             {next!.capacity} slots &nbsp;·&nbsp; {next!.cost.toLocaleString()} ⟡
                           </p>
                         </div>

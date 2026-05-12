@@ -197,7 +197,7 @@ export default function MarketplaceClient({ hookTier: initialTier, doubloons: in
                     <p className="font-karla font-300 text-[#6a6764]" style={{ fontSize: '0.7rem' }}>{hook.description}</p>
 
                     {isNext && (
-                      <p className="font-karla font-600 mt-1" style={{ fontSize: '0.65rem', color: canAfford ? c : '#6a6764' }}>
+                      <p className="font-karla font-600 mt-1" style={{ fontSize: '0.65rem', color: canAfford ? c : '#f0c040' }}>
                         {isPending ? 'Upgrading…' : canAfford ? '↑ Tap to upgrade' : `${(hook.cost - doubloons).toLocaleString()} ⟡ short`}
                       </p>
                     )}
