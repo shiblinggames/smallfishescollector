@@ -41,7 +41,7 @@ export default async function FishOfTheDayPage() {
           </p>
         </div>
 
-        <div className="px-6 pb-12 max-w-sm mx-auto">
+        <div className="px-5 pb-12 max-w-md mx-auto">
           {'error' in puzzleResult ? (
             <p className="font-karla text-[#a0a09a] text-sm text-center">{puzzleResult.error}</p>
           ) : (

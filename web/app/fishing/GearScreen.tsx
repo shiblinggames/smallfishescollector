@@ -31,6 +31,20 @@ function ShopLink({ href, label, color, onClick }: { href: string; label: string
   )
 }
 
+function rodTagline(r: typeof RODS[number]): string {
+  if (r.doubleCatchChance >= 1) return 'Always double'
+  if (r.doubleCatchChance > 0)  return `${Math.round(r.doubleCatchChance * 100)}% double`
+  if ((r.jackpotChance ?? 0) > 0) return `${Math.round(r.jackpotChance! * 100)}% jackpot ×${r.jackpotMultiplier}`
+  if (r.snagImmune)             return 'Snag immune'
+  if (r.retryOnMissChance > 0)  return `${Math.round(r.retryOnMissChance * 100)}% retry`
+  if (r.perfectZoneBonus > 0)   return `+${r.perfectZoneBonus}° perfect`
+  if (r.rarityBonus > 0)        return `+${Math.round(r.rarityBonus * 100)}% rare`
+  const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
+  if (speedPct > 0)             return `${speedPct}% faster`
+  if (r.catchZoneBonus > 0)     return `+${r.catchZoneBonus}° zone`
+  return 'Base rod'
+}
+
 function Pill({ label, color, muted }: { label: string; color?: string; muted?: boolean }) {
   if (muted) return (
     <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
@@ -552,43 +566,51 @@ export default function GearScreen({
 
               {/* ── Rod ── */}
               {openSlot === 'rod' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {ownedRodDefs.map(r => {
-                    const isEquipped = r.tier === equippedRodTier
-                    const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
-                    const hasSpecial = r.doubleCatchChance > 0 || r.retryOnMissChance > 0 || r.snagImmune || r.perfectZoneBonus > 0 || r.rarityBonus > 0 || (r.jackpotChance ?? 0) > 0
-                    return (
-                      <div key={r.tier} style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '0.55rem 0.65rem', borderRadius: 10,
-                        background: isEquipped ? `${r.color}12` : 'rgba(4,10,18,0.72)',
-                        border: `1px solid ${isEquipped ? r.color + '50' : 'rgba(255,255,255,0.09)'}`,
-                      }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8', marginBottom: 3 }}>{r.name}</p>
-                          <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                            {r.doubleCatchChance > 0 && <Pill label={r.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(r.doubleCatchChance*100)}% double`} color={r.color} />}
-                            {r.retryOnMissChance > 0 && <Pill label={`${Math.round(r.retryOnMissChance*100)}% retry`} color={r.color} />}
-                            {r.snagImmune && <Pill label="Snag immune" color={r.color} />}
-                            {r.perfectZoneBonus > 0 && <Pill label={`Perfect +${r.perfectZoneBonus}°`} color={r.color} />}
-                            {r.rarityBonus > 0 && <Pill label={`+${Math.round(r.rarityBonus*100)}% rare`} color={r.color} />}
-                            {(r.jackpotChance ?? 0) > 0 && <Pill label={`${Math.round(r.jackpotChance!*100)}% jackpot ×${r.jackpotMultiplier}`} color={r.color} />}
-                            {!hasSpecial && speedPct > 0 && <Pill label={`${speedPct}% faster`} color={r.color} />}
-                            {!hasSpecial && speedPct <= 0 && r.catchZoneBonus > 0 && <Pill label={`+${r.catchZoneBonus}° zone`} color={r.color} />}
-                            {!hasSpecial && speedPct <= 0 && r.catchZoneBonus === 0 && <Pill label="Base rod" muted />}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                    {ownedRodDefs.map(r => {
+                      const isEquipped = r.tier === equippedRodTier
+                      const tagline = rodTagline(r)
+                      return (
+                        <button
+                          key={r.tier}
+                          onClick={() => { if (!isEquipped) onEquipRod(r.tier) }}
+                          disabled={isEquipped}
+                          className="font-karla font-700"
+                          style={{
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                            padding: '0.6rem 0.4rem 0.5rem',
+                            borderRadius: 10,
+                            background: isEquipped ? `${r.color}1f` : 'rgba(4,10,18,0.72)',
+                            border: `1px solid ${isEquipped ? r.color + '90' : 'rgba(255,255,255,0.09)'}`,
+                            boxShadow: isEquipped ? `0 0 14px ${r.color}33` : 'none',
+                            cursor: isEquipped ? 'default' : 'pointer',
+                            position: 'relative',
+                          }}
+                        >
+                          <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={r.imageUrl ?? '/rod.png'}
+                              alt=""
+                              className={r.glow ? 'rod-glow' : undefined}
+                              style={{
+                                width: 44, height: 44, objectFit: 'contain',
+                                ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 1px 6px ${r.color}66)` }),
+                              } as React.CSSProperties}
+                            />
                           </div>
-                        </div>
-                        {isEquipped
-                          ? <span className="font-karla font-700" style={{ fontSize: '0.52rem', color: r.color, whiteSpace: 'nowrap' }}>✓ On</span>
-                          : <button onClick={() => onEquipRod(r.tier)} className="font-karla font-700"
-                              style={{ fontSize: '0.55rem', padding: '0.28rem 0.6rem', borderRadius: 7, whiteSpace: 'nowrap',
-                                background: `${r.color}16`, border: `1px solid ${r.color}44`, color: r.color, cursor: 'pointer' }}>
-                              Equip
-                            </button>
-                        }
-                      </div>
-                    )
-                  })}
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>
+                            {r.name}
+                          </p>
+                          {isEquipped
+                            ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: r.color }}>✓ Equipped</span>
+                            : <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: r.color, lineHeight: 1.15, textAlign: 'center' }}>{tagline}</span>
+                          }
+                        </button>
+                      )
+                    })}
+                  </div>
                   <ShopLink href="/marketplace/tackle-shop#rod" label="Buy more rods" color={rod.color} onClick={onClose} />
                 </div>
               )}
