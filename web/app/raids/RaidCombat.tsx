@@ -62,6 +62,32 @@ function rollAttackerVsDodge(attackerSpeed: number) {
   return d20() + attackerSpeed
 }
 
+// Lock-moment feel helpers — mirror the existing real-time raid.
+function snapIndicator(el: HTMLDivElement | null) {
+  if (!el) return
+  el.style.transition = 'transform 0s'
+  el.style.transform = 'scaleY(3.0)'
+  requestAnimationFrame(() => {
+    if (!el) return
+    el.style.transition = 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1)'
+    el.style.transform = 'scaleY(1)'
+  })
+}
+function flashBar(el: HTMLDivElement | null, color: string, peak = 0.55) {
+  if (!el) return
+  el.style.background = color
+  el.style.opacity = String(peak)
+  let start: number | null = null
+  function fade(t: number) {
+    if (!el) return
+    if (start === null) start = t
+    const p = (t - start) / 320
+    el.style.opacity = String(Math.max(0, peak * (1 - p)))
+    if (p < 1) requestAnimationFrame(fade)
+  }
+  requestAnimationFrame(fade)
+}
+
 // ─── Aim-bar zone helpers (kept from existing RaidGame) ───────────────────────
 
 const GRAZE_W = 0.038
@@ -136,6 +162,7 @@ export default function RaidCombat({
   const zoneDirRef  = useRef(Math.random() < 0.5 ? 1 : -1)
   const indicatorRef = useRef<HTMLDivElement>(null)
   const zoneRef      = useRef<HTMLDivElement>(null)
+  const barFlashRef  = useRef<HTMLDivElement>(null)
   const rafRef       = useRef(0)
 
   const enemyPatternIdxRef = useRef(0)
@@ -281,10 +308,15 @@ export default function RaidCombat({
 
     setPlayerAction(action)
     if (action === 'fire' || action === 'volley') {
-      // Reset aim positions and begin aiming
+      // Reset aim positions and indicator styling, then begin aiming
       firePosRef.current = 0; fireDirRef.current = 1
       zonePosRef.current = 0.3 + Math.random() * 0.4
       zoneDirRef.current = Math.random() < 0.5 ? 1 : -1
+      if (indicatorRef.current) {
+        indicatorRef.current.style.width = '4px'
+        indicatorRef.current.style.boxShadow = '0 0 8px rgba(255,255,255,0.6)'
+        indicatorRef.current.style.transform = 'scaleY(1)'
+      }
       setSubPhase('aiming')
     } else {
       // Reload/Dodge: skip aim, advance to reveal
@@ -298,6 +330,24 @@ export default function RaidCombat({
     const res = getShotResult(firePosRef.current, zonePosRef.current)
     setAimResult(res)
     setCritFreeze(true)  // freezes the aim bar at the lock position regardless of result
+
+    // Punch the lock moment so it FEELS like a connection.
+    // - Snap the indicator vertically (scaleY 2.8 → 1 with springy ease)
+    // - Flash the whole bar background in the result color
+    const flashColor =
+      res === 'critical' ? '#fbbf24' :
+      res === 'hit'      ? '#4ade80' :
+      res === 'graze'    ? '#94a3b8' :
+                           '#6b7280'
+    snapIndicator(indicatorRef.current)
+    flashBar(barFlashRef.current, flashColor, res === 'critical' ? 0.7 : res === 'hit' ? 0.55 : 0.35)
+    // Indicator glow boost for hit/crit
+    if (indicatorRef.current && (res === 'hit' || res === 'critical')) {
+      const w = res === 'critical' ? 10 : 7
+      const glow = res === 'critical' ? '#fbbf24' : '#4ade80'
+      indicatorRef.current.style.width = `${w}px`
+      indicatorRef.current.style.boxShadow = `0 0 18px ${glow}, 0 0 36px ${glow}, 0 0 60px ${glow}66`
+    }
 
     // LOCK MOMENT = aim quality feedback only.
     // No cannon shot, no damage splat — those fire together at resolution time
@@ -790,7 +840,7 @@ export default function RaidCombat({
         )}
         {subPhase === 'aiming' && (
           <AimPanel
-            indicatorRef={indicatorRef} zoneRef={zoneRef}
+            indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef}
             onLock={lockShot}
             actionLabel={playerAction === 'volley' ? 'VOLLEY' : 'FIRE'}
           />
@@ -1087,9 +1137,10 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
   )
 }
 
-function AimPanel({ indicatorRef, zoneRef, onLock, actionLabel }: {
+function AimPanel({ indicatorRef, zoneRef, flashRef, onLock, actionLabel }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
+  flashRef:     React.RefObject<HTMLDivElement | null>
   onLock: () => void
   actionLabel: string
 }) {
@@ -1099,14 +1150,19 @@ function AimPanel({ indicatorRef, zoneRef, onLock, actionLabel }: {
         Lock your shot · {actionLabel}
       </p>
       <div style={{ position: 'relative', height: 44, background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, overflow: 'hidden' }}>
+        {/* Bar-wide flash overlay — fires on lock to punch the result */}
+        <div ref={flashRef} style={{
+          position: 'absolute', inset: 0, opacity: 0, background: 'transparent',
+          pointerEvents: 'none', zIndex: 3,
+        }} />
         {/* Moving target zone */}
-        <div ref={zoneRef} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 0 }}>
+        <div ref={zoneRef} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 0, zIndex: 1 }}>
           <div style={{ position: 'absolute', inset: '3px 0', background: 'rgba(148,163,184,0.15)', borderRadius: 4 }} />
           <div style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${(GRAZE_W / (HIT_W + GRAZE_W)) * 50}%`, width: `${(HIT_W / (HIT_W + GRAZE_W)) * 100}%`, background: 'rgba(74,222,128,0.22)' }} />
           <div style={{ position: 'absolute', top: '20%', bottom: '20%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
         </div>
         {/* Indicator */}
-        <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)' }} />
+        <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />
       </div>
       <motion.button
         whileTap={{ scale: 0.96 }}
