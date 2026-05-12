@@ -10,6 +10,7 @@ import { updateUsername, updateShowcase, updateCharacterColor } from '@/app/u/ac
 import { equipBadge, unequipBadge } from '@/app/achievements/badgeActions'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { getBoat } from '@/lib/boats'
+import { getHat } from '@/lib/hats'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import { getRod } from '@/lib/rods'
 import { getHook } from '@/lib/hooks'
@@ -49,6 +50,7 @@ interface Props {
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
   ancientTrophies: { id: number; name: string }[]
   equippedBoat: string | null
+  equippedHat: string | null
   characterColor: string
   unlockedColors: string[]
   equippedBadges: string[]
@@ -204,6 +206,7 @@ export default function ProfileClient({
   rarestFish,
   ancientTrophies,
   equippedBoat,
+  equippedHat,
   characterColor: initialCharacterColor,
   unlockedColors,
   equippedBadges: initialEquippedBadges,
@@ -654,6 +657,20 @@ export default function ProfileClient({
             }}>
               <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '72%', maxWidth: 260 }}>
                 <img src={charSprites.rest} alt="" style={{ width: '100%', display: 'block' }} />
+                {(() => {
+                  const hd = getHat(equippedHat)
+                  if (!hd) return null
+                  const hp = hd.positions.rest
+                  return (
+                    <img src={hd.restImageUrl} alt="" style={{
+                      position: 'absolute', top: `${hp.top}%`, left: `${hp.left}%`,
+                      width: `${hp.width}%`,
+                      transform: `rotate(${hp.rotate}deg)`,
+                      transformOrigin: 'center center',
+                      pointerEvents: 'none',
+                    }} />
+                  )
+                })()}
                 {(() => {
                   const bd = getBoat(equippedBoat)
                   if (!bd) return null

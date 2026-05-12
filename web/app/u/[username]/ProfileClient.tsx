@@ -13,6 +13,7 @@ import { getShipSkin } from '@/lib/shipSkins'
 import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
 import { getCharacterSprites } from '@/lib/characters'
 import { getBoat } from '@/lib/boats'
+import { getHat } from '@/lib/hats'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 import { BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 
@@ -61,6 +62,7 @@ interface Props {
   gear: Gear
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
   equippedBoat?: string | null
+  equippedHat?: string | null
   ownedSpecialIds?: string[]
   raidItemIds?: string[]
   equippedShipSkin?: string | null
@@ -194,7 +196,7 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   )
 }
 
-export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null }: Props) {
+export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
@@ -278,6 +280,20 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
             }}>
               <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '72%', maxWidth: 260 }}>
                 <img src={charSprites.rest} alt="" style={{ width: '100%', display: 'block' }} />
+                {(() => {
+                  const hd = getHat(equippedHat)
+                  if (!hd) return null
+                  const hp = hd.positions.rest
+                  return (
+                    <img src={hd.restImageUrl} alt="" style={{
+                      position: 'absolute', top: `${hp.top}%`, left: `${hp.left}%`,
+                      width: `${hp.width}%`,
+                      transform: `rotate(${hp.rotate}deg)`,
+                      transformOrigin: 'center center',
+                      pointerEvents: 'none',
+                    }} />
+                  )
+                })()}
                 {(() => {
                   const bd = getBoat(equippedBoat)
                   if (!bd) return null

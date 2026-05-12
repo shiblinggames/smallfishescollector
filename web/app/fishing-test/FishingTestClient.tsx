@@ -39,15 +39,26 @@ const CHAR_DEFAULT: Record<Frame, { bottom: number; left: number; width: number 
 // Defaults sourced from the BOATS registry so the test page mirrors production.
 const BOAT_DEFAULT: Record<Frame, { top: number; left: number; width: number; rotate: number }> = BOATS[0].positions
 
+// Hat overlay — rest+wait share the rest sprite, cast uses the cast sprite.
+// Positions are starting guesses; tune via the sliders.
+const HAT_REST_SRC = '/hatblue_rest.png'
+const HAT_CAST_SRC = '/hatblue_cast.png'
+const HAT_DEFAULT: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
+  rest: { top: 53,   left: 57.1, width: 21.8, rotate: 0 },
+  wait: { top: 49.1, left: 64.6, width: 21.6, rotate: 0 },
+  cast: { top: 53,   left: 63.8, width: 21.5, rotate: 0 },
+}
+
 function Slider({ label, value, min, max, step = 1, onChange }: {
   label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void
 }) {
+  const display = step < 1 ? value.toFixed(step < 0.1 ? 2 : 1) : String(Math.round(value))
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
       <span style={{ width: 60, fontSize: 11, color: '#aaa', textAlign: 'right' }}>{label}</span>
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={e => onChange(Number(e.target.value))} style={{ flex: 1 }} />
-      <span style={{ width: 38, fontSize: 11, color: '#fff', textAlign: 'right' }}>{value}</span>
+      <span style={{ width: 44, fontSize: 11, color: '#fff', textAlign: 'right' }}>{display}</span>
     </div>
   )
 }
@@ -71,6 +82,8 @@ export default function FishingTestClient() {
   const [badgeCfg, setBadgeCfg] = useState(BADGE_SLOT_POSITIONS)
   const [boatCfg, setBoatCfg] = useState(BOAT_DEFAULT)
   const [boatEnabled, setBoatEnabled] = useState(true)
+  const [hatCfg, setHatCfg] = useState(HAT_DEFAULT)
+  const [hatEnabled, setHatEnabled] = useState(true)
   const [showLegacyControls, setShowLegacyControls] = useState(false)
   const [characterColor, setCharacterColor] = useState('default')
   const FRAMES = getCharacterSprites(characterColor) as Record<Frame, string>
@@ -138,6 +151,22 @@ export default function FishingTestClient() {
             width: `${cp.width}%`,
           }}>
             <img src={FRAMES[frame]} alt="" style={{ width: '100%', display: 'block' }} />
+
+            {hatEnabled && (
+              <img
+                src={frame === 'cast' ? HAT_CAST_SRC : HAT_REST_SRC}
+                alt="hat"
+                style={{
+                  position: 'absolute',
+                  top: `${hatCfg[frame].top}%`,
+                  left: `${hatCfg[frame].left}%`,
+                  width: `${hatCfg[frame].width}%`,
+                  transform: `rotate(${hatCfg[frame].rotate}deg)`,
+                  transformOrigin: 'center center',
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
 
             {boatEnabled && (
               <img src={frame === 'cast' ? BOATS[0].castImageUrl : BOATS[0].restImageUrl} alt="boat" style={{
@@ -268,6 +297,32 @@ export default function FishingTestClient() {
           </>
         )}
 
+        {/* Hat overlay */}
+        <p style={{ fontWeight: 700, marginTop: 16, marginBottom: 6, color: '#fff' }}>
+          Hat overlay
+          <button onClick={() => setHatEnabled(!hatEnabled)} style={{
+            marginLeft: 8, padding: '2px 8px', fontSize: 10, borderRadius: 4,
+            background: hatEnabled ? '#16a34a' : 'rgba(255,255,255,0.08)',
+            border: 'none', color: '#fff', cursor: 'pointer',
+          }}>{hatEnabled ? 'On' : 'Off'}</button>
+        </p>
+        {hatEnabled && (
+          <>
+            <p style={{ fontWeight: 600, marginBottom: 4, color: '#60a5fa' }}>
+              Hat overlay ({frame} — using {frame === 'cast' ? 'hatblue_cast.png' : 'hatblue_rest.png'})
+            </p>
+            <Slider label="top %"    value={hatCfg[frame].top}    min={-40} max={100} step={0.1} onChange={v => setHatCfg(p => ({ ...p, [frame]: { ...p[frame], top: v } }))} />
+            <Slider label="left %"   value={hatCfg[frame].left}   min={-40} max={100} step={0.1} onChange={v => setHatCfg(p => ({ ...p, [frame]: { ...p[frame], left: v } }))} />
+            <Slider label="width %"  value={hatCfg[frame].width}  min={5}   max={120} step={0.1} onChange={v => setHatCfg(p => ({ ...p, [frame]: { ...p[frame], width: v } }))} />
+            <Slider label="rotate °" value={hatCfg[frame].rotate} min={-90} max={90}  step={0.5} onChange={v => setHatCfg(p => ({ ...p, [frame]: { ...p[frame], rotate: v } }))} />
+            <button onClick={() => setHatCfg(p => ({ rest: p[frame], wait: p[frame], cast: p[frame] }))} style={{
+              width: '100%', padding: '4px 0', borderRadius: 6, cursor: 'pointer', marginTop: 6,
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+              color: '#94a3b8', fontWeight: 600, fontSize: 10,
+            }}>Copy {frame} → all frames</button>
+          </>
+        )}
+
         {/* Toggle for production-tuned controls */}
         <button onClick={() => setShowLegacyControls(s => !s)} style={{
           width: '100%', padding: '6px 0', borderRadius: 6, cursor: 'pointer',
@@ -356,7 +411,7 @@ export default function FishingTestClient() {
         {/* Config dump */}
         <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Current config</p>
         <pre style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
-{`BOAT:\n${JSON.stringify(boatCfg, null, 2)}${showLegacyControls ? `\n\nCHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}` : ''}`}
+{`HAT:\n${JSON.stringify(hatCfg, null, 2)}\n\nBOAT:\n${JSON.stringify(boatCfg, null, 2)}${showLegacyControls ? `\n\nCHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}` : ''}`}
         </pre>
       </div>
     </div>

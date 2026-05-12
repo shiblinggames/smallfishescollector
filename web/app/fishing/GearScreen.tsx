@@ -9,6 +9,7 @@ import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
 import { BOATS, DEFAULT_BOAT_COLOR } from '@/lib/boats'
+import { HATS } from '@/lib/hats'
 import { BADGE_MAP, BADGES } from '@/lib/badges'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
@@ -250,6 +251,7 @@ export default function GearScreen({
   reelTier, hookTier, lineTier,
   characterColor, charSrc, equippedBadges, unlockedCharacterColors, unlockedBadges, onUpdateColor, onEquipBadge,
   equippedBoat, unlockedBoats, onEquipBoat, onBuyBoat, doubloons,
+  equippedHat, unlockedHats, onEquipHat, onBuyHat,
   hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster,
   equippedSpecial, onEquipSpecial, onBuySpecialItem,
   fishingLevel,
@@ -275,6 +277,10 @@ export default function GearScreen({
   unlockedBoats: string[]
   onEquipBoat: (id: string | null) => void
   onBuyBoat: (id: string) => void
+  equippedHat: string | null
+  unlockedHats: string[]
+  onEquipHat: (id: string | null) => void
+  onBuyHat: (id: string) => void
   doubloons: number
   hasTideTurner: boolean
   tideTurnerSkipsLeft: number
@@ -731,6 +737,93 @@ export default function GearScreen({
                           ) : (
                             <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: canAfford ? b.color : '#5a5856' }}>
                               {b.cost.toLocaleString()} ⟡
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* ── Bandana Colors ── */}
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a', marginTop: 10 }}>Bandana Color</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                    {/* None — no bandana */}
+                    {(() => {
+                      const isEquipped = !equippedHat
+                      const noneColor = '#6a6764'
+                      return (
+                        <button
+                          key="none"
+                          onClick={() => { if (!isEquipped) { onEquipHat(null); setOpenSlot(null) } }}
+                          className="font-karla font-700"
+                          style={{
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                            padding: '0.6rem 0.4rem 0.5rem',
+                            borderRadius: 10,
+                            background: isEquipped ? `${noneColor}1f` : 'rgba(4,10,18,0.72)',
+                            border: `1px solid ${isEquipped ? noneColor + '90' : 'rgba(255,255,255,0.09)'}`,
+                            boxShadow: isEquipped ? `0 0 14px ${noneColor}33` : 'none',
+                            cursor: isEquipped ? 'default' : 'pointer',
+                            position: 'relative',
+                          }}
+                        >
+                          <div style={{
+                            width: 48, height: 48, borderRadius: 12,
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px dashed rgba(255,255,255,0.18)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: '#5a5856', fontSize: '0.7rem',
+                          }}>—</div>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>None</p>
+                          {isEquipped
+                            ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: noneColor }}>✓ Equipped</span>
+                            : <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#5a5856' }}>Bareheaded</span>
+                          }
+                        </button>
+                      )
+                    })()}
+                    {HATS.map(h => {
+                      const owned = unlockedHats.includes(h.id)
+                      const isEquipped = equippedHat === h.id
+                      const canAfford = doubloons >= h.cost
+                      const tappable = isEquipped ? false : (owned || canAfford)
+                      const onTap = () => {
+                        if (isEquipped) return
+                        if (owned) { onEquipHat(h.id); setOpenSlot(null) }
+                        else if (canAfford) { onBuyHat(h.id); setOpenSlot(null) }
+                      }
+                      return (
+                        <button
+                          key={h.id}
+                          onClick={onTap}
+                          disabled={!tappable}
+                          className="font-karla font-700"
+                          style={{
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                            padding: '0.6rem 0.4rem 0.5rem',
+                            borderRadius: 10,
+                            background: isEquipped ? `${h.color}1f` : 'rgba(4,10,18,0.72)',
+                            border: `1px solid ${isEquipped ? h.color + '90' : owned ? 'rgba(255,255,255,0.09)' : `${h.color}30`}`,
+                            boxShadow: isEquipped ? `0 0 14px ${h.color}33` : 'none',
+                            cursor: tappable ? 'pointer' : 'default',
+                            opacity: !owned && !canAfford ? 0.55 : 1,
+                            position: 'relative',
+                          }}
+                        >
+                          <div style={{
+                            width: 48, height: 48, borderRadius: 12,
+                            background: h.color,
+                            border: `1px solid ${h.color}cc`,
+                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), 0 0 16px ${h.color}50`,
+                          }} />
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: owned ? '#f0ede8' : '#a0a09a', lineHeight: 1.1, textAlign: 'center' }}>{h.name}</p>
+                          {isEquipped ? (
+                            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: h.color }}>✓ Equipped</span>
+                          ) : owned ? (
+                            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Owned · Tap to equip</span>
+                          ) : (
+                            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: canAfford ? h.color : '#5a5856' }}>
+                              {h.cost.toLocaleString()} ⟡
                             </span>
                           )}
                         </button>

@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
 import { liquidateAllFish } from '@/app/tavern/market/actions'
 import { BOATS, getBoat } from '@/lib/boats'
+import { HATS, getHat } from '@/lib/hats'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -1557,6 +1558,7 @@ export default function FishingGame({
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster,
   initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
+  initialEquippedHat, initialUnlockedHats, onHatStateChange,
 }: {
   hookTier: number
   rodTier: number
@@ -1595,12 +1597,18 @@ export default function FishingGame({
   initialEquippedBoat: string | null
   initialUnlockedBoats: string[]
   onBoatStateChange?: (equipped: string | null, unlocked: string[]) => void
+  initialEquippedHat: string | null
+  initialUnlockedHats: string[]
+  onHatStateChange?: (equipped: string | null, unlocked: string[]) => void
 }) {
 
   const [localCharacterColor, setLocalCharacterColor] = useState(characterColor)
   const [equippedBoat, setEquippedBoat] = useState<string | null>(initialEquippedBoat)
   const [unlockedBoats, setUnlockedBoats] = useState<string[]>(initialUnlockedBoats)
   const boatDef = getBoat(equippedBoat)
+  const [equippedHat, setEquippedHat] = useState<string | null>(initialEquippedHat)
+  const [unlockedHats, setUnlockedHats] = useState<string[]>(initialUnlockedHats)
+  const hatDef = getHat(equippedHat)
   const [localEquippedBadges, setLocalEquippedBadges] = useState(equippedBadges)
   const charSrc = getCharSrc(localCharacterColor)
 
@@ -2551,6 +2559,19 @@ export default function FishingGame({
                 visibility: visible ? 'visible' : 'hidden',
               }}>
                 <img src={charSrc[f]} alt="" style={{ width: '100%', display: 'block' }} />
+                {hatDef && (() => {
+                  const hp = hatDef.positions[f]
+                  const hatSrc = f === 'cast' ? hatDef.castImageUrl : hatDef.restImageUrl
+                  return (
+                    <img src={hatSrc} alt="" style={{
+                      position: 'absolute', top: `${hp.top}%`, left: `${hp.left}%`,
+                      width: `${hp.width}%`,
+                      transform: `rotate(${hp.rotate}deg)`,
+                      transformOrigin: 'center center',
+                      pointerEvents: 'none',
+                    }} />
+                  )
+                })()}
                 {boatDef && (() => {
                   const bp = boatDef.positions[f]
                   const src = f === 'cast' ? boatDef.castImageUrl : boatDef.restImageUrl
@@ -4352,6 +4373,24 @@ export default function FishingGame({
                   setUnlockedBoats(newUnlocked)
                   setEquippedBoat(id)
                   onBoatStateChange?.(id, newUnlocked)
+                  setDoubloons(res.doubloons)
+                  window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+                }
+              }}
+              equippedHat={equippedHat}
+              unlockedHats={unlockedHats}
+              onEquipHat={async (id) => {
+                setEquippedHat(id)
+                onHatStateChange?.(id, unlockedHats)
+                await equipHat(id)
+              }}
+              onBuyHat={async (id) => {
+                const res = await buyHat(id)
+                if ('ok' in res) {
+                  const newUnlocked = unlockedHats.includes(id) ? unlockedHats : [...unlockedHats, id]
+                  setUnlockedHats(newUnlocked)
+                  setEquippedHat(id)
+                  onHatStateChange?.(id, newUnlocked)
                   setDoubloons(res.doubloons)
                   window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
                 }

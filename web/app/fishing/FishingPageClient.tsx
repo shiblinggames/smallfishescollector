@@ -25,7 +25,7 @@ export default function FishingPageClient({
   initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
   fishHoldTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, activeSession, username, zoneRewardsClaimed,
-  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats,
+  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, equippedHat, unlockedHats,
 }: {
   hookTier: number
   rodTier: number
@@ -62,16 +62,24 @@ export default function FishingPageClient({
   isPremium: boolean
   equippedBoat: string | null
   unlockedBoats: string[]
+  equippedHat: string | null
+  unlockedHats: string[]
 }) {
   const fishingLevel = getLevelFromXP(initialFishingXP)
 
-  // Boat state lives at this level so it persists across the
+  // Boat/hat state lives at this level so it persists across the
   // ZoneLanding ↔ FishingGame remount when the player switches zones.
   const [persistedEquippedBoat, setPersistedEquippedBoat] = useState<string | null>(equippedBoat)
   const [persistedUnlockedBoats, setPersistedUnlockedBoats] = useState<string[]>(unlockedBoats)
   const handleBoatStateChange = useCallback((equipped: string | null, unlocked: string[]) => {
     setPersistedEquippedBoat(equipped)
     setPersistedUnlockedBoats(unlocked)
+  }, [])
+  const [persistedEquippedHat, setPersistedEquippedHat] = useState<string | null>(equippedHat)
+  const [persistedUnlockedHats, setPersistedUnlockedHats] = useState<string[]>(unlockedHats)
+  const handleHatStateChange = useCallback((equipped: string | null, unlocked: string[]) => {
+    setPersistedEquippedHat(equipped)
+    setPersistedUnlockedHats(unlocked)
   }, [])
 
   const [selectedZone, setSelectedZone] = useState<ZoneKey | null>(() => {
@@ -144,6 +152,9 @@ export default function FishingPageClient({
       initialEquippedBoat={persistedEquippedBoat}
       initialUnlockedBoats={persistedUnlockedBoats}
       onBoatStateChange={handleBoatStateChange}
+      initialEquippedHat={persistedEquippedHat}
+      initialUnlockedHats={persistedUnlockedHats}
+      onHatStateChange={handleHatStateChange}
     />
   )
 }

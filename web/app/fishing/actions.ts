@@ -867,3 +867,48 @@ export async function buyBoat(boatId: string): Promise<{ ok: true; doubloons: nu
   return { ok: true, doubloons: newDoubloons }
 }
 
+export async function equipHat(hatId: string | null): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  if (hatId !== null) {
+    const { data: profile } = await admin.from('profiles').select('unlocked_hats').eq('id', user.id).single()
+    const unlocked = (profile?.unlocked_hats as string[] | null) ?? []
+    if (!unlocked.includes(hatId)) return { error: 'Hat not unlocked' }
+  }
+  await admin.from('profiles').update({ equipped_hat: hatId }).eq('id', user.id)
+  return { ok: true }
+}
+
+export async function buyHat(hatId: string): Promise<{ ok: true; doubloons: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { HAT_MAP } = await import('@/lib/hats')
+  const def = HAT_MAP[hatId]
+  if (!def) return { error: 'Unknown hat' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('doubloons, unlocked_hats').eq('id', user.id).single()
+  if (!profile) return { error: 'Profile not found' }
+  const unlocked = (profile.unlocked_hats as string[] | null) ?? []
+  if (unlocked.includes(hatId)) return { error: 'Already owned' }
+  if ((profile.doubloons ?? 0) < def.cost) return { error: 'Not enough doubloons' }
+
+  const newDoubloons = (profile.doubloons ?? 0) - def.cost
+  await admin.from('profiles').update({
+    doubloons: newDoubloons,
+    unlocked_hats: [...unlocked, hatId],
+    equipped_hat: hatId,
+  }).eq('id', user.id)
+  await admin.from('doubloon_transactions').insert({
+    user_id: user.id,
+    amount: -def.cost,
+    reason: `Bought ${def.name} bandana`,
+  })
+  return { ok: true, doubloons: newDoubloons }
+}
+
