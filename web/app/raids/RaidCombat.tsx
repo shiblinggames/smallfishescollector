@@ -550,17 +550,29 @@ export default function RaidCombat({
           }}
         >
           <motion.div animate={enemyShakeCtrl} style={{ position: 'relative' }}>
-            <motion.img
-              src={enemy.portrait || enemy.image}
-              alt={enemy.name}
+            <motion.div
               animate={{ y: [0, -4, 0] }}
               transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
               style={{
-                width: '100%', display: 'block',
-                transform: 'scaleX(-1)',  // face the player
-                filter: 'drop-shadow(0 8px 20px rgba(239,68,68,0.35))',
+                width: '100%', aspectRatio: '1 / 1',
+                borderRadius: '50%', overflow: 'hidden',
+                border: `3px solid ${isBoss ? '#fbbf24' : ENEMY_COLOR}`,
+                boxShadow: `0 8px 24px ${isBoss ? 'rgba(251,191,36,0.4)' : 'rgba(239,68,68,0.4)'}, inset 0 -8px 22px rgba(0,0,0,0.35)`,
+                background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.08) 0%, rgba(20,40,60,0.85) 70%)',
+                position: 'relative',
               }}
-            />
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={enemy.portrait || enemy.image}
+                alt={enemy.name}
+                style={{
+                  position: 'absolute', inset: 0, width: '100%', height: '100%',
+                  objectFit: 'cover', objectPosition: 'center',
+                  display: 'block',
+                }}
+              />
+            </motion.div>
             <AnimatePresence>
               {eHitsplat && <HitsplatOverlay key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} />}
             </AnimatePresence>
