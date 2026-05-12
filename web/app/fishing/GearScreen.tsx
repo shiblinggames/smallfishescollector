@@ -15,7 +15,7 @@ import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 
 type BaitItem = { bait_type: string; quantity: number }
-type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'bait' | 'special' | 'cosmetic' | 'character' | 'badge'
+type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'cosmetic' | 'hat' | 'character' | 'badge'
 
 function ShopLink({ href, label, color, onClick }: { href: string; label: string; color: string; onClick: () => void }) {
   return (
@@ -348,8 +348,38 @@ export default function GearScreen({
           <GearSlot label="Hook" image={hook.imageUrl ?? null} itemName={hook.name} color={hook.color} glow={hook.glow} onClick={() => setOpenSlot('hook')} />
         </div>
 
-        {/* Center row 1: Character */}
+        {/* Center row 1: Hat / Bandana */}
         <div style={{ gridColumn: '2', gridRow: '1' }}>
+          {(() => {
+            const activeHat = equippedHat ? HATS.find(h => h.id === equippedHat) : null
+            const swatchColor = activeHat?.color ?? '#6a6764'
+            const hatName = activeHat?.name ?? 'None'
+            return (
+              <GearSlot
+                label="Hat Color"
+                color={swatchColor}
+                itemName={hatName}
+                onClick={() => setOpenSlot('hat')}
+                empty={!activeHat}
+                icon={
+                  activeHat
+                    ? (
+                      <div style={{
+                        width: 32, height: 32, borderRadius: 9,
+                        background: swatchColor,
+                        border: `1px solid ${swatchColor}cc`,
+                        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 0 12px ${swatchColor}40`,
+                      }} />
+                    )
+                    : <span style={{ fontSize: '1.1rem', color: '#3a3835' }}>—</span>
+                }
+              />
+            )
+          })()}
+        </div>
+
+        {/* Center row 2: Skin (character) */}
+        <div style={{ gridColumn: '2', gridRow: '2' }}>
           <GearSlot
             label="Skin"
             color="#a0a09a"
@@ -366,31 +396,6 @@ export default function GearScreen({
           />
         </div>
 
-        {/* Center row 2: Cosmetic (boat swatch) */}
-        <div style={{ gridColumn: '2', gridRow: '2' }}>
-          {(() => {
-            const activeBoat = equippedBoat ? BOATS.find(b => b.id === equippedBoat) : null
-            const swatchColor = activeBoat?.color ?? DEFAULT_BOAT_COLOR
-            const cosmeticName = activeBoat?.name ?? 'Driftwood'
-            return (
-              <GearSlot
-                label="Boat Color"
-                color={swatchColor}
-                itemName={cosmeticName}
-                onClick={() => setOpenSlot('cosmetic')}
-                icon={
-                  <div style={{
-                    width: 32, height: 32, borderRadius: 9,
-                    background: swatchColor,
-                    border: `1px solid ${swatchColor}cc`,
-                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 0 12px ${swatchColor}40`,
-                  }} />
-                }
-              />
-            )
-          })()}
-        </div>
-
         <div style={{ gridColumn: '3', gridRow: '1' }}>
           <GearSlot label="Reel" image={reel.imageUrl ?? null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} onClick={() => setOpenSlot('reel')} />
         </div>
@@ -399,7 +404,7 @@ export default function GearScreen({
         </div>
       </div>
 
-      {/* Bottom row: Special | Bait | Cosmetic */}
+      {/* Bottom row: Special | Boat Color | Badges */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gap: 6 }}>
         {(() => {
           const equippedDef = SPECIAL_ITEMS.find(s => s.id === equippedSpecial)
@@ -415,14 +420,27 @@ export default function GearScreen({
             />
           )
         })()}
-        <GearSlot
-          label="Bait"
-          image={bait?.imageUrl ?? null}
-          icon={<BaitIcon color={bait?.color ?? '#94a3b8'} />}
-          itemName={bait?.name ?? 'No Bait'}
-          color={bait?.color ?? '#94a3b8'}
-          onClick={() => setOpenSlot('bait')}
-        />
+        {(() => {
+          const activeBoat = equippedBoat ? BOATS.find(b => b.id === equippedBoat) : null
+          const swatchColor = activeBoat?.color ?? DEFAULT_BOAT_COLOR
+          const boatName = activeBoat?.name ?? 'Driftwood'
+          return (
+            <GearSlot
+              label="Boat Color"
+              color={swatchColor}
+              itemName={boatName}
+              onClick={() => setOpenSlot('cosmetic')}
+              icon={
+                <div style={{
+                  width: 32, height: 32, borderRadius: 9,
+                  background: swatchColor,
+                  border: `1px solid ${swatchColor}cc`,
+                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 0 12px ${swatchColor}40`,
+                }} />
+              }
+            />
+          )
+        })()}
         {/* Badges */}
         {(() => {
           const equipped = equippedBadges.filter(Boolean)
@@ -783,8 +801,39 @@ export default function GearScreen({
                     })}
                   </div>
 
-                  {/* ── Bandana Colors ── */}
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a', marginTop: 10 }}>Bandana Color</p>
+                </div>
+              )}
+
+              {/* ── Hat / Bandana ── */}
+              {openSlot === 'hat' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <AnimatePresence>
+                    {cosmeticToast && (
+                      <motion.div
+                        key={cosmeticToast.id}
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.22 }}
+                        style={{
+                          padding: '0.55rem 0.85rem',
+                          borderRadius: 10,
+                          background: `linear-gradient(90deg, ${cosmeticToast.color}26, ${cosmeticToast.color}10)`,
+                          border: `1px solid ${cosmeticToast.color}80`,
+                          boxShadow: `0 0 14px ${cosmeticToast.color}40`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                        }}
+                      >
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>
+                          ✓ Bought <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span> — now equipped
+                        </p>
+                        <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: cosmeticToast.color }}>
+                          −{cosmeticToast.cost.toLocaleString()} ⟡
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Hat Color</p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                     {/* None — no bandana */}
                     {(() => {
@@ -869,7 +918,6 @@ export default function GearScreen({
                       )
                     })}
                   </div>
-
                 </div>
               )}
 
@@ -1002,45 +1050,6 @@ export default function GearScreen({
                 </div>
               )}
 
-              {/* ── Bait ── */}
-              {openSlot === 'bait' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {BAITS.filter(b => (inventoryMap[b.type] ?? 0) > 0 || b.type === selectedBait).map(b => {
-                    const qty = inventoryMap[b.type] ?? 0
-                    const isSel = b.type === selectedBait
-                    const c = b.color
-                    return (
-                      <button key={b.type} onClick={() => { onSelectBait(b.type); setOpenSlot(null) }}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 10,
-                          padding: '0.55rem 0.7rem', borderRadius: 10, width: '100%',
-                          background: isSel ? `${c}12` : 'rgba(4,10,18,0.72)',
-                          border: `1px solid ${isSel ? c + '50' : 'rgba(255,255,255,0.09)'}`,
-                          cursor: 'pointer',
-                        }}>
-                        {b.imageUrl
-                          ? <img src={b.imageUrl} alt={b.name} style={{ width: 22, height: 22, objectFit: 'contain', opacity: qty > 0 ? 1 : 0.3, flexShrink: 0 }} />
-                          : <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, opacity: qty > 0 ? 1 : 0.3, flexShrink: 0 }} />
-                        }
-                        <div style={{ flex: 1, textAlign: 'left' }}>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: qty > 0 ? '#f0ede8' : '#4a4845' }}>{b.name}</p>
-                          <div style={{ display: 'flex', gap: 3, marginTop: 2, flexWrap: 'wrap' }}>
-                            {b.catchZoneBonus > 0 && <Pill label={`+${b.catchZoneBonus}° zone`} color={c} />}
-                            {b.waitMult < 1 && <Pill label={`${Math.round((1-b.waitMult)*100)}% faster`} color={c} />}
-                            {b.waitMult > 1 && <Pill label={`${Math.round((b.waitMult-1)*100)}% slower`} color="#f87171" />}
-                            {!b.catchZoneBonus && b.waitMult === 1 && <Pill label="No bonus" muted />}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
-                          <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: qty > 0 ? '#f0ede8' : '#4a4845' }}>×{qty}</span>
-                          {isSel && <span className="font-karla font-700" style={{ fontSize: '0.44rem', color: c }}>equipped</span>}
-                        </div>
-                      </button>
-                    )
-                  })}
-                  <ShopLink href="/marketplace/tackle-shop#bait" label="Buy more bait" color={bait?.color ?? '#34d399'} onClick={onClose} />
-                </div>
-              )}
             </motion.div>
           </>
         )}
