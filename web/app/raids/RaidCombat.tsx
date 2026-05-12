@@ -562,16 +562,34 @@ export default function RaidCombat({
                 position: 'relative',
               }}
             >
+              {/* Enemy boat — primary visual */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={enemy.portrait || enemy.image}
+                src={enemy.image}
                 alt={enemy.name}
                 style={{
-                  position: 'absolute', inset: 0, width: '100%', height: '100%',
-                  objectFit: 'cover', objectPosition: 'center',
-                  display: 'block',
+                  position: 'absolute', left: '-8%', right: '-8%', top: '15%',
+                  width: '116%', height: '70%',
+                  objectFit: 'contain', objectPosition: 'center',
+                  transform: 'scaleX(-1)',
+                  filter: isBoss ? 'hue-rotate(20deg) brightness(0.95)' : 'hue-rotate(180deg) brightness(0.85)',
+                  pointerEvents: 'none',
                 }}
               />
+              {/* Captain portrait — small badge bottom-right of the medallion */}
+              {enemy.portrait && (
+                <div style={{
+                  position: 'absolute', bottom: '4%', right: '4%',
+                  width: '32%', aspectRatio: '1 / 1', borderRadius: '50%',
+                  border: `2px solid ${isBoss ? '#fbbf24' : ENEMY_COLOR}`,
+                  overflow: 'hidden',
+                  boxShadow: `0 0 10px ${isBoss ? 'rgba(251,191,36,0.5)' : 'rgba(239,68,68,0.45)'}`,
+                  background: 'rgba(10,20,34,0.85)',
+                }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={enemy.portrait} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              )}
             </motion.div>
             <AnimatePresence>
               {eHitsplat && <HitsplatOverlay key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} />}
