@@ -1748,7 +1748,7 @@ export default function FishingGame({
   const lastTimeRef     = useRef(0)
   const elapsedMsRef    = useRef(0)
   const nextChgMsRef    = useRef(0)
-  const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number } | null>(null)
+  const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond' } | null>(null)
   const selectedBaitRef = useRef(selectedBait)
   useEffect(() => { phaseRef.current = phase }, [phase])
 
