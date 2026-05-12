@@ -779,18 +779,14 @@ export default function GearScreen({
                             position: 'relative',
                           }}
                         >
-                          <div
-                            className={b.effect ? `boat-fx boat-fx-${b.effect}` : undefined}
-                            style={{
-                              position: 'relative',
-                              width: 48, height: 48, borderRadius: 12,
-                              overflow: 'hidden',
-                              background: 'rgba(4,10,18,0.85)',
-                              border: `1px solid ${b.color}cc`,
-                              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 18px ${b.color}55`,
-                              ...(b.effect ? { ['--boat-mask' as string]: `url('${b.restImageUrl}')` } : {}),
-                            } as React.CSSProperties}
-                          >
+                          <div style={{
+                            position: 'relative',
+                            width: 48, height: 48, borderRadius: 12,
+                            overflow: 'hidden',
+                            background: 'rgba(4,10,18,0.85)',
+                            border: `1px solid ${b.color}cc`,
+                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 18px ${b.color}55`,
+                          }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={b.restImageUrl} alt="" style={{
                               width: '170%', height: 'auto', display: 'block',

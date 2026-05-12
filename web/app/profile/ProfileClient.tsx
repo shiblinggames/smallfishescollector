@@ -675,18 +675,15 @@ export default function ProfileClient({
                   const bd = getBoat(equippedBoat)
                   if (!bd) return null
                   const bp = bd.positions.rest
-                  const fxClass = bd.effect ? `boat-fx boat-fx-${bd.effect}` : undefined
-                  const fxVars = bd.effect ? { ['--boat-mask' as string]: `url('${bd.restImageUrl}')` } : {}
                   return (
-                    <div className={fxClass} style={{
+                    <div style={{
                       position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
                       width: `${bp.width}%`,
                       // Match the iOS rest-frame nudge applied in FishingGame
                       transform: `rotate(${bp.rotate}deg) translateX(-2px)`,
                       transformOrigin: 'center center',
                       pointerEvents: 'none',
-                      ...fxVars,
-                    } as React.CSSProperties}>
+                    }}>
                       <img src={bd.restImageUrl} alt="" style={{ width: '100%', display: 'block' }} />
                     </div>
                   )
