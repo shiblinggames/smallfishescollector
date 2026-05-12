@@ -364,12 +364,15 @@ export default function GearScreen({
                 icon={
                   activeHat
                     ? (
-                      <div style={{
-                        width: 32, height: 32, borderRadius: 9,
-                        background: swatchColor,
-                        border: `1px solid ${swatchColor}cc`,
-                        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 0 12px ${swatchColor}40`,
-                      }} />
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={activeHat.restImageUrl}
+                        alt={activeHat.name}
+                        style={{
+                          width: 36, height: 36, objectFit: 'contain',
+                          filter: `drop-shadow(0 0 6px ${swatchColor}55)`,
+                        }}
+                      />
                     )
                     : <span style={{ fontSize: '1.1rem', color: '#3a3835' }}>—</span>
                 }
@@ -431,12 +434,25 @@ export default function GearScreen({
               itemName={boatName}
               onClick={() => setOpenSlot('cosmetic')}
               icon={
-                <div style={{
-                  width: 32, height: 32, borderRadius: 9,
-                  background: swatchColor,
-                  border: `1px solid ${swatchColor}cc`,
-                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 0 12px ${swatchColor}40`,
-                }} />
+                activeBoat ? (
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 9, overflow: 'hidden',
+                    backgroundImage: `url(${activeBoat.restImageUrl})`,
+                    backgroundSize: 'auto 220%',
+                    backgroundPosition: '75% 65%',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundColor: 'rgba(4,10,18,0.6)',
+                    border: `1px solid ${swatchColor}cc`,
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 12px ${swatchColor}40`,
+                  }} />
+                ) : (
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 9,
+                    background: swatchColor,
+                    border: `1px solid ${swatchColor}cc`,
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 0 12px ${swatchColor}40`,
+                  }} />
+                )
               }
             />
           )
