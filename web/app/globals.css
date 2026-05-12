@@ -370,18 +370,15 @@ body {
 }
 .rod-glow { animation: rod-glow-pulse 2.4s ease-in-out infinite; }
 
-/* ── Shallows ambient (caustics + bubbles) ── */
+/* ── Shallows ambient (caustics + sunlight godrays) ── */
 @keyframes shallowsCaustics {
   0%   { transform: translateX(-3%) scale(1.04); opacity: 0.45; }
   50%  { transform: translateX(2%)  scale(1.08); opacity: 0.65; }
   100% { transform: translateX(4%)  scale(1.05); opacity: 0.50; }
 }
-@keyframes shallowsBubble {
-  0%   { transform: translate3d(0, 0, 0);                                opacity: 0; }
-  8%   {                                                                 opacity: var(--bubble-peak, 0.5); }
-  50%  { transform: translate3d(calc(var(--bubble-drift, 0px) * 0.5), -50vh, 0); }
-  92%  {                                                                 opacity: var(--bubble-peak, 0.5); }
-  100% { transform: translate3d(var(--bubble-drift, 0px), -100vh, 0);    opacity: 0; }
+@keyframes shallowsGodray {
+  0%, 100% { opacity: calc(var(--ray-peak, 0.2) * 0.88); }
+  50%      { opacity: var(--ray-peak, 0.2); }
 }
 
 /* ════════════════════════════════════════

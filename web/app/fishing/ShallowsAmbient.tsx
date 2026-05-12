@@ -1,7 +1,9 @@
 /**
  * Pure-CSS ambient layer for the Shallows zone. Adds drifting surface caustics
- * and rising bubbles on top of the static background. No JS animation loop —
- * everything runs on CSS keyframes so we don't fight the dial's render budget.
+ * and angled sunlight godrays on top of the static background. No JS animation
+ * loop — everything runs on CSS keyframes so we don't fight the dial's render
+ * budget. Intentionally avoids rising bubbles since those are reserved for the
+ * fishing event particle effects.
  */
 export default function ShallowsAmbient() {
   return (
@@ -26,44 +28,46 @@ export default function ShallowsAmbient() {
         }}
       />
 
-      {/* Bubbles — baked positions/durations so it's deterministic and cheap */}
-      <Bubble left="8%"  size={5}  duration={8}  delay={0}   drift={6}  opacity={0.55} />
-      <Bubble left="18%" size={4}  duration={10} delay={3.2} drift={-8} opacity={0.45} />
-      <Bubble left="28%" size={7}  duration={9}  delay={1.4} drift={5}  opacity={0.50} />
-      <Bubble left="40%" size={3}  duration={7}  delay={5.0} drift={-4} opacity={0.55} />
-      <Bubble left="54%" size={6}  duration={11} delay={2.6} drift={7}  opacity={0.45} />
-      <Bubble left="66%" size={4}  duration={9}  delay={6.8} drift={-6} opacity={0.50} />
-      <Bubble left="78%" size={8}  duration={10} delay={0.8} drift={5}  opacity={0.40} />
-      <Bubble left="88%" size={4}  duration={8}  delay={4.4} drift={-5} opacity={0.55} />
+      {/* Godrays — diagonal sunlight shafts piercing down from the surface.
+         Long thin gradients angled slightly off-vertical, each with its own
+         flicker so they breathe independently. */}
+      <Godray left="6%"  width={32}  angle={-8}  duration={18}  delay={0}   peak={0.22} />
+      <Godray left="22%" width={48}  angle={-4}  duration={22}  delay={5}   peak={0.18} />
+      <Godray left="38%" width={28}  angle={3}   duration={20}  delay={2}   peak={0.24} />
+      <Godray left="54%" width={56}  angle={-2}  duration={24}  delay={8}   peak={0.16} />
+      <Godray left="72%" width={36}  angle={6}   duration={19}  delay={3.5} peak={0.20} />
+      <Godray left="88%" width={26}  angle={-6}  duration={21}  delay={6}   peak={0.20} />
     </div>
   )
 }
 
-interface BubbleProps {
+interface GodrayProps {
   left: string
-  size: number
+  width: number
+  angle: number
   duration: number
   delay: number
-  drift: number
-  opacity: number
+  peak: number
 }
 
-function Bubble({ left, size, duration, delay, drift, opacity }: BubbleProps) {
+function Godray({ left, width, angle, duration, delay, peak }: GodrayProps) {
   return (
     <div
       style={{
         position: 'absolute',
+        top: '-10%',
         left,
-        bottom: -20,
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95), rgba(220,240,255,0.55) 45%, rgba(180,220,240,0.0) 75%)',
-        boxShadow: '0 0 4px rgba(255,255,255,0.35)',
+        width,
+        height: '70%',
+        transform: `rotate(${angle}deg)`,
+        transformOrigin: 'top center',
+        mixBlendMode: 'screen',
         opacity: 0,
-        animation: `shallowsBubble ${duration}s linear ${delay}s infinite`,
-        ['--bubble-drift' as string]: `${drift}px`,
-        ['--bubble-peak' as string]: opacity,
+        background:
+          'linear-gradient(to bottom, rgba(255,250,230,0.85) 0%, rgba(255,245,210,0.45) 35%, rgba(255,245,210,0.0) 100%)',
+        filter: 'blur(6px)',
+        animation: `shallowsGodray ${duration}s ease-in-out ${delay}s infinite`,
+        ['--ray-peak' as string]: peak,
       } as React.CSSProperties}
     />
   )

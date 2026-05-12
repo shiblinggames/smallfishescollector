@@ -111,7 +111,7 @@ export default async function TavernPage() {
         </div>
 
         <div>
-          <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Today</p>
+          <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Daily</p>
           <div className="flex flex-col gap-3">
           <GameCard
             href="/tavern/daily-bonus"
@@ -135,6 +135,16 @@ export default async function TavernPage() {
             streak={profile?.fotd_streak ?? 0}
             art={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/Hammerhead_Shark.png`}
             accent="#60a5fa"
+          />
+          <GameCard
+            href="/tavern/tide-run"
+            eyebrow="Daily"
+            title="Tide Run"
+            statusText={tideRunCommitted ? 'Today’s run committed — play freely' : 'Outrun pursuit, commit one run a day'}
+            info={[]}
+            icon={<BoatIcon />}
+            art="/boatrun.png"
+            accent="#5da7d4"
           />
           </div>
         </div>
@@ -186,16 +196,6 @@ export default async function TavernPage() {
             completed={slotsCapReached}
             art="/fishslots.png"
             accent="#a78bfa"
-          />
-          <GameCard
-            href="/tavern/tide-run"
-            eyebrow="Game"
-            title="Tide Run"
-            statusText={tideRunCommitted ? 'Today’s run committed — play freely' : 'Outrun pursuit, commit one run a day'}
-            info={[]}
-            icon={<BoatIcon />}
-            art="/boatrun.png"
-            accent="#5da7d4"
           />
           </div>
         </div>
