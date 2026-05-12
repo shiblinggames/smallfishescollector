@@ -50,15 +50,14 @@ function todayUTCDate(): string {
 }
 
 export type CommitTideRunResult =
-  | { ok: true; doubloons: number; xp: number; newDoubloonTotal: number }
+  | { ok: true; doubloons: number; newDoubloonTotal: number }
   | { error: string }
 
 /**
- * Commit a Tide Run's distance for doubloons + expedition XP.
+ * Commit a Tide Run's distance for doubloons (one commit per UTC day).
  *   doubloons earned = floor(distance)
- *   xp earned        = floor(distance / 2)
- * One commit per UTC day. Players can keep playing after committing;
- * the option just won't be offered again until the next UTC midnight.
+ * Players can keep playing after committing; the option just won't be
+ * offered again until the next UTC midnight.
  */
 export async function commitTideRun(distance: number): Promise<CommitTideRunResult> {
   try {
@@ -76,7 +75,7 @@ export async function commitTideRun(distance: number): Promise<CommitTideRunResu
     const admin = createAdminClient()
     const { data: profile } = await admin
       .from('profiles')
-      .select('doubloons, expedition_xp, tide_run_committed_date')
+      .select('doubloons, tide_run_committed_date')
       .eq('id', user.id)
       .single()
     if (!profile) return { error: 'Profile not found' }
@@ -87,15 +86,12 @@ export async function commitTideRun(distance: number): Promise<CommitTideRunResu
     }
 
     const doubloonsEarned = meters
-    const xpEarned = Math.floor(meters / 2)
     const newDoubloons = (profile.doubloons ?? 0) + doubloonsEarned
-    const newXp = (profile.expedition_xp ?? 0) + xpEarned
 
     const { error: updateErr } = await admin
       .from('profiles')
       .update({
         doubloons: newDoubloons,
-        expedition_xp: newXp,
         tide_run_committed_date: today,
       })
       .eq('id', user.id)
@@ -108,7 +104,7 @@ export async function commitTideRun(distance: number): Promise<CommitTideRunResu
       reason: `Tide Run commit (${meters}m)`,
     }).then(() => {}, () => {})
 
-    return { ok: true, doubloons: doubloonsEarned, xp: xpEarned, newDoubloonTotal: newDoubloons }
+    return { ok: true, doubloons: doubloonsEarned, newDoubloonTotal: newDoubloons }
   } catch {
     return { error: 'Server error — please try again' }
   }

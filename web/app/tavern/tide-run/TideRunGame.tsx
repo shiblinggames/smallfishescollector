@@ -297,7 +297,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
   const [highScore, setHighScore] = useState(initialBestDistance)
   const [committedToday, setCommittedToday] = useState(initialCommittedToday)
   const [committing, setCommitting] = useState(false)
-  const [commitReward, setCommitReward] = useState<{ doubloons: number; xp: number } | null>(null)
+  const [commitReward, setCommitReward] = useState<{ doubloons: number } | null>(null)
   const [commitError, setCommitError] = useState<string | null>(null)
   const [showTour, setShowTour] = useState(false)
 
@@ -326,7 +326,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       const result = await commitTideRun(distance)
       if ('ok' in result) {
         setCommittedToday(true)
-        setCommitReward({ doubloons: result.doubloons, xp: result.xp })
+        setCommitReward({ doubloons: result.doubloons })
         // Defer the nav refresh event so any listener-side re-fetches don't
         // race with our local state flush.
         if (typeof window !== 'undefined') {
@@ -1213,8 +1213,8 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <Link href="/expeditions" className="font-karla font-700 text-sm" style={{ color: '#bda05a' }}>
-          ← Expeditions
+        <Link href="/tavern" className="font-karla font-700 text-sm" style={{ color: '#bda05a' }}>
+          ← Tavern
         </Link>
         <p className="font-cinzel font-700 text-base" style={{ color: '#f0ede8' }}>Tide Run</p>
         <button
@@ -1362,10 +1362,10 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
                     Run Committed
                   </p>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#ffd56b' }}>
-                    +{commitReward.doubloons} ⟡ &nbsp; +{commitReward.xp} XP
+                    +{commitReward.doubloons} ⟡
                   </p>
                   <p className="font-karla font-300 mt-2" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.72)', lineHeight: 1.45 }}>
-                    No more <span style={{ color: '#bda05a' }}>⟡</span> or XP today — resets at midnight UTC.
+                    No more <span style={{ color: '#bda05a' }}>⟡</span> today — resets at midnight UTC.
                   </p>
                   <p className="font-karla font-300 mt-1" style={{ fontSize: '0.65rem', color: 'rgba(180, 220, 240, 0.75)', lineHeight: 1.45 }}>
                     Keep playing — new best scores still count for the leaderboard.
@@ -1377,7 +1377,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
                     Already Committed Today
                   </p>
                   <p className="font-karla font-300 mt-1" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.45 }}>
-                    No more <span style={{ color: '#bda05a' }}>⟡</span> or XP today — resets at midnight UTC.
+                    No more <span style={{ color: '#bda05a' }}>⟡</span> today — resets at midnight UTC.
                   </p>
                   <p className="font-karla font-300 mt-1" style={{ fontSize: '0.65rem', color: 'rgba(180, 220, 240, 0.72)', lineHeight: 1.45 }}>
                     New best scores still count for the leaderboard.
@@ -1410,7 +1410,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
                   </span>
                   {!committing && (
                     <span className="font-karla font-700" style={{ fontSize: '0.7rem', opacity: 0.82 }}>
-                      {score} ⟡ &nbsp; {Math.floor(score / 2)} XP
+                      {score} ⟡
                     </span>
                   )}
                 </button>

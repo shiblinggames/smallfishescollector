@@ -88,35 +88,6 @@ export default async function ExpeditionsPage() {
             equippedRaidItems={(profile?.equipped_raid_items as string[] | null) ?? []}
           />
 
-          {/* ── Runs ── */}
-          <div style={{ marginBottom: '1rem' }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Runs</p>
-            <a
-              href="/expeditions/tide-run"
-              className="block"
-              style={{
-                padding: '14px 16px',
-                borderRadius: 12,
-                background: 'rgba(8, 18, 32, 0.78)',
-                border: '1px solid rgba(189,160,90,0.35)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                textDecoration: 'none',
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/boatrun.png" alt="" style={{ width: 72, height: 'auto', flexShrink: 0, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))' }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.0rem', color: '#f0ede8', marginBottom: 2 }}>Tide Run</p>
-                <p className="font-karla font-300" style={{ fontSize: '0.74rem', color: 'rgba(240,237,232,0.7)', lineHeight: 1.4 }}>
-                  Make off with the cargo and stay ahead of pursuit. Play as much as you want — pick one run a day to commit for <span style={{ color: '#bda05a' }}>⟡</span> + XP.
-                </p>
-              </div>
-              <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: '#bda05a', flexShrink: 0 }}>Play →</span>
-            </a>
-          </div>
-
           {/* ── Voyage card ── */}
           <div style={{ marginBottom: '1rem' }}>
             <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Voyages</p>

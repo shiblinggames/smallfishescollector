@@ -21,7 +21,7 @@ export default async function TavernPage() {
   const today = new Date().toISOString().split('T')[0]
 
   const [{ data: profile }, { data: fotdAttempt }, dailyWagered, slotsDailyWagered, chartState] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome, has_seen_setup, character_color, unlocked_character_colors, username, gems').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome, has_seen_setup, character_color, unlocked_character_colors, username, gems, tide_run_committed_date').eq('id', user.id).single(),
     admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
     getDailyWagered(),
     getSlotsDailyWagered(),
@@ -41,6 +41,7 @@ export default async function TavernPage() {
   const fotdDone = !!fotdAttempt && (fotdAttempt.solved || (fotdAttempt.guesses?.length ?? 0) >= 6)
   const crownCapReached = dailyWagered >= DAILY_CAP
   const slotsCapReached = slotsDailyWagered >= SLOTS_DAILY_CAP
+  const tideRunCommitted = profile?.tide_run_committed_date === today
   const hasContest = chartState && !('error' in chartState)
   const chartCompleted = hasContest && !!chartState.progress.completed_at
   const chartTilesCharted = hasContest ? chartState.progress.path_index : 0
@@ -186,6 +187,16 @@ export default async function TavernPage() {
             art="/fishslots.png"
             accent="#a78bfa"
           />
+          <GameCard
+            href="/tavern/tide-run"
+            eyebrow="Game"
+            title="Tide Run"
+            statusText={tideRunCommitted ? 'Today’s run committed — play freely' : 'Outrun pursuit, commit one run a day'}
+            info={[]}
+            icon={<BoatIcon />}
+            art="/boatrun.png"
+            accent="#5da7d4"
+          />
           </div>
         </div>
 
@@ -269,6 +280,17 @@ function SlotsIcon() {
       <path d="M8 6V4M12 6V4M16 6V4"/>
       <path d="M6 12h3M10.5 12h3M15 12h3"/>
       <path d="M7.5 15v0M12 15v0M16.5 15v0"/>
+    </svg>
+  )
+}
+
+function BoatIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 17c2 2 4 2 6 0s4-2 6 0 4 2 6 0"/>
+      <path d="M4 14l1-5h14l1 5"/>
+      <path d="M12 9V4"/>
+      <path d="M12 4l4 3h-8z" fill="currentColor"/>
     </svg>
   )
 }

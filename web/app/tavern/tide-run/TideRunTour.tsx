@@ -80,8 +80,8 @@ const STEPS: TourStep[] = [
         <br />
         <br />
         Once a day you can <span style={{ color: '#bda05a', fontWeight: 700 }}>commit</span>
-        {' '}one run for <span style={{ color: '#bda05a' }}>⟡</span> + XP based
-        on its distance. Pick the run you want to count;
+        {' '}one run for <span style={{ color: '#bda05a' }}>⟡</span> based on its
+        distance. Pick the run you want to count;
         <span style={{ color: '#bda05a', fontWeight: 700 }}> resets at midnight UTC</span>.
       </>
     ),
