@@ -131,8 +131,9 @@ export default function ShipHero({
     startTransition(async () => { await renameShip(trimmed) })
   }
 
-  // Crew management
-  const assignedVariantIds = new Set(slots.filter(Boolean).map(c => c!.variantId))
+  // Crew management — dedup by name so two variants of the same character
+  // (e.g. standard + foil) can't both occupy the loadout
+  const assignedNames = new Set(slots.filter(Boolean).map(c => c!.name))
 
   function openPickerForSlot(i: number) { setPickerSlot(i); setSheetOpen(true); setSortBy(null) }
   function closeSheet() { setSheetOpen(false); setPickerSlot(null) }
@@ -191,7 +192,7 @@ export default function ShipHero({
 
   // Picker cards
   const pickerCards = pickerSlot !== null
-    ? collection.filter(c => !assignedVariantIds.has(c.variantId) || slots[pickerSlot]?.variantId === c.variantId)
+    ? collection.filter(c => !assignedNames.has(c.name) || slots[pickerSlot]?.name === c.name)
     : collection
   const sortedPickerCards = sortBy
     ? [...pickerCards].sort((a, b) => b[sortBy] - a[sortBy])
@@ -566,7 +567,7 @@ export default function ShipHero({
                     ) : (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
                         {sortedPickerCards.map(card => {
-                          const inCrew  = assignedVariantIds.has(card.variantId) && slots[pickerSlot ?? -1]?.variantId !== card.variantId
+                          const inCrew  = assignedNames.has(card.name) && slots[pickerSlot ?? -1]?.name !== card.name
                           const canPick = pickerSlot !== null && !inCrew
                           const rc      = RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764'
                           return (
