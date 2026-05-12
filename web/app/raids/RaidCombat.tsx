@@ -123,7 +123,10 @@ export default function RaidCombat({
   const [critFlash, setCritFlash]     = useState(false)
   const [critFreeze, setCritFreeze]   = useState(false)   // briefly freezes the aim bar at the lock moment
   const [enemyShakeKey, setEnemyShakeKey] = useState(0)
+  const [enemyShakeKind, setEnemyShakeKind] = useState<'hit' | 'crit'>('hit')
   const [playerShakeKey, setPlayerShakeKey] = useState(0)
+  const [playerRecoilKey, setPlayerRecoilKey] = useState(0)
+  const [cannonShot, setCannonShot]   = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
 
   // Aim bar state — RAF driven during 'aiming' subphase
   const firePosRef  = useRef(0)
@@ -140,15 +143,46 @@ export default function RaidCombat({
   const critFreezeRef      = useRef(false)
   useEffect(() => { critFreezeRef.current = critFreeze }, [critFreeze])
 
-  // Ship shake animation controls — fired when the ship takes a hit
+  // Ship shake / recoil controls — match the existing real-time raid keyframes
   const enemyShakeCtrl  = useAnimation()
   const playerShakeCtrl = useAnimation()
+  const playerRecoilCtrl = useAnimation()
   useEffect(() => {
-    if (enemyShakeKey > 0) enemyShakeCtrl.start({ x: [0, -10, 9, -6, 5, 0], transition: { duration: 0.42 } })
-  }, [enemyShakeKey, enemyShakeCtrl])
+    if (enemyShakeKey === 0) return
+    if (enemyShakeKind === 'crit') {
+      // crit-shake (0.6s, bigger)
+      enemyShakeCtrl.start({
+        x:      [0, -10, 10, -8, 8, -4, 4, -2, 0],
+        rotate: [0, -1.5, 1.5, -1, 1, -0.5, 0.3, 0, 0],
+        transition: { duration: 0.6 },
+      })
+    } else {
+      // hit-shake (0.45s)
+      enemyShakeCtrl.start({
+        x:      [0, -6, 6, -4, 3, -1, 0],
+        rotate: [0, -1, 0.8, -0.5, 0.3, 0, 0],
+        transition: { duration: 0.45 },
+      })
+    }
+  }, [enemyShakeKey, enemyShakeKind, enemyShakeCtrl])
   useEffect(() => {
-    if (playerShakeKey > 0) playerShakeCtrl.start({ x: [0, -10, 9, -6, 5, 0], transition: { duration: 0.42 } })
+    if (playerShakeKey === 0) return
+    // player-hit (0.5s)
+    playerShakeCtrl.start({
+      x:      [0, 9, -9, 6, -4, 2, 0],
+      rotate: [0, 1.2, -1.2, 0.8, -0.5, 0.2, 0],
+      transition: { duration: 0.5 },
+    })
   }, [playerShakeKey, playerShakeCtrl])
+  useEffect(() => {
+    if (playerRecoilKey === 0) return
+    // player-recoil (0.4s)
+    playerRecoilCtrl.start({
+      x:      [0, -14, 5, -2, 0],
+      rotate: [0, -2, 0.6, 0, 0],
+      transition: { duration: 0.4 },
+    })
+  }, [playerRecoilKey, playerRecoilCtrl])
 
   const playerHpRef = useRef(initialPlayerHp)
   const enemyHpRef  = useRef(enemy.hpBase)
@@ -260,11 +294,11 @@ export default function RaidCombat({
     const res = getShotResult(firePosRef.current, zonePosRef.current)
     setAimResult(res)
     if (res === 'critical') {
-      // Crit impact: freeze the bar at the lock moment, flash the stage, then proceed.
+      // Lock-moment emphasis: brief freeze so the player feels they nailed it.
+      // The big boom (flash + cascade + shake) fires at resolution time, matching
+      // the existing raid's instant feedback feel.
       setCritFreeze(true)
-      setCritFlash(true)
-      setTimeout(() => setCritFlash(false), 300)
-      setTimeout(() => { setCritFreeze(false); advanceToReveal(playerAction!) }, 380)
+      setTimeout(() => { setCritFreeze(false); advanceToReveal(playerAction!) }, 260)
     } else {
       advanceToReveal(playerAction!)
     }
@@ -404,14 +438,31 @@ export default function RaidCombat({
       setPlayerHp(step.pHp); setEnemyHp(step.eHp)
       setPlayerCharges(step.pCharges); setEnemyCharges(step.eCharges)
 
-      // Show hitsplat if this step had damage / dodge, and shake the receiving ship
+      // Trigger attacker visuals (recoil + cannon shot emojis)
+      const isAttack = step.action === 'fire' || step.action === 'volley'
+      const isDodged = isAttack && step.splatText === 'Dodged'
+      if (isAttack && step.who === 'player') {
+        setPlayerRecoilKey(k => k + 1)
+        const cannonKind: 'normal' | 'volley' | 'crit' = step.big ? 'crit' : step.action === 'volley' ? 'volley' : 'normal'
+        setCannonShot({ key: Date.now() + i, kind: cannonKind })
+        setTimeout(() => setCannonShot(null), 700)
+      }
+
+      // Defender hitsplat + shake. Crit triggers full-screen flash + bigger shake.
       if (step.splatTarget === 'enemy') {
         setEHitsplat({ key: Date.now() + i, text: step.splatText, color: step.splatColor, big: step.big })
-        setEnemyShakeKey(k => k + 1)
+        if (!isDodged) {
+          setEnemyShakeKind(step.big ? 'crit' : 'hit')
+          setEnemyShakeKey(k => k + 1)
+        }
+        if (step.big) {
+          setCritFlash(true)
+          setTimeout(() => setCritFlash(false), 380)
+        }
       }
       if (step.splatTarget === 'player') {
         setPHitsplat({ key: Date.now() + i, text: step.splatText, color: step.splatColor, big: step.big })
-        setPlayerShakeKey(k => k + 1)
+        if (!isDodged) setPlayerShakeKey(k => k + 1)
       }
 
       // Clear the hitsplat after a short hold so it exits and doesn't linger
@@ -516,38 +567,26 @@ export default function RaidCombat({
           }}
         >
           <motion.div animate={playerShakeCtrl} style={{ position: 'relative' }}>
-            <motion.img
-              src={shipImageUrl}
-              alt={shipName}
-              animate={{ y: [0, -3, 0] }}
-              transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
-              style={{
-                width: '100%', display: 'block',
-                filter: 'drop-shadow(0 10px 22px rgba(74,222,128,0.3))',
-              }}
-            />
+            <motion.div animate={playerRecoilCtrl} style={{ position: 'relative' }}>
+              <motion.img
+                src={shipImageUrl}
+                alt={shipName}
+                animate={{ y: [0, -3, 0] }}
+                transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                style={{
+                  width: '100%', display: 'block',
+                  filter: 'drop-shadow(0 10px 22px rgba(74,222,128,0.3))',
+                }}
+              />
+              {cannonShot && (
+                <CannonShotBurst key={`cs-${cannonShot.key}`} kind={cannonShot.kind} />
+              )}
+            </motion.div>
             <AnimatePresence>
               {pHitsplat && <HitsplatOverlay key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} />}
             </AnimatePresence>
           </motion.div>
         </motion.div>
-
-        {/* Critical-hit flash overlay */}
-        <AnimatePresence>
-          {critFlash && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.55 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.16 }}
-              style={{
-                position: 'absolute', inset: 0,
-                background: 'radial-gradient(circle at 50% 50%, rgba(251,191,36,0.85) 0%, rgba(251,191,36,0.0) 65%)',
-                pointerEvents: 'none', zIndex: 6,
-              }}
-            />
-          )}
-        </AnimatePresence>
 
         {/* Player HP box — bottom-right */}
         <div style={{
@@ -598,7 +637,85 @@ export default function RaidCombat({
           <p className="font-karla" style={{ color: '#a8b8d0', textAlign: 'center', padding: '1.5rem 0' }}>Combat ended.</p>
         )}
       </div>
+
+      {/* Full-screen crit flash — fixed, matches the existing raid */}
+      {critFlash && (
+        <div style={{
+          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 90,
+          background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.35) 0%, rgba(251,191,36,0.08) 60%, transparent 100%)',
+          animation: 'rc-crit-flash 0.38s ease forwards',
+        }} />
+      )}
+
+      {/* Keyframes (namespaced rc- so they don't collide with the existing raid's globals) */}
+      <style>{`
+        @keyframes rc-cannon-shot {
+          0%   { opacity: 0; transform: translate(-20px, 6px) scale(0.2) rotate(-20deg); }
+          30%  { opacity: 1; transform: translate(0) scale(1.2) rotate(5deg); }
+          65%  { opacity: 0.7; transform: translate(4px, -5px) scale(0.9); }
+          100% { opacity: 0; transform: translate(10px, -10px) scale(0.3); }
+        }
+        @keyframes rc-crit-flash {
+          0%   { opacity: 1; }
+          100% { opacity: 0; }
+        }
+      `}</style>
     </div>
+  )
+}
+
+function CannonShotBurst({ kind }: { kind: 'normal' | 'volley' | 'crit' }) {
+  // Burst of emoji projectiles flying off the cannon. Crit = big cascade with star + fire.
+  const big = kind === 'crit'
+  const volley = kind === 'volley'
+  const baseFont = big ? '1.6rem' : volley ? '1.3rem' : '0.95rem'
+  return (
+    <>
+      <span style={{
+        position: 'absolute', left: '78%', top: '38%',
+        fontSize: baseFont,
+        animation: 'rc-cannon-shot 0.55s ease forwards',
+        pointerEvents: 'none', zIndex: 10,
+      }}>💥</span>
+      {big && (
+        <>
+          <span style={{
+            position: 'absolute', left: '92%', top: '20%', fontSize: '1.5rem',
+            animation: 'rc-cannon-shot 0.5s 0.06s ease forwards',
+            pointerEvents: 'none', zIndex: 10,
+          }}>💥</span>
+          <span style={{
+            position: 'absolute', left: '85%', top: '55%', fontSize: '1.3rem',
+            animation: 'rc-cannon-shot 0.55s 0.1s ease forwards',
+            pointerEvents: 'none', zIndex: 10,
+          }}>💥</span>
+          <span style={{
+            position: 'absolute', left: '108%', top: '42%', fontSize: '1.9rem',
+            animation: 'rc-cannon-shot 0.65s 0.04s ease forwards',
+            pointerEvents: 'none', zIndex: 10,
+          }}>⭐</span>
+          <span style={{
+            position: 'absolute', left: '88%', top: '38%', fontSize: '1.5rem',
+            animation: 'rc-cannon-shot 0.7s 0.12s ease forwards',
+            pointerEvents: 'none', zIndex: 10,
+          }}>🔥</span>
+        </>
+      )}
+      {volley && !big && (
+        <>
+          <span style={{
+            position: 'absolute', left: '90%', top: '55%', fontSize: '1.3rem',
+            animation: 'rc-cannon-shot 0.5s 0.07s ease forwards',
+            pointerEvents: 'none', zIndex: 10,
+          }}>💥</span>
+          <span style={{
+            position: 'absolute', left: '95%', top: '20%', fontSize: '1.4rem',
+            animation: 'rc-cannon-shot 0.6s 0.14s ease forwards',
+            pointerEvents: 'none', zIndex: 10,
+          }}>🔥</span>
+        </>
+      )}
+    </>
   )
 }
 
