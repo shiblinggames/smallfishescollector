@@ -1669,9 +1669,16 @@ export default function FishingGame({
   const [liquidateConfirm, setLiquidateConfirm] = useState(false)
   const [buyingWorms, setBuyingWorms] = useState(false)
   const [wormBuyMsg, setWormBuyMsg] = useState<string | null>(null)
-  const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number } | null>(null)
+  const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond' } | null>(null)
   const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean; gemEarned?: boolean; perfectStreak: number; streakBonusXP: number; jackpotMultiplier?: number } | null>(null)
-  const [crateResult, setCrateResult] = useState<{ type: 'doubloons'; amount: number } | { type: 'bait'; baitType: string; baitName: string; quantity: number } | { type: 'skin'; skinId: string; skinName: string } | null>(null)
+  const [crateResult, setCrateResult] = useState<
+    | { type: 'doubloons'; amount: number }
+    | { type: 'bait';      baitType: string; baitName: string; quantity: number }
+    | { type: 'skin';      skinId: string;   skinName: string }
+    | { type: 'hat';       hatId: string;    hatName: string;  hatImageUrl: string  }
+    | { type: 'boat';      boatId: string;   boatName: string; boatImageUrl: string }
+    | null
+  >(null)
   const [cratePhase, setCratePhase] = useState<'closed' | 'rolling' | 'revealed'>('closed')
   const [crateRollDisplay, setCrateRollDisplay] = useState<{ type: 'doubloons'; amount: number } | { type: 'bait'; baitType: string; baitName: string } | null>(null)
   const [challengeActive, setChallengeActive] = useState(false)
@@ -1943,7 +1950,7 @@ export default function FishingGame({
 
       await new Promise(r => setTimeout(r, res.waitMs))
 
-      setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity })
+      setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity, crateTier: res.crateTier })
 
       // Initialise boss fight state for ancient_deep
       if (selectedZone === 'ancient_deep') {
@@ -2158,9 +2165,10 @@ export default function FishingGame({
 
     // Crate catch — fetch loot, don't credit until player claims
     if (hookedFishRef.current.fishId === CRATE_FISH_ID) {
+      const tier = hookedFishRef.current.crateTier ?? 'wooden'
       startTransition(async () => {
         try {
-          const res = await reelCrate(selectedZone)
+          const res = await reelCrate(selectedZone, tier)
           if (!('error' in res)) setCrateResult(res)
         } catch {}
         setCratePhase('closed')
@@ -2361,7 +2369,11 @@ export default function FishingGame({
   function handleOpenCrate() {
     if (!crateResult || cratePhase !== 'closed') return
     const result = crateResult
-    if (result.type === 'skin') { setCratePhase('revealed'); return }
+    // Cosmetics (skin/hat/boat) skip the roll animation and reveal directly.
+    if (result.type === 'skin' || result.type === 'hat' || result.type === 'boat') {
+      setCratePhase('revealed')
+      return
+    }
     setCratePhase('rolling')
 
     const pool: Array<{ type: 'doubloons'; amount: number } | { type: 'bait'; baitType: string; baitName: string }> = [
@@ -2410,6 +2422,10 @@ export default function FishingGame({
         if (existing) return prev.map(b => b.bait_type === result.baitType ? { ...b, quantity: b.quantity + result.quantity } : b)
         return [...prev, { bait_type: result.baitType, quantity: result.quantity }]
       })
+    } else if (result.type === 'hat') {
+      setUnlockedHats(prev => prev.includes(result.hatId) ? prev : [...prev, result.hatId])
+    } else if (result.type === 'boat') {
+      setUnlockedBoats(prev => prev.includes(result.boatId) ? prev : [...prev, result.boatId])
     }
     setCratePhase('closed')
     setCrateRollDisplay(null)
@@ -3189,7 +3205,11 @@ export default function FishingGame({
                       {/* Crate image */}
                       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.9rem' }}>
                         <motion.img
-                          src={cratePhase === 'revealed' ? '/crateopen.png' : '/crateclosed.png'}
+                          src={(() => {
+                            const tier = hookedFish?.crateTier ?? 'wooden'
+                            const state = cratePhase === 'revealed' ? 'open' : 'closed'
+                            return tier === 'wooden' ? `/crate${state}.png` : `/${tier}crate${state}.png`
+                          })()}
                           alt="crate"
                           animate={cratePhase === 'rolling'
                             ? { rotate: [-5, 5, -4, 4, -3, 3, 0], scale: [1, 1.05, 1] }
@@ -3293,6 +3313,27 @@ export default function FishingGame({
                               </p>
                               <p className="font-karla" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>New character color unlocked</p>
                             </div>
+                          ) : crateResult.type === 'hat' || crateResult.type === 'boat' ? (
+                            <div style={{ textAlign: 'center', marginBottom: '0.9rem' }}>
+                              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#4ade8099', marginBottom: 6 }}>Rare Drop!</p>
+                              <motion.img
+                                src={crateResult.type === 'hat' ? crateResult.hatImageUrl : crateResult.boatImageUrl}
+                                alt=""
+                                initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                                transition={{ type: 'spring', stiffness: 380, damping: 18, delay: 0.1 }}
+                                style={{
+                                  width: 72, height: 72, objectFit: 'contain',
+                                  margin: '0 auto 8px', display: 'block',
+                                  filter: 'drop-shadow(0 0 18px rgba(74,222,128,0.4))',
+                                }}
+                              />
+                              <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#4ade80', textShadow: '0 0 20px rgba(74,222,128,0.5)', lineHeight: 1 }}>
+                                {crateResult.type === 'hat' ? `${crateResult.hatName} Bandana` : `${crateResult.boatName} Boat`}
+                              </p>
+                              <p className="font-karla" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>
+                                {crateResult.type === 'hat' ? 'New bandana color unlocked' : 'New boat color unlocked'}
+                              </p>
+                            </div>
                           ) : (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: '0.9rem' }}>
                               <motion.img
@@ -3318,27 +3359,37 @@ export default function FishingGame({
                               </div>
                             </div>
                           )}
-                          <motion.button
-                            onClick={handleClaimCrate}
-                            whileTap={{ scale: 0.97 }}
-                            className="font-karla font-700 uppercase tracking-[0.14em]"
-                            style={{
-                              width: '100%', padding: '0.65rem 0',
-                              borderRadius: 12,
-                              background: crateResult.type === 'skin'
-                                ? 'linear-gradient(135deg, rgba(20,83,45,0.5), rgba(74,222,128,0.18))'
-                                : crateResult.type === 'doubloons'
-                                ? 'linear-gradient(135deg, rgba(217,119,6,0.45), rgba(251,191,36,0.2))'
-                                : 'linear-gradient(135deg, rgba(20,83,45,0.5), rgba(134,239,172,0.18))',
-                              border: crateResult.type === 'skin' ? '1px solid rgba(74,222,128,0.45)' : crateResult.type === 'doubloons' ? '1px solid rgba(251,191,36,0.5)' : '1px solid rgba(134,239,172,0.45)',
-                              color: crateResult.type === 'skin' ? '#4ade80' : crateResult.type === 'doubloons' ? '#fbbf24' : '#86efac',
-                              fontSize: '0.72rem',
-                              cursor: 'pointer',
-                              boxShadow: crateResult.type === 'skin' ? '0 0 18px rgba(74,222,128,0.2)' : crateResult.type === 'doubloons' ? '0 0 20px rgba(251,191,36,0.22)' : '0 0 18px rgba(134,239,172,0.18)',
-                            }}
-                          >
-                            Claim
-                          </motion.button>
+                          {(() => {
+                            const isCosmetic = crateResult.type === 'skin' || crateResult.type === 'hat' || crateResult.type === 'boat'
+                            const isDoubloons = crateResult.type === 'doubloons'
+                            const bg = isCosmetic
+                              ? 'linear-gradient(135deg, rgba(20,83,45,0.5), rgba(74,222,128,0.18))'
+                              : isDoubloons
+                              ? 'linear-gradient(135deg, rgba(217,119,6,0.45), rgba(251,191,36,0.2))'
+                              : 'linear-gradient(135deg, rgba(20,83,45,0.5), rgba(134,239,172,0.18))'
+                            const border = isCosmetic ? 'rgba(74,222,128,0.45)' : isDoubloons ? 'rgba(251,191,36,0.5)' : 'rgba(134,239,172,0.45)'
+                            const color = isCosmetic ? '#4ade80' : isDoubloons ? '#fbbf24' : '#86efac'
+                            const glow = isCosmetic ? '0 0 18px rgba(74,222,128,0.2)' : isDoubloons ? '0 0 20px rgba(251,191,36,0.22)' : '0 0 18px rgba(134,239,172,0.18)'
+                            return (
+                              <motion.button
+                                onClick={handleClaimCrate}
+                                whileTap={{ scale: 0.97 }}
+                                className="font-karla font-700 uppercase tracking-[0.14em]"
+                                style={{
+                                  width: '100%', padding: '0.65rem 0',
+                                  borderRadius: 12,
+                                  background: bg,
+                                  border: `1px solid ${border}`,
+                                  color,
+                                  fontSize: '0.72rem',
+                                  cursor: 'pointer',
+                                  boxShadow: glow,
+                                }}
+                              >
+                                Claim
+                              </motion.button>
+                            )
+                          })()}
                         </motion.div>
                       )}
                     </motion.div>

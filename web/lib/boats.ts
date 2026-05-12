@@ -19,6 +19,8 @@ export interface BoatDef {
   castImageUrl: string
   /** Per-frame placement of the overlay on the character container */
   positions: Record<BoatFrame, BoatPos>
+  /** Only obtainable from crates — hidden from the shop picker unless owned. */
+  crateOnly?: boolean
 }
 
 /** Default "Driftwood" — no overlay; uses the base sprite's boat. */
@@ -92,10 +94,11 @@ export const BOATS: BoatDef[] = [
     id: 'charcoal',
     name: 'Charcoal',
     color: '#3a3a40',
-    cost: 10000,
+    cost: 0,
     restImageUrl: '/boat_charcoal_rest.png',
     castImageUrl: '/boat_charcoal_cast.png',
     positions: SHARED_POSITIONS,
+    crateOnly: true,
   },
   {
     id: 'golden',
@@ -110,10 +113,11 @@ export const BOATS: BoatDef[] = [
     id: 'offwhite',
     name: 'Offwhite',
     color: '#e8e2d0',
-    cost: 10000,
+    cost: 0,
     restImageUrl: '/boat_offwhite_rest.png',
     castImageUrl: '/boat_offwhite_cast.png',
     positions: SHARED_POSITIONS,
+    crateOnly: true,
   },
   {
     id: 'periwinkle',

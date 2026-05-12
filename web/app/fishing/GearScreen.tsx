@@ -743,7 +743,7 @@ export default function GearScreen({
                         </button>
                       )
                     })()}
-                    {BOATS.map(b => {
+                    {BOATS.filter(b => !b.crateOnly || unlockedBoats.includes(b.id)).map(b => {
                       const owned = unlockedBoats.includes(b.id)
                       const isEquipped = equippedBoat === b.id
                       const canAfford = doubloons >= b.cost
@@ -852,11 +852,8 @@ export default function GearScreen({
                           }}
                         >
                           <div style={{
-                            width: 48, height: 48, borderRadius: 12,
-                            background: 'rgba(255,255,255,0.04)',
-                            border: `1px solid ${isEquipped ? noneColor + '90' : 'rgba(255,255,255,0.09)'}`,
+                            width: 48, height: 48,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            overflow: 'hidden',
                           }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
@@ -873,7 +870,7 @@ export default function GearScreen({
                         </button>
                       )
                     })()}
-                    {HATS.map(h => {
+                    {HATS.filter(h => !h.crateOnly || unlockedHats.includes(h.id)).map(h => {
                       const owned = unlockedHats.includes(h.id)
                       const isEquipped = equippedHat === h.id
                       const canAfford = doubloons >= h.cost
@@ -902,12 +899,8 @@ export default function GearScreen({
                           }}
                         >
                           <div style={{
-                            width: 48, height: 48, borderRadius: 12,
-                            background: 'rgba(4,10,18,0.85)',
-                            border: `1px solid ${h.color}cc`,
-                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 16px ${h.color}55`,
+                            width: 48, height: 48,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            overflow: 'hidden',
                           }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img

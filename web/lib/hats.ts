@@ -19,6 +19,8 @@ export interface HatDef {
   castImageUrl: string
   /** Per-frame placement of the overlay on the character container */
   positions: Record<HatFrame, HatPos>
+  /** Only obtainable from crates — hidden from the shop picker unless owned. */
+  crateOnly?: boolean
 }
 
 // All bandanas share the same per-frame anchor — sprites are sliced from
@@ -44,10 +46,11 @@ export const HATS: HatDef[] = [
     id: 'black',
     name: 'Black',
     color: '#1f1f1f',
-    cost: 2000,
+    cost: 0,
     restImageUrl: '/hat_black_rest.png',
     castImageUrl: '/hat_black_cast.png',
     positions: SHARED_POSITIONS,
+    crateOnly: true,
   },
   {
     id: 'brown',
@@ -62,10 +65,11 @@ export const HATS: HatDef[] = [
     id: 'gray',
     name: 'Gray',
     color: '#7a7a7a',
-    cost: 2000,
+    cost: 0,
     restImageUrl: '/hat_gray_rest.png',
     castImageUrl: '/hat_gray_cast.png',
     positions: SHARED_POSITIONS,
+    crateOnly: true,
   },
   {
     id: 'green',

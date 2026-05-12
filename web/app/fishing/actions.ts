@@ -134,8 +134,27 @@ export async function activateEvent(type: string): Promise<{ ok: true } | { erro
   return { ok: true }
 }
 
+export type CrateTier = 'wooden' | 'metal' | 'gold' | 'diamond'
+
+const ZONE_CRATE_TIERS: Record<string, Record<CrateTier, number>> = {
+  shallows:    { wooden: 80, metal: 10, gold: 7,  diamond: 3  },
+  open_waters: { wooden: 60, metal: 20, gold: 12, diamond: 8  },
+  deep:        { wooden: 35, metal: 30, gold: 20, diamond: 15 },
+  abyss:       { wooden: 15, metal: 25, gold: 35, diamond: 25 },
+}
+
+function rollCrateTier(habitat: string): CrateTier {
+  const dist = ZONE_CRATE_TIERS[habitat] ?? ZONE_CRATE_TIERS.shallows
+  const total = dist.wooden + dist.metal + dist.gold + dist.diamond
+  let r = Math.random() * total
+  if ((r -= dist.wooden)  < 0) return 'wooden'
+  if ((r -= dist.metal)   < 0) return 'metal'
+  if ((r -= dist.gold)    < 0) return 'gold'
+  return 'diamond'
+}
+
 export async function castLine(baitType: string, habitat: string): Promise<
-  | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number }
+  | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number; crateTier?: CrateTier }
   | { error: string }
 > {
   const supabase = await createClient()
@@ -197,7 +216,8 @@ export async function castLine(baitType: string, habitat: string): Promise<
       await admin.from('bait_inventory').update({ quantity: baitRow.quantity - 1 }).eq('user_id', user.id).eq('bait_type', baitType)
     }
     const crateWait = { shallows: 4000, open_waters: 7000, deep: 11000, abyss: 16000 }[habitat] ?? 6000
-    return { fishId: CRATE_FISH_ID, catchDifficulty: 1, biteRarity: 1, waitMs: crateWait }
+    const crateTier = rollCrateTier(habitat)
+    return { fishId: CRATE_FISH_ID, catchDifficulty: 1, biteRarity: 1, waitMs: crateWait, crateTier }
   }
 
   if (!noBait && baitRow) {
@@ -439,70 +459,133 @@ export async function reelIn(
   return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, newAchievements, xpGained, newXP, dailyProgress: newP, unlockedSkinId: reelInUnlockedSkin }
 }
 
-const CRATE_DOUBLOON_RANGE: Record<string, [number, number]> = {
-  shallows:    [50,  200],
-  open_waters: [100, 400],
-  deep:        [200, 700],
-  abyss:       [400, 1000],
+// Crate loot tables — doubloons and bait pool depend on crate tier, not zone.
+const CRATE_DOUBLOON_RANGE: Record<CrateTier, [number, number]> = {
+  wooden:  [100,  400 ],
+  metal:   [250,  1000],
+  gold:    [500,  2000],
+  diamond: [1000, 4000],
 }
 
-// Weighted bait pool for crate drops (chum + anglers_formula rarer)
-const CRATE_BAIT_POOL: { type: string; weight: number }[] = [
-  { type: 'worm',            weight: 35 },
-  { type: 'minnow',          weight: 25 },
-  { type: 'night_crawler',   weight: 20 },
-  { type: 'chum',            weight: 12 },
-  { type: 'anglers_formula', weight: 8  },
+const CRATE_BAIT_POOLS: Record<CrateTier, { type: string; weight: number }[]> = {
+  wooden:  [
+    { type: 'worm',            weight: 50 },
+    { type: 'minnow',          weight: 30 },
+    { type: 'night_crawler',   weight: 20 },
+  ],
+  metal:   [
+    { type: 'chum',            weight: 40 },
+    { type: 'anglers_formula', weight: 30 },
+    { type: 'night_crawler',   weight: 20 },
+    { type: 'minnow',          weight: 10 },
+  ],
+  gold:    [
+    { type: 'chum',            weight: 50 },
+    { type: 'anglers_formula', weight: 35 },
+    { type: 'night_crawler',   weight: 15 },
+  ],
+  diamond: [
+    { type: 'chum',            weight: 60 },
+    { type: 'anglers_formula', weight: 40 },
+  ],
+}
+
+const CRATE_BAIT_QTY: Record<CrateTier, number> = {
+  wooden:  5,
+  metal:   10,
+  gold:    15,
+  diamond: 20,
+}
+
+// Per-tier outcome weights. Wooden/metal have no cosmetic outcome.
+const CRATE_OUTCOME_WEIGHTS: Record<CrateTier, { doubloons: number; bait: number; cosmetic: number }> = {
+  wooden:  { doubloons: 50, bait: 50, cosmetic: 0  },
+  metal:   { doubloons: 50, bait: 50, cosmetic: 0  },
+  gold:    { doubloons: 55, bait: 35, cosmetic: 10 },
+  diamond: { doubloons: 25, bait: 60, cosmetic: 15 },
+}
+
+// Crate-exclusive cosmetics that can drop from gold/diamond crates.
+// Keep ids in sync with lib/boats.ts, lib/hats.ts, lib/characters.ts.
+const CRATE_COSMETIC_POOL = [
+  { kind: 'skin' as const, id: 'mint',      name: 'Mint'                   },
+  { kind: 'boat' as const, id: 'charcoal',  name: 'Charcoal',  imageUrl: '/boat_charcoal_rest.png' },
+  { kind: 'boat' as const, id: 'offwhite',  name: 'Offwhite',  imageUrl: '/boat_offwhite_rest.png' },
+  { kind: 'hat'  as const, id: 'black',     name: 'Black',     imageUrl: '/hat_black_rest.png'     },
+  { kind: 'hat'  as const, id: 'gray',      name: 'Gray',      imageUrl: '/hat_gray_rest.png'      },
 ]
 
-export async function reelCrate(zone: string): Promise<
+export type CrateLoot =
   | { type: 'doubloons'; amount: number }
-  | { type: 'bait'; baitType: string; baitName: string; quantity: number }
-  | { type: 'skin'; skinId: string; skinName: string }
-  | { error: string }
-> {
+  | { type: 'bait';      baitType: string; baitName: string; quantity: number }
+  | { type: 'skin';      skinId: string;   skinName: string }
+  | { type: 'hat';       hatId: string;    hatName: string;  hatImageUrl: string  }
+  | { type: 'boat';      boatId: string;   boatName: string; boatImageUrl: string }
+
+export async function reelCrate(_zone: string, tier: CrateTier = 'wooden'): Promise<CrateLoot | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()
 
   const { data: profile } = await admin.from('profiles')
-    .select('doubloons, unlocked_character_colors')
+    .select('doubloons, unlocked_character_colors, unlocked_boats, unlocked_hats')
     .eq('id', user.id).single()
 
-  const alreadyHasMint = ((profile?.unlocked_character_colors as string[] | null) ?? []).includes('mint')
+  const unlockedSkins = (profile?.unlocked_character_colors as string[] | null) ?? []
+  const unlockedBoats = (profile?.unlocked_boats as string[] | null) ?? []
+  const unlockedHats  = (profile?.unlocked_hats  as string[] | null) ?? []
+  const isOwned = (entry: typeof CRATE_COSMETIC_POOL[number]) => {
+    if (entry.kind === 'skin') return unlockedSkins.includes(entry.id)
+    if (entry.kind === 'boat') return unlockedBoats.includes(entry.id)
+    return unlockedHats.includes(entry.id)
+  }
 
-  type Outcome = 'skin' | 'doubloons' | 'bait'
+  const weights = CRATE_OUTCOME_WEIGHTS[tier]
+  const unownedCosmetics = CRATE_COSMETIC_POOL.filter(c => !isOwned(c))
+  // If cosmetic outcome can't actually pay out (everything owned), fold its weight into doubloons.
+  const cosmeticWeight = unownedCosmetics.length > 0 ? weights.cosmetic : 0
+  const doubloonWeight = weights.doubloons + (unownedCosmetics.length > 0 ? 0 : weights.cosmetic)
+
+  type Outcome = 'doubloons' | 'bait' | 'cosmetic'
   const pool: { outcome: Outcome; weight: number }[] = [
-    { outcome: 'doubloons', weight: 50 },
-    { outcome: 'bait',      weight: 50 },
+    { outcome: 'doubloons', weight: doubloonWeight },
+    { outcome: 'bait',      weight: weights.bait   },
+    { outcome: 'cosmetic',  weight: cosmeticWeight },
   ]
-  if (!alreadyHasMint) pool.push({ outcome: 'skin', weight: 3 })
-
   const total = pool.reduce((s, o) => s + o.weight, 0)
   let rand = Math.random() * total
   let outcome: Outcome = 'doubloons'
   for (const o of pool) { rand -= o.weight; if (rand <= 0) { outcome = o.outcome; break } }
 
-  if (outcome === 'skin') {
-    const currentUnlocked = (profile?.unlocked_character_colors as string[] | null) ?? []
-    await admin.from('profiles').update({ unlocked_character_colors: [...currentUnlocked, 'mint'] }).eq('id', user.id)
-    return { type: 'skin', skinId: 'mint', skinName: 'Mint' }
+  if (outcome === 'cosmetic') {
+    const picked = unownedCosmetics[Math.floor(Math.random() * unownedCosmetics.length)]
+    if (picked.kind === 'skin') {
+      await admin.from('profiles').update({ unlocked_character_colors: [...unlockedSkins, picked.id] }).eq('id', user.id)
+      return { type: 'skin', skinId: picked.id, skinName: picked.name }
+    }
+    if (picked.kind === 'boat') {
+      await admin.from('profiles').update({ unlocked_boats: [...unlockedBoats, picked.id] }).eq('id', user.id)
+      return { type: 'boat', boatId: picked.id, boatName: picked.name, boatImageUrl: picked.imageUrl }
+    }
+    await admin.from('profiles').update({ unlocked_hats: [...unlockedHats, picked.id] }).eq('id', user.id)
+    return { type: 'hat', hatId: picked.id, hatName: picked.name, hatImageUrl: picked.imageUrl }
   }
 
   if (outcome === 'doubloons') {
-    const [min, max] = CRATE_DOUBLOON_RANGE[zone] ?? [50, 200]
+    const [min, max] = CRATE_DOUBLOON_RANGE[tier]
     const amount = Math.floor(min + Math.random() * (max - min + 1))
     await admin.from('profiles').update({ doubloons: (profile?.doubloons ?? 0) + amount }).eq('id', user.id)
     return { type: 'doubloons', amount }
   }
 
-  // Bait — weighted random pick
-  const totalBaitWeight = CRATE_BAIT_POOL.reduce((s, b) => s + b.weight, 0)
+  // Bait — weighted random pick from this tier's pool
+  const baitPool = CRATE_BAIT_POOLS[tier]
+  const totalBaitWeight = baitPool.reduce((s, b) => s + b.weight, 0)
   let baitRand = Math.random() * totalBaitWeight
-  let picked = CRATE_BAIT_POOL[0]
-  for (const b of CRATE_BAIT_POOL) { baitRand -= b.weight; if (baitRand <= 0) { picked = b; break } }
-  const qty = 10
+  let picked = baitPool[0]
+  for (const b of baitPool) { baitRand -= b.weight; if (baitRand <= 0) { picked = b; break } }
+  const qty = CRATE_BAIT_QTY[tier]
   const { data: existing } = await admin.from('bait_inventory').select('quantity').eq('user_id', user.id).eq('bait_type', picked.type).single()
   if (existing) {
     await admin.from('bait_inventory').update({ quantity: existing.quantity + qty }).eq('user_id', user.id).eq('bait_type', picked.type)
@@ -845,6 +928,7 @@ export async function buyBoat(boatId: string): Promise<{ ok: true; doubloons: nu
   const { BOAT_MAP } = await import('@/lib/boats')
   const def = BOAT_MAP[boatId]
   if (!def) return { error: 'Unknown boat' }
+  if (def.crateOnly) return { error: 'This boat is only found in crates' }
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles').select('doubloons, unlocked_boats').eq('id', user.id).single()
@@ -890,6 +974,7 @@ export async function buyHat(hatId: string): Promise<{ ok: true; doubloons: numb
   const { HAT_MAP } = await import('@/lib/hats')
   const def = HAT_MAP[hatId]
   if (!def) return { error: 'Unknown hat' }
+  if (def.crateOnly) return { error: 'This hat is only found in crates' }
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles').select('doubloons, unlocked_hats').eq('id', user.id).single()
