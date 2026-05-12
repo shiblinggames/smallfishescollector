@@ -187,7 +187,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
                     <div style={{
                       width: 52, height: 52, borderRadius: '50%', overflow: 'hidden',
                       backgroundImage: `url(${sprites.rest})`,
-                      backgroundSize: '320% auto', backgroundPosition: 'center 45%',
+                      backgroundSize: '420% auto', backgroundPosition: '60% 60%',
                       backgroundRepeat: 'no-repeat',
                       border: isActive ? '2px solid #c8a870' : isHinted ? '2px solid rgba(240,192,64,0.5)' : '2px solid rgba(255,255,255,0.1)',
                       boxShadow: isActive ? '0 0 12px rgba(200,168,112,0.45)' : 'none',

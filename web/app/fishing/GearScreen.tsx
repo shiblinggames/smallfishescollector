@@ -392,7 +392,7 @@ export default function GearScreen({
               <div style={{
                 width: 36, height: 36, borderRadius: '50%', overflow: 'hidden',
                 backgroundImage: `url(${charSrc.rest})`,
-                backgroundSize: '320% auto', backgroundPosition: 'center 45%', backgroundRepeat: 'no-repeat',
+                backgroundSize: '420% auto', backgroundPosition: '60% 60%', backgroundRepeat: 'no-repeat',
                 border: '1px solid rgba(255,255,255,0.2)',
               }} />
             }
@@ -959,7 +959,7 @@ export default function GearScreen({
                           <div style={{
                             width: 48, height: 48, borderRadius: '50%', overflow: 'hidden',
                             backgroundImage: `url(${sprites.rest})`,
-                            backgroundSize: '320% auto', backgroundPosition: 'center 45%', backgroundRepeat: 'no-repeat',
+                            backgroundSize: '420% auto', backgroundPosition: '60% 60%', backgroundRepeat: 'no-repeat',
                             border: isActive ? '2px solid #60a5fa' : '2px solid rgba(255,255,255,0.12)',
                             boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.4)' : 'none',
                             position: 'relative',

@@ -3285,7 +3285,7 @@ export default function FishingGame({
                                 style={{
                                   width: 72, height: 72, borderRadius: 12, overflow: 'hidden',
                                   backgroundImage: `url(/fishing_${crateResult.skinId}_rest.png)`,
-                                  backgroundSize: '320% auto', backgroundPosition: 'center 45%',
+                                  backgroundSize: '420% auto', backgroundPosition: '60% 60%',
                                   backgroundRepeat: 'no-repeat', margin: '0 auto 8px',
                                   border: '2px solid rgba(74,222,128,0.4)',
                                   boxShadow: '0 0 20px rgba(74,222,128,0.25)',
@@ -3829,7 +3829,7 @@ export default function FishingGame({
                   style={{
                     width: 96, height: 96, borderRadius: 16, overflow: 'hidden', margin: '0 auto 1rem',
                     backgroundImage: `url(${skinColor.rest})`,
-                    backgroundSize: '320% auto', backgroundPosition: 'center 45%',
+                    backgroundSize: '420% auto', backgroundPosition: '60% 60%',
                     backgroundRepeat: 'no-repeat',
                     border: '2px solid rgba(74,222,128,0.4)',
                     boxShadow: '0 0 24px rgba(74,222,128,0.3)',
