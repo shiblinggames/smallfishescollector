@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { awardPracticeKill } from './practiceActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
+import RaidCombat from '../RaidCombat'
+import type { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
 
 type GamePhase  = 'idle' | 'playing' | 'win' | 'dead'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
@@ -20,8 +22,9 @@ interface PracticeEnemy {
   hpBase: number
   minDmg: number
   maxDmg: number
+  shipSpeed: number
   actionMs: number
-  pattern: string[]
+  pattern: EnemyAction[]
   image: string
   portrait?: string
   killGold: number
@@ -31,18 +34,18 @@ interface PracticeEnemy {
 const PRACTICE_ENEMIES: Record<string, PracticeEnemy> = {
   brute: {
     id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 2, maxDmg: 5,
-    actionMs: 4500, pattern: ['reload', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1.png', portrait: ENEMY_IMG_BASE + 'reefraider.png', killGold: 20, killXP: 20,
+    shipSpeed: 4, actionMs: 4500, pattern: ['reload', 'fire', 'reload', 'fire'],
+    image: '/enemytier1.png', portrait: ENEMY_IMG_BASE + 'reefraider.png', killGold: 20, killXP: 20,
   },
   sniper: {
     id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
-    actionMs: 5500, pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1.png', portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png', killGold: 25, killXP: 30,
+    shipSpeed: 3, actionMs: 5500, pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
+    image: '/enemytier1scout.png', portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png', killGold: 25, killXP: 30,
   },
   corsair: {
     id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
-    actionMs: 3500, pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
-    image: ENEMY_IMG_BASE + 'enemytier1elite.png', portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png', killGold: 35, killXP: 45,
+    shipSpeed: 7, actionMs: 3500, pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
+    image: '/enemytier1elite.png', portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png', killGold: 35, killXP: 45,
   },
 }
 const NON_BOSS_IDS = ['brute', 'sniper', 'corsair'] as const
@@ -446,6 +449,12 @@ export default function PracticeRaidGame({
 
   // Combat loop
   useEffect(() => {
+    // Disabled: the playing phase now runs inside <RaidCombat />, which owns
+    // its own state/RAF. The old combat loop below is kept commented out so
+    // unused old-combat refs/setters don't need to be torn out yet — we'll
+    // clean those up in a follow-up.
+    return
+    /*
     if (phase !== 'playing') return
     let lastTime = performance.now()
     function loop(now: number) {
@@ -561,6 +570,7 @@ export default function PracticeRaidGame({
     }
     rafRef.current = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafRef.current)
+    */
   }, [phase, playerActionMs, dodgeCooldownUse])
 
   const doReload = useCallback(() => {
@@ -662,6 +672,28 @@ export default function PracticeRaidGame({
     }, DODGE_PRIME_MS)
   }, [])
 
+  // ─── Turn-based combat callbacks (called from <RaidCombat />) ─────────────
+
+  const handleEnemyDefeated = useCallback((remainingPlayerHp: number) => {
+    playerHPRef.current = remainingPlayerHp
+    setPlayerHP(remainingPlayerHp)
+    roundEndingRef.current = true
+    setEnemySinking(true)
+    const gold = currentEnemyRef.current.killGold
+    const xp   = currentEnemyRef.current.killXP
+    setWinGold(gold); setWinXP(xp)
+    setTimeout(() => {
+      roundEndingRef.current = false
+      phaseRef.current = 'win'
+      setPhase('win')
+    }, 920)
+  }, [])
+
+  const handlePlayerDefeated = useCallback(() => {
+    phaseRef.current = 'dead'
+    setPhase('dead')
+  }, [])
+
   const collectReward = useCallback(async () => {
     if (isClaiming) return
     setIsClaiming(true)
@@ -686,6 +718,61 @@ export default function PracticeRaidGame({
   const playerReady   = playerActionPct >= 1
   const isActionLocked = actionLocked
   const actionBarColor = enemyActionPct > 0.4 ? '#a78bfa' : enemyActionPct > 0.15 ? '#fbbf24' : '#ef4444'
+
+  // ─── Playing phase: render the new turn-based combat ──────────────────────
+  if (phase === 'playing') {
+    const e = currentEnemyRef.current
+    const enemyForCombat: BroadsideEnemy = {
+      id: e.id, name: e.name, hpBase: e.hpBase, minDmg: e.minDmg, maxDmg: e.maxDmg,
+      shipSpeed: e.shipSpeed, actionMs: e.actionMs, pattern: e.pattern,
+      image: e.image, portrait: e.portrait,
+    }
+    return (
+      <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
+        <div style={{ width: '100%', position: 'sticky', top: 0, zIndex: 55 }}>
+          <NavLevelBar xp={navXP} />
+          <AnimatePresence>
+            {xpPopup && (
+              <motion.p
+                key={xpPopup.id}
+                initial={{ opacity: 0, y: 0 }}
+                animate={{ opacity: [0, 1, 1, 0], y: 18 }}
+                transition={{ duration: 2.0, times: [0, 0.1, 0.6, 1], ease: 'easeOut' }}
+                onAnimationComplete={() => setXpPopup(null)}
+                className="font-karla font-700"
+                style={{
+                  position: 'absolute', right: 8, top: '100%',
+                  fontSize: '0.8rem', color: '#4ade80',
+                  pointerEvents: 'none',
+                  textShadow: '0 0 10px rgba(74,222,128,0.7)',
+                }}
+              >
+                +{xpPopup.value} XP
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
+        <div style={{ width: '100%', padding: '0 0.5rem' }}>
+          <RaidCombat
+            key={`practice-combat-${e.id}-${enemyHPMax}`}
+            enemy={enemyForCombat}
+            isBoss={false}
+            shipImageUrl={shipImageUrl}
+            shipName={shipName}
+            playerHpMax={playerHPMax}
+            playerHp={playerHP}
+            shipMinDamage={shipMinDamage}
+            shipSpeed={shipSpeed}
+            totalPower={totalPower}
+            totalNavigation={totalDodge}
+            equippedRaidItems={[]}
+            onEnemyDefeated={handleEnemyDefeated}
+            onPlayerDefeated={handlePlayerDefeated}
+          />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
