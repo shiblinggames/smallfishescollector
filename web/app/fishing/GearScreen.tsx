@@ -559,7 +559,7 @@ export default function GearScreen({
                         </div>
                         {isEquipped
                           ? <span className="font-karla font-700" style={{ fontSize: '0.52rem', color: r.color, whiteSpace: 'nowrap' }}>✓ On</span>
-                          : <button onClick={() => { onEquipRod(r.tier); setOpenSlot(null) }} className="font-karla font-700"
+                          : <button onClick={() => onEquipRod(r.tier)} className="font-karla font-700"
                               style={{ fontSize: '0.55rem', padding: '0.28rem 0.6rem', borderRadius: 7, whiteSpace: 'nowrap',
                                 background: `${r.color}16`, border: `1px solid ${r.color}44`, color: r.color, cursor: 'pointer' }}>
                               Equip
@@ -690,7 +690,7 @@ export default function GearScreen({
                       return (
                         <button
                           key="default"
-                          onClick={() => { if (!isEquipped) { onEquipBoat(null); setOpenSlot(null) } }}
+                          onClick={() => { if (!isEquipped) onEquipBoat(null) }}
                           className="font-karla font-700"
                           style={{
                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
@@ -724,7 +724,7 @@ export default function GearScreen({
                       const tappable = isEquipped ? false : (owned || canAfford)
                       const onTap = () => {
                         if (isEquipped) return
-                        if (owned) { onEquipBoat(b.id); setOpenSlot(null) }
+                        if (owned) onEquipBoat(b.id)
                         else if (canAfford) { onBuyBoat(b.id); flashPurchase(b.name, b.color, b.cost) }
                       }
                       return (
@@ -793,7 +793,7 @@ export default function GearScreen({
                       return (
                         <button
                           key="none"
-                          onClick={() => { if (!isEquipped) { onEquipHat(null); setOpenSlot(null) } }}
+                          onClick={() => { if (!isEquipped) onEquipHat(null) }}
                           className="font-karla font-700"
                           style={{
                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
@@ -828,7 +828,7 @@ export default function GearScreen({
                       const tappable = isEquipped ? false : (owned || canAfford)
                       const onTap = () => {
                         if (isEquipped) return
-                        if (owned) { onEquipHat(h.id); setOpenSlot(null) }
+                        if (owned) onEquipHat(h.id)
                         else if (canAfford) { onBuyHat(h.id); flashPurchase(`${h.name} Bandana`, h.color, h.cost) }
                       }
                       return (
@@ -887,9 +887,8 @@ export default function GearScreen({
                           key={c.id}
                           onClick={() => {
                             if (!isUnlocked) return
-                            if (isActive) { setOpenSlot(null); return }
+                            if (isActive) return
                             onUpdateColor(c.id)
-                            setOpenSlot(null)
                           }}
                           style={{ background: 'none', border: 'none', cursor: isUnlocked ? 'pointer' : 'default', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
                         >
@@ -970,7 +969,6 @@ export default function GearScreen({
                             onClick={() => {
                               onEquipBadge(badge.id, selectedBadgeSlot ?? undefined)
                               setSelectedBadgeSlot(null)
-                              setOpenSlot(null)
                             }}
                             style={{
                               background: isEquipped ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.04)',
