@@ -360,37 +360,156 @@ export default function RaidCombat({
     }, 1400)
   }
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // ─── Render — Pokemon-style battle stage ──────────────────────────────────
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '1rem', maxWidth: 520, margin: '0 auto' }}>
-      {/* Enemy panel */}
-      <div style={{ position: 'relative', padding: '0.85rem 1rem', background: '#060c14', border: '2px solid #2a3548', borderRadius: 18 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={enemy.portrait || enemy.image} alt={enemy.name}
-            style={{ width: 64, height: 64, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(239,68,68,0.4))' }} />
-          <div style={{ flex: 1 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffffff', marginBottom: 4 }}>{enemy.name}{isBoss && <span style={{ color: ENEMY_COLOR, marginLeft: 8 }}>BOSS</span>}</p>
-            <HPBar current={enemyHp} max={enemy.hpBase} accent={ENEMY_COLOR} />
-            <ChargesRow charges={enemyCharges} max={MAX_CHARGES} />
+    <div style={{
+      display: 'flex', flexDirection: 'column',
+      background: '#04080e',
+      border: '2px solid #2a3548',
+      borderRadius: 18,
+      overflow: 'hidden',
+      maxWidth: 480, margin: '0 auto',
+    }}>
+      {/* Battle stage — ocean scene with ships and HP boxes */}
+      <div style={{
+        position: 'relative',
+        aspectRatio: '4 / 3',
+        background: 'linear-gradient(180deg, #1e3a5f 0%, #234567 45%, #2a5274 55%, #0a1c2e 100%)',
+        overflow: 'hidden',
+      }}>
+        {/* Sky gradient already on parent. Add a horizon line + subtle wave hint */}
+        <div style={{
+          position: 'absolute', left: 0, right: 0, top: '52%', height: 1,
+          background: 'rgba(255,255,255,0.12)', boxShadow: '0 0 24px rgba(140,180,210,0.18)',
+        }} />
+        <div style={{
+          position: 'absolute', left: 0, right: 0, top: '52%', bottom: 0,
+          background: 'linear-gradient(180deg, rgba(20,40,60,0.4) 0%, rgba(8,16,28,0.85) 100%)',
+        }} />
+
+        {/* Enemy HP box — top-left */}
+        <div style={{
+          position: 'absolute', top: 10, left: 10, zIndex: 4,
+          padding: '0.45rem 0.65rem',
+          background: 'rgba(6,12,20,0.9)',
+          border: `1px solid ${isBoss ? '#fbbf24' : '#2a3548'}`,
+          borderRadius: 10, minWidth: 150,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.7rem', color: '#ffffff', lineHeight: 1, flex: 1 }}>
+              {enemy.name}
+            </p>
+            {isBoss && (
+              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.45rem', color: '#fbbf24', letterSpacing: '0.1em' }}>BOSS</span>
+            )}
           </div>
+          <HPBar current={enemyHp} max={enemy.hpBase} accent={ENEMY_COLOR} compact />
+          <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small />
         </div>
+
+        {/* Enemy ship — upper right area */}
+        <motion.div
+          key={`enemy-${enemy.id}`}
+          initial={{ x: 80, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            position: 'absolute', right: '8%', top: '14%', zIndex: 2,
+            width: '38%', maxWidth: 180,
+          }}
+        >
+          <motion.img
+            src={enemy.portrait || enemy.image}
+            alt={enemy.name}
+            animate={{ y: [0, -4, 0] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+            style={{
+              width: '100%', display: 'block',
+              transform: 'scaleX(-1)',  // face the player
+              filter: 'drop-shadow(0 8px 20px rgba(239,68,68,0.35))',
+            }}
+          />
+          <AnimatePresence>
+            {eHitsplat && <HitsplatOverlay key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} />}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* Player ship — lower left area, larger ("closer") */}
+        <motion.div
+          initial={{ x: -60, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
+          style={{
+            position: 'absolute', left: '4%', bottom: '6%', zIndex: 3,
+            width: '52%', maxWidth: 240,
+          }}
+        >
+          <motion.img
+            src={shipImageUrl}
+            alt={shipName}
+            animate={{ y: [0, -3, 0] }}
+            transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+            style={{
+              width: '100%', display: 'block',
+              filter: 'drop-shadow(0 10px 22px rgba(74,222,128,0.3))',
+            }}
+          />
+          <AnimatePresence>
+            {pHitsplat && <HitsplatOverlay key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} />}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* Player HP box — bottom-right */}
+        <div style={{
+          position: 'absolute', bottom: 10, right: 10, zIndex: 4,
+          padding: '0.45rem 0.65rem',
+          background: 'rgba(6,12,20,0.9)',
+          border: '1px solid #2a3548',
+          borderRadius: 10, minWidth: 150,
+        }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.7rem', color: '#ffffff', lineHeight: 1, marginBottom: 4 }}>
+            {shipName}
+          </p>
+          <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact />
+          <ChargesRow charges={playerCharges} max={MAX_CHARGES} small />
+        </div>
+
+        {/* First-strike indicator overlay */}
         <AnimatePresence>
-          {eHitsplat && <HitsplatTopRight key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} />}
+          {subPhase === 'revealing' && firstActor && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.32 }}
+              style={{
+                position: 'absolute', top: '46%', left: '50%', transform: 'translate(-50%, -50%)',
+                zIndex: 5,
+                padding: '0.55rem 1.1rem',
+                background: firstActor === 'player' ? 'rgba(74,222,128,0.95)' : 'rgba(239,68,68,0.95)',
+                color: '#0a1422', borderRadius: 999,
+                fontFamily: 'var(--font-cinzel)', fontSize: '0.85rem', fontWeight: 700,
+                letterSpacing: '0.12em',
+                boxShadow: `0 4px 18px ${firstActor === 'player' ? 'rgba(74,222,128,0.55)' : 'rgba(239,68,68,0.55)'}`,
+              }}
+            >
+              {firstActor === 'player' ? 'YOU STRIKE FIRST' : 'ENEMY STRIKES FIRST'}
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
-      {/* Center: action menu / aim bar / resolve panel */}
-      <div style={{ minHeight: 160, padding: '1rem', background: '#060c14', border: '2px solid #2a3548', borderRadius: 18 }}>
+      {/* Bottom panel — action menu / aim bar / log */}
+      <div style={{
+        background: '#060c14',
+        borderTop: '2px solid #2a3548',
+        padding: '0.85rem 0.9rem 1rem',
+        minHeight: 175,
+      }}>
         {subPhase === 'await_input' && (
-          <ActionMenu
-            canFire={canFire} canVolley={canVolley}
-            onSelect={selectAction}
-            turn={turn}
-          />
+          <ActionMenu canFire={canFire} canVolley={canVolley} onSelect={selectAction} turn={turn} />
         )}
-
         {subPhase === 'aiming' && (
           <AimPanel
             indicatorRef={indicatorRef} zoneRef={zoneRef}
@@ -398,7 +517,6 @@ export default function RaidCombat({
             actionLabel={playerAction === 'volley' ? 'VOLLEY' : 'FIRE'}
           />
         )}
-
         {(subPhase === 'revealing' || subPhase === 'resolving') && (
           <RevealPanel
             playerAction={playerAction}
@@ -408,25 +526,9 @@ export default function RaidCombat({
             log={resolveLog}
           />
         )}
-
-        {subPhase === 'done' && <p className="font-karla" style={{ color: '#a8b8d0', textAlign: 'center' }}>Combat ended.</p>}
-      </div>
-
-      {/* Player panel */}
-      <div style={{ position: 'relative', padding: '0.85rem 1rem', background: '#060c14', border: '2px solid #2a3548', borderRadius: 18 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={shipImageUrl} alt={shipName}
-            style={{ width: 64, height: 64, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(74,222,128,0.35))' }} />
-          <div style={{ flex: 1 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffffff', marginBottom: 4 }}>{shipName}</p>
-            <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} />
-            <ChargesRow charges={playerCharges} max={MAX_CHARGES} />
-          </div>
-        </div>
-        <AnimatePresence>
-          {pHitsplat && <HitsplatTopRight key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} />}
-        </AnimatePresence>
+        {subPhase === 'done' && (
+          <p className="font-karla" style={{ color: '#a8b8d0', textAlign: 'center', padding: '2rem 0' }}>Combat ended.</p>
+        )}
       </div>
     </div>
   )
@@ -434,33 +536,64 @@ export default function RaidCombat({
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
-function HPBar({ current, max, accent }: { current: number; max: number; accent: string }) {
+function HPBar({ current, max, accent, compact }: { current: number; max: number; accent: string; compact?: boolean }) {
   const pct = max > 0 ? Math.max(0, (current / max) * 100) : 0
+  const h = compact ? 5 : 7
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-        <p className="font-karla" style={{ fontSize: '0.52rem', color: '#7a8aa0' }}>HP</p>
-        <p className="font-karla font-700" style={{ fontSize: '0.6rem', color: accent }}>{current}/{max}</p>
-      </div>
-      <div style={{ height: 7, background: 'rgba(0,0,0,0.6)', borderRadius: 4, overflow: 'hidden' }}>
+      {!compact && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+          <p className="font-karla" style={{ fontSize: '0.52rem', color: '#7a8aa0' }}>HP</p>
+          <p className="font-karla font-700" style={{ fontSize: '0.6rem', color: accent }}>{current}/{max}</p>
+        </div>
+      )}
+      <div style={{ height: h, background: 'rgba(0,0,0,0.6)', borderRadius: 4, overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: accent, borderRadius: 4, transition: 'width 0.4s ease' }} />
       </div>
+      {compact && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 2 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.52rem', color: accent }}>{current}/{max}</p>
+        </div>
+      )}
     </div>
   )
 }
 
-function ChargesRow({ charges, max }: { charges: number; max: number }) {
+function ChargesRow({ charges, max, small }: { charges: number; max: number; small?: boolean }) {
+  const dotSize = small ? 9 : 14
   return (
-    <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+    <div style={{ display: 'flex', gap: small ? 3 : 4, marginTop: small ? 4 : 6 }}>
       {Array.from({ length: max }).map((_, i) => (
         <div key={i} style={{
-          width: 14, height: 14, borderRadius: '50%',
+          width: dotSize, height: dotSize, borderRadius: '50%',
           background: i < charges ? '#fbbf24' : '#1c2540',
           border: `1px solid ${i < charges ? '#fbbf24' : '#3a4560'}`,
-          boxShadow: i < charges ? '0 0 6px rgba(251,191,36,0.55)' : 'none',
+          boxShadow: i < charges ? `0 0 ${small ? 4 : 6}px rgba(251,191,36,0.55)` : 'none',
         }} />
       ))}
     </div>
+  )
+}
+
+function HitsplatOverlay({ text, color }: { text: string; color: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 0, scale: 0.6 }}
+      animate={{ opacity: 1, y: -32, scale: 1.05 }}
+      exit={{ opacity: 0, y: -48, scale: 1 }}
+      transition={{ duration: 0.95, ease: [0.34, 1.56, 0.64, 1] }}
+      style={{
+        position: 'absolute', left: '50%', top: '40%', transform: 'translateX(-50%)',
+        pointerEvents: 'none', zIndex: 10,
+        background: color, color: '#ffffff',
+        padding: '0.3rem 0.7rem', borderRadius: 12,
+        fontFamily: 'var(--font-cinzel)', fontWeight: 700, fontSize: '0.95rem',
+        boxShadow: `0 4px 18px ${color}aa, 0 0 10px ${color}66`,
+        textShadow: '0 1px 4px rgba(0,0,0,0.6)',
+      }}
+    >
+      {text}
+    </motion.div>
   )
 }
 
@@ -587,22 +720,3 @@ function ActionTile({ label, action, aim, first, color }: {
   )
 }
 
-function HitsplatTopRight({ text, color }: { text: string; color: string }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 0, scale: 0.85 }}
-      animate={{ opacity: 1, y: -24, scale: 1 }}
-      exit={{ opacity: 0, y: -40 }}
-      transition={{ duration: 0.85 }}
-      style={{
-        position: 'absolute', top: 8, right: 12, pointerEvents: 'none',
-        background: color, color: '#fff',
-        padding: '0.18rem 0.55rem', borderRadius: 10,
-        fontFamily: 'var(--font-cinzel)', fontSize: '0.75rem', fontWeight: 700,
-        boxShadow: `0 2px 8px ${color}66`,
-      }}
-    >
-      {text}
-    </motion.div>
-  )
-}
