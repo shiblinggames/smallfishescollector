@@ -11,6 +11,7 @@ import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
 import {
   BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR,
 } from '@/lib/bossRaids'
+import RaidCombat from './RaidCombat'
 
 type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
@@ -486,6 +487,11 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   }, [playerHPMax, resetEnemyForRound])
 
   useEffect(() => {
+    // Disabled: the playing phase now runs inside <RaidCombat />, which owns
+    // its own state/RAF. The old combat loop below is kept commented out so
+    // unused old-combat refs/setters don't need to be torn out yet — we'll
+    // clean those up in a follow-up.
+    /*
     if (phase !== 'playing') return
     let lastTime = performance.now()
 
@@ -633,6 +639,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
 
     rafRef.current = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafRef.current)
+    */
   }, [phase, dodgeCooldownUse, playerActionMs])
 
   // Slot machine spin — triggers when loot crate is opened
@@ -836,6 +843,61 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     setPhase('ready')
   }, [])
 
+  // ─── Turn-based combat callbacks ───────────────────────────────────────────
+  // Called from <RaidCombat /> when the current encounter ends.
+
+  const handleEnemyDefeated = useCallback((remainingPlayerHp: number) => {
+    playerHPRef.current = remainingPlayerHp
+    setPlayerHP(remainingPlayerHp)
+
+    streakRef.current++
+    setStreak(streakRef.current)
+    const enemyId = getEnemyForRound(roundRef.current, config).id
+    const gold = config.killRewards[enemyId]?.gold ?? 0
+    const xp   = config.killRewards[enemyId]?.xp   ?? 0
+
+    setEnemySinking(true)
+    setClearReady(false)
+
+    setTimeout(() => {
+      setEnemySinking(false)
+
+      setWinGold(gold)
+      setWinXP(xp)
+      setWinPhase('summary')
+
+      if (isBossRound(roundRef.current, config.sequence.length)) {
+        const elapsed = performance.now() - raidStartTimeRef.current
+        const secs    = elapsed / 1000
+        const tier    = getTimeTier(secs)
+        setRaidTimeSecs(secs)
+        setRaidTier(tier)
+        if (tier) {
+          const base  = Math.floor(Math.random() * 301 + 300)
+          const total = Math.floor(base * tier.mult * fortuneMult)
+          setLootBase(base)
+          setLootAmount(total)
+        }
+        setWinIsBoss(true)
+      } else {
+        roundRef.current++
+        resetEnemyForRound(roundRef.current)
+        setRoundDisplay(roundRef.current + 1)
+        setWinIsBoss(false)
+      }
+
+      phaseRef.current = 'clear'
+      setPhase('clear')
+      setTimeout(() => setClearReady(true), 80)
+    }, 920)
+  }, [config, fortuneMult, resetEnemyForRound])
+
+  const handlePlayerDefeated = useCallback(() => {
+    phaseRef.current = 'dead'
+    setBest(prev => Math.max(prev, streakRef.current))
+    setPhase('dead')
+  }, [])
+
   const collectKill = useCallback(async () => {
     if (isClaiming) return
     setIsClaiming(true)
@@ -863,6 +925,58 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const isActionLocked = actionLocked
 
   const actionBarColor     = enemyActionPct > 0.4 ? '#a78bfa' : enemyActionPct > 0.15 ? '#fbbf24' : '#ef4444'
+
+  // ─── Playing phase: render the new turn-based combat ──────────────────────
+  if (phase === 'playing') {
+    return (
+      <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
+        {/* Nav level bar — kept across all phases */}
+        <div style={{ width: '100%', position: 'sticky', top: 0, zIndex: 55 }}>
+          <NavLevelBar xp={navXP} />
+          <AnimatePresence>
+            {xpPopup && (
+              <motion.p
+                key={xpPopup.id}
+                initial={{ opacity: 0, y: 0 }}
+                animate={{ opacity: [0, 1, 1, 0], y: 18 }}
+                transition={{ duration: 2.0, times: [0, 0.1, 0.6, 1], ease: 'easeOut' }}
+                onAnimationComplete={() => setXpPopup(null)}
+                className="font-karla font-700"
+                style={{
+                  position: 'absolute', right: 8, top: '100%',
+                  fontSize: '0.8rem', color: '#4ade80',
+                  pointerEvents: 'none',
+                  textShadow: '0 0 10px rgba(74,222,128,0.7)',
+                }}
+              >
+                +{xpPopup.value} XP
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Turn-based combat owns the rest of the playing-phase UI */}
+        <div style={{ width: '100%', padding: '0 0.5rem' }}>
+          <RaidCombat
+            key={`combat-r${roundDisplay}`}
+            enemy={getEnemyForRound(roundRef.current, config)}
+            isBoss={isBoss}
+            shipImageUrl={shipImageUrl}
+            shipName={shipName}
+            playerHpMax={playerHPMax}
+            playerHp={playerHP}
+            shipMinDamage={shipMinDamage}
+            shipSpeed={shipSpeed}
+            totalPower={totalPower}
+            totalNavigation={totalDodge}
+            equippedRaidItems={equippedItems}
+            onEnemyDefeated={handleEnemyDefeated}
+            onPlayerDefeated={handlePlayerDefeated}
+          />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
