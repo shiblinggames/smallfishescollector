@@ -441,7 +441,7 @@ export default function ProfileClient({
                 <div style={{
                   width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
                   backgroundImage: `url(${charSprites.rest})`,
-                  backgroundSize: '280% auto', backgroundPosition: 'center 92%',
+                  backgroundSize: '340% auto', backgroundPosition: 'center 18%',
                   backgroundRepeat: 'no-repeat',
                   border: '2px solid rgba(96,165,250,0.45)',
                   boxShadow: '0 0 8px rgba(96,165,250,0.2)',
@@ -489,7 +489,7 @@ export default function ProfileClient({
                           <div style={{
                             width: 46, height: 46, borderRadius: '50%', overflow: 'hidden',
                             backgroundImage: `url(${sprites.rest})`,
-                            backgroundSize: '280% auto', backgroundPosition: 'center 92%',
+                            backgroundSize: '340% auto', backgroundPosition: 'center 18%',
                             backgroundRepeat: 'no-repeat',
                             border: isActive ? '2px solid #60a5fa' : isHinted ? '2px solid rgba(240,192,64,0.6)' : '2px solid rgba(255,255,255,0.12)',
                             boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.4)' : isHinted ? '0 0 8px rgba(240,192,64,0.25)' : 'none',
