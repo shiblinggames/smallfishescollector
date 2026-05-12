@@ -530,7 +530,7 @@ export default function RaidCombat({
         }}>
           {enemy.portrait && (
             <div style={{
-              flexShrink: 0, width: 44, height: 44, borderRadius: '50%',
+              flexShrink: 0, width: 54, height: 54, borderRadius: '50%',
               border: `2px solid ${isBoss ? '#fbbf24' : ENEMY_COLOR}`,
               overflow: 'hidden',
               boxShadow: `0 0 10px ${isBoss ? 'rgba(251,191,36,0.45)' : 'rgba(239,68,68,0.4)'}`,
@@ -541,12 +541,12 @@ export default function RaidCombat({
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.7rem', color: '#ffffff', lineHeight: 1, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff', lineHeight: 1, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {enemy.name}
               </p>
               {isBoss && (
-                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.45rem', color: '#fbbf24', letterSpacing: '0.1em' }}>BOSS</span>
+                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#fbbf24', letterSpacing: '0.1em' }}>BOSS</span>
               )}
             </div>
             <HPBar current={enemyHp} max={enemy.hpBase} accent={ENEMY_COLOR} compact />
@@ -624,7 +624,7 @@ export default function RaidCombat({
           border: '1px solid #2a3548',
           borderRadius: 10, minWidth: 150,
         }}>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.7rem', color: '#ffffff', lineHeight: 1, marginBottom: 4 }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff', lineHeight: 1, marginBottom: 4 }}>
             {shipName}
           </p>
           <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact />
@@ -751,21 +751,21 @@ function CannonShotBurst({ kind }: { kind: 'normal' | 'volley' | 'crit' }) {
 
 function HPBar({ current, max, accent, compact }: { current: number; max: number; accent: string; compact?: boolean }) {
   const pct = max > 0 ? Math.max(0, (current / max) * 100) : 0
-  const h = compact ? 5 : 7
+  const h = compact ? 8 : 10
   return (
     <div>
       {!compact && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-          <p className="font-karla" style={{ fontSize: '0.52rem', color: '#7a8aa0' }}>HP</p>
-          <p className="font-karla font-700" style={{ fontSize: '0.6rem', color: accent }}>{current}/{max}</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#7a8aa0' }}>HP</p>
+          <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: accent }}>{current}/{max}</p>
         </div>
       )}
       <div style={{ height: h, background: 'rgba(0,0,0,0.6)', borderRadius: 4, overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: accent, borderRadius: 4, transition: 'width 0.4s ease' }} />
       </div>
       {compact && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 2 }}>
-          <p className="font-karla font-700" style={{ fontSize: '0.52rem', color: accent }}>{current}/{max}</p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 3 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: accent }}>{current}/{max}</p>
         </div>
       )}
     </div>
@@ -773,15 +773,15 @@ function HPBar({ current, max, accent, compact }: { current: number; max: number
 }
 
 function ChargesRow({ charges, max, small }: { charges: number; max: number; small?: boolean }) {
-  const dotSize = small ? 9 : 14
+  const dotSize = small ? 12 : 16
   return (
-    <div style={{ display: 'flex', gap: small ? 3 : 4, marginTop: small ? 4 : 6 }}>
+    <div style={{ display: 'flex', gap: small ? 4 : 5, marginTop: small ? 5 : 7 }}>
       {Array.from({ length: max }).map((_, i) => (
         <div key={i} style={{
           width: dotSize, height: dotSize, borderRadius: '50%',
           background: i < charges ? '#fbbf24' : '#1c2540',
           border: `1px solid ${i < charges ? '#fbbf24' : '#3a4560'}`,
-          boxShadow: i < charges ? `0 0 ${small ? 4 : 6}px rgba(251,191,36,0.55)` : 'none',
+          boxShadow: i < charges ? `0 0 ${small ? 5 : 7}px rgba(251,191,36,0.55)` : 'none',
         }} />
       ))}
     </div>
@@ -830,17 +830,17 @@ function ActionMenu({ canFire, canVolley, onSelect }: {
       disabled={!enabled}
       onClick={() => onSelect(action)}
       style={{
-        padding: '0.7rem 0.5rem',
+        padding: '0.85rem 0.55rem',
         background: enabled ? '#1c2540' : '#0a1422',
         border: `2px solid ${enabled ? color : '#2a3548'}`,
         borderRadius: 12,
         cursor: enabled ? 'pointer' : 'not-allowed',
         opacity: enabled ? 1 : 0.45,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
       }}
     >
-      <span className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: enabled ? '#ffffff' : '#5a6478' }}>{label}</span>
-      <span className="font-karla" style={{ fontSize: '0.54rem', color: enabled ? color : '#4a5468', textAlign: 'center', lineHeight: 1.2 }}>{sub}</span>
+      <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: enabled ? '#ffffff' : '#5a6478' }}>{label}</span>
+      <span className="font-karla" style={{ fontSize: '0.68rem', color: enabled ? color : '#4a5468', textAlign: 'center', lineHeight: 1.25 }}>{sub}</span>
     </motion.button>
   )
   return (
@@ -860,17 +860,17 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
     <div style={{
       background: '#04080e',
       border: '1px solid #1f2e42',
-      borderRadius: 10,
-      padding: '0.5rem 0.7rem',
-      minHeight: 56,
+      borderRadius: 12,
+      padding: '0.65rem 0.85rem',
+      minHeight: 72,
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 3 }}>
-        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#5a7a9a' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: '#5a7a9a' }}>
           Turn {turn}
         </p>
       </div>
       {visible.map((line, i) => (
-        <p key={i} className="font-karla" style={{ fontSize: '0.66rem', color: '#c8d4e0', lineHeight: 1.5 }}>{line}</p>
+        <p key={i} className="font-karla" style={{ fontSize: '0.86rem', color: '#c8d4e0', lineHeight: 1.55 }}>{line}</p>
       ))}
     </div>
   )
@@ -884,7 +884,7 @@ function AimPanel({ indicatorRef, zoneRef, onLock, actionLabel }: {
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: '#fbbf24', textAlign: 'center' }}>
+      <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: '#fbbf24', textAlign: 'center' }}>
         Lock your shot · {actionLabel}
       </p>
       <div style={{ position: 'relative', height: 44, background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, overflow: 'hidden' }}>
@@ -938,13 +938,13 @@ function ActionTile({ label, action, aim, first, color }: {
       textAlign: 'center', position: 'relative',
     }}>
       {first && <span style={{
-        position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)',
-        fontSize: '0.5rem', background: color, color: '#0a1422', padding: '2px 8px',
+        position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)',
+        fontSize: '0.62rem', background: color, color: '#0a1422', padding: '2px 9px',
         borderRadius: 999, fontFamily: 'var(--font-karla)', fontWeight: 700, letterSpacing: '0.1em',
       }}>FIRST</span>}
-      <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#7a8aa0' }}>{label}</p>
-      <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#ffffff', lineHeight: 1.1 }}>{action}</p>
-      {aim && <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: aim === 'critical' ? '#fbbf24' : aim === 'hit' ? '#4ade80' : aim === 'graze' ? '#94a3b8' : '#6b7280', marginTop: 2 }}>{aim.toUpperCase()}</p>}
+      <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: '#7a8aa0' }}>{label}</p>
+      <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#ffffff', lineHeight: 1.1 }}>{action}</p>
+      {aim && <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: aim === 'critical' ? '#fbbf24' : aim === 'hit' ? '#4ade80' : aim === 'graze' ? '#94a3b8' : '#6b7280', marginTop: 3 }}>{aim.toUpperCase()}</p>}
     </div>
   )
 }
