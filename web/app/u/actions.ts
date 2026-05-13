@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { CHARACTER_COLORS } from '@/lib/characters'
-import { ALLOWED_BG_HEXES, ALLOWED_BORDER_HEXES, isPremiumBorder } from '@/lib/avatarColors'
+import { ALLOWED_BG_HEXES, ALLOWED_BORDER_HEXES, isPremiumBg, isPremiumBorder } from '@/lib/avatarColors'
 
 export async function updateUsername(username: string): Promise<{ error?: string }> {
   const supabase = await createClient()
@@ -106,8 +106,10 @@ export async function updateAvatarColors(input: {
   const bg     = input.bgColor === null     ? null : (bgAllowed.has(input.bgColor)         ? input.bgColor     : null)
   const border = input.borderColor === null ? null : (borderAllowed.has(input.borderColor) ? input.borderColor : null)
 
-  // Premium gate on gold (and any future premium-only border colors).
-  if (border && isPremiumBorder(border)) {
+  // Premium gate — applies to both bg and border. Only fetch the profile
+  // once if either choice is gated.
+  const needsPremiumCheck = (bg && isPremiumBg(bg)) || (border && isPremiumBorder(border))
+  if (needsPremiumCheck) {
     const admin0 = createAdminClient()
     const { data: profile } = await admin0
       .from('profiles')
@@ -116,7 +118,7 @@ export async function updateAvatarColors(input: {
       .single()
     const expires = profile?.premium_expires_at ? new Date(profile.premium_expires_at as string) : null
     const isPremium = !!profile?.is_premium && (!expires || expires > new Date())
-    if (!isPremium) return { error: 'That border is for premium members.' }
+    if (!isPremium) return { error: 'That color requires Premium membership.' }
   }
 
   const admin = createAdminClient()

@@ -240,6 +240,12 @@ export default function ProfileClient({
   const [avatarBorder, setAvatarBorder] = useState<string | null>(initialAvatarBorder)
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false)
   const [avatarSaving, setAvatarSaving] = useState(false)
+  // Transient message shown when a premium-locked swatch is tapped.
+  const [avatarLockMsg, setAvatarLockMsg] = useState<string | null>(null)
+  function flashLockMsg(msg: string) {
+    setAvatarLockMsg(msg)
+    setTimeout(() => setAvatarLockMsg(prev => (prev === msg ? null : prev)), 2000)
+  }
   const [badgeSaving, setBadgeSaving] = useState(false)
   const [selectedBadgeSlot, setSelectedBadgeSlot] = useState<0 | 1 | 2 | null>(null)
   useEffect(() => { if (!badgePickerOpen) setSelectedBadgeSlot(null) }, [badgePickerOpen])
@@ -1159,29 +1165,40 @@ export default function ProfileClient({
               {AVATAR_PALETTE.map(c => {
                 const isActive = (avatarBg ?? DEFAULT_AVATAR_BG_COLOR) === c.hex
                 const isNone = c.hex === NONE_VALUE
+                const locked = !!c.premiumOnly && !isPremium
                 return (
                   <button
                     key={`bg-${c.id}`}
                     type="button"
-                    onClick={() => setAvatarBg(c.hex)}
-                    aria-label={`Background ${c.label}`}
-                    title={c.label}
+                    onClick={() => {
+                      if (locked) { flashLockMsg('Requires Premium membership'); return }
+                      setAvatarBg(c.hex)
+                    }}
+                    aria-label={`Background ${c.label}${locked ? ' (premium)' : ''}`}
+                    title={locked ? `${c.label} — premium only` : c.label}
                     style={{
                       width: '100%', aspectRatio: '1 / 1',
                       borderRadius: '50%',
-                      background: isNone
-                        ? 'transparent'
-                        : `radial-gradient(circle at 38% 35%, ${c.hex}ee 0%, ${c.hex}77 100%)`,
+                      // Use longhand backgroundColor + backgroundImage to avoid
+                      // the shorthand quirk where `background: 'transparent'`
+                      // wipes the bg-image on iOS.
+                      backgroundColor: isNone ? 'transparent' : c.hex,
                       backgroundImage: isNone
                         ? 'linear-gradient(45deg, rgba(255,255,255,0.18) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0.18) 75%, transparent 75%, transparent)'
-                        : undefined,
+                        : `radial-gradient(circle at 38% 35%, ${c.hex}ee 0%, ${c.hex}77 100%)`,
                       backgroundSize: isNone ? '8px 8px' : undefined,
                       border: isActive ? `2px solid #f0c040` : '1px solid rgba(255,255,255,0.18)',
                       boxShadow: isActive ? `0 0 10px rgba(240,192,64,0.35)` : 'none',
-                      cursor: 'pointer',
+                      cursor: locked ? 'pointer' : 'pointer',
                       padding: 0,
+                      opacity: locked ? 0.55 : 1,
+                      position: 'relative',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
                     }}
-                  />
+                  >
+                    {locked && <LockBadge />}
+                  </button>
                 )
               })}
             </div>
@@ -1199,14 +1216,16 @@ export default function ProfileClient({
                   <button
                     key={`bd-${c.id}`}
                     type="button"
-                    disabled={locked}
-                    onClick={() => { if (!locked) setAvatarBorder(c.hex) }}
+                    onClick={() => {
+                      if (locked) { flashLockMsg('Requires Premium membership'); return }
+                      setAvatarBorder(c.hex)
+                    }}
                     aria-label={`Border ${c.label}${locked ? ' (premium)' : ''}`}
                     title={locked ? `${c.label} — premium only` : c.label}
                     style={{
                       width: '100%', aspectRatio: '1 / 1',
                       borderRadius: '50%',
-                      background: 'rgba(6,12,20,0.7)',
+                      backgroundColor: 'rgba(6,12,20,0.7)',
                       backgroundImage: isNone
                         ? 'linear-gradient(45deg, rgba(255,255,255,0.18) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0.18) 75%, transparent 75%, transparent)'
                         : undefined,
@@ -1214,33 +1233,52 @@ export default function ProfileClient({
                       border: isNone ? '1px dashed rgba(255,255,255,0.4)' : `3px solid ${c.hex}`,
                       outline: isActive ? '2px solid #f0c040' : 'none',
                       outlineOffset: 2,
-                      cursor: locked ? 'not-allowed' : 'pointer',
+                      cursor: 'pointer',
                       padding: 0,
-                      opacity: locked ? 0.45 : 1,
+                      opacity: locked ? 0.55 : 1,
                       position: 'relative',
                       boxShadow: c.premiumOnly && !locked
                         ? `0 0 10px ${c.hex}55, inset 0 0 6px ${c.hex}44`
                         : undefined,
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
                     }}
                   >
-                    {locked && (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{
-                        position: 'absolute', inset: 0, margin: 'auto',
-                        pointerEvents: 'none',
-                      }}>
-                        <rect x="4" y="11" width="16" height="10" rx="2"/>
-                        <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
-                      </svg>
-                    )}
+                    {locked && <LockBadge />}
                   </button>
                 )
               })}
             </div>
-            {!isPremium && (
-              <p className="font-karla" style={{ fontSize: '0.6rem', color: 'rgba(240,192,64,0.65)', marginBottom: 14, textAlign: 'center' }}>
-                ✦ Gold border unlocks with Premium membership
-              </p>
-            )}
+
+            {/* Lock-tap toast + premium link */}
+            <div style={{ minHeight: 24, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {avatarLockMsg ? (
+                <p className="font-karla font-700" style={{
+                  fontSize: '0.7rem', color: '#f0c040',
+                  background: 'rgba(240,192,64,0.12)',
+                  border: '1px solid rgba(240,192,64,0.35)',
+                  borderRadius: 999, padding: '0.3rem 0.75rem',
+                  letterSpacing: '0.04em',
+                }}>
+                  {avatarLockMsg}
+                </p>
+              ) : !isPremium ? (
+                <a
+                  href="https://shiblingshop.com/products/small-fishes-premium-membership"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-karla font-600"
+                  style={{
+                    fontSize: '0.7rem',
+                    color: '#f0c040',
+                    textDecoration: 'none',
+                    letterSpacing: '0.03em',
+                  }}
+                >
+                  ✦ Unlock more with Premium membership →
+                </a>
+              ) : null}
+            </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
               <button
@@ -1292,5 +1330,19 @@ export default function ProfileClient({
         </div>
       )}
     </div>
+  )
+}
+
+function LockBadge() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+      style={{
+        position: 'absolute', inset: 0, margin: 'auto',
+        pointerEvents: 'none',
+        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))',
+      }}>
+      <rect x="4" y="11" width="16" height="10" rx="2"/>
+      <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+    </svg>
   )
 }

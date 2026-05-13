@@ -26,20 +26,25 @@ export interface AvatarColorOption {
 
 /** Shared base palette — 12 visually distinct swatches that cover neutrals
  *  + the rainbow. Used for both the bg and the border pickers (the border
- *  picker also includes AVATAR_BORDER_EXTRAS below). */
+ *  picker also includes AVATAR_BORDER_EXTRAS below).
+ *  Roughly half the colors are flagged premiumOnly — the showier hues
+ *  (red, orange, yellow, cyan, purple, pink) so non-premium players still
+ *  have a decent selection of neutrals + foundational colors. */
 export const AVATAR_PALETTE: AvatarColorOption[] = [
+  // Free tier (6) — neutrals + foundational
   { id: 'none',   label: 'None',   hex: NONE_VALUE },
   { id: 'black',  label: 'Black',  hex: '#0a0a0a' },
   { id: 'white',  label: 'White',  hex: '#f5f5f0' },
-  { id: 'red',    label: 'Red',    hex: '#dc2626' },
-  { id: 'orange', label: 'Orange', hex: '#f97316' },
-  { id: 'yellow', label: 'Yellow', hex: '#facc15' },
-  { id: 'green',  label: 'Green',  hex: '#16a34a' },
-  { id: 'cyan',   label: 'Cyan',   hex: '#06b6d4' },
-  { id: 'blue',   label: 'Blue',   hex: '#2563eb' },
-  { id: 'purple', label: 'Purple', hex: '#9333ea' },
-  { id: 'pink',   label: 'Pink',   hex: '#db2777' },
   { id: 'slate',  label: 'Slate',  hex: '#64748b' },
+  { id: 'blue',   label: 'Blue',   hex: '#2563eb' },
+  { id: 'green',  label: 'Green',  hex: '#16a34a' },
+  // Premium tier (6) — vivid accent hues
+  { id: 'red',    label: 'Red',    hex: '#dc2626', premiumOnly: true },
+  { id: 'orange', label: 'Orange', hex: '#f97316', premiumOnly: true },
+  { id: 'yellow', label: 'Yellow', hex: '#facc15', premiumOnly: true },
+  { id: 'cyan',   label: 'Cyan',   hex: '#06b6d4', premiumOnly: true },
+  { id: 'purple', label: 'Purple', hex: '#9333ea', premiumOnly: true },
+  { id: 'pink',   label: 'Pink',   hex: '#db2777', premiumOnly: true },
 ]
 
 /** Border-only extras — colors that don't make sense as a background fill
@@ -59,7 +64,14 @@ export const ALLOWED_BORDER_HEXES: string[] = [
 /** True if this border hex requires a premium membership to use. */
 export function isPremiumBorder(hex: string | null | undefined): boolean {
   if (!hex) return false
-  return AVATAR_BORDER_EXTRAS.some(c => c.hex === hex && c.premiumOnly)
+  const all = [...AVATAR_PALETTE, ...AVATAR_BORDER_EXTRAS]
+  return all.some(c => c.hex === hex && c.premiumOnly)
+}
+
+/** True if this bg hex requires a premium membership to use. */
+export function isPremiumBg(hex: string | null | undefined): boolean {
+  if (!hex) return false
+  return AVATAR_PALETTE.some(c => c.hex === hex && c.premiumOnly)
 }
 
 /** Resolve a stored color (may be null) to a usable CSS string. Falls back
