@@ -804,11 +804,14 @@ export default function RaidCombat({
                   style={{ position: 'absolute', color: '#fde68a', fontSize: '0.85rem', pointerEvents: 'none' }}
                 >✦</motion.span>
               ))}
-              {/* Main text */}
+              {/* Main text — single ease-out pop, no spring overshoot.
+                  Underdamped spring (damping 18 / stiffness 500) made the
+                  word "Critical!" visibly bounce past 1.0 and back, which
+                  read as the text flashing twice. */}
               <motion.div
-                initial={{ scale: 0.45, y: 12, opacity: 0 }}
+                initial={{ scale: 0.55, y: 8, opacity: 0 }}
                 animate={{ scale: 1, y: 0, opacity: 1 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 18, delay: 0.04 }}
+                transition={{ duration: 0.22, ease: 'easeOut', delay: 0.04 }}
                 style={{ textAlign: 'center', position: 'relative' }}
               >
                 <p className="font-cinzel font-700 uppercase tracking-[0.28em]"
@@ -825,10 +828,14 @@ export default function RaidCombat({
           {aimResult && aimResult !== 'critical' && critFreeze && (
             <motion.div
               key={`aim-badge-${aimResult}`}
-              initial={{ scale: 0.4, opacity: 0, rotate: -8 }}
-              animate={{ scale: 1, opacity: 1, rotate: 0 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 480, damping: 16 }}
+              // Single clean pop-in. Was a heavily underdamped spring
+              // (damping 16 / stiffness 480) + rotate which overshot past
+              // scale 1.0 and bounced back — reads as the word "HIT"
+              // flashing twice.
+              initial={{ scale: 0.65, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
               style={{
                 position: 'absolute', top: '38%', left: '50%',
                 transform: 'translate(-50%, -50%)',
@@ -1239,13 +1246,17 @@ function ChargesRow({ charges, max, small }: { charges: number; max: number; sma
 function HitsplatOverlay({ text, color, big }: { text: string; color: string; big?: boolean }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 4, scale: big ? 0.5 : 0.6 }}
+      // Smooth ease-out, no overshoot. The previous cubic-bezier
+      // [0.34, 1.56, 0.64, 1] had a control-y of 1.56 — the scale and y
+      // values shot past their target and bounced back, which on text
+      // (damage numbers, "Dodged") reads as the word briefly repeating.
+      initial={{ opacity: 0, y: 4, scale: big ? 0.6 : 0.7 }}
       animate={{ opacity: 1, y: big ? -36 : -28, scale: big ? 1.25 : 1 }}
       exit={{ opacity: 0, y: big ? -48 : -38, scale: big ? 1.3 : 1 }}
       transition={{
         opacity: { duration: 0.18 },
-        y:       { duration: 0.32, ease: [0.34, 1.56, 0.64, 1] },
-        scale:   { duration: 0.32, ease: [0.34, 1.56, 0.64, 1] },
+        y:       { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
+        scale:   { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
       }}
       style={{
         position: 'absolute', left: '50%', top: '40%', transform: 'translateX(-50%)',
