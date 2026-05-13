@@ -5,15 +5,33 @@ import Nav from '@/components/Nav'
 import LeaderboardClient from './LeaderboardClient'
 import type { LeaderboardEntry } from './LeaderboardClient'
 
+/** Resolve the player's rank on a board. If they're in the top-50 array we
+ *  already fetched, use that index (free). Otherwise run a count query for
+ *  "how many people have a higher score than mine" — their rank is that + 1.
+ *  Returns null if the player has no score (myScore === 0). */
+async function resolveMyRank(
+  admin: ReturnType<typeof createAdminClient>,
+  view: string,
+  userId: string,
+  myScore: number,
+  top: LeaderboardEntry[],
+): Promise<number | null> {
+  if (myScore <= 0) return null
+  const idx = top.findIndex(e => e.user_id === userId)
+  if (idx >= 0) return idx + 1
+  const { count } = await admin.from(view).select('*', { count: 'exact', head: true }).gt('score', myScore)
+  return (count ?? 0) + 1
+}
+
 async function fetchBoard(admin: ReturnType<typeof createAdminClient>, view: string, userId: string) {
   const [{ data: top }, { data: me }] = await Promise.all([
     admin.from(view).select('user_id, username, score').order('score', { ascending: false }).order('created_at', { ascending: true }).limit(50),
     admin.from(view).select('score').eq('user_id', userId).single(),
   ])
-  return {
-    top: (top ?? []) as LeaderboardEntry[],
-    myScore: (me as any)?.score ?? 0,
-  }
+  const topRows = (top ?? []) as LeaderboardEntry[]
+  const myScore = (me as any)?.score ?? 0
+  const myRank = await resolveMyRank(admin, view, userId, myScore, topRows)
+  return { top: topRows, myScore, myRank }
 }
 
 async function fetchPerfectStreakBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
@@ -26,10 +44,10 @@ async function fetchPerfectStreakBoard(admin: ReturnType<typeof createAdminClien
       .limit(50),
     admin.from('leaderboard_perfect_streak').select('score').eq('user_id', userId).single(),
   ])
-  return {
-    top: (top ?? []) as LeaderboardEntry[],
-    myScore: (me as any)?.score ?? 0,
-  }
+  const topRows = (top ?? []) as LeaderboardEntry[]
+  const myScore = (me as any)?.score ?? 0
+  const myRank = await resolveMyRank(admin, 'leaderboard_perfect_streak', userId, myScore, topRows)
+  return { top: topRows, myScore, myRank }
 }
 
 export default async function LeaderboardPage() {
@@ -103,6 +121,13 @@ export default async function LeaderboardPage() {
               tideRun: tideRunData.myScore,
               fishSlots: fishSlotsData.myScore,
               expedition: expeditionData.myScore,
+            }}
+            myRanks={{
+              fishing: fishingData.myRank,
+              perfectStreak: perfectStreakData.myRank,
+              tideRun: tideRunData.myRank,
+              fishSlots: fishSlotsData.myRank,
+              expedition: expeditionData.myRank,
             }}
             currentUserId={user.id}
             avatars={avatarsMap}

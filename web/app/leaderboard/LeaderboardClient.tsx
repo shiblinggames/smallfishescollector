@@ -21,6 +21,14 @@ interface MyScores {
   expedition: number
 }
 
+interface MyRanks {
+  fishing: number | null
+  perfectStreak: number | null
+  tideRun: number | null
+  fishSlots: number | null
+  expedition: number | null
+}
+
 interface Props {
   fishing: LeaderboardEntry[]
   perfectStreak: LeaderboardEntry[]
@@ -28,6 +36,7 @@ interface Props {
   fishSlots: LeaderboardEntry[]
   expedition: LeaderboardEntry[]
   myScores: MyScores
+  myRanks: MyRanks
   currentUserId: string
   /** Map of user_id → avatar attributes for every player shown across any
    *  of the boards. Populated server-side in a single side query so each
@@ -45,20 +54,31 @@ type TabKey = 'fishingLevel' | 'perfectStreak' | 'tideRun' | 'fishSlots' | 'expe
 interface BoardDef {
   key: TabKey
   label: string
+  /** Accent color for the leaderboard SECTION below the picker. Picker
+   *  pills use rank-based podium colors, not this. */
   accent: string
-  /** Compact teaser shown to the right of the label on the picker pill. */
-  teaser: (myScore: number) => string
 }
 
 // Order is also the grouping (Fishing → Tavern → Expeditions). Visual
 // section breaks come from the implicit row flow rather than headers.
 const BOARDS: BoardDef[] = [
-  { key: 'fishingLevel',  label: 'Fishing Level',   accent: '#f0c040', teaser: n => n > 0 ? `Lv ${getLevelFromXP(n)}`         : '—' },
-  { key: 'perfectStreak', label: 'Perfect Streak',  accent: '#fb923c', teaser: n => n > 0 ? `${n}×`                            : '—' },
-  { key: 'tideRun',       label: 'Tide Run',        accent: '#5da7d4', teaser: n => n > 0 ? `${n.toLocaleString()} m`          : '—' },
-  { key: 'fishSlots',     label: 'Fish Slots',      accent: '#34d399', teaser: n => n > 0 ? `${n.toLocaleString()} ⟡`          : '—' },
-  { key: 'expedition',    label: 'Navigator Level', accent: '#7090c0', teaser: n => n > 0 ? `Lv ${getExpeditionLevel(n)}`     : '—' },
+  { key: 'fishingLevel',  label: 'Fishing Level',   accent: '#f0c040' },
+  { key: 'perfectStreak', label: 'Perfect Streak',  accent: '#fb923c' },
+  { key: 'tideRun',       label: 'Tide Run',        accent: '#5da7d4' },
+  { key: 'fishSlots',     label: 'Fish Slots',      accent: '#34d399' },
+  { key: 'expedition',    label: 'Navigator Level', accent: '#7090c0' },
 ]
+
+/** Podium colors: gold / silver / bronze for ranks 1, 2, 3.
+ *  Anything outside the top 3 uses a neutral pill — no accent. */
+const PODIUM_COLORS: Record<number, string> = {
+  1: '#f0c040', // gold
+  2: '#c0c8d4', // silver
+  3: '#c47a3a', // bronze
+}
+const NEUTRAL_TEXT = '#d8d4cf'
+const NEUTRAL_BORDER = 'rgba(255,255,255,0.10)'
+const NEUTRAL_BORDER_TOP = 'rgba(255,255,255,0.18)'
 
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
@@ -296,25 +316,45 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
   )
 }
 
-export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fishSlots, expedition, myScores, currentUserId, avatars }: Props) {
+export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fishSlots, expedition, myScores, myRanks, currentUserId, avatars }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>('fishingLevel')
 
   return (
     <div style={{ paddingBottom: '2rem' }}>
 
       {/* ── Board picker — compact pills ── */}
-      {/* 2-col grid of thin pills. Left edge stripe carries each board's
-          accent so the picker has color without taking the space an icon
-          tile would. Active pill gets a stronger border + glow. */}
+      {/* Pills are neutral by default. If the player is podium-ranked
+          (top 3) on a board, that pill takes the podium color (gold /
+          silver / bronze) so wins are visible at a glance. Teaser shows
+          rank, not raw score. */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: '1.25rem' }}>
         {BOARDS.map(b => {
           const isActive = activeTab === b.key
-          const myScore = b.key === 'fishingLevel' ? myScores.fishing
-            : b.key === 'perfectStreak' ? myScores.perfectStreak
-            : b.key === 'tideRun' ? myScores.tideRun
-            : b.key === 'fishSlots' ? myScores.fishSlots
-            : myScores.expedition
-          const teaser = b.teaser(myScore)
+          const myRank = b.key === 'fishingLevel' ? myRanks.fishing
+            : b.key === 'perfectStreak' ? myRanks.perfectStreak
+            : b.key === 'tideRun' ? myRanks.tideRun
+            : b.key === 'fishSlots' ? myRanks.fishSlots
+            : myRanks.expedition
+          const podiumColor = myRank != null && myRank <= 3 ? PODIUM_COLORS[myRank] : null
+          // Pill accent: podium color when applicable, otherwise neutral.
+          // Active state still highlights — uses podium color if podium,
+          // otherwise a brighter neutral border so the selected pill is
+          // visible without invoking a board-specific color.
+          const pillAccent  = podiumColor
+          const teaser      = myRank == null ? '—' : `Rank ${myRank}`
+          const teaserColor = podiumColor ?? (myRank == null ? '#5a5856' : '#9a9488')
+
+          const borderColor = isActive
+            ? (pillAccent ? `${pillAccent}90` : 'rgba(255,255,255,0.30)')
+            : (pillAccent ? `${pillAccent}50` : NEUTRAL_BORDER)
+          const borderTopColor = isActive
+            ? (pillAccent ? `${pillAccent}c0` : 'rgba(255,255,255,0.42)')
+            : (pillAccent ? `${pillAccent}70` : NEUTRAL_BORDER_TOP)
+          const bgColor = isActive
+            ? (pillAccent ? `${pillAccent}1a` : 'rgba(255,255,255,0.05)')
+            : 'rgba(6,6,4,0.7)'
+          const glow = isActive && pillAccent ? `0 0 12px ${pillAccent}35` : 'none'
+
           return (
             <button
               key={b.key}
@@ -322,26 +362,39 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
               style={{
                 position: 'relative',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-                padding: '0.5rem 0.7rem 0.5rem 0.85rem',
+                padding: '0.55rem 0.75rem 0.55rem 0.85rem',
                 borderRadius: 10,
-                background: isActive ? `${b.accent}18` : 'rgba(6,6,4,0.7)',
-                border: `1px solid ${isActive ? `${b.accent}70` : 'rgba(255,255,255,0.09)'}`,
-                boxShadow: isActive ? `0 0 12px ${b.accent}30` : 'none',
+                background: bgColor,
+                border: `1px solid ${borderColor}`,
+                borderTop: `1px solid ${borderTopColor}`,
+                boxShadow: glow,
                 cursor: 'pointer',
                 transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
                 textAlign: 'left',
                 overflow: 'hidden',
               }}
             >
-              {/* Left-edge accent stripe */}
-              <div style={{
-                position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
-                background: b.accent, opacity: isActive ? 1 : 0.55,
-              }} />
-              <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: isActive ? '#f0ede8' : '#d8d4cf', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {/* Left-edge stripe — only renders when podium-ranked */}
+              {pillAccent && (
+                <div style={{
+                  position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+                  background: pillAccent, opacity: isActive ? 1 : 0.7,
+                }} />
+              )}
+              <p className="font-karla font-700" style={{
+                fontSize: '0.72rem',
+                color: isActive ? '#f0ede8' : NEUTRAL_TEXT,
+                lineHeight: 1.1,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
                 {b.label}
               </p>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: myScore > 0 ? b.accent : '#5a5856', lineHeight: 1, flexShrink: 0 }}>
+              <p className="font-cinzel font-700" style={{
+                fontSize: '0.74rem',
+                color: teaserColor,
+                lineHeight: 1,
+                flexShrink: 0,
+              }}>
                 {teaser}
               </p>
             </button>
