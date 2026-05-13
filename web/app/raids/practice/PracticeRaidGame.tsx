@@ -363,6 +363,9 @@ export default function PracticeRaidGame({
   const [winPhase, setWinPhase]           = useState<'summary' | 'claimed'>('summary')
   const [isClaiming, setIsClaiming]       = useState(false)
   const [navXP, setNavXP]                 = useState(initialExpeditionXP)
+  // Ref-mirror of navXP — async callbacks close over the initial value
+  // otherwise (useCallback deps don't include navXP).
+  const navXPRef                          = useRef(initialExpeditionXP)
   const [levelUp, setLevelUp]             = useState<NavLevelUpInfo | null>(null)
   const [xpPopup, setXpPopup]             = useState<{ value: number; id: number } | null>(null)
 
@@ -714,8 +717,9 @@ export default function PracticeRaidGame({
     // Save silently in the background — the rewards already showed in the
     // log via <RaidCombat />.
     awardPracticeKill(xp, gold).then(res => {
-      const oldLevel = getLevelFromXP(navXP)
+      const oldLevel = getLevelFromXP(navXPRef.current)
       const newLevel = getLevelFromXP(res.newExpeditionXP)
+      navXPRef.current = res.newExpeditionXP
       setNavXP(res.newExpeditionXP)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
       if (xp > 0) setXpPopup({ value: xp, id: Date.now() })

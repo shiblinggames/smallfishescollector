@@ -374,6 +374,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const [enemyMinDmg, setEnemyMinDmg]   = useState(2)
   const [enemyMaxDmg, setEnemyMaxDmg]   = useState(5)
   const [navXP, setNavXP]               = useState(initialExpeditionXP)
+  // Mirror of navXP read from async callbacks — the useCallback closures don't
+  // re-bake on every navXP change, so they'd see the initial value forever
+  // without this. Keep in lockstep with setNavXP.
+  const navXPRef                        = useRef(initialExpeditionXP)
   const [xpPopup, setXpPopup]           = useState<{ value: number; id: number } | null>(null)
   const [levelUp, setLevelUp]           = useState<NavLevelUpInfo | null>(null)
 
@@ -877,8 +881,9 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     // Non-boss: save XP/gold silently in the background, sink, then mount
     // the next encounter in-place (RaidCombat remounts via the key change).
     awardRaidKill(xp, gold).then(res => {
-      const oldLevel = getLevelFromXP(navXP)
+      const oldLevel = getLevelFromXP(navXPRef.current)
       const newLevel = getLevelFromXP(res.newExpeditionXP)
+      navXPRef.current = res.newExpeditionXP
       setNavXP(res.newExpeditionXP)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
       if (xp > 0) setXpPopup({ value: xp, id: Date.now() })
@@ -906,8 +911,9 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     setIsClaiming(true)
     try {
       const res = await awardRaidKill(winXP, winGold)
-      const oldLevel = getLevelFromXP(navXP)
+      const oldLevel = getLevelFromXP(navXPRef.current)
       const newLevel = getLevelFromXP(res.newExpeditionXP)
+      navXPRef.current = res.newExpeditionXP
       setNavXP(res.newExpeditionXP)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
       if (winXP > 0) setXpPopup({ value: winXP, id: Date.now() })
@@ -916,7 +922,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
       setIsClaiming(false)
       setWinPhase('claimed')
     }
-  }, [isClaiming, winXP, winGold, navXP])
+  }, [isClaiming, winXP, winGold])
 
   const openFire = useCallback(() => {
     if (phaseRef.current === 'idle') { startGame(); return }
