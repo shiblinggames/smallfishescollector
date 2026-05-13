@@ -7,6 +7,36 @@ import { revalidatePath } from 'next/cache'
 export interface CrewMember {
   username: string
   fishingXP: number
+  expeditionXP: number
+  characterColor: string | null
+  equippedHat: string | null
+  avatarBg: string | null
+  avatarBorder: string | null
+}
+
+const AVATAR_FIELDS = 'id, username, fishing_xp, expedition_xp, character_color, equipped_hat, avatar_bg_color, avatar_border_color'
+
+type ProfileRow = {
+  id: string
+  username: string
+  fishing_xp: number | null
+  expedition_xp: number | null
+  character_color: string | null
+  equipped_hat: string | null
+  avatar_bg_color: string | null
+  avatar_border_color: string | null
+}
+
+function toCrewMember(p: ProfileRow): CrewMember {
+  return {
+    username:       p.username,
+    fishingXP:      p.fishing_xp ?? 0,
+    expeditionXP:   p.expedition_xp ?? 0,
+    characterColor: p.character_color,
+    equippedHat:    p.equipped_hat,
+    avatarBg:       p.avatar_bg_color,
+    avatarBorder:   p.avatar_border_color,
+  }
 }
 
 export async function getCrew(): Promise<CrewMember[]> {
@@ -27,14 +57,14 @@ export async function getCrew(): Promise<CrewMember[]> {
 
   const { data: profiles } = await admin
     .from('profiles')
-    .select('id, username, fishing_xp')
+    .select(AVATAR_FIELDS)
     .in('id', ids)
 
-  const byId = Object.fromEntries((profiles ?? []).map(p => [p.id, p]))
+  const byId = Object.fromEntries(((profiles ?? []) as ProfileRow[]).map(p => [p.id, p]))
   return ids
     .map(id => byId[id])
     .filter(Boolean)
-    .map(p => ({ username: p.username, fishingXP: p.fishing_xp ?? 0 }))
+    .map(toCrewMember)
 }
 
 export async function addCrewMember(targetUsername: string): Promise<{ error?: string }> {
@@ -62,7 +92,7 @@ export async function addCrewMember(targetUsername: string): Promise<{ error?: s
   return {}
 }
 
-export async function getNewFollowers(): Promise<{ username: string; fishingXP: number }[]> {
+export async function getNewFollowers(): Promise<CrewMember[]> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
@@ -91,10 +121,10 @@ export async function getNewFollowers(): Promise<{ username: string; fishingXP: 
 
   const { data: profiles } = await admin
     .from('profiles')
-    .select('username, fishing_xp')
+    .select(AVATAR_FIELDS)
     .in('id', notAddedBack)
 
-  return (profiles ?? []).map(p => ({ username: p.username, fishingXP: p.fishing_xp ?? 0 }))
+  return ((profiles ?? []) as ProfileRow[]).map(toCrewMember)
 }
 
 export async function removeCrewMember(targetUsername: string): Promise<{ error?: string }> {

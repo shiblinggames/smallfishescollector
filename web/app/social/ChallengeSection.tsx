@@ -215,6 +215,7 @@ export default function ChallengeSection({ challenges, wlRecord, myDoubloons, my
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [showRecent, setShowRecent] = useState(false)
 
   const incoming = challenges.filter(c => c.isIncoming && (c.status === 'pending' || c.status === 'challenger_done'))
   const outgoing = challenges.filter(c => !c.isIncoming && c.status === 'pending')
@@ -260,26 +261,85 @@ export default function ChallengeSection({ challenges, wlRecord, myDoubloons, my
   return (
     <div className="flex flex-col gap-6">
 
-      {/* W-L record */}
+      {/* W-L record — with an inline collapsible "Recent results" section.
+          Closed by default so the page stays compact; tap the header to
+          expand and see the per-match outcome cards. */}
       {totalGames > 0 && (
-        <div style={{ background: 'rgba(4,10,20,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '1rem' }}>
-          <p className="font-karla font-600 uppercase tracking-[0.14em] mb-3" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Challenge Record</p>
+        <div style={{ background: 'rgba(6,12,20,0.78)', border: '1px solid rgba(255,255,255,0.10)', borderTop: '1px solid rgba(255,255,255,0.16)', borderRadius: 14, padding: '1rem 1rem 0.85rem' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.14em] mb-3" style={{ fontSize: '0.58rem', color: '#7a7674' }}>Challenge Record</p>
           <div className="flex gap-6">
             <div>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#4ade80', lineHeight: 1 }}>{wlRecord.wins}</p>
-              <p className="font-karla font-400" style={{ fontSize: '0.55rem', color: '#4a4845', marginTop: 2 }}>Wins</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.45rem', color: '#4ade80', lineHeight: 1 }}>{wlRecord.wins}</p>
+              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#5a5856', marginTop: 4 }}>Wins</p>
             </div>
             <div>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f87171', lineHeight: 1 }}>{wlRecord.losses}</p>
-              <p className="font-karla font-400" style={{ fontSize: '0.55rem', color: '#4a4845', marginTop: 2 }}>Losses</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.45rem', color: '#f87171', lineHeight: 1 }}>{wlRecord.losses}</p>
+              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#5a5856', marginTop: 4 }}>Losses</p>
             </div>
             {wlRecord.ties > 0 && (
               <div>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#6a6764', lineHeight: 1 }}>{wlRecord.ties}</p>
-                <p className="font-karla font-400" style={{ fontSize: '0.55rem', color: '#4a4845', marginTop: 2 }}>Ties</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.45rem', color: '#9ca3af', lineHeight: 1 }}>{wlRecord.ties}</p>
+                <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#5a5856', marginTop: 4 }}>Ties</p>
               </div>
             )}
           </div>
+
+          {/* Recent results — collapsible */}
+          {complete.length > 0 && (
+            <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <button
+                onClick={() => setShowRecent(s => !s)}
+                style={{
+                  width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}
+              >
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#9a9488' }}>
+                  Recent results · {complete.length}
+                </p>
+                <span style={{ fontSize: '0.65rem', color: '#5a5856', transition: 'transform 0.15s', display: 'inline-block', transform: showRecent ? 'rotate(180deg)' : 'none' }}>▼</span>
+              </button>
+              {showRecent && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: '0.75rem' }}>
+                  {complete.slice(0, 10).map(c => {
+                    const won = c.winnerId === c.myId
+                    const tied = c.winnerId === null
+                    const opponentName = c.isIncoming ? c.challengerUsername : c.challengedUsername
+                    const myScore = c.myScore
+                    const opponentScore = c.opponentScore ?? 0
+                    const outcomeColor = tied ? '#9ca3af' : won ? '#4ade80' : '#f87171'
+                    const payout = c.wager > 0
+                      ? tied ? `${c.wager} ⟡ returned` : won ? `+${c.wager * 2} ⟡` : `−${c.wager} ⟡`
+                      : null
+                    const scoreUnit = c.challengeType === 'most_fish' ? 'fish' : c.challengeType === 'most_doubloons' ? '⟡' : 'perfects'
+                    return (
+                      <div key={c.id} style={{
+                        background: won ? 'rgba(74,222,128,0.06)' : tied ? 'rgba(156,163,175,0.04)' : 'rgba(248,113,113,0.05)',
+                        border: `1px solid ${outcomeColor}28`,
+                        borderRadius: 10,
+                        padding: '0.6rem 0.75rem',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: outcomeColor, lineHeight: 1 }}>
+                              {tied ? 'Tie' : won ? 'Win' : 'Loss'}
+                            </p>
+                            <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#b0aea8' }}>
+                              vs {opponentName}
+                            </p>
+                          </div>
+                          {payout && <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: outcomeColor, flexShrink: 0 }}>{payout}</span>}
+                        </div>
+                        <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#7a7674' }}>
+                          {myScore} – {opponentScore} {scoreUnit} · {durationLabel(c.durationSeconds)} · {typeLabel(c.challengeType)}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -445,70 +505,8 @@ export default function ChallengeSection({ challenges, wlRecord, myDoubloons, my
         </div>
       ))}
 
-      {/* Completed */}
-      {complete.length > 0 && (
-        <div>
-          <p className="font-karla font-600 uppercase tracking-[0.14em] mb-3" style={{ fontSize: '0.52rem', color: '#6a6764' }}>Recent Results</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {complete.slice(0, 5).map((c) => {
-              const won = c.winnerId === c.myId
-              const tied = c.winnerId === null
-              const opponentName = c.isIncoming ? c.challengerUsername : c.challengedUsername
-              const myScore = c.myScore
-              const opponentScore = c.opponentScore ?? 0
-              const outcomeColor = tied ? '#9ca3af' : won ? '#4ade80' : '#f87171'
-              const payout = c.wager > 0
-                ? tied ? `${c.wager} ⟡ returned` : won ? `+${c.wager * 2} ⟡` : `−${c.wager} ⟡`
-                : null
-              const scoreUnit = c.challengeType === 'most_fish' ? 'fish' : c.challengeType === 'most_doubloons' ? '⟡' : 'perfects'
-              return (
-                <div key={c.id} style={{
-                  background: won ? 'rgba(74,222,128,0.06)' : tied ? 'rgba(156,163,175,0.05)' : 'rgba(248,113,113,0.06)',
-                  border: `1px solid ${outcomeColor}30`,
-                  borderRadius: 14, overflow: 'hidden',
-                  boxShadow: won ? '0 0 24px rgba(74,222,128,0.1)' : 'none',
-                }}>
-                  {/* Outcome header */}
-                  <div style={{
-                    padding: '0.65rem 1rem',
-                    borderBottom: `1px solid ${outcomeColor}15`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  }}>
-                    <p className="font-cinzel font-700" style={{
-                      fontSize: '1rem', color: outcomeColor, lineHeight: 1,
-                      textShadow: won ? '0 0 18px rgba(74,222,128,0.55)' : 'none',
-                    }}>
-                      {tied ? 'Tie' : won ? 'Victory' : 'Defeat'}
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      {payout && <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: outcomeColor }}>{payout}</span>}
-                      <span className="font-karla font-300" style={{ fontSize: '0.55rem', color: '#4a4845' }}>{timeAgo(c.createdAt)}</span>
-                    </div>
-                  </div>
-                  {/* Details + scores */}
-                  <div style={{ padding: '0.75rem 1rem' }}>
-                    <p className="font-karla font-600" style={{ fontSize: '0.65rem', color: '#6a6764', marginBottom: 8 }}>
-                      vs {opponentName} · {durationLabel(c.durationSeconds)} · {typeLabel(c.challengeType)}
-                    </p>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                      <div style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${won && !tied ? `${outcomeColor}35` : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '0.4rem 0.6rem' }}>
-                        <p className="font-karla font-400" style={{ fontSize: '0.52rem', color: '#4a4845', marginBottom: 2 }}>You</p>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: won && !tied ? outcomeColor : '#f0ede8', lineHeight: 1 }}>{myScore}</p>
-                        <p className="font-karla font-300" style={{ fontSize: '0.5rem', color: '#4a4845', marginTop: 1 }}>{scoreUnit}</p>
-                      </div>
-                      <div style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${!won && !tied ? `${outcomeColor}35` : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '0.4rem 0.6rem' }}>
-                        <p className="font-karla font-400" style={{ fontSize: '0.52rem', color: '#4a4845', marginBottom: 2 }}>{opponentName}</p>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: !won && !tied ? outcomeColor : '#f0ede8', lineHeight: 1 }}>{opponentScore}</p>
-                        <p className="font-karla font-300" style={{ fontSize: '0.5rem', color: '#4a4845', marginTop: 1 }}>{scoreUnit}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      {/* Recent results are now collapsible inside the Challenge Record
+          card above — see the "Recent results · N" toggle. */}
     </div>
   )
 }

@@ -25,22 +25,18 @@ export default async function SocialPage() {
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
-      <main className="min-h-screen pt-8">
-        <div className="px-6 max-w-xl mx-auto mb-6 flex items-end justify-between">
-          <div>
-            <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Social</p>
-            <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.4rem' }}>Your Crew</h1>
-          </div>
-          {profile?.username && (
+      <main className="min-h-screen pt-6">
+        {profile?.username && (
+          <div className="px-6 max-w-xl mx-auto mb-4 flex justify-end">
             <Link
               href={`/u/${profile.username}`}
               className="font-karla font-600"
-              style={{ fontSize: '0.68rem', color: '#6a6764', textDecoration: 'none', marginBottom: 4 }}
+              style={{ fontSize: '0.7rem', color: '#7a7674', textDecoration: 'none' }}
             >
               View your profile →
             </Link>
-          )}
-        </div>
+          </div>
+        )}
         <SocialClient
           initialCrew={crew}
           username={profile?.username ?? ''}
