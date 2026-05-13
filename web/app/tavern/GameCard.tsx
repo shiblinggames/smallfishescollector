@@ -13,10 +13,13 @@ interface Props {
   streak?: number
   variant?: 'default' | 'featured' | 'compact'
   art?: string
+  /** Override the compact-card art's max height (default 96). Useful for
+   *  art that reads better at a smaller size — e.g. the Tide Run boat. */
+  artMaxHeight?: number
   accent?: string
 }
 
-export default function GameCard({ href, eyebrow, title, statusText, completed, streak, variant = 'default', art, accent = '#f0c040' }: Props) {
+export default function GameCard({ href, eyebrow, title, statusText, completed, streak, variant = 'default', art, artMaxHeight = 96, accent = '#f0c040' }: Props) {
   const router = useRouter()
   const done = !!completed
   const featured = variant === 'featured'
@@ -51,7 +54,7 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
               alt=""
               style={{
                 maxWidth: '100%',
-                maxHeight: 96,
+                maxHeight: artMaxHeight,
                 objectFit: 'contain',
                 opacity: done ? 0.4 : 0.92,
                 filter: `drop-shadow(0 4px 14px ${accent}55)`,

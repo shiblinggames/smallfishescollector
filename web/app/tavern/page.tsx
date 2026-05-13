@@ -152,6 +152,7 @@ export default async function TavernPage() {
             icon={<BoatIcon />}
             variant="compact"
             art="/boatrun.png"
+            artMaxHeight={68}
             accent="#5da7d4"
           />
           </div>
