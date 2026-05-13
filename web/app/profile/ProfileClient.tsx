@@ -234,7 +234,6 @@ export default function ProfileClient({
   useEffect(() => { if (!badgePickerOpen) setSelectedBadgeSlot(null) }, [badgePickerOpen])
 
   const color = avatarColor(username || email)
-  const initial = (username || email).slice(0, 1).toUpperCase()
 
   const rod = getRod(rodTier)
   const hook = getHook(hookTier)
@@ -326,18 +325,57 @@ export default function ProfileClient({
 
       {/* ── Identity header ── */}
       <div className="flex flex-col items-center gap-3 pt-2 pb-7">
-        {/* Avatar */}
-        <div style={{
-          width: 68, height: 68, borderRadius: '50%',
-          background: `radial-gradient(circle at 38% 35%, ${color}ee 0%, ${color}77 100%)`,
-          border: `2px solid ${color}55`,
-          boxShadow: `0 0 28px ${color}33, inset 0 1px 0 rgba(255,255,255,0.15)`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <span className="font-cinzel font-700" style={{ fontSize: '1.7rem', color: '#f0ede8', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
-            {initial}
-          </span>
-        </div>
+        {/* Avatar — equipped character (zoomed to the head) with the
+            equipped hat overlay composited on top. Same focal logic as the
+            color-picker swatches (420% scale, focal point 60%/68%) so the
+            face sits cleanly in the circle. */}
+        {(() => {
+          const hat = getHat(equippedHat)
+          return (
+            <div style={{
+              width: 68, height: 68, borderRadius: '50%',
+              background: `radial-gradient(circle at 38% 35%, ${color}ee 0%, ${color}77 100%)`,
+              border: `2px solid ${color}55`,
+              boxShadow: `0 0 28px ${color}33, inset 0 1px 0 rgba(255,255,255,0.15)`,
+              overflow: 'hidden',
+              position: 'relative',
+            }}>
+              <div style={{
+                position: 'absolute',
+                width: '420%',
+                left: '50%', top: '50%',
+                transform: 'translate(-60%, -68%)',
+                pointerEvents: 'none',
+              }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={charSprites.rest}
+                  alt=""
+                  style={{ width: '100%', display: 'block' }}
+                />
+                {hat && (() => {
+                  const hp = hat.positions.rest
+                  return (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={hat.restImageUrl}
+                      alt=""
+                      style={{
+                        position: 'absolute',
+                        top: `${hp.top}%`,
+                        left: `${hp.left}%`,
+                        width: `${hp.width}%`,
+                        transform: `rotate(${hp.rotate}deg)`,
+                        transformOrigin: 'center center',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  )
+                })()}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Username + rename */}
         {showUsernameForm ? (
