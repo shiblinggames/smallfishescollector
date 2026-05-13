@@ -933,9 +933,9 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         //   - Nav header (44px mobile / 64px desktop — use mobile, it's the smaller window)
         //   - MobileTabBar (~64px, hidden on sm+ but cheap to reserve)
         //   - iOS safe-area-bottom (home indicator)
-        // and reserve a small bottom pad above the tab bar so the action
-        // panel never bleeds into it.
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 8px)',
+        // Plus a generous breathing gap above the tab bar so the action
+        // buttons feel comfortably clear of it (was 8px, felt too tight).
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 28px)',
         minHeight: 'calc(100dvh - 44px - env(safe-area-inset-bottom, 0px))',
       }}>
         {/* Leave link — always available so the player can back out at any

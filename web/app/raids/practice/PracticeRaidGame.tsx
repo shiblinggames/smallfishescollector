@@ -764,9 +764,10 @@ export default function PracticeRaidGame({
     return (
       <div className="flex flex-col items-center gap-2 select-none" style={{
         userSelect: 'none',
-        // Reserve room for the MobileTabBar (~64px) + iOS safe-area-bottom
-        // so the action panel never bleeds into the tab bar.
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 8px)',
+        // Reserve room for the MobileTabBar (~64px) + iOS safe-area-bottom,
+        // plus a generous breathing gap above the bar so the action buttons
+        // feel comfortably clear of it (was 8px, felt too tight).
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 28px)',
         minHeight: 'calc(100dvh - 44px - env(safe-area-inset-bottom, 0px))',
       }}>
         {/* Leave link — always available so the player can back out at any
