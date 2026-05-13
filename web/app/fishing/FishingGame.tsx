@@ -19,7 +19,8 @@ import { claimDailyReward } from './dailyChallengeActions'
 import { getDailyChallenges, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import { finishSession, type ActiveSession } from '@/app/social/challengeActions'
-import { equipRod } from '@/app/marketplace/tackle-shop/actions'
+import { equipRod, purchaseRod, buyReel } from '@/app/marketplace/tackle-shop/actions'
+import { buyHook } from '@/app/hooks/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
 import { getHook, HOOKS } from '@/lib/hooks'
@@ -1546,7 +1547,7 @@ function XPBarDisplay({ xp, bestStreak }: { xp: number; bestStreak?: number }) {
 type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }
 
 export default function FishingGame({
-  hookTier, rodTier, reelTier, lineTier,
+  hookTier: initialHookTier, rodTier, reelTier: initialReelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialInventory,
   fishHoldTier: initialFishHoldTier,
   ownedRods: initialOwnedRods,
@@ -1617,6 +1618,8 @@ export default function FishingGame({
 
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
   const [ownedRods, setOwnedRods] = useState(initialOwnedRods)
+  const [reelTier, setReelTier] = useState(initialReelTier)
+  const [hookTier, setHookTier] = useState(initialHookTier)
   const [caughtFishIds, setCaughtFishIds] = useState(() => new Set(initialCaughtFishIds))
   const rod  = getRod(equippedRodTier)
   const reel = getReel(reelTier)
@@ -4368,8 +4371,30 @@ export default function FishingGame({
               equippedRodTier={equippedRodTier}
               ownedRods={ownedRods}
               onEquipRod={handleEquipRod}
+              onBuyRod={async (tier) => {
+                const res = await purchaseRod(tier)
+                if ('error' in res) return
+                setOwnedRods(res.ownedRods)
+                setDoubloons(res.doubloons)
+                window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+                await handleEquipRod(tier)
+              }}
               reelTier={reelTier}
+              onBuyReel={async () => {
+                const res = await buyReel()
+                if ('error' in res) return
+                setReelTier(res.reelTier)
+                setDoubloons(res.doubloons)
+                window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+              }}
               hookTier={hookTier}
+              onBuyHook={async () => {
+                const res = await buyHook()
+                if ('error' in res) return
+                setHookTier(res.hookTier)
+                setDoubloons(res.doubloons)
+                window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+              }}
               lineTier={lineTier}
               characterColor={localCharacterColor}
               charSrc={charSrc}

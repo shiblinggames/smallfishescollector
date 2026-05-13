@@ -3,9 +3,9 @@
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getHook } from '@/lib/hooks'
+import { getHook, HOOKS } from '@/lib/hooks'
 import { getRod, RODS } from '@/lib/rods'
-import { getReel } from '@/lib/reels'
+import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
 import { BOATS, DEFAULT_BOAT_COLOR } from '@/lib/boats'
@@ -261,8 +261,8 @@ function GearSlot({
 
 export default function GearScreen({
   baitInventory, selectedBait, onSelectBait,
-  equippedRodTier, ownedRods, onEquipRod,
-  reelTier, hookTier, lineTier,
+  equippedRodTier, ownedRods, onEquipRod, onBuyRod,
+  reelTier, hookTier, lineTier, onBuyReel, onBuyHook,
   characterColor, charSrc, equippedBadges, unlockedCharacterColors, unlockedBadges, onUpdateColor, onEquipBadge,
   equippedBoat, unlockedBoats, onEquipBoat, onBuyBoat, doubloons,
   equippedHat, unlockedHats, onEquipHat, onBuyHat,
@@ -277,9 +277,12 @@ export default function GearScreen({
   equippedRodTier: number
   ownedRods: number[]
   onEquipRod: (tier: number) => void
+  onBuyRod: (tier: number) => Promise<void>
   reelTier: number
   hookTier: number
   lineTier: number
+  onBuyReel: () => Promise<void>
+  onBuyHook: () => Promise<void>
   characterColor: string
   charSrc: Record<string, string>
   equippedBadges: string[]
@@ -565,94 +568,363 @@ export default function GearScreen({
               </div>
 
               {/* ── Rod ── */}
-              {openSlot === 'rod' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                    {ownedRodDefs.map(r => {
-                      const isEquipped = r.tier === equippedRodTier
-                      const tagline = rodTagline(r)
-                      return (
-                        <button
-                          key={r.tier}
-                          onClick={() => { if (!isEquipped) onEquipRod(r.tier) }}
-                          disabled={isEquipped}
-                          className="font-karla font-700"
+              {openSlot === 'rod' && (() => {
+                const unownedRodDefs = RODS
+                  .filter(r => r.cost > 0 && !r.earnedOnly && !ownedRods.includes(r.tier))
+                  .sort((a, b) => a.cost - b.cost)
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <AnimatePresence>
+                      {cosmeticToast && (
+                        <motion.div
+                          key={cosmeticToast.id}
+                          initial={{ opacity: 0, y: -6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.22 }}
                           style={{
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                            padding: '0.6rem 0.4rem 0.5rem',
+                            padding: '0.55rem 0.85rem',
                             borderRadius: 10,
-                            background: isEquipped ? `${r.color}1f` : 'rgba(4,10,18,0.72)',
-                            border: `1px solid ${isEquipped ? r.color + '90' : 'rgba(255,255,255,0.09)'}`,
-                            boxShadow: isEquipped ? `0 0 14px ${r.color}33` : 'none',
-                            cursor: isEquipped ? 'default' : 'pointer',
-                            position: 'relative',
+                            background: `linear-gradient(90deg, ${cosmeticToast.color}26, ${cosmeticToast.color}10)`,
+                            border: `1px solid ${cosmeticToast.color}80`,
+                            boxShadow: `0 0 14px ${cosmeticToast.color}40`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
                           }}
                         >
-                          <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={r.imageUrl ?? '/rod.png'}
-                              alt=""
-                              className={r.glow ? 'rod-glow' : undefined}
-                              style={{
-                                width: 44, height: 44, objectFit: 'contain',
-                                ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 1px 6px ${r.color}66)` }),
-                              } as React.CSSProperties}
-                            />
-                          </div>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>
-                            {r.name}
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>
+                            ✓ Bought <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span> — now equipped
                           </p>
-                          {isEquipped
-                            ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: r.color }}>✓ Equipped</span>
-                            : <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: r.color, lineHeight: 1.15, textAlign: 'center' }}>{tagline}</span>
-                          }
-                        </button>
-                      )
-                    })}
+                          <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: cosmeticToast.color }}>
+                            −{cosmeticToast.cost.toLocaleString()} ⟡
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                      {ownedRodDefs.map(r => {
+                        const isEquipped = r.tier === equippedRodTier
+                        const tagline = rodTagline(r)
+                        return (
+                          <button
+                            key={r.tier}
+                            onClick={() => { if (!isEquipped) onEquipRod(r.tier) }}
+                            disabled={isEquipped}
+                            className="font-karla font-700"
+                            style={{
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                              padding: '0.6rem 0.4rem 0.5rem',
+                              borderRadius: 10,
+                              background: isEquipped ? `${r.color}1f` : 'rgba(4,10,18,0.72)',
+                              border: `1px solid ${isEquipped ? r.color + '90' : 'rgba(255,255,255,0.09)'}`,
+                              boxShadow: isEquipped ? `0 0 14px ${r.color}33` : 'none',
+                              cursor: isEquipped ? 'default' : 'pointer',
+                              position: 'relative',
+                            }}
+                          >
+                            <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={r.imageUrl ?? '/rod.png'}
+                                alt=""
+                                className={r.glow ? 'rod-glow' : undefined}
+                                style={{
+                                  width: 44, height: 44, objectFit: 'contain',
+                                  ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 1px 6px ${r.color}66)` }),
+                                } as React.CSSProperties}
+                              />
+                            </div>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>
+                              {r.name}
+                            </p>
+                            {isEquipped
+                              ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: r.color }}>✓ Equipped</span>
+                              : <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: r.color, lineHeight: 1.15, textAlign: 'center' }}>{tagline}</span>
+                            }
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {unownedRodDefs.length > 0 && (
+                      <>
+                        <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.42)', marginTop: 4, paddingLeft: 2 }}>
+                          Available
+                        </p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                          {unownedRodDefs.map(r => {
+                            const canAfford = doubloons >= r.cost
+                            const tagline = rodTagline(r)
+                            const onTap = () => {
+                              if (!canAfford) return
+                              flashPurchase(r.name, r.color, r.cost)
+                              onBuyRod(r.tier)
+                            }
+                            return (
+                              <button
+                                key={r.tier}
+                                onClick={onTap}
+                                disabled={!canAfford}
+                                className="font-karla font-700"
+                                style={{
+                                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                                  padding: '0.6rem 0.4rem 0.5rem',
+                                  borderRadius: 10,
+                                  background: 'rgba(4,10,18,0.72)',
+                                  border: `1px solid ${canAfford ? r.color + '50' : 'rgba(255,255,255,0.09)'}`,
+                                  cursor: canAfford ? 'pointer' : 'default',
+                                  opacity: canAfford ? 1 : 0.72,
+                                  position: 'relative',
+                                }}
+                              >
+                                <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={r.imageUrl ?? '/rod.png'}
+                                    alt=""
+                                    className={r.glow ? 'rod-glow' : undefined}
+                                    style={{
+                                      width: 44, height: 44, objectFit: 'contain',
+                                      ...(r.glow
+                                        ? { ['--rod-glow-color' as string]: r.color }
+                                        : { filter: `drop-shadow(0 1px 6px ${r.color}66)` }),
+                                      opacity: canAfford ? 1 : 0.65,
+                                    } as React.CSSProperties}
+                                  />
+                                </div>
+                                <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: canAfford ? '#f0ede8' : '#a0a09a', lineHeight: 1.1, textAlign: 'center' }}>
+                                  {r.name}
+                                </p>
+                                <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: r.color, lineHeight: 1.15, textAlign: 'center', opacity: 0.85 }}>
+                                  {tagline}
+                                </span>
+                                <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: canAfford ? '#f0c040' : '#f0c04088' }}>
+                                  {r.cost.toLocaleString()} ⟡
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <ShopLink href="/marketplace/tackle-shop#rod" label="Buy more rods" color={rod.color} onClick={onClose} />
-                </div>
-              )}
+                )
+              })()}
 
               {/* ── Reel ── */}
-              {openSlot === 'reel' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: reel.color }}>{reel.name}</p>
-                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                    {dragPct > 0 ? <Pill label={`−${dragPct}% needle speed`} color={reel.color} /> : <Pill label="Base needle speed" muted />}
+              {openSlot === 'reel' && (() => {
+                const nextReel = REELS[reelTier + 1]
+                const canAffordReel = nextReel ? doubloons >= nextReel.cost : false
+                const nextSlowPct = nextReel ? Math.round((1 - nextReel.needleSpeedMultiplier) * 100) : 0
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <AnimatePresence>
+                      {cosmeticToast && (
+                        <motion.div
+                          key={cosmeticToast.id}
+                          initial={{ opacity: 0, y: -6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.22 }}
+                          style={{
+                            padding: '0.55rem 0.85rem',
+                            borderRadius: 10,
+                            background: `linear-gradient(90deg, ${cosmeticToast.color}26, ${cosmeticToast.color}10)`,
+                            border: `1px solid ${cosmeticToast.color}80`,
+                            boxShadow: `0 0 14px ${cosmeticToast.color}40`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                          }}
+                        >
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>
+                            ✓ Upgraded to <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span>
+                          </p>
+                          <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: cosmeticToast.color }}>
+                            −{cosmeticToast.cost.toLocaleString()} ⟡
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: reel.color }}>{reel.name}</p>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {dragPct > 0 ? <Pill label={`−${dragPct}% needle speed`} color={reel.color} /> : <Pill label="Base needle speed" muted />}
+                    </div>
+                    <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#6a6764', lineHeight: 1.55 }}>{reel.description}</p>
+                    {nextReel ? (
+                      <button
+                        onClick={() => {
+                          if (!canAffordReel) return
+                          flashPurchase(nextReel.name, nextReel.color, nextReel.cost)
+                          onBuyReel()
+                        }}
+                        disabled={!canAffordReel}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '0.75rem 0.9rem', marginTop: 2,
+                          borderRadius: 14,
+                          background: canAffordReel ? `${nextReel.color}14` : 'rgba(255,255,255,0.03)',
+                          border: `1px solid ${canAffordReel ? nextReel.color + '50' : 'rgba(255,255,255,0.1)'}`,
+                          cursor: canAffordReel ? 'pointer' : 'default',
+                          opacity: canAffordReel ? 1 : 0.72,
+                          textAlign: 'left',
+                        }}
+                      >
+                        {nextReel.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={nextReel.imageUrl}
+                            alt={nextReel.name}
+                            style={{
+                              width: 44, height: 44, objectFit: 'contain', flexShrink: 0,
+                              filter: `drop-shadow(0 1px 6px ${nextReel.color}66)`,
+                              opacity: canAffordReel ? 1 : 0.65,
+                            }}
+                          />
+                        ) : (
+                          <div style={{ width: 44, height: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <ReelIcon color={nextReel.color} />
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: canAffordReel ? nextReel.color : '#a09890', lineHeight: 1.1 }}>
+                              {nextReel.name}
+                            </p>
+                            <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: `${nextReel.color}aa`, background: `${nextReel.color}14`, border: `1px solid ${nextReel.color}30`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>
+                              Upgrade
+                            </span>
+                          </div>
+                          {nextSlowPct > 0 && (
+                            <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: `${nextReel.color}cc` }}>
+                              Needle {nextSlowPct}% slower
+                            </p>
+                          )}
+                        </div>
+                        <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: canAffordReel ? '#f0c040' : '#f0c04088', flexShrink: 0 }}>
+                          {nextReel.cost.toLocaleString()} ⟡
+                        </span>
+                      </button>
+                    ) : (
+                      <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#6a6764', textAlign: 'center', padding: '0.6rem 0' }}>
+                        You have the finest reel in the sea.
+                      </p>
+                    )}
                   </div>
-                  <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#6a6764', lineHeight: 1.55 }}>{reel.description}</p>
-                  <ShopLink href="/marketplace/tackle-shop#reel" label="Upgrade reel" color={reel.color} onClick={onClose} />
-                </div>
-              )}
+                )
+              })()}
 
               {/* ── Hook ── */}
-              {openSlot === 'hook' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    {hook.imageUrl && (
-                      <img
-                        src={hook.imageUrl}
-                        alt={hook.name}
-                        className={hook.glow ? 'rod-glow' : undefined}
-                        style={{
-                          width: 44, height: 44, objectFit: 'contain',
-                          ...(hook.glow ? { ['--rod-glow-color' as string]: hook.color } : { filter: `drop-shadow(0 2px 8px ${hook.color}66)` }),
-                        } as React.CSSProperties}
-                      />
-                    )}
-                    <div>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: hook.color }}>{hook.name}</p>
-                      <div style={{ display: 'flex', gap: 4, marginTop: 3 }}>
-                        {hookTier > 0 ? <Pill label={`+${hookTier * 3}° catch zone`} color={hook.color} /> : <Pill label="No catch zone bonus" muted />}
+              {openSlot === 'hook' && (() => {
+                const nextHook = HOOKS[hookTier + 1]
+                const canAffordHook = nextHook ? doubloons >= nextHook.cost : false
+                const nextZoneBonus = nextHook ? nextHook.tier * 3 : 0
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <AnimatePresence>
+                      {cosmeticToast && (
+                        <motion.div
+                          key={cosmeticToast.id}
+                          initial={{ opacity: 0, y: -6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.22 }}
+                          style={{
+                            padding: '0.55rem 0.85rem',
+                            borderRadius: 10,
+                            background: `linear-gradient(90deg, ${cosmeticToast.color}26, ${cosmeticToast.color}10)`,
+                            border: `1px solid ${cosmeticToast.color}80`,
+                            boxShadow: `0 0 14px ${cosmeticToast.color}40`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                          }}
+                        >
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>
+                            ✓ Upgraded to <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span>
+                          </p>
+                          <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: cosmeticToast.color }}>
+                            −{cosmeticToast.cost.toLocaleString()} ⟡
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {hook.imageUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={hook.imageUrl}
+                          alt={hook.name}
+                          className={hook.glow ? 'rod-glow' : undefined}
+                          style={{
+                            width: 44, height: 44, objectFit: 'contain',
+                            ...(hook.glow ? { ['--rod-glow-color' as string]: hook.color } : { filter: `drop-shadow(0 2px 8px ${hook.color}66)` }),
+                          } as React.CSSProperties}
+                        />
+                      )}
+                      <div>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: hook.color }}>{hook.name}</p>
+                        <div style={{ display: 'flex', gap: 4, marginTop: 3 }}>
+                          {hookTier > 0 ? <Pill label={`+${hookTier * 3}° catch zone`} color={hook.color} /> : <Pill label="No catch zone bonus" muted />}
+                        </div>
                       </div>
                     </div>
+                    <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#6a6764', lineHeight: 1.55 }}>{hook.description}</p>
+                    {nextHook ? (
+                      <button
+                        onClick={() => {
+                          if (!canAffordHook) return
+                          flashPurchase(nextHook.name, nextHook.color, nextHook.cost)
+                          onBuyHook()
+                        }}
+                        disabled={!canAffordHook}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '0.75rem 0.9rem', marginTop: 2,
+                          borderRadius: 14,
+                          background: canAffordHook ? `${nextHook.color}14` : 'rgba(255,255,255,0.03)',
+                          border: `1px solid ${canAffordHook ? nextHook.color + '50' : 'rgba(255,255,255,0.1)'}`,
+                          cursor: canAffordHook ? 'pointer' : 'default',
+                          opacity: canAffordHook ? 1 : 0.72,
+                          textAlign: 'left',
+                        }}
+                      >
+                        {nextHook.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={nextHook.imageUrl}
+                            alt={nextHook.name}
+                            className={nextHook.glow ? 'rod-glow' : undefined}
+                            style={{
+                              width: 44, height: 44, objectFit: 'contain', flexShrink: 0,
+                              ...(nextHook.glow
+                                ? { ['--rod-glow-color' as string]: nextHook.color }
+                                : { filter: `drop-shadow(0 1px 6px ${nextHook.color}66)` }),
+                              opacity: canAffordHook ? 1 : 0.65,
+                            } as React.CSSProperties}
+                          />
+                        ) : (
+                          <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 10, background: `${nextHook.color}18`, border: `1px solid ${nextHook.color}38` }} />
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: canAffordHook ? nextHook.color : '#a09890', lineHeight: 1.1 }}>
+                              {nextHook.name}
+                            </p>
+                            <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: `${nextHook.color}aa`, background: `${nextHook.color}14`, border: `1px solid ${nextHook.color}30`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>
+                              Upgrade
+                            </span>
+                          </div>
+                          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: `${nextHook.color}cc` }}>
+                            +{nextZoneBonus}° catch zone
+                          </p>
+                        </div>
+                        <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: canAffordHook ? '#f0c040' : '#f0c04088', flexShrink: 0 }}>
+                          {nextHook.cost.toLocaleString()} ⟡
+                        </span>
+                      </button>
+                    ) : (
+                      <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#6a6764', textAlign: 'center', padding: '0.6rem 0' }}>
+                        You have the best hook in the sea.
+                      </p>
+                    )}
                   </div>
-                  <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#6a6764', lineHeight: 1.55 }}>{hook.description}</p>
-                  <ShopLink href="/marketplace/tackle-shop#hook" label="Upgrade hook" color={hook.color} onClick={onClose} />
-                </div>
-              )}
+                )
+              })()}
 
               {/* ── Line ── */}
               {openSlot === 'line' && (
