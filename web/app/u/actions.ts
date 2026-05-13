@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { CHARACTER_COLORS } from '@/lib/characters'
-import { AVATAR_PALETTE } from '@/lib/avatarColors'
+import { ALLOWED_BG_HEXES, ALLOWED_BORDER_HEXES, isPremiumBorder } from '@/lib/avatarColors'
 
 export async function updateUsername(username: string): Promise<{ error?: string }> {
   const supabase = await createClient()
@@ -86,9 +86,11 @@ export async function updateCharacterColor(colorId: string): Promise<{ error?: s
   return {}
 }
 
-/** Save the player's avatar background + border color choices. Either field
- *  can be null (= use the default from lib/avatarColors). Hex values are
- *  validated against AVATAR_PALETTE so users can't store arbitrary CSS. */
+/** Save the player's avatar background + border color choices.
+ *  - Either field can be null (= unset; resolves to the shared defaults).
+ *  - The special value 'none' means transparent.
+ *  - Premium-only borders (e.g. gold) are rejected unless the user has
+ *    an active premium membership. */
 export async function updateAvatarColors(input: {
   bgColor: string | null
   borderColor: string | null
@@ -97,11 +99,25 @@ export async function updateAvatarColors(input: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const validHexes = new Set(AVATAR_PALETTE.map(c => c.hex))
-  const bg     = input.bgColor === null     ? null : (validHexes.has(input.bgColor)     ? input.bgColor     : null)
-  const border = input.borderColor === null ? null : (validHexes.has(input.borderColor) ? input.borderColor : null)
-  // If the user passed something we didn't recognize, drop to null (default)
-  // rather than rejecting outright — keeps the picker forgiving.
+  const bgAllowed     = new Set(ALLOWED_BG_HEXES)
+  const borderAllowed = new Set(ALLOWED_BORDER_HEXES)
+  // Drop unknown values to null (= default) so the picker is forgiving;
+  // explicit-null also means "unset, use default".
+  const bg     = input.bgColor === null     ? null : (bgAllowed.has(input.bgColor)         ? input.bgColor     : null)
+  const border = input.borderColor === null ? null : (borderAllowed.has(input.borderColor) ? input.borderColor : null)
+
+  // Premium gate on gold (and any future premium-only border colors).
+  if (border && isPremiumBorder(border)) {
+    const admin0 = createAdminClient()
+    const { data: profile } = await admin0
+      .from('profiles')
+      .select('is_premium, premium_expires_at')
+      .eq('id', user.id)
+      .single()
+    const expires = profile?.premium_expires_at ? new Date(profile.premium_expires_at as string) : null
+    const isPremium = !!profile?.is_premium && (!expires || expires > new Date())
+    if (!isPremium) return { error: 'That border is for premium members.' }
+  }
 
   const admin = createAdminClient()
   const { error } = await admin

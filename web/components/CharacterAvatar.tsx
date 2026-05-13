@@ -40,13 +40,20 @@ export default function CharacterAvatar({
 }: Props) {
   const sprites = getCharacterSprites(characterColor ?? 'default')
   const hat = getHat(equippedHat)
-  const gradient = `radial-gradient(circle at 38% 35%, ${bgColor}ee 0%, ${bgColor}77 100%)`
+  // 'none' (or empty / nullish) renders transparent — no gradient, no border.
+  // Otherwise apply the player's chosen color as a soft radial gradient + ring.
+  const bgIsNone     = !bgColor   || bgColor   === 'none'
+  const ringIsNone   = !ringColor || ringColor === 'none'
+  const background   = bgIsNone
+    ? 'transparent'
+    : `radial-gradient(circle at 38% 35%, ${bgColor}ee 0%, ${bgColor}77 100%)`
+  const resolvedBorder = borderStyle ?? (ringIsNone ? 'none' : `2px solid ${ringColor}`)
 
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
-      background: gradient,
-      border: borderStyle ?? `2px solid ${ringColor}`,
+      background,
+      border: resolvedBorder,
       overflow: 'hidden',
       position: 'relative',
       flexShrink: 0,

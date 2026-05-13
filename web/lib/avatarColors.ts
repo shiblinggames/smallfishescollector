@@ -1,33 +1,69 @@
-// Shared palette + defaults for the player avatar circle's background and
-// border colors. Each player can pick their own values from /profile (tap
-// the avatar). Everywhere the avatar renders (Nav, /profile, leaderboard
-// rows, in-raid nameplate) reads from these defaults when the player
+// Shared palette + defaults for the player avatar's background and border
+// colors. Each player can customize from /profile (tap the avatar). The
+// avatar shows up in the desktop nav, /profile, leaderboard rows, and the
+// in-raid player nameplate — all read from these defaults when the player
 // hasn't set a value.
+//
+// The special hex 'none' means transparent (no gradient / no border).
+// Gold border is gated to premium members; validate server-side in
+// updateAvatarColors.
 
-/** Background gradient color when no per-user choice is saved. */
-export const DEFAULT_AVATAR_BG_COLOR = '#1e3a5f'   // deep navy
-/** Outer ring color when no per-user choice is saved. */
-export const DEFAULT_AVATAR_BORDER_COLOR = '#3a5a7a' // steel blue
+export const NONE_VALUE = 'none' as const
 
-/** Picker palette — twelve curated colors covering warm/cool/neutral so
- *  every player can find something. Both the background and border pickers
- *  use the same set. */
-export const AVATAR_PALETTE: { id: string; label: string; hex: string }[] = [
-  { id: 'navy',     label: 'Navy',     hex: '#1e3a5f' },
-  { id: 'steel',    label: 'Steel',    hex: '#3a5a7a' },
-  { id: 'teal',     label: 'Teal',     hex: '#0e7490' },
-  { id: 'emerald',  label: 'Emerald',  hex: '#0d9488' },
-  { id: 'forest',   label: 'Forest',   hex: '#3f6212' },
-  { id: 'amber',    label: 'Amber',    hex: '#b45309' },
-  { id: 'crimson',  label: 'Crimson',  hex: '#9f1239' },
-  { id: 'magenta',  label: 'Magenta',  hex: '#be185d' },
-  { id: 'violet',   label: 'Violet',   hex: '#7c3aed' },
-  { id: 'indigo',   label: 'Indigo',   hex: '#3730a3' },
-  { id: 'slate',    label: 'Slate',    hex: '#475569' },
-  { id: 'gold',     label: 'Gold',     hex: '#a16207' },
+/** Backwards-compatible defaults — null in the DB resolves to these. */
+export const DEFAULT_AVATAR_BG_COLOR     = 'none'
+export const DEFAULT_AVATAR_BORDER_COLOR = 'none'
+
+export interface AvatarColorOption {
+  id: string
+  label: string
+  /** CSS color value. Special: 'none' renders transparent. */
+  hex: string
+  /** Premium-locked option. Server validates this against profiles.is_premium
+   *  before saving. */
+  premiumOnly?: boolean
+}
+
+/** Shared base palette — 12 visually distinct swatches that cover neutrals
+ *  + the rainbow. Used for both the bg and the border pickers (the border
+ *  picker also includes AVATAR_BORDER_EXTRAS below). */
+export const AVATAR_PALETTE: AvatarColorOption[] = [
+  { id: 'none',   label: 'None',   hex: NONE_VALUE },
+  { id: 'black',  label: 'Black',  hex: '#0a0a0a' },
+  { id: 'white',  label: 'White',  hex: '#f5f5f0' },
+  { id: 'red',    label: 'Red',    hex: '#dc2626' },
+  { id: 'orange', label: 'Orange', hex: '#f97316' },
+  { id: 'yellow', label: 'Yellow', hex: '#facc15' },
+  { id: 'green',  label: 'Green',  hex: '#16a34a' },
+  { id: 'cyan',   label: 'Cyan',   hex: '#06b6d4' },
+  { id: 'blue',   label: 'Blue',   hex: '#2563eb' },
+  { id: 'purple', label: 'Purple', hex: '#9333ea' },
+  { id: 'pink',   label: 'Pink',   hex: '#db2777' },
+  { id: 'slate',  label: 'Slate',  hex: '#64748b' },
 ]
 
-/** Resolve a stored color (may be null) to a usable hex string with fallback. */
+/** Border-only extras — colors that don't make sense as a background fill
+ *  but read nicely as a ring. Gold is premium-locked. */
+export const AVATAR_BORDER_EXTRAS: AvatarColorOption[] = [
+  { id: 'gold', label: 'Gold', hex: '#d4af37', premiumOnly: true },
+]
+
+/** All allowed bg values. */
+export const ALLOWED_BG_HEXES: string[] = AVATAR_PALETTE.map(c => c.hex)
+/** All allowed border values (palette + premium extras). */
+export const ALLOWED_BORDER_HEXES: string[] = [
+  ...AVATAR_PALETTE.map(c => c.hex),
+  ...AVATAR_BORDER_EXTRAS.map(c => c.hex),
+]
+
+/** True if this border hex requires a premium membership to use. */
+export function isPremiumBorder(hex: string | null | undefined): boolean {
+  if (!hex) return false
+  return AVATAR_BORDER_EXTRAS.some(c => c.hex === hex && c.premiumOnly)
+}
+
+/** Resolve a stored color (may be null) to a usable CSS string. Falls back
+ *  to the default; 'none' stays 'none' (CharacterAvatar handles it). */
 export function resolveAvatarBg(saved: string | null | undefined): string {
   return saved ?? DEFAULT_AVATAR_BG_COLOR
 }

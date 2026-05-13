@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { updateUsername, updateShowcase, updateCharacterColor, updateAvatarColors } from '@/app/u/actions'
-import { AVATAR_PALETTE, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avatarColors'
+import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE } from '@/lib/avatarColors'
 import { equipBadge, unequipBadge } from '@/app/achievements/badgeActions'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import CharacterAvatar from '@/components/CharacterAvatar'
@@ -337,7 +337,8 @@ export default function ProfileClient({
       {/* ── Identity header ── */}
       <div className="flex flex-col items-center gap-3 pt-2 pb-7">
         {/* Avatar — equipped character + hat composite. Tap to open the
-            color picker (bg + border). */}
+            color picker (bg + border). Small pencil badge + caption below
+            make the affordance obvious to casual players. */}
         <button
           type="button"
           onClick={() => setAvatarPickerOpen(true)}
@@ -345,7 +346,7 @@ export default function ProfileClient({
           style={{
             background: 'none', border: 'none', padding: 0, cursor: 'pointer',
             borderRadius: '50%',
-            boxShadow: `0 0 28px ${(avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR)}33, inset 0 1px 0 rgba(255,255,255,0.15)`,
+            position: 'relative',
           }}
         >
           <CharacterAvatar
@@ -355,7 +356,25 @@ export default function ProfileClient({
             bgColor={avatarBg ?? DEFAULT_AVATAR_BG_COLOR}
             ringColor={avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR}
           />
+          {/* Pencil edit badge — like a profile-picture edit affordance */}
+          <span style={{
+            position: 'absolute', right: -2, bottom: -2,
+            width: 24, height: 24, borderRadius: '50%',
+            background: '#f0c040',
+            border: '2px solid #0a1422',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+            pointerEvents: 'none',
+          }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0a1422" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9"/>
+              <path d="M16.5 3.5a2.12 2.12 0 113 3L7 19l-4 1 1-4z"/>
+            </svg>
+          </span>
         </button>
+        <p className="font-karla" style={{ fontSize: '0.65rem', color: 'rgba(240,237,232,0.5)', marginTop: -2, letterSpacing: '0.06em' }}>
+          Tap to customize colors
+        </p>
 
         {/* Username + rename */}
         {showUsernameForm ? (
@@ -1139,16 +1158,24 @@ export default function ProfileClient({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 14 }}>
               {AVATAR_PALETTE.map(c => {
                 const isActive = (avatarBg ?? DEFAULT_AVATAR_BG_COLOR) === c.hex
+                const isNone = c.hex === NONE_VALUE
                 return (
                   <button
                     key={`bg-${c.id}`}
                     type="button"
                     onClick={() => setAvatarBg(c.hex)}
                     aria-label={`Background ${c.label}`}
+                    title={c.label}
                     style={{
                       width: '100%', aspectRatio: '1 / 1',
                       borderRadius: '50%',
-                      background: `radial-gradient(circle at 38% 35%, ${c.hex}ee 0%, ${c.hex}77 100%)`,
+                      background: isNone
+                        ? 'transparent'
+                        : `radial-gradient(circle at 38% 35%, ${c.hex}ee 0%, ${c.hex}77 100%)`,
+                      backgroundImage: isNone
+                        ? 'linear-gradient(45deg, rgba(255,255,255,0.18) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0.18) 75%, transparent 75%, transparent)'
+                        : undefined,
+                      backgroundSize: isNone ? '8px 8px' : undefined,
                       border: isActive ? `2px solid #f0c040` : '1px solid rgba(255,255,255,0.18)',
                       boxShadow: isActive ? `0 0 10px rgba(240,192,64,0.35)` : 'none',
                       cursor: 'pointer',
@@ -1164,28 +1191,56 @@ export default function ProfileClient({
               Border
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 16 }}>
-              {AVATAR_PALETTE.map(c => {
+              {[...AVATAR_PALETTE, ...AVATAR_BORDER_EXTRAS].map(c => {
                 const isActive = (avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR) === c.hex
+                const isNone = c.hex === NONE_VALUE
+                const locked = !!c.premiumOnly && !isPremium
                 return (
                   <button
                     key={`bd-${c.id}`}
                     type="button"
-                    onClick={() => setAvatarBorder(c.hex)}
-                    aria-label={`Border ${c.label}`}
+                    disabled={locked}
+                    onClick={() => { if (!locked) setAvatarBorder(c.hex) }}
+                    aria-label={`Border ${c.label}${locked ? ' (premium)' : ''}`}
+                    title={locked ? `${c.label} — premium only` : c.label}
                     style={{
                       width: '100%', aspectRatio: '1 / 1',
                       borderRadius: '50%',
                       background: 'rgba(6,12,20,0.7)',
-                      border: `3px solid ${c.hex}`,
+                      backgroundImage: isNone
+                        ? 'linear-gradient(45deg, rgba(255,255,255,0.18) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0.18) 75%, transparent 75%, transparent)'
+                        : undefined,
+                      backgroundSize: isNone ? '8px 8px' : undefined,
+                      border: isNone ? '1px dashed rgba(255,255,255,0.4)' : `3px solid ${c.hex}`,
                       outline: isActive ? '2px solid #f0c040' : 'none',
                       outlineOffset: 2,
-                      cursor: 'pointer',
+                      cursor: locked ? 'not-allowed' : 'pointer',
                       padding: 0,
+                      opacity: locked ? 0.45 : 1,
+                      position: 'relative',
+                      boxShadow: c.premiumOnly && !locked
+                        ? `0 0 10px ${c.hex}55, inset 0 0 6px ${c.hex}44`
+                        : undefined,
                     }}
-                  />
+                  >
+                    {locked && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{
+                        position: 'absolute', inset: 0, margin: 'auto',
+                        pointerEvents: 'none',
+                      }}>
+                        <rect x="4" y="11" width="16" height="10" rx="2"/>
+                        <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+                      </svg>
+                    )}
+                  </button>
                 )
               })}
             </div>
+            {!isPremium && (
+              <p className="font-karla" style={{ fontSize: '0.6rem', color: 'rgba(240,192,64,0.65)', marginBottom: 14, textAlign: 'center' }}>
+                ✦ Gold border unlocks with Premium membership
+              </p>
+            )}
 
             <div style={{ display: 'flex', gap: 8 }}>
               <button
