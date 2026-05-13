@@ -859,6 +859,19 @@ export default function PracticeRaidGame({
             onPlayerDefeated={handlePlayerDefeated}
           />
         </div>
+
+        {/* Nav level-up celebration — also rendered here so it surfaces while
+            phase is still 'playing' (the post-kill gate). The fall-through
+            return below also renders it for win/dead/idle states. */}
+        <NavLevelUpOverlay
+          info={levelUp}
+          onDismiss={() => {
+            setLevelUp(null)
+            const fn = pendingAdvanceRef.current
+            pendingAdvanceRef.current = null
+            fn?.()
+          }}
+        />
       </div>
     )
   }

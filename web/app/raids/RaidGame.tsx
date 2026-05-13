@@ -1050,6 +1050,19 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
             )
           })()}
         </div>
+
+        {/* Nav level-up celebration — also rendered here so it surfaces on
+            non-boss kills (phase stays 'playing'; the fall-through return
+            below never runs in that case). */}
+        <NavLevelUpOverlay
+          info={levelUp}
+          onDismiss={() => {
+            setLevelUp(null)
+            const fn = pendingAdvanceRef.current
+            pendingAdvanceRef.current = null
+            fn?.()
+          }}
+        />
       </div>
     )
   }
