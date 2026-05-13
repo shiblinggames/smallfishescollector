@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import type { ShipStats } from '@/lib/expeditions'
-import { RARITY_COLORS, computeCombatRating } from '@/lib/expeditions'
+import { RARITY_COLORS, computeCombatRating, computeVoyageScore } from '@/lib/expeditions'
 import { saveCrew } from './actions'
 import { renameShip } from '@/app/shipyard/actions'
 import { getXPProgress, getNavigatorTitle, navLevelBonuses } from '@/lib/expeditionLevel'
@@ -275,41 +275,50 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
         {hasCrew && (
           <div style={{ padding: '1rem 1rem 0.85rem' }}>
 
-            {/* Combat Rating — single unified score, tap to expand breakdown */}
+            {/* Two scores side-by-side, clearly labeled for each game mode.
+                Tap anywhere to expand the breakdown. */}
             {(() => {
               const ratedPower   = totalPower   + navBonus.power
               const ratedDodge   = totalDodge   + navBonus.navigation
               const ratedFortune = totalFortune + navBonus.fortune
               const ratedHP      = shipStats.durability + navBonus.hp
-              const rating = computeCombatRating(ratedPower, ratedDodge, ratedFortune, ratedHP, shipStats.minDamage)
+              const voyageScore  = computeVoyageScore(totalPower, totalDodge, totalFortune)
+              const raidRating   = computeCombatRating(ratedPower, ratedDodge, ratedFortune, ratedHP, shipStats.minDamage)
               return (
                 <button
                   onClick={() => setShowBreakdown(b => !b)}
                   style={{
                     width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem',
+                    display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem',
                   }}
                 >
-                  <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }}>
+                    {/* Voyage Score */}
                     <div style={{ textAlign: 'left' }}>
-                      <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a9488', marginBottom: 4 }}>Combat Rating</p>
-                      <p className="font-cinzel font-700" style={{ fontSize: '2.6rem', color: '#f0ede8', lineHeight: 1 }}>
-                        {rating.total}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                        <span style={{ fontSize: '0.78rem', lineHeight: 1 }}>🗺️</span>
+                        <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#7090c0' }}>Voyage Score</p>
+                      </div>
+                      <p className="font-cinzel font-700" style={{ fontSize: '2.4rem', color: '#f0ede8', lineHeight: 1 }}>
+                        {voyageScore}
                       </p>
+                      <p className="font-karla font-400 uppercase tracking-[0.06em]" style={{ fontSize: '0.46rem', color: '#5a6878', marginTop: 4 }}>daily routes</p>
                     </div>
-                    <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.07)', marginTop: 2 }} />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignSelf: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                        <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#f87171' }}>Offense</p>
-                        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1 }}>{rating.offense}</p>
+                    {/* Divider */}
+                    <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.07)', marginTop: 2, marginBottom: 2 }} />
+                    {/* Raid Rating */}
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                        <span style={{ fontSize: '0.78rem', lineHeight: 1 }}>⚔️</span>
+                        <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#c8704a' }}>Raid Rating</p>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                        <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#60a5fa' }}>Defense</p>
-                        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1 }}>{rating.defense}</p>
-                      </div>
+                      <p className="font-cinzel font-700" style={{ fontSize: '2.4rem', color: '#f0ede8', lineHeight: 1 }}>
+                        {raidRating.total}
+                      </p>
+                      <p className="font-karla font-400 uppercase tracking-[0.06em]" style={{ fontSize: '0.46rem', color: '#785848', marginTop: 4 }}>raid combat</p>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, marginTop: 4 }}>
                     <span style={{ fontSize: '0.65rem', color: '#4a4845', transition: 'transform 0.15s', display: 'inline-block', transform: showBreakdown ? 'rotate(180deg)' : 'none' }}>▼</span>
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
                       {STAT_COLS.map(s => (

@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
-import { EXPEDITION_SHIP_STATS, type Expedition } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 import RaidCard from './RaidCard'
 import ShipHero from './ShipHero'
 import DailyVoyagePanel from './DailyVoyagePanel'
@@ -18,17 +18,11 @@ export default async function ExpeditionsPage() {
 
   const admin = createAdminClient()
 
-  const [{ data: profile }, { data: expeditionRows }, collection, dailyVoyageState, { data: voyageHistoryRows }] = await Promise.all([
+  const [{ data: profile }, collection, dailyVoyageState, { data: voyageHistoryRows }] = await Promise.all([
     admin.from('profiles')
       .select('packs_available, doubloons, ship_tier, gems, saved_crew, ship_name, expedition_xp, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, has_completed_practice_raid')
       .eq('id', user.id)
       .single(),
-    admin.from('expeditions')
-      .select('*')
-      .eq('user_id', user.id)
-      .in('status', ['active', 'completed', 'failed'])
-      .order('started_at', { ascending: false })
-      .limit(20),
     getCollectionForCrew(),
     getDailyVoyageState(),
     admin.from('daily_voyages')
@@ -42,13 +36,8 @@ export default async function ExpeditionsPage() {
   const shipTier = profile?.ship_tier ?? 0
   const doubloons = profile?.doubloons ?? 0
   const navLevel = getLevelFromXP(profile?.expedition_xp ?? 0)
-  const recentExpeditions = (expeditionRows ?? []) as Expedition[]
   const savedCrewVariantIds: number[] = (profile?.saved_crew as number[] | null) ?? []
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
-
-  const activeExpedition = recentExpeditions.find(e => e.status === 'active') ?? null
-  const hasPendingVoyage = !('error' in dailyVoyageState) && dailyVoyageState.todayVoyage !== null
-  const hasActiveRaid = !!activeExpedition
 
   return (
     <>
@@ -98,7 +87,6 @@ export default async function ExpeditionsPage() {
               todayVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.todayVoyage}
               readyVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.readyVoyage}
               expeditionXP={profile?.expedition_xp ?? 0}
-              raidActive={hasActiveRaid}
               voyages={(voyageHistoryRows ?? []) as import('./VoyageHistory').VoyageHistoryEntry[]}
             />
           </div>
