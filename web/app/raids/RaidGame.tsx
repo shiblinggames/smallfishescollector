@@ -13,6 +13,7 @@ import {
 } from '@/lib/bossRaids'
 import RaidCombat from './RaidCombat'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
+import TapToContinueGate from '@/components/TapToContinueGate'
 
 type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
@@ -380,9 +381,12 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const navXPRef                        = useRef(initialExpeditionXP)
   const [xpPopup, setXpPopup]           = useState<{ value: number; id: number } | null>(null)
   const [levelUp, setLevelUp]           = useState<NavLevelUpInfo | null>(null)
-  // Action to run once the level-up overlay is dismissed — used to gate
-  // the next-fight advance on the celebration so the user sees the bar
-  // fill, sees the level-up, then proceeds.
+  // Tap-to-continue gate shown after every kill (no level-up branch).
+  // Lets the player sit on the log + XP totals as long as they want
+  // instead of being auto-advanced into the next fight.
+  const [awaitingContinue, setAwaitingContinue] = useState(false)
+  // Action to run once the level-up overlay OR the tap-to-continue prompt
+  // is dismissed — used to gate the next-fight advance.
   const pendingAdvanceRef               = useRef<(() => void) | null>(null)
 
   const fireIndicatorRef  = useRef<HTMLDivElement>(null)
@@ -914,11 +918,14 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
 
     if (newLevel > oldLevel) {
       // Show the celebration and defer the advance until the user taps
-      // dismiss (or the overlay is auto-cleared).
+      // dismiss. The level-up overlay is itself a tap-to-continue prompt.
       pendingAdvanceRef.current = advanceToNext
       setLevelUp({ fromLevel: oldLevel, toLevel: newLevel })
     } else {
-      advanceToNext()
+      // No level-up — still gate on a tap-to-continue so the player can
+      // sit on the log + XP totals at their own pace.
+      pendingAdvanceRef.current = advanceToNext
+      setAwaitingContinue(true)
     }
   }, [config, fortuneMult, resetEnemyForRound])
 
@@ -1059,6 +1066,19 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           info={levelUp}
           onDismiss={() => {
             setLevelUp(null)
+            const fn = pendingAdvanceRef.current
+            pendingAdvanceRef.current = null
+            fn?.()
+          }}
+        />
+
+        {/* Tap-to-continue gate after every kill (when no level-up). Lets
+            the player sit on the action log + XP totals at their own pace
+            before the next enemy mounts. */}
+        <TapToContinueGate
+          visible={awaitingContinue}
+          onTap={() => {
+            setAwaitingContinue(false)
             const fn = pendingAdvanceRef.current
             pendingAdvanceRef.current = null
             fn?.()

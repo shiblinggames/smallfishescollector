@@ -9,6 +9,7 @@ import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
 import RaidCombat from '../RaidCombat'
 import type { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
+import TapToContinueGate from '@/components/TapToContinueGate'
 
 type GamePhase  = 'idle' | 'playing' | 'win' | 'dead'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
@@ -369,7 +370,10 @@ export default function PracticeRaidGame({
   // otherwise (useCallback deps don't include navXP).
   const navXPRef                          = useRef(initialExpeditionXP)
   const [levelUp, setLevelUp]             = useState<NavLevelUpInfo | null>(null)
-  // Action to run after the level-up celebration is dismissed.
+  // Tap-to-continue gate shown after every kill when no level-up fires.
+  const [awaitingContinue, setAwaitingContinue] = useState(false)
+  // Action to run after the level-up celebration OR tap-to-continue is
+  // dismissed.
   const pendingAdvanceRef                 = useRef<(() => void) | null>(null)
   const [xpPopup, setXpPopup]             = useState<{ value: number; id: number } | null>(null)
 
@@ -746,7 +750,10 @@ export default function PracticeRaidGame({
       pendingAdvanceRef.current = showPostBattle
       setLevelUp({ fromLevel: oldLevel, toLevel: newLevel })
     } else {
-      showPostBattle()
+      // Wait for a tap before surfacing the post-battle screen so the player
+      // can sit on the log + XP totals at their own pace.
+      pendingAdvanceRef.current = showPostBattle
+      setAwaitingContinue(true)
     }
   }, [])
 
@@ -870,6 +877,19 @@ export default function PracticeRaidGame({
           info={levelUp}
           onDismiss={() => {
             setLevelUp(null)
+            const fn = pendingAdvanceRef.current
+            pendingAdvanceRef.current = null
+            fn?.()
+          }}
+        />
+
+        {/* Tap-to-continue gate after every kill (when no level-up). Lets
+            the player sit on the action log + XP totals at their own pace
+            before the post-battle screen pops up. */}
+        <TapToContinueGate
+          visible={awaitingContinue}
+          onTap={() => {
+            setAwaitingContinue(false)
             const fn = pendingAdvanceRef.current
             pendingAdvanceRef.current = null
             fn?.()
