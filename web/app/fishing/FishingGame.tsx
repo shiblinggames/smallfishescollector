@@ -3428,13 +3428,17 @@ export default function FishingGame({
                   <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5, marginBottom: 8 }}>
                     Sell your catch below<br />to keep fishing
                   </p>
-                  <Link
-                    href="/marketplace/shipyard"
+                  {/* Open the Fish Hold drawer (where the upgrade button lives)
+                      instead of routing to the shipyard — hold capacity is
+                      now upgraded directly from the fishing page. */}
+                  <button
+                    type="button"
+                    onClick={() => { setHoldOpen(true); setGearOpen(false); setBaitOpen(false); setSellOpen(false) }}
                     className="font-karla font-700"
-                    style={{ fontSize: '0.68rem', color: '#60a5fa', textDecoration: 'none', display: 'inline-block', borderBottom: '1px solid rgba(96,165,250,0.4)', paddingBottom: 1 }}
+                    style={{ fontSize: '0.68rem', color: '#60a5fa', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid rgba(96,165,250,0.4)', paddingBottom: 1 }}
                   >
-                    Upgrade your boat for more storage ↗
-                  </Link>
+                    Upgrade your hold for more storage ↑
+                  </button>
                 </motion.div>
               )}
               {(phase === 'idle' || phase === 'result') && allAncientCaught && (

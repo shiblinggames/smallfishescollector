@@ -96,7 +96,7 @@ const HOW_IT_WORKS = [
   },
   {
     title: 'Fish Hold',
-    body: "Your ship determines how many fish you can hold. When your hold is full you can't cast — head to the market to sell, then come back. Upgrade your ship at the Shipyard to carry more.",
+    body: "When your hold is full you can't cast — sell some catch from the Hold drawer to make room. You can also upgrade the hold for more capacity right from the Hold drawer on the fishing screen.",
   },
   {
     title: 'Crates',
