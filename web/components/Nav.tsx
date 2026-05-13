@@ -189,21 +189,17 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
     },
   ]
 
+  // Mobile hamburger menu — the secondary destinations that don't fit in
+  // the 5-slot bottom tab bar. Order: market, achievements, social
+  // (matches the canonical nav order: tavern/fishing/expeditions/profile/
+  // leaderboards in the bottom bar, then the rest live here).
   const mobileMenuLinks = [
-    { href: '/leaderboard', label: 'Leaderboard', badge: false,
+    { href: '/marketplace', label: 'Market', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="14" width="5" height="7" rx="1"/>
-          <rect x="9.5" y="9" width="5" height="12" rx="1"/>
-          <rect x="17" y="4" width="5" height="17" rx="1"/>
-        </svg>
-      )
-    },
-    { href: '/social', label: 'Social', badge: false,
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/>
+          <path d="M12 2v10"/>
+          <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
+          <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
         </svg>
       )
     },
@@ -216,6 +212,14 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
+    { href: '/social', label: 'Social', badge: false,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/>
+        </svg>
+      )
+    },
   ]
 
   const desktopOnlyLinks = [
@@ -223,6 +227,10 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
     { href: '/social',       label: 'Social',        badge: null },
   ]
 
+  // Desktop top-bar inline links. Canonical order: tavern, fishing,
+  // expeditions, leaderboard, market — then achievements + social from
+  // desktopOnlyLinks. Profile is the avatar button on the far right,
+  // so it doesn't appear here.
   const links = [
     { href: '/tavern', label: 'Tavern', badge: null,
       icon: (
@@ -244,15 +252,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
-    { href: '/marketplace', label: 'Market', badge: null,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2v10"/>
-          <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
-          <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
-        </svg>
-      )
-    },
     { href: '/expeditions', label: 'Expeditions', badge: voyageBadge || null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -268,6 +267,15 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
           <rect x="2" y="14" width="5" height="7" rx="1"/>
           <rect x="9.5" y="9" width="5" height="12" rx="1"/>
           <rect x="17" y="4" width="5" height="17" rx="1"/>
+        </svg>
+      )
+    },
+    { href: '/marketplace', label: 'Market', badge: null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2v10"/>
+          <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
+          <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
         </svg>
       )
     },
