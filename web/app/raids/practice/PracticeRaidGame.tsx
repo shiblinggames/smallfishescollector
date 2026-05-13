@@ -449,11 +449,19 @@ export default function PracticeRaidGame({
 
   // Turn-based: no "OPEN FIRE" gate; auto-enter combat on mount.
   // First-time users still get the tour from handleOpenFire().
+  // Defer past the first paint via double-RAF — framer-motion content in
+  // <RaidCombat /> mounted during initial layout was pulling the body-level
+  // fixed Nav + MobileTabBar into iOS PWA's compositing context and making
+  // them drift on scroll. See memory: feedback_pagetransition_ios_pwa.md
   const autoStartedRef = useRef(false)
+  const autoStartRafRef = useRef(0)
   useEffect(() => {
     if (autoStartedRef.current) return
     autoStartedRef.current = true
-    handleOpenFire()
+    autoStartRafRef.current = requestAnimationFrame(() => {
+      autoStartRafRef.current = requestAnimationFrame(() => { handleOpenFire() })
+    })
+    return () => { if (autoStartRafRef.current) cancelAnimationFrame(autoStartRafRef.current) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

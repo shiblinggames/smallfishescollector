@@ -487,11 +487,22 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   }, [playerHPMax, resetEnemyForRound])
 
   // Turn-based: no "OPEN FIRE" gate, so jump straight into combat on mount.
+  // BUT — we must defer past the first paint, otherwise framer-motion content
+  // in <RaidCombat /> mounts during initial layout and iOS Safari (PWA mode)
+  // pulls the body-level fixed Nav + MobileTabBar into the same compositing
+  // context, causing them to drift on scroll. A double-RAF gives the browser
+  // one full paint with the page in its non-combat skeleton before we mount
+  // the heavy combat content.
+  // See memory: feedback_pagetransition_ios_pwa.md
   const autoStartedRef = useRef(false)
+  const autoStartRafRef = useRef(0)
   useEffect(() => {
     if (autoStartedRef.current) return
     autoStartedRef.current = true
-    startGame()
+    autoStartRafRef.current = requestAnimationFrame(() => {
+      autoStartRafRef.current = requestAnimationFrame(() => { startGame() })
+    })
+    return () => { if (autoStartRafRef.current) cancelAnimationFrame(autoStartRafRef.current) }
   }, [startGame])
 
   useEffect(() => {
