@@ -400,7 +400,10 @@ export default function RaidCombat({
 
   function resolveTurn(pAction: EnemyAction, eAction: EnemyAction, first: Actor, pSpeedRoll: number, eSpeedRoll: number, lockedAimResult: ShotResult | null) {
     setSubPhase('resolving')
-    const log: string[] = [`Speed: you ${pSpeedRoll} vs enemy ${eSpeedRoll} → ${first} first`]
+    // Speed-roll line shows immediately. Per-step lines are appended as each
+    // step starts animating (see playStep) so the log feels alive instead of
+    // dumping the whole turn at once.
+    setResolveLog([`Speed: you ${pSpeedRoll} vs enemy ${eSpeedRoll} → ${first} first`])
 
     const order: Actor[] = first === 'player' ? ['player', 'enemy'] : ['enemy', 'player']
 
@@ -414,6 +417,7 @@ export default function RaidCombat({
       splatText: string
       splatColor: string
       big?: boolean
+      logLines: string[]         // log lines to reveal when this step starts
     }
 
     let pHp = playerHpRef.current
@@ -428,12 +432,13 @@ export default function RaidCombat({
       let splatTarget: Actor | null = null
       let splatText = ''
       let splatColor = '#ef4444'
+      const stepLines: string[] = []
 
       if (action === 'reload') {
-        if (who === 'player') { pCharges = Math.min(MAX_CHARGES, pCharges + 1); log.push(`You reload (+1 → ${pCharges})`) }
-        else                  { eCharges = Math.min(MAX_CHARGES, eCharges + 1); log.push(`Enemy reloads (+1 → ${eCharges})`) }
+        if (who === 'player') { pCharges = Math.min(MAX_CHARGES, pCharges + 1); stepLines.push(`You reload (+1 → ${pCharges})`) }
+        else                  { eCharges = Math.min(MAX_CHARGES, eCharges + 1); stepLines.push(`Enemy reloads (+1 → ${eCharges})`) }
       } else if (action === 'dodge') {
-        log.push(`${who === 'player' ? 'You brace' : 'Enemy braces'} for evasion`)
+        stepLines.push(`${who === 'player' ? 'You brace' : 'Enemy braces'} for evasion`)
       } else if (action === 'fire' || action === 'volley') {
         if (who === 'player') pCharges -= (action === 'volley' ? MAX_CHARGES : 1)
         else                  eCharges -= (action === 'volley' ? MAX_CHARGES : 1)
@@ -462,33 +467,31 @@ export default function RaidCombat({
           const def = rollDodge(defenderSpeed, defenderNav)
           const atk = rollAttackerVsDodge(attackerSpeed)
           if (def >= atk) {
-            log.push(`${isAttackerPlayer ? 'Enemy dodges' : 'You dodge'} ${def} vs ${atk}`)
+            stepLines.push(`${isAttackerPlayer ? 'Enemy dodges' : 'You dodge'} ${def} vs ${atk}`)
             splatText = 'Dodged'
             splatColor = '#38bdf8'
-            steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor })
+            steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, logLines: stepLines })
             continue
           } else {
-            log.push(`${isAttackerPlayer ? 'Enemy fails dodge' : 'You fail dodge'} ${def} vs ${atk}`)
+            stepLines.push(`${isAttackerPlayer ? 'Enemy fails dodge' : 'You fail dodge'} ${def} vs ${atk}`)
           }
         }
 
         if (isAttackerPlayer) {
           eHp = Math.max(0, eHp - dmg)
-          log.push(`You ${action === 'volley' ? 'volley' : 'fire'}${lockedAimResult === 'critical' ? ' — CRITICAL!' : ''} for ${dmg}`)
+          stepLines.push(`You ${action === 'volley' ? 'volley' : 'fire'}${lockedAimResult === 'critical' ? ' — CRITICAL!' : ''} for ${dmg}`)
           splatText = `-${dmg}`
           splatColor = lockedAimResult === 'critical' ? '#fbbf24' : '#ef4444'
         } else {
           pHp = Math.max(0, pHp - dmg)
-          log.push(`Enemy ${action === 'volley' ? 'volleys' : 'fires'} for ${dmg}`)
+          stepLines.push(`Enemy ${action === 'volley' ? 'volleys' : 'fires'} for ${dmg}`)
           splatText = `-${dmg}`
           splatColor = '#ef4444'
         }
       }
 
-      steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, big: who === 'player' && lockedAimResult === 'critical' })
+      steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, big: who === 'player' && lockedAimResult === 'critical', logLines: stepLines })
     }
-
-    setResolveLog(log)
 
     // Animate the pre-computed steps sequentially. Each step:
     //   1. Update HP/charges
@@ -516,6 +519,15 @@ export default function RaidCombat({
       const step = steps[i]
       const isAttack  = step.action === 'fire' || step.action === 'volley'
       const isDodged  = isAttack && step.splatText === 'Dodged'
+
+      // Stream this step's log lines into the visible log as the step plays.
+      // Multi-line steps (e.g. "Enemy fails dodge" + "You fire for X") cascade
+      // with a small stagger so each line is felt individually.
+      step.logLines.forEach((line, j) => {
+        setTimeout(() => {
+          setResolveLog(prev => [...prev, line])
+        }, j * 220)
+      })
 
       // Charges always update at the start of the step (reloads visible right
       // away; spending charges visible the moment the cannon fires).
@@ -1134,7 +1146,10 @@ function ActionMenu({ canFire, canVolley, onSelect, disabled = false, highlighte
 
 function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
   // Pokemon-style "battle text" box. Always visible, just current turn's events.
-  const visible = lines.length > 0 ? lines : ['What will you do?']
+  // Each new line slides + fades in so the log feels alive instead of dumping
+  // the whole turn at once.
+  const isEmpty = lines.length === 0
+  const visible = isEmpty ? ['What will you do?'] : lines
   return (
     <div style={{
       background: '#04080e',
@@ -1149,7 +1164,19 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
         </p>
       </div>
       {visible.map((line, i) => (
-        <p key={i} className="font-karla" style={{ fontSize: '0.86rem', color: '#c8d4e0', lineHeight: 1.55 }}>{line}</p>
+        <motion.p
+          // Keying on the line text + index means lines added later animate
+          // in fresh, but the existing ones don't re-animate on each render.
+          // Reset the keyspace when the turn changes so prompts re-animate.
+          key={`t${turn}-${i}-${line}`}
+          initial={isEmpty ? false : { opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          className="font-karla"
+          style={{ fontSize: '0.86rem', color: '#c8d4e0', lineHeight: 1.55 }}
+        >
+          {line}
+        </motion.p>
       ))}
     </div>
   )
