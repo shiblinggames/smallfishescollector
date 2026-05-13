@@ -26,6 +26,7 @@ export interface RaidPlayerStats {
   totalFortune: number
   shipImageUrl: string
   shipName: string
+  username: string | null
   crewCount: number
   crewMembers: RaidCrewMember[]
   equippedShipSkin: string | null
@@ -39,7 +40,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, equipped_ship_skin, ship_skins, equipped_raid_items, has_seen_raid_tutorial, expedition_xp')
+    .select('ship_tier, saved_crew, ship_name, username, equipped_ship_skin, ship_skins, equipped_raid_items, has_seen_raid_tutorial, expedition_xp')
     .eq('id', userId)
     .single()
 
@@ -92,6 +93,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     totalFortune:     totalFortune + navBonus.fortune,
     shipImageUrl:     ship.image,
     shipName:         (profile?.ship_name as string | null) ?? ship.name,
+    username:         (profile?.username as string | null) ?? null,
     crewCount:        savedCrew.length,
     crewMembers,
     equippedShipSkin:     (profile?.equipped_ship_skin as string | null) ?? null,

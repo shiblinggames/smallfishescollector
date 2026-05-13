@@ -27,6 +27,7 @@ export default async function PracticeRaidPage() {
           <PracticeRaidGame
             shipImageUrl={stats.shipImageUrl}
             shipName={stats.shipName}
+            username={stats.username}
             playerHPMax={stats.playerHPMax}
             shipMinDamage={stats.shipMinDamage}
             shipSpeed={stats.shipSpeed}

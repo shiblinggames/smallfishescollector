@@ -28,6 +28,7 @@ export default async function RaidPage() {
             config={CORSAIRS_RECKONING}
             shipImageUrl={stats.shipImageUrl}
             shipName={stats.shipName}
+            username={stats.username}
             playerHPMax={stats.playerHPMax}
             shipMinDamage={stats.shipMinDamage}
             shipSpeed={stats.shipSpeed}

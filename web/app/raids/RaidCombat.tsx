@@ -117,6 +117,11 @@ export interface RaidCombatProps {
    *  e.g. `'hue-rotate(180deg) brightness(0.7)'` for Corsair Black. */
   shipFilter?: string
   shipName: string
+  /** What to show on the player nameplate (and in the Captain's Ledger
+   *  popup header). Defaults to shipName when not provided. Used to
+   *  surface the player's username during a raid instead of the boat
+   *  name they've set. */
+  playerLabel?: string
   playerHpMax: number
   playerHp: number          // current at start of this encounter
   shipMinDamage: number
@@ -137,7 +142,7 @@ export interface RaidCombatProps {
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function RaidCombat({
-  enemy, isBoss, shipImageUrl, shipFilter, shipName,
+  enemy, isBoss, shipImageUrl, shipFilter, shipName, playerLabel,
   playerHpMax, playerHp: initialPlayerHp,
   shipMinDamage, shipSpeed, totalPower, totalNavigation,
   totalFortune = 0,
@@ -145,6 +150,9 @@ export default function RaidCombat({
   killReward,
   onEnemyDefeated, onPlayerDefeated,
 }: RaidCombatProps) {
+  // The label shown in-fight + on the ledger popup. Defaults to the boat
+  // name when the parent didn't pass a player-specific name through.
+  const nameplate = playerLabel ?? shipName
   // Stats-breakdown popup, opened by tapping the player nameplate
   const [showStats, setShowStats]     = useState(false)
   const [playerHp, setPlayerHp]       = useState(initialPlayerHp)
@@ -897,7 +905,7 @@ export default function RaidCombat({
         <button
           type="button"
           onClick={() => setShowStats(true)}
-          aria-label={`${shipName} — view stats`}
+          aria-label={`${nameplate} — view stats`}
           style={{
             position: 'absolute', bottom: 10, right: 10, zIndex: 4,
             padding: '0.45rem 0.65rem',
@@ -910,7 +918,7 @@ export default function RaidCombat({
           }}
         >
           <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff', lineHeight: 1, marginBottom: 4 }}>
-            {shipName}
+            {nameplate}
           </p>
           <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact />
           <ChargesRow charges={playerCharges} max={MAX_CHARGES} small />
@@ -964,7 +972,7 @@ export default function RaidCombat({
       <AnimatePresence>
         {showStats && (
           <PlayerStatsPopup
-            shipName={shipName}
+            shipName={nameplate}
             shipImageUrl={shipImageUrl}
             shipFilter={shipFilter}
             playerHp={playerHp}
@@ -1086,7 +1094,7 @@ function PlayerStatsPopup({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={shipImageUrl} alt="" style={{ width: 60, height: 60, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 3px 8px rgba(0,0,0,0.5))${shipFilter && shipFilter !== 'none' ? ` ${shipFilter}` : ''}` }} />
           <div style={{ minWidth: 0, flex: 1 }}>
-            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.68rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 3 }}>Your Ship</p>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.68rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 3 }}>Captain</p>
             <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f0ede8', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shipName}</p>
           </div>
         </div>
