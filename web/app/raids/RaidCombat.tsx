@@ -151,6 +151,10 @@ export interface RaidCombatProps {
   killReward?: { gold: number; xp: number }
   onEnemyDefeated: (remainingPlayerHp: number) => void
   onPlayerDefeated: () => void
+  /** When provided, renders a small ← icon in the top-right of the battle
+   *  stage so the player can back out without a dedicated row above the
+   *  game screen. Parent wires the destination (e.g. /expeditions). */
+  onLeave?: () => void
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -164,7 +168,7 @@ export default function RaidCombat({
   totalFortune = 0,
   equippedRaidItems,
   killReward,
-  onEnemyDefeated, onPlayerDefeated,
+  onEnemyDefeated, onPlayerDefeated, onLeave,
 }: RaidCombatProps) {
   // The label shown in-fight + on the ledger popup. Defaults to the boat
   // name when the parent didn't pass a player-specific name through.
@@ -694,6 +698,34 @@ export default function RaidCombat({
           position: 'absolute', left: 0, right: 0, top: '38%', bottom: 0,
           background: 'linear-gradient(180deg, rgba(20,40,60,0.4) 0%, rgba(8,16,28,0.85) 100%)',
         }} />
+
+        {/* Leave button — small ← icon in the top-right of the battle stage.
+            Replaces the dedicated Leave row above the XP bar so the game
+            screen can use that vertical space and the XP bar sits right
+            under the page header. */}
+        {onLeave && (
+          <button
+            type="button"
+            onClick={onLeave}
+            aria-label="Leave raid"
+            style={{
+              position: 'absolute', top: 10, right: 10, zIndex: 5,
+              width: 32, height: 32, borderRadius: '50%',
+              background: 'rgba(6,12,20,0.78)',
+              border: '1px solid rgba(122,138,160,0.4)',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: 0,
+              touchAction: 'manipulation',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5"/>
+              <path d="M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+        )}
 
         {/* Enemy HP nameplate — top-left, with circular portrait badge */}
         <div style={{
