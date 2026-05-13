@@ -370,6 +370,21 @@ body {
 }
 .rod-glow { animation: rod-glow-pulse 2.4s ease-in-out infinite; }
 
+/* ── Boat glow (Ethereal — slow, soft, divine) ── */
+@keyframes boat-glow-pulse {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 3px var(--boat-glow-color, rgba(220,235,255,0.85)))
+      drop-shadow(0 0 8px var(--boat-glow-color, rgba(220,235,255,0.55)));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 6px var(--boat-glow-color, rgba(220,235,255,0.95)))
+      drop-shadow(0 0 16px var(--boat-glow-color, rgba(220,235,255,0.7)));
+  }
+}
+.boat-glow { animation: boat-glow-pulse 3.6s ease-in-out infinite; }
+
 /* ── Expeditions page zoom ── */
 .expeditions-content        { zoom: 1.35; }
 @media (min-width: 640px)   { .expeditions-content { zoom: 1.4; } }

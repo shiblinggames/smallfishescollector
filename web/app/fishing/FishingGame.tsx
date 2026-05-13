@@ -2606,7 +2606,12 @@ export default function FishingGame({
                       transformOrigin: 'center center',
                       pointerEvents: 'none',
                     }}>
-                      <img src={src} alt="" style={{ width: '100%', display: 'block' }} />
+                      <img
+                        src={src}
+                        alt=""
+                        className={boatDef.glow ? 'boat-glow' : undefined}
+                        style={{ width: '100%', display: 'block' }}
+                      />
                     </div>
                   )
                 })()}

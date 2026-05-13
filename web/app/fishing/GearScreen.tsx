@@ -451,11 +451,16 @@ export default function GearScreen({
                   width: 36, height: 36, overflow: 'hidden',
                 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={activeBoat?.restImageUrl ?? '/boat_default_rest.png'} alt="" style={{
-                    width: '170%', height: 'auto', display: 'block',
-                    position: 'absolute', top: '50%', left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                  }} />
+                  <img
+                    src={activeBoat?.restImageUrl ?? '/boat_default_rest.png'}
+                    alt=""
+                    className={activeBoat?.glow ? 'boat-glow' : undefined}
+                    style={{
+                      width: '170%', height: 'auto', display: 'block',
+                      position: 'absolute', top: '50%', left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  />
                 </div>
               }
             />
@@ -1070,11 +1075,16 @@ export default function GearScreen({
                             width: 48, height: 48, overflow: 'hidden',
                           }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={b.restImageUrl} alt="" style={{
-                              width: '170%', height: 'auto', display: 'block',
-                              position: 'absolute', top: '50%', left: '50%',
-                              transform: 'translate(-50%, -50%)',
-                            }} />
+                            <img
+                              src={b.restImageUrl}
+                              alt=""
+                              className={b.glow ? 'boat-glow' : undefined}
+                              style={{
+                                width: '170%', height: 'auto', display: 'block',
+                                position: 'absolute', top: '50%', left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                              }}
+                            />
                           </div>
                           <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: owned ? '#f0ede8' : '#a0a09a', lineHeight: 1.1, textAlign: 'center' }}>{b.name}</p>
                           {isEquipped ? (

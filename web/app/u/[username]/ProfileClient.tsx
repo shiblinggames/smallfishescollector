@@ -307,7 +307,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                       transformOrigin: 'center center',
                       pointerEvents: 'none',
                     }}>
-                      <img src={bd.restImageUrl} alt="" style={{ width: '100%', display: 'block' }} />
+                      <img src={bd.restImageUrl} alt="" className={bd.glow ? 'boat-glow' : undefined} style={{ width: '100%', display: 'block' }} />
                     </div>
                   )
                 })()}

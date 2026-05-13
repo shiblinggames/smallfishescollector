@@ -21,6 +21,8 @@ export interface BoatDef {
   positions: Record<BoatFrame, BoatPos>
   /** Only obtainable from crates — hidden from the shop picker unless owned. */
   crateOnly?: boolean
+  /** Applies the `.boat-glow` CSS animation to the overlay image. */
+  glow?: boolean
 }
 
 /** Default "Driftwood" — no overlay; uses the base sprite's boat. */
@@ -127,6 +129,16 @@ export const BOATS: BoatDef[] = [
     restImageUrl: '/boat_periwinkle_rest.png',
     castImageUrl: '/boat_periwinkle_cast.png',
     positions: SHARED_POSITIONS,
+  },
+  {
+    id: 'ethereal',
+    name: 'Ethereal',
+    color: '#dde8ff',
+    cost: 500000,
+    restImageUrl: '/boat_ethereal_rest.png',
+    castImageUrl: '/boat_ethereal_cast.png',
+    positions: SHARED_POSITIONS,
+    glow: true,
   },
 ]
 
