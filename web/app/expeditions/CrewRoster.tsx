@@ -5,7 +5,7 @@ import type { ShipStats } from '@/lib/expeditions'
 import { RARITY_COLORS } from '@/lib/expeditions'
 import { saveCrew } from './actions'
 import { renameShip } from '@/app/shipyard/actions'
-import { getXPProgress, getNavigatorTitle } from '@/lib/expeditionLevel'
+import { getXPProgress, getNavigatorTitle, navLevelBonuses } from '@/lib/expeditionLevel'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 
@@ -112,6 +112,9 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
     ? [...pickerCards].sort((a, b) => b[sortBy] - a[sortBy])
     : pickerCards
 
+  // Crew-only totals (voyage uses these directly; Nav-level bonus is layered
+  // in below for the raid-side score only).
+  const navBonus     = navLevelBonuses(xpProgress.level)
   const totalPower   = slots.reduce((s, c, i) => s + (c ? Math.round(c.power   * (i === 0 ? 1 : 0.8)) : 0), 0)
   const totalDodge   = slots.reduce((s, c, i) => s + (c ? Math.round(c.dodge   * (i === 0 ? 1 : 0.8)) : 0), 0)
   const totalFortune = slots.reduce((s, c, i) => s + (c ? Math.round(c.fortune * (i === 0 ? 1 : 0.8)) : 0), 0)
@@ -275,8 +278,12 @@ export default function CrewRoster({ shipStats, collection, savedCrewVariantIds,
             {/* Scores row — tap to expand breakdown */}
             {(() => {
               const voyageScore = totalPower + totalDodge + Math.round(totalFortune * 0.5)
-              const powerMax    = shipStats.minDamage + Math.floor(totalPower / 4)
-              const raidScore   = Math.floor(powerMax * 4) + Math.floor(shipStats.durability * 0.5) + Math.floor(totalDodge * 0.4) + Math.floor(totalFortune * 0.2)
+              const raidPower   = totalPower   + navBonus.power
+              const raidDodge   = totalDodge   + navBonus.navigation
+              const raidFortune = totalFortune + navBonus.fortune
+              const raidHP      = shipStats.durability + navBonus.hp
+              const powerMax    = shipStats.minDamage + Math.floor(raidPower / 4)
+              const raidScore   = Math.floor(powerMax * 4) + Math.floor(raidHP * 0.5) + Math.floor(raidDodge * 0.4) + Math.floor(raidFortune * 0.2)
               return (
                 <button
                   onClick={() => setShowBreakdown(b => !b)}

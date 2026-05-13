@@ -54,6 +54,28 @@ export function getNavigatorTitle(level: number): string {
   return TITLES.find(t => level >= t.minLevel)?.title ?? 'Deckhand'
 }
 
+// ── Nav-level → combat bonuses ──────────────────────────────────────────────
+// Veteran-captain stat boost applied on top of ship + crew totals. Per level:
+//   +1 max HP
+// Every 5 levels:
+//   +1 Power, +1 Navigation (Dodge), +1 Fortune
+// Tuning sanity: at Nav 30 a player gains +30 HP and +6 to each of the other
+// three stats — meaningful but doesn't eclipse crew/gear investment.
+export interface NavLevelBonuses {
+  hp: number
+  power: number
+  navigation: number
+  fortune: number
+}
+export function navLevelBonuses(navLevel: number): NavLevelBonuses {
+  return {
+    hp:         navLevel,
+    power:      Math.floor(navLevel / 5),
+    navigation: Math.floor(navLevel / 5),
+    fortune:    Math.floor(navLevel / 5),
+  }
+}
+
 // ── XP awarded per voyage ────────────────────────────────────────────────────
 
 // Base XP for completing the route at all

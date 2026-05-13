@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { applyVariantBoosts, EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
+import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
 import { unlockBadge } from '@/app/achievements/badgeActions'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
@@ -38,7 +39,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, equipped_ship_skin, ship_skins, equipped_raid_items, has_seen_raid_tutorial')
+    .select('ship_tier, saved_crew, ship_name, equipped_ship_skin, ship_skins, equipped_raid_items, has_seen_raid_tutorial, expedition_xp')
     .eq('id', userId)
     .single()
 
@@ -78,13 +79,17 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     }
   }
 
+  // Apply Nav-level captain bonuses on top of crew + ship totals.
+  const navLevel = getLevelFromXP((profile?.expedition_xp as number | null) ?? 0)
+  const navBonus = navLevelBonuses(navLevel)
+
   return {
-    playerHPMax:      ship.durability,
+    playerHPMax:      ship.durability + navBonus.hp,
     shipMinDamage:    ship.minDamage,
     shipSpeed:        ship.speed,
-    totalPower,
-    totalDodge,
-    totalFortune,
+    totalPower:       totalPower   + navBonus.power,
+    totalDodge:       totalDodge   + navBonus.navigation,
+    totalFortune:     totalFortune + navBonus.fortune,
     shipImageUrl:     ship.image,
     shipName:         (profile?.ship_name as string | null) ?? ship.name,
     crewCount:        savedCrew.length,
