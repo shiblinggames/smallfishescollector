@@ -46,10 +46,10 @@ function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: numb
     return Math.floor(Math.random() * (max - min + 1)) + min
   }
   if (res === 'hit') {
-    // Crew-aware floor: keeps variance pinned at ~3.4× as crew power scales
-    // past where shipMin alone would let it widen. No-op at today's top crew
-    // (powerMax × 0.3 ≈ shipMin), kicks in for future high-power builds.
-    const hitMin = Math.max(shipMinDamage, Math.floor(powerMax * 0.3))
+    // Crew-aware floor: hit damage min lifts with crew investment, pinning
+    // variance at ~2× regardless of ship tier, crew composition, or nav level.
+    // shipMin remains the absolute floor for under-built captains.
+    const hitMin = Math.max(shipMinDamage, Math.floor(powerMax * 0.5))
     return Math.floor(Math.random() * (powerMax - hitMin + 1)) + hitMin
   }
   // graze
