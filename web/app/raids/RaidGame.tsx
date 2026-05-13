@@ -950,7 +950,13 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     return (
       <div className="flex flex-col items-center gap-2 select-none" style={{
         userSelect: 'none',
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
+        // Available height: viewport
+        //   - Nav header (44px mobile / 64px desktop — use mobile, it's the smaller window)
+        //   - MobileTabBar (~64px, hidden on sm+ but cheap to reserve)
+        //   - iOS safe-area-bottom (home indicator)
+        // and reserve a small bottom pad above the tab bar so the action
+        // panel never bleeds into it.
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 8px)',
         minHeight: 'calc(100dvh - 44px - env(safe-area-inset-bottom, 0px))',
       }}>
         {/* Nav level bar — kept across all phases. NOTE: must NOT be

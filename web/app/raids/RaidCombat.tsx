@@ -588,12 +588,14 @@ export default function RaidCombat({
       width: '100%',
     }}>
       {/* Battle stage — ocean scene with ships and HP boxes.
-          flex:1 lets it grow into available vertical space on tall phones;
-          minHeight keeps it readable on short viewports. */}
+          flex:1 lets it grow into available vertical space on tall phones.
+          minHeight is a small floor so it stays readable on short viewports
+          but small enough that the action panel below never gets squeezed
+          behind the MobileTabBar. */}
       <div style={{
         position: 'relative',
         flex: 1,
-        minHeight: 'min(60vh, 460px)',
+        minHeight: 320,
         background: 'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)',
         overflow: 'hidden',
       }}>

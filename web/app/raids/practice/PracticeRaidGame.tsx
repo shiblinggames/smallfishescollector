@@ -748,7 +748,9 @@ export default function PracticeRaidGame({
     return (
       <div className="flex flex-col items-center gap-2 select-none" style={{
         userSelect: 'none',
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
+        // Reserve room for the MobileTabBar (~64px) + iOS safe-area-bottom
+        // so the action panel never bleeds into the tab bar.
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 8px)',
         minHeight: 'calc(100dvh - 44px - env(safe-area-inset-bottom, 0px))',
       }}>
         {/* NavLevelBar must NOT be position:sticky — see memory
