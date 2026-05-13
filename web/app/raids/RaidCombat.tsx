@@ -890,7 +890,10 @@ export default function RaidCombat({
           })()}
         </AnimatePresence>
 
-        {/* Player HP box — bottom-right. Tap to open a stats breakdown popup. */}
+        {/* Player HP box — bottom-right. Tap to open the Captain's Ledger
+            (full stats + equipped raid items under "Special"). Kept minimal
+            visually here; item details live inside the popup, not on the
+            battle screen. */}
         <button
           type="button"
           onClick={() => setShowStats(true)}
@@ -906,33 +909,6 @@ export default function RaidCombat({
             font: 'inherit', color: 'inherit',
           }}
         >
-          {/* Equipped-item chips so the player can see at a glance what
-              raid items are active in this fight. Tap the nameplate for
-              the full description. */}
-          {equippedRaidItems.length > 0 && (
-            <div style={{ display: 'flex', gap: 4, marginBottom: 5 }}>
-              {equippedRaidItems.slice(0, 4).map(id => {
-                const item = getRaidItem(id)
-                if (!item) return null
-                return (
-                  <div key={id} title={`${item.name}: ${item.description}`} style={{
-                    width: 22, height: 22, borderRadius: 6,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'rgba(251,191,36,0.14)',
-                    border: '1px solid rgba(251,191,36,0.5)',
-                    flexShrink: 0,
-                  }}>
-                    {item.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.image} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />
-                    ) : (
-                      <span style={{ fontSize: '0.78rem', lineHeight: 1 }}>{item.emoji}</span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
           <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff', lineHeight: 1, marginBottom: 4 }}>
             {shipName}
           </p>
@@ -1052,13 +1028,13 @@ function PlayerStatsPopup({
   const critMin   = shipMinDamage * 2
   const critMax   = Math.round(powerMax * 1.5)
   // Combined "maneuver" stat — Ship Speed and Navigation both feed into how
-  // nimble the ship is in fights, so they're summed into one Sailing score.
-  const sailing   = shipSpeed + totalNavigation
+  // nimble the ship is in fights, so they're summed into one Speed score.
+  const speed   = shipSpeed + totalNavigation
 
   const rows: { label: string; value: string; hint: string; color: string }[] = [
     { label: 'Damage',      value: `${shipMinDamage}–${powerMax}`, hint: 'normal-hit damage range',         color: '#f87171' },
     { label: 'Crit Damage', value: `${critMin}–${critMax}`,        hint: 'damage on a critical lock',       color: '#fbbf24' },
-    { label: 'Sailing',     value: String(sailing),                hint: 'turn order, dodge, evasion',      color: '#60a5fa' },
+    { label: 'Speed',       value: String(speed),                  hint: 'turn order, dodge, evasion',      color: '#60a5fa' },
     { label: 'Fortune',     value: String(totalFortune),           hint: 'better odds at rare loot',        color: '#f0c040' },
   ]
 
