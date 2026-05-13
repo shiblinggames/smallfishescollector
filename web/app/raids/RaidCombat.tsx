@@ -436,7 +436,11 @@ export default function RaidCombat({
     // Speed-roll line shows immediately. Per-step lines are appended as each
     // step starts animating (see playStep) so the log feels alive instead of
     // dumping the whole turn at once.
-    setResolveLog([`Speed: you ${pSpeedRoll} vs enemy ${eSpeedRoll} → ${first} first`])
+    setResolveLog([
+      first === 'player'
+        ? `You're faster — you fire first!`
+        : `Enemy is faster — they fire first.`,
+    ])
 
     const order: Actor[] = first === 'player' ? ['player', 'enemy'] : ['enemy', 'player']
 
@@ -468,10 +472,10 @@ export default function RaidCombat({
       const stepLines: string[] = []
 
       if (action === 'reload') {
-        if (who === 'player') { pCharges = Math.min(MAX_CHARGES, pCharges + 1); stepLines.push(`You reload (+1 → ${pCharges})`) }
-        else                  { eCharges = Math.min(MAX_CHARGES, eCharges + 1); stepLines.push(`Enemy reloads (+1 → ${eCharges})`) }
+        if (who === 'player') { pCharges = Math.min(MAX_CHARGES, pCharges + 1); stepLines.push(`You load a cannonball. (${pCharges}/${MAX_CHARGES})`) }
+        else                  { eCharges = Math.min(MAX_CHARGES, eCharges + 1); stepLines.push(`Enemy loads a cannonball. (${eCharges}/${MAX_CHARGES})`) }
       } else if (action === 'dodge') {
-        stepLines.push(`${who === 'player' ? 'You brace' : 'Enemy braces'} for evasion`)
+        stepLines.push(who === 'player' ? `You brace, ready to dodge.` : `Enemy braces, ready to dodge.`)
       } else if (action === 'fire' || action === 'volley') {
         if (who === 'player') pCharges -= (action === 'volley' ? MAX_CHARGES : 1)
         else                  eCharges -= (action === 'volley' ? MAX_CHARGES : 1)
@@ -500,24 +504,36 @@ export default function RaidCombat({
           const def = rollDodge(defenderSpeed, defenderNav)
           const atk = rollAttackerVsDodge(attackerSpeed)
           if (def >= atk) {
-            stepLines.push(`${isAttackerPlayer ? 'Enemy dodges' : 'You dodge'} ${def} vs ${atk}`)
+            // Defender successfully dodged. Defender = enemy when player is attacking, and vice versa.
+            stepLines.push(isAttackerPlayer ? `Enemy weaves aside — dodged!` : `You weave aside — dodged!`)
             splatText = 'Dodged'
             splatColor = '#38bdf8'
             steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, logLines: stepLines })
             continue
           } else {
-            stepLines.push(`${isAttackerPlayer ? 'Enemy fails dodge' : 'You fail dodge'} ${def} vs ${atk}`)
+            stepLines.push(isAttackerPlayer ? `Enemy couldn't get out of the way.` : `You couldn't dodge in time.`)
           }
         }
 
         if (isAttackerPlayer) {
           eHp = Math.max(0, eHp - dmg)
-          stepLines.push(`You ${action === 'volley' ? 'volley' : 'fire'}${lockedAimResult === 'critical' ? ' — CRITICAL!' : ''} for ${dmg}`)
+          // Player attack — call out crits prominently for the feel.
+          if (lockedAimResult === 'critical') {
+            stepLines.push(action === 'volley'
+              ? `Critical volley! Blasts them for ${dmg} damage.`
+              : `Critical hit! You blast them for ${dmg} damage.`)
+          } else {
+            stepLines.push(action === 'volley'
+              ? `You unleash a volley for ${dmg} damage.`
+              : `You fire for ${dmg} damage.`)
+          }
           splatText = `-${dmg}`
           splatColor = lockedAimResult === 'critical' ? '#fbbf24' : '#ef4444'
         } else {
           pHp = Math.max(0, pHp - dmg)
-          stepLines.push(`Enemy ${action === 'volley' ? 'volleys' : 'fires'} for ${dmg}`)
+          stepLines.push(action === 'volley'
+            ? `Enemy unleashes a volley for ${dmg} damage.`
+            : `Enemy fires for ${dmg} damage.`)
           splatText = `-${dmg}`
           splatColor = '#ef4444'
         }
@@ -547,14 +563,14 @@ export default function RaidCombat({
             // delay to either advance to the next enemy in-place or roll
             // into a loot screen (boss only).
             setSubPhase('done')
-            setTimeout(() => setResolveLog(prev => [...prev, `${enemy.name} defeated!`]), 200)
+            setTimeout(() => setResolveLog(prev => [...prev, `You sank the ${enemy.name}!`]), 200)
             let cbDelay = 1000
             if (killReward?.gold) {
-              setTimeout(() => setResolveLog(prev => [...prev, `+${killReward.gold} gold`]), 500)
+              setTimeout(() => setResolveLog(prev => [...prev, `Plunder: +${killReward.gold} ⟡`]), 500)
               cbDelay = 1300
             }
             if (killReward?.xp) {
-              setTimeout(() => setResolveLog(prev => [...prev, `+${killReward.xp} XP`]), 800)
+              setTimeout(() => setResolveLog(prev => [...prev, `Nav XP: +${killReward.xp}`]), 800)
               cbDelay = 1600
             }
             setTimeout(() => onEnemyDefeated(pHp), cbDelay)
