@@ -767,7 +767,7 @@ export default function PracticeRaidGame({
         // Reserve room for the MobileTabBar (~64px) + iOS safe-area-bottom,
         // plus a generous breathing gap above the bar so the action buttons
         // feel comfortably clear of it (was 8px, felt too tight).
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 28px)',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)',
         minHeight: 'calc(100dvh - 44px - env(safe-area-inset-bottom, 0px))',
       }}>
         {/* Leave link — always available so the player can back out at any
