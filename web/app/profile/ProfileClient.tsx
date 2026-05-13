@@ -342,9 +342,9 @@ export default function ProfileClient({
             }}>
               <div style={{
                 position: 'absolute',
-                width: '420%',
+                width: '317%',
                 left: '50%', top: '50%',
-                transform: 'translate(-60%, -68%)',
+                transform: 'translate(-63%, -65%)',
                 pointerEvents: 'none',
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
