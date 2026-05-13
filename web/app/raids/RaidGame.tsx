@@ -921,7 +921,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
       setRoundDisplay(roundRef.current + 1)
       // Phase stays 'playing'; the key={`combat-r${roundDisplay}`} on
       // <RaidCombat /> remounts it fresh with the next enemy.
-    }, 920)
+    }, 400)
   }, [config, fortuneMult, resetEnemyForRound])
 
   const handlePlayerDefeated = useCallback(() => {

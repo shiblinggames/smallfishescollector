@@ -518,15 +518,15 @@ export default function RaidCombat({
             // delay to either advance to the next enemy in-place or roll
             // into a loot screen (boss only).
             setSubPhase('done')
-            setTimeout(() => setResolveLog(prev => [...prev, `${enemy.name} defeated!`]), 300)
-            let cbDelay = 1200
+            setTimeout(() => setResolveLog(prev => [...prev, `${enemy.name} defeated!`]), 200)
+            let cbDelay = 1000
             if (killReward?.gold) {
-              setTimeout(() => setResolveLog(prev => [...prev, `+${killReward.gold} gold`]), 700)
-              cbDelay = 1700
+              setTimeout(() => setResolveLog(prev => [...prev, `+${killReward.gold} gold`]), 500)
+              cbDelay = 1300
             }
             if (killReward?.xp) {
-              setTimeout(() => setResolveLog(prev => [...prev, `+${killReward.xp} XP`]), 1050)
-              cbDelay = 2050
+              setTimeout(() => setResolveLog(prev => [...prev, `+${killReward.xp} XP`]), 800)
+              cbDelay = 1600
             }
             setTimeout(() => onEnemyDefeated(pHp), cbDelay)
             return

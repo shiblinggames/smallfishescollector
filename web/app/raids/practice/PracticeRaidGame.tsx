@@ -372,6 +372,11 @@ export default function PracticeRaidGame({
   const zonePosRef        = useRef(0.5)
   const zoneDirRef        = useRef(1)
   const currentEnemyRef   = useRef<PracticeEnemy>(PRACTICE_ENEMIES.brute)
+  // Bumped on each startGame so the <RaidCombat /> key always changes between
+  // fights — even when the new random enemy happens to share id+hpBase with
+  // the previous one (which would otherwise reuse the dead RaidCombat instance
+  // with subPhase still 'done', leaving the game stuck).
+  const [fightId, setFightId] = useState(0)
   const phaseRef          = useRef<GamePhase>('idle')
   const playerHPRef       = useRef(playerHPMax)
   const enemyHPRef        = useRef(0)
@@ -395,6 +400,7 @@ export default function PracticeRaidGame({
 
   const startGame = useCallback((enemy: PracticeEnemy) => {
     currentEnemyRef.current = enemy
+    setFightId(id => id + 1)  // force <RaidCombat /> remount
     firePosRef.current = 0; fireDirRef.current = 1
     const halfW = 0.06 + GRAZE_W
     zonePosRef.current = halfW + Math.random() * (1 - halfW * 2)
@@ -708,13 +714,13 @@ export default function PracticeRaidGame({
       if (xp > 0) setXpPopup({ value: xp, id: Date.now() })
     }).catch(() => { /* save failed; log already showed the rewards */ })
 
-    // After the sinking animation, mount a fresh fight in-place. The skirmish
-    // is a single-encounter loop, so we pick a new random enemy and reset.
+    // After a short beat, mount a fresh fight in-place. The skirmish is a
+    // single-encounter loop, so we pick a new random enemy and reset.
     setTimeout(() => {
       roundEndingRef.current = false
       const nextEnemy = hasCompletedPractice ? pickRandomEnemy() : PRACTICE_ENEMIES.brute
       startGame(nextEnemy)
-    }, 1100)
+    }, 400)
   }, [hasCompletedPractice, startGame])
 
   const handlePlayerDefeated = useCallback(() => {
@@ -792,7 +798,7 @@ export default function PracticeRaidGame({
         </div>
         <div style={{ width: '100%', padding: '0 0.5rem', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <RaidCombat
-            key={`practice-combat-${e.id}-${enemyHPMax}`}
+            key={`practice-combat-${fightId}-${e.id}`}
             enemy={enemyForCombat}
             isBoss={false}
             shipImageUrl={shipImageUrl}
