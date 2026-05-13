@@ -22,8 +22,8 @@ export default async function PracticeRaidPage() {
         doubloons={profile?.doubloons ?? 0}
         gems={profile?.gems ?? 0}
       />
-      <main>
-        <div className="px-6 pt-4 pb-6 max-w-sm mx-auto md:[zoom:1.25] lg:[zoom:1.45]">
+      <main className="min-h-screen pt-6">
+        <div className="px-3 pb-12 max-w-xl mx-auto">
           <PracticeRaidGame
             shipImageUrl={stats.shipImageUrl}
             shipName={stats.shipName}
