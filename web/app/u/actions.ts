@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { CHARACTER_COLORS } from '@/lib/characters'
 import { ALLOWED_BG_HEXES, ALLOWED_BORDER_HEXES, isPremiumBg, isPremiumBorder } from '@/lib/avatarColors'
+import { isPremiumActive } from '@/lib/premium'
 
 export async function updateUsername(username: string): Promise<{ error?: string }> {
   const supabase = await createClient()
@@ -116,9 +117,7 @@ export async function updateAvatarColors(input: {
       .select('is_premium, premium_expires_at')
       .eq('id', user.id)
       .single()
-    const expires = profile?.premium_expires_at ? new Date(profile.premium_expires_at as string) : null
-    const isPremium = !!profile?.is_premium && (!expires || expires > new Date())
-    if (!isPremium) return { error: 'That color requires Premium membership.' }
+    if (!isPremiumActive(profile)) return { error: 'That color requires Premium membership.' }
   }
 
   const admin = createAdminClient()

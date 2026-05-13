@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isPremiumActive } from '@/lib/premium'
 
 const PENDING_SALE_DELAY_MS = 60 * 60 * 1000 // 1 hour
 
@@ -115,7 +116,7 @@ export async function liquidateAllFish(): Promise<
     multiplierMap.set(row.fish_id, Number(row.multiplier))
   }
 
-  const isPremium = !!profile.is_premium && !!profile.premium_expires_at && new Date(profile.premium_expires_at) > new Date()
+  const isPremium = isPremiumActive(profile)
   const fee = isPremium ? 1.0 : 0.97
 
   let totalEarned = 0
@@ -184,7 +185,7 @@ export async function marketSellFish(
   if (!invRow || !fish || !profile) return { error: 'Data not found' }
   if (invRow.quantity < quantity) return { error: 'Not enough fish' }
 
-  const isPremium = !!profile.is_premium && !!profile.premium_expires_at && new Date(profile.premium_expires_at) > new Date()
+  const isPremium = isPremiumActive(profile)
   const fee = isPremium ? 1.0 : 0.97
   const multiplier = market?.multiplier ?? 1.0
   const priceEach = Math.floor(fish.sell_value * Number(multiplier) * fee)

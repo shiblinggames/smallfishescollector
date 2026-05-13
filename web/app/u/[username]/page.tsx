@@ -5,6 +5,7 @@ import Nav from '@/components/Nav'
 import ProfileClient from './ProfileClient'
 import { notFound } from 'next/navigation'
 import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
+import { isPremiumActive } from '@/lib/premium'
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
   const { username } = await params
@@ -110,11 +111,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           username={profile.username}
           showcaseVariants={showcaseVariants}
           voyages={(voyagesData.data ?? []) as import('./ProfileClient').VoyageEntry[]}
-          isPremium={
-            !!profile.is_premium &&
-            !!profile.premium_expires_at &&
-            new Date(profile.premium_expires_at) > new Date()
-          }
+          isPremium={isPremiumActive(profile)}
           stats={{
             packsOpened: packCount ?? 0,
             uniqueSpecies: uniqueSpecies ?? 0,

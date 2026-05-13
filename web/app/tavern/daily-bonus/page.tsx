@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import DailyBonusClient from './DailyBonusClient'
+import { isPremiumActive } from '@/lib/premium'
+
 export default async function DailyBonusPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -17,9 +19,7 @@ export default async function DailyBonusPage() {
     .eq('id', user.id)
     .single()
 
-  const isPremium = !!profile?.is_premium &&
-    !!profile?.premium_expires_at &&
-    new Date(profile.premium_expires_at) > new Date()
+  const isPremium = isPremiumActive(profile)
 
   const baseAmount = isPremium ? 100 : 50
 

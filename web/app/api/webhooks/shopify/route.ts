@@ -29,12 +29,12 @@ export async function POST(req: NextRequest) {
   const { data: userId } = await admin.rpc('get_user_by_email', { p_email: email })
   if (!userId) return NextResponse.json({ ok: true })
 
-  const premiumExpires = new Date()
-  premiumExpires.setFullYear(premiumExpires.getFullYear() + 1)
-
+  // Lifetime membership — null premium_expires_at means "never expires."
+  // The premium_expires_at column is kept for legacy buyers who still have
+  // a future date there from the old 1-year era.
   await admin.from('profiles').update({
     is_premium: true,
-    premium_expires_at: premiumExpires.toISOString(),
+    premium_expires_at: null,
   }).eq('id', userId)
 
   return NextResponse.json({ ok: true })

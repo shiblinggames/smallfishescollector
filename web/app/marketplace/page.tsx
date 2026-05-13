@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
+import { isPremiumActive } from '@/lib/premium'
 
 export default async function MarketplacePage() {
   const supabase = await createClient()
@@ -16,10 +17,7 @@ export default async function MarketplacePage() {
     admin.from('market_state').select('mood').eq('id', 1).single(),
   ])
 
-  const isPremium =
-    !!profile?.is_premium &&
-    !!profile?.premium_expires_at &&
-    new Date(profile.premium_expires_at) > new Date()
+  const isPremium = isPremiumActive(profile)
 
   const moodColor = marketState?.mood === 'kraken' ? '#ef4444' : marketState?.mood === 'storm' ? '#f59e0b' : '#4ade80'
   const moodLabel = marketState?.mood === 'kraken' ? 'Kraken Surge' : marketState?.mood === 'storm' ? 'Storm Warning' : 'Calm Market'

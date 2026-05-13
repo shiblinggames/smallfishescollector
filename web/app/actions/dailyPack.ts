@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isPremiumActive } from '@/lib/premium'
 
 export async function claimDailyPack(): Promise<{ claimed: boolean; packsAvailable?: number }> {
   const supabase = await createClient()
@@ -19,11 +20,7 @@ export async function claimDailyPack(): Promise<{ claimed: boolean; packsAvailab
 
   if (!profile) return { claimed: false }
 
-  const isPremium = !!profile.is_premium &&
-    !!profile.premium_expires_at &&
-    new Date(profile.premium_expires_at) > new Date()
-
-  if (!isPremium) return { claimed: false }
+  if (!isPremiumActive(profile)) return { claimed: false }
   if (profile.last_pack_claim === today) return { claimed: false }
 
   const newPacks = (profile.packs_available ?? 0) + 1

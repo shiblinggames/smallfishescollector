@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkAchievements } from '@/lib/checkAchievements'
+import { isPremiumActive } from '@/lib/premium'
 
 const DAILY_BONUS = 50
 const PREMIUM_DAILY_BONUS = 100
@@ -21,9 +22,7 @@ export async function claimDailyBonus(): Promise<{ claimed: boolean; gems?: numb
 
   if (!profile || profile.last_daily_claim === today) return { claimed: false }
 
-  const isPremium = !!profile.is_premium &&
-    !!profile.premium_expires_at &&
-    new Date(profile.premium_expires_at) > new Date()
+  const isPremium = isPremiumActive(profile)
 
   const bonus = isPremium ? PREMIUM_DAILY_BONUS : DAILY_BONUS
   const newGems = (profile.gems ?? 0) + bonus

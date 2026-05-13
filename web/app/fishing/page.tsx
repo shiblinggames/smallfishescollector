@@ -5,6 +5,7 @@ import Nav from '@/components/Nav'
 import FishingPageClient from './FishingPageClient'
 import { getActiveChallengeSession } from '@/app/social/challengeActions'
 import { getDailyChallenge } from './dailyChallengeActions'
+import { isPremiumActive } from '@/lib/premium'
 
 export default async function FishingPage() {
   const supabase = await createClient()
@@ -58,7 +59,7 @@ export default async function FishingPage() {
   for (const row of (marketRows ?? []) as { fish_id: number; multiplier: number | string }[]) {
     marketMultipliers[row.fish_id] = Number(row.multiplier)
   }
-  const isPremium = !!profile?.is_premium && !!profile?.premium_expires_at && new Date(profile.premium_expires_at) > new Date()
+  const isPremium = isPremiumActive(profile)
 
   const ownedRods = (rodRows ?? []).map((r: { rod_tier: number }) => r.rod_tier)
   const caughtFishIds = (collectionRows ?? []).map((r: { fish_id: number }) => r.fish_id)

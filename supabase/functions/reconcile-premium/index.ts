@@ -17,12 +17,10 @@ Deno.serve(async (req: Request) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  // Expire any profiles whose premium_expires_at has passed
-  await admin
-    .from("profiles")
-    .update({ is_premium: false })
-    .eq("is_premium", true)
-    .lt("premium_expires_at", new Date().toISOString());
+  // Membership is lifetime now — nothing to expire. Legacy buyers with a
+  // future premium_expires_at still work because the runtime check treats
+  // a future date as valid; the column is only kept for that grandfathered
+  // population. We no longer downgrade anyone here.
 
   if (!SHOPIFY_ADMIN_TOKEN || !SHOPIFY_STORE_DOMAIN || !SHOPIFY_PREMIUM_PRODUCT_ID) {
     return new Response(
@@ -71,17 +69,19 @@ Deno.serve(async (req: Request) => {
       .eq("id", userId)
       .single();
 
+    // Treat a future expires_at as valid (legacy 1-year buyer) and a null
+    // expires_at as valid (new lifetime buyer). Anything else = grant
+    // lifetime to catch up the dropped webhook.
+    const expiresAt = profile?.premium_expires_at
+      ? new Date(profile.premium_expires_at)
+      : null;
     const hasValidPremium =
-      profile?.is_premium &&
-      profile?.premium_expires_at &&
-      new Date(profile.premium_expires_at) > new Date();
+      !!profile?.is_premium && (!expiresAt || expiresAt > new Date());
 
     if (!hasValidPremium) {
-      const premiumExpires = new Date(order.created_at);
-      premiumExpires.setFullYear(premiumExpires.getFullYear() + 1);
       await admin.from("profiles").update({
         is_premium: true,
-        premium_expires_at: premiumExpires.toISOString(),
+        premium_expires_at: null,
       }).eq("id", userId);
       fixed++;
     }

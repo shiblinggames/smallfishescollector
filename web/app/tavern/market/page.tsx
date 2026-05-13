@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import MarketClient from './MarketClient'
 import MarketIntroModal from './MarketIntroModal'
+import { isPremiumActive } from '@/lib/premium'
 
 export type MarketFishEntry = {
   fish_id: number
@@ -97,7 +98,7 @@ export default async function MarketPage() {
         allMarket={discovered}
         marketState={state}
         doubloons={profile?.doubloons ?? 0}
-        isPremium={!!profile?.is_premium && !!profile?.premium_expires_at && new Date(profile.premium_expires_at) > new Date()}
+        isPremium={isPremiumActive(profile)}
       />
     </>
   )

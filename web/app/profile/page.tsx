@@ -8,6 +8,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { CHARACTER_COLORS } from '@/lib/characters'
+import { isPremiumActive } from '@/lib/premium'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -84,10 +85,7 @@ export default async function ProfilePage() {
   ]
   const expeditionLevel = getExpeditionLevel(profile?.expedition_xp ?? 0)
   const navigatorTitle = getNavigatorTitle(expeditionLevel)
-  const isPremium =
-    !!profile?.is_premium &&
-    !!profile?.premium_expires_at &&
-    new Date(profile.premium_expires_at) > new Date()
+  const isPremium = isPremiumActive(profile)
 
   return (
     <>

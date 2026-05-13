@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import CollectionGrid from './CollectionGrid'
 import type { Card, BorderStyle, ArtEffect } from '@/lib/types'
+import { isPremiumActive } from '@/lib/premium'
 
 
 export interface OwnedEntry {
@@ -99,11 +100,7 @@ export default async function CollectionPage() {
           username={profile?.username ?? ''}
           usernameChanged={profile?.username_changed ?? false}
           showcaseVariantIds={(profile?.showcase_variant_ids as number[] | null) ?? []}
-          isPremium={
-            !!profile?.is_premium &&
-            !!profile?.premium_expires_at &&
-            new Date(profile.premium_expires_at) > new Date()
-          }
+          isPremium={isPremiumActive(profile)}
         />
       </main>
     </>

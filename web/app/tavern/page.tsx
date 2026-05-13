@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { getDailyWagered, getSlotsDailyWagered } from './actions'
 import { DAILY_CAP, SLOTS_DAILY_CAP } from './constants'
 import { getChartState } from '@/app/charting/chartActions'
+import { isPremiumActive } from '@/lib/premium'
 import GameCard from './GameCard'
 import RecruitCard from './RecruitCard'
 import WelcomeModal from './WelcomeModal'
@@ -28,10 +29,7 @@ export default async function TavernPage() {
     getChartState(),
   ])
 
-  const isPremium =
-    !!profile?.is_premium &&
-    !!profile?.premium_expires_at &&
-    new Date(profile.premium_expires_at) > new Date()
+  const isPremium = isPremiumActive(profile)
 
   const baseAmount = isPremium ? 100 : 50
   const allClaimed =
@@ -97,11 +95,7 @@ export default async function TavernPage() {
             unlockedColors={unlockedColors}
             showWelcomeAfter={!profile?.has_seen_welcome}
             hasUsername={!!profile?.username}
-            isPremium={
-              !!profile?.is_premium
-              && !!profile?.premium_expires_at
-              && new Date(profile.premium_expires_at as string) > new Date()
-            }
+            isPremium={isPremiumActive(profile)}
           />
         : !profile?.has_seen_welcome
           ? <WelcomeModal />
