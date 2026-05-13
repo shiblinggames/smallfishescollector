@@ -1002,6 +1002,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 shipSpeed={shipSpeed}
                 totalPower={totalPower}
                 totalNavigation={totalDodge}
+                totalFortune={totalFortune}
                 equippedRaidItems={equippedItems}
                 killReward={reward ? { gold: reward.gold, xp: reward.xp } : undefined}
                 onEnemyDefeated={handleEnemyDefeated}

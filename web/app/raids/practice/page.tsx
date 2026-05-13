@@ -32,6 +32,7 @@ export default async function PracticeRaidPage() {
             shipSpeed={stats.shipSpeed}
             totalPower={stats.totalPower}
             totalDodge={stats.totalDodge}
+            totalFortune={stats.totalFortune}
             crewMembers={stats.crewMembers}
             equippedShipSkin={stats.equippedShipSkin}
             hasSeenTutorial={stats.hasSeenRaidTutorial}

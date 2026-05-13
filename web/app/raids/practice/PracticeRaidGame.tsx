@@ -289,7 +289,7 @@ interface RaidCrewMember {
 
 export default function PracticeRaidGame({
   shipImageUrl, shipName, playerHPMax, shipMinDamage, shipSpeed,
-  totalPower, totalDodge, crewMembers, equippedShipSkin,
+  totalPower, totalDodge, totalFortune, crewMembers, equippedShipSkin,
   hasSeenTutorial, hasCompletedPractice, initialExpeditionXP,
 }: {
   shipImageUrl: string
@@ -299,6 +299,7 @@ export default function PracticeRaidGame({
   shipSpeed: number
   totalPower: number
   totalDodge: number
+  totalFortune: number
   crewMembers: RaidCrewMember[]
   equippedShipSkin: string | null
   hasSeenTutorial: boolean
@@ -827,6 +828,7 @@ export default function PracticeRaidGame({
             shipSpeed={shipSpeed}
             totalPower={totalPower}
             totalNavigation={totalDodge}
+            totalFortune={totalFortune}
             equippedRaidItems={[]}
             killReward={{ gold: e.killGold, xp: e.killXP }}
             onEnemyDefeated={handleEnemyDefeated}

@@ -120,6 +120,9 @@ export interface RaidCombatProps {
   shipSpeed: number
   totalPower: number
   totalNavigation: number   // formerly "dodge"
+  /** Loot-luck stat. Doesn't affect combat math but shown in the
+   *  player-stats breakdown popup (tap the player nameplate). */
+  totalFortune?: number
   equippedRaidItems: string[]
   /** Gold + XP awarded for killing this enemy; streamed into the log on kill
    *  Pokemon-style so the parent doesn't need a separate "Round Clear" overlay. */
@@ -134,10 +137,13 @@ export default function RaidCombat({
   enemy, isBoss, shipImageUrl, shipName,
   playerHpMax, playerHp: initialPlayerHp,
   shipMinDamage, shipSpeed, totalPower, totalNavigation,
+  totalFortune = 0,
   equippedRaidItems,
   killReward,
   onEnemyDefeated, onPlayerDefeated,
 }: RaidCombatProps) {
+  // Stats-breakdown popup, opened by tapping the player nameplate
+  const [showStats, setShowStats]     = useState(false)
   const [playerHp, setPlayerHp]       = useState(initialPlayerHp)
   const [enemyHp, setEnemyHp]         = useState(enemy.hpBase)
   const [playerCharges, setPlayerCharges] = useState(0)
@@ -849,20 +855,28 @@ export default function RaidCombat({
           )}
         </AnimatePresence>
 
-        {/* Player HP box — bottom-right */}
-        <div style={{
-          position: 'absolute', bottom: 10, right: 10, zIndex: 4,
-          padding: '0.45rem 0.65rem',
-          background: 'rgba(6,12,20,0.9)',
-          border: '1px solid #2a3548',
-          borderRadius: 10, minWidth: 150,
-        }}>
+        {/* Player HP box — bottom-right. Tap to open a stats breakdown popup. */}
+        <button
+          type="button"
+          onClick={() => setShowStats(true)}
+          aria-label={`${shipName} — view stats`}
+          style={{
+            position: 'absolute', bottom: 10, right: 10, zIndex: 4,
+            padding: '0.45rem 0.65rem',
+            background: 'rgba(6,12,20,0.9)',
+            border: '1px solid #2a3548',
+            borderRadius: 10, minWidth: 150,
+            textAlign: 'left',
+            cursor: 'pointer',
+            font: 'inherit', color: 'inherit',
+          }}
+        >
           <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff', lineHeight: 1, marginBottom: 4 }}>
             {shipName}
           </p>
           <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact />
           <ChargesRow charges={playerCharges} max={MAX_CHARGES} small />
-        </div>
+        </button>
 
       </div>
 
@@ -908,6 +922,26 @@ export default function RaidCombat({
         }} />
       )}
 
+      {/* Player stats breakdown — opened by tapping the player nameplate */}
+      <AnimatePresence>
+        {showStats && (
+          <PlayerStatsPopup
+            shipName={shipName}
+            shipImageUrl={shipImageUrl}
+            playerHp={playerHp}
+            playerHpMax={playerHpMax}
+            shipMinDamage={shipMinDamage}
+            shipSpeed={shipSpeed}
+            totalPower={totalPower}
+            totalNavigation={totalNavigation}
+            totalFortune={totalFortune}
+            isBoss={isBoss}
+            equippedRaidItems={equippedRaidItems}
+            onClose={() => setShowStats(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Keyframes (namespaced rc- so they don't collide with the existing raid's globals) */}
       <style>{`
         @keyframes rc-cannon-shot {
@@ -928,6 +962,118 @@ export default function RaidCombat({
         }
       `}</style>
     </div>
+  )
+}
+
+function PlayerStatsPopup({
+  shipName, shipImageUrl, playerHp, playerHpMax,
+  shipMinDamage, shipSpeed, totalPower, totalNavigation, totalFortune,
+  isBoss, equippedRaidItems,
+  onClose,
+}: {
+  shipName: string
+  shipImageUrl: string
+  playerHp: number
+  playerHpMax: number
+  shipMinDamage: number
+  shipSpeed: number
+  totalPower: number
+  totalNavigation: number
+  totalFortune: number
+  isBoss: boolean
+  equippedRaidItems: string[]
+  onClose: () => void
+}) {
+  const powerMax = shipMinDamage + Math.floor(totalPower / 4)
+  const bossMult = isBoss
+    ? getActiveEffects(equippedRaidItems)
+        .filter(e => e.type === 'boss_damage_mult')
+        .reduce((a, e) => a * e.value, 1)
+    : 1
+  const rows: { label: string; value: string; hint?: string; color: string }[] = [
+    { label: 'HP',         value: `${playerHp} / ${playerHpMax}`,                       color: '#ef4444' },
+    { label: 'Damage',     value: `${shipMinDamage}–${powerMax}`,                       hint: 'min from hull · max scales with Power',                      color: '#f87171' },
+    { label: 'Power',      value: String(totalPower),                                   hint: 'raises damage cap (max = minDmg + ⌊power/4⌋)',                color: '#f87171' },
+    { label: 'Navigation', value: String(totalNavigation),                              hint: 'slows enemy aim · boosts your dodge roll',                   color: '#60a5fa' },
+    { label: 'Fortune',    value: String(totalFortune),                                 hint: 'shifts loot odds toward rare drops',                         color: '#f0c040' },
+    { label: 'Ship Speed', value: String(shipSpeed),                                    hint: 'd20 turn order + dodge defense',                              color: '#a8b8d0' },
+  ]
+  if (isBoss && bossMult > 1) {
+    rows.push({ label: 'Boss Dmg ×', value: `${bossMult.toFixed(2)}×`, hint: 'from equipped raid items', color: '#fbbf24' })
+  }
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 95,
+        background: 'rgba(0,0,0,0.78)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1.2rem',
+      }}
+    >
+      <motion.div
+        onClick={e => e.stopPropagation()}
+        initial={{ opacity: 0, scale: 0.92, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 4 }}
+        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          width: '100%', maxWidth: 360,
+          background: '#060c14',
+          border: '2px solid #2a3548',
+          borderRadius: 16,
+          padding: '1rem 1rem 0.85rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={shipImageUrl} alt="" style={{ width: 56, height: 56, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.5))' }} />
+          <div style={{ minWidth: 0 }}>
+            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.58rem', color: '#5a7a9a', marginBottom: 2 }}>Captain&apos;s ledger</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shipName}</p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+          {rows.map(r => (
+            <div key={r.label} style={{
+              display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10,
+              padding: '0.45rem 0.65rem',
+              background: '#04080e', border: '1px solid #1f2e42', borderRadius: 10,
+            }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: r.color, lineHeight: 1.15 }}>{r.label}</p>
+                {r.hint && <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a7088', lineHeight: 1.35, marginTop: 2 }}>{r.hint}</p>}
+              </div>
+              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8', flexShrink: 0 }}>{r.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <p className="font-karla" style={{ fontSize: '0.58rem', color: '#5a7088', textAlign: 'center', marginBottom: 10, lineHeight: 1.45 }}>
+          Totals include the Nav-level captain bonus on top of your crew + ship.
+        </p>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="font-karla font-700 uppercase tracking-[0.12em]"
+          style={{
+            width: '100%', padding: '0.7rem',
+            background: 'rgba(96,165,250,0.12)',
+            border: '1px solid rgba(96,165,250,0.45)',
+            color: '#60a5fa', borderRadius: 12,
+            fontSize: '0.72rem', cursor: 'pointer',
+          }}
+        >
+          Close
+        </button>
+      </motion.div>
+    </motion.div>
   )
 }
 
