@@ -271,12 +271,43 @@ function NavLevelBar({ xp }: { xp: number }) {
 }
 
 // ── Tour steps ────────────────────────────────────────────────────────────────
+// First-time tutorial for the (now turn-based) raid combat. The old version
+// was written for the legacy real-time loop — these steps walk a new player
+// through picking actions, the aim bar, speed/turn order, and reading the
+// action log.
 
-const PRACTICE_TOUR = [
-  { title: 'Hit the zone', body: "A marker sweeps back and forth along the bar. Fire when it lines up with the glowing target zone. Miss and your cannon jams briefly — so aim before you pull the trigger." },
-  { title: 'Reload first', body: "Your cannon starts empty. Hit Reload to load a charge. You can stack up to 3 charges before firing — but the enemy is shooting back, so don't wait too long." },
-  { title: 'Volley', body: "Fire with all 3 charges loaded and it fires as a Volley — double damage in one shot. Worth saving up when the hit zone is wide." },
-  { title: 'Dodge incoming shots', body: "Watch the enemy's action bar. When it fills, they fire. Hit Dodge just before they do and you'll take 80% less damage. Dodge too early and you're locked out for a moment." },
+interface TourStep {
+  icon: string
+  title: string
+  body: string
+}
+
+const PRACTICE_TOUR: TourStep[] = [
+  {
+    icon: '⚓',
+    title: 'Welcome aboard, Captain!',
+    body: 'Raids are turn-based ship battles. Each turn you and the enemy each pick one action — whoever’s faster strikes first.',
+  },
+  {
+    icon: '🎯',
+    title: 'Your four actions',
+    body: 'RELOAD loads a cannonball. FIRE spends one for normal damage. VOLLEY spends three for double damage. DODGE braces your ship to reduce incoming damage.',
+  },
+  {
+    icon: '✨',
+    title: 'Lock the aim',
+    body: 'When you Fire or Volley, a marker sweeps across the aim bar. Tap to lock it in the green zone for a Hit — or the tiny gold center for a Critical (max damage).',
+  },
+  {
+    icon: '🛡️',
+    title: 'Speed & dodging',
+    body: 'Faster ships act first. If you think the enemy is loaded up, Dodge that turn to soften their hit. Tap your ship’s nameplate any time to see your stats.',
+  },
+  {
+    icon: '🏴‍☠️',
+    title: 'Sink the ship',
+    body: 'Watch the action log to follow each turn — tap to continue between rounds. Sink the enemy to earn doubloons and Nav XP. Good hunting!',
+  },
 ]
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -1036,54 +1067,92 @@ export default function PracticeRaidGame({
             key="practice-tour-backdrop"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => { if (tourStep < PRACTICE_TOUR.length - 1) setTourStep(s => s + 1) }}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 100, cursor: 'pointer' }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 100, cursor: 'pointer',
+              background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.92) 100%)',
+              backdropFilter: 'blur(2px)',
+              WebkitBackdropFilter: 'blur(2px)',
+            }}
           />
           <motion.div
             key={`practice-tour-${tourStep}`}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.18 }}
+            initial={{ opacity: 0, scale: 0.94, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 4 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             style={{
               position: 'fixed', zIndex: 101,
               left: '1rem', right: '1rem',
               top: '50%', transform: 'translateY(-50%)',
-              maxWidth: 340, margin: '0 auto',
-              background: '#0d1520',
-              border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: 14,
-              padding: '1rem 1.1rem',
+              maxWidth: 360, margin: '0 auto',
+              background: 'linear-gradient(180deg, #0e1a2b 0%, #060e1a 100%)',
+              border: '1px solid rgba(96,165,250,0.28)',
+              borderRadius: 18,
+              padding: '1.25rem 1.1rem 1rem',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset',
             }}
           >
-            <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.46rem', color: '#ef4444', marginBottom: '0.6rem' }}>
-              Reef Skirmish — Tutorial
-            </p>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8', marginBottom: '0.4rem' }}>
+            {/* Eyebrow + step counter on one row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.9rem' }}>
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', color: '#7a9bc4', letterSpacing: '0.16em' }}>
+                Captain’s Briefing
+              </p>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {PRACTICE_TOUR.map((_, i) => (
+                  <span key={i} style={{
+                    width: i === tourStep ? 18 : 6, height: 6, borderRadius: 999,
+                    background: i === tourStep ? '#60a5fa' : 'rgba(255,255,255,0.18)',
+                    transition: 'width 0.22s ease',
+                  }} />
+                ))}
+              </div>
+            </div>
+
+            {/* Big icon */}
+            <div style={{ textAlign: 'center', marginBottom: '0.8rem' }}>
+              <span style={{ fontSize: '3rem', lineHeight: 1, display: 'inline-block', filter: 'drop-shadow(0 4px 14px rgba(96,165,250,0.35))' }}>
+                {PRACTICE_TOUR[tourStep].icon}
+              </span>
+            </div>
+
+            <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.15rem', color: '#f0ede8', marginBottom: '0.55rem', lineHeight: 1.2 }}>
               {PRACTICE_TOUR[tourStep].title}
             </p>
-            <p className="font-karla font-400" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.55, marginBottom: '0.85rem' }}>
+            <p className="font-karla text-center" style={{ fontSize: '0.88rem', color: 'rgba(240,237,232,0.78)', lineHeight: 1.55, marginBottom: '1.1rem' }}>
               {PRACTICE_TOUR[tourStep].body}
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845' }}>
-                {tourStep + 1} / {PRACTICE_TOUR.length}
-              </p>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <button
+                onClick={e => { e.stopPropagation(); dismissTour() }}
+                className="font-karla font-600 uppercase tracking-[0.08em]"
+                style={{
+                  fontSize: '0.7rem', cursor: 'pointer', touchAction: 'manipulation',
+                  color: 'rgba(240,237,232,0.5)',
+                  background: 'none',
+                  border: 'none',
+                  padding: '0.5rem 0.4rem',
+                }}
+              >
+                Skip
+              </button>
               <button
                 onClick={e => {
                   e.stopPropagation()
                   if (tourStep < PRACTICE_TOUR.length - 1) { setTourStep(s => s + 1) }
                   else { dismissTour() }
                 }}
-                className="font-karla font-700 uppercase tracking-[0.12em]"
+                className="font-karla font-700 uppercase tracking-[0.1em]"
                 style={{
-                  fontSize: '0.68rem', cursor: 'pointer', touchAction: 'manipulation',
-                  color: '#ef4444',
-                  background: 'rgba(239,68,68,0.12)',
-                  border: '1px solid rgba(239,68,68,0.4)',
-                  borderRadius: 8, padding: '0.35rem 0.85rem',
+                  fontSize: '0.82rem', cursor: 'pointer', touchAction: 'manipulation',
+                  color: '#0a1422',
+                  background: '#60a5fa',
+                  border: 'none',
+                  borderRadius: 12, padding: '0.7rem 1.4rem',
+                  boxShadow: '0 4px 14px rgba(96,165,250,0.35)',
                 }}
               >
-                {tourStep === PRACTICE_TOUR.length - 1 ? 'Got it' : 'Next →'}
+                {tourStep === PRACTICE_TOUR.length - 1 ? 'Set Sail' : 'Next'}
               </button>
             </div>
           </motion.div>
