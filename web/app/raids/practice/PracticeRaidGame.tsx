@@ -1011,74 +1011,7 @@ export default function PracticeRaidGame({
       </div>
 
       {/* ── Action buttons ────────────────────────────────────────────────────── */}
-      {phase === 'playing' && (
-        <div style={{ display: 'flex', gap: 14, justifyContent: 'center', width: '100%' }}>
-          {/* RELOAD */}
-          <motion.button
-            onPointerDown={playerReady && charges < MAX_CHARGES && !isActionLocked ? doReload : undefined}
-            whileTap={playerReady && charges < MAX_CHARGES && !isActionLocked ? { scale: 0.88 } : {}}
-            style={{
-              width: 82, height: 82, borderRadius: '50%', cursor: playerReady && charges < MAX_CHARGES && !isActionLocked ? 'pointer' : 'default',
-              background: isActionLocked ? 'rgba(239,68,68,0.07)' : !playerReady || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.03)' : 'rgba(96,165,250,0.12)',
-              border: `2px solid ${isActionLocked ? 'rgba(239,68,68,0.22)' : !playerReady || charges >= MAX_CHARGES ? 'rgba(255,255,255,0.1)' : 'rgba(96,165,250,0.45)'}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              opacity: isActionLocked || !playerReady || charges >= MAX_CHARGES ? 0.4 : 1,
-              transition: 'all 0.12s',
-            }}>
-            <p className="font-karla font-700" style={{
-              fontSize: '0.72rem', letterSpacing: '0.06em',
-              color: isActionLocked ? '#7a2a2a' : !playerReady ? '#3a5a7a' : charges >= MAX_CHARGES ? '#4a4845' : '#60a5fa',
-            }}>
-              {isActionLocked ? '…' : charges >= MAX_CHARGES ? 'Full' : 'RELOAD'}
-            </p>
-          </motion.button>
-
-          {/* DODGE */}
-          <motion.button
-            onPointerDown={primeDodge}
-            whileTap={playerReady && !dodgeCooldown && !dodgePrimed && !isActionLocked ? { scale: 0.88 } : {}}
-            animate={dodgePrimed ? { boxShadow: ['0 0 0px #38bdf800', '0 0 20px #38bdf8aa', '0 0 8px #38bdf866'] } : {}}
-            transition={{ duration: 0.4, repeat: Infinity }}
-            style={{
-              width: 82, height: 82, borderRadius: '50%', cursor: playerReady && !dodgeCooldown && !dodgePrimed && !isActionLocked ? 'pointer' : 'default',
-              background: dodgePrimed ? 'rgba(56,189,248,0.18)' : isActionLocked ? 'rgba(239,68,68,0.07)' : dodgeCooldown ? 'rgba(255,255,255,0.03)' : !playerReady ? 'rgba(255,255,255,0.03)' : 'rgba(56,189,248,0.10)',
-              border: `2px solid ${dodgePrimed ? 'rgba(56,189,248,0.65)' : isActionLocked ? 'rgba(239,68,68,0.22)' : dodgeCooldown ? 'rgba(255,255,255,0.1)' : !playerReady ? 'rgba(255,255,255,0.1)' : 'rgba(56,189,248,0.35)'}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              opacity: isActionLocked || dodgeCooldown || !playerReady ? 0.4 : 1,
-              transition: 'background 0.12s, border-color 0.12s, opacity 0.12s',
-            }}>
-            <p className="font-karla font-700" style={{
-              fontSize: '0.72rem', letterSpacing: '0.06em',
-              color: dodgePrimed ? '#38bdf8' : isActionLocked ? '#7a2a2a' : dodgeCooldown ? '#2a4050' : '#38bdf8',
-            }}>
-              {dodgePrimed ? 'PRIMED' : isActionLocked || dodgeCooldown ? '…' : 'DODGE'}
-            </p>
-          </motion.button>
-
-          {/* FIRE */}
-          <motion.button
-            onPointerDown={playerReady && !cannonJammed && charges > 0 && !isActionLocked ? fire : undefined}
-            whileTap={playerReady && !cannonJammed && charges > 0 && !isActionLocked ? { scale: 0.88 } : {}}
-            animate={isVolleyReady ? { boxShadow: ['0 0 0px #f0c04000', '0 0 20px #f0c04077', '0 0 0px #f0c04000'] } : {}}
-            transition={{ duration: 1.4, repeat: Infinity }}
-            style={{
-              width: 82, height: 82, borderRadius: '50%',
-              cursor: playerReady && !cannonJammed && charges > 0 && !isActionLocked ? 'pointer' : 'default',
-              background: cannonJammed ? 'rgba(251,146,60,0.1)' : !playerReady ? 'rgba(255,255,255,0.03)' : isVolleyReady ? 'rgba(240,192,64,0.18)' : charges === 0 ? 'rgba(255,255,255,0.03)' : 'rgba(239,68,68,0.14)',
-              border: `2px solid ${cannonJammed ? 'rgba(251,146,60,0.35)' : !playerReady ? 'rgba(255,255,255,0.1)' : isVolleyReady ? 'rgba(240,192,64,0.6)' : charges === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(239,68,68,0.45)'}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              opacity: !playerReady && !cannonJammed ? 0.4 : charges === 0 && !cannonJammed ? 0.32 : cannonJammed ? 0.7 : 1,
-              transition: 'all 0.12s',
-            }}>
-            <p className="font-karla font-700" style={{
-              fontSize: cannonJammed ? '0.6rem' : '0.72rem', letterSpacing: '0.06em',
-              color: cannonJammed ? '#f97316' : !playerReady ? '#4a3535' : isVolleyReady ? '#f0c040' : charges === 0 ? '#4a4845' : '#ef4444',
-            }}>
-              {cannonJammed ? 'Jammed' : charges === 0 ? 'Empty' : isVolleyReady ? 'VOLLEY' : 'FIRE'}
-            </p>
-          </motion.button>
-        </div>
-      )}
+      {/* (Playing-phase action buttons now live inside <RaidCombat />.) */}
 
       {/* Placeholder buttons when idle */}
       {phase === 'idle' && (
