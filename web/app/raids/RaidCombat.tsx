@@ -825,41 +825,61 @@ export default function RaidCombat({
             </motion.div>
           )}
 
-          {aimResult && aimResult !== 'critical' && critFreeze && (
-            <motion.div
-              key={`aim-badge-${aimResult}`}
-              // Single clean pop-in. Was a heavily underdamped spring
-              // (damping 16 / stiffness 480) + rotate which overshot past
-              // scale 1.0 and bounced back — reads as the word "HIT"
-              // flashing twice.
-              initial={{ scale: 0.65, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-              style={{
-                position: 'absolute', top: '38%', left: '50%',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 11, pointerEvents: 'none',
-                padding: '0.4rem 0.95rem',
-                borderRadius: 999,
-                background:
-                  aimResult === 'hit'   ? '#4ade80' :
-                  aimResult === 'graze' ? '#94a3b8' :
-                                          '#6b7280',
-                color: '#0a1422',
-                fontFamily: 'var(--font-cinzel)', fontWeight: 700,
-                fontSize: '1.05rem',
-                letterSpacing: '0.06em',
-                boxShadow:
-                  aimResult === 'hit'
-                    ? '0 4px 18px rgba(74,222,128,0.5)'
-                    : '0 2px 10px rgba(0,0,0,0.4)',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {aimResult.toUpperCase()}
-            </motion.div>
-          )}
+          {aimResult && aimResult !== 'critical' && critFreeze && (() => {
+            // Hit / Graze treatment — same visual language as the "Critical!"
+            // moment (centered text-only flash with a single expanding ring)
+            // but toned down: smaller text, lower-glow color, one ring
+            // instead of two, no full-screen radial gradient, no sparks.
+            const accent = aimResult === 'hit' ? '#4ade80' : '#94a3b8'
+            const label  = aimResult === 'hit' ? 'Hit!' : 'Graze'
+            const isHit  = aimResult === 'hit'
+            return (
+              <motion.div
+                key={`aim-text-${aimResult}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.16 }}
+                style={{
+                  position: 'absolute', inset: 0, zIndex: 11,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  pointerEvents: 'none',
+                }}
+              >
+                {/* Single expanding ring — smaller and dimmer than crit */}
+                <motion.div
+                  initial={{ scale: 0.25, opacity: isHit ? 0.7 : 0.45 }}
+                  animate={{ scale: isHit ? 2.4 : 1.8, opacity: 0 }}
+                  transition={{ duration: isHit ? 0.55 : 0.45, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute',
+                    width: 100, height: 100, borderRadius: '50%',
+                    border: `1.5px solid ${accent}`,
+                    left: '50%', top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                />
+                {/* Main text — glowy, smaller than the "Critical!" wordmark */}
+                <motion.div
+                  initial={{ scale: 0.65, y: 6, opacity: 0 }}
+                  animate={{ scale: 1, y: 0, opacity: 1 }}
+                  transition={{ duration: 0.18, ease: 'easeOut', delay: 0.02 }}
+                  style={{ textAlign: 'center', position: 'relative' }}
+                >
+                  <p className="font-cinzel font-700 uppercase tracking-[0.22em]"
+                    style={{
+                      fontSize: isHit ? '1.55rem' : '1.3rem',
+                      color: '#fff',
+                      textShadow: isHit
+                        ? `0 0 12px ${accent}, 0 0 28px ${accent}, 0 0 56px ${accent}55`
+                        : `0 0 8px ${accent}, 0 0 18px ${accent}99`,
+                    }}>
+                    {label}
+                  </p>
+                </motion.div>
+              </motion.div>
+            )
+          })()}
         </AnimatePresence>
 
         {/* Player HP box — bottom-right. Tap to open a stats breakdown popup. */}

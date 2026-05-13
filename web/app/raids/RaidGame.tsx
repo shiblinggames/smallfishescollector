@@ -380,6 +380,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const navXPRef                        = useRef(initialExpeditionXP)
   const [xpPopup, setXpPopup]           = useState<{ value: number; id: number } | null>(null)
   const [levelUp, setLevelUp]           = useState<NavLevelUpInfo | null>(null)
+  // Action to run once the level-up overlay is dismissed — used to gate
+  // the next-fight advance on the celebration so the user sees the bar
+  // fill, sees the level-up, then proceeds.
+  const pendingAdvanceRef               = useRef<(() => void) | null>(null)
 
   const fireIndicatorRef  = useRef<HTMLDivElement>(null)
   const fireFlashRef      = useRef<HTMLDivElement>(null)
@@ -842,7 +846,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // ─── Turn-based combat callbacks ───────────────────────────────────────────
   // Called from <RaidCombat /> when the current encounter ends.
 
-  const handleEnemyDefeated = useCallback((remainingPlayerHp: number) => {
+  const handleEnemyDefeated = useCallback(async (remainingPlayerHp: number) => {
     playerHPRef.current = remainingPlayerHp
     setPlayerHP(remainingPlayerHp)
 
@@ -878,26 +882,44 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
       return
     }
 
-    // Non-boss: save XP/gold silently in the background, sink, then mount
-    // the next encounter in-place (RaidCombat remounts via the key change).
-    awardRaidKill(xp, gold).then(res => {
-      const oldLevel = getLevelFromXP(navXPRef.current)
-      const newLevel = getLevelFromXP(res.newExpeditionXP)
-      navXPRef.current = res.newExpeditionXP
-      setNavXP(res.newExpeditionXP)
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
-      if (xp > 0) setXpPopup({ value: xp, id: Date.now() })
-      if (newLevel > oldLevel) setLevelUp({ fromLevel: oldLevel, toLevel: newLevel })
-    }).catch(() => { /* save failed; rewards already shown in log */ })
-
-    setTimeout(() => {
+    // Non-boss post-kill sequence:
+    //   1. RaidCombat already narrated "<enemy> defeated · +gold · +XP"
+    //   2. Award server-side, then animate the XP bar fill (≈700ms)
+    //   3. If the kill bumped the player's Nav level, surface the level-up
+    //      overlay AFTER the bar has visibly filled. Defer the next-fight
+    //      advance until the user dismisses it.
+    //   4. Otherwise just advance to the next enemy.
+    const advanceToNext = () => {
       setEnemySinking(false)
       roundRef.current++
       resetEnemyForRound(roundRef.current)
       setRoundDisplay(roundRef.current + 1)
       // Phase stays 'playing'; the key={`combat-r${roundDisplay}`} on
       // <RaidCombat /> remounts it fresh with the next enemy.
-    }, 400)
+    }
+
+    let res: { newExpeditionXP: number; newDoubloonTotal: number } | null = null
+    try { res = await awardRaidKill(xp, gold) } catch { /* save failed */ }
+    if (!res) { setTimeout(advanceToNext, 400); return }
+
+    const oldLevel = getLevelFromXP(navXPRef.current)
+    const newLevel = getLevelFromXP(res.newExpeditionXP)
+    navXPRef.current = res.newExpeditionXP
+    setNavXP(res.newExpeditionXP)
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+    if (xp > 0) setXpPopup({ value: xp, id: Date.now() })
+
+    // Wait for the XP bar's 0.7s fill animation to land before the next beat.
+    await new Promise<void>(r => setTimeout(r, 800))
+
+    if (newLevel > oldLevel) {
+      // Show the celebration and defer the advance until the user taps
+      // dismiss (or the overlay is auto-cleared).
+      pendingAdvanceRef.current = advanceToNext
+      setLevelUp({ fromLevel: oldLevel, toLevel: newLevel })
+    } else {
+      advanceToNext()
+    }
   }, [config, fortuneMult, resetEnemyForRound])
 
   const handlePlayerDefeated = useCallback(() => {
@@ -917,7 +939,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
       setNavXP(res.newExpeditionXP)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
       if (winXP > 0) setXpPopup({ value: winXP, id: Date.now() })
-      if (newLevel > oldLevel) setLevelUp({ fromLevel: oldLevel, toLevel: newLevel })
+      // Delay the level-up overlay so the player sees the XP bar fill first.
+      if (newLevel > oldLevel) {
+        setTimeout(() => setLevelUp({ fromLevel: oldLevel, toLevel: newLevel }), 800)
+      }
     } catch { /* save failed, still advance */ } finally {
       setIsClaiming(false)
       setWinPhase('claimed')
@@ -1283,7 +1308,16 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
 
 
       {/* ── Nav level-up celebration ───────────────────────────────────────── */}
-      <NavLevelUpOverlay info={levelUp} onDismiss={() => setLevelUp(null)} />
+      <NavLevelUpOverlay
+        info={levelUp}
+        onDismiss={() => {
+          setLevelUp(null)
+          // Resume whatever was waiting (e.g. the next-fight advance).
+          const fn = pendingAdvanceRef.current
+          pendingAdvanceRef.current = null
+          fn?.()
+        }}
+      />
 
       {/* ── Crew info popup ─────────────────────────────────────────────────── */}
       {showCrewInfo && (

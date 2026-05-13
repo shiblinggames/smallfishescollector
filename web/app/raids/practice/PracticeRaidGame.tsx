@@ -367,6 +367,8 @@ export default function PracticeRaidGame({
   // otherwise (useCallback deps don't include navXP).
   const navXPRef                          = useRef(initialExpeditionXP)
   const [levelUp, setLevelUp]             = useState<NavLevelUpInfo | null>(null)
+  // Action to run after the level-up celebration is dismissed.
+  const pendingAdvanceRef                 = useRef<(() => void) | null>(null)
   const [xpPopup, setXpPopup]             = useState<{ value: number; id: number } | null>(null)
 
   const fireIndicatorRef  = useRef<HTMLDivElement>(null)
@@ -704,7 +706,7 @@ export default function PracticeRaidGame({
 
   // ─── Turn-based combat callbacks (called from <RaidCombat />) ─────────────
 
-  const handleEnemyDefeated = useCallback((remainingPlayerHp: number) => {
+  const handleEnemyDefeated = useCallback(async (remainingPlayerHp: number) => {
     playerHPRef.current = remainingPlayerHp
     setPlayerHP(remainingPlayerHp)
     roundEndingRef.current = true
@@ -714,25 +716,36 @@ export default function PracticeRaidGame({
     setWinGold(gold); setWinXP(xp)
     setEnemyName(currentEnemyRef.current.name)
 
-    // Save silently in the background — the rewards already showed in the
-    // log via <RaidCombat />.
-    awardPracticeKill(xp, gold).then(res => {
-      const oldLevel = getLevelFromXP(navXPRef.current)
-      const newLevel = getLevelFromXP(res.newExpeditionXP)
-      navXPRef.current = res.newExpeditionXP
-      setNavXP(res.newExpeditionXP)
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
-      if (xp > 0) setXpPopup({ value: xp, id: Date.now() })
-      if (newLevel > oldLevel) setLevelUp({ fromLevel: oldLevel, toLevel: newLevel })
-    }).catch(() => { /* save failed; log already showed the rewards */ })
-
-    // After the kill log narration, surface a quick post-battle overlay so
-    // the player can choose: fight again, or return to /expeditions.
-    setTimeout(() => {
+    // Post-kill sequence: log narration already happened in <RaidCombat />.
+    // Now: award → XP bar fills (≈700ms) → if level-up, show celebration and
+    // defer post-battle screen until user dismisses → then surface "fight
+    // another / return home".
+    const showPostBattle = () => {
       roundEndingRef.current = false
       phaseRef.current = 'win'
       setPhase('win')
-    }, 400)
+    }
+
+    let res: { newExpeditionXP: number; newDoubloonTotal: number } | null = null
+    try { res = await awardPracticeKill(xp, gold) } catch { /* save failed */ }
+    if (!res) { setTimeout(showPostBattle, 400); return }
+
+    const oldLevel = getLevelFromXP(navXPRef.current)
+    const newLevel = getLevelFromXP(res.newExpeditionXP)
+    navXPRef.current = res.newExpeditionXP
+    setNavXP(res.newExpeditionXP)
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+    if (xp > 0) setXpPopup({ value: xp, id: Date.now() })
+
+    // Wait for the XP bar's 0.7s fill animation to land before the next beat.
+    await new Promise<void>(r => setTimeout(r, 800))
+
+    if (newLevel > oldLevel) {
+      pendingAdvanceRef.current = showPostBattle
+      setLevelUp({ fromLevel: oldLevel, toLevel: newLevel })
+    } else {
+      showPostBattle()
+    }
   }, [])
 
   const handlePlayerDefeated = useCallback(() => {
@@ -944,7 +957,15 @@ export default function PracticeRaidGame({
       </AnimatePresence>
 
       {/* ── Nav level-up celebration ─────────────────────────────────────────── */}
-      <NavLevelUpOverlay info={levelUp} onDismiss={() => setLevelUp(null)} />
+      <NavLevelUpOverlay
+        info={levelUp}
+        onDismiss={() => {
+          setLevelUp(null)
+          const fn = pendingAdvanceRef.current
+          pendingAdvanceRef.current = null
+          fn?.()
+        }}
+      />
 
       {/* ── Dead overlay ─────────────────────────────────────────────────────── */}
       <AnimatePresence>
