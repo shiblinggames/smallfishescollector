@@ -47,11 +47,9 @@ export const AVATAR_PALETTE: AvatarColorOption[] = [
   { id: 'pink',   label: 'Pink',   hex: '#db2777', premiumOnly: true },
 ]
 
-/** Border-only extras — colors that don't make sense as a background fill
- *  but read nicely as a ring. Gold is premium-locked. */
-export const AVATAR_BORDER_EXTRAS: AvatarColorOption[] = [
-  { id: 'gold', label: 'Gold', hex: '#d4af37', premiumOnly: true },
-]
+/** Border-only extras — kept as a slot for future border-only colors.
+ *  Currently empty; both bg and border draw from AVATAR_PALETTE. */
+export const AVATAR_BORDER_EXTRAS: AvatarColorOption[] = []
 
 /** All allowed bg values. */
 export const ALLOWED_BG_HEXES: string[] = AVATAR_PALETTE.map(c => c.hex)

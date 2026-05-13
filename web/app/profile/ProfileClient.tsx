@@ -241,10 +241,11 @@ export default function ProfileClient({
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false)
   const [avatarSaving, setAvatarSaving] = useState(false)
   // Transient message shown when a premium-locked swatch is tapped.
+  // Stays up long enough to read comfortably — was 2000ms, felt too quick.
   const [avatarLockMsg, setAvatarLockMsg] = useState<string | null>(null)
   function flashLockMsg(msg: string) {
     setAvatarLockMsg(msg)
-    setTimeout(() => setAvatarLockMsg(prev => (prev === msg ? null : prev)), 2000)
+    setTimeout(() => setAvatarLockMsg(prev => (prev === msg ? null : prev)), 4000)
   }
   const [badgeSaving, setBadgeSaving] = useState(false)
   const [selectedBadgeSlot, setSelectedBadgeSlot] = useState<0 | 1 | 2 | null>(null)
