@@ -42,12 +42,51 @@ interface Props {
 
 type TabKey = 'fishingLevel' | 'perfectStreak' | 'tideRun' | 'fishSlots' | 'expedition'
 
-const TABS: { key: TabKey; label: string; accent: string }[] = [
-  { key: 'fishingLevel',  label: 'Fishing Level',     accent: '#f0c040' },
-  { key: 'perfectStreak', label: 'Perfect Streak',    accent: '#fb923c' },
-  { key: 'tideRun',       label: 'Tide Run',          accent: '#5da7d4' },
-  { key: 'fishSlots',     label: 'Fish Slots',        accent: '#34d399' },
-  { key: 'expedition',    label: 'Navigator Level',   accent: '#7090c0' },
+interface BoardDef {
+  key: TabKey
+  label: string
+  accent: string
+  icon: string
+  /** Brief teaser shown under the label on the picker card. Should fit one line. */
+  teaser: (myScore: number) => string
+}
+
+const BOARD_GROUPS: { category: string; items: BoardDef[] }[] = [
+  {
+    category: 'Fishing',
+    items: [
+      {
+        key: 'fishingLevel', label: 'Fishing Level', accent: '#f0c040', icon: '🎣',
+        teaser: n => n > 0 ? `Lv ${getLevelFromXP(n)}` : 'Unranked',
+      },
+      {
+        key: 'perfectStreak', label: 'Perfect Streak', accent: '#fb923c', icon: '🔥',
+        teaser: n => n > 0 ? `${n}× streak` : 'Unranked',
+      },
+    ],
+  },
+  {
+    category: 'Tavern',
+    items: [
+      {
+        key: 'tideRun', label: 'Tide Run', accent: '#5da7d4', icon: '⛵',
+        teaser: n => n > 0 ? `${n.toLocaleString()} m` : 'Unranked',
+      },
+      {
+        key: 'fishSlots', label: 'Fish Slots', accent: '#34d399', icon: '🎰',
+        teaser: n => n > 0 ? `${n.toLocaleString()} ⟡` : 'Unranked',
+      },
+    ],
+  },
+  {
+    category: 'Expeditions',
+    items: [
+      {
+        key: 'expedition', label: 'Navigator Level', accent: '#7090c0', icon: '🧭',
+        teaser: n => n > 0 ? `Lv ${getExpeditionLevel(n)}` : 'Unranked',
+      },
+    ],
+  },
 ]
 
 
@@ -292,39 +331,65 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
   return (
     <div style={{ paddingBottom: '2rem' }}>
 
-      {/* ── Tabs ── */}
-      <div
-        className="flex mb-8"
-        style={{
-          background: 'rgba(6,6,4,0.85)',
-          border: '1px solid rgba(255,255,255,0.14)',
-          borderRadius: 14,
-          padding: 4,
-          gap: 4,
-        }}
-      >
-        {TABS.map(t => {
-          const isActive = activeTab === t.key
-          return (
-            <button
-              key={t.key}
-              onClick={() => setActiveTab(t.key)}
-              className="flex-1 font-karla font-700 uppercase tracking-[0.08em] transition-all"
-              style={{
-                padding: '0.7rem 0.5rem',
-                borderRadius: 10,
-                fontSize: '0.68rem',
-                background: isActive ? `${t.accent}22` : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${isActive ? `${t.accent}55` : 'rgba(255,255,255,0.08)'}`,
-                color: isActive ? t.accent : '#b0aea8',
-                cursor: 'pointer',
-                boxShadow: isActive ? `0 0 12px ${t.accent}22` : 'none',
-              }}
-            >
-              {t.label}
-            </button>
-          )
-        })}
+      {/* ── Board picker — grouped grid of cards ── */}
+      {/* Grouping by category gives the picker structure and lets us add
+          new boards into existing groups (or new categories) without the
+          flat tab row growing unboundedly. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+        {BOARD_GROUPS.map(group => (
+          <div key={group.category}>
+            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.58rem', color: '#7a7674', marginBottom: '0.5rem', paddingLeft: 2 }}>
+              {group.category}
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+              {group.items.map(b => {
+                const isActive = activeTab === b.key
+                const myScore = b.key === 'fishingLevel' ? myScores.fishing
+                  : b.key === 'perfectStreak' ? myScores.perfectStreak
+                  : b.key === 'tideRun' ? myScores.tideRun
+                  : b.key === 'fishSlots' ? myScores.fishSlots
+                  : myScores.expedition
+                return (
+                  <button
+                    key={b.key}
+                    onClick={() => setActiveTab(b.key)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '0.7rem 0.8rem',
+                      borderRadius: 14,
+                      background: isActive ? `${b.accent}1a` : 'rgba(6,6,4,0.78)',
+                      border: `1px solid ${isActive ? `${b.accent}80` : 'rgba(255,255,255,0.10)'}`,
+                      borderTop: `1px solid ${isActive ? `${b.accent}b0` : 'rgba(255,255,255,0.16)'}`,
+                      boxShadow: isActive ? `0 0 18px ${b.accent}35` : 'none',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
+                      textAlign: 'left',
+                    }}
+                  >
+                    {/* Icon + accent stripe */}
+                    <div style={{
+                      width: 38, height: 38, flexShrink: 0, borderRadius: 10,
+                      background: `${b.accent}18`,
+                      border: `1px solid ${b.accent}40`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '1.1rem', lineHeight: 1,
+                    }}>
+                      <span>{b.icon}</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8', lineHeight: 1.15, marginBottom: 2 }}>
+                        {b.label}
+                      </p>
+                      <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: isActive ? b.accent : myScore > 0 ? '#9a9488' : '#5a5856', lineHeight: 1 }}>
+                        {b.teaser(myScore)}
+                      </p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* ── Active leaderboard ── */}
