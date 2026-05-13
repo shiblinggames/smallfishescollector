@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ShipStats } from '@/lib/expeditions'
-import { RARITY_COLORS } from '@/lib/expeditions'
+import { RARITY_COLORS, computeCombatRating } from '@/lib/expeditions'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 import { saveCrew, equipShipSkin, saveEquippedRaidItems } from './actions'
 import { RAID_ITEMS, getRaidItem } from '@/lib/raidItems'
@@ -183,13 +183,11 @@ export default function ShipHero({
   const totalPower   = slots.reduce((s, c, i) => s + (c ? Math.round(c.power   * (i === 0 ? 1 : 0.8)) : 0), 0)
   const totalDodge   = slots.reduce((s, c, i) => s + (c ? Math.round(c.dodge   * (i === 0 ? 1 : 0.8)) : 0), 0)
   const totalFortune = slots.reduce((s, c, i) => s + (c ? Math.round(c.fortune * (i === 0 ? 1 : 0.8)) : 0), 0)
-  const voyageScore  = totalPower + totalDodge + Math.round(totalFortune * 0.5)
-  const raidPower    = totalPower   + navBonus.power
-  const raidDodge    = totalDodge   + navBonus.navigation
-  const raidFortune  = totalFortune + navBonus.fortune
-  const raidHP       = shipStats.durability + navBonus.hp
-  const powerMax     = shipStats.minDamage + Math.floor(raidPower / 4)
-  const raidScore    = Math.floor(powerMax * 4) + Math.floor(raidHP * 0.5) + Math.floor(raidDodge * 0.4) + Math.floor(raidFortune * 0.2)
+  const ratedPower   = totalPower   + navBonus.power
+  const ratedDodge   = totalDodge   + navBonus.navigation
+  const ratedFortune = totalFortune + navBonus.fortune
+  const ratedHP      = shipStats.durability + navBonus.hp
+  const rating       = computeCombatRating(ratedPower, ratedDodge, ratedFortune, ratedHP, shipStats.minDamage)
   const hasCrew      = slots.some(Boolean)
 
   // Skin filter
@@ -245,13 +243,19 @@ export default function ShipHero({
             {hasCrew ? (
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem' }}>
                 <div>
-                  <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#9a9488', marginBottom: 2 }}>Voyage</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '2.2rem', color: '#f0ede8', lineHeight: 1 }}>{voyageScore}</p>
+                  <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#9a9488', marginBottom: 2 }}>Combat Rating</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '2.2rem', color: '#f0ede8', lineHeight: 1 }}>{rating.total}</p>
                 </div>
                 <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', alignSelf: 'stretch', marginBottom: 3 }} />
-                <div>
-                  <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#9a9488', marginBottom: 2 }}>Raid</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '2.2rem', color: '#f0ede8', lineHeight: 1 }}>{raidScore}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                    <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.46rem', color: '#f87171' }}>Off</p>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8', lineHeight: 1 }}>{rating.offense}</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                    <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.46rem', color: '#60a5fa' }}>Def</p>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8', lineHeight: 1 }}>{rating.defense}</p>
+                  </div>
                 </div>
               </div>
             ) : (

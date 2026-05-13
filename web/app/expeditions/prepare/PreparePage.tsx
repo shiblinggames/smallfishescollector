@@ -65,8 +65,11 @@ export default function PreparePage({ zone, zoneConfig, shipStats, doubloons, co
   const totalFortune = crew.reduce((s, c, i) => s + (c ? Math.floor(c.fortune * (i === 0 ? 1 : 0.8)) : 0), 0)
   const assignedCount = crew.filter(Boolean).length
 
-  const dmgMin     = Math.max(1, assignedCount)
-  const dmgMax     = Math.max(1, totalPower)
+  // Damage range mirrors the raid-style formula now used by voyages too:
+  // powerMax = shipMin + power/4, hitMin = max(shipMin, powerMax × 0.5).
+  const powerMax   = shipStats.minDamage + Math.floor(totalPower / 4)
+  const dmgMax     = Math.max(1, powerMax)
+  const dmgMin     = Math.max(shipStats.minDamage, Math.floor(dmgMax * 0.5))
   const dodgeTotal = Math.min(50 + Math.floor(totalDodge / 2), 100)
   const critChance = Math.min(Math.floor(totalFortune / 2), 50)
 

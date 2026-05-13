@@ -161,6 +161,48 @@ export function applyVariantBoosts(
   return result
 }
 
+// ── Unified Combat Rating ───────────────────────────────────────────────────
+// One number that predicts how powerful a (crew + ship + nav) build is, used
+// for both voyage and raid contexts. Anchored in real combat math:
+//   - Offense  = avg expected damage per shot × crit factor
+//   - Defense  = ship HP × dodge boost (effective HP)
+//   - Total    = offense + defense × 0.5
+// All input values should already include nav-level bonuses where applicable.
+
+export interface CombatRating {
+  offense: number
+  defense: number
+  total: number
+}
+
+export function computeCombatRating(
+  totalPower: number,
+  totalDodge: number,
+  totalFortune: number,
+  shipDurability: number,
+  shipMinDamage: number,
+): CombatRating {
+  const powerMax = shipMinDamage + Math.floor(totalPower / 4)
+  const hitMin   = Math.max(shipMinDamage, Math.floor(powerMax * 0.5))
+  const avgHit   = (hitMin + powerMax) / 2
+  // Voyage crit comes from fortune (RNG); raid crit is skill-based via the
+  // aim bar. Both boost expected damage so the rating treats fortune as a
+  // representative "offense potential" multiplier.
+  const critRate = Math.min(totalFortune / 2, 50) / 100
+  const offense  = Math.round(avgHit * (1 + critRate))
+
+  // Effective HP from dodge — capped at +50% so a maxed dodge build doesn't
+  // dwarf offense in the score.
+  const dodgeBoost = Math.min(totalDodge / 200, 0.5)
+  const defense    = Math.round(shipDurability * (1 + dodgeBoost))
+
+  return {
+    offense,
+    defense,
+    total: offense + Math.round(defense * 0.5),
+  }
+}
+
 export function computeTotalCrewStats(crew: CrewCard[]): TotalCrewStats {
   return crew.reduce(
     (totals, card, i) => {
@@ -362,15 +404,18 @@ export function resolveRound(
   if (enemyAction === 'reload') newEnemyCharges = Math.min(state.enemyCharges + 1, 3)
   else if (enemyCanFire)        newEnemyCharges = 0
 
-  // Player shot damage — roll between crewCount (min) and effectivePower*mult (max)
+  // Player shot damage — uses the same scaling as raids (powerMax = shipMin
+  // + power/4, with crew-aware floor), so a unified Combat Rating predicts
+  // outcomes in both modes. Heavy fire (3 charges) doubles the cap.
   let playerDamageDealt = 0
   let critHit = false
   let enemyDodged = false
   if (playerCanFire) {
     const mult = playerIsHeavyFire ? FIRE_MULTIPLIERS.heavy : FIRE_MULTIPLIERS.light
-    const maxDmg = Math.max(1, Math.floor(effectivePower * mult))
-    const minDmg = ship.minDamage
-    const base = minDmg >= maxDmg ? maxDmg : Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg
+    const powerMax = ship.minDamage + Math.floor(effectivePower / 4)
+    const maxDmg = Math.max(1, powerMax * mult)
+    const hitMin = Math.max(ship.minDamage, Math.floor(maxDmg * 0.5))
+    const base = hitMin >= maxDmg ? maxDmg : Math.floor(Math.random() * (maxDmg - hitMin + 1)) + hitMin
     const critChance = Math.min(crew.fortune / 2, 50)
     critHit = Math.random() * 100 < critChance
     const raw = critHit ? Math.floor(base * 2) : base

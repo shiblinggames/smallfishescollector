@@ -553,7 +553,12 @@ function CombatView({ enemy, cs, phase, crew, crewLoadout, ship, runBuffs, isBos
   const canLightFire   = cs.playerCharges >= 1
   const canHeavyFire   = cs.playerCharges === 3
   const fireMultLabel  = cs.playerCharges === 3 ? '×2 rdy' : cs.playerCharges >= 1 ? '×1' : ''
-  const dmgRange = crew.count >= effectivePower ? String(effectivePower) : `${crew.count}–${effectivePower}`
+  // Mirrors the raid-style formula in resolveRound: powerMax = shipMin + power/4,
+  // with a crew-aware floor of half maxDmg. Display the light-fire range; heavy
+  // doubles both ends but we want a tight single number here.
+  const _powerMax = ship.minDamage + Math.floor(effectivePower / 4)
+  const _hitMin = Math.max(ship.minDamage, Math.floor(_powerMax * 0.5))
+  const dmgRange = _hitMin >= _powerMax ? String(_powerMax) : `${_hitMin}–${_powerMax}`
 
   const isSinking    = phase.type === 'enemy_sinking'
   const enemyHitAnim = showResult && log && (log.playerAction === 'fire' || log.playerAction === 'fire_heavy') && log.playerDamageDealt > 0
