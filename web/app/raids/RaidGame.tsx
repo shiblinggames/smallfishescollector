@@ -874,18 +874,19 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     const enemyId = getEnemyForRound(roundRef.current, config).id
     const gold = config.killRewards[enemyId]?.gold ?? 0
     const xp   = config.killRewards[enemyId]?.xp   ?? 0
+    const isBossKill = isBossRound(roundRef.current, config.sequence.length)
 
     setEnemySinking(true)
     setClearReady(false)
 
-    setTimeout(() => {
-      setEnemySinking(false)
-
-      setWinGold(gold)
-      setWinXP(xp)
-      setWinPhase('summary')
-
-      if (isBossRound(roundRef.current, config.sequence.length)) {
+    // Boss → keep the existing Round Clear → loot crate flow (the crate IS
+    // the reward presentation, so we don't want to skip it). Non-boss kills
+    // are narrated inline by <RaidCombat />'s log and just auto-advance to
+    // the next enemy here.
+    if (isBossKill) {
+      setTimeout(() => {
+        setEnemySinking(false)
+        setWinGold(gold); setWinXP(xp); setWinPhase('summary')
         const elapsed = performance.now() - raidStartTimeRef.current
         const secs    = elapsed / 1000
         const tier    = getTimeTier(secs)
@@ -898,16 +899,28 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           setLootAmount(total)
         }
         setWinIsBoss(true)
-      } else {
-        roundRef.current++
-        resetEnemyForRound(roundRef.current)
-        setRoundDisplay(roundRef.current + 1)
-        setWinIsBoss(false)
-      }
+        phaseRef.current = 'clear'
+        setPhase('clear')
+        setTimeout(() => setClearReady(true), 80)
+      }, 920)
+      return
+    }
 
-      phaseRef.current = 'clear'
-      setPhase('clear')
-      setTimeout(() => setClearReady(true), 80)
+    // Non-boss: save XP/gold silently in the background, sink, then mount
+    // the next encounter in-place (RaidCombat remounts via the key change).
+    awardRaidKill(xp, gold).then(res => {
+      setNavXP(res.newExpeditionXP)
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+      if (xp > 0) setXpPopup({ value: xp, id: Date.now() })
+    }).catch(() => { /* save failed; rewards already shown in log */ })
+
+    setTimeout(() => {
+      setEnemySinking(false)
+      roundRef.current++
+      resetEnemyForRound(roundRef.current)
+      setRoundDisplay(roundRef.current + 1)
+      // Phase stays 'playing'; the key={`combat-r${roundDisplay}`} on
+      // <RaidCombat /> remounts it fresh with the next enemy.
     }, 920)
   }, [config, fortuneMult, resetEnemyForRound])
 
@@ -990,22 +1003,29 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
 
         {/* Turn-based combat owns the rest of the playing-phase UI */}
         <div style={{ width: '100%', padding: '0 0.5rem', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <RaidCombat
-            key={`combat-r${roundDisplay}`}
-            enemy={getEnemyForRound(roundRef.current, config)}
-            isBoss={isBoss}
-            shipImageUrl={shipImageUrl}
-            shipName={shipName}
-            playerHpMax={playerHPMax}
-            playerHp={playerHP}
-            shipMinDamage={shipMinDamage}
-            shipSpeed={shipSpeed}
-            totalPower={totalPower}
-            totalNavigation={totalDodge}
-            equippedRaidItems={equippedItems}
-            onEnemyDefeated={handleEnemyDefeated}
-            onPlayerDefeated={handlePlayerDefeated}
-          />
+          {(() => {
+            const currentEnemyId = getEnemyForRound(roundRef.current, config).id
+            const reward = config.killRewards[currentEnemyId]
+            return (
+              <RaidCombat
+                key={`combat-r${roundDisplay}`}
+                enemy={getEnemyForRound(roundRef.current, config)}
+                isBoss={isBoss}
+                shipImageUrl={shipImageUrl}
+                shipName={shipName}
+                playerHpMax={playerHPMax}
+                playerHp={playerHP}
+                shipMinDamage={shipMinDamage}
+                shipSpeed={shipSpeed}
+                totalPower={totalPower}
+                totalNavigation={totalDodge}
+                equippedRaidItems={equippedItems}
+                killReward={reward ? { gold: reward.gold, xp: reward.xp } : undefined}
+                onEnemyDefeated={handleEnemyDefeated}
+                onPlayerDefeated={handlePlayerDefeated}
+              />
+            )
+          })()}
         </div>
       </div>
     )

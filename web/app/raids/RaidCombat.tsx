@@ -121,6 +121,9 @@ export interface RaidCombatProps {
   totalPower: number
   totalNavigation: number   // formerly "dodge"
   equippedRaidItems: string[]
+  /** Gold + XP awarded for killing this enemy; streamed into the log on kill
+   *  Pokemon-style so the parent doesn't need a separate "Round Clear" overlay. */
+  killReward?: { gold: number; xp: number }
   onEnemyDefeated: (remainingPlayerHp: number) => void
   onPlayerDefeated: () => void
 }
@@ -132,6 +135,7 @@ export default function RaidCombat({
   playerHpMax, playerHp: initialPlayerHp,
   shipMinDamage, shipSpeed, totalPower, totalNavigation,
   equippedRaidItems,
+  killReward,
   onEnemyDefeated, onPlayerDefeated,
 }: RaidCombatProps) {
   const [playerHp, setPlayerHp]       = useState(initialPlayerHp)
@@ -507,8 +511,26 @@ export default function RaidCombat({
     function playStep(i: number) {
       if (i >= steps.length) {
         setTimeout(() => {
-          if (pHp <= 0)      { setSubPhase('done'); onPlayerDefeated(); return }
-          if (eHp <= 0)      { setSubPhase('done'); onEnemyDefeated(pHp); return }
+          if (pHp <= 0) { setSubPhase('done'); onPlayerDefeated(); return }
+          if (eHp <= 0) {
+            // Pokemon-style victory beat: stream the kill into the log,
+            // then hand control back to the parent. The parent uses this
+            // delay to either advance to the next enemy in-place or roll
+            // into a loot screen (boss only).
+            setSubPhase('done')
+            setTimeout(() => setResolveLog(prev => [...prev, `${enemy.name} defeated!`]), 300)
+            let cbDelay = 1200
+            if (killReward?.gold) {
+              setTimeout(() => setResolveLog(prev => [...prev, `+${killReward.gold} gold`]), 700)
+              cbDelay = 1700
+            }
+            if (killReward?.xp) {
+              setTimeout(() => setResolveLog(prev => [...prev, `+${killReward.xp} XP`]), 1050)
+              cbDelay = 2050
+            }
+            setTimeout(() => onEnemyDefeated(pHp), cbDelay)
+            return
+          }
           turnRef.current++; setTurn(turnRef.current)
           setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
           setSubPhase('await_input')

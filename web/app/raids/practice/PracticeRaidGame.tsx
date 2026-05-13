@@ -699,13 +699,23 @@ export default function PracticeRaidGame({
     setEnemySinking(true)
     const gold = currentEnemyRef.current.killGold
     const xp   = currentEnemyRef.current.killXP
-    setWinGold(gold); setWinXP(xp)
+
+    // Save silently in the background — the rewards already showed in the
+    // log via <RaidCombat />. No separate "win" overlay.
+    awardPracticeKill(xp, gold).then(res => {
+      setNavXP(res.newExpeditionXP)
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+      if (xp > 0) setXpPopup({ value: xp, id: Date.now() })
+    }).catch(() => { /* save failed; log already showed the rewards */ })
+
+    // After the sinking animation, mount a fresh fight in-place. The skirmish
+    // is a single-encounter loop, so we pick a new random enemy and reset.
     setTimeout(() => {
       roundEndingRef.current = false
-      phaseRef.current = 'win'
-      setPhase('win')
-    }, 920)
-  }, [])
+      const nextEnemy = hasCompletedPractice ? pickRandomEnemy() : PRACTICE_ENEMIES.brute
+      startGame(nextEnemy)
+    }, 1100)
+  }, [hasCompletedPractice, startGame])
 
   const handlePlayerDefeated = useCallback(() => {
     phaseRef.current = 'dead'
@@ -794,6 +804,7 @@ export default function PracticeRaidGame({
             totalPower={totalPower}
             totalNavigation={totalDodge}
             equippedRaidItems={[]}
+            killReward={{ gold: e.killGold, xp: e.killXP }}
             onEnemyDefeated={handleEnemyDefeated}
             onPlayerDefeated={handlePlayerDefeated}
           />
