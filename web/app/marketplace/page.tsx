@@ -100,7 +100,7 @@ export default async function MarketplacePage() {
               <a href="https://shiblingshop.com/products/small-fishes-premium-membership" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block' }}>
                 <DestCard
                   accent="#f0c040"
-                  art="/goldenlure.png"
+                  art="/membership.png"
                   eyebrow={isPremium ? 'Active' : 'Support'}
                   title={isPremium ? "You're a Member" : 'Membership'}
                   description={isPremium ? "Daily perks active. Thanks for your support." : "Daily pack, bonus doubloons, no market fees."}
