@@ -370,20 +370,51 @@ body {
 }
 .rod-glow { animation: rod-glow-pulse 2.4s ease-in-out infinite; }
 
-/* ── Boat glow (Ethereal — slow, soft, divine) ── */
-@keyframes boat-glow-pulse {
+/* ── Boat glow (Ethereal — bob + iridescent shimmer at different periods) ── */
+/* Two animations layered: a 3.6s vertical hover (transform) and a 7s color */
+/* shift through pale gold → cool white → lavender → seafoam (filter). The   */
+/* different periods keep them in-and-out of phase, so the motion never      */
+/* repeats the same beat twice — reads as "alive" rather than mechanical.    */
+@keyframes boat-glow-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+@keyframes boat-glow-shimmer {
   0%, 100% {
     filter:
-      drop-shadow(0 0 3px var(--boat-glow-color, rgba(220,235,255,0.85)))
-      drop-shadow(0 0 8px var(--boat-glow-color, rgba(220,235,255,0.55)));
+      brightness(1.08) saturate(1.1)
+      drop-shadow(0 0 5px  rgba(255,255,255,0.90))
+      drop-shadow(0 0 16px rgba(255,235,200,0.60))
+      drop-shadow(0 0 34px rgba(255,210,140,0.30));
+  }
+  25% {
+    filter:
+      brightness(1.22) saturate(1.2)
+      drop-shadow(0 0 9px  rgba(255,255,255,0.98))
+      drop-shadow(0 0 24px rgba(255,245,225,0.78))
+      drop-shadow(0 0 42px rgba(255,220,160,0.46));
   }
   50% {
     filter:
-      drop-shadow(0 0 6px var(--boat-glow-color, rgba(220,235,255,0.95)))
-      drop-shadow(0 0 16px var(--boat-glow-color, rgba(220,235,255,0.7)));
+      brightness(1.24) saturate(1.2)
+      drop-shadow(0 0 10px rgba(255,255,255,1))
+      drop-shadow(0 0 28px rgba(220,235,255,0.82))
+      drop-shadow(0 0 48px rgba(200,180,255,0.50));
+  }
+  75% {
+    filter:
+      brightness(1.20) saturate(1.18)
+      drop-shadow(0 0 9px  rgba(255,255,255,0.95))
+      drop-shadow(0 0 24px rgba(210,250,240,0.75))
+      drop-shadow(0 0 42px rgba(200,235,255,0.45));
   }
 }
-.boat-glow { animation: boat-glow-pulse 3.6s ease-in-out infinite; }
+.boat-glow {
+  animation:
+    boat-glow-bob 3.6s ease-in-out infinite,
+    boat-glow-shimmer 7s ease-in-out infinite;
+  will-change: transform, filter;
+}
 
 /* ── Shop affordance pulse (gear button + slot tiles when an upgrade is in budget) ── */
 @keyframes shop-pulse {
