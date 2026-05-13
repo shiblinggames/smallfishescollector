@@ -301,17 +301,41 @@ export default function ShipHero({
                 background: 'rgba(6,12,20,0.98)',
                 borderTop: '1px solid rgba(255,255,255,0.09)',
                 borderRadius: '18px 18px 0 0',
-                maxHeight: 'calc(100dvh - 80px)',
+                // 100svh = smallest viewport height (excludes mobile browser chrome
+                // when shown). The -72px buffer keeps the drawer top clear of the
+                // page Nav header on iOS PWA.
+                maxHeight: 'calc(100svh - 72px)',
                 display: 'flex', flexDirection: 'column',
                 overflow: 'hidden',
               }}
             >
               <DrawerHandle />
-              <div style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain', padding: '0.5rem 1rem 5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              {/* Sticky header — outside the scroll container so the close
+                  button never scrolls off-screen. */}
+              <div style={{
+                flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0.25rem 1rem 0.65rem',
+                borderBottom: '1px solid rgba(255,255,255,0.05)',
+              }}>
                 <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: '#6a6764' }}>Loadout</p>
-                <button onClick={closeLoadout} style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+                <button
+                  onClick={closeLoadout}
+                  aria-label="Close loadout"
+                  style={{
+                    color: '#e0ddd8', cursor: 'pointer',
+                    background: 'rgba(255,255,255,0.07)',
+                    border: '1px solid rgba(255,255,255,0.14)',
+                    borderRadius: '50%',
+                    width: 32, height: 32, padding: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    touchAction: 'manipulation',
+                  }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
               </div>
+              <div style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain', padding: '1rem 1rem 5rem' }}>
 
               {/* Ship preview with skin + rename */}
               <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
