@@ -23,7 +23,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
     admin.from('profiles')
-      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat')
+      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color')
       .ilike('username', username)
       .single(),
   ])
@@ -141,6 +141,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           equippedBadges={(profile?.equipped_badges as string[] | null) ?? []}
           equippedBoat={(profile?.equipped_boat as string | null) ?? null}
           equippedHat={(profile?.equipped_hat as string | null) ?? null}
+          avatarBg={(profile?.avatar_bg_color as string | null) ?? null}
+          avatarBorder={(profile?.avatar_border_color as string | null) ?? null}
         />
       </main>
     </>

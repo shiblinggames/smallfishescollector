@@ -16,6 +16,8 @@ import { getBoat } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 import { BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
+import CharacterAvatar from '@/components/CharacterAvatar'
+import { DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avatarColors'
 
 interface CardVariant {
   id: number
@@ -73,6 +75,9 @@ interface Props {
   characterColor?: string
   equippedSpecialId?: string | null
   equippedBadges?: string[]
+  /** Saved portrait colors — match the avatar on /profile. */
+  avatarBg?: string | null
+  avatarBorder?: string | null
 }
 
 function fishImageUrl(name: string) {
@@ -196,7 +201,7 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   )
 }
 
-export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null }: Props) {
+export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, avatarBg = null, avatarBorder = null }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
@@ -229,7 +234,17 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
 
       {/* ── Header ── */}
       <div className="flex flex-col items-center gap-3 pt-2 pb-8">
-        <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem' }}>{username}</p>
+        {/* Portrait — same composite (character + hat + bg + border) used on
+            /profile and in the desktop Nav avatar, so the player's visual
+            identity stays consistent everywhere. */}
+        <CharacterAvatar
+          characterColor={characterColor}
+          equippedHat={equippedHat}
+          size={132}
+          bgColor={avatarBg ?? DEFAULT_AVATAR_BG_COLOR}
+          ringColor={avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR}
+        />
+        <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem', marginTop: 6 }}>{username}</p>
 
         <div className="flex items-center gap-2 flex-wrap justify-center">
           {isPremium && (

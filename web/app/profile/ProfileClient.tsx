@@ -359,27 +359,27 @@ export default function ProfileClient({
           <CharacterAvatar
             characterColor={characterColor}
             equippedHat={equippedHat}
-            size={68}
+            size={132}
             bgColor={avatarBg ?? DEFAULT_AVATAR_BG_COLOR}
             ringColor={avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR}
           />
           {/* Pencil edit badge — like a profile-picture edit affordance */}
           <span style={{
-            position: 'absolute', right: -2, bottom: -2,
-            width: 24, height: 24, borderRadius: '50%',
+            position: 'absolute', right: 2, bottom: 2,
+            width: 34, height: 34, borderRadius: '50%',
             background: '#f0c040',
-            border: '2px solid #0a1422',
+            border: '2.5px solid #0a1422',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.55)',
             pointerEvents: 'none',
           }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0a1422" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a1422" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 20h9"/>
               <path d="M16.5 3.5a2.12 2.12 0 113 3L7 19l-4 1 1-4z"/>
             </svg>
           </span>
         </button>
-        <p className="font-karla" style={{ fontSize: '0.65rem', color: 'rgba(240,237,232,0.5)', marginTop: -2, letterSpacing: '0.06em' }}>
+        <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.55)', marginTop: 0, letterSpacing: '0.06em' }}>
           Tap to customize colors
         </p>
 
