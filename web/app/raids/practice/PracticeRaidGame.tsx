@@ -447,6 +447,16 @@ export default function PracticeRaidGame({
     startGame(enemy)
   }
 
+  // Turn-based: no "OPEN FIRE" gate; auto-enter combat on mount.
+  // First-time users still get the tour from handleOpenFire().
+  const autoStartedRef = useRef(false)
+  useEffect(() => {
+    if (autoStartedRef.current) return
+    autoStartedRef.current = true
+    handleOpenFire()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Combat loop
   useEffect(() => {
     // Disabled: the playing phase now runs inside <RaidCombat />, which owns
@@ -710,9 +720,9 @@ export default function PracticeRaidGame({
 
   const retryGame = useCallback(() => {
     setWinPhase('summary')
-    phaseRef.current = 'idle'
-    setPhase('idle')
-  }, [])
+    const enemy = hasCompletedPractice ? pickRandomEnemy() : PRACTICE_ENEMIES.brute
+    startGame(enemy)
+  }, [hasCompletedPractice, startGame])
 
   const isVolleyReady = charges === MAX_CHARGES
   const playerReady   = playerActionPct >= 1
@@ -826,34 +836,11 @@ export default function PracticeRaidGame({
         }} />
       )}
 
-      {/* ── Idle overlay ─────────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {phase === 'idle' && (
-          <motion.div
-            key="idle-overlay"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.62)', zIndex: 50 }}>
-            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.45)', fontSize: '0.65rem', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>
-              Reef Skirmish
-            </p>
-            <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '3.2rem', lineHeight: 1, marginBottom: 8, textShadow: '0 2px 24px rgba(0,0,0,0.85)' }}>
-              ⚔
-            </p>
-            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.7rem', marginBottom: 32, textAlign: 'center', maxWidth: 220, lineHeight: 1.5 }}>
-              {hasCompletedPractice ? 'A random enemy awaits. Sink them for XP.' : 'Train your crew against a Reef Raider.'}
-            </p>
-            <motion.button
-              onPointerDown={handleOpenFire}
-              animate={{ boxShadow: ['0 0 0px #ef444400', '0 0 28px #ef444488', '0 0 0px #ef444400'] }}
-              transition={{ duration: 1.1, repeat: Infinity }}
-              whileTap={{ scale: 0.95 }}
-              className="font-karla font-700"
-              style={{ padding: '14px 48px', borderRadius: 14, cursor: 'pointer', background: 'rgba(239,68,68,0.18)', border: '1.5px solid rgba(239,68,68,0.55)', color: '#ef4444', fontSize: '1rem', letterSpacing: '0.1em' }}>
-              OPEN FIRE
-            </motion.button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Idle "OPEN FIRE" overlay removed — turn-based combat needs no
+          real-time start gate; the skirmish auto-enters combat on mount
+          and retryGame() jumps straight back into a new fight. The
+          tutorial tour still fires for first-time users via
+          handleOpenFire(). */}
 
       {/* ── Win overlay ──────────────────────────────────────────────────────── */}
       <AnimatePresence>

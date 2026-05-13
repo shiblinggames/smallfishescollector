@@ -486,6 +486,14 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     setRaidTimeSecs(0); setRaidTier(null)
   }, [playerHPMax, resetEnemyForRound])
 
+  // Turn-based: no "OPEN FIRE" gate, so jump straight into combat on mount.
+  const autoStartedRef = useRef(false)
+  useEffect(() => {
+    if (autoStartedRef.current) return
+    autoStartedRef.current = true
+    startGame()
+  }, [startGame])
+
   useEffect(() => {
     // Disabled: the playing phase now runs inside <RaidCombat />, which owns
     // its own state/RAF. The old combat loop below is kept commented out so
@@ -839,8 +847,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
 
   const advance = useCallback(() => {
     setShotResult(null); setClearReady(false)
-    phaseRef.current = 'ready'
-    setPhase('ready')
+    phaseRef.current = 'playing'
+    setPhase('playing')
   }, [])
 
   // ─── Turn-based combat callbacks ───────────────────────────────────────────
@@ -1031,31 +1039,9 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         }} />
       )}
 
-      {/* ── Round start overlay (idle + ready) ───────────────────────────────── */}
-      <AnimatePresence>
-        {(phase === 'idle' || phase === 'ready') && (
-          <motion.div
-            key={phase === 'idle' ? 'idle-overlay' : `ready-${roundDisplay}`}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.62)', zIndex: 50 }}>
-            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.45)', fontSize: '0.65rem', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>
-              {isBoss ? 'Boss Round' : 'Round'}
-            </p>
-            <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '5rem', lineHeight: 1, marginBottom: 36, textShadow: '0 2px 24px rgba(0,0,0,0.85)' }}>
-              {roundDisplay}
-            </p>
-            <motion.button
-              onPointerDown={openFire}
-              animate={{ boxShadow: ['0 0 0px #ef444400', '0 0 28px #ef444488', '0 0 0px #ef444400'] }}
-              transition={{ duration: 1.1, repeat: Infinity }}
-              whileTap={{ scale: 0.95 }}
-              className="font-karla font-700"
-              style={{ padding: '14px 48px', borderRadius: 14, cursor: 'pointer', background: 'rgba(239,68,68,0.18)', border: '1.5px solid rgba(239,68,68,0.55)', color: '#ef4444', fontSize: '1rem', letterSpacing: '0.1em' }}>
-              OPEN FIRE
-            </motion.button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Round-start "OPEN FIRE" overlay removed — turn-based combat needs
+          no real-time start gate; raids auto-enter combat on mount and on
+          advance(). */}
 
       {/* ── Round clear / collect overlay ────────────────────────────────────── */}
       <AnimatePresence>
@@ -1281,7 +1267,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                   Try Again
                 </motion.button>
                 <motion.button
-                  onPointerDown={() => { phaseRef.current = 'idle'; setPhase('idle') }}
+                  onPointerDown={() => router.push('/expeditions')}
                   whileTap={{ scale: 0.96 }}
                   className="font-karla font-600"
                   style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#6a6764', fontSize: '0.82rem', letterSpacing: '0.04em' }}>
