@@ -322,8 +322,8 @@ export default function ShipHero({
                 left: 'max(0px, calc(50% - 240px))',
                 right: 'max(0px, calc(50% - 240px))',
                 zIndex: 101,
-                background: 'rgba(6,12,20,0.98)',
-                borderTop: '1px solid rgba(255,255,255,0.09)',
+                background: '#060c14',
+                borderTop: '1px solid rgba(255,255,255,0.12)',
                 borderRadius: '18px 18px 0 0',
                 display: 'flex', flexDirection: 'column',
                 overflow: 'hidden',
@@ -335,10 +335,10 @@ export default function ShipHero({
               <div style={{
                 flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '0.25rem 1rem 0.65rem',
-                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                padding: '0.25rem 1rem 0.7rem',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
               }}>
-                <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: '#6a6764' }}>Loadout</p>
+                <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: '#a8a39c' }}>Loadout</p>
                 <button
                   onClick={closeLoadout}
                   aria-label="Close loadout"
@@ -357,16 +357,22 @@ export default function ShipHero({
               </div>
               <div style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain', padding: '1rem 1rem 5rem' }}>
 
-              {/* Ship preview with skin + rename */}
-              <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              {/* Ship preview with skin + rename — large hero image fills
+                  the upper area of the drawer. */}
+              <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={shipStats.image}
                   alt={shipName ?? shipStats.name}
-                  style={{ width: 90, height: 90, objectFit: 'contain', display: 'block', margin: '0 auto 0.75rem', filter: skinFilter, transition: 'filter 0.3s ease' }}
+                  style={{
+                    width: '100%', maxWidth: 220, height: 'auto',
+                    objectFit: 'contain', display: 'block', margin: '0 auto 0.85rem',
+                    filter: skinFilter,
+                    transition: 'filter 0.3s ease',
+                  }}
                 />
                 {editingName ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
                     <input
                       autoFocus
                       value={nameInput}
@@ -374,26 +380,26 @@ export default function ShipHero({
                       onKeyDown={e => { if (e.key === 'Enter') submitRename(); if (e.key === 'Escape') setEditingName(false) }}
                       maxLength={32}
                       placeholder={shipStats.name}
-                      style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 7, padding: '0.25rem 0.55rem', color: '#f0ede8', fontSize: '0.88rem', fontFamily: 'inherit', outline: 'none', textAlign: 'center', width: 180 }}
+                      style={{ background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.24)', borderRadius: 8, padding: '0.35rem 0.7rem', color: '#f0ede8', fontSize: '1rem', fontFamily: 'inherit', outline: 'none', textAlign: 'center', width: 200 }}
                     />
-                    <button onClick={submitRename} style={{ background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.3)', borderRadius: 5, padding: '0.22rem 0.5rem', color: '#f0c040', cursor: 'pointer', fontSize: '0.62rem' }} className="font-karla font-700">Save</button>
-                    <button onClick={() => setEditingName(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5a5248', fontSize: '0.62rem' }}>✕</button>
+                    <button onClick={submitRename} style={{ background: 'rgba(240,192,64,0.18)', border: '1px solid rgba(240,192,64,0.4)', borderRadius: 6, padding: '0.3rem 0.65rem', color: '#f0c040', cursor: 'pointer', fontSize: '0.74rem' }} className="font-karla font-700">Save</button>
+                    <button onClick={() => setEditingName(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8a7a6c', fontSize: '0.78rem' }}>✕</button>
                   </div>
                 ) : (
                   <button
                     onClick={() => { setNameInput(shipName ?? ''); setEditingName(true) }}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                   >
-                    <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#e0ddd8' }}>{shipName ?? shipStats.name}</p>
-                    <span style={{ fontSize: '0.6rem', color: '#4a3a28' }}>✎</span>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f0ede8' }}>{shipName ?? shipStats.name}</p>
+                    <span style={{ fontSize: '0.85rem', color: '#9a8050' }}>✎</span>
                   </button>
                 )}
               </div>
 
               {/* ── Crew ── */}
-              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Crew</p>
-              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden', marginBottom: '1.5rem' }}>
-                <div style={{ padding: '1rem', borderBottom: hasCrew ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>Crew</p>
+              <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, overflow: 'hidden', marginBottom: '1.5rem' }}>
+                <div style={{ padding: '1rem', borderBottom: hasCrew ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
                   <div style={{ display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
                     {slots.map((card, i) => {
                       const isCaptain = i === 0
@@ -410,14 +416,14 @@ export default function ShipHero({
                                 <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
                                 {isCaptain && (
                                   <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(10,8,4,0.85)', borderTop: '1px solid rgba(240,192,64,0.3)', textAlign: 'center', padding: '0.12rem 0' }}>
-                                    <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.34rem', color: '#f0c040' }}>Captain</span>
+                                    <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.46rem', color: '#f0c040' }}>Captain</span>
                                   </div>
                                 )}
                                 <button onClick={e => removeFromSlot(i, e)} style={{ position: 'absolute', top: 3, right: 3, width: 16, height: 16, borderRadius: '50%', background: 'rgba(0,0,0,0.72)', border: '1px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
                                   <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                                 </button>
                               </div>
-                              <p className="font-karla font-600 truncate text-center" style={{ fontSize: '0.52rem', color: isCaptain ? '#d4b870' : '#8a8784', maxWidth: 64, lineHeight: 1.2 }}>{card.name}</p>
+                              <p className="font-karla font-600 truncate text-center" style={{ fontSize: '0.66rem', color: isCaptain ? '#e4c890' : '#b8b3ac', maxWidth: 64, lineHeight: 1.2 }}>{card.name}</p>
                             </>
                           ) : (
                             <button
@@ -425,7 +431,7 @@ export default function ShipHero({
                               style={{ width: 64, height: 64, borderRadius: 12, background: isCaptain ? 'rgba(240,192,64,0.03)' : 'rgba(255,255,255,0.02)', border: isCaptain ? '1.5px dashed rgba(240,192,64,0.18)' : '1.5px dashed rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', gap: 4, padding: 0 }}
                             >
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={isCaptain ? 'rgba(240,192,64,0.22)' : 'rgba(255,255,255,0.12)'} strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                              <p className="font-karla" style={{ fontSize: '0.38rem', color: isCaptain ? '#8a7030' : '#5a5856' }}>{isCaptain ? 'Captain' : 'Crew'}</p>
+                              <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: isCaptain ? '#b89040' : '#8a8580' }}>{isCaptain ? 'Captain' : 'Crew'}</p>
                             </button>
                           )}
                         </div>
@@ -434,11 +440,11 @@ export default function ShipHero({
                   </div>
                 </div>
                 {hasCrew && (
-                  <div style={{ padding: '0.75rem 1rem', display: 'flex', gap: '1.5rem' }}>
+                  <div style={{ padding: '0.85rem 1rem', display: 'flex', gap: '1.75rem' }}>
                     {STAT_COLS.map(s => (
                       <div key={s.key}>
-                        <p className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#6a6764', marginBottom: 1 }}>{s.short}</p>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: s.color }}>
+                        <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.66rem', color: '#9a9488', marginBottom: 2 }}>{s.short}</p>
+                        <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: s.color }}>
                           {s.key === 'power' ? totalPower : s.key === 'dodge' ? totalDodge : totalFortune}
                         </p>
                       </div>
@@ -448,7 +454,7 @@ export default function ShipHero({
               </div>
 
               {/* ── Ship Skins ── grid layout (mirrors fishing GearScreen boat picker) */}
-              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Ship Skins</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>Ship Skins</p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: '1.5rem' }}>
                 {/* Default */}
                 {(() => {
@@ -471,10 +477,10 @@ export default function ShipHero({
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={shipStats.image} alt="" style={{ width: 44, height: 44, objectFit: 'contain' }} />
                       </div>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>Default</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8', lineHeight: 1.15, textAlign: 'center' }}>Default</p>
                       {isEquipped
-                        ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#e0ddd8' }}>✓ Equipped</span>
-                        : <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#5a5856' }}>Original</span>
+                        ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#e0ddd8' }}>✓ Equipped</span>
+                        : <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7a7674' }}>Original</span>
                       }
                     </button>
                   )
@@ -511,13 +517,13 @@ export default function ShipHero({
                           }}
                         />
                       </div>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: owned ? '#f0ede8' : '#a0a09a', lineHeight: 1.1, textAlign: 'center' }}>{skin.name}</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: owned ? '#f0ede8' : '#a8a3a0', lineHeight: 1.15, textAlign: 'center' }}>{skin.name}</p>
                       {isEquipped ? (
-                        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: skin.color }}>✓ Equipped</span>
+                        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: skin.color }}>✓ Equipped</span>
                       ) : owned ? (
-                        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Tap to equip</span>
+                        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#4ade80' }}>Tap to equip</span>
                       ) : (
-                        <span className="font-karla" style={{ fontSize: '0.5rem', color: '#5a5856', textAlign: 'center', lineHeight: 1.25 }}>{skin.source}</span>
+                        <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#7a7674', textAlign: 'center', lineHeight: 1.3 }}>{skin.source}</span>
                       )}
                     </button>
                   )
@@ -525,11 +531,11 @@ export default function ShipHero({
               </div>
 
               {/* ── Items ── */}
-              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Items</p>
-              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden', marginBottom: '1.5rem' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>Items</p>
+              <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, overflow: 'hidden', marginBottom: '1.5rem' }}>
                 {/* Equip slots */}
-                <div style={{ padding: '1rem', borderBottom: ownedRaidItems.length > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                  <p className="font-karla" style={{ fontSize: '0.56rem', color: '#5a5248', marginBottom: '0.6rem' }}>Equip up to 3 — effects apply in raids</p>
+                <div style={{ padding: '1rem', borderBottom: ownedRaidItems.length > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
+                  <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#8a8480', marginBottom: '0.7rem' }}>Equip up to 3 — effects apply in raids</p>
                   <div style={{ display: 'flex', gap: '0.7rem' }}>
                     {[0, 1, 2].map(i => {
                       const itemId  = equippedItems[i]
@@ -553,7 +559,7 @@ export default function ShipHero({
                                   <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                                 </div>
                               </button>
-                              <p className="font-karla font-600 truncate text-center" style={{ fontSize: '0.48rem', color: color ?? '#8a8784', maxWidth: 64, lineHeight: 1.2 }}>{itemDef.name}</p>
+                              <p className="font-karla font-600 truncate text-center" style={{ fontSize: '0.62rem', color: color ?? '#b8b3ac', maxWidth: 64, lineHeight: 1.2 }}>{itemDef.name}</p>
                             </>
                           ) : (
                             <div style={{ width: 64, height: 64, borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1.5px dashed rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -580,14 +586,14 @@ export default function ShipHero({
                           key={itemId}
                           onClick={equipped ? () => handleUnequipRaidItem(itemId) : full ? undefined : () => handleEquipRaidItem(itemId)}
                           disabled={full}
-                          style={{ background: equipped ? `${color}0d` : 'rgba(255,255,255,0.02)', border: `1.5px solid ${equipped ? color + '55' : 'rgba(255,255,255,0.07)'}`, borderRadius: 10, padding: '0.6rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: full ? 'default' : 'pointer', opacity: full ? 0.4 : 1, width: '100%', textAlign: 'left' }}
+                          style={{ background: equipped ? `${color}14` : 'rgba(255,255,255,0.04)', border: `1.5px solid ${equipped ? color + '60' : 'rgba(255,255,255,0.12)'}`, borderRadius: 10, padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: full ? 'default' : 'pointer', opacity: full ? 0.45 : 1, width: '100%', textAlign: 'left' }}
                         >
-                          <span style={{ fontSize: '1.4rem', lineHeight: 1, flexShrink: 0 }}>{def.emoji}</span>
+                          <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>{def.emoji}</span>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: equipped ? color : '#e0ddd8', marginBottom: 2 }}>{def.name}</p>
-                            <p className="font-karla" style={{ fontSize: '0.58rem', color: '#5a5248' }}>{def.description}</p>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: equipped ? color : '#f0ede8', marginBottom: 3 }}>{def.name}</p>
+                            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4 }}>{def.description}</p>
                           </div>
-                          <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: equipped ? color : '#4a4845', flexShrink: 0 }}>
+                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.62rem', color: equipped ? color : '#7a7674', flexShrink: 0 }}>
                             {equipped ? 'Equipped' : 'Equip'}
                           </span>
                         </button>
@@ -595,8 +601,8 @@ export default function ShipHero({
                     })}
                   </div>
                 ) : (
-                  <div style={{ padding: '0.75rem 1rem' }}>
-                    <p className="font-karla" style={{ fontSize: '0.62rem', color: '#3a3835' }}>No items yet. Items drop from raid bosses.</p>
+                  <div style={{ padding: '0.85rem 1rem' }}>
+                    <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#6a6460' }}>No items yet. Items drop from raid bosses.</p>
                   </div>
                 )}
               </div>
