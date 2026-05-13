@@ -46,47 +46,18 @@ interface BoardDef {
   key: TabKey
   label: string
   accent: string
-  icon: string
-  /** Brief teaser shown under the label on the picker card. Should fit one line. */
+  /** Compact teaser shown to the right of the label on the picker pill. */
   teaser: (myScore: number) => string
 }
 
-const BOARD_GROUPS: { category: string; items: BoardDef[] }[] = [
-  {
-    category: 'Fishing',
-    items: [
-      {
-        key: 'fishingLevel', label: 'Fishing Level', accent: '#f0c040', icon: '🎣',
-        teaser: n => n > 0 ? `Lv ${getLevelFromXP(n)}` : 'Unranked',
-      },
-      {
-        key: 'perfectStreak', label: 'Perfect Streak', accent: '#fb923c', icon: '🔥',
-        teaser: n => n > 0 ? `${n}× streak` : 'Unranked',
-      },
-    ],
-  },
-  {
-    category: 'Tavern',
-    items: [
-      {
-        key: 'tideRun', label: 'Tide Run', accent: '#5da7d4', icon: '⛵',
-        teaser: n => n > 0 ? `${n.toLocaleString()} m` : 'Unranked',
-      },
-      {
-        key: 'fishSlots', label: 'Fish Slots', accent: '#34d399', icon: '🎰',
-        teaser: n => n > 0 ? `${n.toLocaleString()} ⟡` : 'Unranked',
-      },
-    ],
-  },
-  {
-    category: 'Expeditions',
-    items: [
-      {
-        key: 'expedition', label: 'Navigator Level', accent: '#7090c0', icon: '🧭',
-        teaser: n => n > 0 ? `Lv ${getExpeditionLevel(n)}` : 'Unranked',
-      },
-    ],
-  },
+// Order is also the grouping (Fishing → Tavern → Expeditions). Visual
+// section breaks come from the implicit row flow rather than headers.
+const BOARDS: BoardDef[] = [
+  { key: 'fishingLevel',  label: 'Fishing Level',   accent: '#f0c040', teaser: n => n > 0 ? `Lv ${getLevelFromXP(n)}`         : '—' },
+  { key: 'perfectStreak', label: 'Perfect Streak',  accent: '#fb923c', teaser: n => n > 0 ? `${n}×`                            : '—' },
+  { key: 'tideRun',       label: 'Tide Run',        accent: '#5da7d4', teaser: n => n > 0 ? `${n.toLocaleString()} m`          : '—' },
+  { key: 'fishSlots',     label: 'Fish Slots',      accent: '#34d399', teaser: n => n > 0 ? `${n.toLocaleString()} ⟡`          : '—' },
+  { key: 'expedition',    label: 'Navigator Level', accent: '#7090c0', teaser: n => n > 0 ? `Lv ${getExpeditionLevel(n)}`     : '—' },
 ]
 
 
@@ -331,65 +302,51 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
   return (
     <div style={{ paddingBottom: '2rem' }}>
 
-      {/* ── Board picker — grouped grid of cards ── */}
-      {/* Grouping by category gives the picker structure and lets us add
-          new boards into existing groups (or new categories) without the
-          flat tab row growing unboundedly. */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-        {BOARD_GROUPS.map(group => (
-          <div key={group.category}>
-            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.58rem', color: '#7a7674', marginBottom: '0.5rem', paddingLeft: 2 }}>
-              {group.category}
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-              {group.items.map(b => {
-                const isActive = activeTab === b.key
-                const myScore = b.key === 'fishingLevel' ? myScores.fishing
-                  : b.key === 'perfectStreak' ? myScores.perfectStreak
-                  : b.key === 'tideRun' ? myScores.tideRun
-                  : b.key === 'fishSlots' ? myScores.fishSlots
-                  : myScores.expedition
-                return (
-                  <button
-                    key={b.key}
-                    onClick={() => setActiveTab(b.key)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '0.7rem 0.8rem',
-                      borderRadius: 14,
-                      background: isActive ? `${b.accent}1a` : 'rgba(6,6,4,0.78)',
-                      border: `1px solid ${isActive ? `${b.accent}80` : 'rgba(255,255,255,0.10)'}`,
-                      borderTop: `1px solid ${isActive ? `${b.accent}b0` : 'rgba(255,255,255,0.16)'}`,
-                      boxShadow: isActive ? `0 0 18px ${b.accent}35` : 'none',
-                      cursor: 'pointer',
-                      transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
-                      textAlign: 'left',
-                    }}
-                  >
-                    {/* Icon + accent stripe */}
-                    <div style={{
-                      width: 38, height: 38, flexShrink: 0, borderRadius: 10,
-                      background: `${b.accent}18`,
-                      border: `1px solid ${b.accent}40`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '1.1rem', lineHeight: 1,
-                    }}>
-                      <span>{b.icon}</span>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8', lineHeight: 1.15, marginBottom: 2 }}>
-                        {b.label}
-                      </p>
-                      <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: isActive ? b.accent : myScore > 0 ? '#9a9488' : '#5a5856', lineHeight: 1 }}>
-                        {b.teaser(myScore)}
-                      </p>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        ))}
+      {/* ── Board picker — compact pills ── */}
+      {/* 2-col grid of thin pills. Left edge stripe carries each board's
+          accent so the picker has color without taking the space an icon
+          tile would. Active pill gets a stronger border + glow. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: '1.25rem' }}>
+        {BOARDS.map(b => {
+          const isActive = activeTab === b.key
+          const myScore = b.key === 'fishingLevel' ? myScores.fishing
+            : b.key === 'perfectStreak' ? myScores.perfectStreak
+            : b.key === 'tideRun' ? myScores.tideRun
+            : b.key === 'fishSlots' ? myScores.fishSlots
+            : myScores.expedition
+          const teaser = b.teaser(myScore)
+          return (
+            <button
+              key={b.key}
+              onClick={() => setActiveTab(b.key)}
+              style={{
+                position: 'relative',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                padding: '0.5rem 0.7rem 0.5rem 0.85rem',
+                borderRadius: 10,
+                background: isActive ? `${b.accent}18` : 'rgba(6,6,4,0.7)',
+                border: `1px solid ${isActive ? `${b.accent}70` : 'rgba(255,255,255,0.09)'}`,
+                boxShadow: isActive ? `0 0 12px ${b.accent}30` : 'none',
+                cursor: 'pointer',
+                transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
+                textAlign: 'left',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Left-edge accent stripe */}
+              <div style={{
+                position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+                background: b.accent, opacity: isActive ? 1 : 0.55,
+              }} />
+              <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: isActive ? '#f0ede8' : '#d8d4cf', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {b.label}
+              </p>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: myScore > 0 ? b.accent : '#5a5856', lineHeight: 1, flexShrink: 0 }}>
+                {teaser}
+              </p>
+            </button>
+          )
+        })}
       </div>
 
       {/* ── Active leaderboard ── */}
