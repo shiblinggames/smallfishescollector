@@ -842,26 +842,26 @@ export default function RaidCombat({
         {/* Action log — shows this turn's events (cleared at start of each resolve) */}
         <LogBox lines={resolveLog} turn={turn} />
 
-        {subPhase === 'await_input' && (
-          <ActionMenu canFire={canFire} canVolley={canVolley} onSelect={selectAction} />
-        )}
-        {subPhase === 'aiming' && (
+        {/* Action panel — kept structurally stable so the layout doesn't
+            shift between subphases. Aiming gets its own panel (the user is
+            focused on the aim bar). Otherwise the ActionMenu stays mounted
+            so the buttons don't pop in/out; we just disable them when it
+            isn't the player's input phase. The "who went first" info is
+            already in the log box above (Speed: ... → ... first). */}
+        {subPhase === 'aiming' ? (
           <AimPanel
             indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef}
             onLock={lockShot}
             actionLabel={playerAction === 'volley' ? 'VOLLEY' : 'FIRE'}
           />
-        )}
-        {(subPhase === 'revealing' || subPhase === 'resolving') && (
-          <ActionTilesRow
-            playerAction={playerAction}
-            enemyAction={enemyAction}
-            aimResult={aimResult}
-            firstActor={firstActor}
+        ) : (
+          <ActionMenu
+            canFire={canFire}
+            canVolley={canVolley}
+            onSelect={selectAction}
+            disabled={subPhase !== 'await_input'}
+            highlightedAction={subPhase === 'await_input' ? null : playerAction}
           />
-        )}
-        {subPhase === 'done' && (
-          <p className="font-karla" style={{ color: '#a8b8d0', textAlign: 'center', padding: '1.5rem 0' }}>Combat ended.</p>
         )}
       </div>
 
@@ -1087,30 +1087,41 @@ function HitsplatOverlay({ text, color, big }: { text: string; color: string; bi
   )
 }
 
-function ActionMenu({ canFire, canVolley, onSelect }: {
+function ActionMenu({ canFire, canVolley, onSelect, disabled = false, highlightedAction = null }: {
   canFire: boolean
   canVolley: boolean
   onSelect: (a: EnemyAction) => void
+  /** When true, no buttons are clickable (we're in reveal / resolve phase). */
+  disabled?: boolean
+  /** When set, the matching button keeps its accent border to show the chosen action. */
+  highlightedAction?: EnemyAction | null
 }) {
-  const btn = (action: EnemyAction, label: string, sub: string, enabled: boolean, color: string) => (
-    <motion.button
-      whileTap={enabled ? { scale: 0.94 } : {}}
-      disabled={!enabled}
-      onClick={() => onSelect(action)}
-      style={{
-        padding: '0.85rem 0.55rem',
-        background: enabled ? '#1c2540' : '#0a1422',
-        border: `2px solid ${enabled ? color : '#2a3548'}`,
-        borderRadius: 12,
-        cursor: enabled ? 'pointer' : 'not-allowed',
-        opacity: enabled ? 1 : 0.45,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-      }}
-    >
-      <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: enabled ? '#ffffff' : '#5a6478' }}>{label}</span>
-      <span className="font-karla" style={{ fontSize: '0.68rem', color: enabled ? color : '#4a5468', textAlign: 'center', lineHeight: 1.25 }}>{sub}</span>
-    </motion.button>
-  )
+  const btn = (action: EnemyAction, label: string, sub: string, enabledForAction: boolean, color: string) => {
+    const isHighlighted = highlightedAction === action
+    const enabled = enabledForAction && !disabled
+    // Highlighted (chosen this turn) keeps the accent border + faint glow even while disabled.
+    const borderColor = isHighlighted ? color : enabled ? color : '#2a3548'
+    return (
+      <motion.button
+        whileTap={enabled ? { scale: 0.94 } : {}}
+        disabled={!enabled}
+        onClick={() => onSelect(action)}
+        style={{
+          padding: '0.85rem 0.55rem',
+          background: isHighlighted ? '#1c2540' : enabled ? '#1c2540' : '#0a1422',
+          border: `2px solid ${borderColor}`,
+          borderRadius: 12,
+          cursor: enabled ? 'pointer' : 'not-allowed',
+          opacity: enabled ? 1 : isHighlighted ? 0.85 : 0.45,
+          boxShadow: isHighlighted ? `0 0 12px ${color}55` : 'none',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+        }}
+      >
+        <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: enabled || isHighlighted ? '#ffffff' : '#5a6478' }}>{label}</span>
+        <span className="font-karla" style={{ fontSize: '0.68rem', color: enabled || isHighlighted ? color : '#4a5468', textAlign: 'center', lineHeight: 1.25 }}>{sub}</span>
+      </motion.button>
+    )
+  }
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
       {btn('fire',    'FIRE',    'Spend 1 ◆',         canFire,   '#4ade80')}
