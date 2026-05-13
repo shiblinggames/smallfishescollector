@@ -1334,10 +1334,14 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
       </div>
       {visible.map((line, i) => (
         <motion.p
-          // Keyed on turn + index + content so previously-rendered lines don't
-          // re-animate when a new line is appended, and the prompt animates
-          // fresh each turn.
-          key={`t${turn}-${i}-${line}`}
+          // Key on index + content only — DON'T include `turn`. When a turn
+          // ends, `turn` increments but the log still shows the last turn's
+          // lines until the next resolveTurn() clears it. Including `turn` in
+          // the key re-mounted every existing line on turn-over, causing the
+          // whole log to flicker fade-in at the start of every player input.
+          // Line content is unique enough within a turn (and across turns the
+          // log is replaced wholesale by setResolveLog([speedLine]) anyway).
+          key={`${i}-${line}`}
           initial={isEmpty ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.22, ease: 'easeOut' }}
