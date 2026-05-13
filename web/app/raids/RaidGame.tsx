@@ -12,6 +12,7 @@ import {
   BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR,
 } from '@/lib/bossRaids'
 import RaidCombat from './RaidCombat'
+import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
 
 type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
@@ -374,6 +375,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const [enemyMaxDmg, setEnemyMaxDmg]   = useState(5)
   const [navXP, setNavXP]               = useState(initialExpeditionXP)
   const [xpPopup, setXpPopup]           = useState<{ value: number; id: number } | null>(null)
+  const [levelUp, setLevelUp]           = useState<NavLevelUpInfo | null>(null)
 
   const fireIndicatorRef  = useRef<HTMLDivElement>(null)
   const fireFlashRef      = useRef<HTMLDivElement>(null)
@@ -875,9 +877,12 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     // Non-boss: save XP/gold silently in the background, sink, then mount
     // the next encounter in-place (RaidCombat remounts via the key change).
     awardRaidKill(xp, gold).then(res => {
+      const oldLevel = getLevelFromXP(navXP)
+      const newLevel = getLevelFromXP(res.newExpeditionXP)
       setNavXP(res.newExpeditionXP)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
       if (xp > 0) setXpPopup({ value: xp, id: Date.now() })
+      if (newLevel > oldLevel) setLevelUp({ fromLevel: oldLevel, toLevel: newLevel })
     }).catch(() => { /* save failed; rewards already shown in log */ })
 
     setTimeout(() => {
@@ -901,14 +906,17 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     setIsClaiming(true)
     try {
       const res = await awardRaidKill(winXP, winGold)
+      const oldLevel = getLevelFromXP(navXP)
+      const newLevel = getLevelFromXP(res.newExpeditionXP)
       setNavXP(res.newExpeditionXP)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
       if (winXP > 0) setXpPopup({ value: winXP, id: Date.now() })
+      if (newLevel > oldLevel) setLevelUp({ fromLevel: oldLevel, toLevel: newLevel })
     } catch { /* save failed, still advance */ } finally {
       setIsClaiming(false)
       setWinPhase('claimed')
     }
-  }, [isClaiming, winXP, winGold])
+  }, [isClaiming, winXP, winGold, navXP])
 
   const openFire = useCallback(() => {
     if (phaseRef.current === 'idle') { startGame(); return }
@@ -1270,6 +1278,9 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         )}
       </AnimatePresence>
 
+
+      {/* ── Nav level-up celebration ───────────────────────────────────────── */}
+      <NavLevelUpOverlay info={levelUp} onDismiss={() => setLevelUp(null)} />
 
       {/* ── Crew info popup ─────────────────────────────────────────────────── */}
       {showCrewInfo && (

@@ -8,6 +8,7 @@ import { getShipSkin } from '@/lib/shipSkins'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
 import RaidCombat from '../RaidCombat'
 import type { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
+import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
 
 type GamePhase  = 'idle' | 'playing' | 'win' | 'dead'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
@@ -362,6 +363,7 @@ export default function PracticeRaidGame({
   const [winPhase, setWinPhase]           = useState<'summary' | 'claimed'>('summary')
   const [isClaiming, setIsClaiming]       = useState(false)
   const [navXP, setNavXP]                 = useState(initialExpeditionXP)
+  const [levelUp, setLevelUp]             = useState<NavLevelUpInfo | null>(null)
   const [xpPopup, setXpPopup]             = useState<{ value: number; id: number } | null>(null)
 
   const fireIndicatorRef  = useRef<HTMLDivElement>(null)
@@ -712,9 +714,12 @@ export default function PracticeRaidGame({
     // Save silently in the background — the rewards already showed in the
     // log via <RaidCombat />.
     awardPracticeKill(xp, gold).then(res => {
+      const oldLevel = getLevelFromXP(navXP)
+      const newLevel = getLevelFromXP(res.newExpeditionXP)
       setNavXP(res.newExpeditionXP)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
       if (xp > 0) setXpPopup({ value: xp, id: Date.now() })
+      if (newLevel > oldLevel) setLevelUp({ fromLevel: oldLevel, toLevel: newLevel })
     }).catch(() => { /* save failed; log already showed the rewards */ })
 
     // After the kill log narration, surface a quick post-battle overlay so
@@ -933,6 +938,9 @@ export default function PracticeRaidGame({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── Nav level-up celebration ─────────────────────────────────────────── */}
+      <NavLevelUpOverlay info={levelUp} onDismiss={() => setLevelUp(null)} />
 
       {/* ── Dead overlay ─────────────────────────────────────────────────────── */}
       <AnimatePresence>

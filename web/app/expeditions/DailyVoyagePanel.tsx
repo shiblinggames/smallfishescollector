@@ -11,6 +11,7 @@ import { getSpecialItem } from '@/lib/specialItems'
 import { sendDailyVoyage, revealVoyageResults, type DailyVoyage } from './voyageActions'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 import VoyageHistory, { type VoyageHistoryEntry } from './VoyageHistory'
+import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
 
 type PanelState = 'idle' | 'away' | 'returned' | 'done'
 
@@ -174,6 +175,11 @@ export default function DailyVoyagePanel({
   const [logExpanded, setLogExpanded] = useState(false)
   const [xpEarned, setXpEarned] = useState(0)
   const [levelUp, setLevelUp] = useState<{ from: number; to: number } | null>(null)
+  // Big celebration overlay (fishing-style ring bursts + stat-delta breakdown).
+  // Separate from the small inline summary line above, which stays in the
+  // voyage-results card for reference; this fires once on reveal and is
+  // tap-dismissable.
+  const [levelUpOverlay, setLevelUpOverlay] = useState<NavLevelUpInfo | null>(null)
 
   useEffect(() => {
     const handler = (e: Event) => setLiveCrewIds((e as CustomEvent<number[]>).detail)
@@ -233,7 +239,10 @@ export default function DailyVoyagePanel({
       if (res.newPhantomHook) setClaimedPhantomHook(true)
       if (res.unlockedSkinId) setClaimedSkinId(res.unlockedSkinId)
       setXpEarned(res.xpEarned)
-      if (res.newExpeditionLevel > res.oldExpeditionLevel) setLevelUp({ from: res.oldExpeditionLevel, to: res.newExpeditionLevel })
+      if (res.newExpeditionLevel > res.oldExpeditionLevel) {
+        setLevelUp({ from: res.oldExpeditionLevel, to: res.newExpeditionLevel })
+        setLevelUpOverlay({ fromLevel: res.oldExpeditionLevel, toLevel: res.newExpeditionLevel })
+      }
       setPanelState('done')
       router.refresh()
     })
@@ -848,6 +857,8 @@ export default function DailyVoyagePanel({
       .filter(Boolean) as CrewCard[]
 
     return (
+      <>
+      <NavLevelUpOverlay info={levelUpOverlay} onDismiss={() => setLevelUpOverlay(null)} />
       <div>
         <div style={{
           background: 'linear-gradient(135deg, rgba(28,20,10,0.72) 0%, rgba(18,14,6,0.80) 100%)',
@@ -1163,6 +1174,7 @@ export default function DailyVoyagePanel({
           )}
         </div>
       </div>
+      </>
     )
   }
 
