@@ -1146,8 +1146,9 @@ function ActionMenu({ canFire, canVolley, onSelect, disabled = false, highlighte
 
 function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
   // Pokemon-style "battle text" box. Always visible, just current turn's events.
-  // Each new line slides + fades in so the log feels alive instead of dumping
-  // the whole turn at once.
+  // Reserved height fits ~5 lines (typical max for a turn) so appending a new
+  // line doesn't grow the box and shift the rest of the layout — each line
+  // just fades in, no container reflow.
   const isEmpty = lines.length === 0
   const visible = isEmpty ? ['What will you do?'] : lines
   return (
@@ -1156,7 +1157,7 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
       border: '1px solid #1f2e42',
       borderRadius: 12,
       padding: '0.65rem 0.85rem',
-      minHeight: 72,
+      minHeight: 138,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
         <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: '#5a7a9a' }}>
@@ -1165,13 +1166,13 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
       </div>
       {visible.map((line, i) => (
         <motion.p
-          // Keying on the line text + index means lines added later animate
-          // in fresh, but the existing ones don't re-animate on each render.
-          // Reset the keyspace when the turn changes so prompts re-animate.
+          // Keyed on turn + index + content so previously-rendered lines don't
+          // re-animate when a new line is appended, and the prompt animates
+          // fresh each turn.
           key={`t${turn}-${i}-${line}`}
-          initial={isEmpty ? false : { opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          initial={isEmpty ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.22, ease: 'easeOut' }}
           className="font-karla"
           style={{ fontSize: '0.86rem', color: '#c8d4e0', lineHeight: 1.55 }}
         >
