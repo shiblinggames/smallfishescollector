@@ -584,11 +584,16 @@ export default function RaidCombat({
       borderRadius: 18,
       overflow: 'hidden',
       maxWidth: 580, margin: '0 auto',
+      flex: 1, minHeight: 0,
+      width: '100%',
     }}>
-      {/* Battle stage — ocean scene with ships and HP boxes */}
+      {/* Battle stage — ocean scene with ships and HP boxes.
+          flex:1 lets it grow into available vertical space on tall phones;
+          minHeight keeps it readable on short viewports. */}
       <div style={{
         position: 'relative',
-        aspectRatio: '5 / 4',
+        flex: 1,
+        minHeight: 'min(60vh, 460px)',
         background: 'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)',
         overflow: 'hidden',
       }}>

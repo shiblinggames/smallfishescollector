@@ -948,7 +948,11 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // ─── Playing phase: render the new turn-based combat ──────────────────────
   if (phase === 'playing') {
     return (
-      <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
+      <div className="flex flex-col items-center gap-2 select-none" style={{
+        userSelect: 'none',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
+        minHeight: 'calc(100dvh - 44px - env(safe-area-inset-bottom, 0px))',
+      }}>
         {/* Nav level bar — kept across all phases. NOTE: must NOT be
             position:sticky (or have transform/filter/will-change) — combined
             with framer-motion compositing inside RaidCombat, iOS Safari PWA
@@ -979,7 +983,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         </div>
 
         {/* Turn-based combat owns the rest of the playing-phase UI */}
-        <div style={{ width: '100%', padding: '0 0.5rem' }}>
+        <div style={{ width: '100%', padding: '0 0.5rem', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <RaidCombat
             key={`combat-r${roundDisplay}`}
             enemy={getEnemyForRound(roundRef.current, config)}

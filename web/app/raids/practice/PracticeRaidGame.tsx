@@ -746,7 +746,11 @@ export default function PracticeRaidGame({
       image: e.image, portrait: e.portrait,
     }
     return (
-      <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
+      <div className="flex flex-col items-center gap-2 select-none" style={{
+        userSelect: 'none',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
+        minHeight: 'calc(100dvh - 44px - env(safe-area-inset-bottom, 0px))',
+      }}>
         {/* NavLevelBar must NOT be position:sticky — see memory
             feedback_pagetransition_ios_pwa.md. Combined with framer-motion
             compositing in RaidCombat, sticky here breaks the body's
@@ -774,7 +778,7 @@ export default function PracticeRaidGame({
             )}
           </AnimatePresence>
         </div>
-        <div style={{ width: '100%', padding: '0 0.5rem' }}>
+        <div style={{ width: '100%', padding: '0 0.5rem', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <RaidCombat
             key={`practice-combat-${e.id}-${enemyHPMax}`}
             enemy={enemyForCombat}
