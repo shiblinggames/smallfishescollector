@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
-import { getActiveEffects } from '@/lib/raidItems'
+import { getActiveEffects, getRaidItem } from '@/lib/raidItems'
 
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical'
 type SubPhase   = 'await_input' | 'aiming' | 'revealing' | 'resolving' | 'done'
@@ -1014,25 +1014,25 @@ function PlayerStatsPopup({
   const powerMax  = shipMinDamage + Math.floor(totalPower / 4)
   const critMin   = shipMinDamage * 2
   const critMax   = Math.round(powerMax * 1.5)
-  // Combined "maneuver" stat — both Ship Speed (turn-order d20 modifier +
-  // dodge defense) and Navigation (slows enemy aim + boosts dodge roll)
-  // shape the same fantasy of "how nimble your ship is", so we just sum
-  // them into a single Sailing score in the breakdown.
+  // Combined "maneuver" stat — Ship Speed and Navigation both feed into how
+  // nimble the ship is in fights, so they're summed into one Sailing score.
   const sailing   = shipSpeed + totalNavigation
-  const bossMult  = isBoss
-    ? getActiveEffects(equippedRaidItems)
-        .filter(e => e.type === 'boss_damage_mult')
-        .reduce((a, e) => a * e.value, 1)
-    : 1
-  const rows: { label: string; value: string; hint?: string; color: string }[] = [
-    { label: 'Damage',      value: `${shipMinDamage}–${powerMax}`, hint: 'min from hull · max scales with Power',           color: '#f87171' },
-    { label: 'Crit Damage', value: `${critMin}–${critMax}`,        hint: 'critical hits roll in this range',                color: '#fbbf24' },
-    { label: 'Sailing',     value: String(sailing),                hint: 'turn order · dodge · enemy aim difficulty',       color: '#60a5fa' },
-    { label: 'Fortune',     value: String(totalFortune),           hint: 'shifts loot odds toward rare drops',              color: '#f0c040' },
+
+  const rows: { label: string; value: string; hint: string; color: string }[] = [
+    { label: 'Damage',      value: `${shipMinDamage}–${powerMax}`, hint: 'normal-hit damage range',         color: '#f87171' },
+    { label: 'Crit Damage', value: `${critMin}–${critMax}`,        hint: 'damage on a critical lock',       color: '#fbbf24' },
+    { label: 'Sailing',     value: String(sailing),                hint: 'turn order, dodge, evasion',      color: '#60a5fa' },
+    { label: 'Fortune',     value: String(totalFortune),           hint: 'better odds at rare loot',        color: '#f0c040' },
   ]
-  if (isBoss && bossMult > 1) {
-    rows.push({ label: 'Boss Dmg ×', value: `${bossMult.toFixed(2)}×`, hint: 'from equipped raid items', color: '#fbbf24' })
-  }
+
+  // Special — scalable bonus list pulled from every equipped raid item.
+  // Each equipped item surfaces as its own card with name + description, so
+  // new items (any effect type) automatically appear here as they're added.
+  // The legacy Boss-Dmg multiplier is folded into the item's own description.
+  const specialItems = equippedRaidItems
+    .map(id => getRaidItem(id))
+    .filter((i): i is NonNullable<ReturnType<typeof getRaidItem>> => !!i)
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -1042,64 +1042,112 @@ function PlayerStatsPopup({
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 95,
-        background: 'rgba(0,0,0,0.78)',
+        background: 'rgba(0,0,0,0.82)',
+        backdropFilter: 'blur(4px)',
+        WebkitBackdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '1.2rem',
+        padding: '1.25rem',
       }}
     >
       <motion.div
         onClick={e => e.stopPropagation()}
-        initial={{ opacity: 0, scale: 0.92, y: 8 }}
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 4 }}
+        exit={{ opacity: 0, scale: 0.98, y: 4 }}
         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         style={{
-          width: '100%', maxWidth: 360,
-          background: '#060c14',
-          border: '2px solid #2a3548',
-          borderRadius: 16,
-          padding: '1rem 1rem 0.85rem',
+          width: '100%', maxWidth: 380,
+          background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)',
+          border: '1px solid rgba(96,165,250,0.18)',
+          borderRadius: 20,
+          padding: '1.1rem 1rem 1rem',
+          boxShadow: '0 18px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04) inset',
+          maxHeight: 'calc(100dvh - 4rem)',
+          overflowY: 'auto',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        {/* Header — ship art + name. No "Captain's Ledger" label; the popup
+            speaks for itself, and the smaller label was the most antiquated
+            part of the old design. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={shipImageUrl} alt="" style={{ width: 56, height: 56, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.5))' }} />
-          <div style={{ minWidth: 0 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.58rem', color: '#5a7a9a', marginBottom: 2 }}>Captain&apos;s ledger</p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shipName}</p>
+          <img src={shipImageUrl} alt="" style={{ width: 60, height: 60, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.5))' }} />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.68rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 3 }}>Your Ship</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f0ede8', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shipName}</p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+        {/* Stat cards — 2-column grid feels less list-y and more dashboard-y. */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: specialItems.length > 0 ? 16 : 12,
+        }}>
           {rows.map(r => (
             <div key={r.label} style={{
-              display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10,
-              padding: '0.45rem 0.65rem',
-              background: '#04080e', border: '1px solid #1f2e42', borderRadius: 10,
+              display: 'flex', flexDirection: 'column', gap: 4,
+              padding: '0.7rem 0.75rem',
+              background: 'rgba(255,255,255,0.025)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderLeft: `3px solid ${r.color}`,
+              borderRadius: 12,
             }}>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: r.color, lineHeight: 1.15 }}>{r.label}</p>
-                {r.hint && <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a7088', lineHeight: 1.35, marginTop: 2 }}>{r.hint}</p>}
-              </div>
-              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8', flexShrink: 0 }}>{r.value}</p>
+              <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: r.color, letterSpacing: '0.04em' }}>{r.label}</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f0ede8', lineHeight: 1.05 }}>{r.value}</p>
+              <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.55)', lineHeight: 1.35 }}>{r.hint}</p>
             </div>
           ))}
         </div>
 
-        <p className="font-karla" style={{ fontSize: '0.58rem', color: '#5a7088', textAlign: 'center', marginBottom: 10, lineHeight: 1.45 }}>
-          Totals include the Nav-level captain bonus on top of your crew + ship.
-        </p>
+        {/* Special — scales with however many raid items are equipped */}
+        {specialItems.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.7rem', color: '#fbbf24', letterSpacing: '0.16em', marginBottom: 6 }}>
+              Special
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {specialItems.map(item => (
+                <div key={item.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '0.65rem 0.75rem',
+                  background: 'rgba(251,191,36,0.06)',
+                  border: '1px solid rgba(251,191,36,0.22)',
+                  borderRadius: 12,
+                }}>
+                  {/* Item glyph */}
+                  <div style={{
+                    width: 36, height: 36, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(251,191,36,0.1)',
+                    border: '1px solid rgba(251,191,36,0.3)',
+                    borderRadius: 9,
+                  }}>
+                    {item.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.image} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                    ) : (
+                      <span style={{ fontSize: '1.1rem' }}>{item.emoji}</span>
+                    )}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#fbbf24', lineHeight: 1.15, marginBottom: 2 }}>{item.name}</p>
+                    <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>{item.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <button
           type="button"
           onClick={onClose}
-          className="font-karla font-700 uppercase tracking-[0.12em]"
+          className="font-karla font-700"
           style={{
-            width: '100%', padding: '0.7rem',
-            background: 'rgba(96,165,250,0.12)',
+            width: '100%', padding: '0.85rem',
+            background: 'rgba(96,165,250,0.14)',
             border: '1px solid rgba(96,165,250,0.45)',
-            color: '#60a5fa', borderRadius: 12,
-            fontSize: '0.72rem', cursor: 'pointer',
+            color: '#90c0ff', borderRadius: 12,
+            fontSize: '0.85rem', letterSpacing: '0.04em', cursor: 'pointer',
           }}
         >
           Close
