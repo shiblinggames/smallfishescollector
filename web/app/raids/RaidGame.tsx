@@ -972,6 +972,23 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 8px)',
         minHeight: 'calc(100dvh - 44px - env(safe-area-inset-bottom, 0px))',
       }}>
+        {/* Leave link — always available so the player can back out at any
+            time, even between auto-advanced fights. */}
+        <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-start', marginBottom: 2 }}>
+          <button
+            onClick={() => router.push('/expeditions')}
+            className="font-karla font-700 uppercase tracking-[0.12em]"
+            style={{
+              fontSize: '0.58rem', color: '#7a8aa0',
+              background: 'rgba(20,28,40,0.6)',
+              border: '1px solid rgba(122,138,160,0.3)',
+              borderRadius: 999, padding: '0.35rem 0.7rem',
+              cursor: 'pointer',
+            }}
+          >
+            ← Leave
+          </button>
+        </div>
         {/* Nav level bar — kept across all phases. NOTE: must NOT be
             position:sticky (or have transform/filter/will-change) — combined
             with framer-motion compositing inside RaidCombat, iOS Safari PWA
