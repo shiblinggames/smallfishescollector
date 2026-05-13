@@ -24,6 +24,25 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+// Cache for the desktop nav avatar fields so the avatar renders correctly
+// on the first paint after a tab switch (instead of flashing the default
+// while supabase round-trips). Keys are namespaced under `nav:` so they
+// don't collide with anything else stored client-side.
+function readNavCache(key: string): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const v = window.localStorage.getItem(`nav:${key}`)
+    return v && v.length ? v : null
+  } catch { return null }
+}
+function writeNavCache(key: string, value: string | null) {
+  if (typeof window === 'undefined') return
+  try {
+    if (value) window.localStorage.setItem(`nav:${key}`, value)
+    else       window.localStorage.removeItem(`nav:${key}`)
+  } catch { /* private mode etc. — ignore */ }
+}
+
 export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailable?: number; doubloons?: number; gems?: number }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -40,12 +59,15 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   const [displayDoubloons, setDisplayDoubloons] = useState(doubloons)
   const [displayGems, setDisplayGems] = useState(gems)
   const [displayPacks, setDisplayPacks] = useState(packsAvailable)
-  // Profile-button avatar (desktop nav). Pulled on mount so the SVG fallback
-  // only shows briefly during initial paint.
-  const [characterColor, setCharacterColor] = useState<string | null>(null)
-  const [equippedHat, setEquippedHat] = useState<string | null>(null)
-  const [avatarBg, setAvatarBg] = useState<string | null>(null)
-  const [avatarBorder, setAvatarBorder] = useState<string | null>(null)
+  // Profile-button avatar (desktop nav). Pulled on mount and cached in
+  // localStorage so the avatar doesn't flash to "default" between tab
+  // switches — Nav lives inside PageTransition which remounts on every
+  // navigation (key={pathname}), and otherwise these would reset to null
+  // until the supabase fetcher resolves.
+  const [characterColor, setCharacterColor] = useState<string | null>(() => readNavCache('character_color'))
+  const [equippedHat, setEquippedHat]       = useState<string | null>(() => readNavCache('equipped_hat'))
+  const [avatarBg, setAvatarBg]             = useState<string | null>(() => readNavCache('avatar_bg'))
+  const [avatarBorder, setAvatarBorder]     = useState<string | null>(() => readNavCache('avatar_border'))
 
   const fetchBadge = useCallback(() => {
     const supabase = createClient()
@@ -59,10 +81,19 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         const lastViewed = profile?.last_viewed_achievements_at
         const latestUnlocked = latestAchievement?.unlocked_at
         setAchievementsBadge(!!latestUnlocked && (!lastViewed || latestUnlocked > lastViewed))
-        setCharacterColor((profile?.character_color as string | null) ?? null)
-        setEquippedHat((profile?.equipped_hat as string | null) ?? null)
-        setAvatarBg((profile?.avatar_bg_color as string | null) ?? null)
-        setAvatarBorder((profile?.avatar_border_color as string | null) ?? null)
+        const cc = (profile?.character_color as string | null) ?? null
+        const hat = (profile?.equipped_hat as string | null) ?? null
+        const bg = (profile?.avatar_bg_color as string | null) ?? null
+        const border = (profile?.avatar_border_color as string | null) ?? null
+        setCharacterColor(cc)
+        setEquippedHat(hat)
+        setAvatarBg(bg)
+        setAvatarBorder(border)
+        // Cache so next tab-switch hydrates immediately (no flash).
+        writeNavCache('character_color', cc)
+        writeNavCache('equipped_hat', hat)
+        writeNavCache('avatar_bg', bg)
+        writeNavCache('avatar_border', border)
         const now = Date.now()
         const hasReadyVoyage = (voyages ?? []).some(
           (r: { created_at: string; duration_ms: number | null }) =>
