@@ -636,8 +636,8 @@ export default function DailyVoyagePanel({
               )}
             </>
           )}
+          <VoyageHistory voyages={voyages} />
         </div>
-        <VoyageHistory voyages={voyages} />
       </div>
     )
   }
@@ -843,8 +843,8 @@ export default function DailyVoyagePanel({
             </div>
           )}
 
+          <VoyageHistory voyages={voyages} />
         </div>
-        <VoyageHistory voyages={voyages} />
       </div>
     )
   }
