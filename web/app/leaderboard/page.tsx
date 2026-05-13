@@ -59,14 +59,30 @@ export default async function LeaderboardPage() {
     ...fishSlotsData.top.map(e => e.user_id),
     ...expeditionData.top.map(e => e.user_id),
   ])
-  const avatarsMap: Record<string, { characterColor: string | null; equippedHat: string | null }> = {}
+  const avatarsMap: Record<string, {
+    characterColor: string | null
+    equippedHat: string | null
+    avatarBg: string | null
+    avatarBorder: string | null
+  }> = {}
   if (displayedUserIds.size > 0) {
     const { data: avatarRows } = await admin
       .from('profiles')
-      .select('id, character_color, equipped_hat')
+      .select('id, character_color, equipped_hat, avatar_bg_color, avatar_border_color')
       .in('id', Array.from(displayedUserIds))
-    for (const row of (avatarRows ?? []) as Array<{ id: string; character_color: string | null; equipped_hat: string | null }>) {
-      avatarsMap[row.id] = { characterColor: row.character_color, equippedHat: row.equipped_hat }
+    for (const row of (avatarRows ?? []) as Array<{
+      id: string
+      character_color: string | null
+      equipped_hat: string | null
+      avatar_bg_color: string | null
+      avatar_border_color: string | null
+    }>) {
+      avatarsMap[row.id] = {
+        characterColor: row.character_color,
+        equippedHat: row.equipped_hat,
+        avatarBg: row.avatar_bg_color,
+        avatarBorder: row.avatar_border_color,
+      }
     }
   }
 

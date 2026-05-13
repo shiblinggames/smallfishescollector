@@ -29,10 +29,15 @@ interface Props {
   expedition: LeaderboardEntry[]
   myScores: MyScores
   currentUserId: string
-  /** Map of user_id → { characterColor, equippedHat } for every player
-   *  shown across any of the boards. Populated server-side in a single
-   *  side query so each row can render the player's actual character. */
-  avatars: Record<string, { characterColor: string | null; equippedHat: string | null }>
+  /** Map of user_id → avatar attributes for every player shown across any
+   *  of the boards. Populated server-side in a single side query so each
+   *  row can render the player's actual character. */
+  avatars: Record<string, {
+    characterColor: string | null
+    equippedHat: string | null
+    avatarBg: string | null
+    avatarBorder: string | null
+  }>
 }
 
 type TabKey = 'fishingLevel' | 'perfectStreak' | 'tideRun' | 'fishSlots' | 'expedition'
@@ -53,32 +58,35 @@ function avatarColor(str: string) {
   return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
 }
 
-function Avatar({ username, size = 36, characterColor: charColor, equippedHat }: {
+function Avatar({ username, size = 36, characterColor: charColor, equippedHat, avatarBg, avatarBorder }: {
   username: string
   size?: number
   characterColor?: string | null
   equippedHat?: string | null
+  avatarBg?: string | null
+  avatarBorder?: string | null
 }) {
-  const color = avatarColor(username)
+  const fallbackColor = avatarColor(username)
   // If we have avatar data from the server payload, render the character +
-  // hat composite. Otherwise fall back to the username-hashed colored
-  // letter circle (still used for older accounts without character_color).
+  // hat composite using the player's saved colors (or the shared defaults).
+  // Otherwise fall back to the username-hashed colored letter circle (still
+  // used for legacy accounts without character_color set).
   if (charColor) {
     return (
       <CharacterAvatar
         characterColor={charColor}
         equippedHat={equippedHat ?? null}
         size={size}
-        ringColor={color}
-        bgColor={color}
+        bgColor={avatarBg ?? undefined}
+        ringColor={avatarBorder ?? undefined}
       />
     )
   }
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      background: `radial-gradient(circle at 38% 35%, ${color}ee 0%, ${color}77 100%)`,
-      border: `1.5px solid ${color}55`,
+      background: `radial-gradient(circle at 38% 35%, ${fallbackColor}ee 0%, ${fallbackColor}77 100%)`,
+      border: `1.5px solid ${fallbackColor}55`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <span className="font-cinzel font-700" style={{ fontSize: size * 0.38, color: '#f0ede8' }}>
@@ -121,7 +129,12 @@ interface SectionProps {
   myScore: number
   currentUserId: string
   showZone?: boolean
-  avatars: Record<string, { characterColor: string | null; equippedHat: string | null }>
+  avatars: Record<string, {
+    characterColor: string | null
+    equippedHat: string | null
+    avatarBg: string | null
+    avatarBorder: string | null
+  }>
 }
 
 function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, currentUserId, showZone, avatars }: SectionProps) {
@@ -161,7 +174,14 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
                 }}
               >
                 <span style={{ fontSize: rank === 1 ? '1.3rem' : '1.1rem', lineHeight: 1, flexShrink: 0 }}>{medal}</span>
-                <Avatar username={entry.username} size={rank === 1 ? 36 : 28} characterColor={avatars[entry.user_id]?.characterColor} equippedHat={avatars[entry.user_id]?.equippedHat} />
+                <Avatar
+                  username={entry.username}
+                  size={rank === 1 ? 36 : 28}
+                  characterColor={avatars[entry.user_id]?.characterColor}
+                  equippedHat={avatars[entry.user_id]?.equippedHat}
+                  avatarBg={avatars[entry.user_id]?.avatarBg}
+                  avatarBorder={avatars[entry.user_id]?.avatarBorder}
+                />
                 <div className="flex-1 min-w-0">
                   <p className="font-karla font-700 truncate" style={{ fontSize: rank === 1 ? '0.88rem' : '0.8rem', color: isMe ? '#f0ede8' : '#c8c8c2' }}>
                     {entry.username}
@@ -208,7 +228,14 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
                 <span className="font-karla font-300 shrink-0" style={{ width: 22, textAlign: 'right', fontSize: '0.65rem', color: '#3a3835' }}>
                   {rank}
                 </span>
-                <Avatar username={entry.username} size={28} characterColor={avatars[entry.user_id]?.characterColor} equippedHat={avatars[entry.user_id]?.equippedHat} />
+                <Avatar
+                  username={entry.username}
+                  size={28}
+                  characterColor={avatars[entry.user_id]?.characterColor}
+                  equippedHat={avatars[entry.user_id]?.equippedHat}
+                  avatarBg={avatars[entry.user_id]?.avatarBg}
+                  avatarBorder={avatars[entry.user_id]?.avatarBorder}
+                />
                 <div className="flex-1 min-w-0">
                   <p className="font-karla font-600 truncate" style={{ fontSize: '0.8rem', color: isMe ? '#f0ede8' : '#a0a09a' }}>
                     {entry.username}
@@ -239,7 +266,14 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
             background: `${accent}0d`, border: `1px solid ${accent}30`,
           }}>
             <span className="font-karla font-300" style={{ width: 22, textAlign: 'right', fontSize: '0.65rem', color: '#4a4845' }}>—</span>
-            <Avatar username="you" size={28} characterColor={avatars[currentUserId]?.characterColor} equippedHat={avatars[currentUserId]?.equippedHat} />
+            <Avatar
+              username="you"
+              size={28}
+              characterColor={avatars[currentUserId]?.characterColor}
+              equippedHat={avatars[currentUserId]?.equippedHat}
+              avatarBg={avatars[currentUserId]?.avatarBg}
+              avatarBorder={avatars[currentUserId]?.avatarBorder}
+            />
             <p className="flex-1 font-karla font-700" style={{ fontSize: '0.8rem', color: '#f0ede8' }}>You</p>
             <div style={{ textAlign: 'right' }}>
               <p className="font-cinzel font-600" style={{ fontSize: '0.75rem', color: accent }}>{unit(myScore)}</p>

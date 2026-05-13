@@ -295,6 +295,7 @@ export default function PracticeRaidGame({
   equippedRaidItems = [],
   hasSeenTutorial, hasCompletedPractice, initialExpeditionXP,
   playerCharacterColor, playerEquippedHat,
+  playerAvatarBg, playerAvatarBorder,
 }: {
   shipImageUrl: string
   shipName: string
@@ -310,6 +311,8 @@ export default function PracticeRaidGame({
   equippedRaidItems?: string[]
   playerCharacterColor: string | null
   playerEquippedHat: string | null
+  playerAvatarBg: string | null
+  playerAvatarBorder: string | null
   hasSeenTutorial: boolean
   hasCompletedPractice: boolean
   initialExpeditionXP: number
@@ -863,6 +866,8 @@ export default function PracticeRaidGame({
             playerLabel={username ?? shipName}
             playerCharacterColor={playerCharacterColor}
             playerEquippedHat={playerEquippedHat}
+            playerAvatarBg={playerAvatarBg}
+            playerAvatarBorder={playerAvatarBorder}
             playerHpMax={playerHPMax}
             playerHp={playerHP}
             shipMinDamage={shipMinDamage}

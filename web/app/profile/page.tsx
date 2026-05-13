@@ -23,7 +23,7 @@ export default async function ProfilePage() {
     { data: rarestFishRows },
   ] = await Promise.all([
     supabase.from('profiles')
-      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges, trophy_catches, equipped_boat, equipped_hat')
+      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges, trophy_catches, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color')
       .eq('id', user.id)
       .single(),
     admin.from('fish_collection')
@@ -124,6 +124,8 @@ export default async function ProfilePage() {
           equippedBoat={(profile?.equipped_boat as string | null) ?? null}
           equippedHat={(profile?.equipped_hat as string | null) ?? null}
           unlockedBadges={(profile?.unlocked_badges as string[] | null) ?? []}
+          avatarBgColor={(profile?.avatar_bg_color as string | null) ?? null}
+          avatarBorderColor={(profile?.avatar_border_color as string | null) ?? null}
         />
       </main>
     </>

@@ -128,6 +128,10 @@ export interface RaidCombatProps {
   playerCharacterColor?: string | null
   /** Equipped bandana for the player's avatar portrait. */
   playerEquippedHat?: string | null
+  /** Saved avatar background / border colors. Fall back to the
+   *  CharacterAvatar defaults when null. */
+  playerAvatarBg?: string | null
+  playerAvatarBorder?: string | null
   playerHpMax: number
   playerHp: number          // current at start of this encounter
   shipMinDamage: number
@@ -150,6 +154,7 @@ export interface RaidCombatProps {
 export default function RaidCombat({
   enemy, isBoss, shipImageUrl, shipFilter, shipName, playerLabel,
   playerCharacterColor, playerEquippedHat,
+  playerAvatarBg, playerAvatarBorder,
   playerHpMax, playerHp: initialPlayerHp,
   shipMinDamage, shipSpeed, totalPower, totalNavigation,
   totalFortune = 0,
@@ -926,12 +931,14 @@ export default function RaidCombat({
             display: 'flex', alignItems: 'center', gap: 8,
           }}
         >
-          {/* Player portrait — mirrors the enemy's portrait badge */}
+          {/* Player portrait — mirrors the enemy's portrait badge. Uses the
+              player's saved avatar bg/border colors (or the shared defaults
+              when unset) so the in-fight portrait matches /profile and the
+              leaderboard. */}
           {playerCharacterColor && (
             <div style={{
               flexShrink: 0,
               borderRadius: '50%',
-              border: `2px solid ${PLAYER_COLOR}`,
               boxShadow: `0 0 10px rgba(96,165,250,0.4)`,
               overflow: 'hidden',
             }}>
@@ -939,8 +946,8 @@ export default function RaidCombat({
                 characterColor={playerCharacterColor}
                 equippedHat={playerEquippedHat ?? null}
                 size={50}
-                ringColor={PLAYER_COLOR}
-                borderStyle="none"
+                bgColor={playerAvatarBg ?? undefined}
+                ringColor={playerAvatarBorder ?? undefined}
               />
             </div>
           )}

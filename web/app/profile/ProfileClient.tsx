@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
-import { updateUsername, updateShowcase, updateCharacterColor } from '@/app/u/actions'
+import { updateUsername, updateShowcase, updateCharacterColor, updateAvatarColors } from '@/app/u/actions'
+import { AVATAR_PALETTE, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avatarColors'
 import { equipBadge, unequipBadge } from '@/app/achievements/badgeActions'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import CharacterAvatar from '@/components/CharacterAvatar'
@@ -56,6 +57,8 @@ interface Props {
   unlockedColors: string[]
   equippedBadges: string[]
   unlockedBadges: string[]
+  avatarBgColor: string | null
+  avatarBorderColor: string | null
 }
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
@@ -212,6 +215,8 @@ export default function ProfileClient({
   unlockedColors,
   equippedBadges: initialEquippedBadges,
   unlockedBadges,
+  avatarBgColor: initialAvatarBg,
+  avatarBorderColor: initialAvatarBorder,
 }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -230,6 +235,11 @@ export default function ProfileClient({
   const [hintSkinId, setHintSkinId] = useState<string | null>(null)
   const [equippedBadges, setEquippedBadges] = useState<string[]>(initialEquippedBadges)
   const [badgePickerOpen, setBadgePickerOpen] = useState(false)
+  // Avatar colors — bg + border, saved per-user. null = use defaults.
+  const [avatarBg, setAvatarBg] = useState<string | null>(initialAvatarBg)
+  const [avatarBorder, setAvatarBorder] = useState<string | null>(initialAvatarBorder)
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false)
+  const [avatarSaving, setAvatarSaving] = useState(false)
   const [badgeSaving, setBadgeSaving] = useState(false)
   const [selectedBadgeSlot, setSelectedBadgeSlot] = useState<0 | 1 | 2 | null>(null)
   useEffect(() => { if (!badgePickerOpen) setSelectedBadgeSlot(null) }, [badgePickerOpen])
@@ -326,16 +336,26 @@ export default function ProfileClient({
 
       {/* ── Identity header ── */}
       <div className="flex flex-col items-center gap-3 pt-2 pb-7">
-        {/* Avatar — equipped character + hat composite. */}
-        <div style={{ boxShadow: `0 0 28px ${color}33, inset 0 1px 0 rgba(255,255,255,0.15)`, borderRadius: '50%' }}>
+        {/* Avatar — equipped character + hat composite. Tap to open the
+            color picker (bg + border). */}
+        <button
+          type="button"
+          onClick={() => setAvatarPickerOpen(true)}
+          aria-label="Customize avatar colors"
+          style={{
+            background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+            borderRadius: '50%',
+            boxShadow: `0 0 28px ${(avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR)}33, inset 0 1px 0 rgba(255,255,255,0.15)`,
+          }}
+        >
           <CharacterAvatar
             characterColor={characterColor}
             equippedHat={equippedHat}
             size={68}
-            bgColor={color}
-            ringColor={color}
+            bgColor={avatarBg ?? DEFAULT_AVATAR_BG_COLOR}
+            ringColor={avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR}
           />
-        </div>
+        </button>
 
         {/* Username + rename */}
         {showUsernameForm ? (
@@ -1064,6 +1084,153 @@ export default function ProfileClient({
             <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid rgba(255,255,255,0.09)', flexShrink: 0 }}>
               <button onClick={handleSaveShowcase} disabled={pending} className="btn-ghost w-full" style={{ opacity: pending ? 0.5 : 1 }}>
                 {pending ? 'Saving…' : 'Save Showcase'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Avatar color picker ─────────────────────────────────────────────── */}
+      {avatarPickerOpen && (
+        <div
+          onClick={() => setAvatarPickerOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 80,
+            background: 'rgba(0,0,0,0.78)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1.25rem',
+            cursor: 'pointer',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)',
+              border: '1px solid rgba(96,165,250,0.18)',
+              borderRadius: 18,
+              padding: '1.1rem 1rem 0.95rem',
+              width: '100%', maxWidth: 360,
+              cursor: 'default',
+              boxShadow: '0 18px 60px rgba(0,0,0,0.55)',
+            }}
+          >
+            {/* Live preview */}
+            <div className="flex items-center justify-center" style={{ marginBottom: 14 }}>
+              <CharacterAvatar
+                characterColor={characterColor}
+                equippedHat={equippedHat}
+                size={92}
+                bgColor={avatarBg ?? DEFAULT_AVATAR_BG_COLOR}
+                ringColor={avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR}
+              />
+            </div>
+
+            <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.05rem', color: '#f0ede8', marginBottom: 4 }}>
+              Avatar Colors
+            </p>
+            <p className="font-karla text-center" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.55)', marginBottom: 16 }}>
+              These appear everywhere your avatar shows up.
+            </p>
+
+            {/* Background swatches */}
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 6 }}>
+              Background
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 14 }}>
+              {AVATAR_PALETTE.map(c => {
+                const isActive = (avatarBg ?? DEFAULT_AVATAR_BG_COLOR) === c.hex
+                return (
+                  <button
+                    key={`bg-${c.id}`}
+                    type="button"
+                    onClick={() => setAvatarBg(c.hex)}
+                    aria-label={`Background ${c.label}`}
+                    style={{
+                      width: '100%', aspectRatio: '1 / 1',
+                      borderRadius: '50%',
+                      background: `radial-gradient(circle at 38% 35%, ${c.hex}ee 0%, ${c.hex}77 100%)`,
+                      border: isActive ? `2px solid #f0c040` : '1px solid rgba(255,255,255,0.18)',
+                      boxShadow: isActive ? `0 0 10px rgba(240,192,64,0.35)` : 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  />
+                )
+              })}
+            </div>
+
+            {/* Border swatches */}
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 6 }}>
+              Border
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 16 }}>
+              {AVATAR_PALETTE.map(c => {
+                const isActive = (avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR) === c.hex
+                return (
+                  <button
+                    key={`bd-${c.id}`}
+                    type="button"
+                    onClick={() => setAvatarBorder(c.hex)}
+                    aria-label={`Border ${c.label}`}
+                    style={{
+                      width: '100%', aspectRatio: '1 / 1',
+                      borderRadius: '50%',
+                      background: 'rgba(6,12,20,0.7)',
+                      border: `3px solid ${c.hex}`,
+                      outline: isActive ? '2px solid #f0c040' : 'none',
+                      outlineOffset: 2,
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  />
+                )
+              })}
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                disabled={avatarSaving}
+                onClick={async () => {
+                  setAvatarSaving(true)
+                  setAvatarBg(null)
+                  setAvatarBorder(null)
+                  await updateAvatarColors({ bgColor: null, borderColor: null })
+                  setAvatarSaving(false)
+                }}
+                className="font-karla font-700 uppercase tracking-[0.08em]"
+                style={{
+                  flex: 1, padding: '0.7rem 0',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  color: 'rgba(240,237,232,0.65)',
+                  borderRadius: 12, fontSize: '0.75rem',
+                  cursor: avatarSaving ? 'default' : 'pointer',
+                }}
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                disabled={avatarSaving}
+                onClick={async () => {
+                  setAvatarSaving(true)
+                  await updateAvatarColors({ bgColor: avatarBg, borderColor: avatarBorder })
+                  setAvatarSaving(false)
+                  setAvatarPickerOpen(false)
+                }}
+                className="font-karla font-700 uppercase tracking-[0.08em]"
+                style={{
+                  flex: 2, padding: '0.7rem 0',
+                  background: 'rgba(96,165,250,0.14)',
+                  border: '1px solid rgba(96,165,250,0.45)',
+                  color: '#90c0ff',
+                  borderRadius: 12, fontSize: '0.75rem',
+                  cursor: avatarSaving ? 'default' : 'pointer',
+                  opacity: avatarSaving ? 0.6 : 1,
+                }}
+              >
+                {avatarSaving ? 'Saving…' : 'Save'}
               </button>
             </div>
           </div>

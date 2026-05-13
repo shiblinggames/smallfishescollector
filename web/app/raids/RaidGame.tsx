@@ -291,6 +291,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   shipImageUrl, shipName, username, playerHPMax, shipMinDamage, shipSpeed,
   totalPower, totalDodge, totalFortune, crewCount, crewMembers, initialExpeditionXP,
   playerCharacterColor, playerEquippedHat,
+  playerAvatarBg, playerAvatarBorder,
 }: {
   config: BossRaidConfig
   shipImageUrl: string
@@ -310,6 +311,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   initialExpeditionXP: number
   playerCharacterColor: string | null
   playerEquippedHat: string | null
+  playerAvatarBg: string | null
+  playerAvatarBorder: string | null
 }) {
   const router            = useRouter()
   const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
@@ -1050,6 +1053,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 playerLabel={username ?? shipName}
                 playerCharacterColor={playerCharacterColor}
                 playerEquippedHat={playerEquippedHat}
+                playerAvatarBg={playerAvatarBg}
+                playerAvatarBorder={playerAvatarBorder}
                 playerHpMax={playerHPMax}
                 playerHp={playerHP}
                 shipMinDamage={shipMinDamage}

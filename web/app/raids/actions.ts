@@ -29,6 +29,8 @@ export interface RaidPlayerStats {
   username: string | null
   characterColor: string | null
   equippedHat: string | null
+  avatarBgColor: string | null
+  avatarBorderColor: string | null
   crewCount: number
   crewMembers: RaidCrewMember[]
   equippedShipSkin: string | null
@@ -42,7 +44,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, equipped_ship_skin, ship_skins, equipped_raid_items, has_seen_raid_tutorial, expedition_xp')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, equipped_raid_items, has_seen_raid_tutorial, expedition_xp')
     .eq('id', userId)
     .single()
 
@@ -98,6 +100,8 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     username:         (profile?.username as string | null) ?? null,
     characterColor:   (profile?.character_color as string | null) ?? null,
     equippedHat:      (profile?.equipped_hat as string | null) ?? null,
+    avatarBgColor:    (profile?.avatar_bg_color as string | null) ?? null,
+    avatarBorderColor:(profile?.avatar_border_color as string | null) ?? null,
     crewCount:        savedCrew.length,
     crewMembers,
     equippedShipSkin:     (profile?.equipped_ship_skin as string | null) ?? null,

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { CHARACTER_COLORS } from '@/lib/characters'
+import { AVATAR_PALETTE } from '@/lib/avatarColors'
 
 export async function updateUsername(username: string): Promise<{ error?: string }> {
   const supabase = await createClient()
@@ -82,6 +83,32 @@ export async function updateCharacterColor(colorId: string): Promise<{ error?: s
   }
 
   await admin.from('profiles').update({ character_color: colorId }).eq('id', user.id)
+  return {}
+}
+
+/** Save the player's avatar background + border color choices. Either field
+ *  can be null (= use the default from lib/avatarColors). Hex values are
+ *  validated against AVATAR_PALETTE so users can't store arbitrary CSS. */
+export async function updateAvatarColors(input: {
+  bgColor: string | null
+  borderColor: string | null
+}): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const validHexes = new Set(AVATAR_PALETTE.map(c => c.hex))
+  const bg     = input.bgColor === null     ? null : (validHexes.has(input.bgColor)     ? input.bgColor     : null)
+  const border = input.borderColor === null ? null : (validHexes.has(input.borderColor) ? input.borderColor : null)
+  // If the user passed something we didn't recognize, drop to null (default)
+  // rather than rejecting outright — keeps the picker forgiving.
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('profiles')
+    .update({ avatar_bg_color: bg, avatar_border_color: border })
+    .eq('id', user.id)
+  if (error) return { error: 'Something went wrong. Please try again.' }
   return {}
 }
 

@@ -10,16 +10,21 @@
 
 import { getCharacterSprites } from '@/lib/characters'
 import { getHat } from '@/lib/hats'
+import {
+  DEFAULT_AVATAR_BG_COLOR,
+  DEFAULT_AVATAR_BORDER_COLOR,
+} from '@/lib/avatarColors'
 
 interface Props {
   characterColor: string | null
   equippedHat: string | null
   /** Pixel size of the circle. */
   size: number
-  /** Accent ring color. Username-hashed default works fine; pass through
-   *  the existing avatarColor() result if a row already computes one. */
+  /** Outer ring color. Defaults to DEFAULT_AVATAR_BORDER_COLOR; the user
+   *  can override this via the profile picker. */
   ringColor?: string
-  /** Subtle inner background gradient hue. Optional. */
+  /** Inner background gradient hue. Defaults to DEFAULT_AVATAR_BG_COLOR;
+   *  the user can override this via the profile picker. */
   bgColor?: string
   /** Extra inline style hook for borders / outlines from the call site. */
   borderStyle?: string
@@ -29,21 +34,19 @@ export default function CharacterAvatar({
   characterColor,
   equippedHat,
   size,
-  ringColor = '#2a3548',
-  bgColor,
+  ringColor = DEFAULT_AVATAR_BORDER_COLOR,
+  bgColor   = DEFAULT_AVATAR_BG_COLOR,
   borderStyle,
 }: Props) {
   const sprites = getCharacterSprites(characterColor ?? 'default')
   const hat = getHat(equippedHat)
-  const gradient = bgColor
-    ? `radial-gradient(circle at 38% 35%, ${bgColor}ee 0%, ${bgColor}77 100%)`
-    : `radial-gradient(circle at 38% 35%, ${ringColor}ee 0%, ${ringColor}77 100%)`
+  const gradient = `radial-gradient(circle at 38% 35%, ${bgColor}ee 0%, ${bgColor}77 100%)`
 
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
       background: gradient,
-      border: borderStyle ?? `2px solid ${ringColor}55`,
+      border: borderStyle ?? `2px solid ${ringColor}`,
       overflow: 'hidden',
       position: 'relative',
       flexShrink: 0,

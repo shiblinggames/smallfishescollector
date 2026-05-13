@@ -44,13 +44,15 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   // only shows briefly during initial paint.
   const [characterColor, setCharacterColor] = useState<string | null>(null)
   const [equippedHat, setEquippedHat] = useState<string | null>(null)
+  const [avatarBg, setAvatarBg] = useState<string | null>(null)
+  const [avatarBorder, setAvatarBorder] = useState<string | null>(null)
 
   const fetchBadge = useCallback(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       Promise.all([
-        supabase.from('profiles').select('last_viewed_achievements_at, character_color, equipped_hat').eq('id', user.id).single(),
+        supabase.from('profiles').select('last_viewed_achievements_at, character_color, equipped_hat, avatar_bg_color, avatar_border_color').eq('id', user.id).single(),
         supabase.from('user_achievements').select('unlocked_at').eq('user_id', user.id).order('unlocked_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('daily_voyages').select('created_at, duration_ms').eq('user_id', user.id).eq('status', 'pending'),
       ]).then(([{ data: profile }, { data: latestAchievement }, { data: voyages }]) => {
@@ -59,6 +61,8 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         setAchievementsBadge(!!latestUnlocked && (!lastViewed || latestUnlocked > lastViewed))
         setCharacterColor((profile?.character_color as string | null) ?? null)
         setEquippedHat((profile?.equipped_hat as string | null) ?? null)
+        setAvatarBg((profile?.avatar_bg_color as string | null) ?? null)
+        setAvatarBorder((profile?.avatar_border_color as string | null) ?? null)
         const now = Date.now()
         const hasReadyVoyage = (voyages ?? []).some(
           (r: { created_at: string; duration_ms: number | null }) =>
@@ -327,7 +331,8 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
               characterColor={characterColor}
               equippedHat={equippedHat}
               size={32}
-              ringColor="#2a3548"
+              bgColor={avatarBg ?? undefined}
+              ringColor={avatarBorder ?? undefined}
               borderStyle="none"
             />
           </Link>
