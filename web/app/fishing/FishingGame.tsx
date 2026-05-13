@@ -1636,6 +1636,13 @@ export default function FishingGame({
   const [baitInventory, setBaitInventory] = useState<BaitItem[]>(initialBait)
   const [inventory, setInventory]   = useState<InventoryItem[]>(initialInventory)
   const [doubloons, setDoubloons]   = useState(initialDoubloons)
+  // Shop affordability — drives the "↑" dot on the gear button + rod/reel/hook slots
+  const rodHasAffordable = RODS.some(r => r.cost > 0 && !r.earnedOnly && !ownedRods.includes(r.tier) && doubloons >= r.cost)
+  const nextReelDef = REELS[reelTier + 1]
+  const reelHasAffordable = nextReelDef ? doubloons >= nextReelDef.cost : false
+  const nextHookDef = HOOKS[hookTier + 1]
+  const hookHasAffordable = nextHookDef ? doubloons >= nextHookDef.cost : false
+  const anyShopAffordable = rodHasAffordable || reelHasAffordable || hookHasAffordable
   const [holdOpen, setHoldOpen]         = useState(false)
   const [sellOpen, setSellOpen]         = useState(false)
   const [gearOpen, setGearOpen]         = useState(false)
@@ -3628,6 +3635,18 @@ export default function FishingGame({
                         <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/>
                       </svg>
                     </div>
+                    {/* Shop affordance — pulses when any rod/reel/hook upgrade is in budget */}
+                    {anyShopAffordable && !gearOpen && (
+                      <div style={{
+                        position: 'absolute', top: -4, right: -4,
+                        width: 14, height: 14, borderRadius: '50%',
+                        background: '#4ade80',
+                        border: '2px solid rgba(4,10,18,1)',
+                        boxShadow: '0 0 6px rgba(74,222,128,0.7)',
+                        animation: 'shop-pulse 1.6s ease-in-out infinite',
+                        pointerEvents: 'none',
+                      }} />
+                    )}
                   </div>
                 </button>
 
@@ -4365,7 +4384,7 @@ export default function FishingGame({
             <DrawerHandle />
             <div className="flex items-center justify-between mb-4" style={{ paddingTop: '0.75rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                style={{ fontSize: '0.6rem', color: '#6a6764' }}>Gear</p>
+                style={{ fontSize: '0.6rem', color: '#6a6764' }}>Gear &amp; Shop</p>
               <button onClick={() => setGearOpen(false)}
                 style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
             </div>
@@ -4376,6 +4395,9 @@ export default function FishingGame({
               equippedRodTier={equippedRodTier}
               ownedRods={ownedRods}
               onEquipRod={handleEquipRod}
+              rodHasAffordable={rodHasAffordable}
+              reelHasAffordable={reelHasAffordable}
+              hookHasAffordable={hookHasAffordable}
               onBuyRod={async (tier) => {
                 const res = await purchaseRod(tier)
                 if ('error' in res) return

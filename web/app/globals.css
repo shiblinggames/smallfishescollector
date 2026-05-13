@@ -385,6 +385,12 @@ body {
 }
 .boat-glow { animation: boat-glow-pulse 3.6s ease-in-out infinite; }
 
+/* ── Shop affordance pulse (gear button + slot tiles when an upgrade is in budget) ── */
+@keyframes shop-pulse {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 6px rgba(74,222,128,0.7); }
+  50%      { transform: scale(1.18); box-shadow: 0 0 10px rgba(74,222,128,0.95); }
+}
+
 /* ── Expeditions page zoom ── */
 .expeditions-content        { zoom: 1.35; }
 @media (min-width: 640px)   { .expeditions-content { zoom: 1.4; } }

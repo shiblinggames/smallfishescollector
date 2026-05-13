@@ -210,7 +210,7 @@ function BaitIcon({ color }: { color: string }) {
 }
 
 function GearSlot({
-  label, image, icon, itemName, color, onClick, small, empty, glow,
+  label, image, icon, itemName, color, onClick, small, empty, glow, notify,
 }: {
   label: string
   image?: string | null
@@ -221,11 +221,13 @@ function GearSlot({
   small?: boolean
   empty?: boolean
   glow?: boolean
+  notify?: boolean
 }) {
   return (
     <button
       onClick={onClick}
       style={{
+        position: 'relative',
         width: '100%',
         border: `1px solid ${color}40`,
         background: 'rgba(4,10,20,0.75)',
@@ -237,6 +239,17 @@ function GearSlot({
         touchAction: 'manipulation',
       }}
     >
+      {notify && (
+        <div style={{
+          position: 'absolute', top: 6, right: 6,
+          width: 12, height: 12, borderRadius: '50%',
+          background: '#4ade80',
+          border: '2px solid rgba(4,10,18,1)',
+          boxShadow: '0 0 6px rgba(74,222,128,0.7)',
+          animation: 'shop-pulse 1.6s ease-in-out infinite',
+          pointerEvents: 'none',
+        }} />
+      )}
       <div style={{ width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         {image
           ? <img
@@ -263,6 +276,7 @@ export default function GearScreen({
   baitInventory, selectedBait, onSelectBait,
   equippedRodTier, ownedRods, onEquipRod, onBuyRod,
   reelTier, hookTier, lineTier, onBuyReel, onBuyHook,
+  rodHasAffordable, reelHasAffordable, hookHasAffordable,
   characterColor, charSrc, equippedBadges, unlockedCharacterColors, unlockedBadges, onUpdateColor, onEquipBadge,
   equippedBoat, unlockedBoats, onEquipBoat, onBuyBoat, doubloons,
   equippedHat, unlockedHats, onEquipHat, onBuyHat,
@@ -283,6 +297,9 @@ export default function GearScreen({
   lineTier: number
   onBuyReel: () => Promise<void>
   onBuyHook: () => Promise<void>
+  rodHasAffordable: boolean
+  reelHasAffordable: boolean
+  hookHasAffordable: boolean
   characterColor: string
   charSrc: Record<string, string>
   equippedBadges: string[]
@@ -359,10 +376,10 @@ export default function GearScreen({
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gridTemplateRows: 'auto auto', gap: 6 }}>
 
         <div style={{ gridColumn: '1', gridRow: '1' }}>
-          <GearSlot label="Rod" image={rod.imageUrl ?? '/rod.png'} itemName={rod.name} color={rod.color} glow={rod.glow} onClick={() => setOpenSlot('rod')} />
+          <GearSlot label="Rod" image={rod.imageUrl ?? '/rod.png'} itemName={rod.name} color={rod.color} glow={rod.glow} notify={rodHasAffordable} onClick={() => setOpenSlot('rod')} />
         </div>
         <div style={{ gridColumn: '1', gridRow: '2' }}>
-          <GearSlot label="Hook" image={hook.imageUrl ?? null} itemName={hook.name} color={hook.color} glow={hook.glow} onClick={() => setOpenSlot('hook')} />
+          <GearSlot label="Hook" image={hook.imageUrl ?? null} itemName={hook.name} color={hook.color} glow={hook.glow} notify={hookHasAffordable} onClick={() => setOpenSlot('hook')} />
         </div>
 
         {/* Center row 1: Hat / Bandana */}
@@ -412,7 +429,7 @@ export default function GearScreen({
         </div>
 
         <div style={{ gridColumn: '3', gridRow: '1' }}>
-          <GearSlot label="Reel" image={reel.imageUrl ?? null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} onClick={() => setOpenSlot('reel')} />
+          <GearSlot label="Reel" image={reel.imageUrl ?? null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} notify={reelHasAffordable} onClick={() => setOpenSlot('reel')} />
         </div>
         <div style={{ gridColumn: '3', gridRow: '2' }}>
           <GearSlot label="Line" image={line.imageUrl ?? null} itemName={line.name} color={line.color} onClick={() => setOpenSlot('line')} />
