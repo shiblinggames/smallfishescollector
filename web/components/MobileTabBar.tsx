@@ -69,6 +69,8 @@ export default function MobileTabBar() {
         zIndex: 50,
         borderTop: '1px solid rgba(255,255,255,0.15)',
         background: bg,
+        transform: 'translateZ(0)',
+        WebkitTransform: 'translateZ(0)',
       }}
     >
       {LINKS.map(({ href, label, icon }) => {
