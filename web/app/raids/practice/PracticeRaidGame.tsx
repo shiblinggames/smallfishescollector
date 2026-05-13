@@ -286,7 +286,7 @@ const PRACTICE_TOUR: TourStep[] = [
   {
     icon: '⚓',
     title: 'Welcome aboard, Captain!',
-    body: 'Raids are turn-based ship battles. Each turn you and the enemy each pick one action — whoever’s faster strikes first.',
+    body: 'Battles are turn-based. Each turn, you and the enemy each pick one action — whoever’s faster acts first.',
   },
   {
     icon: '🎯',
@@ -296,7 +296,7 @@ const PRACTICE_TOUR: TourStep[] = [
   {
     icon: '✨',
     title: 'Lock the aim',
-    body: 'When you Fire or Volley, a marker sweeps across the aim bar. Tap to lock it in the green zone for a Hit — or the tiny gold center for a Critical (max damage).',
+    body: 'When you Fire or Volley, a marker sweeps across the aim bar. Tap to lock it in the green zone for a Hit — or the tiny gold center for a Critical, a damage multiplier on top of your shot.',
   },
   {
     icon: '🛡️',
@@ -305,8 +305,8 @@ const PRACTICE_TOUR: TourStep[] = [
   },
   {
     icon: '🏴‍☠️',
-    title: 'Sink the ship',
-    body: 'Watch the action log to follow each turn — tap to continue between rounds. Sink the enemy to earn doubloons and Nav XP. Good hunting!',
+    title: 'Skirmish vs Raid',
+    body: 'This Skirmish is a single battle so you can practice. A full Raid (like Barnacle Pete’s) is a sequence of battles ending with a boss fight. Sink the enemy to earn doubloons and Nav XP — good hunting!',
   },
 ]
 

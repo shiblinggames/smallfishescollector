@@ -436,10 +436,13 @@ export default function RaidCombat({
     // Speed-roll line shows immediately. Per-step lines are appended as each
     // step starts animating (see playStep) so the log feels alive instead of
     // dumping the whole turn at once.
+    // Speed roll determines turn order regardless of chosen action — keep
+    // the line action-agnostic ("act first" not "fire first") since a faster
+    // ship might reload or dodge first.
     setResolveLog([
       first === 'player'
-        ? `You're faster — you fire first!`
-        : `Enemy is faster — they fire first.`,
+        ? `You're faster — you act first.`
+        : `Enemy is faster — they act first.`,
     ])
 
     const order: Actor[] = first === 'player' ? ['player', 'enemy'] : ['enemy', 'player']
