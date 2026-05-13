@@ -107,18 +107,10 @@ function NavLevelBar({ xp }: { xp: number }) {
   )
 }
 
-function fmtTime(ms: number) {
-  const s = Math.floor(ms / 1000)
-  const m = Math.floor(s / 60)
-  return `${m}:${String(s % 60).padStart(2, '0')}`
-}
-
-function getTimeTier(secs: number): { mult: number; label: string; color: string } | null {
-  if (secs < 120) return { mult: 1.5,  label: 'Legendary', color: '#f97316' }
-  if (secs < 180) return { mult: 1.25, label: 'Swift',     color: '#fbbf24' }
-  if (secs < 300) return { mult: 1.0,  label: 'Completed', color: '#4ade80' }
-  return null  // over 5:00 — time expired, no loot
-}
+// (Removed: fmtTime + getTimeTier — Barnacle Pete no longer has a time limit
+//  or speed-tier multipliers on loot. Every successful raid clear grants the
+//  base loot roll. raidStartTimeRef is still tracked for the corsairs_bane
+//  speedrun badge, but it doesn't gate or scale rewards.)
 
 // ── Zone geometry ─────────────────────────────────────────────────────────────
 
@@ -368,7 +360,6 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const [playerRecoil, setPlayerRecoil] = useState(false)
   const [playerHitShake, setPlayerHitShake] = useState(false)
   const [clearReady, setClearReady]     = useState(false)
-  const [raidElapsedMs, setRaidElapsedMs] = useState(0)
   const [lootAmount, setLootAmount]     = useState(0)
   const [lootBase, setLootBase]         = useState(0)
   const [lootOpened, setLootOpened]     = useState(false)
@@ -377,8 +368,6 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const [slotLanded, setSlotLanded]   = useState(false)
   const [slotFinal, setSlotFinal]     = useState(0)
   const slotIntervalsRef = useRef<ReturnType<typeof setInterval>[]>([])
-  const [raidTimeSecs, setRaidTimeSecs] = useState(0)
-  const [raidTier, setRaidTier]         = useState<{ mult: number; label: string; color: string } | null>(null)
   const [pHitsplat, setPHitsplat]       = useState({ key: 0, text: '', color: '', big: false })
   const [eHitsplat, setEHitsplat]       = useState({ key: 0, text: '', color: '', big: false })
   const [enemyMinDmg, setEnemyMinDmg]   = useState(2)
@@ -482,8 +471,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     setDodgePrimePct(1); setDodgeFlash(false); setDodgeShake(false); setShowDodgeVFX(false)
     setRoundDisplay(1); setEnemySinking(false)
     setShowCannonShot(false); setClearReady(false)
-    setRaidElapsedMs(0); setLootAmount(0); setLootBase(0); setLootOpened(false); setLootClaimed(false)
-    setRaidTimeSecs(0); setRaidTier(null)
+    setLootAmount(0); setLootBase(0); setLootOpened(false); setLootClaimed(false)
   }, [playerHPMax, resetEnemyForRound])
 
   // Turn-based: no "OPEN FIRE" gate, so jump straight into combat on mount.
@@ -697,20 +685,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     return () => { clearTimeout(t1); slotIntervalsRef.current.forEach(clearInterval) }
   }, [lootOpened])
 
-  // Raid timer — ticks through playing+clear, triggers time-expired at 5:00
-  useEffect(() => {
-    if (phase !== 'playing' && phase !== 'clear') return
-    const id = setInterval(() => {
-      const elapsed = performance.now() - raidStartTimeRef.current
-      setRaidElapsedMs(elapsed)
-      if (elapsed >= 300000 && phaseRef.current !== 'loot') {
-        setRaidTimeSecs(elapsed / 1000)
-        phaseRef.current = 'loot'
-        setPhase('loot')
-      }
-    }, 200)
-    return () => clearInterval(id)
-  }, [phase])
+  // (Removed: 5-minute raid timer + time-expired loot screen. Pete no longer
+  //  has a time limit. raidStartTimeRef is still set in startGame so the
+  //  speedrun badge can compute elapsed time at claim — but nothing in the
+  //  visible flow gates on it.)
 
   const doReload = useCallback(() => {
     if (phaseRef.current !== 'playing' || !playerReadyRef.current || chargesRef.current >= MAX_CHARGES || actionLockedRef.current) return
@@ -798,17 +776,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           setWinPhase('summary')
 
           if (isBossRound(roundRef.current, config.sequence.length)) {
-            const elapsed = performance.now() - raidStartTimeRef.current
-            const secs    = elapsed / 1000
-            const tier    = getTimeTier(secs)
-            setRaidTimeSecs(secs)
-            setRaidTier(tier)
-            if (tier) {
-              const base  = Math.floor(Math.random() * 301 + 300)
-              const total = Math.floor(base * tier.mult * fortuneMult)
-              setLootBase(base)
-              setLootAmount(total)
-            }
+            const base  = Math.floor(Math.random() * 301 + 300)
+            const total = Math.floor(base * fortuneMult)
+            setLootBase(base)
+            setLootAmount(total)
             setWinIsBoss(true)
           } else {
             roundRef.current++
@@ -887,17 +858,12 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
       setTimeout(() => {
         setEnemySinking(false)
         setWinGold(gold); setWinXP(xp); setWinPhase('summary')
-        const elapsed = performance.now() - raidStartTimeRef.current
-        const secs    = elapsed / 1000
-        const tier    = getTimeTier(secs)
-        setRaidTimeSecs(secs)
-        setRaidTier(tier)
-        if (tier) {
-          const base  = Math.floor(Math.random() * 301 + 300)
-          const total = Math.floor(base * tier.mult * fortuneMult)
-          setLootBase(base)
-          setLootAmount(total)
-        }
+        // No time tier multiplier — Pete clears always grant the base roll
+        // (scaled only by the player's Fortune stat).
+        const base  = Math.floor(Math.random() * 301 + 300)
+        const total = Math.floor(base * fortuneMult)
+        setLootBase(base)
+        setLootAmount(total)
         setWinIsBoss(true)
         phaseRef.current = 'clear'
         setPhase('clear')
@@ -1195,22 +1161,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
       {/* ── Loot overlay (raid complete) ─────────────────────────────────────── */}
       <AnimatePresence>
         {phase === 'loot' && (
-          raidTier ? (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.88)', zIndex: 50 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.88)', zIndex: 50 }}>
               <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.6rem', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 6 }}>Raid Complete</p>
-              <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '1.6rem', marginBottom: 10 }}>{config.bossDefeatedText}</p>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <span className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#5a5855' }}>Cleared in</span>
-                <span className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>{fmtTime(raidTimeSecs * 1000)}</span>
-              </div>
-              <motion.div initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }}
-                style={{ background: `${raidTier.color}18`, border: `1px solid ${raidTier.color}55`, borderRadius: 8, padding: '3px 12px', marginBottom: 28 }}>
-                <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: raidTier.color, letterSpacing: '0.1em' }}>
-                  {raidTier.label} · {raidTier.mult}×
-                </span>
-              </motion.div>
+              <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '1.6rem', marginBottom: 28 }}>{config.bossDefeatedText}</p>
 
               {!lootOpened ? (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
@@ -1287,14 +1241,17 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                         <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0c040', textShadow: '0 0 20px #f0c04088' }}>
                           {fmtGold(lootAmount)} ⟡
                         </p>
-                        <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.3)', fontSize: '0.6rem', marginBottom: 10 }}>
-                          {raidTier.mult}× speed{fortuneMult > 1 ? ` · ${fortuneMult.toFixed(2)}× luck` : ''}
-                        </p>
+                        {fortuneMult > 1 && (
+                          <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.3)', fontSize: '0.6rem', marginBottom: 10 }}>
+                            {fortuneMult.toFixed(2)}× luck
+                          </p>
+                        )}
                         <motion.button
                           onPointerDown={async () => {
                             if (lootClaimed) return
                             setLootClaimed(true)
-                            const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id], raidElapsedMs, playerHPMax - playerHP)
+                            const elapsedMs = performance.now() - raidStartTimeRef.current
+                            const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP)
                             window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
                             router.push('/expeditions')
                           }}
@@ -1309,36 +1266,6 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 </motion.div>
               )}
             </motion.div>
-          ) : (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.88)', zIndex: 50 }}>
-              <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.6rem', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 6 }}>Time Expired</p>
-              <p className="font-cinzel font-700" style={{ color: '#f87171', fontSize: '1.6rem', marginBottom: 10 }}>Too Slow</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <span className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#5a5855' }}>Stopped at</span>
-                <span className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>{fmtTime(raidTimeSecs * 1000)}</span>
-              </div>
-              <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.28)', fontSize: '0.68rem', marginBottom: 32, textAlign: 'center' }}>
-                Finish the raid in under 5:00 to earn loot.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 240 }}>
-                <motion.button
-                  onPointerDown={startGame}
-                  whileTap={{ scale: 0.96 }}
-                  className="font-karla font-700"
-                  style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(239,68,68,0.16)', border: '1px solid rgba(239,68,68,0.45)', color: '#ef4444', fontSize: '0.92rem', letterSpacing: '0.06em' }}>
-                  Try Again
-                </motion.button>
-                <motion.button
-                  onPointerDown={() => router.push('/expeditions')}
-                  whileTap={{ scale: 0.96 }}
-                  className="font-karla font-600"
-                  style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#6a6764', fontSize: '0.82rem', letterSpacing: '0.04em' }}>
-                  Leave
-                </motion.button>
-              </div>
-            </motion.div>
-          )
         )}
       </AnimatePresence>
 
