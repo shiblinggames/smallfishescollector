@@ -9,6 +9,7 @@ import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { updateUsername, updateShowcase, updateCharacterColor } from '@/app/u/actions'
 import { equipBadge, unequipBadge } from '@/app/achievements/badgeActions'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
+import CharacterAvatar from '@/components/CharacterAvatar'
 import { getBoat } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
@@ -325,57 +326,16 @@ export default function ProfileClient({
 
       {/* ── Identity header ── */}
       <div className="flex flex-col items-center gap-3 pt-2 pb-7">
-        {/* Avatar — equipped character (zoomed to the head) with the
-            equipped hat overlay composited on top. Same focal logic as the
-            color-picker swatches (420% scale, focal point 60%/68%) so the
-            face sits cleanly in the circle. */}
-        {(() => {
-          const hat = getHat(equippedHat)
-          return (
-            <div style={{
-              width: 68, height: 68, borderRadius: '50%',
-              background: `radial-gradient(circle at 38% 35%, ${color}ee 0%, ${color}77 100%)`,
-              border: `2px solid ${color}55`,
-              boxShadow: `0 0 28px ${color}33, inset 0 1px 0 rgba(255,255,255,0.15)`,
-              overflow: 'hidden',
-              position: 'relative',
-            }}>
-              <div style={{
-                position: 'absolute',
-                width: '317%',
-                left: '50%', top: '50%',
-                transform: 'translate(-63%, -65%)',
-                pointerEvents: 'none',
-              }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={charSprites.rest}
-                  alt=""
-                  style={{ width: '100%', display: 'block' }}
-                />
-                {hat && (() => {
-                  const hp = hat.positions.rest
-                  return (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={hat.restImageUrl}
-                      alt=""
-                      style={{
-                        position: 'absolute',
-                        top: `${hp.top}%`,
-                        left: `${hp.left}%`,
-                        width: `${hp.width}%`,
-                        transform: `rotate(${hp.rotate}deg)`,
-                        transformOrigin: 'center center',
-                        pointerEvents: 'none',
-                      }}
-                    />
-                  )
-                })()}
-              </div>
-            </div>
-          )
-        })()}
+        {/* Avatar — equipped character + hat composite. */}
+        <div style={{ boxShadow: `0 0 28px ${color}33, inset 0 1px 0 rgba(255,255,255,0.15)`, borderRadius: '50%' }}>
+          <CharacterAvatar
+            characterColor={characterColor}
+            equippedHat={equippedHat}
+            size={68}
+            bgColor={color}
+            ringColor={color}
+          />
+        </div>
 
         {/* Username + rename */}
         {showUsernameForm ? (

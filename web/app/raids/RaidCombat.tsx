@@ -23,6 +23,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
 import { getActiveEffects, getRaidItem } from '@/lib/raidItems'
+import CharacterAvatar from '@/components/CharacterAvatar'
 
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical'
 type SubPhase   = 'await_input' | 'aiming' | 'revealing' | 'resolving' | 'done'
@@ -122,6 +123,11 @@ export interface RaidCombatProps {
    *  surface the player's username during a raid instead of the boat
    *  name they've set. */
   playerLabel?: string
+  /** Character color id for the player's avatar portrait next to their
+   *  nameplate, mirroring how the enemy nameplate shows enemy.portrait. */
+  playerCharacterColor?: string | null
+  /** Equipped bandana for the player's avatar portrait. */
+  playerEquippedHat?: string | null
   playerHpMax: number
   playerHp: number          // current at start of this encounter
   shipMinDamage: number
@@ -143,6 +149,7 @@ export interface RaidCombatProps {
 
 export default function RaidCombat({
   enemy, isBoss, shipImageUrl, shipFilter, shipName, playerLabel,
+  playerCharacterColor, playerEquippedHat,
   playerHpMax, playerHp: initialPlayerHp,
   shipMinDamage, shipSpeed, totalPower, totalNavigation,
   totalFortune = 0,
@@ -908,20 +915,42 @@ export default function RaidCombat({
           aria-label={`${nameplate} — view stats`}
           style={{
             position: 'absolute', bottom: 10, right: 10, zIndex: 4,
-            padding: '0.45rem 0.65rem',
+            padding: '0.45rem 0.6rem 0.5rem 0.45rem',
             background: 'rgba(6,12,20,0.9)',
             border: '1px solid #2a3548',
-            borderRadius: 10, minWidth: 150,
+            borderRadius: 12,
+            minWidth: 160,
             textAlign: 'left',
             cursor: 'pointer',
             font: 'inherit', color: 'inherit',
+            display: 'flex', alignItems: 'center', gap: 8,
           }}
         >
-          <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff', lineHeight: 1, marginBottom: 4 }}>
-            {nameplate}
-          </p>
-          <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact />
-          <ChargesRow charges={playerCharges} max={MAX_CHARGES} small />
+          {/* Player portrait — mirrors the enemy's portrait badge */}
+          {playerCharacterColor && (
+            <div style={{
+              flexShrink: 0,
+              borderRadius: '50%',
+              border: `2px solid ${PLAYER_COLOR}`,
+              boxShadow: `0 0 10px rgba(96,165,250,0.4)`,
+              overflow: 'hidden',
+            }}>
+              <CharacterAvatar
+                characterColor={playerCharacterColor}
+                equippedHat={playerEquippedHat ?? null}
+                size={50}
+                ringColor={PLAYER_COLOR}
+                borderStyle="none"
+              />
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff', lineHeight: 1, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {nameplate}
+            </p>
+            <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact />
+            <ChargesRow charges={playerCharges} max={MAX_CHARGES} small />
+          </div>
         </button>
 
       </div>

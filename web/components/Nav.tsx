@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import AnnouncementBanner from './AnnouncementBanner'
+import CharacterAvatar from './CharacterAvatar'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { motion } from 'framer-motion'
@@ -39,19 +40,25 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   const [displayDoubloons, setDisplayDoubloons] = useState(doubloons)
   const [displayGems, setDisplayGems] = useState(gems)
   const [displayPacks, setDisplayPacks] = useState(packsAvailable)
+  // Profile-button avatar (desktop nav). Pulled on mount so the SVG fallback
+  // only shows briefly during initial paint.
+  const [characterColor, setCharacterColor] = useState<string | null>(null)
+  const [equippedHat, setEquippedHat] = useState<string | null>(null)
 
   const fetchBadge = useCallback(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       Promise.all([
-        supabase.from('profiles').select('last_viewed_achievements_at').eq('id', user.id).single(),
+        supabase.from('profiles').select('last_viewed_achievements_at, character_color, equipped_hat').eq('id', user.id).single(),
         supabase.from('user_achievements').select('unlocked_at').eq('user_id', user.id).order('unlocked_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('daily_voyages').select('created_at, duration_ms').eq('user_id', user.id).eq('status', 'pending'),
       ]).then(([{ data: profile }, { data: latestAchievement }, { data: voyages }]) => {
         const lastViewed = profile?.last_viewed_achievements_at
         const latestUnlocked = latestAchievement?.unlocked_at
         setAchievementsBadge(!!latestUnlocked && (!lastViewed || latestUnlocked > lastViewed))
+        setCharacterColor((profile?.character_color as string | null) ?? null)
+        setEquippedHat((profile?.equipped_hat as string | null) ?? null)
         const now = Date.now()
         const hasReadyVoyage = (voyages ?? []).some(
           (r: { created_at: string; duration_ms: number | null }) =>
@@ -308,17 +315,21 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
             href="/profile"
             className="flex items-center justify-center rounded-full transition-all duration-200"
             style={{
-              width: 34, height: 34,
-              border: pathname === '/profile' ? '1px solid rgba(240,192,64,0.45)' : '1px solid rgba(255,255,255,0.15)',
-              background: pathname === '/profile' ? 'rgba(240,192,64,0.08)' : 'transparent',
+              width: 36, height: 36,
+              padding: 0,
+              borderRadius: '50%',
+              border: pathname === '/profile' ? '1.5px solid rgba(240,192,64,0.65)' : '1.5px solid rgba(255,255,255,0.18)',
+              boxShadow: pathname === '/profile' ? '0 0 12px rgba(240,192,64,0.3)' : 'none',
+              overflow: 'hidden',
             }}
-            onMouseOver={undefined}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
-              stroke={pathname === '/profile' ? '#f0c040' : '#a0a09a'}>
-              <circle cx="12" cy="8" r="4"/>
-              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-            </svg>
+            <CharacterAvatar
+              characterColor={characterColor}
+              equippedHat={equippedHat}
+              size={32}
+              ringColor="#2a3548"
+              borderStyle="none"
+            />
           </Link>
         </div>
       </nav>

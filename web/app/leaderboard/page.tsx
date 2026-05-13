@@ -48,6 +48,28 @@ export default async function LeaderboardPage() {
     fetchBoard(admin, 'leaderboard_expedition', user.id),
   ])
 
+  // Fetch avatar data (character_color + equipped_hat) for every user that
+  // appears on any board, in a single round-trip, so the leaderboard rows
+  // can render the player's actual character + hat composite next to their
+  // username instead of a colored letter circle.
+  const displayedUserIds = new Set<string>([
+    ...fishingData.top.map(e => e.user_id),
+    ...perfectStreakData.top.map(e => e.user_id),
+    ...tideRunData.top.map(e => e.user_id),
+    ...fishSlotsData.top.map(e => e.user_id),
+    ...expeditionData.top.map(e => e.user_id),
+  ])
+  const avatarsMap: Record<string, { characterColor: string | null; equippedHat: string | null }> = {}
+  if (displayedUserIds.size > 0) {
+    const { data: avatarRows } = await admin
+      .from('profiles')
+      .select('id, character_color, equipped_hat')
+      .in('id', Array.from(displayedUserIds))
+    for (const row of (avatarRows ?? []) as Array<{ id: string; character_color: string | null; equipped_hat: string | null }>) {
+      avatarsMap[row.id] = { characterColor: row.character_color, equippedHat: row.equipped_hat }
+    }
+  }
+
   return (
     <>
       <Nav packsAvailable={profile.data?.packs_available ?? 0} doubloons={profile.data?.doubloons ?? 0} gems={profile.data?.gems ?? 0} />
@@ -69,6 +91,7 @@ export default async function LeaderboardPage() {
               expedition: expeditionData.myScore,
             }}
             currentUserId={user.id}
+            avatars={avatarsMap}
           />
         </div>
       </main>
