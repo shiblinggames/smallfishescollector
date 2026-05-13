@@ -97,6 +97,11 @@ export default async function TavernPage() {
             unlockedColors={unlockedColors}
             showWelcomeAfter={!profile?.has_seen_welcome}
             hasUsername={!!profile?.username}
+            isPremium={
+              !!profile?.is_premium
+              && !!profile?.premium_expires_at
+              && new Date(profile.premium_expires_at as string) > new Date()
+            }
           />
         : !profile?.has_seen_welcome
           ? <WelcomeModal />
