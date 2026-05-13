@@ -91,8 +91,6 @@ export default async function LeaderboardPage() {
       <Nav packsAvailable={profile.data?.packs_available ?? 0} doubloons={profile.data?.doubloons ?? 0} gems={profile.data?.gems ?? 0} />
       <main className="min-h-screen pt-8" style={{ position: 'relative', zIndex: 1 }}>
         <div className="px-6 max-w-xl mx-auto">
-          <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Global</p>
-          <h1 className="font-cinzel font-700 text-[#f0ede8] mb-6" style={{ fontSize: '1.4rem' }}>Leaderboard</h1>
           <LeaderboardClient
             fishing={fishingData.top}
             perfectStreak={perfectStreakData.top}
