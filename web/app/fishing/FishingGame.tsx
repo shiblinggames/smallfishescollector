@@ -1636,12 +1636,37 @@ export default function FishingGame({
   const [baitInventory, setBaitInventory] = useState<BaitItem[]>(initialBait)
   const [inventory, setInventory]   = useState<InventoryItem[]>(initialInventory)
   const [doubloons, setDoubloons]   = useState(initialDoubloons)
-  // Shop affordability — drives the "↑" dot on the gear button + rod/reel/hook slots
-  const rodHasAffordable = RODS.some(r => r.cost > 0 && !r.earnedOnly && !ownedRods.includes(r.tier) && doubloons >= r.cost)
+  // Dismiss-on-open tracking. Reading localStorage in a lazy initializer keeps
+  // the values stable across re-renders without a useEffect roundtrip.
+  const [seenRodTiers, setSeenRodTiers] = useState<number[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const raw = localStorage.getItem('fishing:seen-rods')
+      const parsed = raw ? JSON.parse(raw) : null
+      return Array.isArray(parsed) ? parsed.filter((n): n is number => typeof n === 'number') : []
+    } catch { return [] }
+  })
+  const [seenReelTier, setSeenReelTier] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0
+    const n = parseInt(localStorage.getItem('fishing:seen-reel-tier') ?? '0', 10)
+    return Number.isFinite(n) ? n : 0
+  })
+  const [seenHookTier, setSeenHookTier] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0
+    const n = parseInt(localStorage.getItem('fishing:seen-hook-tier') ?? '0', 10)
+    return Number.isFinite(n) ? n : 0
+  })
+
+  // Shop affordability — drives the "↑" dot on the gear button + rod/reel/hook slots.
+  // The dot suppresses once the drawer is opened with that upgrade visible.
+  const affordableRodTiers = RODS
+    .filter(r => r.cost > 0 && !r.earnedOnly && !ownedRods.includes(r.tier) && doubloons >= r.cost)
+    .map(r => r.tier)
+  const rodHasAffordable = affordableRodTiers.some(t => !seenRodTiers.includes(t))
   const nextReelDef = REELS[reelTier + 1]
-  const reelHasAffordable = nextReelDef ? doubloons >= nextReelDef.cost : false
+  const reelHasAffordable = nextReelDef ? (doubloons >= nextReelDef.cost && (reelTier + 1) > seenReelTier) : false
   const nextHookDef = HOOKS[hookTier + 1]
-  const hookHasAffordable = nextHookDef ? doubloons >= nextHookDef.cost : false
+  const hookHasAffordable = nextHookDef ? (doubloons >= nextHookDef.cost && (hookTier + 1) > seenHookTier) : false
   const anyShopAffordable = rodHasAffordable || reelHasAffordable || hookHasAffordable
   const [holdOpen, setHoldOpen]         = useState(false)
   const [sellOpen, setSellOpen]         = useState(false)
@@ -1761,6 +1786,31 @@ export default function FishingGame({
   const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond' } | null>(null)
   const selectedBaitRef = useRef(selectedBait)
   useEffect(() => { phaseRef.current = phase }, [phase])
+
+  // When the gear drawer opens, mark currently-affordable upgrades as seen so
+  // the green pulse dots stop nagging. Re-pulses once a NEW tier crosses into
+  // budget (e.g. you buy reel 4 → reel 5 becomes the next-tier and is unseen).
+  useEffect(() => {
+    if (!gearOpen) return
+    if (affordableRodTiers.length > 0) {
+      const merged = Array.from(new Set([...seenRodTiers, ...affordableRodTiers]))
+      if (merged.length !== seenRodTiers.length) {
+        setSeenRodTiers(merged)
+        try { localStorage.setItem('fishing:seen-rods', JSON.stringify(merged)) } catch {}
+      }
+    }
+    if (nextReelDef && doubloons >= nextReelDef.cost && (reelTier + 1) > seenReelTier) {
+      const tier = reelTier + 1
+      setSeenReelTier(tier)
+      try { localStorage.setItem('fishing:seen-reel-tier', String(tier)) } catch {}
+    }
+    if (nextHookDef && doubloons >= nextHookDef.cost && (hookTier + 1) > seenHookTier) {
+      const tier = hookTier + 1
+      setSeenHookTier(tier)
+      try { localStorage.setItem('fishing:seen-hook-tier', String(tier)) } catch {}
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gearOpen])
 
   useEffect(() => {
     Promise.all([
