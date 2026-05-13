@@ -100,6 +100,7 @@ export default function ShipHero({
 
   // Modal state
   const [loadoutOpen, setLoadoutOpen] = useState(false)
+  const [breakdownScore, setBreakdownScore] = useState<'voyage' | 'raid' | null>(null)
 
   // Loadout inner state
   const [pickerSlot, setPickerSlot] = useState<number | null>(null)
@@ -243,23 +244,31 @@ export default function ShipHero({
 
             {hasCrew ? (
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.8rem' }}>
-                {/* Voyage */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2 }}>
-                    <span style={{ fontSize: '0.6rem', lineHeight: 1 }}>🗺️</span>
-                    <p className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#7090c0' }}>Voyage</p>
+                {/* Voyage Score — tap for breakdown */}
+                <button
+                  onClick={() => setBreakdownScore('voyage')}
+                  aria-label="Voyage Score breakdown"
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+                >
+                  <p className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#7090c0', marginBottom: 2 }}>Voyage Score</p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0ede8', lineHeight: 1 }}>{voyageScore}</p>
+                    <span style={{ fontSize: '0.5rem', color: '#4a4845', lineHeight: 1 }}>ⓘ</span>
                   </div>
-                  <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0ede8', lineHeight: 1 }}>{voyageScore}</p>
-                </div>
+                </button>
                 <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', alignSelf: 'stretch', marginBottom: 3 }} />
-                {/* Raid */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2 }}>
-                    <span style={{ fontSize: '0.6rem', lineHeight: 1 }}>⚔️</span>
-                    <p className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#c8704a' }}>Raid</p>
+                {/* Raid Score — tap for breakdown */}
+                <button
+                  onClick={() => setBreakdownScore('raid')}
+                  aria-label="Raid Score breakdown"
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+                >
+                  <p className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#c8704a', marginBottom: 2 }}>Raid Score</p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0ede8', lineHeight: 1 }}>{raidRating.total}</p>
+                    <span style={{ fontSize: '0.5rem', color: '#4a4845', lineHeight: 1 }}>ⓘ</span>
                   </div>
-                  <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0ede8', lineHeight: 1 }}>{raidRating.total}</p>
-                </div>
+                </button>
               </div>
             ) : (
               <p className="font-karla" style={{ fontSize: '0.65rem', color: '#5a5248' }}>No crew assigned</p>
@@ -286,15 +295,17 @@ export default function ShipHero({
       <AnimatePresence>
         {loadoutOpen && (
           <>
-            {/* Backdrop */}
+            {/* Backdrop. z-index 100 to clear the page Nav (which is z:50). */}
             <motion.div
               key="loadout-backdrop"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 49 }}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 100 }}
               onClick={closeLoadout}
             />
 
-            {/* Drawer */}
+            {/* Drawer. z-index 101 so the modal paints above the page Nav
+                regardless of DOM order; without this the LOADOUT sticky
+                header was hidden behind the fixed Nav (both were at z:50). */}
             <motion.div
               key="loadout-drawer"
               initial={{ y: '100vh' }} animate={{ y: 0 }} exit={{ y: '100vh' }}
@@ -304,14 +315,14 @@ export default function ShipHero({
                 position: 'fixed', bottom: 0,
                 left: 'max(0px, calc(50% - 240px))',
                 right: 'max(0px, calc(50% - 240px))',
-                zIndex: 50,
+                zIndex: 101,
                 background: 'rgba(6,12,20,0.98)',
                 borderTop: '1px solid rgba(255,255,255,0.09)',
                 borderRadius: '18px 18px 0 0',
                 // 100svh = smallest viewport height (excludes mobile browser chrome
-                // when shown). The -72px buffer keeps the drawer top clear of the
-                // page Nav header on iOS PWA.
-                maxHeight: 'calc(100svh - 72px)',
+                // when shown). The -80px buffer keeps the drawer top clear of the
+                // page Nav header (44px mobile / 64px desktop) plus a small gap.
+                maxHeight: 'calc(100svh - 80px)',
                 display: 'flex', flexDirection: 'column',
                 overflow: 'hidden',
               }}
@@ -434,42 +445,78 @@ export default function ShipHero({
                 )}
               </div>
 
-              {/* ── Ship Skins ── */}
+              {/* ── Ship Skins ── grid layout (mirrors fishing GearScreen boat picker) */}
               <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Ship Skins</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: '1.5rem' }}>
                 {/* Default */}
-                <button
-                  onClick={() => handleEquipSkin(null)}
-                  style={{ background: 'rgba(255,255,255,0.03)', border: `1.5px solid ${equippedSkin === null ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 12, padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer', width: '100%', textAlign: 'left' }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={shipStats.image} alt="" style={{ width: 46, height: 46, objectFit: 'contain', flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#e0ddd8', marginBottom: 2 }}>Default</p>
-                    <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248' }}>The original hull</p>
-                  </div>
-                  {equippedSkin === null && <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#f0ede8', flexShrink: 0 }}>Equipped</span>}
-                </button>
-
+                {(() => {
+                  const isEquipped = equippedSkin === null
+                  return (
+                    <button
+                      onClick={() => { if (!isEquipped) handleEquipSkin(null) }}
+                      disabled={isEquipped}
+                      className="font-karla font-700"
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                        padding: '0.6rem 0.4rem 0.5rem',
+                        borderRadius: 10,
+                        background: isEquipped ? 'rgba(255,255,255,0.06)' : 'rgba(4,10,18,0.72)',
+                        border: `1px solid ${isEquipped ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.09)'}`,
+                        cursor: isEquipped ? 'default' : 'pointer',
+                      }}
+                    >
+                      <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={shipStats.image} alt="" style={{ width: 44, height: 44, objectFit: 'contain' }} />
+                      </div>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>Default</p>
+                      {isEquipped
+                        ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#e0ddd8' }}>✓ Equipped</span>
+                        : <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: '#5a5856' }}>Original</span>
+                      }
+                    </button>
+                  )
+                })()}
                 {SHIP_SKINS.map(skin => {
-                  const owned   = ownedSkins.includes(skin.id)
-                  const equipped = equippedSkin === skin.id
+                  const owned    = ownedSkins.includes(skin.id)
+                  const isEquipped = equippedSkin === skin.id
                   return (
                     <button
                       key={skin.id}
-                      onClick={owned ? () => handleEquipSkin(skin.id) : undefined}
-                      disabled={!owned}
-                      style={{ background: 'rgba(255,255,255,0.03)', border: `1.5px solid ${equipped ? skin.color + '88' : owned ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)'}`, borderRadius: 12, padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '1rem', cursor: owned ? 'pointer' : 'default', opacity: owned ? 1 : 0.5, width: '100%', textAlign: 'left' }}
+                      onClick={owned && !isEquipped ? () => handleEquipSkin(skin.id) : undefined}
+                      disabled={!owned || isEquipped}
+                      className="font-karla font-700"
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                        padding: '0.6rem 0.4rem 0.5rem',
+                        borderRadius: 10,
+                        background: isEquipped ? `${skin.color}1f` : 'rgba(4,10,18,0.72)',
+                        border: `1px solid ${isEquipped ? skin.color + '90' : owned ? 'rgba(255,255,255,0.09)' : `${skin.color}22`}`,
+                        boxShadow: isEquipped ? `0 0 14px ${skin.color}33` : 'none',
+                        cursor: owned && !isEquipped ? 'pointer' : 'default',
+                        opacity: owned ? 1 : 0.6,
+                      }}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={shipStats.image} alt="" style={{ width: 46, height: 46, objectFit: 'contain', flexShrink: 0, filter: owned ? skin.filter : 'brightness(0.2) saturate(0)', transition: 'filter 0.25s' }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: equipped ? skin.color : '#e0ddd8', marginBottom: 2 }}>{skin.name}</p>
-                        <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248' }}>{skin.description}</p>
-                        {!owned && <p className="font-karla" style={{ fontSize: '0.56rem', color: '#3a3835', marginTop: 3 }}>Drops from: {skin.source}</p>}
+                      <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={shipStats.image}
+                          alt=""
+                          style={{
+                            width: 44, height: 44, objectFit: 'contain',
+                            filter: owned ? skin.filter : 'brightness(0.25) saturate(0)',
+                            transition: 'filter 0.25s',
+                          }}
+                        />
                       </div>
-                      {equipped && <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: skin.color, flexShrink: 0 }}>Equipped</span>}
-                      {owned && !equipped && <span className="font-karla font-600" style={{ fontSize: '0.56rem', color: '#4a4845', flexShrink: 0 }}>Equip</span>}
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: owned ? '#f0ede8' : '#a0a09a', lineHeight: 1.1, textAlign: 'center' }}>{skin.name}</p>
+                      {isEquipped ? (
+                        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: skin.color }}>✓ Equipped</span>
+                      ) : owned ? (
+                        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Tap to equip</span>
+                      ) : (
+                        <span className="font-karla" style={{ fontSize: '0.5rem', color: '#5a5856', textAlign: 'center', lineHeight: 1.25 }}>{skin.source}</span>
+                      )}
                     </button>
                   )
                 })}
@@ -634,6 +681,196 @@ export default function ShipHero({
           </>
         )}
       </AnimatePresence>
+
+      {/* Score breakdown modal — opens when the player taps a score on the
+          hero strip. Shows the actual formula with the player's numbers
+          plugged in so they can see WHY their score is what it is. */}
+      <AnimatePresence>
+        {breakdownScore && (
+          <>
+            <motion.div
+              key="breakdown-backdrop"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 110 }}
+              onClick={() => setBreakdownScore(null)}
+            />
+            <motion.div
+              key="breakdown-modal"
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 4 }}
+              transition={{ duration: 0.18 }}
+              style={{
+                position: 'fixed', zIndex: 111,
+                top: '50%', left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: 'min(94vw, 420px)',
+                maxHeight: 'calc(100svh - 100px)',
+                background: 'rgba(8,14,24,0.98)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 18,
+                padding: '1.1rem 1rem 1.25rem',
+                overflowY: 'auto',
+                overscrollBehavior: 'contain',
+              }}
+            >
+              {breakdownScore === 'voyage' ? (
+                <VoyageScoreBreakdown
+                  power={totalPower}
+                  dodge={totalDodge}
+                  fortune={totalFortune}
+                  total={voyageScore}
+                  onClose={() => setBreakdownScore(null)}
+                />
+              ) : (
+                <RaidScoreBreakdown
+                  power={ratedPower}
+                  dodge={ratedDodge}
+                  fortune={ratedFortune}
+                  hp={ratedHP}
+                  shipMin={shipStats.minDamage}
+                  rating={raidRating}
+                  onClose={() => setBreakdownScore(null)}
+                />
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
+  )
+}
+
+// ─── Score breakdown modals ──────────────────────────────────────────────────
+
+function BreakdownHeader({ title, color, onClose }: { title: string; color: string; onClose: () => void }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+      <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color }}>{title}</p>
+      <button
+        onClick={onClose}
+        aria-label="Close breakdown"
+        style={{
+          color: '#e0ddd8', cursor: 'pointer',
+          background: 'rgba(255,255,255,0.07)',
+          border: '1px solid rgba(255,255,255,0.14)',
+          borderRadius: '50%',
+          width: 28, height: 28, padding: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          touchAction: 'manipulation',
+        }}
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+  )
+}
+
+function VoyageScoreBreakdown({ power, dodge, fortune, total, onClose }: {
+  power: number; dodge: number; fortune: number; total: number; onClose: () => void
+}) {
+  const powerRate   = Math.min(power   / 55, 0.80)
+  const fortuneRate = Math.min(fortune / 45, 1)
+  const dodgeRate   = Math.min(dodge   / 28, 1)
+  const rows = [
+    { label: 'Power',   value: power,   rate: powerRate,   cap: 55, color: '#f87171', capNote: 'caps at 55 (max contribution 80%)' },
+    { label: 'Nav',     value: dodge,   rate: dodgeRate,   cap: 28, color: '#60a5fa', capNote: 'caps at 28' },
+    { label: 'Fortune', value: fortune, rate: fortuneRate, cap: 45, color: '#f0c040', capNote: 'caps at 45' },
+  ]
+  return (
+    <>
+      <BreakdownHeader title="Voyage Score" color="#7090c0" onClose={onClose} />
+      <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#9a9488', lineHeight: 1.5, marginBottom: '1rem' }}>
+        Predicts your crew&apos;s odds of clearing hard daily-voyage events. Each stat checks against its own threshold in <span style={{ color: '#bfb59f' }}>voyageEvents.ts</span>; the three rates are averaged and scaled to 0–100.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', marginBottom: '0.95rem' }}>
+        {rows.map(r => (
+          <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: r.color, width: 58, flexShrink: 0 }}>{r.label}</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#e0ddd8', width: 36, flexShrink: 0 }}>{r.value}</p>
+            <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${r.rate * 100}%`, background: r.color, borderRadius: 3 }} />
+            </div>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#e0ddd8', width: 44, flexShrink: 0, textAlign: 'right' }}>{Math.round(r.rate * 100)}%</p>
+          </div>
+        ))}
+      </div>
+      <div style={{ padding: '0.7rem 0.85rem', background: 'rgba(112,144,192,0.08)', border: '1px solid rgba(112,144,192,0.22)', borderRadius: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#9aaecc' }}>Average × 100</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>{total}<span style={{ color: '#7090c0', fontSize: '0.7rem' }}> / 100</span></p>
+        </div>
+      </div>
+      <p className="font-karla font-300" style={{ fontSize: '0.6rem', color: '#5a5856', marginTop: '0.85rem', lineHeight: 1.45 }}>
+        Uses raw crew totals (no Nav-level captain bonus). Stat thresholds: Power 55, Nav 28, Fortune 45.
+      </p>
+    </>
+  )
+}
+
+function RaidScoreBreakdown({ power, dodge, fortune, hp, shipMin, rating, onClose }: {
+  power: number; dodge: number; fortune: number; hp: number; shipMin: number;
+  rating: { offense: number; defense: number; total: number };
+  onClose: () => void
+}) {
+  const powerMax = shipMin + Math.floor(power / 4)
+  const hitMin = Math.max(shipMin, Math.floor(powerMax * 0.5))
+  const avgHit = (hitMin + powerMax) / 2
+  const critRate = Math.min(fortune / 2, 50) / 100
+  const dodgeBoost = Math.min(dodge / 200, 0.5)
+  return (
+    <>
+      <BreakdownHeader title="Raid Score" color="#c8704a" onClose={onClose} />
+      <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#9a9488', lineHeight: 1.5, marginBottom: '1rem' }}>
+        Predicts your damage output and survivability in raid combat. Anchored in the actual hit-damage formula plus a dodge-boosted effective HP.
+      </p>
+
+      {/* Offense block */}
+      <div style={{ padding: '0.7rem 0.85rem', background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.22)', borderRadius: 10, marginBottom: '0.65rem' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: '#f87171' }}>Offense</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8' }}>{rating.offense}</p>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <BreakdownRow label="Avg hit damage" value={`${hitMin}–${powerMax} → ${avgHit.toFixed(1)}`} />
+          <BreakdownRow label="Crit factor" value={`×${(1 + critRate).toFixed(2)} (Fortune ${fortune})`} />
+        </div>
+      </div>
+
+      {/* Defense block */}
+      <div style={{ padding: '0.7rem 0.85rem', background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.22)', borderRadius: 10, marginBottom: '0.85rem' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: '#60a5fa' }}>Defense</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8' }}>{rating.defense}</p>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <BreakdownRow label="Ship HP" value={`${hp}`} />
+          <BreakdownRow label="Dodge boost" value={`×${(1 + dodgeBoost).toFixed(2)} (Nav ${dodge})`} />
+        </div>
+      </div>
+
+      {/* Total */}
+      <div style={{ padding: '0.7rem 0.85rem', background: 'rgba(200,112,74,0.08)', border: '1px solid rgba(200,112,74,0.30)', borderRadius: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#d4906a' }}>
+            Offense + Defense × 0.5
+          </p>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>{rating.total}</p>
+        </div>
+      </div>
+
+      <p className="font-karla font-300" style={{ fontSize: '0.6rem', color: '#5a5856', marginTop: '0.85rem', lineHeight: 1.45 }}>
+        Includes Nav-level captain bonuses. Raid hit damage: powerMax = shipMin + Power/4, hitMin = max(shipMin, powerMax × 0.5).
+      </p>
+    </>
+  )
+}
+
+function BreakdownRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.5rem' }}>
+      <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8a8784' }}>{label}</p>
+      <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#d8d4cf', fontFeatureSettings: '"tnum"' }}>{value}</p>
+    </div>
   )
 }
