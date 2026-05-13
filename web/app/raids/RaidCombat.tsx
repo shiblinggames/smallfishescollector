@@ -689,6 +689,37 @@ export default function RaidCombat({
         background: 'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)',
         overflow: 'hidden',
       }}>
+        {/* ── Atmospheric backdrop ─────────────────────────────────────────
+            Sun + drifting clouds + a soft water-surface shimmer. All pure
+            CSS via keyframes in globals.css. Sits below the horizon line,
+            ships, and HP boxes (z-index left implicit — they're rendered
+            after these and have explicit z-index where it matters). */}
+
+        {/* Sun — sits high-right in the sky portion. Soft pulse via filter. */}
+        <div
+          className="raid-sun"
+          aria-hidden
+          style={{
+            position: 'absolute', top: '7%', right: '14%',
+            width: 36, height: 36, borderRadius: '50%',
+            background: 'radial-gradient(circle at 38% 35%, rgba(255,245,210,1) 0%, rgba(255,220,150,0.85) 55%, rgba(255,200,120,0) 100%)',
+            pointerEvents: 'none',
+          }}
+        />
+
+        {/* Drifting clouds — three layers at different sizes + speeds.
+            Each cloud is a flat radial-gradient with soft edges; the
+            wrapping div handles the slow translate. */}
+        <div aria-hidden style={{ position: 'absolute', top: '6%',  left: 0, right: 0, height: 36, pointerEvents: 'none' }}>
+          <div className="raid-cloud-slow" style={{ width: 120, height: 28, borderRadius: 14, background: 'radial-gradient(ellipse at 50% 60%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0) 75%)', filter: 'blur(1px)' }} />
+        </div>
+        <div aria-hidden style={{ position: 'absolute', top: '15%', left: 0, right: 0, height: 28, pointerEvents: 'none' }}>
+          <div className="raid-cloud-mid"  style={{ width: 88, height: 22, borderRadius: 11, background: 'radial-gradient(ellipse at 50% 60%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 75%)', filter: 'blur(0.8px)' }} />
+        </div>
+        <div aria-hidden style={{ position: 'absolute', top: '22%', left: 0, right: 0, height: 22, pointerEvents: 'none' }}>
+          <div className="raid-cloud-fast" style={{ width: 64, height: 18, borderRadius: 9,  background: 'radial-gradient(ellipse at 50% 60%, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0) 75%)', filter: 'blur(0.8px)' }} />
+        </div>
+
         {/* Horizon line + water tint — sits higher so the ships have more water under them */}
         <div style={{
           position: 'absolute', left: 0, right: 0, top: '38%', height: 1,
@@ -698,6 +729,22 @@ export default function RaidCombat({
           position: 'absolute', left: 0, right: 0, top: '38%', bottom: 0,
           background: 'linear-gradient(180deg, rgba(20,40,60,0.4) 0%, rgba(8,16,28,0.85) 100%)',
         }} />
+
+        {/* Water-surface shimmer — a thin band just below the horizon line
+            with a soft sun-glint that pans slowly across. Adds life to the
+            otherwise static water gradient. */}
+        <div
+          aria-hidden
+          className="raid-shimmer"
+          style={{
+            position: 'absolute', left: 0, right: 0, top: '38%', height: '12%',
+            backgroundImage: 'linear-gradient(90deg, transparent 0%, transparent 30%, rgba(255,235,200,0.10) 45%, rgba(255,245,220,0.18) 50%, rgba(255,235,200,0.10) 55%, transparent 70%, transparent 100%)',
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: '60% 100%',
+            mixBlendMode: 'screen',
+            pointerEvents: 'none',
+          }}
+        />
 
         {/* Leave button — small ← icon in the top-right of the battle stage.
             Replaces the dedicated Leave row above the XP bar so the game

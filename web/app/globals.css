@@ -422,6 +422,40 @@ body {
   50%      { transform: scale(1.18); box-shadow: 0 0 10px rgba(74,222,128,0.95); }
 }
 
+/* ── Raid sky — drifting clouds + slow sun pulse + water shimmer ───────────── */
+/* Clouds translate from off-right to off-left across the battle stage. The
+   three keyframes use different speeds so they never re-sync (organic feel
+   without random JS).                                                        */
+@keyframes raid-cloud-drift-slow {
+  from { transform: translateX(120%); }
+  to   { transform: translateX(-220%); }
+}
+@keyframes raid-cloud-drift-mid {
+  from { transform: translateX(140%); }
+  to   { transform: translateX(-200%); }
+}
+@keyframes raid-cloud-drift-fast {
+  from { transform: translateX(110%); }
+  to   { transform: translateX(-240%); }
+}
+/* Sun: subtle breathing glow. */
+@keyframes raid-sun-pulse {
+  0%, 100% { filter: drop-shadow(0 0 18px rgba(255,220,160,0.55)) drop-shadow(0 0 36px rgba(255,200,120,0.25)); }
+  50%      { filter: drop-shadow(0 0 28px rgba(255,225,170,0.70)) drop-shadow(0 0 52px rgba(255,210,130,0.38)); }
+}
+/* Water-surface shimmer: a soft horizontal sun-glint that pans slowly across
+   the upper water band. */
+@keyframes raid-water-shimmer {
+  from { background-position: -40% 0; }
+  to   { background-position: 140% 0; }
+}
+
+.raid-cloud-slow { animation: raid-cloud-drift-slow 60s linear infinite; }
+.raid-cloud-mid  { animation: raid-cloud-drift-mid  45s linear infinite; }
+.raid-cloud-fast { animation: raid-cloud-drift-fast 32s linear infinite; }
+.raid-sun        { animation: raid-sun-pulse 5.5s ease-in-out infinite; }
+.raid-shimmer    { animation: raid-water-shimmer 12s linear infinite; }
+
 /* ── Expeditions page zoom ── */
 .expeditions-content        { zoom: 1.35; }
 @media (min-width: 640px)   { .expeditions-content { zoom: 1.4; } }
