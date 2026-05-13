@@ -921,19 +921,14 @@ export default function PracticeRaidGame({
           tutorial tour still fires for first-time users via
           handleOpenFire(). */}
 
-      {/* ── Win overlay — post-battle "fight another or return home" prompt ──
-          Rewards already streamed into the action log + saved in the
-          background, so this is just the next-step choice. */}
+      {/* ── Win overlay — just the next-step choice. The kill narration and
+          reward streamed into the action log a beat earlier, so we don't
+          repeat any of that here. */}
       <AnimatePresence>
         {phase === 'win' && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.88)', zIndex: 50, padding: '1.5rem' }}>
-            <p className="font-karla font-400 uppercase tracking-[0.14em]" style={{ color: 'rgba(240,237,232,0.4)', fontSize: '0.6rem', marginBottom: 6 }}>Enemy Sunk</p>
-            <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '1.45rem', marginBottom: 6, textAlign: 'center' }}>{enemyName} Defeated</p>
-            <p className="font-karla" style={{ color: '#4ade80', fontSize: '0.85rem', marginBottom: 28, letterSpacing: '0.04em' }}>
-              +{winGold} ⟡  ·  +{winXP} XP
-            </p>
+            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.86)', zIndex: 50, padding: '1.5rem' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 260 }}>
               <motion.button
                 onPointerDown={retryGame}
