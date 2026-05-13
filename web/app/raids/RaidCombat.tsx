@@ -1124,6 +1124,10 @@ function PlayerStatsPopup({
   onClose: () => void
 }) {
   const powerMax  = shipMinDamage + Math.floor(totalPower / 4)
+  // Crew-aware hit floor — mirrors rollShotDamage. shipMin stays the absolute
+  // floor for under-built captains; for everyone else, hitMin is half of
+  // powerMax so investment in crew shows up in every shot.
+  const hitMin    = Math.max(shipMinDamage, Math.floor(powerMax * 0.5))
   const critMin   = shipMinDamage * 2
   const critMax   = Math.round(powerMax * 1.5)
   // Combined "maneuver" stat — Ship Speed and Navigation both feed into how
@@ -1131,7 +1135,7 @@ function PlayerStatsPopup({
   const speed   = shipSpeed + totalNavigation
 
   const rows: { label: string; value: string; hint: string; color: string }[] = [
-    { label: 'Damage',      value: `${shipMinDamage}–${powerMax}`, hint: 'normal-hit damage range',         color: '#f87171' },
+    { label: 'Damage',      value: `${hitMin}–${powerMax}`,        hint: 'normal-hit damage range',         color: '#f87171' },
     { label: 'Crit Damage', value: `${critMin}–${critMax}`,        hint: 'damage on a critical lock',       color: '#fbbf24' },
     { label: 'Speed',       value: String(speed),                  hint: 'turn order, dodge, evasion',      color: '#60a5fa' },
     { label: 'Fortune',     value: String(totalFortune),           hint: 'better odds at rare loot',        color: '#f0c040' },
