@@ -1011,19 +1011,24 @@ function PlayerStatsPopup({
   equippedRaidItems: string[]
   onClose: () => void
 }) {
-  const powerMax = shipMinDamage + Math.floor(totalPower / 4)
-  const bossMult = isBoss
+  const powerMax  = shipMinDamage + Math.floor(totalPower / 4)
+  const critMin   = shipMinDamage * 2
+  const critMax   = Math.round(powerMax * 1.5)
+  // Combined "maneuver" stat — both Ship Speed (turn-order d20 modifier +
+  // dodge defense) and Navigation (slows enemy aim + boosts dodge roll)
+  // shape the same fantasy of "how nimble your ship is", so we just sum
+  // them into a single Sailing score in the breakdown.
+  const sailing   = shipSpeed + totalNavigation
+  const bossMult  = isBoss
     ? getActiveEffects(equippedRaidItems)
         .filter(e => e.type === 'boss_damage_mult')
         .reduce((a, e) => a * e.value, 1)
     : 1
   const rows: { label: string; value: string; hint?: string; color: string }[] = [
-    { label: 'HP',         value: `${playerHp} / ${playerHpMax}`,                       color: '#ef4444' },
-    { label: 'Damage',     value: `${shipMinDamage}–${powerMax}`,                       hint: 'min from hull · max scales with Power',                      color: '#f87171' },
-    { label: 'Power',      value: String(totalPower),                                   hint: 'raises damage cap (max = minDmg + ⌊power/4⌋)',                color: '#f87171' },
-    { label: 'Navigation', value: String(totalNavigation),                              hint: 'slows enemy aim · boosts your dodge roll',                   color: '#60a5fa' },
-    { label: 'Fortune',    value: String(totalFortune),                                 hint: 'shifts loot odds toward rare drops',                         color: '#f0c040' },
-    { label: 'Ship Speed', value: String(shipSpeed),                                    hint: 'd20 turn order + dodge defense',                              color: '#a8b8d0' },
+    { label: 'Damage',      value: `${shipMinDamage}–${powerMax}`, hint: 'min from hull · max scales with Power',           color: '#f87171' },
+    { label: 'Crit Damage', value: `${critMin}–${critMax}`,        hint: 'critical hits roll in this range',                color: '#fbbf24' },
+    { label: 'Sailing',     value: String(sailing),                hint: 'turn order · dodge · enemy aim difficulty',       color: '#60a5fa' },
+    { label: 'Fortune',     value: String(totalFortune),           hint: 'shifts loot odds toward rare drops',              color: '#f0c040' },
   ]
   if (isBoss && bossMult > 1) {
     rows.push({ label: 'Boss Dmg ×', value: `${bossMult.toFixed(2)}×`, hint: 'from equipped raid items', color: '#fbbf24' })
