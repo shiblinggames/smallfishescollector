@@ -1034,6 +1034,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 enemy={getEnemyForRound(roundRef.current, config)}
                 isBoss={isBoss}
                 shipImageUrl={shipImageUrl}
+                shipFilter={shipFilter}
                 shipName={shipName}
                 playerHpMax={playerHPMax}
                 playerHp={playerHP}

@@ -113,6 +113,9 @@ export interface RaidCombatProps {
   enemy: BroadsideEnemy
   isBoss: boolean
   shipImageUrl: string
+  /** Optional CSS filter to recolor the ship sprite when a skin is equipped.
+   *  e.g. `'hue-rotate(180deg) brightness(0.7)'` for Corsair Black. */
+  shipFilter?: string
   shipName: string
   playerHpMax: number
   playerHp: number          // current at start of this encounter
@@ -134,7 +137,7 @@ export interface RaidCombatProps {
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function RaidCombat({
-  enemy, isBoss, shipImageUrl, shipName,
+  enemy, isBoss, shipImageUrl, shipFilter, shipName,
   playerHpMax, playerHp: initialPlayerHp,
   shipMinDamage, shipSpeed, totalPower, totalNavigation,
   totalFortune = 0,
@@ -738,7 +741,12 @@ export default function RaidCombat({
                 transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
                 style={{
                   width: '100%', display: 'block',
-                  filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
+                  // Combine the equipped-skin recolor with the standard
+                  // drop-shadow so both apply. shipFilter is the bare
+                  // recolor string from getShipSkin().filter; we prepend
+                  // the drop-shadow so the skin's hue/brightness still
+                  // works even when no skin is set.
+                  filter: `drop-shadow(0 3px 6px rgba(0,0,0,0.35))${shipFilter && shipFilter !== 'none' ? ` ${shipFilter}` : ''}`,
                 }}
               />
               {cannonShot && (
@@ -898,6 +906,33 @@ export default function RaidCombat({
             font: 'inherit', color: 'inherit',
           }}
         >
+          {/* Equipped-item chips so the player can see at a glance what
+              raid items are active in this fight. Tap the nameplate for
+              the full description. */}
+          {equippedRaidItems.length > 0 && (
+            <div style={{ display: 'flex', gap: 4, marginBottom: 5 }}>
+              {equippedRaidItems.slice(0, 4).map(id => {
+                const item = getRaidItem(id)
+                if (!item) return null
+                return (
+                  <div key={id} title={`${item.name}: ${item.description}`} style={{
+                    width: 22, height: 22, borderRadius: 6,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(251,191,36,0.14)',
+                    border: '1px solid rgba(251,191,36,0.5)',
+                    flexShrink: 0,
+                  }}>
+                    {item.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.image} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />
+                    ) : (
+                      <span style={{ fontSize: '0.78rem', lineHeight: 1 }}>{item.emoji}</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
           <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff', lineHeight: 1, marginBottom: 4 }}>
             {shipName}
           </p>
@@ -955,6 +990,7 @@ export default function RaidCombat({
           <PlayerStatsPopup
             shipName={shipName}
             shipImageUrl={shipImageUrl}
+            shipFilter={shipFilter}
             playerHp={playerHp}
             playerHpMax={playerHpMax}
             shipMinDamage={shipMinDamage}
@@ -993,13 +1029,14 @@ export default function RaidCombat({
 }
 
 function PlayerStatsPopup({
-  shipName, shipImageUrl, playerHp, playerHpMax,
+  shipName, shipImageUrl, shipFilter, playerHp, playerHpMax,
   shipMinDamage, shipSpeed, totalPower, totalNavigation, totalFortune,
   isBoss, equippedRaidItems,
   onClose,
 }: {
   shipName: string
   shipImageUrl: string
+  shipFilter?: string
   playerHp: number
   playerHpMax: number
   shipMinDamage: number
@@ -1071,7 +1108,7 @@ function PlayerStatsPopup({
             part of the old design. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={shipImageUrl} alt="" style={{ width: 60, height: 60, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.5))' }} />
+          <img src={shipImageUrl} alt="" style={{ width: 60, height: 60, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 3px 8px rgba(0,0,0,0.5))${shipFilter && shipFilter !== 'none' ? ` ${shipFilter}` : ''}` }} />
           <div style={{ minWidth: 0, flex: 1 }}>
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.68rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 3 }}>Your Ship</p>
             <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f0ede8', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shipName}</p>
