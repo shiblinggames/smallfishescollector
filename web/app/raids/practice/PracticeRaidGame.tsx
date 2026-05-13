@@ -739,7 +739,11 @@ export default function PracticeRaidGame({
     }
     return (
       <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
-        <div style={{ width: '100%', position: 'sticky', top: 0, zIndex: 55 }}>
+        {/* NavLevelBar must NOT be position:sticky — see memory
+            feedback_pagetransition_ios_pwa.md. Combined with framer-motion
+            compositing in RaidCombat, sticky here breaks the body's
+            position:fixed Nav header + MobileTabBar in iOS PWA mode. */}
+        <div style={{ width: '100%' }}>
           <NavLevelBar xp={navXP} />
           <AnimatePresence>
             {xpPopup && (

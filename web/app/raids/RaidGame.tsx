@@ -938,8 +938,12 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   if (phase === 'playing') {
     return (
       <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
-        {/* Nav level bar — kept across all phases */}
-        <div style={{ width: '100%', position: 'sticky', top: 0, zIndex: 55 }}>
+        {/* Nav level bar — kept across all phases. NOTE: must NOT be
+            position:sticky (or have transform/filter/will-change) — combined
+            with framer-motion compositing inside RaidCombat, iOS Safari PWA
+            mis-handles position:fixed for Nav header + MobileTabBar.
+            See memory: feedback_pagetransition_ios_pwa.md */}
+        <div style={{ width: '100%' }}>
           <NavLevelBar xp={navXP} />
           <AnimatePresence>
             {xpPopup && (
@@ -990,7 +994,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
 
       {/* ── Nav level bar ─────────────────────────────────────────────────────── */}
-      <div style={{ width: '100%', position: 'sticky', top: 0, zIndex: 55 }}>
+      {/* See note in playing-phase return — no position:sticky here either. */}
+      <div style={{ width: '100%' }}>
         <NavLevelBar xp={navXP} />
         <AnimatePresence>
           {xpPopup && (
