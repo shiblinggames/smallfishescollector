@@ -304,25 +304,27 @@ export default function ShipHero({
             />
 
             {/* Drawer. z-index 101 so the modal paints above the page Nav
-                regardless of DOM order; without this the LOADOUT sticky
-                header was hidden behind the fixed Nav (both were at z:50). */}
+                (also z:50). Using explicit top + bottom (instead of maxHeight)
+                hard-anchors the drawer top — it can never extend above the
+                page Nav, so the sticky LOADOUT header is always reachable.
+                Nav is 44px mobile / 64px desktop; 80px from top gives a
+                clean gap below it. The framer-motion animation slides the
+                drawer up from below; at rest it occupies top:80 → bottom:0. */}
             <motion.div
               key="loadout-drawer"
-              initial={{ y: '100vh' }} animate={{ y: 0 }} exit={{ y: '100vh' }}
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 380, damping: 36 }}
               {...drawerDragProps(closeLoadout)}
               style={{
-                position: 'fixed', bottom: 0,
+                position: 'fixed',
+                top: 'max(80px, env(safe-area-inset-top, 0px) + 20px)',
+                bottom: 0,
                 left: 'max(0px, calc(50% - 240px))',
                 right: 'max(0px, calc(50% - 240px))',
                 zIndex: 101,
                 background: 'rgba(6,12,20,0.98)',
                 borderTop: '1px solid rgba(255,255,255,0.09)',
                 borderRadius: '18px 18px 0 0',
-                // 100svh = smallest viewport height (excludes mobile browser chrome
-                // when shown). The -80px buffer keeps the drawer top clear of the
-                // page Nav header (44px mobile / 64px desktop) plus a small gap.
-                maxHeight: 'calc(100svh - 80px)',
                 display: 'flex', flexDirection: 'column',
                 overflow: 'hidden',
               }}
