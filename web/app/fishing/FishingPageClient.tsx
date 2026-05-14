@@ -1,13 +1,34 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import dynamic from 'next/dynamic'
 import ZoneLanding, { type ZoneKey } from './ZoneLanding'
-import FishingGame from './FishingGame'
 import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { ZONE_MIN_LEVEL } from './zoneData'
 import type { ActiveSession } from '@/app/social/challengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
+
+// FishingGame is a ~5,300-line client component. Dynamic-import it so the
+// JS only ships once the player actually picks a zone — not on the first
+// /fishing visit when they're still on ZoneLanding. ssr:false because the
+// component owns RAF loops and localStorage state that don't render on
+// the server anyway.
+const FishingGame = dynamic(() => import('./FishingGame'), {
+  ssr: false,
+  loading: () => (
+    <div style={{
+      position: 'fixed', inset: 0,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: '#04080e',
+      color: '#7a8aa0',
+      fontFamily: 'var(--font-karla), system-ui, sans-serif',
+      fontSize: '0.78rem', letterSpacing: '0.14em', textTransform: 'uppercase',
+    }}>
+      Casting line…
+    </div>
+  ),
+})
 
 const LAST_ZONE_KEY = 'fishing_last_zone'
 
