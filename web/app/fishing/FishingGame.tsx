@@ -4,13 +4,14 @@ import React, { useState, useEffect, useRef, useTransition, useMemo } from 'reac
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
-import { recordFinnEncounter, settleFinnChallenge, markFinnRevealSeen } from './finnActions'
+import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
 import {
   FINN_ENCOUNTER_RATE, FINN_PERFECT_TIERS, FINN_SPEED_TIERS, FINN_REVEAL_BEAT,
   FINN_OFFER_LINES, FINN_WIN_LINES, FINN_LOSS_LINES,
   FINN_EPILOGUE_OFFER_LINES, FINN_EPILOGUE_WIN_LINES, FINN_EPILOGUE_LOSS_LINES,
   FINN_EPILOGUE_LORE_LINES, FINN_EPILOGUE_LORE_CHANCE,
+  FINN_RETURN_AFTER_WIN, FINN_RETURN_AFTER_LOSS, FINN_RETURN_AFTER_PASS,
   pickFinnTier, pickChallengeType, pickRandomLine,
   findNextEncounterBeat, findNextWinBeat,
   type FinnChallengeType,
@@ -1680,7 +1681,7 @@ export default function FishingGame({
   initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
-  initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed,
+  initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
 }: {
   hookTier: number
   rodTier: number
@@ -1726,6 +1727,7 @@ export default function FishingGame({
   initialFinnWins: number
   initialFinnSeenBeats: string[]
   initialFinnRevealed: boolean
+  initialFinnLastOutcome: 'won' | 'lost' | 'passed' | null
 }) {
 
   const [localCharacterColor, setLocalCharacterColor] = useState(characterColor)
@@ -1848,6 +1850,11 @@ export default function FishingGame({
   const [finnWins, setFinnWins] = useState(initialFinnWins)
   const [finnSeenBeats, setFinnSeenBeats] = useState<string[]>(initialFinnSeenBeats)
   const [finnRevealed, setFinnRevealed] = useState(initialFinnRevealed)
+  // Outcome of the LAST encounter ('won' | 'lost' | 'passed'). When set,
+  // the next encounter opens with a callback line acknowledging it, then
+  // clears (server-side via recordFinnEncounter). null after a fresh
+  // encounter or for a player who's never met Finn.
+  const [finnLastOutcome, setFinnLastOutcome] = useState<'won' | 'lost' | 'passed' | null>(initialFinnLastOutcome)
   // Active challenge — non-null while a bet is in flight. Cleared on settle.
   const [finnChallenge, setFinnChallenge] = useState<{
     type: FinnChallengeType
@@ -2272,9 +2279,18 @@ export default function FishingGame({
 
     const rewardText = `+${(fishingLevel * multiplier).toLocaleString()} ⟡`
 
-    // Build dialogue: beat lines (if any) + a closing offer line. Post-reveal,
+    // Build dialogue: optional callback line (if Finn remembers a previous
+    // outcome) + beat lines (if any) + a closing offer line. Post-reveal,
     // occasionally swap the offer for a lore drop instead.
     const offerPool = finnRevealed ? FINN_EPILOGUE_OFFER_LINES : FINN_OFFER_LINES
+    const callbackLine = (() => {
+      switch (finnLastOutcome) {
+        case 'won':    return pickRandomLine(FINN_RETURN_AFTER_WIN)
+        case 'lost':   return pickRandomLine(FINN_RETURN_AFTER_LOSS)
+        case 'passed': return pickRandomLine(FINN_RETURN_AFTER_PASS)
+        default:       return null
+      }
+    })()
     let lines: string[]
     if (beat) {
       lines = [...beat.lines, pickRandomLine(offerPool)]
@@ -2283,6 +2299,7 @@ export default function FishingGame({
     } else {
       lines = [pickRandomLine(offerPool)]
     }
+    if (callbackLine) lines = [callbackLine, ...lines]
 
     // Hold for ~500ms so the cast tap feels intentional — the player sees
     // the cast ripple, then Finn arrives. Slamming the overlay in
@@ -2301,6 +2318,9 @@ export default function FishingGame({
     // Optimistic state — server resyncs us.
     setFinnEncounters(newEncounters)
     if (beat) setFinnSeenBeats(prev => prev.includes(beat.id) ? prev : [...prev, beat.id])
+    // Clear the remembered outcome locally — the server-side
+    // recordFinnEncounter call below also nulls finn_last_outcome.
+    setFinnLastOutcome(null)
 
     startTransition(() => {
       void recordFinnEncounter(beat?.id ?? null).then(res => {
@@ -2325,6 +2345,9 @@ export default function FishingGame({
 
   function handleFinnPass() {
     setFinnOverlay(null)
+    // Remember the decline so the next encounter can call it out.
+    setFinnLastOutcome('passed')
+    startTransition(() => { void recordFinnPass() })
   }
 
   function handleFinnDismiss() {
@@ -2359,6 +2382,9 @@ export default function FishingGame({
     }
 
     setFinnChallenge(null)
+    // Stamp the outcome so the NEXT encounter can open with a callback
+    // line. Cleared on the server when recordFinnEncounter fires next time.
+    setFinnLastOutcome(won ? 'won' : 'lost')
     // Hold the result overlay back a beat so the catch result card / banners
     // get to land first. Without this Finn slams in over the catch and the
     // player can't even tell if they hit it.

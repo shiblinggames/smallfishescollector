@@ -29,7 +29,7 @@ export default async function FishingPage() {
     getActiveChallengeSession(),
     getDailyChallenge(),
     admin.from('profiles')
-      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, fish_hold_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, has_tide_turner, tide_turner_used, tide_turner_date, equipped_special, has_phantom_hook, has_auto_caster, prestige_levels, trophy_catches, character_color, equipped_badges, unlocked_badges, unlocked_character_colors, equipped_boat, unlocked_boats, equipped_hat, unlocked_hats, is_premium, premium_expires_at, finn_encounters, finn_wins, finn_seen_beats, finn_revealed')
+      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, fish_hold_tier, highest_perfect_streak, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, has_tide_turner, tide_turner_used, tide_turner_date, equipped_special, has_phantom_hook, has_auto_caster, prestige_levels, trophy_catches, character_color, equipped_badges, unlocked_badges, unlocked_character_colors, equipped_boat, unlocked_boats, equipped_hat, unlocked_hats, is_premium, premium_expires_at, finn_encounters, finn_wins, finn_seen_beats, finn_revealed, finn_last_outcome')
       .eq('id', user.id)
       .single(),
     admin.from('bait_inventory')
@@ -132,6 +132,7 @@ export default async function FishingPage() {
           initialFinnWins={profile?.finn_wins ?? 0}
           initialFinnSeenBeats={(profile?.finn_seen_beats as string[] | null) ?? []}
           initialFinnRevealed={profile?.finn_revealed ?? false}
+          initialFinnLastOutcome={(profile?.finn_last_outcome as 'won' | 'lost' | 'passed' | null) ?? null}
         />
       </main>
     </>

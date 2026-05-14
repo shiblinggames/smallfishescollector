@@ -387,6 +387,36 @@ export const FINN_EPILOGUE_LOSS_LINES: string[] = [
   "The deep's patient. So am I.",
 ]
 
+// ─── Return-acknowledgement pools ────────────────────────────────────────────
+// Fires as the FIRST line on Finn's NEXT encounter after a resolved (or
+// declined) challenge — so he remembers the last outcome instead of acting
+// like every encounter is the first. Cleared on the server after each
+// encounter so it only fires once per outcome.
+
+export const FINN_RETURN_AFTER_PASS: string[] = [
+  "Last time you walked away. Not biting today either?",
+  "You passed on me last time. Cold feet, or just smart?",
+  "Back so soon. Still afraid to commit?",
+  "I half-thought you'd dodge me again.",
+  "You ducked my last bet. Don't make a habit of it.",
+]
+
+export const FINN_RETURN_AFTER_LOSS: string[] = [
+  "Lost the last one. Ready to lose another?",
+  "Last bet went my way. Got a stomach for round two?",
+  "Don't tell me you forgot the last one. Try again.",
+  "I'll take your doubloons twice if you'll let me.",
+  "You owed me one. Time to settle.",
+]
+
+export const FINN_RETURN_AFTER_WIN: string[] = [
+  "You got me last time. Won't happen twice.",
+  "Beat me once. That's a coincidence. Twice is a pattern.",
+  "Don't get smug about the last one. I was warming up.",
+  "Lucky last time. Skill this time?",
+  "Hope you didn't spend it all already.",
+]
+
 /** Rare lore drops — fires occasionally instead of a normal offer line. */
 export const FINN_EPILOGUE_LORE_LINES: string[] = [
   "Marl used to chase a sturgeon for three summers running. Never landed it. Grinned like an idiot every time it broke the line.",
