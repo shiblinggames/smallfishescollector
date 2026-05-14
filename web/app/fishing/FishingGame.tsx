@@ -33,6 +33,7 @@ import { finishSession, type ActiveSession } from '@/app/social/challengeActions
 import { equipRod, purchaseRod, buyReel } from '@/app/marketplace/tackle-shop/actions'
 import { buyHook } from '@/app/hooks/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
+import { ZONE_MIN_LEVEL } from './zoneData'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
 import { getHook, HOOKS } from '@/lib/hooks'
 import { getRod, RODS, type RodDef } from '@/lib/rods'
@@ -1603,6 +1604,48 @@ function XPBarDisplay({ xp, bestStreak }: { xp: number; bestStreak?: number }) {
   )
 }
 
+/** Cumulative fishing-level perks at a given level. Used by the level-up
+ *  overlay to surface what the player's level actually does — bite speed
+ *  and catch-zone width scale linearly with level (see lib/fishingLevel
+ *  and app/fishing/actions.ts fishWaitMs). Zone unlocks are checked against
+ *  ZONE_MIN_LEVEL separately. */
+function fishingLevelPerks(level: number) {
+  return {
+    catchZone: Math.floor(level * 0.2),                                // degrees
+    biteSpeed: Math.round(((level - 1) / 99) * 33 * 10) / 10,          // percent
+  }
+}
+
+/** Returns the zones that unlock between two adjacent levels — the player
+ *  sees a "Zone Unlocked" callout on the level-up overlay only when crossing
+ *  a threshold. */
+function zonesUnlockedBetween(from: number, to: number): { key: string; label: string }[] {
+  const out: { key: string; label: string }[] = []
+  for (const [zone, min] of Object.entries(ZONE_MIN_LEVEL)) {
+    if (min > from && min <= to) out.push({ key: zone, label: HABITAT_LABEL[zone] ?? zone })
+  }
+  return out
+}
+
+/** Stat-perk line for the level-up overlay. Cinzel value + caps label,
+ *  styled to match NavLevelUpOverlay's stat-delta lines. */
+function PerkLine({ label, value }: { label: string; value: string }) {
+  return (
+    <p
+      className="font-cinzel font-700"
+      style={{
+        display: 'inline-flex', alignItems: 'baseline', gap: 10,
+        fontSize: '1.05rem', lineHeight: 1.25,
+        color: '#f0ede8',
+        textShadow: '0 0 16px rgba(240,192,64,0.45), 0 0 30px rgba(96,165,250,0.22)',
+      }}
+    >
+      <span style={{ color: '#f0c040' }}>{value}</span>
+      <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.82rem', letterSpacing: '0.08em' }}>{label}</span>
+    </p>
+  )
+}
+
 /** Tiny live-countdown shown inside the Finn-challenge HUD chip for speed
  *  challenges. Re-renders ~4× a second; cheap. */
 function SpeedClock({ endsAt }: { endsAt: number }) {
@@ -1851,7 +1894,10 @@ export default function FishingGame({
   const [missResult, setMissResult] = useState<ZoneType | null>(null)
   const [fishingXP, setFishingXP]   = useState(initialFishingXP)
   const [xpPopup, setXpPopup]       = useState<{ value: number; id: number; prestige?: boolean } | null>(null)
-  const [levelUpNotif, setLevelUpNotif] = useState<number | null>(null)
+  // Level-up celebration carries both the old AND new level so we can
+  // compute the stat deltas the player just earned (catch-zone width,
+  // bite speed, zone unlocks) — see fishingLevelDeltas() helper.
+  const [levelUpNotif, setLevelUpNotif] = useState<{ from: number; to: number } | null>(null)
   const [podiumNotif, setPodiumNotif] = useState<PodiumNotif | null>(null)
   const podiumPositionsRef = useRef<{ fishingLevel: number | null; perfectStreak: number | null }>({ fishingLevel: null, perfectStreak: null })
   const [, startTransition]         = useTransition()
@@ -2638,7 +2684,7 @@ export default function FishingGame({
         setFishingXP(newXP)
         setXpPopup({ value: xpGained, id: Date.now(), prestige: (prestigeLevels[fish.habitat] ?? 0) > 0 })
         if (newLevel > oldLevel) {
-          setLevelUpNotif(newLevel)
+          setLevelUpNotif({ from: oldLevel, to: newLevel })
           checkLeaderboardPosition('fishingLevel').then(r => {
             const cur = r?.position ?? null
             if (cur === 1 && podiumPositionsRef.current.fishingLevel !== 1) setPodiumNotif({ category: 'Fishing Level', position: 1 })
@@ -5355,9 +5401,14 @@ export default function FishingGame({
         )}
       </AnimatePresence>
 
-      {/* ── Level-up overlay ── */}
+      {/* ── Level-up overlay — surfaces what the new level actually does
+            (cumulative bite-speed + catch-zone perks, and any zone unlock).
+            Mirrors NavLevelUpOverlay's stat-delta style. */}
       <AnimatePresence>
-        {levelUpNotif && (
+        {levelUpNotif && (() => {
+          const perks = fishingLevelPerks(levelUpNotif.to)
+          const zoneUnlocks = zonesUnlockedBetween(levelUpNotif.from, levelUpNotif.to)
+          return (
           <motion.div
             key="levelup"
             initial={{ opacity: 0 }}
@@ -5370,6 +5421,7 @@ export default function FishingGame({
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'radial-gradient(ellipse 80% 65% at 50% 50%, rgba(96,165,250,0.22) 0%, rgba(0,0,0,0.88) 100%)',
               cursor: 'pointer',
+              padding: '1.5rem',
             }}
           >
             {/* Ring bursts */}
@@ -5401,13 +5453,13 @@ export default function FishingGame({
 
             {/* Text */}
             <motion.div
-              initial={{ scale: 0.4, y: 24, opacity: 0 }}
+              initial={{ scale: 0.55, y: 18, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 420, damping: 18, delay: 0.06 }}
-              style={{ textAlign: 'center', position: 'relative' }}
+              transition={{ duration: 0.28, ease: 'easeOut', delay: 0.06 }}
+              style={{ textAlign: 'center', position: 'relative', maxWidth: 320 }}
             >
               <p className="font-cinzel font-700 uppercase tracking-[0.25em]"
-                style={{ fontSize: '1.1rem', color: '#fff', marginBottom: '0.4rem', textShadow: '0 0 18px rgba(255,255,255,0.95), 0 0 48px rgba(96,165,250,0.6)' }}>
+                style={{ fontSize: '1.1rem', color: '#fff', marginBottom: '0.35rem', textShadow: '0 0 18px rgba(255,255,255,0.95), 0 0 48px rgba(96,165,250,0.6)' }}>
                 Level Up!
               </p>
               <p className="font-cinzel font-700"
@@ -5415,17 +5467,65 @@ export default function FishingGame({
                   fontSize: '5rem', lineHeight: 1, color: '#f0c040',
                   textShadow: '0 0 40px rgba(240,192,64,1), 0 0 90px rgba(240,192,64,0.5)',
                 }}>
-                {levelUpNotif}
+                {levelUpNotif.to}
               </p>
+
+              {/* Perks at this level — cumulative numbers so the player sees
+                  where they ARE, not just the marginal gain. */}
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.28, duration: 0.3, ease: 'easeOut' }}
+                style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+              >
+                <p className="font-karla font-700 uppercase tracking-[0.22em]"
+                   style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.45)', marginBottom: '0.4rem', textShadow: '0 0 12px rgba(96,165,250,0.4)' }}>
+                  Angler&apos;s Perks
+                </p>
+                {perks.biteSpeed > 0 && (
+                  <PerkLine label="Faster Bites" value={`+${perks.biteSpeed}%`} />
+                )}
+                {perks.catchZone > 0 && (
+                  <PerkLine label="Catch Zone" value={`+${perks.catchZone}°`} />
+                )}
+              </motion.div>
+
+              {/* Zone unlock — only when crossing a threshold, prominent. */}
+              {zoneUnlocks.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 18 }}
+                  style={{
+                    marginTop: '1rem',
+                    padding: '0.55rem 1rem',
+                    background: 'linear-gradient(180deg, rgba(96,165,250,0.22) 0%, rgba(96,165,250,0.06) 100%), #06121e',
+                    border: '1px solid rgba(96,165,250,0.50)',
+                    borderTop: '1px solid rgba(96,165,250,0.80)',
+                    borderRadius: 999,
+                    boxShadow: '0 0 22px rgba(96,165,250,0.35)',
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                  }}
+                >
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', color: '#90c0ff', letterSpacing: '0.20em' }}>
+                    Zone Unlocked
+                  </span>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0ede8', textShadow: '0 0 12px rgba(96,165,250,0.55)' }}>
+                    {zoneUnlocks.map(z => z.label).join(' · ')}
+                  </span>
+                </motion.div>
+              )}
+
               <motion.p
                 className="font-karla font-400"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-                style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.28)', marginTop: '0.75rem' }}>
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
+                style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.32)', marginTop: '1rem', letterSpacing: '0.08em' }}>
                 tap to continue
               </motion.p>
             </motion.div>
           </motion.div>
-        )}
+          )
+        })()}
       </AnimatePresence>
 
       <PodiumToast notif={podiumNotif} onDone={() => setPodiumNotif(null)} />
