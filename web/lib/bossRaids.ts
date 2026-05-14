@@ -68,18 +68,23 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
   raidTitle: "The Corsair's Reckoning",
   bossDefeatedText: 'Barnacle Pete Defeated',
   enemies: {
-    // Patterns are designed so each fire has at least 1 stockpiled charge
-    // and each volley has 3, with dodges sprinkled in unpredictable slots.
-    // Volley + dodge combos punish players who reload-fire-reload-fire on
-    // autopilot — they eventually have to brace for a buildup volley or
-    // waste a charged shot against a dodge.
+    // Patterns explicitly punish a player on reload-fire-reload-fire
+    // autopilot (firing on even turns, reloading on odd ones):
+    //   - Enemy DODGE placed on a player-fire turn → player wastes a charged
+    //     shot for nothing. The only way to avoid this is to skip a fire
+    //     turn (reload twice, or defend instead).
+    //   - Enemy FIRE / VOLLEY placed on a player-reload turn → player takes
+    //     a hit they can't retaliate against. The only way to soak it
+    //     without losing HP is to Defend on that turn.
+    // Every cycle below has at least 2 punishment turns where autopilot
+    // play has a direct cost.
     brute: {
       id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 2, maxDmg: 5,
       shipSpeed: 4, actionMs: 4500,
-      // 6-turn loop. Quick fire turn 2, then 3 reloads into a volley
-      // turn 6. Player has to anticipate the buildup or eat 2× damage.
-      // Charges over cycle: 0→1→0→1→2→3→0
-      pattern: ['reload', 'fire', 'reload', 'reload', 'reload', 'volley'],
+      // 8-turn loop. Punishes turns 7 + 8: enemy volleys while player
+      // reloads (can't retaliate), then dodges the next player fire.
+      // Charges: 0→1→0→0→1→2→3→0→0
+      pattern: ['reload', 'fire', 'dodge', 'reload', 'reload', 'reload', 'volley', 'dodge'],
       critChance: 0.025,
       image: '/enemytier1.png',
       portrait: ENEMY_IMG_BASE + 'reefraider.png',
@@ -87,10 +92,11 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
     sniper: {
       id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
       shipSpeed: 3, actionMs: 5500,
-      // 7-turn loop. Devastating volley up front (turn 4), then a dodge to
-      // burn the player's retaliatory shot, then a finisher fire.
-      // Charges: 0→1→2→3→0→0→1→0
-      pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'fire'],
+      // 10-turn loop. Three punish turns: T4 big volley while player fires
+      // (mutual but enemy 2×), T7 enemy fires while player reloads (free
+      // hit), T8 dodge while player fires (wasted shot).
+      // Charges: 0→1→2→3→0→0→1→0→0→1→0
+      pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'fire', 'dodge', 'reload', 'fire'],
       critChance: 0.10,
       image: '/enemytier1scout.png',
       portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png',
@@ -98,12 +104,12 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
     corsair: {
       id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
       shipSpeed: 7, actionMs: 3500,
-      // 9-turn loop, full toolkit: 2 fires + 1 volley + 1 dodge. Dodge
-      // sits right after the opening fire so a reactive player who fires
-      // back next turn whiffs. Fastest enemy ship → wins speed rolls more
-      // often, so the dodge lands before the player's reply too.
-      // Charges: 0→1→0→0→1→2→3→0→1→0
-      pattern: ['reload', 'fire', 'dodge', 'reload', 'reload', 'reload', 'volley', 'reload', 'fire'],
+      // 10-turn loop. Three punish turns: T5 enemy fires while player
+      // reloads, T6 dodges the player fire that follows, T10 closes with
+      // a volley. Fastest ship in the raid (speed 7) so it wins speed
+      // rolls more often, meaning dodges + volleys often land first.
+      // Charges: 0→1→0→0→1→0→0→1→2→3→0
+      pattern: ['reload', 'fire', 'dodge', 'reload', 'fire', 'dodge', 'reload', 'reload', 'reload', 'volley'],
       critChance: 0.05,
       image: '/enemytier1elite.png',
       portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png',
@@ -111,12 +117,13 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
     pete: {
       id: 'pete', name: 'Barnacle Pete', hpBase: 55, minDmg: 8, maxDmg: 15,
       shipSpeed: 6, actionMs: 4500,
-      // 12-turn loop, boss-grade threat: TWO volleys (turns 4 and 9), each
-      // followed by a dodge that disrupts the player's "trade hits" rhythm.
-      // 8–15 dmg × 2 (volley) × possible 1.5 crit = up to 45-dmg single
-      // shots, so a low-HP player who isn't bracing is in real trouble.
-      // Charges: 0→1→2→3→0→0→1→2→3→0→0→1→0
-      pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'fire'],
+      // 13-turn loop, boss-grade threat. FOUR punish turns: T4 + T12
+      // double-volley, T7 free hit during player reload, T8 dodge wastes
+      // player fire. 8–15 dmg × 2 (volley) × possible 1.5 crit = up to
+      // 45-dmg single shots — a low-HP player not bracing is in real
+      // trouble.
+      // Charges: 0→1→2→3→0→0→1→0→0→1→2→3→0→0
+      pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'fire', 'dodge', 'reload', 'reload', 'reload', 'volley', 'dodge'],
       critChance: 0.075,
       image: '/enemytier1boss.png',
       portrait: ENEMY_IMG_BASE + 'barnacle_pete.png',
