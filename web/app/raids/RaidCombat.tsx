@@ -480,6 +480,7 @@ export default function RaidCombat({
       let splatTarget: Actor | null = null
       let splatText = ''
       let splatColor = '#ef4444'
+      let enemyCrit = false
       const stepLines: string[] = []
 
       if (action === 'reload') {
@@ -507,6 +508,13 @@ export default function RaidCombat({
         } else {
           const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
           dmg = base * (action === 'volley' ? 2 : 1)
+          // Enemy crit — flat chance per enemy, applied after the volley
+          // multiplier. Players crit through aim-bar skill; enemies don't
+          // have that, so the same outcome happens via RNG.
+          if (Math.random() < (enemy.critChance ?? 0)) {
+            enemyCrit = true
+            dmg = Math.floor(dmg * 1.5)
+          }
         }
 
         splatTarget = isAttackerPlayer ? 'enemy' : 'player'
@@ -542,15 +550,25 @@ export default function RaidCombat({
           splatColor = lockedAimResult === 'critical' ? '#fbbf24' : '#ef4444'
         } else {
           pHp = Math.max(0, pHp - dmg)
-          stepLines.push(action === 'volley'
-            ? `Enemy unleashes a volley for ${dmg} damage.`
-            : `Enemy fires for ${dmg} damage.`)
+          if (enemyCrit) {
+            stepLines.push(action === 'volley'
+              ? `Critical volley! Enemy blasts you for ${dmg} damage.`
+              : `Critical hit! Enemy lands a heavy shot for ${dmg} damage.`)
+          } else {
+            stepLines.push(action === 'volley'
+              ? `Enemy unleashes a volley for ${dmg} damage.`
+              : `Enemy fires for ${dmg} damage.`)
+          }
           splatText = `-${dmg}`
-          splatColor = '#ef4444'
+          splatColor = enemyCrit ? '#fbbf24' : '#ef4444'
         }
       }
 
-      steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, big: who === 'player' && lockedAimResult === 'critical', logLines: stepLines })
+      steps.push({
+        who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor,
+        big: (who === 'player' && lockedAimResult === 'critical') || (who === 'enemy' && enemyCrit),
+        logLines: stepLines,
+      })
     }
 
     // Animate the pre-computed steps sequentially. Each step:
