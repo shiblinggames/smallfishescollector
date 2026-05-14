@@ -381,20 +381,24 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
               onClick={() => canBuyOne && handleBuyWithGems(1)}
               disabled={buyingWithGems || !canBuyOne}
               style={{
-                background: canBuyOne ? 'linear-gradient(180deg, rgba(167,139,250,0.16) 0%, rgba(167,139,250,0.04) 100%)' : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${canBuyOne ? 'rgba(167,139,250,0.36)' : 'rgba(255,255,255,0.08)'}`,
-                borderTop: `1px solid ${canBuyOne ? 'rgba(167,139,250,0.55)' : 'rgba(255,255,255,0.12)'}`,
+                // Disabled (insufficient gems) uses a neutral slate bg instead
+                // of fading the whole card — players still need to read the
+                // cost so they know what to save toward.
+                background: canBuyOne
+                  ? 'linear-gradient(180deg, rgba(167,139,250,0.16) 0%, rgba(167,139,250,0.04) 100%)'
+                  : 'linear-gradient(180deg, rgba(120,130,160,0.10) 0%, rgba(120,130,160,0.04) 100%)',
+                border: `1px solid ${canBuyOne ? 'rgba(167,139,250,0.36)' : 'rgba(120,130,160,0.22)'}`,
+                borderTop: `1px solid ${canBuyOne ? 'rgba(167,139,250,0.55)' : 'rgba(120,130,160,0.35)'}`,
                 borderRadius: 12,
                 padding: '0.85rem 0.6rem',
                 cursor: canBuyOne && !buyingWithGems ? 'pointer' : 'default',
-                opacity: canBuyOne ? 1 : 0.45,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                 transition: 'transform 0.12s ease',
               }}
             >
-              <span className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', lineHeight: 1 }}>1</span>
-              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#a8a08c' }}>Pack</span>
-              <span className="font-karla font-700" style={{ fontSize: '0.85rem', color: canBuyOne ? '#a78bfa' : '#5a5468', marginTop: 2 }}>
+              <span className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: canBuyOne ? '#f0ede8' : '#cac8c4', lineHeight: 1 }}>1</span>
+              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: canBuyOne ? '#a8a08c' : '#9a9890' }}>Pack</span>
+              <span className="font-karla font-700" style={{ fontSize: '0.85rem', color: canBuyOne ? '#a78bfa' : '#a09cb0', marginTop: 2 }}>
                 100 ◆
               </span>
             </button>
@@ -402,13 +406,14 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
               onClick={() => canBuyTen && handleBuyWithGems(10)}
               disabled={buyingWithGems || !canBuyTen}
               style={{
-                background: canBuyTen ? 'linear-gradient(180deg, rgba(167,139,250,0.22) 0%, rgba(167,139,250,0.06) 100%)' : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${canBuyTen ? 'rgba(167,139,250,0.42)' : 'rgba(255,255,255,0.08)'}`,
-                borderTop: `1px solid ${canBuyTen ? 'rgba(167,139,250,0.65)' : 'rgba(255,255,255,0.12)'}`,
+                background: canBuyTen
+                  ? 'linear-gradient(180deg, rgba(167,139,250,0.22) 0%, rgba(167,139,250,0.06) 100%)'
+                  : 'linear-gradient(180deg, rgba(120,130,160,0.10) 0%, rgba(120,130,160,0.04) 100%)',
+                border: `1px solid ${canBuyTen ? 'rgba(167,139,250,0.42)' : 'rgba(120,130,160,0.22)'}`,
+                borderTop: `1px solid ${canBuyTen ? 'rgba(167,139,250,0.65)' : 'rgba(120,130,160,0.35)'}`,
                 borderRadius: 12,
                 padding: '0.85rem 0.6rem',
                 cursor: canBuyTen && !buyingWithGems ? 'pointer' : 'default',
-                opacity: canBuyTen ? 1 : 0.45,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                 position: 'relative',
                 transition: 'transform 0.12s ease',
@@ -424,9 +429,9 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
                 }}>
                 Best Value
               </span>
-              <span className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', lineHeight: 1 }}>10</span>
-              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#a8a08c' }}>Packs</span>
-              <span className="font-karla font-700" style={{ fontSize: '0.85rem', color: canBuyTen ? '#a78bfa' : '#5a5468', marginTop: 2 }}>
+              <span className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: canBuyTen ? '#f0ede8' : '#cac8c4', lineHeight: 1 }}>10</span>
+              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: canBuyTen ? '#a8a08c' : '#9a9890' }}>Packs</span>
+              <span className="font-karla font-700" style={{ fontSize: '0.85rem', color: canBuyTen ? '#a78bfa' : '#a09cb0', marginTop: 2 }}>
                 900 ◆
               </span>
             </button>

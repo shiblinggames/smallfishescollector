@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-
-const TOUR_KEY = 'expeditions-tour-seen-v1'
+import { useState, startTransition } from 'react'
+import { markExpeditionsTourSeen } from './tourActions'
 
 const STEPS = [
   {
@@ -22,17 +21,13 @@ const STEPS = [
   },
 ]
 
-export default function ExpeditionsTour() {
-  const [visible, setVisible] = useState(false)
+export default function ExpeditionsTour({ hasSeen }: { hasSeen: boolean }) {
+  const [visible, setVisible] = useState(!hasSeen)
   const [step, setStep] = useState(0)
 
-  useEffect(() => {
-    if (!localStorage.getItem(TOUR_KEY)) setVisible(true)
-  }, [])
-
   function dismiss() {
-    localStorage.setItem(TOUR_KEY, '1')
     setVisible(false)
+    startTransition(() => { void markExpeditionsTourSeen() })
   }
 
   if (!visible) return null

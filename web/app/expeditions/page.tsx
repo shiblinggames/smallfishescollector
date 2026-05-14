@@ -20,7 +20,7 @@ export default async function ExpeditionsPage() {
 
   const [{ data: profile }, collection, dailyVoyageState, { data: voyageHistoryRows }] = await Promise.all([
     admin.from('profiles')
-      .select('packs_available, doubloons, ship_tier, gems, saved_crew, ship_name, expedition_xp, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, has_completed_practice_raid')
+      .select('packs_available, doubloons, ship_tier, gems, saved_crew, ship_name, expedition_xp, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, has_completed_practice_raid, has_seen_expeditions_tour')
       .eq('id', user.id)
       .single(),
     getCollectionForCrew(),
@@ -59,7 +59,7 @@ export default async function ExpeditionsPage() {
       <div style={{ position: 'relative', zIndex: 1 }}>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={doubloons} gems={profile?.gems ?? 0} />
 
-      <ExpeditionsTour />
+      <ExpeditionsTour hasSeen={profile?.has_seen_expeditions_tour ?? false} />
       <main className="min-h-screen pb-24 sm:pb-0">
 
         <div className="px-5 max-w-lg mx-auto expeditions-content" style={{ paddingTop: '1rem' }}>
