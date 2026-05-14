@@ -277,32 +277,38 @@ export default function ShipHero({
           </div>
         </div>
 
-        {/* Loadout button */}
-        <button
-          onClick={() => setLoadoutOpen(true)}
-          style={{
-            width: '100%', background: 'rgba(240,192,64,0.04)', border: 'none',
-            borderTop: '1px solid rgba(240,192,64,0.14)',
-            padding: '0.65rem 1rem', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          }}
-        >
-          <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: '#d4a860' }}>View Loadout &amp; Assign Crew</span>
-          <span style={{ fontSize: '1rem', color: '#8a6838', lineHeight: 1 }}>›</span>
-        </button>
-
-        {/* Power-up CTAs: directs the player to the two ways their scores
-            actually grow — open packs for stronger crew, upgrade ship for
-            base stats. Sits right under the scores so the connection is
-            visible at a glance. */}
+        {/* Expedition controls — all three actions share one section so
+            the primary "loadout" CTA and the two "go get stronger" CTAs
+            read as one cohesive panel under the scores instead of three
+            disconnected bars. */}
         <div style={{
           borderTop: '1px solid rgba(255,255,255,0.06)',
-          padding: '0.7rem 0.875rem 0.85rem',
+          padding: '0.7rem 0.7rem 0.8rem',
           background: 'rgba(255,255,255,0.015)',
+          display: 'flex', flexDirection: 'column', gap: 8,
         }}>
-          <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.54rem', color: '#5a7090', textAlign: 'center', marginBottom: '0.5rem' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.54rem', color: '#5a7090', textAlign: 'center' }}>
             Strengthen your expedition
           </p>
+
+          {/* Primary CTA — bigger, gold (matches the ship hero's gold trim) */}
+          <button
+            onClick={() => setLoadoutOpen(true)}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+              padding: '0.65rem 0.5rem',
+              background: 'linear-gradient(180deg, rgba(240,192,64,0.12) 0%, rgba(240,192,64,0.03) 100%)',
+              border: '1px solid rgba(240,192,64,0.30)',
+              borderTop: '1px solid rgba(240,192,64,0.55)',
+              borderRadius: 10,
+              cursor: 'pointer',
+            }}
+          >
+            <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.82rem', color: '#f0c040' }}>View Loadout &amp; Assign Crew</span>
+            <span className="font-karla" style={{ fontSize: '0.6rem', color: '#a88a48' }}>Set captain &amp; ship skin ›</span>
+          </button>
+
+          {/* Secondary CTAs — same card chrome, color-coded by destination */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <Link
               href="/packs"
@@ -320,19 +326,19 @@ export default function ShipHero({
               <span className="font-karla" style={{ fontSize: '0.6rem', color: '#6a88a8' }}>Open packs ›</span>
             </Link>
             <Link
-              href="/shipyard"
+              href="/marketplace/shipyard"
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
                 padding: '0.6rem 0.5rem',
-                background: 'linear-gradient(180deg, rgba(240,192,64,0.08) 0%, rgba(240,192,64,0.02) 100%)',
-                border: '1px solid rgba(240,192,64,0.22)',
-                borderTop: '1px solid rgba(240,192,64,0.45)',
+                background: 'linear-gradient(180deg, rgba(160,210,160,0.08) 0%, rgba(160,210,160,0.02) 100%)',
+                border: '1px solid rgba(160,210,160,0.22)',
+                borderTop: '1px solid rgba(160,210,160,0.42)',
                 borderRadius: 10,
                 textDecoration: 'none',
               }}
             >
-              <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.78rem', color: '#f0c040' }}>Upgrade Ship</span>
-              <span className="font-karla" style={{ fontSize: '0.6rem', color: '#a88a48' }}>Shipyard ›</span>
+              <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.78rem', color: '#a8e0a8' }}>Upgrade Ship</span>
+              <span className="font-karla" style={{ fontSize: '0.6rem', color: '#6a986a' }}>Shipyard ›</span>
             </Link>
           </div>
         </div>
