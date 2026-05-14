@@ -287,10 +287,6 @@ export default function ShipHero({
           background: 'rgba(255,255,255,0.015)',
           display: 'flex', flexDirection: 'column', gap: 8,
         }}>
-          <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.54rem', color: '#5a7090', textAlign: 'center' }}>
-            Strengthen your expedition
-          </p>
-
           {/* Primary CTA — bigger, gold (matches the ship hero's gold trim) */}
           <button
             onClick={() => setLoadoutOpen(true)}
@@ -305,7 +301,7 @@ export default function ShipHero({
             }}
           >
             <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.82rem', color: '#f0c040' }}>View Loadout &amp; Assign Crew</span>
-            <span className="font-karla" style={{ fontSize: '0.6rem', color: '#a88a48' }}>Set captain &amp; ship skin ›</span>
+            <span className="font-karla" style={{ fontSize: '0.6rem', color: '#a88a48' }}>Assign crew &amp; equip raid items ›</span>
           </button>
 
           {/* Secondary CTAs — same card chrome, color-coded by destination */}
