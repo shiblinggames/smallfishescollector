@@ -15,9 +15,10 @@ import AchievementToast from '@/components/AchievementToast'
 interface Props {
   packsAvailable: number
   gems: number
+  isPremium: boolean
 }
 
-export default function PackOpener({ packsAvailable: initialPacks, gems: initialGems }: Props) {
+export default function PackOpener({ packsAvailable: initialPacks, gems: initialGems, isPremium }: Props) {
   const router = useRouter()
   const packButtonRef = useRef<HTMLButtonElement>(null)
   const [packs, setPacks] = useState(initialPacks)
@@ -275,84 +276,195 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
   }
 
   if (phase === 'idle') {
+    const canBuyOne = gems >= 100
+    const canBuyTen = gems >= 900
     return (
       <div style={{
-        background: 'rgba(8,8,6,0.82)',
-        border: '1px solid rgba(255,255,255,0.16)',
-        borderRadius: 20,
-        padding: '2.5rem 2rem',
         width: '100%',
-        maxWidth: 360,
-        display: 'grid',
-        gap: '1.5rem',
+        maxWidth: 400,
+        display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '1rem',
       }}>
-        {/* Crew Notices count */}
-        <div style={{ textAlign: 'center' }}>
-          <p className="font-cinzel font-700" style={{ fontSize: '4rem', lineHeight: 1, color: '#f0ede8' }}>{packs}</p>
-          <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: 4 }}>
-            Crew Notice{packs !== 1 ? 's' : ''}
-          </p>
+        {/* Hero — pack-art image floats above the panel for some life. */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '-30px', position: 'relative', zIndex: 1 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/recruitcrew.png"
+            alt=""
+            style={{
+              width: '70%', maxWidth: 220, height: 'auto',
+              filter: 'drop-shadow(0 14px 32px rgba(0,0,0,0.65)) drop-shadow(0 0 28px rgba(240,192,64,0.18))',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+            draggable={false}
+          />
         </div>
 
-        {/* Recruit button or empty state */}
-        {packs > 0 ? (
-          <button
-            ref={packButtonRef}
-            onClick={openPack}
-            disabled={loading}
-            style={{
-              display: 'block',
-              width: '100%',
-              background: 'rgba(240,192,64,0.12)',
-              border: '1px solid rgba(240,192,64,0.45)',
-              borderRadius: 14,
-              padding: '1.1rem',
-              cursor: loading ? 'default' : 'pointer',
-              opacity: loading ? 0.6 : 1,
-              textAlign: 'center',
-              transition: 'transform 0.15s ease',
-              animation: 'btn-pulse 2s ease-in-out infinite',
-            }}
-            onPointerEnter={e => { if (e.pointerType !== 'touch' && !loading) e.currentTarget.style.transform = 'translateY(-3px)' }}
-            onPointerLeave={e => { e.currentTarget.style.transform = '' }}
-          >
-            <span className="font-cinzel font-700 uppercase tracking-[0.14em]" style={{ fontSize: '1rem', color: '#f0c040' }}>
-              {loading ? 'Recruiting…' : 'Recruit Crew'}
-            </span>
-          </button>
-        ) : (
-          <div style={{ textAlign: 'center', display: 'grid', gap: '0.75rem' }}>
-            <p className="font-karla" style={{ fontSize: '0.8rem', color: '#6a6764' }}>No Crew Notices remaining.</p>
-            <a href="/tavern" className="btn-ghost" style={{ fontSize: '0.75rem' }}>Back to Tavern</a>
-            <a href="/redeem" className="font-karla font-600 uppercase tracking-[0.12em] transition-colors" style={{ fontSize: '0.65rem', color: '#f0c040' }}>
-              Redeem a Code
-            </a>
+        {/* Primary panel: count + recruit button. */}
+        <div style={{
+          background: 'linear-gradient(180deg, rgba(14,22,38,0.96) 0%, rgba(6,12,22,0.98) 100%)',
+          border: '1px solid rgba(240,192,64,0.22)',
+          borderTop: '1px solid rgba(240,192,64,0.42)',
+          borderRadius: 18,
+          padding: '1.6rem 1.4rem 1.4rem',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.1rem',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.55)',
+          position: 'relative', zIndex: 2,
+        }}>
+          {/* Count + label */}
+          <div style={{ textAlign: 'center' }}>
+            <p className="font-karla font-700 uppercase tracking-[0.20em]" style={{ fontSize: '0.65rem', color: '#8a7a52', marginBottom: 4 }}>
+              You have
+            </p>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '0.6rem' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '4.5rem', lineHeight: 0.9, color: '#f0ede8', textShadow: '0 4px 20px rgba(240,192,64,0.22)' }}>{packs}</p>
+              <p className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ fontSize: '1.05rem', color: '#a8a08c' }}>
+                Crew Notice{packs !== 1 ? 's' : ''}
+              </p>
+            </div>
           </div>
+
+          {/* Primary action — Recruit Crew (when packs available) */}
+          {packs > 0 ? (
+            <button
+              ref={packButtonRef}
+              onClick={openPack}
+              disabled={loading}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(180deg, rgba(240,192,64,0.28) 0%, rgba(240,192,64,0.10) 100%)',
+                border: '1px solid rgba(240,192,64,0.55)',
+                borderTop: '1px solid rgba(240,192,64,0.85)',
+                borderRadius: 14,
+                padding: '1.2rem 1rem',
+                cursor: loading ? 'default' : 'pointer',
+                opacity: loading ? 0.6 : 1,
+                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                boxShadow: '0 4px 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.08)',
+                animation: 'btn-pulse 2.4s ease-in-out infinite',
+              }}
+              onPointerEnter={e => { if (e.pointerType !== 'touch' && !loading) e.currentTarget.style.transform = 'translateY(-2px)' }}
+              onPointerLeave={e => { e.currentTarget.style.transform = '' }}
+            >
+              <span className="font-cinzel font-700 uppercase tracking-[0.18em]" style={{ fontSize: '1.25rem', color: '#f0c040', textShadow: '0 0 18px rgba(240,192,64,0.45)' }}>
+                {loading ? 'Recruiting…' : 'Recruit Crew'}
+              </span>
+            </button>
+          ) : (
+            <p className="font-karla" style={{ fontSize: '0.92rem', color: '#a09a8c', textAlign: 'center', lineHeight: 1.5 }}>
+              No Crew Notices left.<br />
+              <span style={{ color: '#f0c040' }}>Get more below ↓</span>
+            </p>
+          )}
+        </div>
+
+        {/* Buy-with-gems panel — bigger, clearer cards. */}
+        <div style={{
+          background: 'rgba(167,139,250,0.04)',
+          border: '1px solid rgba(167,139,250,0.18)',
+          borderTop: '1px solid rgba(167,139,250,0.34)',
+          borderRadius: 16,
+          padding: '0.95rem 1rem 1rem',
+          display: 'flex', flexDirection: 'column', gap: '0.7rem',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p className="font-cinzel font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.85rem', color: '#cab8ff' }}>
+              Buy with Gems
+            </p>
+            <p className="font-karla font-700" style={{ fontSize: '0.9rem', color: '#a78bfa' }}>
+              {gems.toLocaleString()} <span style={{ fontSize: '0.78rem' }}>◆</span>
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <button
+              onClick={() => canBuyOne && handleBuyWithGems(1)}
+              disabled={buyingWithGems || !canBuyOne}
+              style={{
+                background: canBuyOne ? 'linear-gradient(180deg, rgba(167,139,250,0.16) 0%, rgba(167,139,250,0.04) 100%)' : 'rgba(255,255,255,0.02)',
+                border: `1px solid ${canBuyOne ? 'rgba(167,139,250,0.36)' : 'rgba(255,255,255,0.08)'}`,
+                borderTop: `1px solid ${canBuyOne ? 'rgba(167,139,250,0.55)' : 'rgba(255,255,255,0.12)'}`,
+                borderRadius: 12,
+                padding: '0.85rem 0.6rem',
+                cursor: canBuyOne && !buyingWithGems ? 'pointer' : 'default',
+                opacity: canBuyOne ? 1 : 0.45,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                transition: 'transform 0.12s ease',
+              }}
+            >
+              <span className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', lineHeight: 1 }}>1</span>
+              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#a8a08c' }}>Pack</span>
+              <span className="font-karla font-700" style={{ fontSize: '0.85rem', color: canBuyOne ? '#a78bfa' : '#5a5468', marginTop: 2 }}>
+                100 ◆
+              </span>
+            </button>
+            <button
+              onClick={() => canBuyTen && handleBuyWithGems(10)}
+              disabled={buyingWithGems || !canBuyTen}
+              style={{
+                background: canBuyTen ? 'linear-gradient(180deg, rgba(167,139,250,0.22) 0%, rgba(167,139,250,0.06) 100%)' : 'rgba(255,255,255,0.02)',
+                border: `1px solid ${canBuyTen ? 'rgba(167,139,250,0.42)' : 'rgba(255,255,255,0.08)'}`,
+                borderTop: `1px solid ${canBuyTen ? 'rgba(167,139,250,0.65)' : 'rgba(255,255,255,0.12)'}`,
+                borderRadius: 12,
+                padding: '0.85rem 0.6rem',
+                cursor: canBuyTen && !buyingWithGems ? 'pointer' : 'default',
+                opacity: canBuyTen ? 1 : 0.45,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                position: 'relative',
+                transition: 'transform 0.12s ease',
+              }}
+            >
+              <span className="font-karla font-700 uppercase tracking-[0.08em]"
+                style={{
+                  position: 'absolute', top: -8, right: 8,
+                  fontSize: '0.52rem', color: '#0a0612',
+                  background: 'linear-gradient(180deg, #f0c040 0%, #d4a430 100%)',
+                  padding: '2px 6px', borderRadius: 4,
+                  boxShadow: '0 2px 6px rgba(240,192,64,0.35)',
+                }}>
+                Best Value
+              </span>
+              <span className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', lineHeight: 1 }}>10</span>
+              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#a8a08c' }}>Packs</span>
+              <span className="font-karla font-700" style={{ fontSize: '0.85rem', color: canBuyTen ? '#a78bfa' : '#5a5468', marginTop: 2 }}>
+                900 ◆
+              </span>
+            </button>
+          </div>
+
+          {buyingWithGems && (
+            <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a78bfa', textAlign: 'center' }}>Processing…</p>
+          )}
+        </div>
+
+        {/* Membership hint — only for non-members. Soft sell, not a pop-up. */}
+        {!isPremium && (
+          <a
+            href="/marketplace"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: 'linear-gradient(180deg, rgba(240,192,64,0.06) 0%, rgba(240,192,64,0.02) 100%)',
+              border: '1px solid rgba(240,192,64,0.18)',
+              borderTop: '1px solid rgba(240,192,64,0.32)',
+              borderRadius: 12,
+              padding: '0.65rem 0.85rem',
+              textDecoration: 'none',
+            }}
+          >
+            <span style={{ fontSize: '1rem', lineHeight: 1 }}>✦</span>
+            <span className="font-karla" style={{ fontSize: '0.78rem', color: '#c8b890', lineHeight: 1.4, flex: 1 }}>
+              Members get <span style={{ color: '#f0c040', fontWeight: 700 }}>1 free pack daily</span>. Learn more.
+            </span>
+            <span style={{ fontSize: '0.85rem', color: '#a88a48' }}>›</span>
+          </a>
         )}
 
-        {/* Gem balance + buy buttons */}
-        <div style={{ textAlign: 'center', display: 'grid', gap: '0.5rem' }}>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.875rem', color: '#a78bfa' }}>{gems.toLocaleString()} ◆</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-            <button
-              onClick={() => gems >= 100 && handleBuyWithGems(1)}
-              disabled={buyingWithGems}
-              className="btn-ghost"
-              style={{ fontSize: '0.72rem', opacity: gems >= 100 ? 1 : 0.35, cursor: gems >= 100 ? 'pointer' : 'default' }}
-            >
-              {buyingWithGems ? '…' : 'Buy 1 · 100 ◆'}
-            </button>
-            <button
-              onClick={() => gems >= 900 && handleBuyWithGems(10)}
-              disabled={buyingWithGems}
-              className="btn-ghost"
-              style={{ fontSize: '0.72rem', opacity: gems >= 900 ? 1 : 0.35, cursor: gems >= 900 ? 'pointer' : 'default' }}
-            >
-              Buy 10 · 900 ◆
-            </button>
-          </div>
+        {/* Quiet utility row — keep redeem-code access available. */}
+        <div style={{ textAlign: 'center', marginTop: '0.25rem' }}>
+          <a href="/redeem" className="font-karla font-600 uppercase tracking-[0.12em] transition-colors" style={{ fontSize: '0.62rem', color: '#6a6760' }}>
+            Have a code? Redeem here
+          </a>
         </div>
-
       </div>
     )
   }
