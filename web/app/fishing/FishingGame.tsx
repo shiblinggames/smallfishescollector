@@ -1814,6 +1814,10 @@ export default function FishingGame({
     fishTarget?: number;     fishCaught?: number
     speedEndsAt?: number
   } | null>(null)
+  // True for ~500ms after a cast triggers an encounter — gives the player
+  // a beat to register the cast before Finn slides in, and blocks further
+  // input during the lead-in.
+  const [finnPending, setFinnPending] = useState(false)
   // Overlay state — when set, FinnEncounter mounts with these props.
   const [finnOverlay, setFinnOverlay] = useState<{
     mode: 'offer' | 'result' | 'reveal'
@@ -2234,12 +2238,19 @@ export default function FishingGame({
       lines = [pickRandomLine(offerPool)]
     }
 
-    setFinnOverlay({
-      mode: 'offer',
-      lines,
-      challenge: { type, tier, targetText, rewardText },
-      pendingChallenge: { type, tier, multiplier, perfectsTarget, fishTarget, timeMs },
-    })
+    // Hold for ~500ms so the cast tap feels intentional — the player sees
+    // the cast ripple, then Finn arrives. Slamming the overlay in
+    // instantly reads as a jump-cut.
+    setFinnPending(true)
+    setTimeout(() => {
+      setFinnPending(false)
+      setFinnOverlay({
+        mode: 'offer',
+        lines,
+        challenge: { type, tier, targetText, rewardText },
+        pendingChallenge: { type, tier, multiplier, perfectsTarget, fishTarget, timeMs },
+      })
+    }, 500)
 
     // Optimistic state — server resyncs us.
     setFinnEncounters(newEncounters)
@@ -2302,7 +2313,10 @@ export default function FishingGame({
     }
 
     setFinnChallenge(null)
-    setFinnOverlay({ mode: 'result', lines })
+    // Hold the result overlay back a beat so the catch result card / banners
+    // get to land first. Without this Finn slams in over the catch and the
+    // player can't even tell if they hit it.
+    setTimeout(() => setFinnOverlay({ mode: 'result', lines }), 1200)
 
     startTransition(() => {
       void settleFinnChallenge(won, rewardAmount, winBeat?.id ?? null).then(res => {
@@ -2327,9 +2341,14 @@ export default function FishingGame({
   // Phase 1 — cast (from idle)
   async function handleCast() {
     if (phase !== 'idle') return
+    if (finnPending) return  // encounter is loading in
     // 2% chance Finn intercepts the cast (no bait consumed). Suppressed
     // while a challenge is already in flight so the player isn't double-bet.
     if (!finnChallenge && !finnOverlay && Math.random() < FINN_ENCOUNTER_RATE) {
+      // Brief cast ripple for tap feedback before Finn arrives — keeps
+      // the tap from feeling unresponsive during the 500ms lead-in.
+      setCastRippleKey(k => k + 1)
+      setTimeout(() => setCastRippleKey(0), 1800)
       fireFinnEncounter()
       return
     }
@@ -2692,9 +2711,12 @@ export default function FishingGame({
 
   async function handleCastAgain() {
     if (phase !== 'result') return
+    if (finnPending) return
     // Same Finn intercept as handleCast. Bait isn't consumed during an
     // encounter, so the player can pass freely.
     if (!finnChallenge && !finnOverlay && Math.random() < FINN_ENCOUNTER_RATE) {
+      setCastRippleKey(k => k + 1)
+      setTimeout(() => setCastRippleKey(0), 1800)
       fireFinnEncounter()
       return
     }
