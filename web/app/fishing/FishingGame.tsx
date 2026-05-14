@@ -1007,9 +1007,12 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ type: 'spring', stiffness: 400, damping: 22 }}
               style={{
-                background: `linear-gradient(180deg, rgba(${accentRgb},0.18) 0%, rgba(${accentRgb},0.04) 100%)`,
-                border: `1px solid rgba(${accentRgb},0.30)`,
-                borderTop: `1px solid rgba(${accentRgb},0.55)`,
+                // Opaque dark base + colored tint on top. The earlier
+                // translucent gradient let the busy fishing UI behind
+                // bleed through and dropped contrast on the text.
+                background: `linear-gradient(180deg, rgba(${accentRgb},0.22) 0%, rgba(${accentRgb},0.06) 100%), #0d1320`,
+                border: `1px solid rgba(${accentRgb},0.48)`,
+                borderTop: `1px solid rgba(${accentRgb},0.78)`,
                 borderRadius: 12,
                 boxShadow: glow,
                 padding: '0.7rem 0.9rem',
@@ -1059,27 +1062,27 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           transition={{ type: 'spring', stiffness: 320, damping: 18 }}
           className="mb-2"
           style={{
-            background: 'linear-gradient(180deg, rgba(249,115,22,0.20) 0%, rgba(249,115,22,0.04) 100%)',
-            border: '1px solid rgba(249,115,22,0.40)',
-            borderTop: '1px solid rgba(249,115,22,0.72)',
+            background: 'linear-gradient(180deg, rgba(249,115,22,0.24) 0%, rgba(249,115,22,0.06) 100%), #1a0c04',
+            border: '1px solid rgba(249,115,22,0.55)',
+            borderTop: '1px solid rgba(249,115,22,0.85)',
             borderRadius: 12,
-            boxShadow: '0 0 22px rgba(249,115,22,0.25)',
+            boxShadow: '0 0 22px rgba(249,115,22,0.30)',
             padding: '0.7rem 0.9rem',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
           }}
         >
-          <span style={{ fontSize: '1.1rem', color: '#f97316', textShadow: '0 0 10px rgba(249,115,22,0.6)' }}>★</span>
+          <span style={{ fontSize: '1.1rem', color: '#fb923c', textShadow: '0 0 10px rgba(249,115,22,0.7)' }}>★</span>
           <div style={{ textAlign: 'center' }}>
             <p className="font-karla font-700 uppercase"
-              style={{ fontSize: '0.55rem', color: '#fdba74', letterSpacing: '0.22em', marginBottom: 3 }}>
+              style={{ fontSize: '0.58rem', color: '#fb923c', letterSpacing: '0.22em', marginBottom: 3 }}>
               Jackpot
             </p>
             <p className="font-cinzel font-700"
-              style={{ fontSize: '1.05rem', color: '#f97316', textShadow: '0 0 14px rgba(249,115,22,0.55)', lineHeight: 1 }}>
+              style={{ fontSize: '1.05rem', color: '#fdba74', textShadow: '0 0 14px rgba(249,115,22,0.55)', lineHeight: 1 }}>
               ×{jackpotMultiplier} fish landed
             </p>
           </div>
-          <span style={{ fontSize: '1.1rem', color: '#f97316', textShadow: '0 0 10px rgba(249,115,22,0.6)' }}>★</span>
+          <span style={{ fontSize: '1.1rem', color: '#fb923c', textShadow: '0 0 10px rgba(249,115,22,0.7)' }}>★</span>
         </motion.div>
       )}
 
@@ -1114,27 +1117,27 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           transition={{ type: 'spring', stiffness: 400, damping: 22 }}
           className="mb-2"
           style={{
-            background: 'linear-gradient(180deg, rgba(251,191,36,0.18) 0%, rgba(251,191,36,0.04) 100%)',
-            border: '1px solid rgba(251,191,36,0.34)',
-            borderTop: '1px solid rgba(251,191,36,0.62)',
+            background: 'linear-gradient(180deg, rgba(251,191,36,0.22) 0%, rgba(251,191,36,0.06) 100%), #1a1304',
+            border: '1px solid rgba(251,191,36,0.50)',
+            borderTop: '1px solid rgba(251,191,36,0.80)',
             borderRadius: 12,
-            boxShadow: '0 0 18px rgba(251,191,36,0.20)',
+            boxShadow: '0 0 18px rgba(251,191,36,0.25)',
             padding: '0.65rem 0.9rem',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
           }}
         >
-          <span style={{ fontSize: '1rem', color: '#fbbf24', textShadow: '0 0 8px rgba(251,191,36,0.6)' }}>✦</span>
+          <span style={{ fontSize: '1rem', color: '#fbbf24', textShadow: '0 0 8px rgba(251,191,36,0.7)' }}>✦</span>
           <div style={{ textAlign: 'center' }}>
             <p className="font-karla font-700 uppercase"
-              style={{ fontSize: '0.55rem', color: '#fde68a', letterSpacing: '0.22em', marginBottom: 3 }}>
+              style={{ fontSize: '0.58rem', color: '#fbbf24', letterSpacing: '0.22em', marginBottom: 3 }}>
               Double Catch
             </p>
             <p className="font-cinzel font-700"
-              style={{ fontSize: '1rem', color: '#fbbf24', textShadow: '0 0 12px rgba(251,191,36,0.50)', lineHeight: 1 }}>
+              style={{ fontSize: '1rem', color: '#fde68a', textShadow: '0 0 12px rgba(251,191,36,0.55)', lineHeight: 1 }}>
               ×2 fish landed
             </p>
           </div>
-          <span style={{ fontSize: '1rem', color: '#fbbf24', textShadow: '0 0 8px rgba(251,191,36,0.6)' }}>✦</span>
+          <span style={{ fontSize: '1rem', color: '#fbbf24', textShadow: '0 0 8px rgba(251,191,36,0.7)' }}>✦</span>
         </motion.div>
       )}
 
