@@ -658,15 +658,31 @@ export default function ShipHero({
             {/* Crew picker — outside the motion.div to avoid CSS transform
                 stacking context. z-index 110 so it paints above the loadout
                 drawer (z:101); otherwise it opens behind the drawer and the
-                player can't reach it. */}
+                player can't reach it.
+                Positioning: explicit top + bottom hard-anchors the picker
+                so its header can never drift above the page Nav. Earlier
+                pattern (inset:0 + paddingTop) let the close button slip
+                off-screen on certain mobile viewport heights. */}
             {sheetOpen && (
-              <div
-                onClick={closeSheet}
-                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 110, paddingTop: '80px' }}
-              >
+              <>
+                <div
+                  onClick={closeSheet}
+                  style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 110 }}
+                />
                 <div
                   onClick={e => e.stopPropagation()}
-                  style={{ background: '#0d0d0c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 520, maxHeight: 'calc(100dvh - 80px)', display: 'flex', flexDirection: 'column' }}
+                  style={{
+                    position: 'fixed', zIndex: 111,
+                    top: 'max(80px, env(safe-area-inset-top, 0px) + 20px)',
+                    bottom: 0,
+                    left: 'max(0px, calc(50% - 260px))',
+                    right: 'max(0px, calc(50% - 260px))',
+                    background: '#0d0d0c',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '20px 20px 0 0',
+                    display: 'flex', flexDirection: 'column',
+                    overflow: 'hidden',
+                  }}
                 >
                   <div style={{ padding: '1rem 1.25rem 0.875rem', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
                     <div>
@@ -733,7 +749,7 @@ export default function ShipHero({
                     )}
                   </div>
                 </div>
-              </div>
+              </>
             )}
           </>
         )}
