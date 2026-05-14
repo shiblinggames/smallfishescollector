@@ -277,66 +277,63 @@ export default function ShipHero({
           </div>
         </div>
 
-        {/* Expedition controls — all three actions share one section so
-            the primary "loadout" CTA and the two "go get stronger" CTAs
-            read as one cohesive panel under the scores instead of three
-            disconnected bars. */}
+        {/* Expedition controls — three CTAs in one row so the player sees
+            all paths to power (loadout, recruit, upgrade) at a glance.
+            Color-coded by destination: gold for the primary loadout
+            action, blue for packs, green for the shipyard. */}
         <div style={{
           borderTop: '1px solid rgba(255,255,255,0.06)',
           padding: '0.7rem 0.7rem 0.8rem',
           background: 'rgba(255,255,255,0.015)',
-          display: 'flex', flexDirection: 'column', gap: 8,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 6,
         }}>
-          {/* Primary CTA — bigger, gold (matches the ship hero's gold trim) */}
           <button
             onClick={() => setLoadoutOpen(true)}
             style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-              padding: '0.65rem 0.5rem',
-              background: 'linear-gradient(180deg, rgba(240,192,64,0.12) 0%, rgba(240,192,64,0.03) 100%)',
-              border: '1px solid rgba(240,192,64,0.30)',
-              borderTop: '1px solid rgba(240,192,64,0.55)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+              padding: '0.6rem 0.35rem',
+              background: 'linear-gradient(180deg, rgba(240,192,64,0.14) 0%, rgba(240,192,64,0.03) 100%)',
+              border: '1px solid rgba(240,192,64,0.34)',
+              borderTop: '1px solid rgba(240,192,64,0.62)',
               borderRadius: 10,
               cursor: 'pointer',
             }}
           >
-            <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.82rem', color: '#f0c040' }}>View Loadout &amp; Assign Crew</span>
-            <span className="font-karla" style={{ fontSize: '0.6rem', color: '#a88a48' }}>Assign crew &amp; equip raid items ›</span>
+            <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: '#f0c040', textAlign: 'center', lineHeight: 1.1 }}>Edit Loadout</span>
+            <span className="font-karla" style={{ fontSize: '0.54rem', color: '#a88a48' }}>Assign crew ›</span>
           </button>
-
-          {/* Secondary CTAs — same card chrome, color-coded by destination */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <Link
-              href="/packs"
-              style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                padding: '0.6rem 0.5rem',
-                background: 'linear-gradient(180deg, rgba(96,165,250,0.08) 0%, rgba(96,165,250,0.02) 100%)',
-                border: '1px solid rgba(96,165,250,0.22)',
-                borderTop: '1px solid rgba(96,165,250,0.42)',
-                borderRadius: 10,
-                textDecoration: 'none',
-              }}
-            >
-              <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.78rem', color: '#9ec6ff' }}>Recruit Crew</span>
-              <span className="font-karla" style={{ fontSize: '0.6rem', color: '#6a88a8' }}>Open packs ›</span>
-            </Link>
-            <Link
-              href="/marketplace/shipyard"
-              style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                padding: '0.6rem 0.5rem',
-                background: 'linear-gradient(180deg, rgba(160,210,160,0.08) 0%, rgba(160,210,160,0.02) 100%)',
-                border: '1px solid rgba(160,210,160,0.22)',
-                borderTop: '1px solid rgba(160,210,160,0.42)',
-                borderRadius: 10,
-                textDecoration: 'none',
-              }}
-            >
-              <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.78rem', color: '#a8e0a8' }}>Upgrade Ship</span>
-              <span className="font-karla" style={{ fontSize: '0.6rem', color: '#6a986a' }}>Shipyard ›</span>
-            </Link>
-          </div>
+          <Link
+            href="/packs"
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+              padding: '0.6rem 0.35rem',
+              background: 'linear-gradient(180deg, rgba(96,165,250,0.10) 0%, rgba(96,165,250,0.02) 100%)',
+              border: '1px solid rgba(96,165,250,0.26)',
+              borderTop: '1px solid rgba(96,165,250,0.50)',
+              borderRadius: 10,
+              textDecoration: 'none',
+            }}
+          >
+            <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: '#9ec6ff', textAlign: 'center', lineHeight: 1.1 }}>Recruit Crew</span>
+            <span className="font-karla" style={{ fontSize: '0.54rem', color: '#6a88a8' }}>Open packs ›</span>
+          </Link>
+          <Link
+            href="/marketplace/shipyard"
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+              padding: '0.6rem 0.35rem',
+              background: 'linear-gradient(180deg, rgba(160,210,160,0.10) 0%, rgba(160,210,160,0.02) 100%)',
+              border: '1px solid rgba(160,210,160,0.26)',
+              borderTop: '1px solid rgba(160,210,160,0.50)',
+              borderRadius: 10,
+              textDecoration: 'none',
+            }}
+          >
+            <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: '#a8e0a8', textAlign: 'center', lineHeight: 1.1 }}>Upgrade Ship</span>
+            <span className="font-karla" style={{ fontSize: '0.54rem', color: '#6a986a' }}>Shipyard ›</span>
+          </Link>
         </div>
       </div>
 
