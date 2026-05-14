@@ -563,6 +563,9 @@ export default function RaidCombat({
     const PROJECTILE_FLIGHT_MS = 220
     const SPLAT_HOLD_MS        = 480
     const STEP_GAP_MS          = 980
+    // Pause after the speed-roll line lands so the player reads who's
+    // acting first before the action lines start streaming in.
+    const SPEED_LINE_HOLD_MS   = 750
 
     function playStep(i: number) {
       if (i >= steps.length) {
@@ -661,7 +664,7 @@ export default function RaidCombat({
       setTimeout(() => playStep(i + 1), STEP_GAP_MS)
     }
 
-    playStep(0)
+    setTimeout(() => playStep(0), SPEED_LINE_HOLD_MS)
   }
 
   // ─── Render — Pokemon-style battle stage ──────────────────────────────────
