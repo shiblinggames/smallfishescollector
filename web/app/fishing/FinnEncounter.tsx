@@ -27,13 +27,20 @@ interface Props {
   lines: string[]
   mode: Mode
   challenge?: ChallengeOffer
+  /** When mode === 'result', controls the win/loss badge rendered above
+   *  the dialogue. Without this the result card looks identical to a
+   *  reveal/intro and the player can't tell at a glance which way the bet
+   *  went. */
+  resultKind?: 'won' | 'lost'
+  /** Reward shown on the WON badge (e.g. "+150 ⟡"). Ignored for losses. */
+  rewardText?: string
   onAccept?: () => void
   onPass?: () => void
   onDismiss?: () => void
 }
 
 export default function FinnEncounter({
-  visible, lines, mode, challenge, onAccept, onPass, onDismiss,
+  visible, lines, mode, challenge, resultKind, rewardText, onAccept, onPass, onDismiss,
 }: Props) {
   const [index, setIndex] = useState(0)
   // Reset line index whenever a new dialogue arrives. lines reference
@@ -145,6 +152,50 @@ export default function FinnEncounter({
                 </div>
               )}
             </div>
+
+            {/* Result outcome badge — only on win/loss screens, sits above
+                the dialogue so the player has an unambiguous read of which
+                way the bet went without parsing Finn's banter. */}
+            {mode === 'result' && resultKind && (
+              <motion.div
+                initial={{ opacity: 0, y: -4, scale: 0.94 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 360, damping: 22 }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                  marginBottom: '0.85rem',
+                  padding: '0.5rem 0.85rem',
+                  background: resultKind === 'won'
+                    ? 'linear-gradient(180deg, rgba(74,222,128,0.22) 0%, rgba(74,222,128,0.06) 100%), #0a1a0e'
+                    : 'linear-gradient(180deg, rgba(120,130,160,0.16) 0%, rgba(120,130,160,0.04) 100%), #0e1018',
+                  border: `1px solid ${resultKind === 'won' ? 'rgba(74,222,128,0.50)' : 'rgba(120,130,160,0.40)'}`,
+                  borderTop: `1px solid ${resultKind === 'won' ? 'rgba(74,222,128,0.78)' : 'rgba(120,130,160,0.65)'}`,
+                  borderRadius: 10,
+                  boxShadow: resultKind === 'won' ? '0 0 16px rgba(74,222,128,0.22)' : 'none',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <span style={{ fontSize: '0.9rem', lineHeight: 1 }}>
+                    {resultKind === 'won' ? '✓' : '✕'}
+                  </span>
+                  <p className="font-karla font-700 uppercase" style={{
+                    fontSize: '0.62rem',
+                    letterSpacing: '0.22em',
+                    color: resultKind === 'won' ? '#86efac' : '#aab0c0',
+                  }}>
+                    {resultKind === 'won' ? 'Challenge Won' : 'Challenge Lost'}
+                  </p>
+                </div>
+                {resultKind === 'won' && rewardText && (
+                  <p className="font-cinzel font-700" style={{
+                    fontSize: '0.95rem', color: '#f0c040',
+                    textShadow: '0 0 12px rgba(240,192,64,0.5)', lineHeight: 1,
+                  }}>
+                    {rewardText}
+                  </p>
+                )}
+              </motion.div>
+            )}
 
             {/* Dialogue */}
             <AnimatePresence mode="wait">

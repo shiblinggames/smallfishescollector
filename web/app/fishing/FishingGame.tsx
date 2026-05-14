@@ -1881,6 +1881,9 @@ export default function FishingGame({
       fishTarget?: number
       timeMs?: number
     }
+    // Drives the win/loss badge on result overlays.
+    resultKind?: 'won' | 'lost'
+    rewardText?: string
   } | null>(null)
   const [perfectStreak, setPerfectStreak] = useState(0)
   const [highestPerfectStreak, setHighestPerfectStreak] = useState(initialHighestPerfectStreak)
@@ -2388,7 +2391,12 @@ export default function FishingGame({
     // Hold the result overlay back a beat so the catch result card / banners
     // get to land first. Without this Finn slams in over the catch and the
     // player can't even tell if they hit it.
-    setTimeout(() => setFinnOverlay({ mode: 'result', lines }), 1200)
+    setTimeout(() => setFinnOverlay({
+      mode: 'result',
+      lines,
+      resultKind: won ? 'won' : 'lost',
+      rewardText: won ? `+${rewardAmount.toLocaleString()} ⟡` : undefined,
+    }), 1200)
 
     startTransition(() => {
       void settleFinnChallenge(won, rewardAmount, winBeat?.id ?? null).then(res => {
@@ -5732,6 +5740,8 @@ export default function FishingGame({
         lines={finnOverlay?.lines ?? []}
         mode={finnOverlay?.mode ?? 'offer'}
         challenge={finnOverlay?.challenge}
+        resultKind={finnOverlay?.resultKind}
+        rewardText={finnOverlay?.rewardText}
         onAccept={handleFinnAccept}
         onPass={handleFinnPass}
         onDismiss={handleFinnDismiss}
