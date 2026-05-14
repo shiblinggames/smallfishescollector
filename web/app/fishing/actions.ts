@@ -665,24 +665,6 @@ export async function sellFish(
   return { earned, doubloons: newDoubloons }
 }
 
-// Award 1 gem for double-perfect challenge
-export async function awardPerfectChallengeGem(): Promise<{ success: true } | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-  const { data: profile, error: fetchErr } = await admin
-    .from('profiles').select('gems').eq('id', user.id).single()
-  if (fetchErr || !profile) return { error: 'Profile not found' }
-
-  const { error: updateErr } = await admin
-    .from('profiles').update({ gems: (profile.gems ?? 0) + 1 }).eq('id', user.id)
-  if (updateErr) return { error: updateErr.message }
-
-  return { success: true }
-}
-
 // Persist a new highest perfect streak if it beats the stored value
 export async function saveHighestPerfectStreak(streak: number, zone: string): Promise<void> {
   const supabase = await createClient()
