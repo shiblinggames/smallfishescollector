@@ -25,6 +25,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FISH_DIR  = path.resolve(__dirname, 'web/public/fish')
 
 const APPLY                = process.argv.includes('--apply')
+// Optional comma-separated filename whitelist (with or without .png).
+// Lets us run the audit on a subset, e.g. just the ancient-deep trophies:
+//   node audit-fish-images.mjs --only=megalodon,plesiosaurus,...
+const ONLY_ARG             = process.argv.find(a => a.startsWith('--only='))
+const ONLY                 = ONLY_ARG
+  ? ONLY_ARG.slice('--only='.length).split(',').map(s => {
+      const t = s.trim()
+      return t.endsWith('.png') ? t : `${t}.png`
+    })
+  : null
 const STUB_AREA_THRESHOLD  = 0.05  // blob is a stub if < 5% of main blob area
 const OFFCENTER_THRESHOLD  = 0.05  // off-center if pad-diff > 5% of width
 const PAD_PCT              = 0.12  // horizontal margin around content
@@ -88,16 +98,21 @@ async function analyze(filePath) {
   const main = blobs[0]
   const stubs = blobs.slice(1).filter(b => b.area >= main.area * STUB_AREA_THRESHOLD)
 
-  const leftPad  = main.minX
-  const rightPad = w - 1 - main.maxX
-  const padDiff  = Math.abs(leftPad - rightPad) / w
-  const offcenter = padDiff > OFFCENTER_THRESHOLD
+  const leftPad   = main.minX
+  const rightPad  = w - 1 - main.maxX
+  const topPad    = main.minY
+  const bottomPad = h - 1 - main.maxY
+  const hDiff = Math.abs(leftPad - rightPad) / w
+  const vDiff = Math.abs(topPad - bottomPad) / h
+  const offcenterH = hDiff > OFFCENTER_THRESHOLD
+  const offcenterV = vDiff > OFFCENTER_THRESHOLD
 
   const issues = []
   if (stubs.length > 0) issues.push(`${stubs.length} stub(s)`)
-  if (offcenter)        issues.push(`off-center (L:${leftPad} R:${rightPad})`)
+  if (offcenterH)       issues.push(`off-center H (L:${leftPad} R:${rightPad})`)
+  if (offcenterV)       issues.push(`off-center V (T:${topPad} B:${bottomPad})`)
 
-  return { buf, data, alpha, w, h, blobs, main, stubs, offcenter, issues }
+  return { buf, data, alpha, w, h, blobs, main, stubs, offcenterH, offcenterV, issues }
 }
 
 async function rewrite(filePath, analysis) {
@@ -113,15 +128,17 @@ async function rewrite(filePath, analysis) {
     if (!mainMask[i]) cleaned[i * 4 + 3] = 0
   }
 
-  // Horizontal crop to the main bbox, keep the original canvas height so
-  // any intentional vertical positioning is preserved. Then pad with
-  // PAD_PCT margin on each side so the subject sits centered.
+  // Tight-crop to the main bbox on both axes, then pad with PAD_PCT
+  // margin on every side so the subject is centered both horizontally
+  // AND vertically. Padding is computed off the larger bbox dimension so
+  // the per-side margin reads consistently regardless of fish aspect.
   const bboxW = main.maxX - main.minX + 1
-  const padPx = Math.round(bboxW * PAD_PCT)
+  const bboxH = main.maxY - main.minY + 1
+  const padPx = Math.round(Math.max(bboxW, bboxH) * PAD_PCT)
 
   const out = await sharp(cleaned, { raw: { width: w, height: h, channels: 4 } })
-    .extract({ left: main.minX, top: 0, width: bboxW, height: h })
-    .extend({ left: padPx, right: padPx, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .extract({ left: main.minX, top: main.minY, width: bboxW, height: bboxH })
+    .extend({ left: padPx, right: padPx, top: padPx, bottom: padPx, background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
     .toBuffer()
 
@@ -129,7 +146,11 @@ async function rewrite(filePath, analysis) {
 }
 
 async function main() {
-  const files = (await readdir(FISH_DIR)).filter(f => f.toLowerCase().endsWith('.png'))
+  let files = (await readdir(FISH_DIR)).filter(f => f.toLowerCase().endsWith('.png'))
+  if (ONLY) {
+    const want = new Set(ONLY.map(s => s.toLowerCase()))
+    files = files.filter(f => want.has(f.toLowerCase()))
+  }
   console.log(`Auditing ${files.length} fish images in ${FISH_DIR}`)
   console.log(`Mode: ${APPLY ? 'APPLY (will rewrite)' : 'dry run'}\n`)
 
