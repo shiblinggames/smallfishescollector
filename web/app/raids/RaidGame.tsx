@@ -12,6 +12,7 @@ import {
   BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR,
 } from '@/lib/bossRaids'
 import RaidCombat from './RaidCombat'
+import RaidLootStage from './RaidLootStage'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
 import TapToContinueGate from '@/components/TapToContinueGate'
 
@@ -873,24 +874,41 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     setEnemySinking(true)
     setClearReady(false)
 
-    // Boss → keep the existing Round Clear → loot crate flow (the crate IS
-    // the reward presentation, so we don't want to skip it). Non-boss kills
-    // are narrated inline by <RaidCombat />'s log and just auto-advance to
-    // the next enemy here.
+    // Boss kill → unified loot screen. The old 2-overlay flow (Round Clear
+    // "Collect" → Open Loot Crate → Open Crate → Claim) is gone; we now
+    // award the kill rewards immediately and jump straight to the loot
+    // stage, which lives in the same battle-screen layout. See RaidLootStage.
     if (isBossKill) {
-      setTimeout(() => {
+      setTimeout(async () => {
         setEnemySinking(false)
-        setWinGold(gold); setWinXP(xp); setWinPhase('summary')
-        // No time tier multiplier — Pete clears always grant the base roll
-        // (scaled only by the player's Fortune stat).
+        setWinGold(gold); setWinXP(xp)
+        // Roll loot + dollar amount up front so the stage can pre-position
+        // the slot before the player taps Loot Chest.
+        const final = rollLootIndex(config.loot)
         const base  = Math.floor(Math.random() * 301 + 300)
         const total = Math.floor(base * fortuneMult)
+        setSlotFinal(final)
         setLootBase(base)
         setLootAmount(total)
         setWinIsBoss(true)
-        phaseRef.current = 'clear'
-        setPhase('clear')
-        setTimeout(() => setClearReady(true), 80)
+        // Award the kill XP + gold immediately — the stage's log shows
+        // "Plunder: +X ⟡ · Nav XP: +Y" lines as it mounts.
+        try {
+          const res = await awardRaidKill(xp, gold)
+          const oldLevel = getLevelFromXP(navXPRef.current)
+          const newLevel = getLevelFromXP(res.newExpeditionXP)
+          navXPRef.current = res.newExpeditionXP
+          setNavXP(res.newExpeditionXP)
+          window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+          if (xp > 0) setXpPopup({ value: xp, id: Date.now() })
+          if (newLevel > oldLevel) {
+            // Surface the level-up overlay before the loot stage so the
+            // celebration doesn't fight the chest reveal for attention.
+            setTimeout(() => setLevelUp({ fromLevel: oldLevel, toLevel: newLevel }), 600)
+          }
+        } catch { /* save failed, still go to loot */ }
+        phaseRef.current = 'loot'
+        setPhase('loot')
       }, 920)
       return
     }
@@ -1086,6 +1104,62 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     )
   }
 
+  // ─── Loot phase: unified chest screen in the same battle-screen layout ───
+  // Boss kill went straight here (skipping the old Round Clear → Open Crate
+  // → Claim 3-click flow). Shows the kill narration in its action log,
+  // hosts the chest reveal in the battle-stage area, and ends with a
+  // Return to Port button that fires the claim + routes.
+  if (phase === 'loot') {
+    const bossEnemy = config.enemies[config.bossId]
+    return (
+      <div className="flex flex-col items-center gap-2 select-none" style={{
+        userSelect: 'none',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)',
+        minHeight: 'calc(100dvh - 44px - env(safe-area-inset-bottom, 0px))',
+      }}>
+        <div style={{ width: '100%' }}>
+          <NavLevelBar xp={navXP} />
+        </div>
+        <div style={{ width: '100%', padding: '0 0.5rem', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <RaidLootStage
+            boss={bossEnemy}
+            killGold={winGold}
+            killXP={winXP}
+            loot={config.loot}
+            slotFinal={slotFinal}
+            lootAmount={lootAmount}
+            fortuneMult={fortuneMult}
+            shipImageUrl={shipImageUrl}
+            shipFilter={shipFilter}
+            shipName={shipName}
+            playerLabel={username ?? shipName}
+            playerCharacterColor={playerCharacterColor}
+            playerEquippedHat={playerEquippedHat}
+            playerAvatarBg={playerAvatarBg}
+            playerAvatarBorder={playerAvatarBorder}
+            playerHpMax={playerHPMax}
+            playerHp={playerHP}
+            claiming={lootClaimed}
+            onClaim={async () => {
+              if (lootClaimed) return
+              setLootClaimed(true)
+              const elapsedMs = performance.now() - raidStartTimeRef.current
+              try {
+                const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP)
+                window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+              } catch { /* save failed, route anyway */ }
+              router.push('/expeditions')
+            }}
+          />
+        </div>
+        <NavLevelUpOverlay
+          info={levelUp}
+          onDismiss={() => setLevelUp(null)}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col items-center gap-2 select-none" style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
 
@@ -1144,7 +1218,12 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           no real-time start gate; raids auto-enter combat on mount and on
           advance(). */}
 
-      {/* ── Round clear / collect overlay ────────────────────────────────────── */}
+      {/* ── Round clear / collect overlay ───────────────────────────────────
+           Boss kills now skip this entirely and jump straight to the unified
+           loot stage (see <RaidLootStage> below). This block is dead code as
+           of that change but is left in place for now in case we re-introduce
+           a non-boss "round clear" interstitial. It only renders if phase is
+           'clear', which the boss kill flow no longer sets. */}
       <AnimatePresence>
         {phase === 'clear' && clearReady && (
           <motion.div
@@ -1254,116 +1333,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         )}
       </AnimatePresence>
 
-      {/* ── Loot overlay (raid complete) ─────────────────────────────────────── */}
-      <AnimatePresence>
-        {phase === 'loot' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.88)', zIndex: 50 }}>
-              <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.35)', fontSize: '0.6rem', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 6 }}>Raid Complete</p>
-              <p className="font-cinzel font-700" style={{ color: '#f0ede8', fontSize: '1.6rem', marginBottom: 28 }}>{config.bossDefeatedText}</p>
-
-              {!lootOpened ? (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-                  <motion.div
-                    animate={{ y: [0, -5, 0] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/plunderclosed.png" alt="Plunder crate" style={{ width: 120, height: 120, objectFit: 'contain' }} />
-                  </motion.div>
-                  <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.4)', fontSize: '0.65rem', letterSpacing: '0.08em' }}>Plunder Crate</p>
-                  <motion.button
-                    onPointerDown={() => setLootOpened(true)}
-                    whileTap={{ scale: 0.95 }}
-                    animate={{ boxShadow: ['0 0 0px #f0c04000', '0 0 18px #f0c04066', '0 0 0px #f0c04000'] }}
-                    transition={{ duration: 1.4, repeat: Infinity }}
-                    className="font-karla font-700"
-                    style={{ padding: '12px 32px', borderRadius: 14, cursor: 'pointer', background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', color: '#f0c040', fontSize: '0.92rem', letterSpacing: '0.06em' }}>
-                    Open Crate
-                  </motion.button>
-                </motion.div>
-              ) : (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/plunderopen.png" alt="Plunder crate open" style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: 20 }} />
-
-                  {/* Single loot roll */}
-                  {(() => {
-                    const item  = config.loot[slotDisplay]
-                    const color = RARITY_COLOR[item.rarity]
-                    return (
-                      <motion.div
-                        animate={slotLanded ? { scale: [1, 1.32, 0.92, 1.1, 1] } : {}}
-                        transition={{ duration: 0.65, ease: 'easeOut' }}
-                        style={{
-                          width: 120, height: 144,
-                          border: `2px solid ${slotLanded ? color : 'rgba(255,255,255,0.12)'}`,
-                          borderRadius: 18,
-                          background: slotLanded ? `${color}1a` : 'rgba(0,0,0,0.45)',
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
-                          overflow: 'hidden',
-                          transition: 'border-color 0.2s, background 0.2s',
-                          boxShadow: slotLanded ? `0 0 28px ${color}55` : 'none',
-                          marginBottom: 20,
-                        }}>
-                        {item.shipSkinId ? (
-                          <img src={shipImageUrl} alt={item.label}
-                            style={{ width: 70, height: 70, objectFit: 'contain', objectPosition: 'bottom',
-                              filter: !slotLanded ? 'blur(1.5px) brightness(0.3)' : getShipSkin(item.shipSkinId)!.filter,
-                              transition: 'filter 0.15s' }} />
-                        ) : item.image ? (
-                          <img src={item.image} alt={item.label}
-                            style={{ width: 70, height: 70, objectFit: 'contain',
-                              filter: !slotLanded ? 'blur(1.5px) brightness(0.6)' : 'none',
-                              transition: 'filter 0.15s' }} />
-                        ) : (
-                          <span style={{ fontSize: '2.8rem',
-                            filter: !slotLanded ? 'blur(1.5px) brightness(0.6)' : 'none',
-                            transition: 'filter 0.15s' }}>{item.emoji}</span>
-                        )}
-                        <p className="font-karla font-700" style={{
-                          fontSize: '0.72rem', color: slotLanded ? color : 'transparent',
-                          textAlign: 'center', lineHeight: 1.2,
-                          transition: 'color 0.2s',
-                        }}>{item.label}</p>
-                      </motion.div>
-                    )
-                  })()}
-
-                  {/* Doubloon total + claim — always in flow, fades in when landed */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, opacity: slotLanded ? 1 : 0, transition: 'opacity 0.4s 0.2s' }}>
-                        <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0c040', textShadow: '0 0 20px #f0c04088' }}>
-                          {fmtGold(lootAmount)} ⟡
-                        </p>
-                        {fortuneMult > 1 && (
-                          <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.3)', fontSize: '0.6rem', marginBottom: 10 }}>
-                            {fortuneMult.toFixed(2)}× luck
-                          </p>
-                        )}
-                        <motion.button
-                          onPointerDown={async () => {
-                            if (lootClaimed) return
-                            setLootClaimed(true)
-                            const elapsedMs = performance.now() - raidStartTimeRef.current
-                            const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP)
-                            window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
-                            router.push('/expeditions')
-                          }}
-                          whileTap={{ scale: 0.95 }}
-                          disabled={lootClaimed}
-                          className="font-karla font-700"
-                          style={{ padding: '12px 36px', borderRadius: 14, cursor: lootClaimed ? 'default' : 'pointer', background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', color: '#f0c040', fontSize: '0.92rem', letterSpacing: '0.06em', opacity: lootClaimed ? 0.6 : 1 }}>
-                          {lootClaimed ? 'Claimed!' : 'Claim Loot'}
-                        </motion.button>
-                  </div>
-
-                </motion.div>
-              )}
-            </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Old loot overlay removed — replaced by the in-place <RaidLootStage>
+          early-return above. */}
 
 
       {/* ── Nav level-up celebration ───────────────────────────────────────── */}
