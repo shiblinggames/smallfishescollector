@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, startTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { awardPracticeKill } from './practiceActions'
+import { markRaidTutorialSeen } from '../tutorialActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
 import RaidCombat from '../RaidCombat'
@@ -283,42 +284,64 @@ function NavLevelBar({ xp }: { xp: number }) {
 }
 
 // ── Tour steps ────────────────────────────────────────────────────────────────
-// First-time tutorial for the (now turn-based) raid combat. The old version
-// was written for the legacy real-time loop — these steps walk a new player
-// through picking actions, the aim bar, speed/turn order, and reading the
-// action log.
+// First-time tutorial for the (now turn-based) raid combat. Modeled after the
+// fishing tour — each step positions its card to point at the actual UI
+// element it's describing, so the player can see what we mean as they read.
+// Tour fires DURING the fight (not before it) so the buttons / nameplates /
+// charges are visible underneath the dim backdrop.
 
 interface TourStep {
-  icon: string
   title: string
   body: string
+  /** Absolute positioning of the card relative to the viewport. */
+  cardStyle: React.CSSProperties
+  /** Side of the card the arrow sticks out of. 'none' = centered card, no arrow. */
+  arrowDir: 'up' | 'down' | 'none'
+  arrowAlign: 'left' | 'center' | 'right'
 }
 
 const PRACTICE_TOUR: TourStep[] = [
   {
-    icon: '⚓',
     title: 'Welcome aboard, Captain!',
-    body: 'Battles are turn-based. Each turn, you and the enemy each pick one action — whoever’s faster acts first.',
+    body: "Battles are turn-based. Each turn, you and the enemy each pick one action — whoever's faster acts first.",
+    cardStyle: { top: '50%', left: '1rem', right: '1rem', transform: 'translateY(-50%)' },
+    arrowDir: 'none', arrowAlign: 'center',
   },
   {
-    icon: '🎯',
     title: 'Your four actions',
-    body: 'RELOAD loads a cannonball. FIRE spends one for normal damage. VOLLEY spends three for double damage. DODGE braces your ship to reduce incoming damage.',
+    body: 'RELOAD loads a cannonball (◆). FIRE spends one. VOLLEY spends three for 2× damage. DODGE evades the next attack — but you can only use it once in a row.',
+    cardStyle: { bottom: '32%', left: '1rem', right: '1rem' },
+    arrowDir: 'down', arrowAlign: 'center',
   },
   {
-    icon: '✨',
     title: 'Lock the aim',
-    body: 'When you Fire or Volley, a marker sweeps across the aim bar. Tap to lock it in the green zone for a Hit — or the tiny gold center for a Critical, a damage multiplier on top of your shot.',
+    body: 'When you Fire or Volley, a marker sweeps across an aim bar. Tap to lock it in the green zone for a Hit — or the tiny gold center for a Critical (1.5× damage).',
+    cardStyle: { bottom: '32%', left: '1rem', right: '1rem' },
+    arrowDir: 'down', arrowAlign: 'center',
   },
   {
-    icon: '🛡️',
+    title: 'Read the enemy',
+    body: "Enemies don't act randomly — each follows a scripted attack pattern. Watch their charges (◆) — at 3 a volley is coming. Reading the pattern is the difference between brawling and outsmarting them.",
+    cardStyle: { top: '32%', left: '1rem', right: '1rem' },
+    arrowDir: 'up', arrowAlign: 'left',
+  },
+  {
     title: 'Speed & dodging',
-    body: 'Faster ships act first. If you think the enemy is loaded up, Dodge that turn to soften their hit. Tap your ship’s nameplate any time to see your stats.',
+    body: "Faster ships act first. If you've read the enemy and a volley's coming, Dodge that turn — even a failed dodge cuts the hit in half. But it's on cooldown for one turn after.",
+    cardStyle: { bottom: '32%', left: '1rem', right: '1rem' },
+    arrowDir: 'down', arrowAlign: 'right',
   },
   {
-    icon: '🏴‍☠️',
+    title: 'Your stats',
+    body: "Tap your nameplate any time to see your ship's stats — power, speed, navigation, fortune, and HP. Crew and Nav level both feed into these numbers.",
+    cardStyle: { top: '32%', left: '1rem', right: '1rem' },
+    arrowDir: 'down', arrowAlign: 'right',
+  },
+  {
     title: 'Skirmish vs Raid',
-    body: 'This Skirmish is a single battle so you can practice. A full Raid (like Barnacle Pete’s) is a sequence of battles ending with a boss fight. Sink the enemy to earn doubloons and Nav XP — good hunting!',
+    body: "This Skirmish is a single battle so you can practice. A full Raid (like Barnacle Pete's) is a chain of fights ending with a boss. Sink the enemy to earn doubloons and Nav XP — good hunting!",
+    cardStyle: { top: '50%', left: '1rem', right: '1rem', transform: 'translateY(-50%)' },
+    arrowDir: 'none', arrowAlign: 'center',
   },
 ]
 
@@ -504,17 +527,24 @@ export default function PracticeRaidGame({
 
   function handleOpenFire() {
     if (phaseRef.current !== 'idle') return
-    if (!seenTutorial) { setShowTour(true); return }
     const enemy = hasCompletedPractice ? pickRandomEnemy() : PRACTICE_ENEMIES.brute
     startGame(enemy)
+    // First-timers get the tour layered on top of the live fight — modeled
+    // after the fishing tour. Defer one more frame so RaidCombat paints
+    // before the overlay drops in, so the buttons/nameplates the tour
+    // points at are actually visible underneath.
+    if (!seenTutorial) {
+      requestAnimationFrame(() => requestAnimationFrame(() => setShowTour(true)))
+    }
   }
 
   function dismissTour() {
     setSeenTutorial(true)
     setShowTour(false)
     setTourStep(0)
-    const enemy = hasCompletedPractice ? pickRandomEnemy() : PRACTICE_ENEMIES.brute
-    startGame(enemy)
+    // Persist so the tour doesn't reappear next session. (Previously the
+    // local-only flag meant new fishing players saw it every load.)
+    startTransition(() => { void markRaidTutorialSeen() })
   }
 
   // Turn-based: no "OPEN FIRE" gate; auto-enter combat on mount.
@@ -935,6 +965,120 @@ export default function PracticeRaidGame({
             fn?.()
           }}
         />
+
+        {/* ── First-time tour ─────────────────────────────────────────────
+            Layers on top of the live fight so each step's card can point
+            at the actual buttons / nameplates it describes. Backdrop is
+            light enough to leave the UI readable underneath. */}
+        <AnimatePresence>
+          {showTour && (
+            <>
+              <motion.div
+                key="practice-tour-backdrop"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => {
+                  if (tourStep < PRACTICE_TOUR.length - 1) setTourStep(s => s + 1)
+                  else dismissTour()
+                }}
+                style={{
+                  position: 'fixed', inset: 0, zIndex: 100, cursor: 'pointer',
+                  background: 'rgba(0,0,0,0.55)',
+                }}
+              />
+              <motion.div
+                key={`practice-tour-${tourStep}`}
+                initial={{ opacity: 0, scale: 0.96, y: 4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 4 }}
+                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                onClick={e => e.stopPropagation()}
+                style={{
+                  position: 'fixed', zIndex: 101,
+                  maxWidth: 360, margin: '0 auto',
+                  background: '#0e1a2b',
+                  border: '1px solid rgba(96,165,250,0.36)',
+                  borderRadius: 14, padding: '0.95rem 1.05rem 0.85rem',
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.55)',
+                  ...PRACTICE_TOUR[tourStep].cardStyle,
+                }}
+              >
+                {(() => {
+                  const step = PRACTICE_TOUR[tourStep]
+                  if (step.arrowDir === 'none') return null
+                  const color = 'rgba(96,165,250,0.36)'
+                  const base: React.CSSProperties = {
+                    position: 'absolute', width: 12, height: 12, background: '#0e1a2b',
+                    transform: 'rotate(45deg)',
+                  }
+                  const align =
+                    step.arrowAlign === 'center' ? { left: '50%', marginLeft: -6 } :
+                    step.arrowAlign === 'right'  ? { right: 28 } :
+                                                   { left: 28 }
+                  const pos: React.CSSProperties = step.arrowDir === 'up'
+                    ? { top: -7, ...align }
+                    : { bottom: -7, ...align }
+                  const border: React.CSSProperties = step.arrowDir === 'up'
+                    ? { borderTop: `1px solid ${color}`, borderLeft: `1px solid ${color}` }
+                    : { borderBottom: `1px solid ${color}`, borderRight: `1px solid ${color}` }
+                  return <div style={{ ...base, ...pos, ...border }} />
+                })()}
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+                  <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#7a9bc4', letterSpacing: '0.16em' }}>
+                    Captain&rsquo;s Briefing
+                  </p>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {PRACTICE_TOUR.map((_, i) => (
+                      <span key={i} style={{
+                        width: i === tourStep ? 18 : 6, height: 5, borderRadius: 999,
+                        background: i === tourStep ? '#60a5fa' : 'rgba(255,255,255,0.18)',
+                        transition: 'width 0.22s ease',
+                      }} />
+                    ))}
+                  </div>
+                </div>
+
+                <p className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: '#f0ede8', marginBottom: '0.45rem', lineHeight: 1.2 }}>
+                  {PRACTICE_TOUR[tourStep].title}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.78)', lineHeight: 1.55, marginBottom: '0.85rem' }}>
+                  {PRACTICE_TOUR[tourStep].body}
+                </p>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <button
+                    onClick={e => { e.stopPropagation(); dismissTour() }}
+                    className="font-karla font-600 uppercase tracking-[0.08em]"
+                    style={{
+                      fontSize: '0.68rem', cursor: 'pointer', touchAction: 'manipulation',
+                      color: 'rgba(240,237,232,0.5)',
+                      background: 'none', border: 'none', padding: '0.4rem 0.3rem',
+                    }}
+                  >
+                    Skip
+                  </button>
+                  <button
+                    onClick={e => {
+                      e.stopPropagation()
+                      if (tourStep < PRACTICE_TOUR.length - 1) setTourStep(s => s + 1)
+                      else dismissTour()
+                    }}
+                    className="font-karla font-700 uppercase tracking-[0.1em]"
+                    style={{
+                      fontSize: '0.78rem', cursor: 'pointer', touchAction: 'manipulation',
+                      color: '#0a1422',
+                      background: '#60a5fa',
+                      border: 'none', borderRadius: 10, padding: '0.58rem 1.15rem',
+                      boxShadow: '0 4px 14px rgba(96,165,250,0.35)',
+                    }}
+                  >
+                    {tourStep === PRACTICE_TOUR.length - 1 ? 'Got it' : 'Next'}
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
     )
   }
@@ -1121,105 +1265,6 @@ export default function PracticeRaidGame({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ── First-time tour ───────────────────────────────────────────────────── */}
-      {showTour && (
-        <AnimatePresence>
-          <motion.div
-            key="practice-tour-backdrop"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={() => { if (tourStep < PRACTICE_TOUR.length - 1) setTourStep(s => s + 1) }}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 100, cursor: 'pointer',
-              background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.92) 100%)',
-              backdropFilter: 'blur(2px)',
-              WebkitBackdropFilter: 'blur(2px)',
-            }}
-          />
-          <motion.div
-            key={`practice-tour-${tourStep}`}
-            initial={{ opacity: 0, scale: 0.94, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 4 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            style={{
-              position: 'fixed', zIndex: 101,
-              left: '1rem', right: '1rem',
-              top: '50%', transform: 'translateY(-50%)',
-              maxWidth: 360, margin: '0 auto',
-              background: 'linear-gradient(180deg, #0e1a2b 0%, #060e1a 100%)',
-              border: '1px solid rgba(96,165,250,0.28)',
-              borderRadius: 18,
-              padding: '1.25rem 1.1rem 1rem',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset',
-            }}
-          >
-            {/* Eyebrow + step counter on one row */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.9rem' }}>
-              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', color: '#7a9bc4', letterSpacing: '0.16em' }}>
-                Captain’s Briefing
-              </p>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {PRACTICE_TOUR.map((_, i) => (
-                  <span key={i} style={{
-                    width: i === tourStep ? 18 : 6, height: 6, borderRadius: 999,
-                    background: i === tourStep ? '#60a5fa' : 'rgba(255,255,255,0.18)',
-                    transition: 'width 0.22s ease',
-                  }} />
-                ))}
-              </div>
-            </div>
-
-            {/* Big icon */}
-            <div style={{ textAlign: 'center', marginBottom: '0.8rem' }}>
-              <span style={{ fontSize: '3rem', lineHeight: 1, display: 'inline-block', filter: 'drop-shadow(0 4px 14px rgba(96,165,250,0.35))' }}>
-                {PRACTICE_TOUR[tourStep].icon}
-              </span>
-            </div>
-
-            <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.15rem', color: '#f0ede8', marginBottom: '0.55rem', lineHeight: 1.2 }}>
-              {PRACTICE_TOUR[tourStep].title}
-            </p>
-            <p className="font-karla text-center" style={{ fontSize: '0.88rem', color: 'rgba(240,237,232,0.78)', lineHeight: 1.55, marginBottom: '1.1rem' }}>
-              {PRACTICE_TOUR[tourStep].body}
-            </p>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-              <button
-                onClick={e => { e.stopPropagation(); dismissTour() }}
-                className="font-karla font-600 uppercase tracking-[0.08em]"
-                style={{
-                  fontSize: '0.7rem', cursor: 'pointer', touchAction: 'manipulation',
-                  color: 'rgba(240,237,232,0.5)',
-                  background: 'none',
-                  border: 'none',
-                  padding: '0.5rem 0.4rem',
-                }}
-              >
-                Skip
-              </button>
-              <button
-                onClick={e => {
-                  e.stopPropagation()
-                  if (tourStep < PRACTICE_TOUR.length - 1) { setTourStep(s => s + 1) }
-                  else { dismissTour() }
-                }}
-                className="font-karla font-700 uppercase tracking-[0.1em]"
-                style={{
-                  fontSize: '0.82rem', cursor: 'pointer', touchAction: 'manipulation',
-                  color: '#0a1422',
-                  background: '#60a5fa',
-                  border: 'none',
-                  borderRadius: 12, padding: '0.7rem 1.4rem',
-                  boxShadow: '0 4px 14px rgba(96,165,250,0.35)',
-                }}
-              >
-                {tourStep === PRACTICE_TOUR.length - 1 ? 'Set Sail' : 'Next'}
-              </button>
-            </div>
-          </motion.div>
-        </AnimatePresence>
-      )}
 
       <style>{`
         @keyframes hitsplat-pop {
