@@ -91,30 +91,23 @@ export default function NavLevelUpOverlay({ info, onDismiss }: Props) {
               {info.toLevel}
             </p>
 
-            {/* Stat-delta rows */}
+            {/* Stat-delta lines — match the celebration typography: Cinzel,
+                gold numerators, soft white-on-blue text shadow. Cards out,
+                plain text lines in. */}
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.28, duration: 0.3, ease: 'easeOut' }}
-              style={{ marginTop: '1.1rem', display: 'flex', flexDirection: 'column', gap: 6 }}
+              style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
             >
-              <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: '#5a7a9a', marginBottom: 2 }}>
+              <p className="font-karla font-700 uppercase tracking-[0.22em]"
+                 style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.45)', marginBottom: '0.4rem', textShadow: '0 0 12px rgba(96,165,250,0.4)' }}>
                 Captain&apos;s Bonus
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {deltas.hp > 0 && (
-                  <StatDeltaRow label="Max HP"     delta={deltas.hp}     color="#ef4444" />
-                )}
-                {deltas.power > 0 && (
-                  <StatDeltaRow label="Power"      delta={deltas.power}  color="#f87171" />
-                )}
-                {deltas.navigation > 0 && (
-                  <StatDeltaRow label="Navigation" delta={deltas.navigation} color="#60a5fa" />
-                )}
-                {deltas.fortune > 0 && (
-                  <StatDeltaRow label="Fortune"    delta={deltas.fortune} color="#f0c040" />
-                )}
-              </div>
+              {deltas.hp         > 0 && <StatDeltaLine label="Max HP"     delta={deltas.hp} />}
+              {deltas.power      > 0 && <StatDeltaLine label="Power"      delta={deltas.power} />}
+              {deltas.navigation > 0 && <StatDeltaLine label="Navigation" delta={deltas.navigation} />}
+              {deltas.fortune    > 0 && <StatDeltaLine label="Fortune"    delta={deltas.fortune} />}
             </motion.div>
 
             <motion.p
@@ -130,17 +123,20 @@ export default function NavLevelUpOverlay({ info, onDismiss }: Props) {
   )
 }
 
-function StatDeltaRow({ label, delta, color }: { label: string; delta: number; color: string }) {
+function StatDeltaLine({ label, delta }: { label: string; delta: number }) {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      gap: 14, padding: '0.4rem 0.85rem',
-      background: 'rgba(6,12,20,0.7)', border: `1px solid ${color}55`,
-      borderRadius: 10,
-    }}>
-      <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color }}>{label}</span>
-      <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>+{delta}</span>
-    </div>
+    <p
+      className="font-cinzel font-700"
+      style={{
+        display: 'inline-flex', alignItems: 'baseline', gap: 10,
+        fontSize: '1.05rem', lineHeight: 1.25,
+        color: '#f0ede8',
+        textShadow: '0 0 16px rgba(240,192,64,0.45), 0 0 30px rgba(96,165,250,0.22)',
+      }}
+    >
+      <span style={{ color: '#f0c040' }}>+{delta}</span>
+      <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.82rem', letterSpacing: '0.08em' }}>{label}</span>
+    </p>
   )
 }
 
