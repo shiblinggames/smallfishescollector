@@ -260,11 +260,9 @@ export default function RaidCombat({
 
   // Reset when enemy changes (parent unmounts/remounts on encounter switch).
   // The log is seeded with an intro line + the prompt so each fight opens
-  // with flavor instead of a generic "What will you do?". Bosses get a
-  // dramatic "heaves into view" framing; non-boss enemies get a softer
-  // "draws alongside" line. Replaced wholesale by setResolveLog on the
-  // first turn's speed-roll, so the intro only lingers while the player
-  // decides.
+  // with flavor instead of a generic "What will you do?". Lines are
+  // staggered (~600ms apart) so the player reads the intro, then the prompt
+  // appears below — same rhythm as the in-fight action log.
   useEffect(() => {
     setEnemyHp(enemy.hpBase); enemyHpRef.current = enemy.hpBase
     setPlayerCharges(0); setEnemyCharges(0)
@@ -273,10 +271,16 @@ export default function RaidCombat({
     const intro = isBoss
       ? `${enemy.name} heaves into view!`
       : `A ${enemy.name} draws alongside!`
-    setResolveLog([intro, 'What will you do?'])
+    setResolveLog([intro])
+    const promptTimer = setTimeout(() => {
+      // Only append if the player hasn't acted yet — once a turn resolves,
+      // resolveLog gets replaced wholesale and we don't want to clobber it.
+      setResolveLog(prev => (prev.length === 1 && prev[0] === intro ? [intro, 'What will you do?'] : prev))
+    }, 600)
     setPHitsplat(null); setEHitsplat(null)
     enemyPatternIdxRef.current = 0
     turnRef.current = 1; setTurn(1)
+    return () => clearTimeout(promptTimer)
   }, [enemy.id, enemy.name, enemy.hpBase, isBoss])
 
   // ─── Aim bar RAF (only during 'aiming') ────────────────────────────────────
