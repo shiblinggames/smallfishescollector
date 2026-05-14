@@ -517,7 +517,6 @@ export default function TackleShopClient({
                 const isEquipping = equippingRod === rod.tier && isPending
                 const c = rod.color
                 const speedPct = Math.round((3800 - rod.biteIntervalMs) / 3800 * 100)
-                const hasSpecial = rod.doubleCatchChance > 0 || rod.retryOnMissChance > 0 || rod.snagImmune || rod.perfectZoneBonus > 0 || rod.rarityBonus > 0 || (rod.jackpotChance ?? 0) > 0
 
                 const pill = (label: string) => (
                   <span key={label} className="font-karla font-600"
@@ -577,8 +576,8 @@ export default function TackleShopClient({
                         {rod.perfectZoneBonus > 0 && pill(`Perfect zone +${rod.perfectZoneBonus}°`)}
                         {rod.rarityBonus > 0 && pill(`+${Math.round(rod.rarityBonus * 100)}% rare bias`)}
                         {(rod.jackpotChance ?? 0) > 0 && pill(`${Math.round(rod.jackpotChance! * 100)}% jackpot ×${rod.jackpotMultiplier}`)}
-                        {!hasSpecial && speedPct > 0 && pill(`${speedPct}% faster bites`)}
-                        {!hasSpecial && rod.catchZoneBonus > 0 && pill(`+${rod.catchZoneBonus}° catch zone`)}
+                        {speedPct > 0 && pill(`${speedPct}% faster bites`)}
+                        {rod.catchZoneBonus > 0 && pill(`+${rod.catchZoneBonus}° catch zone`)}
                       </div>
 
                       <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.45 }}>{rod.description}</p>

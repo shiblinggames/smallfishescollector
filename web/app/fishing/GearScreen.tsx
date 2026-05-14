@@ -32,17 +32,22 @@ function ShopLink({ href, label, color, onClick }: { href: string; label: string
 }
 
 function rodTagline(r: typeof RODS[number]): string {
-  if (r.doubleCatchChance >= 1) return 'Always double'
-  if (r.doubleCatchChance > 0)  return `${Math.round(r.doubleCatchChance * 100)}% double`
-  if ((r.jackpotChance ?? 0) > 0) return `${Math.round(r.jackpotChance! * 100)}% jackpot ×${r.jackpotMultiplier}`
-  if (r.snagImmune)             return 'Snag immune'
-  if (r.retryOnMissChance > 0)  return `${Math.round(r.retryOnMissChance * 100)}% retry`
-  if (r.perfectZoneBonus > 0)   return `+${r.perfectZoneBonus}° perfect`
-  if (r.rarityBonus > 0)        return `+${Math.round(r.rarityBonus * 100)}% rare`
+  // Collect every active trait, then return the top 2 joined — rods like
+  // the Legendary have both a rarity bonus AND a big speed boost, and the
+  // tile was hiding the speed because the old code returned the first match.
+  const parts: string[] = []
+  if (r.doubleCatchChance >= 1)        parts.push('Always double')
+  else if (r.doubleCatchChance > 0)    parts.push(`${Math.round(r.doubleCatchChance * 100)}% double`)
+  if ((r.jackpotChance ?? 0) > 0)      parts.push(`${Math.round(r.jackpotChance! * 100)}% jackpot`)
+  if (r.snagImmune)                    parts.push('Snag immune')
+  if (r.retryOnMissChance > 0)         parts.push(`${Math.round(r.retryOnMissChance * 100)}% retry`)
+  if (r.perfectZoneBonus > 0)          parts.push(`+${r.perfectZoneBonus}° perfect`)
+  if (r.rarityBonus > 0)               parts.push(`+${Math.round(r.rarityBonus * 100)}% rare`)
   const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
-  if (speedPct > 0)             return `${speedPct}% faster`
-  if (r.catchZoneBonus > 0)     return `+${r.catchZoneBonus}° zone`
-  return 'Base rod'
+  if (speedPct > 0)                    parts.push(`${speedPct}% faster`)
+  if (r.catchZoneBonus > 0)            parts.push(`+${r.catchZoneBonus}° zone`)
+  if (parts.length === 0) return 'Base rod'
+  return parts.slice(0, 2).join(' · ')
 }
 
 function Pill({ label, color, muted }: { label: string; color?: string; muted?: boolean }) {
