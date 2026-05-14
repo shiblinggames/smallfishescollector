@@ -1241,11 +1241,11 @@ function PlayerStatsPopup({
   equippedRaidItems: string[]
   onClose: () => void
 }) {
-  const powerMax  = shipMinDamage + Math.floor(totalPower / 4)
+  const powerMax  = shipMinDamage + 2 + Math.floor(totalPower / 4)
   // Crew-aware hit floor — mirrors rollShotDamage. shipMin stays the absolute
-  // floor for under-built captains; for everyone else, hitMin is half of
+  // floor for under-built captains; for everyone else, hitMin is 0.4× of
   // powerMax so investment in crew shows up in every shot.
-  const hitMin    = Math.max(shipMinDamage, Math.floor(powerMax * 0.5))
+  const hitMin    = Math.max(shipMinDamage, Math.floor(powerMax * 0.4))
   const critMin   = shipMinDamage * 2
   const critMax   = Math.round(powerMax * 1.5)
   // Combined "maneuver" stat — Ship Speed and Navigation both feed into how

@@ -144,8 +144,8 @@ export function computeCombatRating(
   shipDurability: number,
   shipMinDamage: number,
 ): CombatRating {
-  const powerMax = shipMinDamage + Math.floor(totalPower / 4)
-  const hitMin   = Math.max(shipMinDamage, Math.floor(powerMax * 0.5))
+  const powerMax = shipMinDamage + 2 + Math.floor(totalPower / 4)
+  const hitMin   = Math.max(shipMinDamage, Math.floor(powerMax * 0.4))
   const avgHit   = (hitMin + powerMax) / 2
   // Fortune doesn't affect raid crit (skill-based aim bar handles that), but
   // keeping it in the rating gives players a reason to balance the stat.

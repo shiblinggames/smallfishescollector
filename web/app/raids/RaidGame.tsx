@@ -61,9 +61,9 @@ const ENEMY_DODGE_MS      = 1400
 
 function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: number): number {
   if (!res || res === 'miss') return 0
-  const powerMax = shipMinDamage + Math.floor(totalPower / 4)
+  const powerMax = shipMinDamage + 2 + Math.floor(totalPower / 4)
   // Crew-aware floor on hit — see RaidCombat.tsx for the rationale.
-  const hitMin = Math.max(shipMinDamage, Math.floor(powerMax * 0.5))
+  const hitMin = Math.max(shipMinDamage, Math.floor(powerMax * 0.4))
   const ranges: Record<string, [number, number]> = {
     critical: [shipMinDamage * 2, Math.round(powerMax * 1.5)],
     hit:      [hitMin, powerMax],

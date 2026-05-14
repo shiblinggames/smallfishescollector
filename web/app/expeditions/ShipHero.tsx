@@ -919,8 +919,8 @@ function RaidScoreBreakdown({
   const totalFortune = crewFortune + navBonusFortune
   const totalHp      = shipDurability + navBonusHp
 
-  const powerMax = shipMin + Math.floor(totalPower / 4)
-  const hitMin = Math.max(shipMin, Math.floor(powerMax * 0.5))
+  const powerMax = shipMin + 2 + Math.floor(totalPower / 4)
+  const hitMin = Math.max(shipMin, Math.floor(powerMax * 0.4))
   const avgHit = (hitMin + powerMax) / 2
   const critRate = Math.min(totalFortune / 2, 50) / 100
   const dodgeBoost = Math.min(totalDodge / 200, 0.5)
