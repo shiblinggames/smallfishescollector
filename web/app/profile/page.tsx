@@ -22,6 +22,7 @@ export default async function ProfilePage() {
     { count: uniqueSpecies },
     { data: ownedRows },
     { data: rarestFishRows },
+    { data: allFishSpecies },
   ] = await Promise.all([
     supabase.from('profiles')
       .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges, trophy_catches, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color')
@@ -38,6 +39,10 @@ export default async function ProfilePage() {
       .eq('user_id', user.id)
       .order('fish_species(bite_rarity)', { ascending: false })
       .limit(3),
+    // fish_species has ~140 rows — pulling id+name for the whole table is
+    // cheaper than a second round-trip after the profile query just to look
+    // up trophy names by ID. Costs a couple KB; saves ~50–200ms of waterfall.
+    admin.from('fish_species').select('id, name'),
   ])
 
   const seen = new Set<number>()
@@ -66,16 +71,9 @@ export default async function ProfilePage() {
     .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
 
   const trophyIds = ((profile?.trophy_catches as number[] | null) ?? [])
-  const ancientTrophies: { id: number; name: string }[] = []
-  if (trophyIds.length > 0) {
-    const { data: trophyRows } = await admin
-      .from('fish_species')
-      .select('id, name')
-      .in('id', trophyIds)
-    for (const row of (trophyRows ?? []) as { id: number; name: string }[]) {
-      ancientTrophies.push({ id: row.id, name: row.name })
-    }
-  }
+  const trophyIdSet = new Set(trophyIds)
+  const ancientTrophies = ((allFishSpecies ?? []) as { id: number; name: string }[])
+    .filter(f => trophyIdSet.has(f.id))
 
   const ship = getShip(profile?.ship_tier ?? 0)
   const level = getLevelFromXP(profile?.fishing_xp ?? 0)
