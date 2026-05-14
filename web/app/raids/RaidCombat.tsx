@@ -695,14 +695,18 @@ export default function RaidCombat({
             ships, and HP boxes (z-index left implicit — they're rendered
             after these and have explicit z-index where it matters). */}
 
-        {/* Sun — sits high-right in the sky portion. Soft pulse via filter. */}
+        {/* Sun — diffuse atmospheric glow, not a 3D-looking sphere. The
+            radial gradient softens the center alpha so it blends into the
+            sky instead of reading as a hard disk; the .raid-sun pulse adds
+            the breathing halo via colored drop-shadows. */}
         <div
           className="raid-sun"
           aria-hidden
           style={{
-            position: 'absolute', top: '7%', right: '14%',
-            width: 36, height: 36, borderRadius: '50%',
-            background: 'radial-gradient(circle at 38% 35%, rgba(255,245,210,1) 0%, rgba(255,220,150,0.85) 55%, rgba(255,200,120,0) 100%)',
+            position: 'absolute', top: '6%', right: '13%',
+            width: 56, height: 56, borderRadius: '50%',
+            background: 'radial-gradient(circle at 50% 50%, rgba(255,250,225,0.70) 0%, rgba(255,230,170,0.40) 28%, rgba(255,210,140,0.15) 55%, transparent 90%)',
+            filter: 'blur(1.5px)',
             pointerEvents: 'none',
           }}
         />
@@ -730,19 +734,24 @@ export default function RaidCombat({
           background: 'linear-gradient(180deg, rgba(20,40,60,0.4) 0%, rgba(8,16,28,0.85) 100%)',
         }} />
 
-        {/* Water-surface shimmer — a thin band just below the horizon line
-            with a soft sun-glint that pans slowly across. Adds life to the
-            otherwise static water gradient. */}
+        {/* Water-surface shimmer — a soft sun-glint that pans across the
+            water. The horizontal gradient fades left/right; a vertical
+            mask fades the top + bottom of the band so the rectangle
+            shape disappears and you just see a blob of light bleeding
+            into the water. */}
         <div
           aria-hidden
           className="raid-shimmer"
           style={{
-            position: 'absolute', left: 0, right: 0, top: '38%', height: '12%',
-            backgroundImage: 'linear-gradient(90deg, transparent 0%, transparent 30%, rgba(255,235,200,0.10) 45%, rgba(255,245,220,0.18) 50%, rgba(255,235,200,0.10) 55%, transparent 70%, transparent 100%)',
+            position: 'absolute', left: 0, right: 0, top: '40%', height: '10%',
+            backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(255,240,210,0.20) 45%, rgba(255,250,225,0.32) 50%, rgba(255,240,210,0.20) 55%, transparent 100%)',
             backgroundRepeat: 'no-repeat',
-            backgroundSize: '60% 100%',
+            backgroundSize: '55% 100%',
+            WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, black 50%, transparent 100%)',
+            maskImage: 'linear-gradient(180deg, transparent 0%, black 50%, transparent 100%)',
             mixBlendMode: 'screen',
             pointerEvents: 'none',
+            filter: 'blur(2px)',
           }}
         />
 
