@@ -35,21 +35,27 @@ interface PracticeEnemy {
 }
 
 const PRACTICE_ENEMIES: Record<string, PracticeEnemy> = {
+  // Patterns mirror lib/bossRaids.ts — see that file for the full design
+  // notes. Skirmish uses the same enemies so the Captain's Briefing
+  // transitions cleanly into the real raid.
   brute: {
     id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 2, maxDmg: 5,
-    shipSpeed: 4, actionMs: 4500, pattern: ['reload', 'fire', 'reload', 'fire'],
+    shipSpeed: 4, actionMs: 4500,
+    pattern: ['reload', 'fire', 'reload', 'reload', 'reload', 'volley'],
     critChance: 0.025,
     image: '/enemytier1.png', portrait: ENEMY_IMG_BASE + 'reefraider.png', killGold: 20, killXP: 20,
   },
   sniper: {
     id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
-    shipSpeed: 3, actionMs: 5500, pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
+    shipSpeed: 3, actionMs: 5500,
+    pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'fire'],
     critChance: 0.10,
     image: '/enemytier1scout.png', portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png', killGold: 25, killXP: 30,
   },
   corsair: {
     id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
-    shipSpeed: 7, actionMs: 3500, pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
+    shipSpeed: 7, actionMs: 3500,
+    pattern: ['reload', 'fire', 'dodge', 'reload', 'reload', 'reload', 'volley', 'reload', 'fire'],
     critChance: 0.05,
     image: '/enemytier1elite.png', portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png', killGold: 35, killXP: 45,
   },
