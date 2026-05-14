@@ -734,24 +734,19 @@ export default function RaidCombat({
           background: 'linear-gradient(180deg, rgba(20,40,60,0.4) 0%, rgba(8,16,28,0.85) 100%)',
         }} />
 
-        {/* Water-surface shimmer — a soft sun-glint that pans across the
-            water. The horizontal gradient fades left/right; a vertical
-            mask fades the top + bottom of the band so the rectangle
-            shape disappears and you just see a blob of light bleeding
-            into the water. */}
+        {/* Static sun reflection — the sun is upper-right, so its glint
+            on the water sits directly below it, fading down into the
+            depths. No movement — water surface motion gets weird at this
+            visual scale, so the reflection is a still soft glow. */}
         <div
           aria-hidden
-          className="raid-shimmer"
           style={{
-            position: 'absolute', left: 0, right: 0, top: '40%', height: '10%',
-            backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(255,240,210,0.20) 45%, rgba(255,250,225,0.32) 50%, rgba(255,240,210,0.20) 55%, transparent 100%)',
-            backgroundRepeat: 'no-repeat',
-            backgroundSize: '55% 100%',
-            WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, black 50%, transparent 100%)',
-            maskImage: 'linear-gradient(180deg, transparent 0%, black 50%, transparent 100%)',
+            position: 'absolute', top: '38%', right: '8%',
+            width: 110, height: '32%',
+            background: 'radial-gradient(ellipse at 50% 0%, rgba(255,235,180,0.22) 0%, rgba(255,225,160,0.10) 40%, transparent 75%)',
             mixBlendMode: 'screen',
             pointerEvents: 'none',
-            filter: 'blur(2px)',
+            filter: 'blur(3px)',
           }}
         />
 

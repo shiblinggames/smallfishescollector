@@ -443,18 +443,10 @@ body {
   0%, 100% { filter: drop-shadow(0 0 18px rgba(255,220,160,0.55)) drop-shadow(0 0 36px rgba(255,200,120,0.25)); }
   50%      { filter: drop-shadow(0 0 28px rgba(255,225,170,0.70)) drop-shadow(0 0 52px rgba(255,210,130,0.38)); }
 }
-/* Water-surface shimmer: a soft horizontal sun-glint that pans slowly across
-   the upper water band. */
-@keyframes raid-water-shimmer {
-  from { background-position: -40% 0; }
-  to   { background-position: 140% 0; }
-}
-
 .raid-cloud-slow { animation: raid-cloud-drift-slow 60s linear infinite; }
 .raid-cloud-mid  { animation: raid-cloud-drift-mid  45s linear infinite; }
 .raid-cloud-fast { animation: raid-cloud-drift-fast 32s linear infinite; }
 .raid-sun        { animation: raid-sun-pulse 5.5s ease-in-out infinite; }
-.raid-shimmer    { animation: raid-water-shimmer 12s linear infinite; }
 
 /* ── Expeditions page zoom ── */
 .expeditions-content        { zoom: 1.35; }
