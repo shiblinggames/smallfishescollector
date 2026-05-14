@@ -121,13 +121,13 @@ type ZoneKey = typeof ZONES[number]
 type BossMechanic = 'shrink' | 'drift' | 'accelerate' | 'randomize' | 'split'
 const BOSS_CONFIG: Record<string, BossMechanic> = {
   'Megalodon':    'shrink',
-  'Plesiosaur':   'drift',
+  'Plesiosaurus': 'drift',
   'Dunkleosteus': 'accelerate',
   'Mosasaurus':   'randomize',
-  'Kraken':       'split',
-  'Leviathan':    'shrink', // gets random mechanic per stage via handlePrestige logic
+  'Basilosaurus': 'split',
+  'Shastasaurus': 'shrink', // gets random mechanic per stage via handlePrestige logic
 }
-const LEVIATHAN_MECHANICS: BossMechanic[] = ['shrink', 'drift', 'accelerate', 'randomize', 'split']
+const SHASTASAURUS_MECHANICS: BossMechanic[] = ['shrink', 'drift', 'accelerate', 'randomize', 'split']
 
 const RARITY: Record<number, { label: string; color: string; hookedText: string }> = {
   1: { label: 'Common',    color: '#94a3b8', hookedText: "Something's on the line…" },
@@ -2126,7 +2126,7 @@ export default function FishingGame({
   // retryKey increments on Second Wind retry to restart animation with fresh randomization
   }, [phase, hookedFish, reel.needleSpeedMultiplier, retryKey])
 
-  // Drift mechanic: Plesiosaur rotates the zone arc continuously while the needle spins
+  // Drift mechanic: Plesiosaurus rotates the zone arc continuously while the needle spins
   useEffect(() => {
     if (phase !== 'catching' || activeBossMechanic !== 'drift') return
     const id = setInterval(() => setZoneRotation(r => (r + 1) % 360), 30)
@@ -2186,9 +2186,9 @@ export default function FishingGame({
       // Initialise boss fight state for ancient_deep
       if (selectedZone === 'ancient_deep') {
         const bossName = allFishSpecies.find(f => f.id === res.fishId)?.name ?? ''
-        const isLeviathan = bossName === 'Leviathan'
-        const mechanic = isLeviathan
-          ? LEVIATHAN_MECHANICS[Math.floor(Math.random() * LEVIATHAN_MECHANICS.length)]
+        const isShastasaurus = bossName === 'Shastasaurus'
+        const mechanic = isShastasaurus
+          ? SHASTASAURUS_MECHANICS[Math.floor(Math.random() * SHASTASAURUS_MECHANICS.length)]
           : (BOSS_CONFIG[bossName] ?? 'shrink')
         activeBossMechanicRef.current = mechanic
         setActiveBossMechanic(mechanic)
@@ -2497,10 +2497,10 @@ export default function FishingGame({
             bossNeedleMultRef.current = Math.min(bossNeedleMultRef.current * 1.4, 4.0)
           }
 
-          // Leviathan: pick a new random mechanic each stage
+          // Shastasaurus: pick a new random mechanic each stage
           const bossName = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
-          if (bossName === 'Leviathan') {
-            const next = LEVIATHAN_MECHANICS[Math.floor(Math.random() * LEVIATHAN_MECHANICS.length)]
+          if (bossName === 'Shastasaurus') {
+            const next = SHASTASAURUS_MECHANICS[Math.floor(Math.random() * SHASTASAURUS_MECHANICS.length)]
             activeBossMechanicRef.current = next
             setActiveBossMechanic(next)
             bossZoneShrinkRef.current = next === 'shrink' ? 8 : 0
