@@ -3,7 +3,18 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, awardPerfectChallengeGem, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
+import { recordFinnEncounter, settleFinnChallenge, markFinnRevealSeen } from './finnActions'
+import FinnEncounter from './FinnEncounter'
+import {
+  FINN_ENCOUNTER_RATE, FINN_PERFECT_TIERS, FINN_SPEED_TIERS, FINN_REVEAL_BEAT,
+  FINN_OFFER_LINES, FINN_WIN_LINES, FINN_LOSS_LINES,
+  FINN_EPILOGUE_OFFER_LINES, FINN_EPILOGUE_WIN_LINES, FINN_EPILOGUE_LOSS_LINES,
+  FINN_EPILOGUE_LORE_LINES, FINN_EPILOGUE_LORE_CHANCE,
+  pickFinnTier, pickChallengeType, pickRandomLine,
+  findNextEncounterBeat, findNextWinBeat,
+  type FinnChallengeType,
+} from '@/lib/finn'
 import { liquidateAllFish } from '@/app/tavern/market/actions'
 import { BOATS, getBoat } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
@@ -1592,6 +1603,22 @@ function XPBarDisplay({ xp, bestStreak }: { xp: number; bestStreak?: number }) {
   )
 }
 
+/** Tiny live-countdown shown inside the Finn-challenge HUD chip for speed
+ *  challenges. Re-renders ~4× a second; cheap. */
+function SpeedClock({ endsAt }: { endsAt: number }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 250)
+    return () => clearInterval(t)
+  }, [])
+  const secs = Math.max(0, Math.ceil((endsAt - now) / 1000))
+  return (
+    <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: secs <= 5 ? '#ef4444' : '#fde68a' }}>
+      · {secs}s
+    </span>
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }
@@ -1610,6 +1637,7 @@ export default function FishingGame({
   initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
+  initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed,
 }: {
   hookTier: number
   rodTier: number
@@ -1651,6 +1679,10 @@ export default function FishingGame({
   initialEquippedHat: string | null
   initialUnlockedHats: string[]
   onHatStateChange?: (equipped: string | null, unlocked: string[]) => void
+  initialFinnEncounters: number
+  initialFinnWins: number
+  initialFinnSeenBeats: string[]
+  initialFinnRevealed: boolean
 }) {
 
   const [localCharacterColor, setLocalCharacterColor] = useState(characterColor)
@@ -1748,7 +1780,6 @@ export default function FishingGame({
   const [sessionCatches, setSessionCatches] = useState<FishSpecies[]>([])
   const [sessionPerfects, setSessionPerfects] = useState(0)
   const [sessionNewSpecies, setSessionNewSpecies] = useState(0)
-  const [sessionGems, setSessionGems] = useState(0)
   const [sellPending, setSellPending] = useState<number | null>(null)
   const [liquidating, setLiquidating] = useState(false)
   const [liquidateConfirm, setLiquidateConfirm] = useState(false)
@@ -1766,7 +1797,37 @@ export default function FishingGame({
   >(null)
   const [cratePhase, setCratePhase] = useState<'closed' | 'rolling' | 'revealed'>('closed')
   const [crateRollDisplay, setCrateRollDisplay] = useState<{ type: 'doubloons'; amount: number } | { type: 'bait'; baitType: string; baitName: string } | null>(null)
-  const [challengeActive, setChallengeActive] = useState(false)
+  // ── Finn (fishing rival) ────────────────────────────────────────────────
+  // Encounter counters mirror the DB columns so we can pick story beats
+  // locally without a server round-trip. Updated optimistically; the server
+  // actions return authoritative state we resync against.
+  const [finnEncounters, setFinnEncounters] = useState(initialFinnEncounters)
+  const [finnWins, setFinnWins] = useState(initialFinnWins)
+  const [finnSeenBeats, setFinnSeenBeats] = useState<string[]>(initialFinnSeenBeats)
+  const [finnRevealed, setFinnRevealed] = useState(initialFinnRevealed)
+  // Active challenge — non-null while a bet is in flight. Cleared on settle.
+  const [finnChallenge, setFinnChallenge] = useState<{
+    type: FinnChallengeType
+    tier: 1 | 2 | 3
+    multiplier: number
+    perfectsTarget?: number; perfectsHit?: number
+    fishTarget?: number;     fishCaught?: number
+    speedEndsAt?: number
+  } | null>(null)
+  // Overlay state — when set, FinnEncounter mounts with these props.
+  const [finnOverlay, setFinnOverlay] = useState<{
+    mode: 'offer' | 'result' | 'reveal'
+    lines: string[]
+    challenge?: { type: FinnChallengeType; tier: 1 | 2 | 3; targetText: string; rewardText: string }
+    pendingChallenge?: {
+      type: FinnChallengeType
+      tier: 1 | 2 | 3
+      multiplier: number
+      perfectsTarget?: number
+      fishTarget?: number
+      timeMs?: number
+    }
+  } | null>(null)
   const [perfectStreak, setPerfectStreak] = useState(0)
   const [highestPerfectStreak, setHighestPerfectStreak] = useState(initialHighestPerfectStreak)
   const [snapKey, setSnapKey] = useState(0)
@@ -2117,9 +2178,161 @@ export default function FishingGame({
     }
   }
 
+  // ── Finn rival helpers ──────────────────────────────────────────────────
+
+  function fireFinnEncounter() {
+    // Reveal supersedes every other beat once the player has landed an
+    // Ancient Deep trophy and hasn't seen the climax yet.
+    const hasAncientTrophy = trophyCatches.size > 0
+    if (hasAncientTrophy && !finnRevealed) {
+      setFinnOverlay({ mode: 'reveal', lines: FINN_REVEAL_BEAT.lines })
+      setFinnRevealed(true)
+      setFinnSeenBeats(prev => prev.includes('reveal') ? prev : [...prev, 'reveal'])
+      startTransition(() => { void markFinnRevealSeen() })
+      return
+    }
+
+    // Normal encounter — bump counters, pick story beat (if any), pick challenge.
+    const newEncounters = finnEncounters + 1
+    const beat = findNextEncounterBeat(newEncounters, finnSeenBeats)
+
+    const type = pickChallengeType()
+    const tier = pickFinnTier()
+
+    let perfectsTarget: number | undefined
+    let fishTarget: number | undefined
+    let timeMs: number | undefined
+    let multiplier: number
+    let targetText: string
+
+    if (type === 'perfect_streak') {
+      const def = FINN_PERFECT_TIERS[tier - 1]
+      perfectsTarget = def.perfects
+      multiplier = def.multiplier
+      targetText = def.perfects === 1
+        ? 'Land a perfect on your next cast'
+        : `Land ${def.perfects} perfects in a row`
+    } else {
+      const def = FINN_SPEED_TIERS[tier - 1]
+      fishTarget = def.fish
+      timeMs = def.timeMs
+      multiplier = def.multiplier
+      targetText = `Catch ${def.fish} fish in ${Math.round(def.timeMs / 1000)}s`
+    }
+
+    const rewardText = `+${(fishingLevel * multiplier).toLocaleString()} ⟡`
+
+    // Build dialogue: beat lines (if any) + a closing offer line. Post-reveal,
+    // occasionally swap the offer for a lore drop instead.
+    const offerPool = finnRevealed ? FINN_EPILOGUE_OFFER_LINES : FINN_OFFER_LINES
+    let lines: string[]
+    if (beat) {
+      lines = [...beat.lines, pickRandomLine(offerPool)]
+    } else if (finnRevealed && Math.random() < FINN_EPILOGUE_LORE_CHANCE) {
+      lines = [pickRandomLine(FINN_EPILOGUE_LORE_LINES), pickRandomLine(offerPool)]
+    } else {
+      lines = [pickRandomLine(offerPool)]
+    }
+
+    setFinnOverlay({
+      mode: 'offer',
+      lines,
+      challenge: { type, tier, targetText, rewardText },
+      pendingChallenge: { type, tier, multiplier, perfectsTarget, fishTarget, timeMs },
+    })
+
+    // Optimistic state — server resyncs us.
+    setFinnEncounters(newEncounters)
+    if (beat) setFinnSeenBeats(prev => prev.includes(beat.id) ? prev : [...prev, beat.id])
+
+    startTransition(() => {
+      void recordFinnEncounter(beat?.id ?? null).then(res => {
+        if (!res) return
+        setFinnEncounters(res.encounters)
+        setFinnSeenBeats(res.seenBeats)
+      })
+    })
+  }
+
+  function handleFinnAccept() {
+    const pc = finnOverlay?.pendingChallenge
+    if (!pc) { setFinnOverlay(null); return }
+    setFinnChallenge({
+      type: pc.type, tier: pc.tier, multiplier: pc.multiplier,
+      perfectsTarget: pc.perfectsTarget, perfectsHit: 0,
+      fishTarget: pc.fishTarget, fishCaught: 0,
+      speedEndsAt: pc.timeMs ? Date.now() + pc.timeMs : undefined,
+    })
+    setFinnOverlay(null)
+  }
+
+  function handleFinnPass() {
+    setFinnOverlay(null)
+  }
+
+  function handleFinnDismiss() {
+    setFinnOverlay(null)
+  }
+
+  function resolveFinnChallenge(won: boolean) {
+    if (!finnChallenge) return
+    const rewardAmount = won ? fishingLevel * finnChallenge.multiplier : 0
+
+    // Win-track beat takes priority over generic win lines.
+    const newWins = won ? finnWins + 1 : finnWins
+    const winBeat = won ? findNextWinBeat(newWins, finnSeenBeats) : null
+
+    let lines: string[]
+    if (won) {
+      if (winBeat) lines = winBeat.lines
+      else lines = [pickRandomLine(finnRevealed ? FINN_EPILOGUE_WIN_LINES : FINN_WIN_LINES)]
+    } else {
+      lines = [pickRandomLine(finnRevealed ? FINN_EPILOGUE_LOSS_LINES : FINN_LOSS_LINES)]
+    }
+
+    // Optimistic state
+    if (won) {
+      setFinnWins(newWins)
+      if (winBeat) setFinnSeenBeats(prev => prev.includes(winBeat.id) ? prev : [...prev, winBeat.id])
+      setDoubloons(prev => {
+        const next = prev + rewardAmount
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: next }))
+        return next
+      })
+    }
+
+    setFinnChallenge(null)
+    setFinnOverlay({ mode: 'result', lines })
+
+    startTransition(() => {
+      void settleFinnChallenge(won, rewardAmount, winBeat?.id ?? null).then(res => {
+        if (!res) return
+        setFinnWins(res.wins)
+        setFinnSeenBeats(res.seenBeats)
+        setDoubloons(res.doubloons)
+      })
+    })
+  }
+
+  // Speed challenge timeout — when the clock runs out the challenge fails.
+  useEffect(() => {
+    if (!finnChallenge?.speedEndsAt) return
+    const ms = finnChallenge.speedEndsAt - Date.now()
+    if (ms <= 0) { resolveFinnChallenge(false); return }
+    const t = setTimeout(() => resolveFinnChallenge(false), ms)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finnChallenge?.speedEndsAt])
+
   // Phase 1 — cast (from idle)
   async function handleCast() {
     if (phase !== 'idle') return
+    // 2% chance Finn intercepts the cast (no bait consumed). Suppressed
+    // while a challenge is already in flight so the player isn't double-bet.
+    if (!finnChallenge && !finnOverlay && Math.random() < FINN_ENCOUNTER_RATE) {
+      fireFinnEncounter()
+      return
+    }
     setCastRippleKey(k => k + 1)
     setTimeout(() => setCastRippleKey(0), 1800)
     await doCast()
@@ -2236,8 +2449,8 @@ export default function FishingGame({
         return
       }
 
-      // Miss/penalty: challenge and streak fail
-      setChallengeActive(false)
+      // Miss/penalty: streak resets. (Finn perfect challenge is unaffected
+      // by misses — it only fails on a non-perfect CATCH, not a missed cast.)
       setPerfectStreak(0)
       setMissResult(effectiveZoneType)
       setCatchResult(null)
@@ -2264,10 +2477,33 @@ export default function FishingGame({
     const newStreak = wasPerfect ? perfectStreak + 1 : 0
     const streakBonusXP = wasPerfect ? (perfectStreak + 1) ** 2 * 3 : 0  // streak 1=+3, 2=+12, 3=+27, 5=+75, 10=+300
 
-    // Challenge mechanic: non-perfect catch clears the challenge without reward
-    const wonChallenge = wasPerfect && challengeActive
-    const triggerChallenge = wasPerfect && !challengeActive && Math.random() < 0.10
-    if (!wasPerfect) { setChallengeActive(false); setPerfectStreak(0) }
+    if (!wasPerfect) { setPerfectStreak(0) }
+
+    // Finn challenge progression — replaces the old gem-challenge mechanic.
+    // Perfect-streak: a non-perfect catch fails. Speed-catch: any catch
+    // counts; misses don't fail (the timer handles loss). Resolution
+    // (showing the win/loss overlay + payout) happens via resolveFinnChallenge.
+    if (finnChallenge) {
+      if (finnChallenge.type === 'perfect_streak' && isCatch) {
+        if (wasPerfect) {
+          const newHit = (finnChallenge.perfectsHit ?? 0) + 1
+          if (newHit >= (finnChallenge.perfectsTarget ?? 1)) {
+            void resolveFinnChallenge(true)
+          } else {
+            setFinnChallenge(prev => prev ? { ...prev, perfectsHit: newHit } : null)
+          }
+        } else {
+          void resolveFinnChallenge(false)
+        }
+      } else if (finnChallenge.type === 'speed_catch' && isCatch) {
+        const newCount = (finnChallenge.fishCaught ?? 0) + 1
+        if (newCount >= (finnChallenge.fishTarget ?? 1)) {
+          void resolveFinnChallenge(true)
+        } else {
+          setFinnChallenge(prev => prev ? { ...prev, fishCaught: newCount } : null)
+        }
+      }
+    }
 
     await new Promise(r => setTimeout(r, 200))
     phaseRef.current = 'reeling'
@@ -2298,13 +2534,6 @@ export default function FishingGame({
     startTransition(async () => {
       try {
       const res = await reelIn(hookedFishRef.current!.fishId, zone.type as 'perfect' | 'catch', selectedBaitRef.current, doubleCatch, streakBonusXP, jackpotMultiplier)
-
-      if (wonChallenge) {
-        await awardPerfectChallengeGem()
-        setChallengeActive(false)
-      } else if (triggerChallenge) {
-        setChallengeActive(true)
-      }
 
       if ('error' in res || !res.caught) {
         setMissResult('miss')
@@ -2344,7 +2573,7 @@ export default function FishingGame({
         // it when the YOLO jackpot actually triggered. Double catches go
         // through the separate "Double Catch — ×2" banner; we don't want
         // Millionaire's / Twin-Strike showing the "Jackpot!" banner too.
-        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge, perfectStreak: newStreak, streakBonusXP, jackpotMultiplier: jackpotHit && actualQty > 1 ? actualQty : undefined })
+        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: false, perfectStreak: newStreak, streakBonusXP, jackpotMultiplier: jackpotHit && actualQty > 1 ? actualQty : undefined })
         if (isNewSpecies) {
           if (fish.habitat === 'ancient_deep') {
             setTrophyCatches(prev => new Set([...prev, fish.id]))
@@ -2357,11 +2586,9 @@ export default function FishingGame({
         const newCatches = [...sessionCatches, ...Array(catchCount).fill(fish)]
         const newPerfects = sessionPerfects + (wasPerfect ? 1 : 0)
         const newNewSpecies = sessionNewSpecies + (isNewSpecies ? 1 : 0)
-        const newGems = sessionGems + (wonChallenge ? 1 : 0)
         setSessionCatches(newCatches)
         if (wasPerfect) setSessionPerfects(newPerfects)
         if (isNewSpecies) setSessionNewSpecies(newNewSpecies)
-        if (wonChallenge) setSessionGems(newGems)
         if (activeSession && !sessionDone) {
           const ct = activeSession.challengeType
           if (ct === 'most_fish') setSessionScore(s => s + catchCount)
@@ -2380,7 +2607,7 @@ export default function FishingGame({
             xpGained: newXP - initialFishingXP,
             perfects: newPerfects,
             newSpecies: newNewSpecies,
-            gems: newGems,
+            gems: 0,
             bestCatch: bestCatch ? { name: bestCatch.name, bite_rarity: bestCatch.bite_rarity, scientific_name: bestCatch.scientific_name } : null,
             rarityCounts,
           }))
@@ -2465,6 +2692,12 @@ export default function FishingGame({
 
   async function handleCastAgain() {
     if (phase !== 'result') return
+    // Same Finn intercept as handleCast. Bait isn't consumed during an
+    // encounter, so the player can pass freely.
+    if (!finnChallenge && !finnOverlay && Math.random() < FINN_ENCOUNTER_RATE) {
+      fireFinnEncounter()
+      return
+    }
     setCastRippleKey(k => k + 1)
     setTimeout(() => setCastRippleKey(0), 1800)
     setCatchResult(null)
@@ -3257,17 +3490,6 @@ export default function FishingGame({
                       </div>
                     )}
                   </div>
-
-                  {/* Double-perfect challenge taunt */}
-                  {challengeActive && phase === 'catching' && (
-                    <motion.p
-                      initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-                      className="font-karla font-700 text-center"
-                      style={{ fontSize: '0.65rem', color: '#f59e0b', letterSpacing: '0.04em', marginBottom: 4 }}
-                    >
-                      I bet you can&apos;t do that again.
-                    </motion.p>
-                  )}
 
                   <div style={{ position: 'relative' }}>
                     <div style={{
@@ -5324,6 +5546,50 @@ export default function FishingGame({
       </div>
 
       <EventBanner event={activeEvent} announcing={eventAnnouncing} />
+
+      {/* ── Finn (fishing rival) overlay ─────────────────────────────────
+          Mounted at the document root so it floats above the fishing UI.
+          Mode controls whether this is an offer, a result, or the climax
+          reveal. Bait is never consumed during an encounter. */}
+      <FinnEncounter
+        visible={finnOverlay !== null}
+        lines={finnOverlay?.lines ?? []}
+        mode={finnOverlay?.mode ?? 'offer'}
+        challenge={finnOverlay?.challenge}
+        onAccept={handleFinnAccept}
+        onPass={handleFinnPass}
+        onDismiss={handleFinnDismiss}
+      />
+
+      {/* Active-challenge HUD chip — small floating reminder of what bet
+          you're running so you don't forget mid-cast. Speed challenges
+          show a live countdown; perfect challenges show your progress. */}
+      {finnChallenge && (
+        <div style={{
+          position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 60px)',
+          left: '50%', transform: 'translateX(-50%)',
+          zIndex: 60, pointerEvents: 'none',
+          padding: '0.36rem 0.78rem',
+          background: 'linear-gradient(180deg, rgba(240,192,64,0.22) 0%, rgba(240,192,64,0.06) 100%), #1a1304',
+          border: '1px solid rgba(240,192,64,0.50)',
+          borderTop: '1px solid rgba(240,192,64,0.80)',
+          borderRadius: 999,
+          boxShadow: '0 0 16px rgba(240,192,64,0.20)',
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+        }}>
+          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', color: '#fbbf24', letterSpacing: '0.16em' }}>
+            Finn&apos;s Bet
+          </span>
+          <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#fde68a' }}>
+            {finnChallenge.type === 'perfect_streak'
+              ? `${finnChallenge.perfectsHit ?? 0} / ${finnChallenge.perfectsTarget} perfects`
+              : `${finnChallenge.fishCaught ?? 0} / ${finnChallenge.fishTarget} fish`}
+          </span>
+          {finnChallenge.type === 'speed_catch' && (
+            <SpeedClock endsAt={finnChallenge.speedEndsAt ?? 0} />
+          )}
+        </div>
+      )}
     </div>
   )
 }
