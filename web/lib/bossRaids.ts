@@ -60,7 +60,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 2, maxDmg: 5,
       shipSpeed: 4, actionMs: 4500,
       pattern: ['reload', 'fire', 'reload', 'fire'],
-      critChance: 0.05,  // brutes are unsubtle — low crit
+      critChance: 0.025,  // brutes are unsubtle — low crit
       image: '/enemytier1.png',
       portrait: ENEMY_IMG_BASE + 'reefraider.png',
     },
@@ -68,7 +68,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
       shipSpeed: 3, actionMs: 5500,
       pattern: ['reload', 'reload', 'dodge', 'reload', 'fire'],
-      critChance: 0.20,  // marksman — high crit, slower cadence
+      critChance: 0.10,  // marksman — higher crit than others, slower cadence
       image: '/enemytier1scout.png',
       portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png',
     },
@@ -76,7 +76,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
       shipSpeed: 7, actionMs: 3500,
       pattern: ['reload', 'dodge', 'fire', 'reload', 'fire'],
-      critChance: 0.10,
+      critChance: 0.05,
       image: '/enemytier1elite.png',
       portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png',
     },
@@ -84,7 +84,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       id: 'pete', name: 'Barnacle Pete', hpBase: 55, minDmg: 8, maxDmg: 15,
       shipSpeed: 6, actionMs: 4500,
       pattern: ['reload', 'reload', 'dodge', 'fire', 'reload', 'fire'],
-      critChance: 0.15,
+      critChance: 0.075,
       image: '/enemytier1boss.png',
       portrait: ENEMY_IMG_BASE + 'barnacle_pete.png',
     },
