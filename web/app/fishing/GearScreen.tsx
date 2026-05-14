@@ -1092,21 +1092,29 @@ export default function GearScreen({
                             position: 'relative',
                           }}
                         >
-                          <div style={{
-                            position: 'relative',
-                            width: 48, height: 48, overflow: 'hidden',
-                          }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={b.restImageUrl}
-                              alt=""
-                              className={b.glow ? 'boat-glow' : undefined}
-                              style={{
-                                width: '170%', height: 'auto', display: 'block',
-                                position: 'absolute', top: '50%', left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                              }}
-                            />
+                          {/* Wrapper hosts the decorative halo for glow boats
+                              alongside the clipped thumbnail. Drop-shadow
+                              filters on the thumbnail itself get cut off by
+                              the 48x48 overflow:hidden, so the halo lives
+                              outside that clip. */}
+                          <div style={{ position: 'relative', width: 48, height: 48 }}>
+                            {b.glow && <div className="boat-glow-halo" aria-hidden />}
+                            <div style={{
+                              position: 'relative',
+                              width: 48, height: 48, overflow: 'hidden',
+                              zIndex: 1,
+                            }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={b.restImageUrl}
+                                alt=""
+                                style={{
+                                  width: '170%', height: 'auto', display: 'block',
+                                  position: 'absolute', top: '50%', left: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                }}
+                              />
+                            </div>
                           </div>
                           <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: owned ? '#f0ede8' : '#a0a09a', lineHeight: 1.1, textAlign: 'center' }}>{b.name}</p>
                           {isEquipped ? (

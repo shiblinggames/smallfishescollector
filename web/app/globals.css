@@ -416,6 +416,30 @@ body {
   will-change: transform, filter;
 }
 
+/* Picker-tile glow halo. The full .boat-glow shimmer relies on large
+   drop-shadows that get clipped by the 48x48 overflow:hidden box around
+   the boat thumbnail — they read as a square box of light rather than a
+   soft aura. This is a separate decorative element rendered behind the
+   thumbnail with a radial gradient that pulses softly. */
+@keyframes boat-glow-halo {
+  0%, 100% { opacity: 0.55; transform: scale(0.96); }
+  50%      { opacity: 1.00; transform: scale(1.06); }
+}
+.boat-glow-halo {
+  position: absolute;
+  inset: -6px;
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse at center,
+      rgba(255,240,210,0.55) 0%,
+      rgba(220,235,255,0.35) 35%,
+      rgba(200,180,255,0.18) 65%,
+      transparent 88%);
+  filter: blur(3px);
+  pointer-events: none;
+  animation: boat-glow-halo 3.2s ease-in-out infinite;
+}
+
 /* ── Shop affordance pulse (gear button + slot tiles when an upgrade is in budget) ── */
 @keyframes shop-pulse {
   0%, 100% { transform: scale(1);    box-shadow: 0 0 6px rgba(74,222,128,0.7); }
