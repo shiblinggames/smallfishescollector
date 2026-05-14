@@ -3195,6 +3195,34 @@ export default function FishingGame({
           </div>
 
 
+          {/* Active Finn challenge chip — sits directly below the XP bar
+              so the player can glance up and see where they are in the
+              bet. Amber palette to keep the rival vibe light. */}
+          {finnChallenge && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 8, marginBottom: '0.4rem',
+              padding: '0.32rem 0.78rem',
+              background: 'linear-gradient(180deg, rgba(200,168,80,0.18) 0%, rgba(200,168,80,0.05) 100%), #14100a',
+              border: '1px solid rgba(200,168,80,0.42)',
+              borderTop: '1px solid rgba(200,168,80,0.70)',
+              borderRadius: 999,
+              boxShadow: '0 0 14px rgba(200,168,80,0.18)',
+            }}>
+              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', color: '#d8b878', letterSpacing: '0.16em' }}>
+                Finn&apos;s Bet
+              </span>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0d8a0' }}>
+                {finnChallenge.type === 'perfect_streak'
+                  ? `${finnChallenge.perfectsHit ?? 0} / ${finnChallenge.perfectsTarget} perfects`
+                  : `${finnChallenge.fishCaught ?? 0} / ${finnChallenge.fishTarget} fish`}
+              </span>
+              {finnChallenge.type === 'speed_catch' && (
+                <SpeedClock endsAt={finnChallenge.speedEndsAt ?? 0} />
+              )}
+            </div>
+          )}
+
           {/* Active event indicator — below XP bar, reserved height prevents layout shift */}
           <div style={{ minHeight: 28, marginBottom: '0.3rem' }}>
             <AnimatePresence>
@@ -5561,35 +5589,6 @@ export default function FishingGame({
         onDismiss={handleFinnDismiss}
       />
 
-      {/* Active-challenge HUD chip — small floating reminder of what bet
-          you're running so you don't forget mid-cast. Speed challenges
-          show a live countdown; perfect challenges show your progress. */}
-      {finnChallenge && (
-        <div style={{
-          position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 60px)',
-          left: '50%', transform: 'translateX(-50%)',
-          zIndex: 60, pointerEvents: 'none',
-          padding: '0.36rem 0.78rem',
-          background: 'linear-gradient(180deg, rgba(240,192,64,0.22) 0%, rgba(240,192,64,0.06) 100%), #1a1304',
-          border: '1px solid rgba(240,192,64,0.50)',
-          borderTop: '1px solid rgba(240,192,64,0.80)',
-          borderRadius: 999,
-          boxShadow: '0 0 16px rgba(240,192,64,0.20)',
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-        }}>
-          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', color: '#fbbf24', letterSpacing: '0.16em' }}>
-            Finn&apos;s Bet
-          </span>
-          <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#fde68a' }}>
-            {finnChallenge.type === 'perfect_streak'
-              ? `${finnChallenge.perfectsHit ?? 0} / ${finnChallenge.perfectsTarget} perfects`
-              : `${finnChallenge.fishCaught ?? 0} / ${finnChallenge.fishTarget} fish`}
-          </span>
-          {finnChallenge.type === 'speed_catch' && (
-            <SpeedClock endsAt={finnChallenge.speedEndsAt ?? 0} />
-          )}
-        </div>
-      )}
     </div>
   )
 }

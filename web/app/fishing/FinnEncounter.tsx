@@ -75,7 +75,7 @@ export default function FinnEncounter({
             onClick={handleBackdropClick}
             style={{
               position: 'fixed', inset: 0, zIndex: 100, cursor: 'pointer',
-              background: 'rgba(0,0,0,0.62)',
+              background: 'rgba(0,0,0,0.55)',
               backdropFilter: 'blur(2px)',
               WebkitBackdropFilter: 'blur(2px)',
             }}
@@ -92,12 +92,15 @@ export default function FinnEncounter({
               top: '50%', left: '1rem', right: '1rem',
               transform: 'translateY(-50%)',
               maxWidth: 380, margin: '0 auto',
-              background: 'linear-gradient(180deg, #1a0e16 0%, #0a0608 100%)',
-              border: '1px solid rgba(220,38,38,0.36)',
-              borderTop: '1px solid rgba(220,38,38,0.65)',
+              // Light-rival palette: maritime navy base with warm amber
+              // trim — same chrome family as the rest of the game's
+              // dialogue overlays. Drops the previous menacing red.
+              background: 'linear-gradient(180deg, #0e1a2b 0%, #06101c 100%)',
+              border: '1px solid rgba(200,168,80,0.32)',
+              borderTop: '1px solid rgba(200,168,80,0.60)',
               borderRadius: 16,
               padding: '1.1rem 1.1rem 1rem',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.65), 0 0 40px rgba(220,38,38,0.15)',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.55)',
             }}
           >
             {/* Header — eyebrow + portrait + name */}
@@ -105,7 +108,7 @@ export default function FinnEncounter({
               <div style={{
                 transform: FINN_AVATAR.mirrored ? 'scaleX(-1)' : 'none',
                 flexShrink: 0,
-                boxShadow: '0 0 18px rgba(220,38,38,0.30)',
+                boxShadow: '0 0 16px rgba(200,168,80,0.28)',
                 borderRadius: '50%',
               }}>
                 <CharacterAvatar
@@ -118,13 +121,13 @@ export default function FinnEncounter({
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p className="font-karla font-700 uppercase" style={{
-                  fontSize: '0.55rem', color: '#dc7a7a', letterSpacing: '0.20em', marginBottom: 3,
+                  fontSize: '0.55rem', color: '#c8a060', letterSpacing: '0.20em', marginBottom: 3,
                 }}>
                   Rival
                 </p>
                 <p className="font-cinzel font-700" style={{
                   fontSize: '1.2rem', color: '#f0ede8', lineHeight: 1,
-                  textShadow: '0 0 14px rgba(220,38,38,0.35)',
+                  textShadow: '0 0 12px rgba(200,168,80,0.30)',
                 }}>
                   {FINN_NAME}
                 </p>
@@ -135,7 +138,7 @@ export default function FinnEncounter({
                   {lines.map((_, i) => (
                     <span key={i} style={{
                       width: i === index ? 16 : 5, height: 4, borderRadius: 999,
-                      background: i === index ? '#dc2626' : i < index ? 'rgba(220,38,38,0.5)' : 'rgba(255,255,255,0.18)',
+                      background: i === index ? '#c8a060' : i < index ? 'rgba(200,168,80,0.45)' : 'rgba(255,255,255,0.18)',
                       transition: 'width 0.22s, background 0.22s',
                     }} />
                   ))}
@@ -244,10 +247,10 @@ export default function FinnEncounter({
                   className="font-cinzel font-700 uppercase tracking-[0.12em]"
                   style={{
                     flex: 1, padding: '0.7rem',
-                    background: 'linear-gradient(180deg, rgba(220,38,38,0.22) 0%, rgba(220,38,38,0.06) 100%)',
-                    border: '1px solid rgba(220,38,38,0.45)',
-                    borderTop: '1px solid rgba(220,38,38,0.70)',
-                    color: '#fda4a4',
+                    background: 'linear-gradient(180deg, rgba(200,168,80,0.22) 0%, rgba(200,168,80,0.06) 100%)',
+                    border: '1px solid rgba(200,168,80,0.45)',
+                    borderTop: '1px solid rgba(200,168,80,0.70)',
+                    color: '#e8c48a',
                     borderRadius: 10, fontSize: '0.78rem',
                     cursor: 'pointer',
                   }}

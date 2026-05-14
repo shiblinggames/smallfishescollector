@@ -13,13 +13,13 @@
 export const FINN_NAME = 'Finn'
 
 // Visuals — uses the existing CharacterAvatar component so we don't need
-// new art. Mirrored so he faces the player. Swap to whichever character
-// color reads as most distinctive against the player palette.
+// new art. Mirrored so he faces the player. Warm-amber avatar ring keeps
+// the rival vibe friendly rather than menacing (was a red ring before).
 export const FINN_AVATAR = {
   characterColor: 'ruby',
   equippedHat: null as string | null,
-  bgColor: '#3a1a1a',
-  borderColor: '#dc2626',
+  bgColor: '#1a1408',
+  borderColor: '#c8a060',
   mirrored: true,
 } as const
 
