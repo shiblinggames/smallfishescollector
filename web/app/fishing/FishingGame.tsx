@@ -973,171 +973,147 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
         </motion.div>
       )}
 
-      {/* Perfect catch banner — matches the new gradient + top-accent panel
-          chrome used across the game (skirmish tour, packs page, raid
-          overlays). Eyebrow caption + values + streak counter. */}
-      {isPerfect && (() => {
-        const isCombo = perfectStreak >= 3
-        const isOnFire = perfectStreak >= 3
-        const isIgnition = perfectStreak === 3
-        const s = Math.min(perfectStreak, 6)
-        const accent = isOnFire ? '#fb923c' : '#fbbf24'
-        const accentRgb = isOnFire ? '251,146,60' : '251,191,36'
-        const glow = `0 0 ${12 + (s - 1) * 4}px rgba(${accentRgb},${0.28 + (s - 1) * 0.05})`
-        const basePerfectBonus = Math.round((xpGained - streakBonusXP) * 0.2 / 1.2)
-        return (
-          <div style={{ position: 'relative' }} className="mb-2">
-            {/* Ignition burst rings (kept — still a satisfying VFX) */}
-            {isIgnition && [0, 0.1, 0.2].map((delay, i) => (
-              <motion.div key={i}
-                initial={{ scale: 0.85, opacity: 0.7 - i * 0.2 }}
-                animate={{ scale: 2.2 - i * 0.25, opacity: 0 }}
-                transition={{ duration: 0.55, ease: 'easeOut', delay }}
-                style={{
-                  position: 'absolute', inset: 0, borderRadius: 12,
-                  border: `${1.5 - i * 0.3}px solid rgba(251,146,60,${0.7 - i * 0.2})`,
-                  pointerEvents: 'none',
-                }}
-              />
-            ))}
+      {/* Compact banner row — perfect / double / jackpot / gem all collapse
+          into a single flex-wrap row of slim pills so they never push the
+          cast button or bottom nav off the screen. Each pill keeps its own
+          accent color + the same gradient + top-accent chrome as before,
+          just at ~32px tall instead of ~80px. Ignition burst rings still
+          fire on the perfect pill at the 3-streak ignition moment. */}
+      {(isPerfect || (jackpotMultiplier && jackpotMultiplier > 1) || doubleCatch || gemEarned) && (
+        <div className="mb-2 flex flex-wrap items-center justify-center gap-1.5">
+          {isPerfect && (() => {
+            const isOnFire = perfectStreak >= 3
+            const isIgnition = perfectStreak === 3
+            const s = Math.min(perfectStreak, 6)
+            const accent = isOnFire ? '#fb923c' : '#fbbf24'
+            const accentRgb = isOnFire ? '251,146,60' : '251,191,36'
+            const glow = `0 0 ${10 + (s - 1) * 3}px rgba(${accentRgb},${0.30 + (s - 1) * 0.04})`
+            const basePerfectBonus = Math.round((xpGained - streakBonusXP) * 0.2 / 1.2)
+            const totalXp = basePerfectBonus + streakBonusXP
+            return (
+              <div style={{ position: 'relative', display: 'inline-flex' }}>
+                {/* Ignition burst rings — fire on first time hitting streak 3 */}
+                {isIgnition && [0, 0.1, 0.2].map((delay, i) => (
+                  <motion.div key={i}
+                    initial={{ scale: 0.85, opacity: 0.7 - i * 0.2 }}
+                    animate={{ scale: 2.2 - i * 0.25, opacity: 0 }}
+                    transition={{ duration: 0.55, ease: 'easeOut', delay }}
+                    style={{
+                      position: 'absolute', inset: 0, borderRadius: 999,
+                      border: `${1.5 - i * 0.3}px solid rgba(251,146,60,${0.7 - i * 0.2})`,
+                      pointerEvents: 'none',
+                    }}
+                  />
+                ))}
+                <motion.div
+                  key={perfectStreak}
+                  initial={{ opacity: 0, y: -6, scale: 0.92 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+                  className="font-karla font-700 uppercase"
+                  style={{
+                    background: `linear-gradient(180deg, rgba(${accentRgb},0.22) 0%, rgba(${accentRgb},0.06) 100%), #0d1320`,
+                    border: `1px solid rgba(${accentRgb},0.48)`,
+                    borderTop: `1px solid rgba(${accentRgb},0.78)`,
+                    borderRadius: 999,
+                    boxShadow: glow,
+                    padding: '0.36rem 0.72rem',
+                    fontSize: '0.62rem',
+                    letterSpacing: '0.14em',
+                    color: accent,
+                    display: 'inline-flex', alignItems: 'center', gap: 7,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span>{isOnFire ? '🔥' : '⭐'}</span>
+                  <span>{isOnFire ? 'On Fire' : 'Perfect'}</span>
+                  {totalXp > 0 && (
+                    <span style={{ color: '#86efac', letterSpacing: 0 }}>+{totalXp} XP</span>
+                  )}
+                  {perfectStreak >= 2 && (
+                    <span style={{ color: accent, letterSpacing: 0, textShadow: `0 0 8px rgba(${accentRgb},0.6)` }}>×{perfectStreak}</span>
+                  )}
+                  {baitSaved && <span style={{ color: '#86efac', letterSpacing: 0 }}>+bait</span>}
+                </motion.div>
+              </div>
+            )
+          })()}
+
+          {doubleCatch && (
             <motion.div
-              key={perfectStreak}
-              initial={{ opacity: 0, y: -8, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
+              initial={{ opacity: 0, y: -6, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+              className="font-karla font-700 uppercase"
               style={{
-                // Opaque dark base + colored tint on top. The earlier
-                // translucent gradient let the busy fishing UI behind
-                // bleed through and dropped contrast on the text.
-                background: `linear-gradient(180deg, rgba(${accentRgb},0.22) 0%, rgba(${accentRgb},0.06) 100%), #0d1320`,
-                border: `1px solid rgba(${accentRgb},0.48)`,
-                borderTop: `1px solid rgba(${accentRgb},0.78)`,
-                borderRadius: 12,
-                boxShadow: glow,
-                padding: '0.7rem 0.9rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 10,
+                background: 'linear-gradient(180deg, rgba(251,191,36,0.22) 0%, rgba(251,191,36,0.06) 100%), #1a1304',
+                border: '1px solid rgba(251,191,36,0.50)',
+                borderTop: '1px solid rgba(251,191,36,0.80)',
+                borderRadius: 999,
+                boxShadow: '0 0 12px rgba(251,191,36,0.22)',
+                padding: '0.36rem 0.72rem',
+                fontSize: '0.62rem',
+                letterSpacing: '0.14em',
+                color: '#fbbf24',
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                whiteSpace: 'nowrap',
               }}
             >
-              <div style={{ minWidth: 0 }}>
-                <p className="font-karla font-700 uppercase"
-                  style={{ fontSize: '0.55rem', color: accent, letterSpacing: '0.20em', marginBottom: 5 }}>
-                  {isIgnition ? '🔥 On Fire' : isOnFire ? 'On Fire' : 'Perfect Catch'}
-                </p>
-                <div className="flex items-center gap-3 flex-wrap">
-                  {basePerfectBonus > 0 && (
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#86efac' }}>
-                      +{basePerfectBonus} XP
-                    </p>
-                  )}
-                  {streakBonusXP > 0 && (
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: accent }}>+{streakBonusXP} XP</p>
-                  )}
-                  {baitSaved && (
-                    <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#86efac' }}>
-                      Bait returned
-                    </p>
-                  )}
-                </div>
-              </div>
-              {isCombo && (
-                <p className="font-cinzel font-700" style={{ fontSize: '1.7rem', color: accent, textShadow: glow, lineHeight: 1, flexShrink: 0 }}>
-                  ×{perfectStreak}
-                </p>
-              )}
+              <span>✦</span>
+              <span>Double</span>
+              <span style={{ color: '#fde68a', letterSpacing: 0, textShadow: '0 0 8px rgba(251,191,36,0.55)' }}>×2</span>
             </motion.div>
-          </div>
-        )
-      })()}
+          )}
 
-      {/* Jackpot banner — same panel chrome as the perfect banner, just in
-          the YOLO orange. Lives on its own line beneath the perfect banner
-          when both fire on the same catch (yes, that can happen). */}
-      {jackpotMultiplier && jackpotMultiplier > 1 && (
-        <motion.div
-          initial={{ opacity: 0, y: -10, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ type: 'spring', stiffness: 320, damping: 18 }}
-          className="mb-2"
-          style={{
-            background: 'linear-gradient(180deg, rgba(249,115,22,0.24) 0%, rgba(249,115,22,0.06) 100%), #1a0c04',
-            border: '1px solid rgba(249,115,22,0.55)',
-            borderTop: '1px solid rgba(249,115,22,0.85)',
-            borderRadius: 12,
-            boxShadow: '0 0 22px rgba(249,115,22,0.30)',
-            padding: '0.7rem 0.9rem',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-          }}
-        >
-          <span style={{ fontSize: '1.1rem', color: '#fb923c', textShadow: '0 0 10px rgba(249,115,22,0.7)' }}>★</span>
-          <div style={{ textAlign: 'center' }}>
-            <p className="font-karla font-700 uppercase"
-              style={{ fontSize: '0.58rem', color: '#fb923c', letterSpacing: '0.22em', marginBottom: 3 }}>
-              Jackpot
-            </p>
-            <p className="font-cinzel font-700"
-              style={{ fontSize: '1.05rem', color: '#fdba74', textShadow: '0 0 14px rgba(249,115,22,0.55)', lineHeight: 1 }}>
-              ×{jackpotMultiplier} fish landed
-            </p>
-          </div>
-          <span style={{ fontSize: '1.1rem', color: '#fb923c', textShadow: '0 0 10px rgba(249,115,22,0.7)' }}>★</span>
-        </motion.div>
-      )}
+          {jackpotMultiplier && jackpotMultiplier > 1 && (
+            <motion.div
+              initial={{ opacity: 0, y: -6, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 18 }}
+              className="font-karla font-700 uppercase"
+              style={{
+                background: 'linear-gradient(180deg, rgba(249,115,22,0.24) 0%, rgba(249,115,22,0.06) 100%), #1a0c04',
+                border: '1px solid rgba(249,115,22,0.55)',
+                borderTop: '1px solid rgba(249,115,22,0.85)',
+                borderRadius: 999,
+                boxShadow: '0 0 14px rgba(249,115,22,0.32)',
+                padding: '0.36rem 0.72rem',
+                fontSize: '0.62rem',
+                letterSpacing: '0.14em',
+                color: '#fb923c',
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span>★</span>
+              <span>Jackpot</span>
+              <span style={{ color: '#fdba74', letterSpacing: 0, textShadow: '0 0 8px rgba(249,115,22,0.55)' }}>×{jackpotMultiplier}</span>
+            </motion.div>
+          )}
 
-      {/* Gem earned banner */}
-      {gemEarned && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 22, delay: 0.15 }}
-          className="flex items-center justify-center gap-2 mb-2 py-2 px-3 rounded-xl"
-          style={{ background: 'rgba(0,8,12,0.88)', border: '1px solid rgba(99,226,183,0.55)' }}
-        >
-          <span style={{ fontSize: '0.72rem', color: '#63e2b7' }}>◆</span>
-          <div style={{ textAlign: 'center' }}>
-            <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
-              style={{ fontSize: '0.72rem', color: '#63e2b7', textShadow: '0 0 10px rgba(99,226,183,0.6)' }}>
-              Challenge Complete
-            </p>
-            <p className="font-karla font-600 mt-0.5" style={{ fontSize: '0.6rem', color: 'rgba(99,226,183,0.7)' }}>
-              +1 Gem
-            </p>
-          </div>
-          <span style={{ fontSize: '0.72rem', color: '#63e2b7' }}>◆</span>
-        </motion.div>
-      )}
-
-      {/* Double catch banner — same panel chrome as the perfect/jackpot
-          banners, in the gold accent. Fires for Millionaire's (always)
-          and Twin-Strike (25%); the YOLO jackpot has its own banner. */}
-      {doubleCatch && (
-        <motion.div
-          initial={{ opacity: 0, y: -10, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-          className="mb-2"
-          style={{
-            background: 'linear-gradient(180deg, rgba(251,191,36,0.22) 0%, rgba(251,191,36,0.06) 100%), #1a1304',
-            border: '1px solid rgba(251,191,36,0.50)',
-            borderTop: '1px solid rgba(251,191,36,0.80)',
-            borderRadius: 12,
-            boxShadow: '0 0 18px rgba(251,191,36,0.25)',
-            padding: '0.65rem 0.9rem',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-          }}
-        >
-          <span style={{ fontSize: '1rem', color: '#fbbf24', textShadow: '0 0 8px rgba(251,191,36,0.7)' }}>✦</span>
-          <div style={{ textAlign: 'center' }}>
-            <p className="font-karla font-700 uppercase"
-              style={{ fontSize: '0.58rem', color: '#fbbf24', letterSpacing: '0.22em', marginBottom: 3 }}>
-              Double Catch
-            </p>
-            <p className="font-cinzel font-700"
-              style={{ fontSize: '1rem', color: '#fde68a', textShadow: '0 0 12px rgba(251,191,36,0.55)', lineHeight: 1 }}>
-              ×2 fish landed
-            </p>
-          </div>
-          <span style={{ fontSize: '1rem', color: '#fbbf24', textShadow: '0 0 8px rgba(251,191,36,0.7)' }}>✦</span>
-        </motion.div>
+          {gemEarned && (
+            <motion.div
+              initial={{ opacity: 0, y: -6, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 22, delay: 0.15 }}
+              className="font-karla font-700 uppercase"
+              style={{
+                background: 'linear-gradient(180deg, rgba(99,226,183,0.20) 0%, rgba(99,226,183,0.04) 100%), #04141a',
+                border: '1px solid rgba(99,226,183,0.50)',
+                borderTop: '1px solid rgba(99,226,183,0.78)',
+                borderRadius: 999,
+                boxShadow: '0 0 12px rgba(99,226,183,0.22)',
+                padding: '0.36rem 0.72rem',
+                fontSize: '0.62rem',
+                letterSpacing: '0.14em',
+                color: '#63e2b7',
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span>◆</span>
+              <span>Challenge</span>
+              <span style={{ color: '#9af3cf', letterSpacing: 0 }}>+1 Gem</span>
+            </motion.div>
+          )}
+        </div>
       )}
 
       {/* Card + all its effects in one relative container */}
