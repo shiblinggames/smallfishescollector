@@ -1105,20 +1105,36 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
         </motion.div>
       )}
 
-      {/* Double catch banner */}
+      {/* Double catch banner — same panel chrome as the perfect/jackpot
+          banners, in the gold accent. Fires for Millionaire's (always)
+          and Twin-Strike (25%); the YOLO jackpot has its own banner. */}
       {doubleCatch && (
         <motion.div
-          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: -10, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-          className="flex items-center justify-center gap-2 mb-2 py-2 px-3 rounded-xl"
-          style={{ background: 'rgba(4,8,0,0.88)', border: '1px solid rgba(251,191,36,0.45)' }}
+          className="mb-2"
+          style={{
+            background: 'linear-gradient(180deg, rgba(251,191,36,0.18) 0%, rgba(251,191,36,0.04) 100%)',
+            border: '1px solid rgba(251,191,36,0.34)',
+            borderTop: '1px solid rgba(251,191,36,0.62)',
+            borderRadius: 12,
+            boxShadow: '0 0 18px rgba(251,191,36,0.20)',
+            padding: '0.65rem 0.9rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+          }}
         >
-          <span style={{ fontSize: '0.65rem', color: '#fbbf24' }}>✦</span>
-          <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
-            style={{ fontSize: '0.68rem', color: '#fbbf24', textShadow: '0 0 10px rgba(251,191,36,0.6)' }}>
-            Double Catch — ×2
-          </p>
-          <span style={{ fontSize: '0.65rem', color: '#fbbf24' }}>✦</span>
+          <span style={{ fontSize: '1rem', color: '#fbbf24', textShadow: '0 0 8px rgba(251,191,36,0.6)' }}>✦</span>
+          <div style={{ textAlign: 'center' }}>
+            <p className="font-karla font-700 uppercase"
+              style={{ fontSize: '0.55rem', color: '#fde68a', letterSpacing: '0.22em', marginBottom: 3 }}>
+              Double Catch
+            </p>
+            <p className="font-cinzel font-700"
+              style={{ fontSize: '1rem', color: '#fbbf24', textShadow: '0 0 12px rgba(251,191,36,0.50)', lineHeight: 1 }}>
+              ×2 fish landed
+            </p>
+          </div>
+          <span style={{ fontSize: '1rem', color: '#fbbf24', textShadow: '0 0 8px rgba(251,191,36,0.6)' }}>✦</span>
         </motion.div>
       )}
 
@@ -2304,7 +2320,11 @@ export default function FishingGame({
         const currentHoldCount = inventory.reduce((s, i) => s + i.quantity, 0)
         const desiredQty = doubleCatch ? 2 : jackpotMultiplier
         const actualQty = Math.min(desiredQty, Math.max(0, holdCapacity - currentHoldCount))
-        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge, perfectStreak: newStreak, streakBonusXP, jackpotMultiplier: actualQty > 1 ? actualQty : undefined })
+        // jackpotMultiplier is the YOLO Rod's special ×N event — only set
+        // it when the YOLO jackpot actually triggered. Double catches go
+        // through the separate "Double Catch — ×2" banner; we don't want
+        // Millionaire's / Twin-Strike showing the "Jackpot!" banner too.
+        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: wonChallenge, perfectStreak: newStreak, streakBonusXP, jackpotMultiplier: jackpotHit && actualQty > 1 ? actualQty : undefined })
         if (isNewSpecies) {
           if (fish.habitat === 'ancient_deep') {
             setTrophyCatches(prev => new Set([...prev, fish.id]))
