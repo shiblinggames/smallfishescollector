@@ -218,8 +218,8 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
                   avatarBg={avatars[entry.user_id]?.avatarBg}
                   avatarBorder={avatars[entry.user_id]?.avatarBorder}
                 />
-                <div className="flex-1 min-w-0">
-                  <p className="font-karla font-700 truncate" style={{ fontSize: rank === 1 ? '0.88rem' : '0.8rem', color: isMe ? '#f0ede8' : '#c8c8c2' }}>
+                <div className="flex-1 min-w-0" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                  <p className="font-karla font-700 truncate" style={{ fontSize: rank === 1 ? '0.88rem' : '0.8rem', color: isMe ? '#f0ede8' : '#c8c8c2', minWidth: 0 }}>
                     {entry.username}
                     {isMe && <span style={{ color: accent, fontSize: '0.55rem', marginLeft: 6 }}>you</span>}
                   </p>
@@ -272,8 +272,8 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
                   avatarBg={avatars[entry.user_id]?.avatarBg}
                   avatarBorder={avatars[entry.user_id]?.avatarBorder}
                 />
-                <div className="flex-1 min-w-0">
-                  <p className="font-karla font-600 truncate" style={{ fontSize: '0.8rem', color: isMe ? '#f0ede8' : '#a0a09a' }}>
+                <div className="flex-1 min-w-0" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                  <p className="font-karla font-600 truncate" style={{ fontSize: '0.8rem', color: isMe ? '#f0ede8' : '#a0a09a', minWidth: 0 }}>
                     {entry.username}
                     {isMe && <span style={{ color: accent, fontSize: '0.55rem', marginLeft: 6 }}>you</span>}
                   </p>
