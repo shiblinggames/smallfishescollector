@@ -4,6 +4,10 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import LeaderboardClient from './LeaderboardClient'
 import type { LeaderboardEntry } from './LeaderboardClient'
+import {
+  EXPEDITION_SHIP_STATS, applyVariantBoosts, computeCombatRating,
+} from '@/lib/expeditions'
+import { getLevelFromXP as getExpeditionLevel, navLevelBonuses } from '@/lib/expeditionLevel'
 
 /** Resolve the player's rank on a board. If they're in the top-50 array we
  *  already fetched, use that index (free). Otherwise run a count query for
@@ -34,6 +38,110 @@ async function fetchBoard(admin: ReturnType<typeof createAdminClient>, view: str
   return { top: topRows, myScore, myRank }
 }
 
+/** Raid Score isn't stored — it's a live combat rating computed from each
+ *  player's CURRENT loadout (ship + assigned crew + nav-level bonuses). We
+ *  pull every profile, sum stats, run computeCombatRating, sort. There's
+ *  no leaderboard view to lean on since the inputs change every time the
+ *  player edits their loadout. */
+async function fetchRaidScoreBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
+  // 1. All profiles with the fields that feed into combat rating.
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('id, username, ship_tier, saved_crew, expedition_xp')
+
+  if (!profiles || profiles.length === 0) {
+    return { top: [] as LeaderboardEntry[], myScore: 0, myRank: null as number | null }
+  }
+
+  // 2. Collect every variant ID referenced by any saved_crew so we can
+  //    look up the underlying card stats in a single query.
+  const variantIds = new Set<number>()
+  for (const p of profiles as Array<{ saved_crew: number[] | null }>) {
+    for (const id of (p.saved_crew ?? [])) variantIds.add(id)
+  }
+
+  type CardRow = {
+    power: number; dodge: number; fortune: number
+    mythic_power: number; mythic_dodge: number; mythic_fortune: number
+  }
+  type VariantRow = { id: number; variant_name: string; cards: CardRow | null }
+
+  const variantMap = new Map<number, { variantName: string; power: number; dodge: number; fortune: number; mythic: { power: number; dodge: number; fortune: number } }>()
+  if (variantIds.size > 0) {
+    const { data: variants } = await admin
+      .from('card_variants')
+      .select('id, variant_name, cards(power, dodge, fortune, mythic_power, mythic_dodge, mythic_fortune)')
+      .in('id', Array.from(variantIds))
+    for (const v of (variants ?? []) as unknown as VariantRow[]) {
+      const c = v.cards
+      if (!c) continue
+      variantMap.set(v.id, {
+        variantName: v.variant_name,
+        power: c.power ?? 0,
+        dodge: c.dodge ?? 0,
+        fortune: c.fortune ?? 0,
+        mythic: {
+          power: c.mythic_power ?? 0,
+          dodge: c.mythic_dodge ?? 0,
+          fortune: c.mythic_fortune ?? 0,
+        },
+      })
+    }
+  }
+
+  // 3. Compute combat rating per profile.
+  const rows: LeaderboardEntry[] = []
+  for (const p of profiles as Array<{
+    id: string; username: string | null; ship_tier: number | null
+    saved_crew: number[] | null; expedition_xp: number | null
+  }>) {
+    const shipStats = EXPEDITION_SHIP_STATS[p.ship_tier ?? 0] ?? EXPEDITION_SHIP_STATS[0]
+    const navLevel  = getExpeditionLevel(p.expedition_xp ?? 0)
+    const navBonus  = navLevelBonuses(navLevel)
+
+    let crewPower = 0, crewDodge = 0, crewFortune = 0
+    const crew = p.saved_crew ?? []
+    crew.forEach((variantId, i) => {
+      const v = variantMap.get(variantId)
+      if (!v) return
+      const boosted = applyVariantBoosts(
+        { power: v.power, dodge: v.dodge, fortune: v.fortune },
+        v.variantName,
+        v.mythic,
+      )
+      // First slot (captain) full stats; rest at 0.8× — matches voyage/raid math.
+      const mult = i === 0 ? 1.0 : 0.8
+      crewPower   += Math.round(boosted.power   * mult)
+      crewDodge   += Math.round(boosted.dodge   * mult)
+      crewFortune += Math.round(boosted.fortune * mult)
+    })
+
+    const totalPower   = crewPower   + navBonus.power
+    const totalDodge   = crewDodge   + navBonus.navigation
+    const totalFortune = crewFortune + navBonus.fortune
+    const rating = computeCombatRating(
+      totalPower, totalDodge, totalFortune,
+      shipStats.durability + navBonus.hp,
+      shipStats.minDamage,
+    )
+
+    // Filter out players who haven't built any loadout at all — there's
+    // no meaningful "score" to rank, and they'd flood the bottom of the
+    // board. Anyone with at least one crew member or a non-default ship
+    // qualifies.
+    if (rating.total > 0 && (crew.length > 0 || (p.ship_tier ?? 0) > 0)) {
+      rows.push({ user_id: p.id, username: p.username ?? '', score: rating.total })
+    }
+  }
+
+  rows.sort((a, b) => b.score - a.score)
+  const top = rows.slice(0, 50)
+  const myIdx = rows.findIndex(r => r.user_id === userId)
+  const myScore = myIdx >= 0 ? rows[myIdx].score : 0
+  const myRank  = myIdx >= 0 ? myIdx + 1 : null
+  return { top, myScore, myRank }
+}
+
 async function fetchPerfectStreakBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
   const [{ data: top }, { data: me }] = await Promise.all([
     admin.from('leaderboard_perfect_streak')
@@ -57,13 +165,14 @@ export default async function LeaderboardPage() {
 
   const admin = createAdminClient()
 
-  const [profile, fishingData, perfectStreakData, tideRunData, fishSlotsData, expeditionData] = await Promise.all([
+  const [profile, fishingData, perfectStreakData, tideRunData, fishSlotsData, expeditionData, raidScoreData] = await Promise.all([
     admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     fetchBoard(admin, 'leaderboard_fishing', user.id),
     fetchPerfectStreakBoard(admin, user.id),
     fetchBoard(admin, 'leaderboard_tide_run', user.id),
     fetchBoard(admin, 'leaderboard_fish_slots', user.id),
     fetchBoard(admin, 'leaderboard_expedition', user.id),
+    fetchRaidScoreBoard(admin, user.id),
   ])
 
   // Fetch avatar data (character_color + equipped_hat) for every user that
@@ -76,6 +185,7 @@ export default async function LeaderboardPage() {
     ...tideRunData.top.map(e => e.user_id),
     ...fishSlotsData.top.map(e => e.user_id),
     ...expeditionData.top.map(e => e.user_id),
+    ...raidScoreData.top.map(e => e.user_id),
   ])
   const avatarsMap: Record<string, {
     characterColor: string | null
@@ -115,12 +225,14 @@ export default async function LeaderboardPage() {
             tideRun={tideRunData.top}
             fishSlots={fishSlotsData.top}
             expedition={expeditionData.top}
+            raidScore={raidScoreData.top}
             myScores={{
               fishing: fishingData.myScore,
               perfectStreak: perfectStreakData.myScore,
               tideRun: tideRunData.myScore,
               fishSlots: fishSlotsData.myScore,
               expedition: expeditionData.myScore,
+              raidScore: raidScoreData.myScore,
             }}
             myRanks={{
               fishing: fishingData.myRank,
@@ -128,6 +240,7 @@ export default async function LeaderboardPage() {
               tideRun: tideRunData.myRank,
               fishSlots: fishSlotsData.myRank,
               expedition: expeditionData.myRank,
+              raidScore: raidScoreData.myRank,
             }}
             currentUserId={user.id}
             avatars={avatarsMap}

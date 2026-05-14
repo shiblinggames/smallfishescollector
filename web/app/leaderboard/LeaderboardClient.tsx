@@ -19,6 +19,7 @@ interface MyScores {
   tideRun: number
   fishSlots: number
   expedition: number
+  raidScore: number
 }
 
 interface MyRanks {
@@ -27,6 +28,7 @@ interface MyRanks {
   tideRun: number | null
   fishSlots: number | null
   expedition: number | null
+  raidScore: number | null
 }
 
 interface Props {
@@ -35,6 +37,7 @@ interface Props {
   tideRun: LeaderboardEntry[]
   fishSlots: LeaderboardEntry[]
   expedition: LeaderboardEntry[]
+  raidScore: LeaderboardEntry[]
   myScores: MyScores
   myRanks: MyRanks
   currentUserId: string
@@ -49,7 +52,8 @@ interface Props {
   }>
 }
 
-type TabKey = 'fishingLevel' | 'perfectStreak' | 'tideRun' | 'fishSlots' | 'expedition'
+type TabKey = 'fishingLevel' | 'perfectStreak' | 'tideRun' | 'fishSlots' | 'expedition' | 'raidScore'
+type SectionKey = 'fishing' | 'expeditions' | 'tavern'
 
 interface BoardDef {
   key: TabKey
@@ -59,15 +63,21 @@ interface BoardDef {
   accent: string
 }
 
-// Order is also the grouping (Fishing → Tavern → Expeditions). Visual
-// section breaks come from the implicit row flow rather than headers.
-const BOARDS: BoardDef[] = [
-  { key: 'fishingLevel',  label: 'Fishing Level',   accent: '#f0c040' },
-  { key: 'perfectStreak', label: 'Perfect Streak',  accent: '#fb923c' },
-  { key: 'tideRun',       label: 'Tide Run',        accent: '#5da7d4' },
-  { key: 'fishSlots',     label: 'Fish Slots',      accent: '#34d399' },
-  { key: 'expedition',    label: 'Navigator Level', accent: '#7090c0' },
-]
+const BOARDS: Record<TabKey, BoardDef> = {
+  fishingLevel:  { key: 'fishingLevel',  label: 'Fishing Level',   accent: '#f0c040' },
+  perfectStreak: { key: 'perfectStreak', label: 'Perfect Streak',  accent: '#fb923c' },
+  expedition:    { key: 'expedition',    label: 'Navigator Level', accent: '#7090c0' },
+  raidScore:     { key: 'raidScore',     label: 'Raid Score',      accent: '#c8704a' },
+  tideRun:       { key: 'tideRun',       label: 'Tide Run',        accent: '#5da7d4' },
+  fishSlots:     { key: 'fishSlots',     label: 'Fish Slots',      accent: '#34d399' },
+}
+
+/** Master sections — each owns 2 boards. Section order = display order. */
+const SECTIONS: Record<SectionKey, { label: string; boards: TabKey[] }> = {
+  fishing:     { label: 'Fishing',     boards: ['perfectStreak', 'fishingLevel'] },
+  expeditions: { label: 'Expeditions', boards: ['expedition', 'raidScore'] },
+  tavern:      { label: 'Tavern',      boards: ['tideRun', 'fishSlots'] },
+}
 
 /** Podium colors: gold / silver / bronze for ranks 1, 2, 3.
  *  Anything outside the top 3 uses a neutral pill — no accent. */
@@ -97,10 +107,6 @@ function Avatar({ username, size = 36, characterColor: charColor, equippedHat, a
   avatarBorder?: string | null
 }) {
   const fallbackColor = avatarColor(username)
-  // If we have avatar data from the server payload, render the character +
-  // hat composite using the player's saved colors (or the shared defaults).
-  // Otherwise fall back to the username-hashed colored letter circle (still
-  // used for legacy accounts without character_color set).
   if (charColor) {
     return (
       <CharacterAvatar
@@ -316,30 +322,71 @@ function LeaderboardSection({ label, accent, unit, subUnit, data, myScore, curre
   )
 }
 
-export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fishSlots, expedition, myScores, myRanks, currentUserId, avatars }: Props) {
-  const [activeTab, setActiveTab] = useState<TabKey>('fishingLevel')
+export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fishSlots, expedition, raidScore, myScores, myRanks, currentUserId, avatars }: Props) {
+  const [section, setSection] = useState<SectionKey>('fishing')
+  const [activeTab, setActiveTab] = useState<TabKey>(SECTIONS.fishing.boards[0])
+
+  function selectSection(s: SectionKey) {
+    setSection(s)
+    // When switching sections, reset to that section's first board so the
+    // visible leaderboard always belongs to the active section.
+    setActiveTab(SECTIONS[s].boards[0])
+  }
+
+  function rankOf(key: TabKey): number | null {
+    switch (key) {
+      case 'fishingLevel':  return myRanks.fishing
+      case 'perfectStreak': return myRanks.perfectStreak
+      case 'expedition':    return myRanks.expedition
+      case 'raidScore':     return myRanks.raidScore
+      case 'tideRun':       return myRanks.tideRun
+      case 'fishSlots':     return myRanks.fishSlots
+    }
+  }
 
   return (
     <div style={{ paddingBottom: '2rem' }}>
 
-      {/* ── Board picker — compact pills ── */}
-      {/* Pills are neutral by default. If the player is podium-ranked
-          (top 3) on a board, that pill takes the podium color (gold /
-          silver / bronze) so wins are visible at a glance. Teaser shows
-          rank, not raw score. */}
+      {/* ── Section tabs (Fishing / Expeditions / Tavern) ─────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: '0.6rem' }}>
+        {(Object.keys(SECTIONS) as SectionKey[]).map(key => {
+          const isActive = section === key
+          return (
+            <button
+              key={key}
+              onClick={() => selectSection(key)}
+              className="font-cinzel font-700 uppercase tracking-[0.10em]"
+              style={{
+                padding: '0.55rem 0.5rem',
+                borderRadius: 10,
+                background: isActive
+                  ? 'linear-gradient(180deg, rgba(240,192,64,0.20) 0%, rgba(240,192,64,0.05) 100%)'
+                  : 'rgba(6,6,4,0.7)',
+                border: `1px solid ${isActive ? 'rgba(240,192,64,0.48)' : NEUTRAL_BORDER}`,
+                borderTop: `1px solid ${isActive ? 'rgba(240,192,64,0.78)' : NEUTRAL_BORDER_TOP}`,
+                color: isActive ? '#f0c040' : NEUTRAL_TEXT,
+                fontSize: '0.72rem',
+                cursor: 'pointer',
+                boxShadow: isActive ? '0 0 14px rgba(240,192,64,0.20)' : 'none',
+                transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
+              }}
+            >
+              {SECTIONS[key].label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* ── Sub-filter pills — only the boards belonging to the active
+            section. Pills go neutral by default; podium ranks (top 3)
+            light up in gold/silver/bronze. Teaser is the rank, not the
+            score. ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: '1.25rem' }}>
-        {BOARDS.map(b => {
-          const isActive = activeTab === b.key
-          const myRank = b.key === 'fishingLevel' ? myRanks.fishing
-            : b.key === 'perfectStreak' ? myRanks.perfectStreak
-            : b.key === 'tideRun' ? myRanks.tideRun
-            : b.key === 'fishSlots' ? myRanks.fishSlots
-            : myRanks.expedition
+        {SECTIONS[section].boards.map(key => {
+          const b = BOARDS[key]
+          const isActive = activeTab === key
+          const myRank = rankOf(key)
           const podiumColor = myRank != null && myRank <= 3 ? PODIUM_COLORS[myRank] : null
-          // Pill accent: podium color when applicable, otherwise neutral.
-          // Active state still highlights — uses podium color if podium,
-          // otherwise a brighter neutral border so the selected pill is
-          // visible without invoking a board-specific color.
           const pillAccent  = podiumColor
           const teaser      = myRank == null ? '—' : `Rank ${myRank}`
           const teaserColor = podiumColor ?? (myRank == null ? '#5a5856' : '#9a9488')
@@ -460,6 +507,18 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
           subUnit={n => `${n.toLocaleString()} XP`}
           data={expedition}
           myScore={myScores.expedition}
+          currentUserId={currentUserId}
+          avatars={avatars}
+        />
+      )}
+      {activeTab === 'raidScore' && (
+        <LeaderboardSection
+          label="Raid Score — Strongest Loadout"
+          accent="#c8704a"
+          unit={n => n.toLocaleString()}
+          subUnit={() => 'combat rating'}
+          data={raidScore}
+          myScore={myScores.raidScore}
           currentUserId={currentUserId}
           avatars={avatars}
         />
