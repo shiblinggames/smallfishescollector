@@ -184,16 +184,7 @@ export default function RaidCombat({
   const [enemyAction, setEnemyAction]   = useState<EnemyAction | null>(null)
   const [aimResult, setAimResult]     = useState<ShotResult | null>(null)
   const [firstActor, setFirstActor]   = useState<Actor | null>(null)
-  // Pre-seed the action log with an intro line + the prompt. Bosses get a
-  // more dramatic "heaves into view" framing; non-boss enemies get a softer
-  // "draws alongside" line. Replaced wholesale by setResolveLog on first
-  // turn so this just shows until the player acts.
-  const [resolveLog, setResolveLog] = useState<string[]>(() => {
-    const intro = isBoss
-      ? `${enemy.name} heaves into view!`
-      : `A ${enemy.name} draws alongside!`
-    return [intro, 'What will you do?']
-  })
+  const [resolveLog, setResolveLog] = useState<string[]>([])
   const [pHitsplat, setPHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
   const [eHitsplat, setEHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
   const [critFlash, setCritFlash]     = useState(false)
@@ -267,16 +258,26 @@ export default function RaidCombat({
   useEffect(() => { playerHpRef.current = playerHp }, [playerHp])
   useEffect(() => { enemyHpRef.current = enemyHp }, [enemyHp])
 
-  // Reset when enemy changes (parent unmounts/remounts on encounter switch)
+  // Reset when enemy changes (parent unmounts/remounts on encounter switch).
+  // The log is seeded with an intro line + the prompt so each fight opens
+  // with flavor instead of a generic "What will you do?". Bosses get a
+  // dramatic "heaves into view" framing; non-boss enemies get a softer
+  // "draws alongside" line. Replaced wholesale by setResolveLog on the
+  // first turn's speed-roll, so the intro only lingers while the player
+  // decides.
   useEffect(() => {
     setEnemyHp(enemy.hpBase); enemyHpRef.current = enemy.hpBase
     setPlayerCharges(0); setEnemyCharges(0)
     setSubPhase('await_input')
     setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
-    setResolveLog([]); setPHitsplat(null); setEHitsplat(null)
+    const intro = isBoss
+      ? `${enemy.name} heaves into view!`
+      : `A ${enemy.name} draws alongside!`
+    setResolveLog([intro, 'What will you do?'])
+    setPHitsplat(null); setEHitsplat(null)
     enemyPatternIdxRef.current = 0
     turnRef.current = 1; setTurn(1)
-  }, [enemy.id])
+  }, [enemy.id, enemy.name, enemy.hpBase, isBoss])
 
   // ─── Aim bar RAF (only during 'aiming') ────────────────────────────────────
 
