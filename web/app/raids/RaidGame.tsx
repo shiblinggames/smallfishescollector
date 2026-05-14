@@ -1213,14 +1213,41 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
       <AnimatePresence>
         {phase === 'dead' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', zIndex: 50, padding: '1.5rem' }}>
-            <p className="font-karla font-400 uppercase tracking-[0.14em]" style={{ color: 'rgba(240,237,232,0.4)', fontSize: '0.6rem', marginBottom: 10 }}>Ship Sunk</p>
-            <p className="font-cinzel font-700" style={{ color: '#f87171', fontSize: '2rem', marginBottom: 32 }}>Defeated</p>
+            style={{
+              position: 'fixed', inset: 0,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              background: 'radial-gradient(ellipse at center, rgba(6,12,20,0.86) 0%, rgba(2,4,8,0.96) 100%)',
+              zIndex: 50, padding: '1.5rem',
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05, duration: 0.35 }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, marginBottom: '1.75rem' }}
+            >
+              <p className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.6rem', color: '#9a9488' }}>
+                Ship Sunk
+              </p>
+              <p className="font-cinzel font-700" style={{ fontSize: '2.2rem', color: '#f87171', textShadow: '0 0 22px rgba(248,113,113,0.40)', letterSpacing: '0.02em' }}>
+                Defeated
+              </p>
+            </motion.div>
             <motion.button
               onPointerDown={() => router.push('/expeditions')}
-              whileTap={{ scale: 0.96 }}
-              className="font-karla font-700 uppercase tracking-[0.08em]"
-              style={{ padding: '13px 36px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 14, color: '#c0b8a8', fontSize: '0.88rem', cursor: 'pointer' }}>
+              whileTap={{ scale: 0.97 }}
+              className="font-cinzel font-700 uppercase tracking-[0.12em]"
+              style={{
+                padding: '14px 32px',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.18)',
+                borderTop: '1px solid rgba(255,255,255,0.30)',
+                borderRadius: 12,
+                color: '#c8c4be',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+              }}
+            >
               Return to Port
             </motion.button>
           </motion.div>

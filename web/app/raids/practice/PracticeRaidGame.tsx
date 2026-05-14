@@ -997,29 +997,67 @@ export default function PracticeRaidGame({
           tutorial tour still fires for first-time users via
           handleOpenFire(). */}
 
-      {/* ── Win overlay — just the next-step choice. The kill narration and
-          reward streamed into the action log a beat earlier, so we don't
-          repeat any of that here. */}
+      {/* ── Win overlay — Skirmish/Victory header + maritime-styled
+          buttons that match the rest of the raid UI. Kill narration and
+          reward already streamed into the action log a beat earlier. */}
       <AnimatePresence>
         {phase === 'win' && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.86)', zIndex: 50, padding: '1.5rem' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 260 }}>
+            style={{
+              position: 'fixed', inset: 0,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              background: 'radial-gradient(ellipse at center, rgba(6,12,20,0.86) 0%, rgba(2,4,8,0.96) 100%)',
+              zIndex: 50, padding: '1.5rem',
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05, duration: 0.35 }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, marginBottom: '1.75rem' }}
+            >
+              <p className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.6rem', color: '#9a9488' }}>
+                Skirmish
+              </p>
+              <p className="font-cinzel font-700" style={{ fontSize: '2.2rem', color: '#f0c040', textShadow: '0 0 22px rgba(240,192,64,0.45)', letterSpacing: '0.02em' }}>
+                Victory
+              </p>
+            </motion.div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 280 }}>
               <motion.button
                 onPointerDown={retryGame}
-                whileTap={{ scale: 0.96 }}
-                animate={{ boxShadow: ['0 0 0px #ef444400', '0 0 18px #ef444466', '0 0 0px #ef444400'] }}
-                transition={{ duration: 1.4, repeat: Infinity }}
-                className="font-karla font-700 uppercase tracking-[0.08em]"
-                style={{ padding: '13px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(239,68,68,0.16)', border: '1.5px solid rgba(239,68,68,0.55)', color: '#ef4444', fontSize: '0.92rem' }}>
+                whileTap={{ scale: 0.97 }}
+                className="font-cinzel font-700 uppercase tracking-[0.12em]"
+                style={{
+                  padding: '14px 0',
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                  background: 'linear-gradient(180deg, rgba(240,192,64,0.18) 0%, rgba(240,192,64,0.06) 100%)',
+                  border: '1px solid rgba(240,192,64,0.45)',
+                  borderTop: '1px solid rgba(240,192,64,0.70)',
+                  color: '#f0c040',
+                  fontSize: '0.85rem',
+                  boxShadow: '0 0 18px rgba(240,192,64,0.16)',
+                }}
+              >
                 Fight Another
               </motion.button>
               <motion.button
                 onPointerDown={() => router.push('/expeditions')}
-                whileTap={{ scale: 0.96 }}
-                className="font-karla font-600 uppercase tracking-[0.06em]"
-                style={{ padding: '13px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(240,237,232,0.7)', fontSize: '0.82rem' }}>
+                whileTap={{ scale: 0.97 }}
+                className="font-karla font-700 uppercase tracking-[0.1em]"
+                style={{
+                  padding: '12px 0',
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.16)',
+                  color: '#9a9488',
+                  fontSize: '0.74rem',
+                }}
+              >
                 Return Home
               </motion.button>
             </div>
@@ -1043,14 +1081,41 @@ export default function PracticeRaidGame({
         {phase === 'dead' && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', zIndex: 50 }}>
-            <p className="font-karla font-400" style={{ color: 'rgba(240,237,232,0.32)', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>Ship Sunk</p>
-            <p className="font-cinzel font-700" style={{ color: '#f87171', fontSize: '2rem', marginBottom: 24 }}>Defeated</p>
+            style={{
+              position: 'fixed', inset: 0,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              background: 'radial-gradient(ellipse at center, rgba(6,12,20,0.86) 0%, rgba(2,4,8,0.96) 100%)',
+              zIndex: 50, padding: '1.5rem',
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05, duration: 0.35 }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, marginBottom: '1.75rem' }}
+            >
+              <p className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.6rem', color: '#9a9488' }}>
+                Ship Sunk
+              </p>
+              <p className="font-cinzel font-700" style={{ fontSize: '2.2rem', color: '#f87171', textShadow: '0 0 22px rgba(248,113,113,0.40)', letterSpacing: '0.02em' }}>
+                Defeated
+              </p>
+            </motion.div>
             <motion.button
               onPointerDown={() => router.push('/expeditions')}
-              whileTap={{ scale: 0.96 }}
-              className="font-karla font-700"
-              style={{ padding: '12px 32px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, color: '#c0b8a8', fontSize: '0.88rem', cursor: 'pointer', letterSpacing: '0.04em' }}>
+              whileTap={{ scale: 0.97 }}
+              className="font-cinzel font-700 uppercase tracking-[0.12em]"
+              style={{
+                padding: '14px 32px',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.18)',
+                borderTop: '1px solid rgba(255,255,255,0.30)',
+                borderRadius: 12,
+                color: '#c8c4be',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+              }}
+            >
               Return Home
             </motion.button>
           </motion.div>
