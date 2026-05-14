@@ -340,36 +340,37 @@ type TourStep = {
 
 const TOUR_STEPS: TourStep[] = [
   {
-    title: 'Fishing Zones',
-    body: 'There are four zones: Shallows, Open Waters, Deep, and Abyss. Deeper zones have rarer fish but a tighter catch window and faster dial. Earn XP to unlock them.',
-    cardStyle: { top: 96, left: 16, right: 16 },
-    arrowDir: 'up', arrowAlign: 'center',
-  },
-  {
-    title: 'Fishing XP',
-    body: 'Every catch earns XP. Leveling up unlocks the next zone and widens your catch window slightly — so veteran players find reeling in a bit easier.',
+    title: 'Zones',
+    body: 'Four zones — rarer fish the deeper you go. XP unlocks the next one.',
     cardStyle: { top: 96, left: 16, right: 16 },
     arrowDir: 'up', arrowAlign: 'center',
   },
   {
     title: 'Collection',
-    body: "Every species you've caught lives here. Tap any fish to see its scientific name, fun fact, and sell value.",
+    body: "Every species you catch is logged here. Tap any fish for details.",
     cardStyle: { top: 56, right: 16 },
     maxWidth: 210,
     arrowDir: 'up', arrowAlign: 'right',
   },
   {
-    title: 'Gear & Bait',
-    body: 'Upgrade your rod, reel, hook, and line. Bait matters too — some baits speed up bites, others widen your catch zone. You get 10 free worms every day.',
+    title: 'Gear',
+    body: 'Rod, reel, hook, line — plus boats, hats, badges. A green dot means an upgrade is in budget.',
     cardStyle: { bottom: 112, left: 16 },
     maxWidth: 220,
     arrowDir: 'down', arrowAlign: 'left',
   },
   {
-    title: 'Fish Hold',
-    body: 'Caught fish wait here. Quick-sell everything instantly at 65% of base value, or head to the Fish Market to sell at live hourly prices — up to 2.5× base.',
+    title: 'Bait',
+    body: 'Each bait changes how bites work. 10 free worms come in daily.',
+    cardStyle: { bottom: 112, left: 16, right: 16 },
+    maxWidth: 220,
+    arrowDir: 'down', arrowAlign: 'center',
+  },
+  {
+    title: 'Hold & Sell',
+    body: 'Quick-sell at 65%, liquidate (90% locked, 1h delay), or list at live market prices.',
     cardStyle: { bottom: 112, right: 16 },
-    maxWidth: 210,
+    maxWidth: 220,
     arrowDir: 'down', arrowAlign: 'right',
   },
 ]
