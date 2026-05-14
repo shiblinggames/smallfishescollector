@@ -974,22 +974,21 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
         </motion.div>
       )}
 
-      {/* Perfect catch banner */}
+      {/* Perfect catch banner — matches the new gradient + top-accent panel
+          chrome used across the game (skirmish tour, packs page, raid
+          overlays). Eyebrow caption + values + streak counter. */}
       {isPerfect && (() => {
-        const s = Math.min(perfectStreak, 6)
         const isCombo = perfectStreak >= 3
         const isOnFire = perfectStreak >= 3
         const isIgnition = perfectStreak === 3
-        const titleSize = 0.72 + (s - 1) * 0.05
-        const iconSize  = 0.70 + (s - 1) * 0.05
+        const s = Math.min(perfectStreak, 6)
         const accent = isOnFire ? '#fb923c' : '#fbbf24'
         const accentRgb = isOnFire ? '251,146,60' : '251,191,36'
-        const borderAlpha = Math.min(0.65 + (s - 1) * 0.06, 0.95)
-        const glow = `0 0 ${10 + (s - 1) * 5}px rgba(${accentRgb},${0.4 + (s - 1) * 0.08})`
+        const glow = `0 0 ${12 + (s - 1) * 4}px rgba(${accentRgb},${0.28 + (s - 1) * 0.05})`
         const basePerfectBonus = Math.round((xpGained - streakBonusXP) * 0.2 / 1.2)
         return (
           <div style={{ position: 'relative' }} className="mb-2">
-            {/* Ignition burst rings */}
+            {/* Ignition burst rings (kept — still a satisfying VFX) */}
             {isIgnition && [0, 0.1, 0.2].map((delay, i) => (
               <motion.div key={i}
                 initial={{ scale: 0.85, opacity: 0.7 - i * 0.2 }}
@@ -1008,41 +1007,41 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ type: 'spring', stiffness: 400, damping: 22 }}
               style={{
-                background: isOnFire ? 'rgba(20,6,0,0.92)' : 'rgba(6,4,0,0.88)',
-                border: `1px solid rgba(${accentRgb},0.35)`,
-                borderLeft: `3px solid rgba(${accentRgb},0.85)`,
+                background: `linear-gradient(180deg, rgba(${accentRgb},0.18) 0%, rgba(${accentRgb},0.04) 100%)`,
+                border: `1px solid rgba(${accentRgb},0.30)`,
+                borderTop: `1px solid rgba(${accentRgb},0.55)`,
                 borderRadius: 12,
                 boxShadow: glow,
-                padding: '0.6rem 0.9rem',
+                padding: '0.7rem 0.9rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                gap: 8,
+                gap: 10,
               }}
             >
-              <div>
-                <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                  style={{ fontSize: '0.48rem', color: `rgba(${accentRgb},0.6)`, marginBottom: 4 }}>
-                  {isIgnition ? '🔥 On Fire!' : isOnFire ? 'On Fire' : 'Perfect Catch'}
+              <div style={{ minWidth: 0 }}>
+                <p className="font-karla font-700 uppercase"
+                  style={{ fontSize: '0.55rem', color: accent, letterSpacing: '0.20em', marginBottom: 5 }}>
+                  {isIgnition ? '🔥 On Fire' : isOnFire ? 'On Fire' : 'Perfect Catch'}
                 </p>
                 <div className="flex items-center gap-3 flex-wrap">
                   {basePerfectBonus > 0 && (
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#86efac' }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#86efac' }}>
                       +{basePerfectBonus} XP
                     </p>
                   )}
                   {streakBonusXP > 0 && (
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: accent }}>+{streakBonusXP} XP</p>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: accent }}>+{streakBonusXP} XP</p>
                   )}
                   {baitSaved && (
-                    <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#86efac' }}>
+                    <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#86efac' }}>
                       Bait returned
                     </p>
                   )}
                 </div>
               </div>
               {isCombo && (
-                <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: accent, textShadow: glow, lineHeight: 1, flexShrink: 0 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.7rem', color: accent, textShadow: glow, lineHeight: 1, flexShrink: 0 }}>
                   ×{perfectStreak}
                 </p>
               )}
@@ -1051,21 +1050,36 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
         )
       })()}
 
-      {/* Jackpot banner */}
+      {/* Jackpot banner — same panel chrome as the perfect banner, just in
+          the YOLO orange. Lives on its own line beneath the perfect banner
+          when both fire on the same catch (yes, that can happen). */}
       {jackpotMultiplier && jackpotMultiplier > 1 && (
         <motion.div
-          initial={{ opacity: 0, y: -10, scale: 0.88 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ type: 'spring', stiffness: 320, damping: 15 }}
-          className="flex items-center justify-center gap-2 mb-2 py-2 px-3 rounded-xl"
-          style={{ background: 'rgba(12,2,0,0.92)', border: '1px solid rgba(249,115,22,0.72)', boxShadow: '0 0 22px rgba(249,115,22,0.38)' }}
+          initial={{ opacity: 0, y: -10, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 320, damping: 18 }}
+          className="mb-2"
+          style={{
+            background: 'linear-gradient(180deg, rgba(249,115,22,0.20) 0%, rgba(249,115,22,0.04) 100%)',
+            border: '1px solid rgba(249,115,22,0.40)',
+            borderTop: '1px solid rgba(249,115,22,0.72)',
+            borderRadius: 12,
+            boxShadow: '0 0 22px rgba(249,115,22,0.25)',
+            padding: '0.7rem 0.9rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+          }}
         >
-          <span style={{ fontSize: '0.78rem', color: '#f97316' }}>★</span>
+          <span style={{ fontSize: '1.1rem', color: '#f97316', textShadow: '0 0 10px rgba(249,115,22,0.6)' }}>★</span>
           <div style={{ textAlign: 'center' }}>
-            <p className="font-cinzel font-700 uppercase tracking-[0.2em]"
-              style={{ fontSize: '0.75rem', color: '#f97316', textShadow: '0 0 12px rgba(249,115,22,0.55)' }}>Jackpot!</p>
-            <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#fdba74' }}>×{jackpotMultiplier} fish landed</p>
+            <p className="font-karla font-700 uppercase"
+              style={{ fontSize: '0.55rem', color: '#fdba74', letterSpacing: '0.22em', marginBottom: 3 }}>
+              Jackpot
+            </p>
+            <p className="font-cinzel font-700"
+              style={{ fontSize: '1.05rem', color: '#f97316', textShadow: '0 0 14px rgba(249,115,22,0.55)', lineHeight: 1 }}>
+              ×{jackpotMultiplier} fish landed
+            </p>
           </div>
-          <span style={{ fontSize: '0.78rem', color: '#f97316' }}>★</span>
+          <span style={{ fontSize: '1.1rem', color: '#f97316', textShadow: '0 0 10px rgba(249,115,22,0.6)' }}>★</span>
         </motion.div>
       )}
 
