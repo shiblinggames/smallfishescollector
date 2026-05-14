@@ -44,10 +44,12 @@ async function fetchBoard(admin: ReturnType<typeof createAdminClient>, view: str
  *  no leaderboard view to lean on since the inputs change every time the
  *  player edits their loadout. */
 async function fetchRaidScoreBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
-  // 1. All profiles with the fields that feed into combat rating.
+  // 1. All non-admin profiles with the fields that feed into combat rating.
+  //    Matches the leaderboard_* views which already filter `NOT is_admin`.
   const { data: profiles } = await admin
     .from('profiles')
     .select('id, username, ship_tier, saved_crew, expedition_xp')
+    .eq('is_admin', false)
 
   if (!profiles || profiles.length === 0) {
     return { top: [] as LeaderboardEntry[], myScore: 0, myRank: null as number | null }
