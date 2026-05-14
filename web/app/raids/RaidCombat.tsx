@@ -39,7 +39,9 @@ const d20 = () => Math.floor(Math.random() * 20) + 1
 
 function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: number): number {
   if (res === 'miss') return 0
-  const powerMax = shipMinDamage + Math.floor(totalPower / 4)
+  // Base bump of +2 so low-tier loadouts (rowboat + small crew) still roll
+  // a meaningful range instead of 1–2. Power scaling is unchanged.
+  const powerMax = shipMinDamage + 2 + Math.floor(totalPower / 4)
   if (res === 'critical') {
     const min = shipMinDamage * 2
     const max = Math.round(powerMax * 1.5)
@@ -47,9 +49,10 @@ function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: numb
   }
   if (res === 'hit') {
     // Crew-aware floor: hit damage min lifts with crew investment, pinning
-    // variance at ~2× regardless of ship tier, crew composition, or nav level.
-    // shipMin remains the absolute floor for under-built captains.
-    const hitMin = Math.max(shipMinDamage, Math.floor(powerMax * 0.5))
+    // variance at ~2.5× regardless of ship tier or nav level. shipMin
+    // remains the absolute floor for under-built captains. Floor relaxed
+    // from 0.5 → 0.4 so rowboat hits start at the ship min, not above it.
+    const hitMin = Math.max(shipMinDamage, Math.floor(powerMax * 0.4))
     return Math.floor(Math.random() * (powerMax - hitMin + 1)) + hitMin
   }
   // graze

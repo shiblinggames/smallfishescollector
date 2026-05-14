@@ -207,6 +207,10 @@ export default function DailyVoyagePanel({
   }, [returnTime, panelState])
 
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
+  // Minimum crew needed to set sail. Rowboat / Dinghy only have 1 crew slot
+  // so they cap at solo captain — the 2-crew floor applies once you've
+  // upgraded to a Sloop with room for a real party.
+  const minCrew = Math.min(2, shipStats.crewSlots)
   const byVariantId = new Map(collection.map(c => [c.variantId, c]))
   const savedCrew: CrewCard[] = liveCrewIds
     .slice(0, shipStats.crewSlots)
@@ -258,16 +262,7 @@ export default function DailyVoyagePanel({
           border: '1px solid rgba(240,192,64,0.18)',
           borderRadius: 16, padding: '1.05rem 1.1rem',
         }}>
-          {shipTier < 2 ? (
-            <div>
-              <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#9a8868', lineHeight: 1.5 }}>
-                🔒 Requires a Sloop
-              </p>
-              <p className="font-karla" style={{ fontSize: '0.6rem', color: '#6a5a40', lineHeight: 1.5, marginTop: 4 }}>
-                Upgrade your ship to send voyages. A solo rowboat isn&apos;t going far.
-              </p>
-            </div>
-          ) : raidActive ? (
+          {raidActive ? (
             <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9a8868', lineHeight: 1.5 }}>
               Your crew is on a raid. Finish the raid before sending them on a voyage.
             </p>
@@ -377,7 +372,9 @@ export default function DailyVoyagePanel({
                     const node = ROUTE_NODES[routeKey]
                     const isSelected = selectedRoute === routeKey
                     const minLevel = ROUTE_MIN_LEVELS[routeKey]
-                    const locked = expeditionLevel < minLevel
+                    const levelLocked = expeditionLevel < minLevel
+                    const shipLocked  = shipTier < rco.minShipTier
+                    const locked      = levelLocked || shipLocked
                     return (
                       <button
                         key={routeKey}
@@ -428,7 +425,7 @@ export default function DailyVoyagePanel({
                             {rco.name}
                           </span>
                           <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: locked ? '#c8a060' : isSelected ? `${rco.color}bb` : '#6a5a40', display: 'block', textAlign: 'center', marginTop: 1, fontWeight: locked ? 700 : undefined }}>
-                            {locked ? `Unlock at Lv ${minLevel}` : `${REC_SCORES[routeKey]}+ score`}
+                            {shipLocked ? 'Requires a Sloop' : levelLocked ? `Unlock at Lv ${minLevel}` : `${REC_SCORES[routeKey]}+ score`}
                           </span>
                         </span>
                       </button>
@@ -441,8 +438,10 @@ export default function DailyVoyagePanel({
                   const expeditionLevel = getLevelFromXP(expeditionXP)
                   const ROUTE_MIN_LEVELS_OVL: Record<VoyageRoute, number> = { coastal: 1, open: 5, deep: 15, triangle: 25 }
                   const minLevel = ROUTE_MIN_LEVELS_OVL[selectedRoute]
-                  const routeLocked = expeditionLevel < minLevel
                   const rco = ROUTE_CONFIGS[selectedRoute]
+                  const levelLockedRoute = expeditionLevel < minLevel
+                  const shipLockedRoute  = shipTier < rco.minShipTier
+                  const routeLocked = levelLockedRoute || shipLockedRoute
                   const est = stats ? computeRouteEstimate(stats, savedCrew.length, selectedRoute) : null
                   return (
                     <div style={{
@@ -516,9 +515,9 @@ export default function DailyVoyagePanel({
                               </div>
                             )}
                             {/* Crew risk / crew count */}
-                            {savedCrew.length < 2 ? (
+                            {savedCrew.length < minCrew ? (
                               <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#c87a4a' }}>
-                                ⚠ Need at least 2 crew to set sail
+                                {minCrew === 1 ? '⚠ Need at least 1 crew to set sail' : `⚠ Need at least ${minCrew} crew to set sail`}
                               </span>
                             ) : est && est.crewRiskPct > 0 ? (
                               <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: riskColor }}>
@@ -603,24 +602,24 @@ export default function DailyVoyagePanel({
                             padding: '0.45rem 1rem', textAlign: 'center',
                           }}>
                             <span className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.78rem', color: '#a08858' }}>
-                              🔒 Unlocks at Expedition Lv {minLevel}
+                              {shipLockedRoute ? '🔒 Requires a Sloop or better' : `🔒 Unlocks at Expedition Lv ${minLevel}`}
                             </span>
                           </div>
                         ) : (
                           <button
                             onClick={handleSend}
-                            disabled={isPending || savedCrew.length < 2}
+                            disabled={isPending || savedCrew.length < minCrew}
                             style={{
                               width: '100%',
-                              background: isPending || savedCrew.length < 2
+                              background: isPending || savedCrew.length < minCrew
                                 ? 'rgba(80,100,160,0.08)'
                                 : `linear-gradient(135deg, ${rco.color}33 0%, ${rco.color}18 100%)`,
-                              border: `1px solid ${savedCrew.length >= 2 ? rco.color + '66' : 'rgba(255,255,255,0.08)'}`,
+                              border: `1px solid ${savedCrew.length >= minCrew ? rco.color + '66' : 'rgba(255,255,255,0.08)'}`,
                               borderRadius: 8, padding: '0.45rem 1rem',
-                              color: isPending || savedCrew.length < 2 ? 'rgba(255,255,255,0.18)' : rco.color,
-                              cursor: isPending || savedCrew.length < 2 ? 'default' : 'pointer',
+                              color: isPending || savedCrew.length < minCrew ? 'rgba(255,255,255,0.18)' : rco.color,
+                              cursor: isPending || savedCrew.length < minCrew ? 'default' : 'pointer',
                               transition: 'all 0.15s',
-                              boxShadow: savedCrew.length >= 2 && !isPending ? `0 0 12px ${rco.color}22` : 'none',
+                              boxShadow: savedCrew.length >= minCrew && !isPending ? `0 0 12px ${rco.color}22` : 'none',
                             }}
                             className="font-cinzel font-700 uppercase tracking-[0.12em]"
                           >

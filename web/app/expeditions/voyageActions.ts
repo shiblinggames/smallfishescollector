@@ -7,6 +7,7 @@ import { EXPEDITION_SHIP_STATS, applyVariantBoosts } from '@/lib/expeditions'
 import { unlockBadge } from '@/app/achievements/badgeActions'
 import { RARITY_TIERS } from '@/lib/variants'
 import { generateVoyageEvents, type VoyageEvent, type VoyageRoute } from '@/lib/voyageEvents'
+import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
 import { generateAndSaveVoyageLog, type VoyageCrewMember } from '@/lib/captains-log'
 import type { CrewCard } from '@/lib/expeditions'
 import { voyageXP, getLevelFromXP } from '@/lib/expeditionLevel'
@@ -124,9 +125,15 @@ export async function sendDailyVoyage(crewVariantIds: number[], route: VoyageRou
     .single()
 
   if (!profile) return { error: 'Profile not found' }
-  if ((profile.ship_tier ?? 0) < 2) return { error: 'Requires a Sloop or better to send a voyage' }
 
   const shipTier = profile.ship_tier ?? 0
+  // Per-route ship gate. Coastal (rowboat OK) carries no crew-loss risk;
+  // the deeper routes do, and need at least a Sloop. See lib/voyageRoutes.
+  const routeCfg = ROUTE_CONFIGS[route]
+  if (!routeCfg) return { error: 'Unknown route' }
+  if (shipTier < routeCfg.minShipTier) {
+    return { error: 'Requires a Sloop or better for this route' }
+  }
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
 
   if (crewVariantIds.length > shipStats.crewSlots) {

@@ -11,6 +11,11 @@ export interface RouteConfig {
   crewLossScale: number
   gemScale: number
   baseDoubloons: number
+  /** Minimum ship tier required to set sail on this route. Coastal is open
+   *  to anyone (rowboat OK); deeper-water routes require a Sloop or better
+   *  since they have a crew-loss risk and we don't want to punish players
+   *  who haven't upgraded their ship yet. */
+  minShipTier: number
 }
 
 export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
@@ -23,6 +28,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     crewLossScale: 0,
     gemScale: 0.5,
     baseDoubloons: 50,
+    minShipTier: 0,
   },
   open: {
     name: 'The Crossing',
@@ -33,6 +39,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     crewLossScale: 0.25,
     gemScale: 1.0,
     baseDoubloons: 120,
+    minShipTier: 2,
   },
   deep: {
     name: 'The Howling Deep',
@@ -43,6 +50,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     crewLossScale: 0.5,
     gemScale: 1.5,
     baseDoubloons: 200,
+    minShipTier: 2,
   },
   triangle: {
     name: 'The Bertuna Triangle',
@@ -53,6 +61,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     crewLossScale: 1.0,
     gemScale: 2.2,
     baseDoubloons: 380,
+    minShipTier: 2,
   },
 }
 
