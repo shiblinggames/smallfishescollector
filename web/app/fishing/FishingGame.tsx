@@ -901,8 +901,6 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   ancientCount?: number
   ancientTotal?: number
 }) {
-  const habitatColor = HABITAT_COLOR[fish.habitat] ?? '#888'
-  const habitatLabel = HABITAT_LABEL[fish.habitat] ?? fish.habitat
   const isAncient = fish.habitat === 'ancient_deep'
   const rarity = fish.bite_rarity ?? 1
   const baseR = RARITY[rarity] ?? RARITY[1]
@@ -1240,68 +1238,110 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           />
         )}
 
-        {/* Header band */}
-        <div className="px-4 py-3 flex items-center justify-between"
+        {/* Header band — just the rarity tag + "New Species" if applicable.
+            Zone label dropped (player already knows what zone they're in). */}
+        <div className="px-4 py-2.5 flex items-center justify-center gap-2"
           style={{ position: 'relative', zIndex: 2, background: `${r.color}28`, borderBottom: `1px solid ${r.color}45` }}>
-          <div className="flex items-center gap-2">
-            <span className="font-karla font-700 uppercase tracking-[0.14em]"
-              style={{ fontSize: '0.55rem', color: habitatColor }}>{habitatLabel}</span>
-            <span className="font-karla font-700 uppercase tracking-[0.12em]"
-              style={{
-                fontSize: '0.5rem', color: r.color,
-                background: `${r.color}1c`, border: `1px solid ${r.color}45`,
-                padding: '0.12rem 0.45rem', borderRadius: '2rem',
-              }}>
-              {r.label}{rarity >= 4 ? ' ✦' : ''}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {isNewSpecies && (
-              <motion.span
-                initial={{ scale: 0 }} animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.2 }}
-                className="font-karla font-700 uppercase tracking-[0.12em]"
-                style={{ fontSize: '0.5rem', color: '#fde68a',
-                  background: 'rgba(253,230,138,0.15)', border: '1px solid rgba(253,230,138,0.4)',
-                  padding: '0.15rem 0.5rem', borderRadius: '2rem' }}
-              >New Species ✦</motion.span>
-            )}
-          </div>
+          <span className="font-karla font-700 uppercase tracking-[0.18em]"
+            style={{
+              fontSize: '0.58rem', color: r.color,
+              background: `${r.color}1c`, border: `1px solid ${r.color}45`,
+              padding: '0.18rem 0.6rem', borderRadius: '2rem',
+            }}>
+            {r.label}{rarity >= 4 ? ' ✦' : ''}
+          </span>
+          {isNewSpecies && (
+            <motion.span
+              initial={{ scale: 0 }} animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.2 }}
+              className="font-karla font-700 uppercase tracking-[0.18em]"
+              style={{ fontSize: '0.58rem', color: '#fde68a',
+                background: 'rgba(253,230,138,0.15)', border: '1px solid rgba(253,230,138,0.4)',
+                padding: '0.18rem 0.6rem', borderRadius: '2rem' }}
+            >New ✦</motion.span>
+          )}
         </div>
 
-        {/* Body */}
-        <div className="px-4 py-4" style={{ position: 'relative', zIndex: 2 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <FishImg name={fish.name} style={{ width: 72, height: 56, objectFit: 'contain', flexShrink: 0 }} />
-            <div>
-              <p className="font-cinzel font-700 mb-0.5" style={{ fontSize: '1.1rem', color: r.color }}>
-                {fish.name}
-              </p>
-              <p className="font-karla font-300 italic" style={{ fontSize: '0.68rem', color: '#6a6764' }}>
-                {fish.scientific_name}
-              </p>
-            </div>
-          </div>
-          <p className="font-karla font-400 leading-relaxed mb-0" style={{ fontSize: '0.76rem', color: '#b0afa8' }}>
-            {fish.fun_fact}
+        {/* Body — fish is the hero. Big image, name, and the price (or
+            trophy badge) get the visual weight; fun fact sits below as
+            flavor, not as the focus. */}
+        <div style={{ position: 'relative', zIndex: 2, padding: '1rem 1rem 1.1rem' }}>
+          {/* Big fish image — entrance bounce so it FEELS like a reveal. */}
+          <motion.div
+            initial={{ scale: 0.6, opacity: 0, rotate: -8 }}
+            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 14, delay: 0.08 }}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              marginBottom: '0.55rem',
+            }}
+          >
+            <FishImg
+              name={fish.name}
+              style={{
+                width: '78%', maxWidth: 220, height: 124, objectFit: 'contain',
+                filter: `drop-shadow(0 8px 20px ${r.color}55)${isEpicPlus ? ` drop-shadow(0 0 28px ${r.color}40)` : ''}`,
+              }}
+            />
+          </motion.div>
+
+          {/* Name */}
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.35rem', color: r.color, lineHeight: 1.1, marginBottom: 2 }}>
+            {fish.name}
           </p>
+          <p className="font-karla font-300 italic text-center" style={{ fontSize: '0.68rem', color: '#6a6764', marginBottom: '0.7rem' }}>
+            {fish.scientific_name}
+          </p>
+
+          {/* Hero price — non-ancient. Big gold number, the thing your eye
+              lands on first after the fish itself. */}
           {!isAncient && (
-            <div className="flex items-center gap-1.5 mt-3">
-              <span style={{ width: 7, height: 7, borderRadius: 2, background: r.color, display: 'inline-block', flexShrink: 0 }} />
-              <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
-                Sells for <span style={{ color: '#f0c040' }}>{fish.sell_value.toLocaleString()} ⟡</span>
-              </p>
-            </div>
-          )}
-          {isAncient && (
-            <div className="flex items-center gap-1.5 mt-3">
-              <span style={{ width: 7, height: 7, borderRadius: 2, background: r.color, display: 'inline-block', flexShrink: 0 }} />
-              <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
-                Trophy — kept on display, never sold
-              </p>
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.28, delay: 0.22 }}
+              style={{
+                display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4,
+                marginBottom: '0.7rem',
+              }}
+            >
+              <span className="font-cinzel font-700"
+                style={{
+                  fontSize: '2.05rem', color: '#f0c040', lineHeight: 1,
+                  textShadow: '0 0 18px rgba(240,192,64,0.45)',
+                }}>
+                {fish.sell_value.toLocaleString()}
+              </span>
+              <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0c040', lineHeight: 1 }}>⟡</span>
+            </motion.div>
           )}
 
+          {/* Trophy badge — ancient catches go on display, no sell price. */}
+          {isAncient && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.28, delay: 0.22 }}
+              className="font-karla font-700 uppercase text-center"
+              style={{
+                fontSize: '0.7rem', letterSpacing: '0.22em',
+                color: r.color,
+                background: `${r.color}14`, border: `1px solid ${r.color}45`,
+                borderRadius: 999, padding: '0.4rem 1rem',
+                marginBottom: '0.7rem',
+                alignSelf: 'center', display: 'inline-block',
+                textShadow: `0 0 10px ${r.color}66`,
+                marginLeft: '50%', transform: 'translateX(-50%)',
+              }}
+            >
+              ★ Trophy
+            </motion.div>
+          )}
+
+          {/* Flavor — the fun fact, demoted to caption status. */}
+          <p className="font-karla font-400 text-center" style={{ fontSize: '0.72rem', color: '#7a7670', lineHeight: 1.5 }}>
+            {fish.fun_fact}
+          </p>
         </div>
       </motion.div>
     </div>
