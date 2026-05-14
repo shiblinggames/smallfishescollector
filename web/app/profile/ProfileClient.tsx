@@ -417,7 +417,6 @@ export default function ProfileClient({
                 <span className="font-karla font-600" style={{ fontSize: '0.65rem', color: '#6a6764', textDecoration: 'underline', textUnderlineOffset: 3 }}>Rename</span>
               </button>
             )}
-            <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#4a4845' }}>{email}</p>
           </div>
         )}
 
