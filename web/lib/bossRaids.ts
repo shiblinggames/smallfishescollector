@@ -32,6 +32,14 @@ export interface RaidLootItem {
   shipSkinId?: string  // if set, render player's ship with this skin applied
 }
 
+/** Pre-fight dialogue line. Shown in an RPG-style modal before the boss
+ *  battle begins. `narrator` lines render without a portrait; `boss` and
+ *  `player` lines render with the speaker's portrait/avatar. */
+export interface BossDialogueLine {
+  speaker: 'boss' | 'player' | 'narrator'
+  text: string
+}
+
 export interface BossRaidConfig {
   raidId: string
   raidTitle: string
@@ -41,6 +49,10 @@ export interface BossRaidConfig {
   bossId: string
   loot: RaidLootItem[]
   killRewards: Record<string, { gold: number; xp: number }>
+  /** Optional dialogue sequence shown right before the boss fight starts.
+   *  Tap to advance each line; the last line's button is "Engage" which
+   *  closes the modal and mounts the combat. */
+  preFightDialogue?: BossDialogueLine[]
 }
 
 export const RARITY_COLOR: Record<RaidLootItem['rarity'], string> = {
@@ -126,4 +138,12 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
     corsair: { gold: 35,  xp: 45  },
     pete:    { gold: 180, xp: 180 },
   },
+  preFightDialogue: [
+    { speaker: 'narrator', text: "A weathered galleon emerges from the fog — barnacle-crusted hull, patched sails, cannons already trained on your ship." },
+    { speaker: 'boss', text: "So another pup thinks they can take old Barnacle Pete. Many've tried, captain. None've sailed home." },
+    { speaker: 'boss', text: "I've been raiding these waters since before your grandfather wet his trousers in his first storm. Your crew, your ship, your name — they'll all join the others at the bottom." },
+    { speaker: 'player', text: "Save your breath, Pete. I'm not here to talk. I'm here for the plunder." },
+    { speaker: 'boss', text: "Plunder?! Hah! The only thing you'll take from me is a swift trip to Davy Jones." },
+    { speaker: 'boss', text: "Ready your guns. This is where your story ends." },
+  ],
 }

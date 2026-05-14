@@ -184,7 +184,16 @@ export default function RaidCombat({
   const [enemyAction, setEnemyAction]   = useState<EnemyAction | null>(null)
   const [aimResult, setAimResult]     = useState<ShotResult | null>(null)
   const [firstActor, setFirstActor]   = useState<Actor | null>(null)
-  const [resolveLog, setResolveLog]   = useState<string[]>([])  // human-readable resolution lines
+  // Pre-seed the action log with an intro line + the prompt. Bosses get a
+  // more dramatic "heaves into view" framing; non-boss enemies get a softer
+  // "draws alongside" line. Replaced wholesale by setResolveLog on first
+  // turn so this just shows until the player acts.
+  const [resolveLog, setResolveLog] = useState<string[]>(() => {
+    const intro = isBoss
+      ? `${enemy.name} heaves into view!`
+      : `A ${enemy.name} draws alongside!`
+    return [intro, 'What will you do?']
+  })
   const [pHitsplat, setPHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
   const [eHitsplat, setEHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
   const [critFlash, setCritFlash]     = useState(false)

@@ -13,6 +13,7 @@ import {
 } from '@/lib/bossRaids'
 import RaidCombat from './RaidCombat'
 import RaidLootStage from './RaidLootStage'
+import BossDialogueModal from './BossDialogueModal'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
 import TapToContinueGate from '@/components/TapToContinueGate'
 
@@ -349,6 +350,11 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const [winXP, setWinXP]               = useState(0)
   const [winPhase, setWinPhase]         = useState<'summary' | 'claimed'>('summary')
   const [winIsBoss, setWinIsBoss]       = useState(false)
+  // Boss pre-fight dialogue. When advancing into a boss round we stash the
+  // pending advance here, render the dialogue modal, and only fire the
+  // advance when the dialogue is dismissed (Engage tap).
+  const [bossDialoguePending, setBossDialoguePending] = useState(false)
+  const pendingBossAdvanceRef = useRef<(() => void) | null>(null)
   const [shotResult, setShotResult]     = useState<ShotResult>(null)
   const [dodgePrimed, setDodgePrimed]   = useState(false)
   const [dodgeCooldown, setDodgeCooldown] = useState(false)
@@ -922,7 +928,23 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     //   4. Otherwise just advance to the next enemy.
     const advanceToNext = () => {
       setEnemySinking(false)
-      roundRef.current++
+      const nextRound = roundRef.current + 1
+      // If the next round is the boss AND the raid config has pre-fight
+      // dialogue, gate the round advance on the dialogue modal. Real
+      // round/enemy advance runs in the modal's onComplete callback.
+      if (
+        isBossRound(nextRound, config.sequence.length) &&
+        config.preFightDialogue && config.preFightDialogue.length > 0
+      ) {
+        pendingBossAdvanceRef.current = () => {
+          roundRef.current = nextRound
+          resetEnemyForRound(roundRef.current)
+          setRoundDisplay(roundRef.current + 1)
+        }
+        setBossDialoguePending(true)
+        return
+      }
+      roundRef.current = nextRound
       resetEnemyForRound(roundRef.current)
       setRoundDisplay(roundRef.current + 1)
       // Phase stays 'playing'; the key={`combat-r${roundDisplay}`} on
@@ -1100,6 +1122,32 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
             fn?.()
           }}
         />
+
+        {/* Boss pre-fight dialogue — RPG-style modal that runs before the
+            boss round mounts. The advanceToNext path stashes the round
+            advance in pendingBossAdvanceRef and sets bossDialoguePending;
+            the modal's onComplete fires the advance. */}
+        <AnimatePresence>
+          {bossDialoguePending && config.preFightDialogue && (
+            <BossDialogueModal
+              boss={config.enemies[config.bossId]}
+              bossDefeatedText={config.bossDefeatedText}
+              raidTitle={config.raidTitle}
+              lines={config.preFightDialogue}
+              playerLabel={username ?? shipName}
+              playerCharacterColor={playerCharacterColor}
+              playerEquippedHat={playerEquippedHat}
+              playerAvatarBg={playerAvatarBg}
+              playerAvatarBorder={playerAvatarBorder}
+              onComplete={() => {
+                setBossDialoguePending(false)
+                const fn = pendingBossAdvanceRef.current
+                pendingBossAdvanceRef.current = null
+                fn?.()
+              }}
+            />
+          )}
+        </AnimatePresence>
       </div>
     )
   }
