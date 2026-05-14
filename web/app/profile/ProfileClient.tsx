@@ -231,8 +231,6 @@ export default function ProfileClient({
   const [modalOpen, setModalOpen] = useState(false)
   const [characterColor, setCharacterColor] = useState(initialCharacterColor)
   const [colorSaving, setColorSaving] = useState(false)
-  const [colorPickerOpen, setColorPickerOpen] = useState(false)
-  const [hintSkinId, setHintSkinId] = useState<string | null>(null)
   const [equippedBadges, setEquippedBadges] = useState<string[]>(initialEquippedBadges)
   const [badgePickerOpen, setBadgePickerOpen] = useState(false)
   // Avatar colors — bg + border, saved per-user. null = use defaults.
@@ -472,122 +470,14 @@ export default function ProfileClient({
             overflow: 'hidden',
             paddingBottom: 14,
           }}>
-            {/* Color picker trigger row */}
+            {/* Picker wrapper — character color moved to the Avatar Colors
+                modal; only the badge picker lives here now. */}
             <div style={{ padding: '0.75rem 1rem 0' }}>
-              <button
-                disabled={colorSaving}
-                onClick={() => { setColorPickerOpen(o => !o); setHintSkinId(null) }}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                }}
-              >
-                <div style={{
-                  width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
-                  backgroundImage: `url(${charSprites.rest})`,
-                  backgroundSize: '420% auto', backgroundPosition: '60% 68%',
-                  backgroundRepeat: 'no-repeat',
-                  border: '2px solid rgba(96,165,250,0.45)',
-                  boxShadow: '0 0 8px rgba(96,165,250,0.2)',
-                }} />
-                <div style={{ flex: 1, textAlign: 'left' }}>
-                  <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#d8d5d0', lineHeight: 1 }}>
-                    {CHARACTER_COLORS.find(c => c.id === characterColor)?.name ?? characterColor}
-                  </p>
-                  <p className="font-karla" style={{ fontSize: '0.56rem', color: '#5a5755', marginTop: 2 }}>Character color</p>
-                </div>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5a5755" strokeWidth="2.5" strokeLinecap="round"
-                  style={{ transform: colorPickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>
-                  <path d="M6 9l6 6 6-6"/>
-                </svg>
-              </button>
-
-              {colorPickerOpen && (
-                <div style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem' }}>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {CHARACTER_COLORS.map(c => {
-                      const sprites = getCharacterSprites(c.id)
-                      const isActive = characterColor === c.id
-                      const isUnlocked = unlockedColors.includes(c.id)
-                      const isHinted = hintSkinId === c.id
-                      return (
-                        <button
-                          key={c.id}
-                          disabled={colorSaving}
-                          onClick={async () => {
-                            if (!isUnlocked) { setHintSkinId(isHinted ? null : c.id); return }
-                            if (isActive) { setColorPickerOpen(false); return }
-                            setHintSkinId(null)
-                            setColorSaving(true)
-                            setCharacterColor(c.id)
-                            setColorPickerOpen(false)
-                            await updateCharacterColor(c.id)
-                            setColorSaving(false)
-                          }}
-                          style={{
-                            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                            opacity: !isUnlocked ? 0.5 : 1,
-                          }}
-                        >
-                          <div style={{
-                            width: 46, height: 46, borderRadius: '50%', overflow: 'hidden',
-                            backgroundImage: `url(${sprites.rest})`,
-                            backgroundSize: '420% auto', backgroundPosition: '60% 68%',
-                            backgroundRepeat: 'no-repeat',
-                            border: isActive ? '2px solid #60a5fa' : isHinted ? '2px solid rgba(240,192,64,0.6)' : '2px solid rgba(255,255,255,0.12)',
-                            boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.4)' : isHinted ? '0 0 8px rgba(240,192,64,0.25)' : 'none',
-                            position: 'relative',
-                          }}>
-                            {!isUnlocked && (
-                              <div style={{
-                                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: 'rgba(0,0,0,0.52)', borderRadius: '50%',
-                              }}>
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round">
-                                  <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                                </svg>
-                              </div>
-                            )}
-                          </div>
-                          <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: isActive ? '#60a5fa' : isHinted ? '#f0c040' : '#8a8782' }}>
-                            {c.name}
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-
-                  {hintSkinId && (() => {
-                    const skin = CHARACTER_COLORS.find(c => c.id === hintSkinId)
-                    if (!skin?.unlockHint) return null
-                    return (
-                      <div style={{
-                        marginTop: '0.8rem',
-                        background: 'rgba(20,12,4,0.9)',
-                        border: '1px solid rgba(240,192,64,0.35)',
-                        borderLeft: '3px solid rgba(240,192,64,0.7)',
-                        borderRadius: 10, padding: '0.7rem 0.9rem',
-                      }}>
-                        <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#f0c040', marginBottom: 4 }}>
-                          {skin.name} — Locked
-                        </p>
-                        <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.55 }}>
-                          {skin.unlockHint}
-                        </p>
-                      </div>
-                    )
-                  })()}
-
-                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '0.75rem' }} />
-                </div>
-              )}
-
               {/* Badge picker */}
               <button
                 disabled={badgeSaving}
                 onClick={() => setBadgePickerOpen(o => !o)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.6rem 0 0', display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
               >
                 <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                   {[0, 1, 2].map(slot => {
@@ -1157,6 +1047,55 @@ export default function ProfileClient({
             <p className="font-karla text-center" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.55)', marginBottom: 16 }}>
               These appear everywhere your avatar shows up.
             </p>
+
+            {/* Character swatches — saves immediately on click (same as the
+                old standalone picker), so the live preview above updates as
+                soon as the player taps. Background/border still batch into
+                the Save button below. */}
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 6 }}>
+              Character
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 14 }}>
+              {CHARACTER_COLORS.map(c => {
+                const sprites = getCharacterSprites(c.id)
+                const isActive = characterColor === c.id
+                const isUnlocked = unlockedColors.includes(c.id)
+                return (
+                  <button
+                    key={`char-${c.id}`}
+                    type="button"
+                    disabled={colorSaving}
+                    onClick={async () => {
+                      if (!isUnlocked) { flashLockMsg(c.unlockHint ? `${c.name} — ${c.unlockHint}` : `${c.name} — locked`); return }
+                      if (isActive) return
+                      setColorSaving(true)
+                      setCharacterColor(c.id)
+                      await updateCharacterColor(c.id)
+                      setColorSaving(false)
+                    }}
+                    aria-label={`Character ${c.name}${!isUnlocked ? ' (locked)' : ''}`}
+                    title={isUnlocked ? c.name : `${c.name} — ${c.unlockHint ?? 'locked'}`}
+                    style={{
+                      width: '100%', aspectRatio: '1 / 1',
+                      borderRadius: '50%', overflow: 'hidden',
+                      backgroundImage: `url(${sprites.rest})`,
+                      backgroundSize: '420% auto', backgroundPosition: '60% 68%',
+                      backgroundRepeat: 'no-repeat',
+                      border: isActive ? '2px solid #f0c040' : '1px solid rgba(255,255,255,0.18)',
+                      boxShadow: isActive ? '0 0 10px rgba(240,192,64,0.35)' : 'none',
+                      cursor: colorSaving ? 'default' : 'pointer',
+                      padding: 0,
+                      opacity: !isUnlocked ? 0.55 : 1,
+                      position: 'relative',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                    }}
+                  >
+                    {!isUnlocked && <LockBadge />}
+                  </button>
+                )
+              })}
+            </div>
 
             {/* Background swatches */}
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 6 }}>
