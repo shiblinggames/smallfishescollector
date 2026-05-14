@@ -658,11 +658,14 @@ export default function ShipHero({
               </div>{/* end scrollable */}
             </motion.div>
 
-            {/* Crew picker — outside the motion.div to avoid CSS transform stacking context */}
+            {/* Crew picker — outside the motion.div to avoid CSS transform
+                stacking context. z-index 110 so it paints above the loadout
+                drawer (z:101); otherwise it opens behind the drawer and the
+                player can't reach it. */}
             {sheetOpen && (
               <div
                 onClick={closeSheet}
-                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 60, paddingTop: '80px' }}
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 110, paddingTop: '80px' }}
               >
                 <div
                   onClick={e => e.stopPropagation()}
