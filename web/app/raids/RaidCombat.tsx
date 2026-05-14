@@ -182,6 +182,9 @@ export default function RaidCombat({
   const [subPhase, setSubPhase]       = useState<SubPhase>('await_input')
   const [playerAction, setPlayerAction] = useState<EnemyAction | null>(null)
   const [enemyAction, setEnemyAction]   = useState<EnemyAction | null>(null)
+  // Last action the player committed to (set when the turn fully resolves).
+  // Used to block back-to-back dodges so dodge-camping isn't viable.
+  const [lastPlayerAction, setLastPlayerAction] = useState<EnemyAction | null>(null)
   const [aimResult, setAimResult]     = useState<ShotResult | null>(null)
   const [firstActor, setFirstActor]   = useState<Actor | null>(null)
   const [resolveLog, setResolveLog] = useState<string[]>([])
@@ -268,6 +271,7 @@ export default function RaidCombat({
     setPlayerCharges(0); setEnemyCharges(0)
     setSubPhase('await_input')
     setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
+    setLastPlayerAction(null)
     const intro = isBoss
       ? `${enemy.name} heaves into view!`
       : `A ${enemy.name} draws alongside!`
@@ -355,11 +359,14 @@ export default function RaidCombat({
 
   const canFire   = playerCharges >= 1
   const canVolley = playerCharges >= MAX_CHARGES
+  // Dodge has a 1-turn cooldown so it can't be spammed defensively.
+  const canDodge  = lastPlayerAction !== 'dodge'
 
   function selectAction(action: EnemyAction) {
     if (subPhase !== 'await_input') return
     if (action === 'fire'   && !canFire)   return
     if (action === 'volley' && !canVolley) return
+    if (action === 'dodge'  && !canDodge)  return
 
     setPlayerAction(action)
     if (action === 'fire' || action === 'volley') {
@@ -533,48 +540,68 @@ export default function RaidCombat({
 
         splatTarget = isAttackerPlayer ? 'enemy' : 'player'
 
+        // Dodge outcomes: success = 0 dmg, failure = "partial dodge" at 50%.
+        // No more "fully ate the shot" — the dodge button always pays for
+        // itself a little. Combined with the dodge cooldown above, this
+        // turns dodge into a soft mitigation read instead of a binary.
+        let partialDodge = false
         if (defenderAction === 'dodge') {
           const def = rollDodge(defenderSpeed, defenderNav)
           const atk = rollAttackerVsDodge(attackerSpeed)
           if (def >= atk) {
-            // Defender successfully dodged. Defender = enemy when player is attacking, and vice versa.
             stepLines.push(isAttackerPlayer ? `Enemy weaves aside — dodged!` : `You weave aside — dodged!`)
             splatText = 'Dodged'
             splatColor = '#38bdf8'
             steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, logLines: stepLines })
             continue
           } else {
-            stepLines.push(isAttackerPlayer ? `Enemy couldn't get out of the way.` : `You couldn't dodge in time.`)
+            partialDodge = true
+            dmg = Math.max(1, Math.floor(dmg * 0.5))
           }
         }
 
         if (isAttackerPlayer) {
           eHp = Math.max(0, eHp - dmg)
-          // Player attack — call out crits prominently for the feel.
-          if (lockedAimResult === 'critical') {
+          if (partialDodge) {
+            stepLines.push(action === 'volley'
+              ? `Enemy partially dodges your volley — grazed for ${dmg}.`
+              : `Enemy partially dodges — grazed for ${dmg}.`)
+            splatText = `-${dmg}`
+            splatColor = '#94a3b8'
+          } else if (lockedAimResult === 'critical') {
             stepLines.push(action === 'volley'
               ? `Critical volley! Blasts them for ${dmg} damage.`
               : `Critical hit! You blast them for ${dmg} damage.`)
+            splatText = `-${dmg}`
+            splatColor = '#fbbf24'
           } else {
             stepLines.push(action === 'volley'
               ? `You unleash a volley for ${dmg} damage.`
               : `You fire for ${dmg} damage.`)
+            splatText = `-${dmg}`
+            splatColor = '#ef4444'
           }
-          splatText = `-${dmg}`
-          splatColor = lockedAimResult === 'critical' ? '#fbbf24' : '#ef4444'
         } else {
           pHp = Math.max(0, pHp - dmg)
-          if (enemyCrit) {
+          if (partialDodge) {
+            stepLines.push(action === 'volley'
+              ? `You partially dodge the volley — grazed for ${dmg}.`
+              : `You partially dodge — grazed for ${dmg}.`)
+            splatText = `-${dmg}`
+            splatColor = '#94a3b8'
+          } else if (enemyCrit) {
             stepLines.push(action === 'volley'
               ? `Critical volley! Enemy blasts you for ${dmg} damage.`
               : `Critical hit! Enemy lands a heavy shot for ${dmg} damage.`)
+            splatText = `-${dmg}`
+            splatColor = '#fbbf24'
           } else {
             stepLines.push(action === 'volley'
               ? `Enemy unleashes a volley for ${dmg} damage.`
               : `Enemy fires for ${dmg} damage.`)
+            splatText = `-${dmg}`
+            splatColor = '#ef4444'
           }
-          splatText = `-${dmg}`
-          splatColor = enemyCrit ? '#fbbf24' : '#ef4444'
         }
       }
 
@@ -623,6 +650,7 @@ export default function RaidCombat({
             return
           }
           turnRef.current++; setTurn(turnRef.current)
+          setLastPlayerAction(pAction)
           setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
           setSubPhase('await_input')
         }, 400)
@@ -1129,6 +1157,7 @@ export default function RaidCombat({
           <ActionMenu
             canFire={canFire}
             canVolley={canVolley}
+            canDodge={canDodge}
             onSelect={selectAction}
             disabled={subPhase !== 'await_input'}
             highlightedAction={subPhase === 'await_input' ? null : playerAction}
@@ -1553,9 +1582,10 @@ function HitsplatOverlay({ text, color, big }: { text: string; color: string; bi
   )
 }
 
-function ActionMenu({ canFire, canVolley, onSelect, disabled = false, highlightedAction = null }: {
+function ActionMenu({ canFire, canVolley, canDodge, onSelect, disabled = false, highlightedAction = null }: {
   canFire: boolean
   canVolley: boolean
+  canDodge: boolean
   onSelect: (a: EnemyAction) => void
   /** When true, no buttons are clickable (we're in reveal / resolve phase). */
   disabled?: boolean
@@ -1584,16 +1614,16 @@ function ActionMenu({ canFire, canVolley, onSelect, disabled = false, highlighte
         }}
       >
         <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: enabled || isHighlighted ? '#ffffff' : '#5a6478' }}>{label}</span>
-        <span className="font-karla" style={{ fontSize: '0.68rem', color: enabled || isHighlighted ? color : '#4a5468', textAlign: 'center', lineHeight: 1.25 }}>{sub}</span>
+        <span className="font-karla" style={{ fontSize: '0.72rem', color: enabled || isHighlighted ? color : '#4a5468', textAlign: 'center', lineHeight: 1.25 }}>{sub}</span>
       </motion.button>
     )
   }
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-      {btn('fire',    'FIRE',    'Spend 1 ◆',         canFire,   '#4ade80')}
-      {btn('volley',  'VOLLEY',  'Spend 3 ◆ · ×2',    canVolley, '#fbbf24')}
-      {btn('reload',  'RELOAD',  '+1 ◆ · vulnerable', true,      '#a8b8d0')}
-      {btn('dodge',   'DODGE',   'Evade incoming',    true,      '#38bdf8')}
+      {btn('fire',    'FIRE',    'Attack · 1 ◆',                       canFire,   '#4ade80')}
+      {btn('volley',  'VOLLEY',  '2× attack · 3 ◆',                    canVolley, '#fbbf24')}
+      {btn('reload',  'RELOAD',  'Load +1 ◆',                          true,      '#a8b8d0')}
+      {btn('dodge',   'DODGE',   canDodge ? 'Avoid attack' : 'Recovering', canDodge,  '#38bdf8')}
     </div>
   )
 }
