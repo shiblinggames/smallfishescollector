@@ -3828,7 +3828,7 @@ export default function FishingGame({
                 if (isCrate) return (
                   <motion.div key={`hooked-${hookedFish.fishId}`}
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                    transition={{ duration: 0.15 }}
                     style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                     <div
                       style={{
@@ -3858,7 +3858,7 @@ export default function FishingGame({
                 if (isBoss && bossName) return (
                   <motion.div key={`hooked-${hookedFish.fishId}`}
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.2 }}
                     style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 1rem', pointerEvents: 'none' }}>
                     <motion.div
                       initial={{ scale: 0.92, y: 8 }} animate={{ scale: 1, y: 0 }}
@@ -3921,7 +3921,7 @@ export default function FishingGame({
                 return (
                   <motion.div key={`hooked-${hookedFish.fishId}`}
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                    transition={{ duration: 0.15 }}
                     style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                     <div
                       style={{
