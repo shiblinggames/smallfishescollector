@@ -2922,7 +2922,10 @@ export default function FishingGame({
     }
     setCratePhase('closed')
     setCrateRollDisplay(null)
-    await handleCastAgain()
+    // Don't auto-cast after the player taps Claim — they should decide
+    // when to fish next. Clearing crateResult drops the crate panel and
+    // reveals the normal Cast Again button for them to tap manually.
+    setCrateResult(null)
   }
 
   async function handleClaimDaily(index: 0 | 1 | 2) {
@@ -3754,10 +3757,21 @@ export default function FishingGame({
                       </div>
 
                       {/* Closed: label + tap button */}
-                      {cratePhase === 'closed' && (
+                      {cratePhase === 'closed' && (() => {
+                        // Show the actual crate tier so the player knows
+                        // what they hooked at a glance, not just "a crate".
+                        const tier = hookedFish?.crateTier ?? 'wooden'
+                        const tierName = tier === 'wooden' ? 'Wooden Crate'
+                                       : tier === 'metal'  ? 'Metal Crate'
+                                       : tier === 'gold'   ? 'Gold Crate'
+                                       :                     'Diamond Crate'
+                        return (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                          <p className="font-karla font-600" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginBottom: '0.7rem', letterSpacing: '0.06em' }}>
-                            You reeled up a sunken crate
+                          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.42)', letterSpacing: '0.18em', marginBottom: 3 }}>
+                            You reeled up a
+                          </p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', marginBottom: '0.7rem', textShadow: '0 0 12px rgba(251,191,36,0.35)' }}>
+                            {tierName}
                           </p>
                           <motion.button
                             onClick={handleOpenCrate}
@@ -3778,7 +3792,8 @@ export default function FishingGame({
                             Open Crate
                           </motion.button>
                         </motion.div>
-                      )}
+                        )
+                      })()}
 
                       {/* Rolling: slot ticker */}
                       {cratePhase === 'rolling' && (
