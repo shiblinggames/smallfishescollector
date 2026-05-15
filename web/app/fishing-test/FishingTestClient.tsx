@@ -19,12 +19,12 @@ const ROD_OVERLAY: Record<Frame, { top: number; left: number; width: number; rot
 // 3-pose rod defaults — each frame is the raw source-sheet quadrant
 // (rest/wait = 960×540, cast = 960×1080). The artist places the rod
 // handle at a consistent x,y in every source sheet, so one set of coords
-// works for every rod. Tune bamboo once and flip the picker to confirm
-// the rod_yolo / rod_millionaires / etc. lineup matches.
+// works for every rod. Final tuned values that line up rod_carbon and
+// all other rods identically.
 const ROD_3POSE_DEFAULT: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
-  rest: { top: 14, left: -10, width: 80, rotate: 0 },
-  wait: { top: 36, left: -10, width: 80, rotate: 0 },
-  cast: { top: -8, left:  30, width: 35, rotate: 0 },
+  rest: { top: 37,   left: -12, width: 107.5, rotate: 0 },
+  wait: { top: 37.5, left: -8,  width: 107.5, rotate: 0 },
+  cast: { top: -8.5, left: 3.5, width: 100.5, rotate: 0 },
 }
 
 const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number; hidden?: boolean }> = {
@@ -37,9 +37,9 @@ const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; ro
 // Sits on the rod near the handle; no per-pose sprite variants.
 const REEL_SRC = '/reel_basic.png'
 const REEL_DEFAULT: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
-  rest: { top: 45, left: 28, width: 9, rotate: 0 },
-  wait: { top: 60, left: 25, width: 9, rotate: 0 },
-  cast: { top: 18, left: 50, width: 9, rotate: 0 },
+  rest: { top: 73.2, left: 42.8, width: 5.6, rotate: -9.5  },
+  wait: { top: 73.5, left: 50.6, width: 5.6, rotate: -29.5 },
+  cast: { top: 46.9, left: 48.5, width: 5.3, rotate: 44    },
 }
 
 const ZONE_BG: Record<string, string> = {
