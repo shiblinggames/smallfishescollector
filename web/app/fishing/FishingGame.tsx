@@ -3492,13 +3492,11 @@ export default function FishingGame({
                 const bossName = isBoss ? (allFishSpecies.find(f => f.id === hookedFish.fishId)?.name ?? 'Ancient Creature') : null
 
                 if (isCrate) return (
-                  <motion.div key="hooked"
+                  <motion.div key={`hooked-${hookedFish.fishId}`}
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
                     style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <motion.div
-                      initial={{ scale: 0.95 }} animate={{ scale: 1 }}
-                      transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+                    <div
                       style={{
                         position: 'relative',
                         background: 'rgba(4,10,18,0.52)',
@@ -3519,12 +3517,12 @@ export default function FishingGame({
                         borderRight: '1px solid rgba(255,255,255,0.12)',
                         borderBottom: '1px solid rgba(255,255,255,0.12)',
                       }} />
-                    </motion.div>
+                    </div>
                   </motion.div>
                 )
 
                 if (isBoss && bossName) return (
-                  <motion.div key="hooked"
+                  <motion.div key={`hooked-${hookedFish.fishId}`}
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
                     style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 1rem' }}>
@@ -3587,13 +3585,11 @@ export default function FishingGame({
                 )
 
                 return (
-                  <motion.div key="hooked"
+                  <motion.div key={`hooked-${hookedFish.fishId}`}
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
                     style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <motion.div
-                      initial={{ scale: 0.95 }} animate={{ scale: 1 }}
-                      transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+                    <div
                       style={{
                         position: 'relative',
                         background: 'rgba(4,10,18,0.52)',
@@ -3604,25 +3600,35 @@ export default function FishingGame({
                         boxShadow: `0 0 32px ${r.color}28`,
                       }}
                     >
-                      <motion.p
-                        className="font-karla font-700"
-                        animate={isLegendary
-                          ? { scale: [1, 1.04, 1], opacity: [1, 0.82, 1] }
-                          : isEpicPlus ? { opacity: [1, 0.85, 1] } : {}
-                        }
-                        transition={isLegendary || isEpicPlus
-                          ? { duration: 0.8, repeat: Infinity, ease: 'easeInOut' }
-                          : {}
-                        }
-                        style={{
-                          fontSize: isLegendary ? '1.1rem' : isEpicPlus ? '1rem' : '0.95rem',
-                          color: r.color,
-                          textShadow: `0 0 20px ${r.color}80`,
-                          letterSpacing: isLegendary ? '0.04em' : 'normal',
-                        }}
-                      >
-                        {r.hookedText}
-                      </motion.p>
+                      {isEpicPlus ? (
+                        <motion.p
+                          className="font-karla font-700"
+                          animate={isLegendary
+                            ? { scale: [1, 1.04, 1], opacity: [1, 0.82, 1] }
+                            : { opacity: [1, 0.85, 1] }
+                          }
+                          transition={{ duration: 0.8, repeat: Infinity, ease: 'easeInOut' }}
+                          style={{
+                            fontSize: isLegendary ? '1.1rem' : '1rem',
+                            color: r.color,
+                            textShadow: `0 0 20px ${r.color}80`,
+                            letterSpacing: isLegendary ? '0.04em' : 'normal',
+                          }}
+                        >
+                          {r.hookedText}
+                        </motion.p>
+                      ) : (
+                        <p
+                          className="font-karla font-700"
+                          style={{
+                            fontSize: '0.95rem',
+                            color: r.color,
+                            textShadow: `0 0 20px ${r.color}80`,
+                          }}
+                        >
+                          {r.hookedText}
+                        </p>
+                      )}
                       <div style={{
                         position: 'absolute', bottom: -7, left: '50%',
                         transform: 'translateX(-50%) rotate(45deg)',
@@ -3631,7 +3637,7 @@ export default function FishingGame({
                         borderRight: `1px solid ${r.color}40`,
                         borderBottom: `1px solid ${r.color}40`,
                       }} />
-                    </motion.div>
+                    </div>
                   </motion.div>
                 )
               })()}
@@ -3644,13 +3650,7 @@ export default function FishingGame({
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', paddingBottom: '1rem' }}>
 
                   <div style={{ minHeight: '1.6rem' }}>
-                    {/* Only render the status pill during reeling. Showing the
-                        current dial zone label during catching produced a
-                        pill that visually echoed the just-dismissed "you've
-                        got a bite" banner one position up — read as the
-                        hooked banner flashing in twice. The dial itself
-                        already communicates the zones visually. */}
-                    {phase === 'reeling' && (
+                    {(phase === 'reeling' || currentZone) && (
                       <div style={{
                         display: 'inline-block',
                         background: 'rgba(4,10,18,0.52)',
@@ -3664,7 +3664,7 @@ export default function FishingGame({
                             color: retryFlash ? '#fb923c' : (currentZone?.color ?? '#e8e4de'),
                             textShadow: retryFlash ? '0 0 16px rgba(251,146,60,0.7)' : currentZone ? `0 0 16px ${currentZone.color}70` : 'none',
                           }}>
-                          {retryFlash ? 'Second Wind!' : bossStageCleared ? `Stage ${bossStage - 1}/3 — Hold On!` : 'Reeling in…'}
+                          {retryFlash ? 'Second Wind!' : (phase === 'reeling' && bossStageCleared) ? `Stage ${bossStage - 1}/3 — Hold On!` : phase === 'reeling' ? 'Reeling in…' : (currentZone?.label ?? '')}
                         </p>
                       </div>
                     )}
