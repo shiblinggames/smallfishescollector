@@ -3184,13 +3184,19 @@ export default function FishingGame({
                     maxWidth: 'none',
                   }} />
                 )}
-                {hook.imageUrl && !hc.hidden && (
+                {/* Hook — disabled until CHAR_HOOK_OVERLAY is retuned for
+                    the new raw 1920x1080 hook uploads. Old coords were
+                    tuned against ~64px sprites and would render a screen-
+                    sized hook against the new canvas. Re-enable once the
+                    tuner on /fishing-test produces final coords. */}
+                {false && hook.imageUrl && !hc.hidden && (
                   <img src={hook.imageUrl} alt="" className={hook.glow ? 'rod-glow' : undefined} style={{
                     position: 'absolute', top: `${hc.top}%`, left: `${hc.left}%`,
                     width: `${hc.width}%`,
                     transform: `rotate(${hc.rotate}deg)`,
                     transformOrigin: 'center center',
                     pointerEvents: 'none',
+                    maxWidth: 'none',
                     ...(hook.glow ? { ['--rod-glow-color' as string]: hook.color } : {}),
                   } as React.CSSProperties} />
                 )}
@@ -5644,7 +5650,7 @@ export default function FishingGame({
               borderRadius: 10, padding: '7px 14px',
             }}
           >
-            <img src="/models/hooks/gold-hook.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', opacity: 0.9 }} />
+            <img src="/hook_gold_thumb.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', opacity: 0.9 }} />
             <div>
               <p className="font-karla font-600 uppercase tracking-[0.14em]"
                 style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.38)', marginBottom: 1 }}>

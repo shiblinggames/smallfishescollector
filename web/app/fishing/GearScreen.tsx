@@ -388,7 +388,7 @@ export default function GearScreen({
           <GearSlot label="Rod" image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glowClass={rodGlowClass(rod)} notify={rodHasAffordable} onClick={() => setOpenSlot('rod')} />
         </div>
         <div style={{ gridColumn: '1', gridRow: '2' }}>
-          <GearSlot label="Hook" image={hook.imageUrl ?? null} itemName={hook.name} color={hook.color} glowClass={hook.glow ? 'rod-glow' : undefined} notify={hookHasAffordable} onClick={() => setOpenSlot('hook')} />
+          <GearSlot label="Hook" image={hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null} itemName={hook.name} color={hook.color} glowClass={hook.glow ? 'rod-glow' : undefined} notify={hookHasAffordable} onClick={() => setOpenSlot('hook')} />
         </div>
 
         {/* Center row 1: Hat / Bandana */}
@@ -878,7 +878,7 @@ export default function GearScreen({
                       {hook.imageUrl && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={hook.imageUrl}
+                          src={hook.imageUrl.replace(/\.png$/, '_thumb.png')}
                           alt={hook.name}
                           className={hook.glow ? 'rod-glow' : undefined}
                           style={{
@@ -917,7 +917,7 @@ export default function GearScreen({
                         {nextHook.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={nextHook.imageUrl}
+                            src={nextHook.imageUrl.replace(/\.png$/, '_thumb.png')}
                             alt={nextHook.name}
                             className={nextHook.glow ? 'rod-glow' : undefined}
                             style={{

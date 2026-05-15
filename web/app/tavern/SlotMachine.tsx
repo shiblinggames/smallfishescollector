@@ -25,7 +25,7 @@ function HookImage({ size }: { size: number }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/models/hooks/steel-hook.png"
+      src="/hook_steel_thumb.png"
       alt="Hook"
       style={{ width: size, height: size, objectFit: 'contain', display: 'block' }}
     />
@@ -45,7 +45,7 @@ function SlotSymbolDisplay({ id, size }: { id: SlotSymbolId; size?: number }) {
     return (
       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/models/hooks/steel-hook.png" alt="Hook" style={{ width: '72%', height: '72%', objectFit: 'contain', display: 'block' }} />
+        <img src="/hook_steel_thumb.png" alt="Hook" style={{ width: '72%', height: '72%', objectFit: 'contain', display: 'block' }} />
       </div>
     )
   }

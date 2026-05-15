@@ -147,7 +147,7 @@ export default function TackleShopClient({
 
   const CATEGORIES: { key: Exclude<Section, null>; label: string; desc: string; color: string; imageUrl?: string }[] = [
     { key: 'bait',  label: 'Bait',  color: '#34d399', desc: 'Consumables used per cast.',           imageUrl: '/worms.png' },
-    { key: 'hook',  label: 'Hooks', color: '#f0c040', desc: 'Widens the catch zone on the dial.',  imageUrl: '/models/hooks/steel-hook.png' },
+    { key: 'hook',  label: 'Hooks', color: '#f0c040', desc: 'Widens the catch zone on the dial.',  imageUrl: '/hook_steel_thumb.png' },
     { key: 'rod',   label: 'Rods',  color: '#b8956a', desc: 'Every rod has a unique ability.',       imageUrl: '/rod_driftwood_thumb.png' },
     { key: 'reel',  label: 'Reels', color: '#60a5fa', desc: 'Slows the needle for easier timing.',   imageUrl: '/reel_basic_thumb.png' },
     { key: 'line',  label: 'Line',  color: '#4ade80', desc: 'Shrinks snag zones. Earned by species.',  imageUrl: '/monofilament.png' },
@@ -362,7 +362,7 @@ export default function TackleShopClient({
       {section === 'hook' && (
         <>
           <div className="mb-5">
-            <HookViewer3D imageUrl={HOOKS[previewTier]?.imageUrl} color={HOOKS[previewTier]?.color ?? '#f0c040'} tier={previewTier} />
+            <HookViewer3D imageUrl={HOOKS[previewTier]?.imageUrl ? HOOKS[previewTier]!.imageUrl!.replace(/\.png$/, '_thumb.png') : undefined} color={HOOKS[previewTier]?.color ?? '#f0c040'} tier={previewTier} />
             <div className="flex items-center justify-center gap-2 mt-2.5">
               <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.85rem', color: HOOKS[previewTier]?.color }}>
                 {HOOKS[previewTier]?.name}
@@ -402,7 +402,7 @@ export default function TackleShopClient({
                   }}
                 >
                   <div className="flex items-start gap-3 sm:gap-5">
-                    <HookIcon tier={hook.tier} color={c} owned={owned} isActive={isActive} imageUrl={hook.imageUrl} glow={hook.glow} />
+                    <HookIcon tier={hook.tier} color={c} owned={owned} isActive={isActive} imageUrl={hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : undefined} glow={hook.glow} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <p className="font-cinzel font-700 text-sm sm:text-base" style={{ color: owned ? '#f0ede8' : '#6a6764' }}>

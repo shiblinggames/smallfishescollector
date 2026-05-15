@@ -27,10 +27,15 @@ const ROD_3POSE_DEFAULT: Record<Frame, { top: number; left: number; width: numbe
   cast: { top: -8.5, left: 3.5, width: 100.5, rotate: 0 },
 }
 
+// Hook overlay defaults for the new raw 1920×1080 hook uploads. Same
+// canvas + consistent core position across every hook tier means one set
+// of coords applies to all of them. Wait pose is hidden because the hook
+// is in the water during the bite. Starting numbers are rough — tune in
+// the test page and paste back.
 const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number; hidden?: boolean }> = {
-  rest: { top: 81, left: 9,  width: 16, rotate: -30 },
-  wait: { top: 58, left: -4, width: 25, rotate: 0,   hidden: true },
-  cast: { top: 18, left: 6,  width: 16, rotate: 8   },
+  rest: { top: 30,  left: -20, width: 120, rotate: 0 },
+  wait: { top: 30,  left: -20, width: 120, rotate: 0, hidden: true },
+  cast: { top: -10, left:  10, width: 100, rotate: 0 },
 }
 
 // Reel: 1920×1080 raw uploads — same canvas across every tier so a single
@@ -277,6 +282,7 @@ export default function FishingTestClient() {
                 position: 'absolute', top: `${hc.top}%`, left: `${hc.left}%`,
                 width: `${hc.width}%`, transform: `rotate(${hc.rotate}deg)`,
                 transformOrigin: 'center center', pointerEvents: 'none',
+                maxWidth: 'none',
                 ...(hook.glow ? { ['--rod-glow-color' as string]: hook.color } : {}),
               } as React.CSSProperties} />
             )}
@@ -539,10 +545,12 @@ export default function FishingTestClient() {
           ))}
         </select>
         <p style={{ fontWeight: 600, marginBottom: 4, color: '#6ee7b7' }}>Hook overlay ({frame})</p>
-        <Slider label="top %"    value={hc.top}    min={-80} max={150}  onChange={v => setHook('top',    v)} />
-        <Slider label="left %"   value={hc.left}   min={-80} max={100}  onChange={v => setHook('left',   v)} />
-        <Slider label="width %"  value={hc.width}  min={2}   max={60}   onChange={v => setHook('width',  v)} />
-        <Slider label="rotate °" value={hc.rotate} min={-180} max={180} onChange={v => setHook('rotate', v)} />
+        {/* Raw 1920×1080 hook canvases — same wide ranges as rod/reel
+            because the hook core is a tiny portion of the canvas. */}
+        <Slider label="top %"    value={hc.top}    min={-200} max={200} step={0.5} onChange={v => setHook('top',    v)} />
+        <Slider label="left %"   value={hc.left}   min={-200} max={200} step={0.5} onChange={v => setHook('left',   v)} />
+        <Slider label="width %"  value={hc.width}  min={1}    max={500} step={0.5} onChange={v => setHook('width',  v)} />
+        <Slider label="rotate °" value={hc.rotate} min={-180} max={180} step={0.5} onChange={v => setHook('rotate', v)} />
 
         {/* Badge slots */}
         <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Badges</p>
