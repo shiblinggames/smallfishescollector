@@ -8,6 +8,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
 import { getHook } from '@/lib/hooks'
 import { getRod } from '@/lib/rods'
+import { getReel } from '@/lib/reels'
 import { getShip } from '@/lib/ships'
 import { getShipSkin } from '@/lib/shipSkins'
 import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
@@ -213,6 +214,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
   const expTitle = getNavigatorTitle(expLevel)
 
   const rod  = getRod(gear.rodTier)
+  const reel = getReel(gear.reelTier)
   const hook = getHook(gear.hookTier)
   const ship = getShip(gear.shipTier)
   const shipSkin = equippedShipSkin ? getShipSkin(equippedShipSkin) : null
@@ -326,13 +328,32 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                     </div>
                   )
                 })()}
-                {rod.imageUrl && (
+                {/* Rod — 3-pose rest sprite. Coords mirror CHAR_ROD_OVERLAY.rest
+                    in FishingGame so the static silhouette matches the live game. */}
+                {rod.slug ? (
+                  <img src={`/${rod.slug}_rest.png`} alt="" className={rod.glow ? 'rod-glow' : undefined} style={{
+                    position: 'absolute', top: '37%', left: '-12%', width: '107.5%',
+                    transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                    maxWidth: 'none',
+                    ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
+                  } as React.CSSProperties} />
+                ) : rod.imageUrl && (
                   <img src={rod.imageUrl} alt="" className={rod.glow ? 'rod-glow' : undefined} style={{
                     position: 'absolute', top: '33%', left: '12%', width: '51%',
                     transform: 'rotate(-1deg)', transformOrigin: 'bottom right',
                     pointerEvents: 'none',
                     ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
                   } as React.CSSProperties} />
+                )}
+                {/* Reel — mirrors CHAR_REEL_OVERLAY.rest. */}
+                {reel.imageUrl && (
+                  <img src={reel.imageUrl} alt="" style={{
+                    position: 'absolute', top: '15%', left: '-10.3%', width: '222%',
+                    transform: 'rotate(-18deg)', transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                    maxWidth: 'none',
+                  }} />
                 )}
                 {hook.imageUrl && (
                   <img src={hook.imageUrl} alt="" className={hook.glow ? 'rod-glow' : undefined} style={{

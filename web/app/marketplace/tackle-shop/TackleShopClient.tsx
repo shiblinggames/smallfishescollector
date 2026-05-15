@@ -148,8 +148,8 @@ export default function TackleShopClient({
   const CATEGORIES: { key: Exclude<Section, null>; label: string; desc: string; color: string; imageUrl?: string }[] = [
     { key: 'bait',  label: 'Bait',  color: '#34d399', desc: 'Consumables used per cast.',           imageUrl: '/worms.png' },
     { key: 'hook',  label: 'Hooks', color: '#f0c040', desc: 'Widens the catch zone on the dial.',  imageUrl: '/models/hooks/steel-hook.png' },
-    { key: 'rod',   label: 'Rods',  color: '#b8956a', desc: 'Every rod has a unique ability.',       imageUrl: '/driftwoodrod.png' },
-    { key: 'reel',  label: 'Reels', color: '#60a5fa', desc: 'Slows the needle for easier timing.',   imageUrl: '/basicreel.png' },
+    { key: 'rod',   label: 'Rods',  color: '#b8956a', desc: 'Every rod has a unique ability.',       imageUrl: '/rod_driftwood_rest.png' },
+    { key: 'reel',  label: 'Reels', color: '#60a5fa', desc: 'Slows the needle for easier timing.',   imageUrl: '/reel_basic.png' },
     { key: 'line',  label: 'Line',  color: '#4ade80', desc: 'Shrinks snag zones. Earned by species.',  imageUrl: '/monofilament.png' },
   ]
 
@@ -484,10 +484,10 @@ export default function TackleShopClient({
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
                   </div>
-                  {compRod.imageUrl && (
+                  {(compRod.slug || compRod.imageUrl) && (
                     <div style={{ background: `${c}0a`, border: `1px solid ${c}25`, borderRadius: 12, padding: '1rem', display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={compRod.imageUrl} alt={compRod.name} style={{ height: 140, objectFit: 'contain' }} />
+                      <img src={compRod.slug ? `/${compRod.slug}_rest.png` : compRod.imageUrl} alt={compRod.name} style={{ height: 140, objectFit: 'contain' }} />
                     </div>
                   )}
                   <div className="flex flex-wrap gap-1.5 mb-4">
@@ -545,10 +545,10 @@ export default function TackleShopClient({
                       borderBottom: `1px solid ${c}22`,
                       padding: '0.75rem 0.5rem',
                     }}>
-                      {rod.imageUrl
+                      {(rod.slug || rod.imageUrl)
                         ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={rod.imageUrl} alt={rod.name} className={owned && rod.glow ? 'rod-glow' : undefined} style={{
+                          <img src={rod.slug ? `/${rod.slug}_rest.png` : rod.imageUrl} alt={rod.name} className={owned && rod.glow ? 'rod-glow' : undefined} style={{
                             height: '100%', maxWidth: '100%', objectFit: 'contain',
                             ...(owned && rod.glow
                               ? { ['--rod-glow-color' as string]: rod.color }

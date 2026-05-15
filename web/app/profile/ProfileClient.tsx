@@ -15,6 +15,7 @@ import { getBoat } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import { getRod } from '@/lib/rods'
+import { getReel } from '@/lib/reels'
 import { getHook } from '@/lib/hooks'
 import { getShip } from '@/lib/ships'
 import { getShipSkin } from '@/lib/shipSkins'
@@ -47,6 +48,7 @@ interface Props {
   customShipName: string | null
   equippedShipSkin: string | null
   rodTier: number
+  reelTier: number
   hookTier: number
   equippedSpecialId: string | null
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
@@ -205,6 +207,7 @@ export default function ProfileClient({
   customShipName,
   equippedShipSkin,
   rodTier,
+  reelTier,
   hookTier,
   equippedSpecialId,
   rarestFish,
@@ -252,6 +255,7 @@ export default function ProfileClient({
   const color = avatarColor(username || email)
 
   const rod = getRod(rodTier)
+  const reel = getReel(reelTier)
   const hook = getHook(hookTier)
   const ship = getShip(shipTier)
   const shipSkinDef = equippedShipSkin ? getShipSkin(equippedShipSkin) : null
@@ -621,13 +625,35 @@ export default function ProfileClient({
                     </div>
                   )
                 })()}
-                {rod.imageUrl && (
+                {/* Rod — 3-pose rest sprite. Coords mirror CHAR_ROD_OVERLAY.rest
+                    in FishingGame so the static profile silhouette matches what
+                    the player sees in the actual fishing scene. maxWidth: 'none'
+                    overrides Tailwind preflight which would otherwise cap the
+                    rod at 100% of the avatar container. */}
+                {rod.slug ? (
+                  <img src={`/${rod.slug}_rest.png`} alt="" className={rod.glow ? 'rod-glow' : undefined} style={{
+                    position: 'absolute', top: '37%', left: '-12%', width: '107.5%',
+                    transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                    maxWidth: 'none',
+                    ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
+                  } as React.CSSProperties} />
+                ) : rod.imageUrl && (
                   <img src={rod.imageUrl} alt="" className={rod.glow ? 'rod-glow' : undefined} style={{
                     position: 'absolute', top: '33%', left: '12%', width: '51%',
                     transform: 'rotate(-1deg)', transformOrigin: 'bottom right',
                     pointerEvents: 'none',
                     ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
                   } as React.CSSProperties} />
+                )}
+                {/* Reel — mirrors CHAR_REEL_OVERLAY.rest from FishingGame. */}
+                {reel.imageUrl && (
+                  <img src={reel.imageUrl} alt="" style={{
+                    position: 'absolute', top: '15%', left: '-10.3%', width: '222%',
+                    transform: 'rotate(-18deg)', transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                    maxWidth: 'none',
+                  }} />
                 )}
                 {hook.imageUrl && (
                   <img src={hook.imageUrl} alt="" className={hook.glow ? 'rod-glow' : undefined} style={{

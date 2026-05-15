@@ -25,7 +25,7 @@ export default async function ProfilePage() {
     { data: allFishSpecies },
   ] = await Promise.all([
     supabase.from('profiles')
-      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges, trophy_catches, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color')
+      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, reel_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges, trophy_catches, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color')
       .eq('id', user.id)
       .single(),
     admin.from('fish_collection')
@@ -110,6 +110,7 @@ export default async function ProfilePage() {
           customShipName={(profile?.ship_name as string | null) ?? null}
           equippedShipSkin={(profile?.equipped_ship_skin as string | null) ?? null}
           rodTier={profile?.rod_tier ?? 0}
+          reelTier={profile?.reel_tier ?? 0}
           hookTier={profile?.hook_tier ?? 0}
           equippedSpecialId={(profile?.equipped_special as string | null) ?? null}
           rarestFish={rarestFish}
