@@ -59,10 +59,11 @@ const REEL_DEFAULT: Record<Frame, { top: number; left: number; width: number; ro
 }
 
 const ZONE_BG: Record<string, string> = {
-  shallows:    '/fishingbackground1.jpeg',
-  open_waters: '/fishingbackground2.jpeg',
-  deep:        '/fishingbackground3.jpeg',
-  abyss:       '/fishingbackground4.jpeg',
+  shallows:    '/shallows.jpg',
+  open_waters: '/openwaters.jpg',
+  deep:        '/deep.jpg',
+  abyss:       '/abyss.jpg',
+  ancient_deep:'/ancient.jpg',
 }
 
 const CHAR_DEFAULT: Record<Frame, { bottom: number; left: number; width: number }> = {

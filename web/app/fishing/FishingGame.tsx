@@ -109,11 +109,11 @@ const HABITAT_TAGLINE: Record<string, string> = {
   ancient_deep: 'Before time. Beyond depth.',
 }
 const ZONE_BG: Record<string, string> = {
-  shallows:     '/fishingbackground1.jpeg',
-  open_waters:  '/fishingbackground2.jpeg',
-  deep:         '/fishingbackground3.jpeg',
-  abyss:        '/fishingbackground4.jpeg',
-  ancient_deep: '/fishingbackground4.jpeg',
+  shallows:     '/shallows.jpg',
+  open_waters:  '/openwaters.jpg',
+  deep:         '/deep.jpg',
+  abyss:        '/abyss.jpg',
+  ancient_deep: '/ancient.jpg',
 }
 
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep'] as const
@@ -3073,7 +3073,7 @@ export default function FishingGame({
           style={{ position: 'absolute', inset: '-14px', willChange: 'transform' }}
         >
           <img
-            src={ZONE_BG[selectedZone] ?? '/fishingbackground1.jpeg'}
+            src={ZONE_BG[selectedZone] ?? '/shallows.jpg'}
             alt=""
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
           />
