@@ -63,11 +63,26 @@ export const FINN_PERFECT_TIERS: PerfectTier[] = [
   { tier: 3, perfects: 3, multiplier: 15 },
 ]
 
+// Base times calibrated for Shallows. Higher zones multiply timeMs via
+// FINN_SPEED_ZONE_MULT so the per-fish pace stays tight no matter where
+// the player is fishing. Ancient Deep is excluded from speed challenges
+// entirely — its boss-style multi-stage catches don't fit a speed format.
 export const FINN_SPEED_TIERS: SpeedTier[] = [
-  { tier: 1, fish: 3, timeMs: 35_000, multiplier: 5  },
-  { tier: 2, fish: 5, timeMs: 50_000, multiplier: 10 },
-  { tier: 3, fish: 7, timeMs: 60_000, multiplier: 15 },
+  { tier: 1, fish: 3, timeMs: 30_000, multiplier: 5  },
+  { tier: 2, fish: 5, timeMs: 42_000, multiplier: 10 },
+  { tier: 3, fish: 7, timeMs: 54_000, multiplier: 15 },
 ]
+
+/** Multiplier on the Shallows-baseline timeMs per zone. Tracks actual
+ *  bite-wait scaling (deeper waters have longer waits) so the challenge
+ *  stays achievable but never sloppy at any depth. */
+export const FINN_SPEED_ZONE_MULT: Record<string, number> = {
+  shallows:     1.0,
+  open_waters:  1.4,
+  deep:         1.9,
+  abyss:        2.5,
+  ancient_deep: 0,    // sentinel — speed challenges skipped entirely here
+}
 
 // ─── Story beats ─────────────────────────────────────────────────────────────
 

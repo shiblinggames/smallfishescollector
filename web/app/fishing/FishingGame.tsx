@@ -7,7 +7,7 @@ import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, saveHighestPerfec
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
 import {
-  FINN_ENCOUNTER_RATE, FINN_PERFECT_TIERS, FINN_SPEED_TIERS, FINN_REVEAL_BEAT,
+  FINN_ENCOUNTER_RATE, FINN_PERFECT_TIERS, FINN_SPEED_TIERS, FINN_SPEED_ZONE_MULT, FINN_REVEAL_BEAT,
   FINN_OFFER_LINES, FINN_WIN_LINES, FINN_LOSS_LINES,
   FINN_EPILOGUE_OFFER_LINES, FINN_EPILOGUE_WIN_LINES, FINN_EPILOGUE_LOSS_LINES,
   FINN_EPILOGUE_LORE_LINES, FINN_EPILOGUE_LORE_CHANCE,
@@ -2270,7 +2270,11 @@ export default function FishingGame({
     const newEncounters = finnEncounters + 1
     const beat = findNextEncounterBeat(newEncounters, finnSeenBeats)
 
-    const type = pickChallengeType()
+    // Pick challenge type. Speed challenges don't make sense in Ancient
+    // Deep (boss-style multi-stage catches break the timer concept), so
+    // we force perfect_streak there.
+    const zoneSpeedMult = FINN_SPEED_ZONE_MULT[selectedZone] ?? 1
+    const type = zoneSpeedMult === 0 ? 'perfect_streak' : pickChallengeType()
     const tier = pickFinnTier()
 
     let perfectsTarget: number | undefined
@@ -2289,9 +2293,11 @@ export default function FishingGame({
     } else {
       const def = FINN_SPEED_TIERS[tier - 1]
       fishTarget = def.fish
-      timeMs = def.timeMs
+      // Scale time by zone — deeper waters get more wall-clock seconds so
+      // the per-fish pace stays similar to Shallows. Base time stays tight.
+      timeMs = Math.round(def.timeMs * zoneSpeedMult)
       multiplier = def.multiplier
-      targetText = `Catch ${def.fish} fish in ${Math.round(def.timeMs / 1000)}s`
+      targetText = `Catch ${def.fish} fish in ${Math.round(timeMs / 1000)}s`
     }
 
     const rewardText = `+${(fishingLevel * multiplier).toLocaleString()} ⟡`
