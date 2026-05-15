@@ -3166,15 +3166,19 @@ export default function FishingGame({
                     ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
                   } as React.CSSProperties} />
                 )}
-                {/* Reel — sits on the rod handle. Sprite varies by reel tier
-                    but the on-rod position is the same. */}
-                {reel.imageUrl && (
+                {/* Reel — disabled until CHAR_REEL_OVERLAY is retuned for
+                    the new raw 1920x1080 reel uploads. Old coords were
+                    tuned against the 48x53 trim and would render a
+                    screen-sized reel against the new canvas. Re-enable
+                    once the tuner on /fishing-test produces final coords. */}
+                {false && reel.imageUrl && (
                   <img src={reel.imageUrl} alt="" style={{
                     position: 'absolute', top: `${rec.top}%`, left: `${rec.left}%`,
                     width: `${rec.width}%`,
                     transform: `rotate(${rec.rotate}deg)`,
                     transformOrigin: 'center center',
                     pointerEvents: 'none',
+                    maxWidth: 'none',
                   }} />
                 )}
                 {hook.imageUrl && !hc.hidden && (

@@ -33,13 +33,25 @@ const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; ro
   cast: { top: 18, left: 6,  width: 16, rotate: 8   },
 }
 
-// Reel: a single 48×53 sprite (reel_basic.png) positioned per frame.
-// Sits on the rod near the handle; no per-pose sprite variants.
-const REEL_SRC = '/reel_basic.png'
+// Reel: 1920×1080 raw uploads — same canvas across every tier so a single
+// set of position coords works for all of them. Decorations on higher-tier
+// reels (kraken, tidecaller) live inside the canvas padding without
+// shifting where the reel core lands on screen.
+const REEL_NAMES = [
+  'reel_basic',
+  'reel_spinning',
+  'reel_baitcasting',
+  'reel_saltwater',
+  'reel_precision',
+  'reel_tournament',
+  'reel_deepsea',
+  'reel_kraken',
+  'reel_tidecaller',
+] as const
 const REEL_DEFAULT: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
-  rest: { top: 73.2, left: 42.8, width: 5.6, rotate: -9.5  },
-  wait: { top: 73.5, left: 50.6, width: 5.6, rotate: -29.5 },
-  cast: { top: 46.9, left: 48.5, width: 5.3, rotate: 44    },
+  rest: { top: 10, left: -25, width: 100, rotate: 0 },
+  wait: { top: 10, left: -20, width: 100, rotate: 0 },
+  cast: { top: -5, left:  -5, width: 100, rotate: 0 },
 }
 
 const ZONE_BG: Record<string, string> = {
@@ -105,6 +117,7 @@ export default function FishingTestClient() {
   const [rodCfg, setRodCfg] = useState(ROD_OVERLAY)
   const [rodThreePoseCfg, setRodThreePoseCfg] = useState(ROD_3POSE_DEFAULT)
   const [reelEnabled, setReelEnabled] = useState(false)
+  const [reelName, setReelName] = useState<typeof REEL_NAMES[number]>('reel_basic')
   const [reelCfg, setReelCfg] = useState(REEL_DEFAULT)
   const [hookCfg, setHookCfg] = useState(HOOK_OVERLAY)
   const [charCfg, setCharCfg] = useState(CHAR_DEFAULT)
@@ -242,7 +255,7 @@ export default function FishingTestClient() {
 
             {reelEnabled && (
               <img
-                src={REEL_SRC}
+                src={`/${reelName}.png`}
                 alt="reel"
                 style={{
                   position: 'absolute',
@@ -252,6 +265,9 @@ export default function FishingTestClient() {
                   transform: `rotate(${reelCfg[frame].rotate}deg)`,
                   transformOrigin: 'center center',
                   pointerEvents: 'none',
+                  // Same Tailwind preflight override the rod img needs:
+                  // raw-quadrant canvases often want width past 100%.
+                  maxWidth: 'none',
                 }}
               />
             )}
@@ -458,12 +474,22 @@ export default function FishingTestClient() {
         {reelEnabled && (
           <>
             <p style={{ fontSize: 10, color: '#6b7280', marginBottom: 6 }}>
-              Sprite: <span style={{ color: '#a3e635' }}>{REEL_SRC}</span>
+              Sprite: <span style={{ color: '#a3e635' }}>/{reelName}.png</span>
             </p>
+            <select
+              value={reelName}
+              onChange={e => setReelName(e.target.value as typeof REEL_NAMES[number])}
+              style={{ width: '100%', marginBottom: 10, padding: '4px 6px', background: '#1e2d3e', color: '#fff', border: '1px solid #334', borderRadius: 6 }}
+            >
+              {REEL_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
             <p style={{ fontWeight: 600, marginBottom: 4, color: '#a3e635' }}>Reel overlay ({frame})</p>
-            <Slider label="top %"    value={reelCfg[frame].top}    min={-40} max={100} step={0.1} onChange={v => setReelCfg(p => ({ ...p, [frame]: { ...p[frame], top:    v } }))} />
-            <Slider label="left %"   value={reelCfg[frame].left}   min={-40} max={100} step={0.1} onChange={v => setReelCfg(p => ({ ...p, [frame]: { ...p[frame], left:   v } }))} />
-            <Slider label="width %"  value={reelCfg[frame].width}  min={1}   max={40}  step={0.1} onChange={v => setReelCfg(p => ({ ...p, [frame]: { ...p[frame], width:  v } }))} />
+            {/* Reels are raw 1920×1080 uploads, so the slider ranges match
+                the rod ones — width often past 100%, top/left negative to
+                anchor the visible reel onto the rod handle. */}
+            <Slider label="top %"    value={reelCfg[frame].top}    min={-200} max={200} step={0.1} onChange={v => setReelCfg(p => ({ ...p, [frame]: { ...p[frame], top:    v } }))} />
+            <Slider label="left %"   value={reelCfg[frame].left}   min={-200} max={200} step={0.1} onChange={v => setReelCfg(p => ({ ...p, [frame]: { ...p[frame], left:   v } }))} />
+            <Slider label="width %"  value={reelCfg[frame].width}  min={1}    max={500} step={0.5} onChange={v => setReelCfg(p => ({ ...p, [frame]: { ...p[frame], width:  v } }))} />
             <Slider label="rotate °" value={reelCfg[frame].rotate} min={-180} max={180} step={0.5} onChange={v => setReelCfg(p => ({ ...p, [frame]: { ...p[frame], rotate: v } }))} />
             <button onClick={() => setReelCfg(p => ({ rest: p[frame], wait: p[frame], cast: p[frame] }))} style={{
               width: '100%', padding: '4px 0', borderRadius: 6, cursor: 'pointer', marginTop: 6,
