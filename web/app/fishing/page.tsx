@@ -6,6 +6,9 @@ import FishingPageClient from './FishingPageClient'
 import { getActiveChallengeSession } from '@/app/social/challengeActions'
 import { getDailyChallenge } from './dailyChallengeActions'
 import { isPremiumActive } from '@/lib/premium'
+import { getCharacterSprites } from '@/lib/characters'
+import { getBoat } from '@/lib/boats'
+import { getHat } from '@/lib/hats'
 
 export default async function FishingPage() {
   const supabase = await createClient()
@@ -73,8 +76,28 @@ export default async function FishingPage() {
   const hasAutoCaster = profile?.has_auto_caster ?? false
   const characterColor = profile?.character_color ?? 'default'
 
+  // Preload the player's active character sprites + equipped cosmetics so
+  // they're warm in the browser cache by the time FishingGame mounts —
+  // otherwise the character flickers in after navigation. Only the
+  // CURRENT player's assets are preloaded (not all colors / all hats /
+  // all boats) to keep total preload bytes minimal.
+  const charSprites = getCharacterSprites(characterColor)
+  const equippedBoatDef = getBoat((profile?.equipped_boat as string | null) ?? null)
+  const equippedHatDef  = getHat((profile?.equipped_hat as string | null) ?? null)
+  const preloads: string[] = [
+    charSprites.rest, charSprites.wait, charSprites.cast,
+    ...(equippedBoatDef ? [equippedBoatDef.restImageUrl, equippedBoatDef.castImageUrl] : []),
+    ...(equippedHatDef  ? [equippedHatDef.restImageUrl,  equippedHatDef.castImageUrl ] : []),
+  ]
+
   return (
     <>
+      {/* Image preload hints — React 19 hoists these into <head>. Loading
+          and decoding starts as the page HTML streams in, so by the time
+          the player picks a zone the character + cosmetics are ready. */}
+      {preloads.map(href => (
+        <link key={href} rel="preload" as="image" href={href} />
+      ))}
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main>
         <FishingPageClient
