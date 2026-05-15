@@ -424,12 +424,14 @@ export default function FishingTestClient() {
               <option value="rod_yolo">rod_yolo</option>
             </select>
             <p style={{ fontWeight: 600, marginBottom: 4, color: '#e8c84a' }}>3-pose overlay ({frame})</p>
-            <Slider label="top %"    value={rc.top}    min={-80} max={100}  step={0.5} onChange={v => setRod('top',    v)} />
-            <Slider label="left %"   value={rc.left}   min={-80} max={100}  step={0.5} onChange={v => setRod('left',   v)} />
-            {/* Width can go very low because the cast sprite is tall +
-                narrow (~66×408) and the rest sprite is roughly square. */}
-            <Slider label="width %"  value={rc.width}  min={1}   max={150}  step={0.5} onChange={v => setRod('width',  v)} />
-            <Slider label="rotate °" value={rc.rotate} min={-90} max={90}   step={0.5} onChange={v => setRod('rotate', v)} />
+            {/* Generous ranges: the raw-quadrant canvas (960x540, 960x1080)
+                is much larger than the rod silhouette inside it, so width
+                often needs to push past 100% and top/left can go strongly
+                negative to anchor the visible rod portion on screen. */}
+            <Slider label="top %"    value={rc.top}    min={-200} max={200} step={0.5} onChange={v => setRod('top',    v)} />
+            <Slider label="left %"   value={rc.left}   min={-200} max={200} step={0.5} onChange={v => setRod('left',   v)} />
+            <Slider label="width %"  value={rc.width}  min={1}    max={500} step={0.5} onChange={v => setRod('width',  v)} />
+            <Slider label="rotate °" value={rc.rotate} min={-90}  max={90}  step={0.5} onChange={v => setRod('rotate', v)} />
             <button onClick={() => setRodThreePoseCfg(p => ({ rest: p[frame], wait: p[frame], cast: p[frame] }))} style={{
               width: '100%', padding: '4px 0', borderRadius: 6, cursor: 'pointer', marginTop: 6,
               background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
