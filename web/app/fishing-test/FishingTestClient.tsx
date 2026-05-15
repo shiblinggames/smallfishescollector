@@ -107,6 +107,14 @@ const ANIM_SEQUENCE: [Frame, number][] = [
   ['rest', 800],
 ]
 
+// Toggle to expose the full tuner (zone picker, character color, all
+// overlays, badges, etc.). When true, only the frame picker + hook
+// controls + config dump are visible, and rod / reel render automatically
+// using their production-tuned coords so the hook is tuned in proper
+// context. Flip back to false if a future pass needs to retune anything
+// other than the hook.
+const HOOK_TUNING_MODE = true
+
 export default function FishingTestClient() {
   const [frame, setFrame] = useState<Frame>('rest')
   const [zone, setZone] = useState<string>('shallows')
@@ -117,11 +125,14 @@ export default function FishingTestClient() {
   // baked at the correct pose, instead of a single rotated sprite. New
   // rod uploads use this format — currently only Bamboo has the sliced
   // sprites in /public, so this is gated on the bamboo source files.
-  const [rodThreePose, setRodThreePose] = useState(false)
+  // Rod + reel default to On so the tuner shows the production-equivalent
+  // character loadout while another piece (e.g. hook) is being tuned —
+  // saves toggling each one every time the page is opened.
+  const [rodThreePose, setRodThreePose] = useState(true)
   const [rodThreePoseName, setRodThreePoseName] = useState('rod_bamboo')
   const [rodCfg, setRodCfg] = useState(ROD_OVERLAY)
   const [rodThreePoseCfg, setRodThreePoseCfg] = useState(ROD_3POSE_DEFAULT)
-  const [reelEnabled, setReelEnabled] = useState(false)
+  const [reelEnabled, setReelEnabled] = useState(true)
   const [reelName, setReelName] = useState<typeof REEL_NAMES[number]>('reel_basic')
   const [reelCfg, setReelCfg] = useState(REEL_DEFAULT)
   const [hookCfg, setHookCfg] = useState(HOOK_OVERLAY)
@@ -322,6 +333,7 @@ export default function FishingTestClient() {
       {/* ── Controls ── */}
       <div style={{ width: 290, background: 'rgba(0,0,0,0.8)', padding: '1.2rem', overflowY: 'auto', fontSize: 12, color: '#ccc' }}>
 
+        {!HOOK_TUNING_MODE && (<>
         {/* Zone picker */}
         <p style={{ fontWeight: 700, marginBottom: 6, color: '#fff' }}>Zone</p>
         <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -345,10 +357,11 @@ export default function FishingTestClient() {
             <option key={c.id} value={c.id}>{c.name}{c.id === 'default' ? ' (default)' : ''}</option>
           ))}
         </select>
+        </>)}
 
-        {/* Frame picker + animate */}
+        {/* Frame picker (always visible — needed for per-frame tuning) */}
         <p style={{ fontWeight: 700, marginBottom: 8, color: '#fff' }}>Frame</p>
-        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
           {(['rest', 'wait', 'cast'] as Frame[]).map(f => (
             <button key={f} onClick={() => setFrame(f)} style={{
               flex: 1, padding: '4px 0', borderRadius: 6, cursor: 'pointer',
@@ -357,12 +370,16 @@ export default function FishingTestClient() {
             }}>{f}</button>
           ))}
         </div>
-        <button onClick={playAnimation} disabled={animating} style={{
-          width: '100%', padding: '6px 0', borderRadius: 6, cursor: animating ? 'default' : 'pointer',
-          background: animating ? 'rgba(255,255,255,0.04)' : '#16a34a',
-          border: 'none', color: '#fff', fontWeight: 700, marginBottom: 16, fontSize: 12,
-        }}>{animating ? 'casting...' : '▶ Play cast sequence'}</button>
 
+        {!HOOK_TUNING_MODE && (
+          <button onClick={playAnimation} disabled={animating} style={{
+            width: '100%', padding: '6px 0', borderRadius: 6, cursor: animating ? 'default' : 'pointer',
+            background: animating ? 'rgba(255,255,255,0.04)' : '#16a34a',
+            border: 'none', color: '#fff', fontWeight: 700, marginBottom: 16, fontSize: 12,
+          }}>{animating ? 'casting...' : '▶ Play cast sequence'}</button>
+        )}
+
+        {!HOOK_TUNING_MODE && (<>
         {/* Boat overlay */}
         <p style={{ fontWeight: 700, marginBottom: 6, color: '#fff' }}>
           Boat overlay
@@ -412,7 +429,9 @@ export default function FishingTestClient() {
             }}>Copy {frame} → all frames</button>
           </>
         )}
+        </>)}
 
+        {!HOOK_TUNING_MODE && (<>
         {/* 3-pose rod tuner — new upload format (top-left rest,
             bottom-left wait, right cast). Picks a fully-baked sprite
             per frame so rotation is only a fine adjustment. */}
@@ -504,8 +523,38 @@ export default function FishingTestClient() {
             }}>Copy {frame} → all frames</button>
           </>
         )}
+        </>)}
 
-        {/* Toggle for production-tuned controls */}
+        {/* HOOK tuner — always visible. Same canvas (raw 1920x1080) across
+            every hook tier, so a single set of coords applies to all of
+            them. Picker lets you flip through the 9 hooks to verify the
+            tuning works for each (e.g. enchanted / abyssal / legendary
+            have decorations that extend the bounding box). */}
+        {HOOK_TUNING_MODE && (
+          <>
+            <p style={{ fontWeight: 700, marginTop: 4, marginBottom: 6, color: '#fff' }}>Hook</p>
+            <select value={hookTier} onChange={e => setHookTier(Number(e.target.value))}
+              style={{ width: '100%', marginBottom: 10, padding: '4px 6px', background: '#1e2d3e', color: '#fff', border: '1px solid #334', borderRadius: 6 }}>
+              {HOOKS.filter(h => h.imageUrl).map(h => (
+                <option key={h.tier} value={h.tier}>{h.name}</option>
+              ))}
+            </select>
+            <p style={{ fontWeight: 600, marginBottom: 4, color: '#6ee7b7' }}>Hook overlay ({frame})</p>
+            <Slider label="top %"    value={hc.top}    min={-200} max={200} step={0.5} onChange={v => setHook('top',    v)} />
+            <Slider label="left %"   value={hc.left}   min={-200} max={200} step={0.5} onChange={v => setHook('left',   v)} />
+            <Slider label="width %"  value={hc.width}  min={1}    max={500} step={0.5} onChange={v => setHook('width',  v)} />
+            <Slider label="rotate °" value={hc.rotate} min={-180} max={180} step={0.5} onChange={v => setHook('rotate', v)} />
+            <button onClick={() => setHookCfg(p => ({ rest: p[frame], wait: { ...p[frame], hidden: p.wait.hidden }, cast: p[frame] }))} style={{
+              width: '100%', padding: '4px 0', borderRadius: 6, cursor: 'pointer', marginTop: 6,
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+              color: '#94a3b8', fontWeight: 600, fontSize: 10,
+            }}>Copy {frame} → all frames</button>
+          </>
+        )}
+
+        {/* Toggle for production-tuned controls (legacy character /
+            rod / hook / badge controls — hidden during hook tuning) */}
+        {!HOOK_TUNING_MODE && (<>
         <button onClick={() => setShowLegacyControls(s => !s)} style={{
           width: '100%', padding: '6px 0', borderRadius: 6, cursor: 'pointer',
           background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
@@ -591,11 +640,17 @@ export default function FishingTestClient() {
         <Slider label="rotate °" value={bc.rotate} min={-180} max={180} onChange={v => setBadge('rotate', v)} />
 
         </>)}
+        </>)}
 
-        {/* Config dump */}
+        {/* Config dump — in hook-tuning mode we only emit the HOOK block
+            since rod/reel/hat/boat positions are coming from production
+            constants. Outside hook tuning, dump everything that's been
+            touched. */}
         <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Current config</p>
         <pre className="select-text" style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap', cursor: 'text' }}>
-{`HAT:\n${JSON.stringify(hatCfg, null, 2)}\n\nBOAT:\n${JSON.stringify(boatCfg, null, 2)}${rodThreePose ? `\n\nROD (${rodThreePoseName}):\n${JSON.stringify(rodThreePoseCfg, null, 2)}` : ''}${reelEnabled ? `\n\nREEL:\n${JSON.stringify(reelCfg, null, 2)}` : ''}${showLegacyControls ? `\n\nCHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD (legacy):\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}` : ''}`}
+{HOOK_TUNING_MODE
+  ? `HOOK:\n${JSON.stringify(hookCfg, null, 2)}`
+  : `HAT:\n${JSON.stringify(hatCfg, null, 2)}\n\nBOAT:\n${JSON.stringify(boatCfg, null, 2)}${rodThreePose ? `\n\nROD (${rodThreePoseName}):\n${JSON.stringify(rodThreePoseCfg, null, 2)}` : ''}${reelEnabled ? `\n\nREEL:\n${JSON.stringify(reelCfg, null, 2)}` : ''}${showLegacyControls ? `\n\nCHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD (legacy):\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}` : ''}`}
         </pre>
       </div>
     </div>
