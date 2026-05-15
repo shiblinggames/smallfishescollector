@@ -76,6 +76,12 @@ export default function FishingTestClient() {
   const [animating, setAnimating] = useState(false)
   const [rodTier, setRodTier] = useState(0)
   const [hookTier, setHookTier] = useState(0)
+  // 3-pose rod mode: render a separate sprite per frame (rest/wait/cast)
+  // baked at the correct pose, instead of a single rotated sprite. New
+  // rod uploads use this format — currently only Bamboo has the sliced
+  // sprites in /public, so this is gated on the bamboo source files.
+  const [rodThreePose, setRodThreePose] = useState(false)
+  const [rodThreePoseName, setRodThreePoseName] = useState('rod_bamboo')
   const [rodCfg, setRodCfg] = useState(ROD_OVERLAY)
   const [hookCfg, setHookCfg] = useState(HOOK_OVERLAY)
   const [charCfg, setCharCfg] = useState(CHAR_DEFAULT)
@@ -179,7 +185,21 @@ export default function FishingTestClient() {
               }} />
             )}
 
-            {rod.imageUrl && (
+            {rodThreePose ? (
+              <img
+                src={`/${rodThreePoseName}_${frame}.png`}
+                alt="rod"
+                style={{
+                  position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
+                  width: `${rc.width}%`, transform: `rotate(${rc.rotate}deg)`,
+                  // Each 3-pose sprite already has the right pose baked in,
+                  // so rotation around the visual center reads cleanly. The
+                  // legacy single-sprite path uses bottom-right because the
+                  // rod is rotated through ~70° between rest and cast there.
+                  transformOrigin: 'center center', pointerEvents: 'none',
+                }}
+              />
+            ) : rod.imageUrl && (
               <img src={rod.imageUrl} alt="rod" className={rod.glow ? 'rod-glow' : undefined} style={{
                 position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
                 width: `${rc.width}%`, transform: `rotate(${rc.rotate}deg)`,
@@ -323,6 +343,42 @@ export default function FishingTestClient() {
           </>
         )}
 
+        {/* 3-pose rod tuner — new upload format (top-left rest,
+            bottom-left wait, right cast). Picks a fully-baked sprite
+            per frame so rotation is only a fine adjustment. */}
+        <p style={{ fontWeight: 700, marginTop: 16, marginBottom: 6, color: '#fff' }}>
+          3-pose rod
+          <button onClick={() => setRodThreePose(v => !v)} style={{
+            marginLeft: 8, padding: '2px 8px', fontSize: 10, borderRadius: 4,
+            background: rodThreePose ? '#16a34a' : 'rgba(255,255,255,0.08)',
+            border: 'none', color: '#fff', cursor: 'pointer',
+          }}>{rodThreePose ? 'On' : 'Off'}</button>
+        </p>
+        {rodThreePose && (
+          <>
+            <p style={{ fontSize: 10, color: '#6b7280', marginBottom: 6 }}>
+              Sprite base: <span style={{ color: '#e8c84a' }}>/{rodThreePoseName}_{`{rest,wait,cast}`}.png</span>
+            </p>
+            <select
+              value={rodThreePoseName}
+              onChange={e => setRodThreePoseName(e.target.value)}
+              style={{ width: '100%', marginBottom: 10, padding: '4px 6px', background: '#1e2d3e', color: '#fff', border: '1px solid #334', borderRadius: 6 }}
+            >
+              <option value="rod_bamboo">rod_bamboo</option>
+            </select>
+            <p style={{ fontWeight: 600, marginBottom: 4, color: '#e8c84a' }}>3-pose overlay ({frame})</p>
+            <Slider label="top %"    value={rc.top}    min={-80} max={100}  step={0.5} onChange={v => setRod('top',    v)} />
+            <Slider label="left %"   value={rc.left}   min={-80} max={100}  step={0.5} onChange={v => setRod('left',   v)} />
+            <Slider label="width %"  value={rc.width}  min={10}  max={150}  step={0.5} onChange={v => setRod('width',  v)} />
+            <Slider label="rotate °" value={rc.rotate} min={-90} max={90}   step={0.5} onChange={v => setRod('rotate', v)} />
+            <button onClick={() => setRodCfg(p => ({ rest: p[frame], wait: p[frame], cast: p[frame] }))} style={{
+              width: '100%', padding: '4px 0', borderRadius: 6, cursor: 'pointer', marginTop: 6,
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+              color: '#94a3b8', fontWeight: 600, fontSize: 10,
+            }}>Copy {frame} → all frames</button>
+          </>
+        )}
+
         {/* Toggle for production-tuned controls */}
         <button onClick={() => setShowLegacyControls(s => !s)} style={{
           width: '100%', padding: '6px 0', borderRadius: 6, cursor: 'pointer',
@@ -411,7 +467,7 @@ export default function FishingTestClient() {
         {/* Config dump */}
         <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Current config</p>
         <pre style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
-{`HAT:\n${JSON.stringify(hatCfg, null, 2)}\n\nBOAT:\n${JSON.stringify(boatCfg, null, 2)}${showLegacyControls ? `\n\nCHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}` : ''}`}
+{`HAT:\n${JSON.stringify(hatCfg, null, 2)}\n\nBOAT:\n${JSON.stringify(boatCfg, null, 2)}${rodThreePose && !showLegacyControls ? `\n\nROD (${rodThreePoseName}):\n${JSON.stringify(rodCfg, null, 2)}` : ''}${showLegacyControls ? `\n\nCHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}` : ''}`}
         </pre>
       </div>
     </div>
