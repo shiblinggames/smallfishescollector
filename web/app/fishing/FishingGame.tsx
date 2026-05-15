@@ -1842,6 +1842,13 @@ export default function FishingGame({
   const hookHasAffordable = nextHookDef ? (doubloons >= nextHookDef.cost && (hookTier + 1) > seenHookTier) : false
   const anyShopAffordable = rodHasAffordable || reelHasAffordable || hookHasAffordable
   const [holdOpen, setHoldOpen]         = useState(false)
+  // Ref + animation state for the "result card sucks into the hold"
+  // exit on Cast Again. The target offset is computed at click-time from
+  // the live DOM rects of the result card and the hold button, since the
+  // hold button's screen position depends on viewport / scroll.
+  const holdBtnRef = useRef<HTMLButtonElement | null>(null)
+  const resultCardWrapperRef = useRef<HTMLDivElement | null>(null)
+  const [resultSuction, setResultSuction] = useState<{ x: number; y: number } | null>(null)
   const [sellOpen, setSellOpen]         = useState(false)
   const [gearOpen, setGearOpen]         = useState(false)
   const [baitOpen, setBaitOpen]         = useState(false)
@@ -2860,6 +2867,34 @@ export default function FishingGame({
       fireFinnEncounter()
       return
     }
+
+    // Drawer needs to be shut before we measure — an open hold drawer
+    // covers the hold-button tile and we'd suction toward the drawer
+    // chrome instead. Closing first also avoids the visual conflict of
+    // the card flying into an already-open panel.
+    setHoldOpen(false)
+    setGearOpen(false)
+
+    // Result-card suction: only meaningful when there's an actual result
+    // card on screen (a catch or a crate). Skip for "no catch" / "snag"
+    // since the user gets a tiny text message instead of a card, and
+    // suctioning empty space looks wrong.
+    const wrapperEl = resultCardWrapperRef.current
+    const holdEl = holdBtnRef.current
+    const showedCard = !!catchResult || !!crateResult
+    if (showedCard && wrapperEl && holdEl) {
+      const wrapRect = wrapperEl.getBoundingClientRect()
+      const holdRect = holdEl.getBoundingClientRect()
+      const wrapCx = wrapRect.left + wrapRect.width  / 2
+      const wrapCy = wrapRect.top  + wrapRect.height / 2
+      const holdCx = holdRect.left + holdRect.width  / 2
+      const holdCy = holdRect.top  + holdRect.height / 2
+      setResultSuction({ x: holdCx - wrapCx, y: holdCy - wrapCy })
+      // Match the transition.duration on the wrapper (0.35s). After the
+      // suction completes, clear state and run the normal cast flow.
+      await new Promise(r => setTimeout(r, 350))
+    }
+
     setCastRippleKey(k => k + 1)
     setTimeout(() => setCastRippleKey(0), 1800)
     setCatchResult(null)
@@ -2870,8 +2905,7 @@ export default function FishingGame({
     setHookedFish(null)
     setPerfectFlash(false)
     setLevelUpNotif(null)
-    setHoldOpen(false)
-    setGearOpen(false)
+    setResultSuction(null)
     await doCast()
   }
 
@@ -3639,6 +3673,19 @@ export default function FishingGame({
                   exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: '1rem', paddingBottom: '1rem' }}>
 
+                  {/* Suction wrapper — when handleCastAgain captures the
+                      delta to the hold button into resultSuction, the card
+                      glides into the hold tab before the phase changes. */}
+                  <motion.div
+                    ref={resultCardWrapperRef}
+                    animate={resultSuction
+                      ? { x: resultSuction.x, y: resultSuction.y, scale: 0.05, opacity: 0 }
+                      : { x: 0, y: 0, scale: 1, opacity: 1 }}
+                    transition={resultSuction
+                      ? { duration: 0.35, ease: [0.5, 0, 0.75, 0] }
+                      : { duration: 0 }}
+                    style={{ transformOrigin: 'center center' }}
+                  >
                   {crateResult ? (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -3870,6 +3917,7 @@ export default function FishingGame({
                       )}
                     </motion.div>
                   ) : null}
+                  </motion.div>
 
                 </motion.div>
               )}
@@ -4294,6 +4342,7 @@ export default function FishingGame({
 
                 {/* Hold — fish icon + count */}
                 <button
+                  ref={holdBtnRef}
                   onClick={() => { setHoldOpen(o => !o); setGearOpen(false); setBaitOpen(false); setSellOpen(false) }}
                   style={{
                     ...tile,
