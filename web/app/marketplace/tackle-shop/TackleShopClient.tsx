@@ -362,7 +362,7 @@ export default function TackleShopClient({
       {section === 'hook' && (
         <>
           <div className="mb-5">
-            <HookViewer3D imageUrl={HOOKS[previewTier]?.imageUrl ? HOOKS[previewTier]!.imageUrl!.replace(/\.png$/, '_thumb.png') : undefined} color={HOOKS[previewTier]?.color ?? '#f0c040'} tier={previewTier} />
+            <HookViewer3D imageUrl={HOOKS[previewTier]?.imageUrl ? HOOKS[previewTier]!.imageUrl!.replace(/\.png$/, '_thumb.png') : undefined} color={HOOKS[previewTier]?.color ?? '#f0c040'} tier={previewTier} glowClass={HOOKS[previewTier] ? hookGlowClass(HOOKS[previewTier]) : undefined} />
             <div className="flex items-center justify-center gap-2 mt-2.5">
               <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.85rem', color: HOOKS[previewTier]?.color }}>
                 {HOOKS[previewTier]?.name}

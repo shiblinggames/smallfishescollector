@@ -1,6 +1,6 @@
 'use client'
 
-export default function HookViewer3D({ imageUrl, color, height = 220 }: { imageUrl?: string; color: string; tier?: number; modelUrl?: string; height?: number }) {
+export default function HookViewer3D({ imageUrl, color, height = 220, glowClass }: { imageUrl?: string; color: string; tier?: number; modelUrl?: string; height?: number; glowClass?: string }) {
   return (
     <div style={{
       width: '100%', height,
@@ -12,7 +12,14 @@ export default function HookViewer3D({ imageUrl, color, height = 220 }: { imageU
         <img
           src={imageUrl}
           alt=""
-          style={{ maxHeight: height * 0.85, maxWidth: '70%', objectFit: 'contain', filter: `drop-shadow(0 0 18px ${color}55)` }}
+          className={glowClass}
+          style={{
+            maxHeight: height * 0.85, maxWidth: '70%', objectFit: 'contain',
+            // The themed glow classes drive their own drop-shadow filter via
+            // CSS animation, so the static color shadow would compete with
+            // them. Only apply it when there's no themed aura.
+            ...(glowClass ? {} : { filter: `drop-shadow(0 0 18px ${color}55)` }),
+          }}
         />
       ) : (
         <div style={{
