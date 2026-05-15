@@ -35,7 +35,12 @@ export default function NavLevelUpOverlay({ info, onDismiss }: Props) {
           style={{
             position: 'fixed', inset: 0, zIndex: 80,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'radial-gradient(ellipse 80% 65% at 50% 50%, rgba(96,165,250,0.22) 0%, rgba(0,0,0,0.9) 100%)',
+            // Near-opaque dark backdrop so the underlying raid/voyage card
+            // never bleeds through the NAV LEVEL UP text or stat deltas.
+            // Matches the fishing level-up backdrop.
+            background: 'radial-gradient(ellipse 80% 65% at 50% 50%, rgba(20,40,80,0.94) 0%, rgba(0,0,0,0.98) 100%)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
             cursor: 'pointer',
             padding: '1.5rem',
           }}
