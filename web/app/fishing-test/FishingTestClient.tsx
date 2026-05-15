@@ -16,15 +16,15 @@ const ROD_OVERLAY: Record<Frame, { top: number; left: number; width: number; rot
   cast: { top: 24, left: 3,  width: 51, rotate: 49  },
 }
 
-// 3-pose rod defaults — each frame uses a fully-baked sprite at a fixed
-// canvas size (rest/wait = 600×540, cast = 400×900). Same canvas across
-// every rod means one set of coords applies to all of them. Starting
-// values below are a rough guess; tune bamboo once and the values port
-// to rod_millionaires, rod_yolo, etc. via the rod picker.
+// 3-pose rod defaults — each frame is the raw source-sheet quadrant
+// (rest/wait = 960×540, cast = 960×1080). The artist places the rod
+// handle at a consistent x,y in every source sheet, so one set of coords
+// works for every rod. Tune bamboo once and flip the picker to confirm
+// the rod_yolo / rod_millionaires / etc. lineup matches.
 const ROD_3POSE_DEFAULT: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
-  rest: { top: 28, left: 6,  width: 55, rotate: -1 },
-  wait: { top: 42, left: 4,  width: 65, rotate: 0  },
-  cast: { top: 4,  left: 46, width: 18, rotate: 0  },
+  rest: { top: 14, left: -10, width: 80, rotate: 0 },
+  wait: { top: 36, left: -10, width: 80, rotate: 0 },
+  cast: { top: -8, left:  30, width: 35, rotate: 0 },
 }
 
 const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number; hidden?: boolean }> = {
