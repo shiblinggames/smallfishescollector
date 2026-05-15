@@ -888,10 +888,15 @@ const CHAR_REEL_OVERLAY: Record<CharFrame, { top: number; left: number; width: n
   cast: { top: 38.9, left: -42,   width: 219.5, rotate:  46.5 },
 }
 
+// Hook overlay — raw 1920×1080 uploads, same canvas across every tier so a
+// single set of coords lines up all 9 hooks identically (copper, bronze,
+// iron, steel, silver, gold, enchanted, abyssal, legendary). Wait frame is
+// hidden because the hook is in the water during the bite. Tuned on
+// /fishing-test against the raw uploads.
 const CHAR_HOOK_OVERLAY: Record<CharFrame, { top: number; left: number; width: number; rotate: number; hidden?: boolean }> = {
-  rest: { top: 81, left: 9,  width: 16, rotate: -30 },
-  wait: { top: 58, left: -4, width: 25, rotate: 0,   hidden: true },
-  cast: { top: 18, left: 6,  width: 16, rotate: 8   },
+  rest: { top: 39.5, left: -10.5, width: 204.5, rotate: 0 },
+  wait: { top: 39.5, left: -10.5, width: 222,   rotate: 0,    hidden: true },
+  cast: { top: 40.5, left: -73,   width: 204.5, rotate: 66.5 },
 }
 
 function fishImageUrl(name: string) {
@@ -3184,12 +3189,12 @@ export default function FishingGame({
                     maxWidth: 'none',
                   }} />
                 )}
-                {/* Hook — disabled until CHAR_HOOK_OVERLAY is retuned for
-                    the new raw 1920x1080 hook uploads. Old coords were
-                    tuned against ~64px sprites and would render a screen-
-                    sized hook against the new canvas. Re-enable once the
-                    tuner on /fishing-test produces final coords. */}
-                {false && hook.imageUrl && !hc.hidden && (
+                {/* Hook — raw 1920x1080 sprite at CHAR_HOOK_OVERLAY coords.
+                    Same coords work for every hook tier; wait frame is
+                    hidden (hook is in the water during the bite).
+                    maxWidth: 'none' bypasses Tailwind preflight cap so the
+                    >100% width values actually render. */}
+                {hook.imageUrl && !hc.hidden && (
                   <img src={hook.imageUrl} alt="" className={hook.glow ? 'rod-glow' : undefined} style={{
                     position: 'absolute', top: `${hc.top}%`, left: `${hc.left}%`,
                     width: `${hc.width}%`,

@@ -355,12 +355,11 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                     maxWidth: 'none',
                   }} />
                 )}
-                {/* Hook overlay disabled until CHAR_HOOK_OVERLAY is retuned
-                    for the new raw 1920x1080 hook uploads. */}
-                {false && hook.imageUrl && (
+                {/* Hook — mirrors CHAR_HOOK_OVERLAY.rest from FishingGame. */}
+                {hook.imageUrl && (
                   <img src={hook.imageUrl} alt="" className={hook.glow ? 'rod-glow' : undefined} style={{
-                    position: 'absolute', top: '81%', left: '9%', width: '16%',
-                    transform: 'rotate(-30deg)', transformOrigin: 'center center',
+                    position: 'absolute', top: '39.5%', left: '-10.5%', width: '204.5%',
+                    transformOrigin: 'center center',
                     pointerEvents: 'none',
                     maxWidth: 'none',
                     ...(hook.glow ? { ['--rod-glow-color' as string]: hook.color } : {}),

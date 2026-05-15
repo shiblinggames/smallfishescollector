@@ -27,15 +27,14 @@ const ROD_3POSE_DEFAULT: Record<Frame, { top: number; left: number; width: numbe
   cast: { top: -8.5, left: 3.5, width: 100.5, rotate: 0 },
 }
 
-// Hook overlay defaults for the new raw 1920×1080 hook uploads. Same
-// canvas + consistent core position across every hook tier means one set
-// of coords applies to all of them. Wait pose is hidden because the hook
-// is in the water during the bite. Starting numbers are rough — tune in
-// the test page and paste back.
+// Hook overlay — final tuned defaults for the raw 1920×1080 hook uploads.
+// Same canvas + consistent core position across every hook tier means one
+// set of coords applies to all of them. Wait pose is hidden because the
+// hook is in the water during the bite.
 const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number; hidden?: boolean }> = {
-  rest: { top: 30,  left: -20, width: 120, rotate: 0 },
-  wait: { top: 30,  left: -20, width: 120, rotate: 0, hidden: true },
-  cast: { top: -10, left:  10, width: 100, rotate: 0 },
+  rest: { top: 39.5, left: -10.5, width: 204.5, rotate: 0 },
+  wait: { top: 39.5, left: -10.5, width: 222,   rotate: 0,    hidden: true },
+  cast: { top: 40.5, left: -73,   width: 204.5, rotate: 66.5 },
 }
 
 // Reel: 1920×1080 raw uploads — same canvas across every tier so a single
