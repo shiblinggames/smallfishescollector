@@ -455,7 +455,7 @@ textarea,
       drop-shadow(0 0 16px #f0c040);
   }
 }
-.rod-glow-sparkle { animation: rod-glow-sparkle 2.8s ease-in-out infinite; }
+.rod-glow-sparkle { animation: rod-glow-sparkle 4.8s ease-in-out infinite; }
 
 /* YOLO — electric: light cyan/white base that snaps to white-blue bursts
    at three irregular points per cycle. Linear timing + tight on-off
@@ -504,7 +504,7 @@ textarea,
       drop-shadow(0 0 18px #2f9cff);
   }
 }
-.rod-glow-electric { animation: rod-glow-electric 1.6s linear infinite; }
+.rod-glow-electric { animation: rod-glow-electric 3.6s linear infinite; }
 
 /* ── Boat glow (Ethereal — bob + iridescent shimmer at different periods) ── */
 /* Two animations layered: a 3.6s vertical hover (transform) and a 7s color */
