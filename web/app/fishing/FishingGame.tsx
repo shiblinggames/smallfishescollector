@@ -876,13 +876,16 @@ const CHAR_ROD_OVERLAY: Record<CharFrame, { top: number; left: number; width: nu
   cast: { top: -8.5, left: 3.5, width: 100.5, rotate: 0 },
 }
 
-// Reel overlay — single trimmed sprite (reel_basic.png, 48×53) positioned
-// per frame to sit on the rod handle. Same per-frame coords applied to
-// every reel tier for now; future per-tier reels can re-tune.
+// Reel overlay — raw 1920×1080 uploads, same canvas across every tier so
+// a single CHAR_REEL_OVERLAY position lines up all 9 reels identically
+// (basic, spinning, baitcasting, saltwater, precision, tournament,
+// deepsea, kraken, tidecaller). Decorations on higher tiers live inside
+// the canvas padding without shifting the reel core. Tuned on
+// /fishing-test against reel_basic.
 const CHAR_REEL_OVERLAY: Record<CharFrame, { top: number; left: number; width: number; rotate: number }> = {
-  rest: { top: 73.2, left: 42.8, width: 5.6, rotate: -9.5  },
-  wait: { top: 73.5, left: 50.6, width: 5.6, rotate: -29.5 },
-  cast: { top: 46.9, left: 48.5, width: 5.3, rotate: 44    },
+  rest: { top: 15,   left: -10.3, width: 222,   rotate: -18   },
+  wait: { top: -5.2, left:  -3.1, width: 222,   rotate: -36.5 },
+  cast: { top: 38.9, left: -42,   width: 219.5, rotate:  46.5 },
 }
 
 const CHAR_HOOK_OVERLAY: Record<CharFrame, { top: number; left: number; width: number; rotate: number; hidden?: boolean }> = {
@@ -3166,12 +3169,12 @@ export default function FishingGame({
                     ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
                   } as React.CSSProperties} />
                 )}
-                {/* Reel — disabled until CHAR_REEL_OVERLAY is retuned for
-                    the new raw 1920x1080 reel uploads. Old coords were
-                    tuned against the 48x53 trim and would render a
-                    screen-sized reel against the new canvas. Re-enable
-                    once the tuner on /fishing-test produces final coords. */}
-                {false && reel.imageUrl && (
+                {/* Reel — sits on the rod handle. Same per-frame coords
+                    work for every reel tier because all 9 source images
+                    are uploaded raw at 1920×1080 with the reel core at
+                    the same x,y. maxWidth: 'none' overrides Tailwind's
+                    preflight cap so width can scale past 100%. */}
+                {reel.imageUrl && (
                   <img src={reel.imageUrl} alt="" style={{
                     position: 'absolute', top: `${rec.top}%`, left: `${rec.left}%`,
                     width: `${rec.width}%`,

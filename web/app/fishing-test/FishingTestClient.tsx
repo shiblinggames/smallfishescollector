@@ -49,9 +49,9 @@ const REEL_NAMES = [
   'reel_tidecaller',
 ] as const
 const REEL_DEFAULT: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
-  rest: { top: 10, left: -25, width: 100, rotate: 0 },
-  wait: { top: 10, left: -20, width: 100, rotate: 0 },
-  cast: { top: -5, left:  -5, width: 100, rotate: 0 },
+  rest: { top: 15,   left: -10.3, width: 222,   rotate: -18   },
+  wait: { top: -5.2, left:  -3.1, width: 222,   rotate: -36.5 },
+  cast: { top: 38.9, left: -42,   width: 219.5, rotate:  46.5 },
 }
 
 const ZONE_BG: Record<string, string> = {
