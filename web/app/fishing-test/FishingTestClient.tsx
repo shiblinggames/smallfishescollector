@@ -17,18 +17,28 @@ const ROD_OVERLAY: Record<Frame, { top: number; left: number; width: number; rot
 }
 
 // 3-pose rod defaults — each frame uses a fully-baked sprite, so rotation
-// is just a fine tweak. Cast width starts low because the cast sprite is
-// tall + narrow and looks oversized at the same % as rest/wait.
+// is just a fine tweak. Bamboo values are tuned production-ready; cast
+// width is much lower than rest/wait because the cast sprite is tall +
+// narrow (~66x408) vs rest/wait's roughly square aspect.
 const ROD_3POSE_DEFAULT: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
   rest: { top: 41.5, left: 19, width: 36.5, rotate: -1 },
   wait: { top: 54.5, left: 17, width: 45.5, rotate: 0  },
-  cast: { top: 24,   left: 24, width: 6,    rotate: 0  },
+  cast: { top: 10.5, left: 52, width: 7.5,  rotate: 0  },
 }
 
 const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number; hidden?: boolean }> = {
   rest: { top: 81, left: 9,  width: 16, rotate: -30 },
   wait: { top: 58, left: -4, width: 25, rotate: 0,   hidden: true },
   cast: { top: 18, left: 6,  width: 16, rotate: 8   },
+}
+
+// Reel: a single 48×53 sprite (reel_basic.png) positioned per frame.
+// Sits on the rod near the handle; no per-pose sprite variants.
+const REEL_SRC = '/reel_basic.png'
+const REEL_DEFAULT: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
+  rest: { top: 45, left: 28, width: 9, rotate: 0 },
+  wait: { top: 60, left: 25, width: 9, rotate: 0 },
+  cast: { top: 18, left: 50, width: 9, rotate: 0 },
 }
 
 const ZONE_BG: Record<string, string> = {
@@ -93,6 +103,8 @@ export default function FishingTestClient() {
   const [rodThreePoseName, setRodThreePoseName] = useState('rod_bamboo')
   const [rodCfg, setRodCfg] = useState(ROD_OVERLAY)
   const [rodThreePoseCfg, setRodThreePoseCfg] = useState(ROD_3POSE_DEFAULT)
+  const [reelEnabled, setReelEnabled] = useState(false)
+  const [reelCfg, setReelCfg] = useState(REEL_DEFAULT)
   const [hookCfg, setHookCfg] = useState(HOOK_OVERLAY)
   const [charCfg, setCharCfg] = useState(CHAR_DEFAULT)
   const [badgeCfg, setBadgeCfg] = useState(BADGE_SLOT_POSITIONS)
@@ -220,6 +232,22 @@ export default function FishingTestClient() {
                 transformOrigin: 'bottom right', pointerEvents: 'none',
                 ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
               } as React.CSSProperties} />
+            )}
+
+            {reelEnabled && (
+              <img
+                src={REEL_SRC}
+                alt="reel"
+                style={{
+                  position: 'absolute',
+                  top: `${reelCfg[frame].top}%`,
+                  left: `${reelCfg[frame].left}%`,
+                  width: `${reelCfg[frame].width}%`,
+                  transform: `rotate(${reelCfg[frame].rotate}deg)`,
+                  transformOrigin: 'center center',
+                  pointerEvents: 'none',
+                }}
+              />
             )}
 
             {hook.imageUrl && !hc.hidden && (
@@ -395,6 +423,34 @@ export default function FishingTestClient() {
           </>
         )}
 
+        {/* Reel overlay — one trimmed sprite (reel_basic.png) positioned
+            per frame. Sits on the rod near the handle. */}
+        <p style={{ fontWeight: 700, marginTop: 16, marginBottom: 6, color: '#fff' }}>
+          Reel
+          <button onClick={() => setReelEnabled(v => !v)} style={{
+            marginLeft: 8, padding: '2px 8px', fontSize: 10, borderRadius: 4,
+            background: reelEnabled ? '#16a34a' : 'rgba(255,255,255,0.08)',
+            border: 'none', color: '#fff', cursor: 'pointer',
+          }}>{reelEnabled ? 'On' : 'Off'}</button>
+        </p>
+        {reelEnabled && (
+          <>
+            <p style={{ fontSize: 10, color: '#6b7280', marginBottom: 6 }}>
+              Sprite: <span style={{ color: '#a3e635' }}>{REEL_SRC}</span>
+            </p>
+            <p style={{ fontWeight: 600, marginBottom: 4, color: '#a3e635' }}>Reel overlay ({frame})</p>
+            <Slider label="top %"    value={reelCfg[frame].top}    min={-40} max={100} step={0.1} onChange={v => setReelCfg(p => ({ ...p, [frame]: { ...p[frame], top:    v } }))} />
+            <Slider label="left %"   value={reelCfg[frame].left}   min={-40} max={100} step={0.1} onChange={v => setReelCfg(p => ({ ...p, [frame]: { ...p[frame], left:   v } }))} />
+            <Slider label="width %"  value={reelCfg[frame].width}  min={1}   max={40}  step={0.1} onChange={v => setReelCfg(p => ({ ...p, [frame]: { ...p[frame], width:  v } }))} />
+            <Slider label="rotate °" value={reelCfg[frame].rotate} min={-180} max={180} step={0.5} onChange={v => setReelCfg(p => ({ ...p, [frame]: { ...p[frame], rotate: v } }))} />
+            <button onClick={() => setReelCfg(p => ({ rest: p[frame], wait: p[frame], cast: p[frame] }))} style={{
+              width: '100%', padding: '4px 0', borderRadius: 6, cursor: 'pointer', marginTop: 6,
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+              color: '#94a3b8', fontWeight: 600, fontSize: 10,
+            }}>Copy {frame} → all frames</button>
+          </>
+        )}
+
         {/* Toggle for production-tuned controls */}
         <button onClick={() => setShowLegacyControls(s => !s)} style={{
           width: '100%', padding: '6px 0', borderRadius: 6, cursor: 'pointer',
@@ -483,7 +539,7 @@ export default function FishingTestClient() {
         {/* Config dump */}
         <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Current config</p>
         <pre style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
-{`HAT:\n${JSON.stringify(hatCfg, null, 2)}\n\nBOAT:\n${JSON.stringify(boatCfg, null, 2)}${rodThreePose ? `\n\nROD (${rodThreePoseName}):\n${JSON.stringify(rodThreePoseCfg, null, 2)}` : ''}${showLegacyControls ? `\n\nCHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD (legacy):\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}` : ''}`}
+{`HAT:\n${JSON.stringify(hatCfg, null, 2)}\n\nBOAT:\n${JSON.stringify(boatCfg, null, 2)}${rodThreePose ? `\n\nROD (${rodThreePoseName}):\n${JSON.stringify(rodThreePoseCfg, null, 2)}` : ''}${reelEnabled ? `\n\nREEL:\n${JSON.stringify(reelCfg, null, 2)}` : ''}${showLegacyControls ? `\n\nCHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD (legacy):\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}` : ''}`}
         </pre>
       </div>
     </div>
