@@ -9,6 +9,8 @@ import { isPremiumActive } from '@/lib/premium'
 import { getCharacterSprites } from '@/lib/characters'
 import { getBoat } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
+import { getRod } from '@/lib/rods'
+import { getReel } from '@/lib/reels'
 
 export default async function FishingPage() {
   const supabase = await createClient()
@@ -84,10 +86,16 @@ export default async function FishingPage() {
   const charSprites = getCharacterSprites(characterColor)
   const equippedBoatDef = getBoat((profile?.equipped_boat as string | null) ?? null)
   const equippedHatDef  = getHat((profile?.equipped_hat as string | null) ?? null)
+  const equippedRodDef  = getRod(profile?.rod_tier ?? 0)
+  const equippedReelDef = getReel(profile?.reel_tier ?? 0)
   const preloads: string[] = [
     charSprites.rest, charSprites.wait, charSprites.cast,
     ...(equippedBoatDef ? [equippedBoatDef.restImageUrl, equippedBoatDef.castImageUrl] : []),
     ...(equippedHatDef  ? [equippedHatDef.restImageUrl,  equippedHatDef.castImageUrl ] : []),
+    ...(equippedRodDef.slug
+      ? [`/${equippedRodDef.slug}_rest.png`, `/${equippedRodDef.slug}_wait.png`, `/${equippedRodDef.slug}_cast.png`]
+      : []),
+    ...(equippedReelDef.imageUrl ? [equippedReelDef.imageUrl] : []),
   ]
 
   return (

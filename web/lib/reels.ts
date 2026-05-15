@@ -13,7 +13,7 @@ export const REELS: ReelDef[] = [
     tier: 0, name: 'Basic Reel', cost: 0,
     description: 'Gets the job done. The needle moves fast though.',
     color: '#a07858', needleSpeedMultiplier: 1.00,
-    imageUrl: '/basicreel.png',
+    imageUrl: '/reel_basic.png',
   },
   {
     tier: 1, name: 'Spinning Reel', cost: 1500,

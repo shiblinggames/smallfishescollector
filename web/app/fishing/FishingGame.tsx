@@ -866,10 +866,23 @@ const CHAR_POS: Record<CharFrame, { bottom: number; left: number; width: number 
   cast: { bottom: 60, left: 26, width: 70 },
 }
 
+// Rod overlay — final tuned positions for the 3-pose raw-quadrant sprites
+// (rest/wait = 960×540, cast = 960×1080). Same coords apply to every rod
+// because the artist places the rod handle at the same x,y in every
+// source sheet quadrant. Tuned on /fishing-test against rod_carbon.
 const CHAR_ROD_OVERLAY: Record<CharFrame, { top: number; left: number; width: number; rotate: number }> = {
-  rest: { top: 33, left: 12, width: 51, rotate: -1  },
-  wait: { top: 24, left: 23, width: 51, rotate: -22 },
-  cast: { top: 24, left: 3,  width: 51, rotate: 49  },
+  rest: { top: 37,   left: -12, width: 107.5, rotate: 0 },
+  wait: { top: 37.5, left: -8,  width: 107.5, rotate: 0 },
+  cast: { top: -8.5, left: 3.5, width: 100.5, rotate: 0 },
+}
+
+// Reel overlay — single trimmed sprite (reel_basic.png, 48×53) positioned
+// per frame to sit on the rod handle. Same per-frame coords applied to
+// every reel tier for now; future per-tier reels can re-tune.
+const CHAR_REEL_OVERLAY: Record<CharFrame, { top: number; left: number; width: number; rotate: number }> = {
+  rest: { top: 73.2, left: 42.8, width: 5.6, rotate: -9.5  },
+  wait: { top: 73.5, left: 50.6, width: 5.6, rotate: -29.5 },
+  cast: { top: 46.9, left: 48.5, width: 5.3, rotate: 44    },
 }
 
 const CHAR_HOOK_OVERLAY: Record<CharFrame, { top: number; left: number; width: number; rotate: number; hidden?: boolean }> = {
@@ -3065,6 +3078,7 @@ export default function FishingGame({
           {(Object.keys(charSrc) as CharFrame[]).map(f => {
             const p   = CHAR_POS[f]
             const rc  = CHAR_ROD_OVERLAY[f]
+            const rec = CHAR_REEL_OVERLAY[f]
             const hc  = CHAR_HOOK_OVERLAY[f]
             const visible = f === charFrame
             return (
@@ -3119,7 +3133,30 @@ export default function FishingGame({
                     </div>
                   )
                 })()}
-                {rod.imageUrl && (
+                {/* Rod — 3-pose sliced sprites (slug-based). Each rod's
+                    source sheet is split by web/slice-rod.mjs into raw
+                    quadrants, and the artist places the handle at the same
+                    x,y in every sheet, so CHAR_ROD_OVERLAY applies uniformly
+                    to every rod. Legacy single-sprite path kept for rods
+                    without 3-pose art (none currently). maxWidth: 'none'
+                    overrides Tailwind's preflight which would otherwise cap
+                    the rod img at 100% of its parent. */}
+                {rod.slug ? (
+                  <img
+                    src={`/${rod.slug}_${f}.png`}
+                    alt=""
+                    className={rod.glow ? 'rod-glow' : undefined}
+                    style={{
+                      position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
+                      width: `${rc.width}%`,
+                      transform: `rotate(${rc.rotate}deg)`,
+                      transformOrigin: 'center center',
+                      pointerEvents: 'none',
+                      maxWidth: 'none',
+                      ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
+                    } as React.CSSProperties}
+                  />
+                ) : rod.imageUrl && (
                   <img src={rod.imageUrl} alt="" className={rod.glow ? 'rod-glow' : undefined} style={{
                     position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
                     width: `${rc.width}%`,
@@ -3128,6 +3165,17 @@ export default function FishingGame({
                     pointerEvents: 'none',
                     ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
                   } as React.CSSProperties} />
+                )}
+                {/* Reel — sits on the rod handle. Sprite varies by reel tier
+                    but the on-rod position is the same. */}
+                {reel.imageUrl && (
+                  <img src={reel.imageUrl} alt="" style={{
+                    position: 'absolute', top: `${rec.top}%`, left: `${rec.left}%`,
+                    width: `${rec.width}%`,
+                    transform: `rotate(${rec.rotate}deg)`,
+                    transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                  }} />
                 )}
                 {hook.imageUrl && !hc.hidden && (
                   <img src={hook.imageUrl} alt="" className={hook.glow ? 'rod-glow' : undefined} style={{

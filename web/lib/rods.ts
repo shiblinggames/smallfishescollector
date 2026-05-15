@@ -14,7 +14,11 @@ export interface RodDef {
   perfectZoneBonus: number   // degrees added to the perfect zone (base is 5°)
   jackpotChance?: number     // chance to catch jackpotMultiplier fish at once (0–1)
   jackpotMultiplier?: number // how many fish on a jackpot hit
-  imageUrl?: string
+  // 3-pose sprite slug. Loads /{slug}_rest.png / _wait.png / _cast.png.
+  // Every rod's source sheet is sliced into raw quadrants by web/slice-rod.mjs
+  // so a single CHAR_ROD_OVERLAY position applies to all of them.
+  slug?: string
+  imageUrl?: string          // legacy single-sprite fallback (deprecated; kept for rods without 3-pose art)
   glow?: boolean             // shared pulsing aura for marquee rods
 }
 
@@ -24,98 +28,98 @@ export const RODS: RodDef[] = [
     description: 'A simple bamboo pole. Gets the job done.',
     color: '#a07858', rarityBonus: 0, biteIntervalMs: 3800, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/rod.png',
+    slug: 'rod_bamboo',
   },
   {
     tier: 1, name: 'Driftwood Staff', cost: 1500,
     description: 'Heavy and slow, but the wide tip gives you a more forgiving catch window.',
     color: '#b8956a', rarityBonus: 0, biteIntervalMs: 4500, catchZoneBonus: 8,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/driftwoodrod.png',
+    slug: 'rod_driftwood',
   },
   {
     tier: 2, name: 'Fiberglass Rod', cost: 2500,
     description: 'Lighter than bamboo with a wider tip. Gives you a more forgiving catch window.',
     color: '#9ca3af', rarityBonus: 0, biteIntervalMs: 3800, catchZoneBonus: 10,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/fiberglassrod.png',
+    slug: 'rod_fiberglass',
   },
   {
     tier: 3, name: 'Reef Guard', cost: 8000,
     description: 'Responsive and fast. Fish bite 15% quicker than the baseline.',
     color: '#34d399', rarityBonus: 0, biteIntervalMs: 3230, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/reefguardrod.png',
+    slug: 'rod_reefguard',
   },
   {
     tier: 4, name: 'Telescoping Rod', cost: 8000,
     description: 'Extends deep. Something about the length draws rarer fish to the surface.',
     color: '#60a5fa', rarityBonus: 0.10, biteIntervalMs: 3800, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/telescopingrod.png',
+    slug: 'rod_telescoping',
   },
   {
     tier: 5, name: 'Moonwood Staff', cost: 14000,
     description: 'Carved from driftwood blessed by a full moon. Bites 10% faster with a wider catch window.',
     color: '#a78bfa', rarityBonus: 0, biteIntervalMs: 3420, catchZoneBonus: 10,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/moonwoodrod.png',
+    slug: 'rod_moonwood',
   },
   {
     tier: 6, name: 'Graphite Rod', cost: 22000,
     description: 'Lightweight and stiff. Fish bite 25% faster than baseline.',
     color: '#64748b', rarityBonus: 0, biteIntervalMs: 2850, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/graphiterod.png',
+    slug: 'rod_graphite',
   },
   {
     tier: 7, name: "Navigator's Rod", cost: 35000,
     description: 'A well-balanced deep-sea rod. Good speed and a wider catch zone.',
     color: '#38bdf8', rarityBonus: 0, biteIntervalMs: 2800, catchZoneBonus: 8,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/navigatorrod.png',
+    slug: 'rod_navigators',
   },
   {
     tier: 8, name: 'Carbon Rod', cost: 60000,
     description: 'Precision-engineered. Bites come 35% faster than baseline.',
     color: '#4ade80', rarityBonus: 0, biteIntervalMs: 2470, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/carbonrod.png',
+    slug: 'rod_carbon',
   },
   {
     tier: 9, name: 'Deep Diver', cost: 90000,
     description: 'Built for the abyss. 38% faster bites and a wide catch window.',
     color: '#22d3ee', rarityBonus: 0, biteIntervalMs: 2356, catchZoneBonus: 13,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/deepdiverrod.png',
+    slug: 'rod_deepdiver',
   },
   {
     tier: 10, name: 'Legendary Rod', cost: 200000,
     description: 'Forged from the mast of a sunken galleon. 40% faster bites — the rarest fish cannot resist.',
     color: '#ff6b35', rarityBonus: 0.50, biteIntervalMs: 2280, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/legendaryrod.png', glow: true,
+    slug: 'rod_legendary', glow: true,
   },
   {
     tier: 11, name: 'Twin-Strike', cost: 45000,
     description: 'Two hooks on one line. When luck strikes, they both bite.',
     color: '#fbbf24', rarityBonus: 0, biteIntervalMs: 3200, catchZoneBonus: 0,
     doubleCatchChance: 0.25, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/twin-strikerod.png',
+    slug: 'rod_twinstrike',
   },
   {
     tier: 12, name: 'Second Wind', cost: 28000,
     description: "Stubborn rod. When you miss, sometimes it refuses to let go.",
     color: '#fb923c', rarityBonus: 0, biteIntervalMs: 3200, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0.25, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/secondwindrod.png',
+    slug: 'rod_secondwind',
   },
   {
     tier: 13, name: "Millionaire's Rod", cost: 175000,
     description: 'Hand-rolled in gold leaf. Every catch brings two.',
     color: '#f0c040', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
     doubleCatchChance: 1.0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    imageUrl: '/millionairesrod.png', glow: true,
+    slug: 'rod_millionaires', glow: true,
   },
   {
     tier: 15, name: 'YOLO Rod', cost: 200000,
@@ -123,7 +127,7 @@ export const RODS: RodDef[] = [
     color: '#f97316', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     jackpotChance: 0.10, jackpotMultiplier: 100,
-    imageUrl: '/yolorod.png', glow: true,
+    slug: 'rod_yolo', glow: true,
   },
   {
     tier: 14, name: 'Completionist Rod', cost: 0, earnedOnly: true,
