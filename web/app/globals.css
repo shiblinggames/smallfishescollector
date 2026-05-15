@@ -421,8 +421,9 @@ textarea,
 }
 .rod-glow-fire { animation: rod-glow-fire 2.0s ease-in-out infinite; }
 
-/* Millionaire's — sparkle: gold base with sharper white-gold peaks at
-   irregular intervals so the rod twinkles instead of pulsing smoothly. */
+/* Millionaire's — sparkle: long calm gold base with one distinct
+   white-gold twinkle peak per cycle. Single peak (vs two) keeps each
+   sparkle feeling deliberate rather than busy. */
 @keyframes rod-glow-sparkle {
   0%, 100% {
     filter:
@@ -430,36 +431,25 @@ textarea,
       drop-shadow(0 0 8px #f0c040)
       drop-shadow(0 0 16px #f0c040);
   }
-  12% {
-    filter:
-      drop-shadow(0 0 8px #ffffff)
-      drop-shadow(0 0 18px #fff2a8)
-      drop-shadow(0 0 32px #ffd560);
-  }
-  20% {
-    filter:
-      drop-shadow(0 0 2px #fff2c0)
-      drop-shadow(0 0 8px #f0c040)
-      drop-shadow(0 0 16px #f0c040);
-  }
-  55% {
+  46% {
     filter:
       drop-shadow(0 0 10px #ffffff)
       drop-shadow(0 0 22px #fff8d0)
       drop-shadow(0 0 40px #ffd560);
   }
-  62% {
+  54% {
     filter:
       drop-shadow(0 0 2px #fff2c0)
       drop-shadow(0 0 8px #f0c040)
       drop-shadow(0 0 16px #f0c040);
   }
 }
-.rod-glow-sparkle { animation: rod-glow-sparkle 4.8s ease-in-out infinite; }
+.rod-glow-sparkle { animation: rod-glow-sparkle 6.5s ease-in-out infinite; }
 
-/* YOLO — electric: light cyan/white base that snaps to white-blue bursts
-   at three irregular points per cycle. Linear timing + tight on-off
-   windows make the edges feel like lightning instead of a breath. */
+/* YOLO — electric: long cyan/white base broken by two sharp white-blue
+   lightning bursts per cycle. Tight on-off windows preserve the snappy
+   lightning edges while the longer cycle prevents the "always pulsing"
+   feel. */
 @keyframes rod-glow-electric {
   0%, 100% {
     filter:
@@ -467,44 +457,32 @@ textarea,
       drop-shadow(0 0 8px #5cc8ff)
       drop-shadow(0 0 18px #2f9cff);
   }
-  9% {
-    filter:
-      drop-shadow(0 0 10px #ffffff)
-      drop-shadow(0 0 22px #b0ecff)
-      drop-shadow(0 0 44px #4dc8ff);
-  }
-  14% {
-    filter:
-      drop-shadow(0 0 2px #c8f0ff)
-      drop-shadow(0 0 8px #5cc8ff)
-      drop-shadow(0 0 18px #2f9cff);
-  }
-  42% {
+  28% {
     filter:
       drop-shadow(0 0 12px #ffffff)
       drop-shadow(0 0 26px #c0efff)
       drop-shadow(0 0 50px #5cc8ff);
   }
-  48% {
+  33% {
     filter:
       drop-shadow(0 0 2px #c8f0ff)
       drop-shadow(0 0 8px #5cc8ff)
       drop-shadow(0 0 18px #2f9cff);
   }
-  78% {
+  72% {
     filter:
-      drop-shadow(0 0 8px #ffffff)
-      drop-shadow(0 0 20px #b8edff)
-      drop-shadow(0 0 38px #4dc8ff);
+      drop-shadow(0 0 10px #ffffff)
+      drop-shadow(0 0 22px #b8edff)
+      drop-shadow(0 0 44px #4dc8ff);
   }
-  83% {
+  77% {
     filter:
       drop-shadow(0 0 2px #c8f0ff)
       drop-shadow(0 0 8px #5cc8ff)
       drop-shadow(0 0 18px #2f9cff);
   }
 }
-.rod-glow-electric { animation: rod-glow-electric 3.6s linear infinite; }
+.rod-glow-electric { animation: rod-glow-electric 5.5s linear infinite; }
 
 /* ── Boat glow (Ethereal — bob + iridescent shimmer at different periods) ── */
 /* Two animations layered: a 3.6s vertical hover (transform) and a 7s color */
