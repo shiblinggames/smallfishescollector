@@ -27,6 +27,27 @@ body {
   font-family: var(--font-karla), system-ui, sans-serif;
   font-weight: 300;
   line-height: 1.75;
+
+  /* Game-app behavior: kill the text-selection highlight and the iOS
+     long-press callout (Copy/Define) on tap targets. The site is mostly
+     buttons and dialogue cards — long-press shouldn't pop a menu over the
+     UI. Form inputs and textareas opt back in below so usernames, codes,
+     and any future text fields still behave normally. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Re-enable selection where it actually matters: form inputs, textareas,
+   and anything explicitly marked .select-text. */
+input,
+textarea,
+[contenteditable="true"],
+.select-text {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
 }
 
 @media (max-width: 639px) {
