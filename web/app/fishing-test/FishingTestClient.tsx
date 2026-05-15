@@ -16,6 +16,15 @@ const ROD_OVERLAY: Record<Frame, { top: number; left: number; width: number; rot
   cast: { top: 24, left: 3,  width: 51, rotate: 49  },
 }
 
+// 3-pose rod defaults — each frame uses a fully-baked sprite, so rotation
+// is just a fine tweak. Cast width starts low because the cast sprite is
+// tall + narrow and looks oversized at the same % as rest/wait.
+const ROD_3POSE_DEFAULT: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
+  rest: { top: 41.5, left: 19, width: 36.5, rotate: -1 },
+  wait: { top: 54.5, left: 17, width: 45.5, rotate: 0  },
+  cast: { top: 24,   left: 24, width: 6,    rotate: 0  },
+}
+
 const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number; hidden?: boolean }> = {
   rest: { top: 81, left: 9,  width: 16, rotate: -30 },
   wait: { top: 58, left: -4, width: 25, rotate: 0,   hidden: true },
@@ -83,6 +92,7 @@ export default function FishingTestClient() {
   const [rodThreePose, setRodThreePose] = useState(false)
   const [rodThreePoseName, setRodThreePoseName] = useState('rod_bamboo')
   const [rodCfg, setRodCfg] = useState(ROD_OVERLAY)
+  const [rodThreePoseCfg, setRodThreePoseCfg] = useState(ROD_3POSE_DEFAULT)
   const [hookCfg, setHookCfg] = useState(HOOK_OVERLAY)
   const [charCfg, setCharCfg] = useState(CHAR_DEFAULT)
   const [badgeCfg, setBadgeCfg] = useState(BADGE_SLOT_POSITIONS)
@@ -115,7 +125,11 @@ export default function FishingTestClient() {
 
   const rod  = RODS.find(r => r.tier === rodTier) ?? RODS[0]
   const hook = HOOKS.find(h => h.tier === hookTier) ?? HOOKS[0]
-  const rc = rodCfg[frame]
+  // Rod controls bind to whichever config is active so tuning a 3-pose
+  // rod doesn't overwrite legacy positions and vice versa.
+  const activeRodCfg = rodThreePose ? rodThreePoseCfg : rodCfg
+  const setActiveRodCfg = rodThreePose ? setRodThreePoseCfg : setRodCfg
+  const rc = activeRodCfg[frame]
   const hc = hookCfg[frame]
   const cp = charCfg[frame]
 
@@ -123,7 +137,7 @@ export default function FishingTestClient() {
     setCharCfg(prev => ({ ...prev, [frame]: { ...prev[frame], [key]: val } }))
   }
   function setRod(key: keyof typeof rc, val: number) {
-    setRodCfg(prev => ({ ...prev, [frame]: { ...prev[frame], [key]: val } }))
+    setActiveRodCfg(prev => ({ ...prev, [frame]: { ...prev[frame], [key]: val } }))
   }
   function setHook(key: keyof typeof hc, val: number) {
     setHookCfg(prev => ({ ...prev, [frame]: { ...prev[frame], [key]: val } }))
@@ -369,9 +383,11 @@ export default function FishingTestClient() {
             <p style={{ fontWeight: 600, marginBottom: 4, color: '#e8c84a' }}>3-pose overlay ({frame})</p>
             <Slider label="top %"    value={rc.top}    min={-80} max={100}  step={0.5} onChange={v => setRod('top',    v)} />
             <Slider label="left %"   value={rc.left}   min={-80} max={100}  step={0.5} onChange={v => setRod('left',   v)} />
-            <Slider label="width %"  value={rc.width}  min={10}  max={150}  step={0.5} onChange={v => setRod('width',  v)} />
+            {/* Width can go very low because the cast sprite is tall +
+                narrow (~66×408) and the rest sprite is roughly square. */}
+            <Slider label="width %"  value={rc.width}  min={1}   max={150}  step={0.5} onChange={v => setRod('width',  v)} />
             <Slider label="rotate °" value={rc.rotate} min={-90} max={90}   step={0.5} onChange={v => setRod('rotate', v)} />
-            <button onClick={() => setRodCfg(p => ({ rest: p[frame], wait: p[frame], cast: p[frame] }))} style={{
+            <button onClick={() => setRodThreePoseCfg(p => ({ rest: p[frame], wait: p[frame], cast: p[frame] }))} style={{
               width: '100%', padding: '4px 0', borderRadius: 6, cursor: 'pointer', marginTop: 6,
               background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
               color: '#94a3b8', fontWeight: 600, fontSize: 10,
@@ -467,7 +483,7 @@ export default function FishingTestClient() {
         {/* Config dump */}
         <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Current config</p>
         <pre style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
-{`HAT:\n${JSON.stringify(hatCfg, null, 2)}\n\nBOAT:\n${JSON.stringify(boatCfg, null, 2)}${rodThreePose && !showLegacyControls ? `\n\nROD (${rodThreePoseName}):\n${JSON.stringify(rodCfg, null, 2)}` : ''}${showLegacyControls ? `\n\nCHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD:\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}` : ''}`}
+{`HAT:\n${JSON.stringify(hatCfg, null, 2)}\n\nBOAT:\n${JSON.stringify(boatCfg, null, 2)}${rodThreePose ? `\n\nROD (${rodThreePoseName}):\n${JSON.stringify(rodThreePoseCfg, null, 2)}` : ''}${showLegacyControls ? `\n\nCHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD (legacy):\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}` : ''}`}
         </pre>
       </div>
     </div>
