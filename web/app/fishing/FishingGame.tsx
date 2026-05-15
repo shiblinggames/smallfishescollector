@@ -5599,7 +5599,12 @@ export default function FishingGame({
             style={{
               position: 'absolute', inset: 0, zIndex: 32,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'radial-gradient(ellipse 80% 65% at 50% 50%, rgba(96,165,250,0.22) 0%, rgba(0,0,0,0.88) 100%)',
+              // Near-opaque dark backdrop so the catch-result card behind
+              // never bleeds through the LEVEL UP text. Soft blue tint at
+              // center keeps the celebratory glow.
+              background: 'radial-gradient(ellipse 80% 65% at 50% 50%, rgba(20,40,80,0.94) 0%, rgba(0,0,0,0.98) 100%)',
+              backdropFilter: 'blur(4px)',
+              WebkitBackdropFilter: 'blur(4px)',
               cursor: 'pointer',
               padding: '1.5rem',
             }}
