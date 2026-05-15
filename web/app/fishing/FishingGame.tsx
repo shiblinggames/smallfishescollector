@@ -3438,8 +3438,10 @@ export default function FishingGame({
             </div>
           )}
 
-          {/* Phase content — grows to fill available space */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {/* Phase content — grows to fill available space. Relative so
+              the separate hooked-banner AnimatePresence below can absolutely
+              overlay the same area without affecting the main phase flow. */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
             <AnimatePresence mode="wait">
 
               {/* ── IDLE / CASTING ── */}
@@ -3482,165 +3484,12 @@ export default function FishingGame({
                 </motion.div>
               )}
 
-              {/* ── HOOKED — own key so it exits cleanly before catching enters ── */}
-              {phase === 'hooked' && hookedFish && (() => {
-                const r = RARITY[hookedFish.biteRarity] ?? RARITY[1]
-                const isLegendary = hookedFish.biteRarity === 5
-                const isEpicPlus  = hookedFish.biteRarity >= 4
-                const isCrate = hookedFish.fishId === CRATE_FISH_ID
-                const isBoss = selectedZone === 'ancient_deep'
-                const bossName = isBoss ? (allFishSpecies.find(f => f.id === hookedFish.fishId)?.name ?? 'Ancient Creature') : null
-
-                if (isCrate) return (
-                  <motion.div key={`hooked-${hookedFish.fishId}`}
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div
-                      style={{
-                        position: 'relative',
-                        background: 'rgba(4,10,18,0.52)',
-                        border: '1px solid rgba(255,255,255,0.12)',
-                        borderRadius: 20,
-                        padding: '1.1rem 1.75rem',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <p className="font-karla font-400" style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.65)' }}>
-                        Something heavy... and square?
-                      </p>
-                      <div style={{
-                        position: 'absolute', bottom: -7, left: '50%',
-                        transform: 'translateX(-50%) rotate(45deg)',
-                        width: 12, height: 12,
-                        background: 'rgba(4,10,18,0.52)',
-                        borderRight: '1px solid rgba(255,255,255,0.12)',
-                        borderBottom: '1px solid rgba(255,255,255,0.12)',
-                      }} />
-                    </div>
-                  </motion.div>
-                )
-
-                if (isBoss && bossName) return (
-                  <motion.div key={`hooked-${hookedFish.fishId}`}
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 1rem' }}>
-                    <motion.div
-                      initial={{ scale: 0.92, y: 8 }} animate={{ scale: 1, y: 0 }}
-                      transition={{ type: 'spring', stiffness: 320, damping: 22 }}
-                      style={{
-                        width: '100%',
-                        background: 'rgba(20,4,4,0.92)',
-                        border: '1px solid #ef444466',
-                        borderLeft: '3px solid #ef4444',
-                        borderRadius: 14,
-                        padding: '1rem 1.1rem',
-                        boxShadow: '0 0 40px rgba(239,68,68,0.25), inset 0 0 30px rgba(239,68,68,0.04)',
-                      }}
-                    >
-                      {/* Warning header */}
-                      <motion.div
-                        animate={{ opacity: [1, 0.5, 1] }}
-                        transition={{ duration: 0.6, repeat: Infinity, ease: 'easeInOut' }}
-                        className="flex items-center gap-2"
-                        style={{ marginBottom: '0.6rem' }}
-                      >
-                        <span style={{ fontSize: '0.75rem' }}>⚠</span>
-                        <p className="font-karla font-700 uppercase tracking-[0.2em]" style={{ fontSize: '0.58rem', color: '#ef4444', letterSpacing: '0.2em' }}>
-                          Ancient Encounter Detected
-                        </p>
-                        <span style={{ fontSize: '0.75rem' }}>⚠</span>
-                      </motion.div>
-
-                      {/* Boss name */}
-                      <motion.p
-                        className="font-cinzel font-700"
-                        animate={{ textShadow: ['0 0 20px rgba(239,68,68,0.6)', '0 0 35px rgba(239,68,68,0.9)', '0 0 20px rgba(239,68,68,0.6)'] }}
-                        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-                        style={{ fontSize: '1.5rem', color: '#fca5a5', letterSpacing: '0.05em', marginBottom: '0.5rem', lineHeight: 1 }}
-                      >
-                        {bossName}
-                      </motion.p>
-
-                      {/* Divider */}
-                      <div style={{ height: 1, background: 'linear-gradient(90deg, #ef444444, #ef444422, transparent)', marginBottom: '0.5rem' }} />
-
-                      {/* 3-stage warning */}
-                      <div className="flex items-center gap-2" style={{ marginBottom: '0.35rem' }}>
-                        <div className="flex gap-1">
-                          {[1,2,3].map(s => (
-                            <div key={s} style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 5px #ef4444' }} />
-                          ))}
-                        </div>
-                        <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#fca5a5' }}>
-                          3 stages required
-                        </p>
-                      </div>
-                      <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: 'rgba(252,165,165,0.55)', lineHeight: 1.4 }}>
-                        Miss once and it escapes. Stay sharp.
-                      </p>
-                    </motion.div>
-                  </motion.div>
-                )
-
-                return (
-                  <motion.div key={`hooked-${hookedFish.fishId}`}
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div
-                      style={{
-                        position: 'relative',
-                        background: 'rgba(4,10,18,0.52)',
-                        border: `1px solid ${r.color}40`,
-                        borderRadius: 20,
-                        padding: '1.1rem 1.75rem',
-                        textAlign: 'center',
-                        boxShadow: `0 0 32px ${r.color}28`,
-                      }}
-                    >
-                      {isEpicPlus ? (
-                        <motion.p
-                          className="font-karla font-700"
-                          animate={isLegendary
-                            ? { scale: [1, 1.04, 1], opacity: [1, 0.82, 1] }
-                            : { opacity: [1, 0.85, 1] }
-                          }
-                          transition={{ duration: 0.8, repeat: Infinity, ease: 'easeInOut' }}
-                          style={{
-                            fontSize: isLegendary ? '1.1rem' : '1rem',
-                            color: r.color,
-                            textShadow: `0 0 20px ${r.color}80`,
-                            letterSpacing: isLegendary ? '0.04em' : 'normal',
-                          }}
-                        >
-                          {r.hookedText}
-                        </motion.p>
-                      ) : (
-                        <p
-                          className="font-karla font-700"
-                          style={{
-                            fontSize: '0.95rem',
-                            color: r.color,
-                            textShadow: `0 0 20px ${r.color}80`,
-                          }}
-                        >
-                          {r.hookedText}
-                        </p>
-                      )}
-                      <div style={{
-                        position: 'absolute', bottom: -7, left: '50%',
-                        transform: 'translateX(-50%) rotate(45deg)',
-                        width: 12, height: 12,
-                        background: 'rgba(4,10,18,0.52)',
-                        borderRight: `1px solid ${r.color}40`,
-                        borderBottom: `1px solid ${r.color}40`,
-                      }} />
-                    </div>
-                  </motion.div>
-                )
-              })()}
+              {/* HOOKED banner lives in its own AnimatePresence below — it
+                  used to share this one, but the catching transition was
+                  reconciling against the exiting hooked child and producing
+                  a one-frame ghost re-render of the bite text a few pixels
+                  above its original position. Separating them entirely is
+                  the reliable fix. */}
 
               {/* ── CATCHING / REELING ── */}
               {(phase === 'catching' || phase === 'reeling') && hookedFish && (
@@ -3959,6 +3808,173 @@ export default function FishingGame({
                 </motion.div>
               )}
 
+            </AnimatePresence>
+
+            {/* HOOKED banner — its OWN AnimatePresence, absolutely overlaid
+                so its enter/exit is fully independent of the catching
+                transition. Was producing a ghost re-render of the bite text
+                when it shared an AP with the catching child (the parent's
+                reconciliation flashed the exiting hooked back on for one
+                frame, a few pixels offset). */}
+            <AnimatePresence>
+              {phase === 'hooked' && hookedFish && (() => {
+                const r = RARITY[hookedFish.biteRarity] ?? RARITY[1]
+                const isLegendary = hookedFish.biteRarity === 5
+                const isEpicPlus  = hookedFish.biteRarity >= 4
+                const isCrate = hookedFish.fishId === CRATE_FISH_ID
+                const isBoss = selectedZone === 'ancient_deep'
+                const bossName = isBoss ? (allFishSpecies.find(f => f.id === hookedFish.fishId)?.name ?? 'Ancient Creature') : null
+
+                if (isCrate) return (
+                  <motion.div key={`hooked-${hookedFish.fishId}`}
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                    style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                    <div
+                      style={{
+                        position: 'relative',
+                        background: 'rgba(4,10,18,0.52)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: 20,
+                        padding: '1.1rem 1.75rem',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <p className="font-karla font-400" style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.65)' }}>
+                        Something heavy... and square?
+                      </p>
+                      <div style={{
+                        position: 'absolute', bottom: -7, left: '50%',
+                        transform: 'translateX(-50%) rotate(45deg)',
+                        width: 12, height: 12,
+                        background: 'rgba(4,10,18,0.52)',
+                        borderRight: '1px solid rgba(255,255,255,0.12)',
+                        borderBottom: '1px solid rgba(255,255,255,0.12)',
+                      }} />
+                    </div>
+                  </motion.div>
+                )
+
+                if (isBoss && bossName) return (
+                  <motion.div key={`hooked-${hookedFish.fishId}`}
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
+                    style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 1rem', pointerEvents: 'none' }}>
+                    <motion.div
+                      initial={{ scale: 0.92, y: 8 }} animate={{ scale: 1, y: 0 }}
+                      transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+                      style={{
+                        width: '100%',
+                        background: 'rgba(20,4,4,0.92)',
+                        border: '1px solid #ef444466',
+                        borderLeft: '3px solid #ef4444',
+                        borderRadius: 14,
+                        padding: '1rem 1.1rem',
+                        boxShadow: '0 0 40px rgba(239,68,68,0.25), inset 0 0 30px rgba(239,68,68,0.04)',
+                      }}
+                    >
+                      {/* Warning header */}
+                      <motion.div
+                        animate={{ opacity: [1, 0.5, 1] }}
+                        transition={{ duration: 0.6, repeat: Infinity, ease: 'easeInOut' }}
+                        className="flex items-center gap-2"
+                        style={{ marginBottom: '0.6rem' }}
+                      >
+                        <span style={{ fontSize: '0.75rem' }}>⚠</span>
+                        <p className="font-karla font-700 uppercase tracking-[0.2em]" style={{ fontSize: '0.58rem', color: '#ef4444', letterSpacing: '0.2em' }}>
+                          Ancient Encounter Detected
+                        </p>
+                        <span style={{ fontSize: '0.75rem' }}>⚠</span>
+                      </motion.div>
+
+                      {/* Boss name */}
+                      <motion.p
+                        className="font-cinzel font-700"
+                        animate={{ textShadow: ['0 0 20px rgba(239,68,68,0.6)', '0 0 35px rgba(239,68,68,0.9)', '0 0 20px rgba(239,68,68,0.6)'] }}
+                        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{ fontSize: '1.5rem', color: '#fca5a5', letterSpacing: '0.05em', marginBottom: '0.5rem', lineHeight: 1 }}
+                      >
+                        {bossName}
+                      </motion.p>
+
+                      {/* Divider */}
+                      <div style={{ height: 1, background: 'linear-gradient(90deg, #ef444444, #ef444422, transparent)', marginBottom: '0.5rem' }} />
+
+                      {/* 3-stage warning */}
+                      <div className="flex items-center gap-2" style={{ marginBottom: '0.35rem' }}>
+                        <div className="flex gap-1">
+                          {[1,2,3].map(s => (
+                            <div key={s} style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 5px #ef4444' }} />
+                          ))}
+                        </div>
+                        <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#fca5a5' }}>
+                          3 stages required
+                        </p>
+                      </div>
+                      <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: 'rgba(252,165,165,0.55)', lineHeight: 1.4 }}>
+                        Miss once and it escapes. Stay sharp.
+                      </p>
+                    </motion.div>
+                  </motion.div>
+                )
+
+                return (
+                  <motion.div key={`hooked-${hookedFish.fishId}`}
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                    style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                    <div
+                      style={{
+                        position: 'relative',
+                        background: 'rgba(4,10,18,0.52)',
+                        border: `1px solid ${r.color}40`,
+                        borderRadius: 20,
+                        padding: '1.1rem 1.75rem',
+                        textAlign: 'center',
+                        boxShadow: `0 0 32px ${r.color}28`,
+                      }}
+                    >
+                      {isEpicPlus ? (
+                        <motion.p
+                          className="font-karla font-700"
+                          animate={isLegendary
+                            ? { scale: [1, 1.04, 1], opacity: [1, 0.82, 1] }
+                            : { opacity: [1, 0.85, 1] }
+                          }
+                          transition={{ duration: 0.8, repeat: Infinity, ease: 'easeInOut' }}
+                          style={{
+                            fontSize: isLegendary ? '1.1rem' : '1rem',
+                            color: r.color,
+                            textShadow: `0 0 20px ${r.color}80`,
+                            letterSpacing: isLegendary ? '0.04em' : 'normal',
+                          }}
+                        >
+                          {r.hookedText}
+                        </motion.p>
+                      ) : (
+                        <p
+                          className="font-karla font-700"
+                          style={{
+                            fontSize: '0.95rem',
+                            color: r.color,
+                            textShadow: `0 0 20px ${r.color}80`,
+                          }}
+                        >
+                          {r.hookedText}
+                        </p>
+                      )}
+                      <div style={{
+                        position: 'absolute', bottom: -7, left: '50%',
+                        transform: 'translateX(-50%) rotate(45deg)',
+                        width: 12, height: 12,
+                        background: 'rgba(4,10,18,0.52)',
+                        borderRight: `1px solid ${r.color}40`,
+                        borderBottom: `1px solid ${r.color}40`,
+                      }} />
+                    </div>
+                  </motion.div>
+                )
+              })()}
             </AnimatePresence>
           </div>
 
