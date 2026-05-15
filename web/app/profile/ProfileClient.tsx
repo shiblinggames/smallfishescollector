@@ -14,7 +14,7 @@ import CharacterAvatar from '@/components/CharacterAvatar'
 import { getBoat } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
-import { getRod } from '@/lib/rods'
+import { getRod, rodGlowClass } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { getHook } from '@/lib/hooks'
 import { getShip } from '@/lib/ships'
@@ -631,7 +631,7 @@ export default function ProfileClient({
                     overrides Tailwind preflight which would otherwise cap the
                     rod at 100% of the avatar container. */}
                 {rod.slug ? (
-                  <img src={`/${rod.slug}_rest.png`} alt="" className={rod.glow ? 'rod-glow' : undefined} style={{
+                  <img src={`/${rod.slug}_rest.png`} alt="" className={rodGlowClass(rod)} style={{
                     position: 'absolute', top: '37%', left: '-12%', width: '107.5%',
                     transformOrigin: 'center center',
                     pointerEvents: 'none',
@@ -639,7 +639,7 @@ export default function ProfileClient({
                     ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
                   } as React.CSSProperties} />
                 ) : rod.imageUrl && (
-                  <img src={rod.imageUrl} alt="" className={rod.glow ? 'rod-glow' : undefined} style={{
+                  <img src={rod.imageUrl} alt="" className={rodGlowClass(rod)} style={{
                     position: 'absolute', top: '33%', left: '12%', width: '51%',
                     transform: 'rotate(-1deg)', transformOrigin: 'bottom right',
                     pointerEvents: 'none',

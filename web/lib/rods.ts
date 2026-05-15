@@ -19,7 +19,19 @@ export interface RodDef {
   // so a single CHAR_ROD_OVERLAY position applies to all of them.
   slug?: string
   imageUrl?: string          // legacy single-sprite fallback (deprecated; kept for rods without 3-pose art)
-  glow?: boolean             // shared pulsing aura for marquee rods
+  glow?: boolean             // enable any glow aura at all
+  // Theme of the glow effect. Driven by per-keyframe CSS in globals.css
+  // (rod-glow-fire / rod-glow-sparkle / rod-glow-electric). Falls back to
+  // the generic .rod-glow pulse when omitted.
+  glowType?: 'fire' | 'sparkle' | 'electric'
+}
+
+// Resolve the CSS class for a rod's glow aura. Single source of truth so
+// every place that renders a rod (live game, shop, profiles, gear picker)
+// stays in sync if we add a new glowType later.
+export function rodGlowClass(rod: RodDef): string | undefined {
+  if (!rod.glow) return undefined
+  return rod.glowType ? `rod-glow-${rod.glowType}` : 'rod-glow'
 }
 
 export const RODS: RodDef[] = [
@@ -98,7 +110,7 @@ export const RODS: RodDef[] = [
     description: 'Forged from the mast of a sunken galleon. 40% faster bites — the rarest fish cannot resist.',
     color: '#ff6b35', rarityBonus: 0.50, biteIntervalMs: 2280, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    slug: 'rod_legendary', glow: true,
+    slug: 'rod_legendary', glow: true, glowType: 'fire',
   },
   {
     tier: 11, name: 'Twin-Strike', cost: 45000,
@@ -119,15 +131,15 @@ export const RODS: RodDef[] = [
     description: 'Hand-rolled in gold leaf. Every catch brings two.',
     color: '#f0c040', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
     doubleCatchChance: 1.0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    slug: 'rod_millionaires', glow: true,
+    slug: 'rod_millionaires', glow: true, glowType: 'sparkle',
   },
   {
     tier: 15, name: 'YOLO Rod', cost: 200000,
     description: '10% chance to land 100 fish at once. The other 90%? Just a regular catch.',
-    color: '#f97316', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
+    color: '#60d9ff', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     jackpotChance: 0.10, jackpotMultiplier: 100,
-    slug: 'rod_yolo', glow: true,
+    slug: 'rod_yolo', glow: true, glowType: 'electric',
   },
   {
     tier: 14, name: 'Completionist Rod', cost: 0, earnedOnly: true,

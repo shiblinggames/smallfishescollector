@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getHook, HOOKS } from '@/lib/hooks'
-import { getRod, RODS } from '@/lib/rods'
+import { getRod, RODS, rodGlowClass } from '@/lib/rods'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
@@ -215,7 +215,7 @@ function BaitIcon({ color }: { color: string }) {
 }
 
 function GearSlot({
-  label, image, icon, itemName, color, onClick, small, empty, glow, notify,
+  label, image, icon, itemName, color, onClick, small, empty, glowClass, notify,
 }: {
   label: string
   image?: string | null
@@ -225,9 +225,13 @@ function GearSlot({
   onClick: () => void
   small?: boolean
   empty?: boolean
-  glow?: boolean
+  /** CSS class for the animated aura around the gear thumbnail. Rod uses
+   *  themed glows (rod-glow-fire / -sparkle / -electric); hook uses the
+   *  generic rod-glow pulse. */
+  glowClass?: string
   notify?: boolean
 }) {
+  const glow = !!glowClass
   return (
     <button
       onClick={onClick}
@@ -260,7 +264,7 @@ function GearSlot({
           ? <img
               src={image}
               alt={label}
-              className={glow ? 'rod-glow' : undefined}
+              className={glowClass}
               style={{
                 width: 36, height: 36, objectFit: 'contain',
                 ...(glow ? { ['--rod-glow-color' as string]: color } : { filter: `drop-shadow(0 2px 6px ${color}55)` }),
@@ -381,10 +385,10 @@ export default function GearScreen({
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gridTemplateRows: 'auto auto', gap: 6 }}>
 
         <div style={{ gridColumn: '1', gridRow: '1' }}>
-          <GearSlot label="Rod" image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glow={rod.glow} notify={rodHasAffordable} onClick={() => setOpenSlot('rod')} />
+          <GearSlot label="Rod" image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glowClass={rodGlowClass(rod)} notify={rodHasAffordable} onClick={() => setOpenSlot('rod')} />
         </div>
         <div style={{ gridColumn: '1', gridRow: '2' }}>
-          <GearSlot label="Hook" image={hook.imageUrl ?? null} itemName={hook.name} color={hook.color} glow={hook.glow} notify={hookHasAffordable} onClick={() => setOpenSlot('hook')} />
+          <GearSlot label="Hook" image={hook.imageUrl ?? null} itemName={hook.name} color={hook.color} glowClass={hook.glow ? 'rod-glow' : undefined} notify={hookHasAffordable} onClick={() => setOpenSlot('hook')} />
         </div>
 
         {/* Center row 1: Hat / Bandana */}
@@ -653,7 +657,7 @@ export default function GearScreen({
                               <img
                                 src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
                                 alt=""
-                                className={r.glow ? 'rod-glow' : undefined}
+                                className={rodGlowClass(r)}
                                 style={{
                                   width: 44, height: 44, objectFit: 'contain',
                                   ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 1px 6px ${r.color}66)` }),
@@ -707,7 +711,7 @@ export default function GearScreen({
                                   <img
                                     src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
                                     alt=""
-                                    className={r.glow ? 'rod-glow' : undefined}
+                                    className={rodGlowClass(r)}
                                     style={{
                                       width: 44, height: 44, objectFit: 'contain',
                                       ...(r.glow

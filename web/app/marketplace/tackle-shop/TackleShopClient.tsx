@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { HOOKS } from '@/lib/hooks'
-import { RODS } from '@/lib/rods'
+import { RODS, rodGlowClass } from '@/lib/rods'
 import { REELS } from '@/lib/reels'
 import { LINES } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
@@ -548,7 +548,7 @@ export default function TackleShopClient({
                       {(rod.slug || rod.imageUrl)
                         ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={rod.slug ? `/${rod.slug}_thumb.png` : rod.imageUrl} alt={rod.name} className={owned && rod.glow ? 'rod-glow' : undefined} style={{
+                          <img src={rod.slug ? `/${rod.slug}_thumb.png` : rod.imageUrl} alt={rod.name} className={owned ? rodGlowClass(rod) : undefined} style={{
                             height: '100%', maxWidth: '100%', objectFit: 'contain',
                             ...(owned && rod.glow
                               ? { ['--rod-glow-color' as string]: rod.color }

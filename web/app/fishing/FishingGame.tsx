@@ -38,7 +38,7 @@ import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, t
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
 import { getHook, HOOKS } from '@/lib/hooks'
-import { getRod, RODS, type RodDef } from '@/lib/rods'
+import { getRod, RODS, rodGlowClass, type RodDef } from '@/lib/rods'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS, getBait } from '@/lib/bait'
@@ -3148,7 +3148,7 @@ export default function FishingGame({
                   <img
                     src={`/${rod.slug}_${f}.png`}
                     alt=""
-                    className={rod.glow ? 'rod-glow' : undefined}
+                    className={rodGlowClass(rod)}
                     style={{
                       position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
                       width: `${rc.width}%`,
@@ -3160,7 +3160,7 @@ export default function FishingGame({
                     } as React.CSSProperties}
                   />
                 ) : rod.imageUrl && (
-                  <img src={rod.imageUrl} alt="" className={rod.glow ? 'rod-glow' : undefined} style={{
+                  <img src={rod.imageUrl} alt="" className={rodGlowClass(rod)} style={{
                     position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
                     width: `${rc.width}%`,
                     transform: `rotate(${rc.rotate}deg)`,
