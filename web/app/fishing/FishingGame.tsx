@@ -3064,11 +3064,13 @@ export default function FishingGame({
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0" style={{ background: '#08121c', zIndex: 40, display: 'flex', justifyContent: 'center' }}>
       <div className="relative w-full max-w-md overflow-hidden" style={{ height: '100%' }}>
 
-        {/* Background */}
+        {/* Background — willChange: 'transform' promotes this to its own
+            GPU layer so the bobbing animation doesn't force the browser
+            to re-rasterize a 1920x1080 image every frame on mobile. */}
         <motion.div
           animate={bgBobAnimate}
           transition={bgBobTransition}
-          style={{ position: 'absolute', inset: '-14px' }}
+          style={{ position: 'absolute', inset: '-14px', willChange: 'transform' }}
         >
           <img
             src={ZONE_BG[selectedZone] ?? '/fishingbackground1.jpeg'}
@@ -3077,11 +3079,18 @@ export default function FishingGame({
           />
         </motion.div>
 
-        {/* Character + rod + hook overlay — all 3 frames always in DOM so sprites are pre-decoded */}
+        {/* Character + rod + hook overlay — all 3 frames always in DOM so
+            sprites are pre-decoded. willChange + transform: translateZ(0)
+            forces a stable compositing layer on mobile; the drop-shadow
+            that used to live here was applying a per-frame blur to the
+            entire compositied set of children (character + hat + boat +
+            rod + reel + hook + badges), which is the most expensive
+            filter operation on mobile GPUs. Moved to the character img
+            individually below so we only blur the character silhouette. */}
         <motion.div
           animate={bgBobAnimate}
           transition={bgBobTransition}
-          style={{ position: 'absolute', inset: 0, pointerEvents: 'none', filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))' }}
+          style={{ position: 'absolute', inset: 0, pointerEvents: 'none', willChange: 'transform' }}
         >
           {(Object.keys(charSrc) as CharFrame[]).map(f => {
             const p   = CHAR_POS[f]
@@ -3103,7 +3112,7 @@ export default function FishingGame({
                 aspectRatio: '900 / 800',
                 visibility: visible ? 'visible' : 'hidden',
               }}>
-                <img src={charSrc[f]} alt="" style={{ width: '100%', display: 'block' }} />
+                <img src={charSrc[f]} alt="" style={{ width: '100%', display: 'block', filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))' }} />
                 {hatDef && (() => {
                   const hp = hatDef.positions[f]
                   const hatSrc = f === 'cast' ? hatDef.castImageUrl : hatDef.restImageUrl

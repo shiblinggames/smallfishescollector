@@ -402,21 +402,18 @@ textarea,
 @keyframes rod-glow-fire {
   0%, 100% {
     filter:
-      drop-shadow(0 0 3px  #ffb066)
-      drop-shadow(0 0 10px #ff7a1a)
-      drop-shadow(0 0 22px #ff3d00);
+      drop-shadow(0 0 4px  #ffb066)
+      drop-shadow(0 0 18px #ff4a10);
   }
   35% {
     filter:
-      drop-shadow(0 0 6px  #ffd28a)
-      drop-shadow(0 0 18px #ff8a3a)
-      drop-shadow(0 0 38px #ff2200);
+      drop-shadow(0 0 8px  #ffd28a)
+      drop-shadow(0 0 32px #ff3a00);
   }
   65% {
     filter:
-      drop-shadow(0 0 5px  #ffbf66)
-      drop-shadow(0 0 14px #ff6020)
-      drop-shadow(0 0 30px #d83000);
+      drop-shadow(0 0 6px  #ffbf66)
+      drop-shadow(0 0 26px #d83000);
   }
 }
 .rod-glow-fire { animation: rod-glow-fire 2.0s ease-in-out infinite; }
@@ -427,21 +424,18 @@ textarea,
 @keyframes rod-glow-sparkle {
   0%, 100% {
     filter:
-      drop-shadow(0 0 2px #fff2c0)
-      drop-shadow(0 0 8px #f0c040)
-      drop-shadow(0 0 16px #f0c040);
+      drop-shadow(0 0 3px #fff2c0)
+      drop-shadow(0 0 14px #f0c040);
   }
   46% {
     filter:
       drop-shadow(0 0 10px #ffffff)
-      drop-shadow(0 0 22px #fff8d0)
-      drop-shadow(0 0 40px #ffd560);
+      drop-shadow(0 0 36px #ffd560);
   }
   54% {
     filter:
-      drop-shadow(0 0 2px #fff2c0)
-      drop-shadow(0 0 8px #f0c040)
-      drop-shadow(0 0 16px #f0c040);
+      drop-shadow(0 0 3px #fff2c0)
+      drop-shadow(0 0 14px #f0c040);
   }
 }
 .rod-glow-sparkle { animation: rod-glow-sparkle 6.5s ease-in-out infinite; }
@@ -453,33 +447,28 @@ textarea,
 @keyframes rod-glow-electric {
   0%, 100% {
     filter:
-      drop-shadow(0 0 2px #c8f0ff)
-      drop-shadow(0 0 8px #5cc8ff)
-      drop-shadow(0 0 18px #2f9cff);
+      drop-shadow(0 0 3px #c8f0ff)
+      drop-shadow(0 0 16px #3fa8ff);
   }
   28% {
     filter:
       drop-shadow(0 0 12px #ffffff)
-      drop-shadow(0 0 26px #c0efff)
-      drop-shadow(0 0 50px #5cc8ff);
+      drop-shadow(0 0 44px #5cc8ff);
   }
   33% {
     filter:
-      drop-shadow(0 0 2px #c8f0ff)
-      drop-shadow(0 0 8px #5cc8ff)
-      drop-shadow(0 0 18px #2f9cff);
+      drop-shadow(0 0 3px #c8f0ff)
+      drop-shadow(0 0 16px #3fa8ff);
   }
   72% {
     filter:
       drop-shadow(0 0 10px #ffffff)
-      drop-shadow(0 0 22px #b8edff)
-      drop-shadow(0 0 44px #4dc8ff);
+      drop-shadow(0 0 38px #4dc8ff);
   }
   77% {
     filter:
-      drop-shadow(0 0 2px #c8f0ff)
-      drop-shadow(0 0 8px #5cc8ff)
-      drop-shadow(0 0 18px #2f9cff);
+      drop-shadow(0 0 3px #c8f0ff)
+      drop-shadow(0 0 16px #3fa8ff);
   }
 }
 .rod-glow-electric { animation: rod-glow-electric 5.5s linear infinite; }
@@ -491,13 +480,12 @@ textarea,
   0%, 100% {
     filter:
       drop-shadow(0 0 2px #d8c8ff)
-      drop-shadow(0 0 6px #a78bfa);
+      drop-shadow(0 0 8px #a78bfa);
   }
   50% {
     filter:
-      drop-shadow(0 0 5px #ece0ff)
-      drop-shadow(0 0 14px #c4adff)
-      drop-shadow(0 0 22px #a78bfa);
+      drop-shadow(0 0 6px #ece0ff)
+      drop-shadow(0 0 18px #b89bff);
   }
 }
 .rod-glow-moon { animation: rod-glow-moon 6.0s ease-in-out infinite; }
@@ -514,8 +502,7 @@ textarea,
   50% {
     filter:
       drop-shadow(0 0 3px #bbf7d0)
-      drop-shadow(0 0 9px #4ade80)
-      drop-shadow(0 0 16px #22c55e);
+      drop-shadow(0 0 12px #2fbf6e);
   }
 }
 .rod-glow-tech { animation: rod-glow-tech 2.8s ease-in-out infinite; }
@@ -537,8 +524,7 @@ textarea,
   50% {
     filter:
       drop-shadow(0 0 2px #ffffff)
-      drop-shadow(0 0 6px #d4d4d8)
-      drop-shadow(0 0 10px #a3a3a3);
+      drop-shadow(0 0 8px #b8b8bc);
   }
 }
 .hook-glow-chrome { animation: hook-glow-chrome 4.5s ease-in-out infinite; }
@@ -554,8 +540,7 @@ textarea,
   50% {
     filter:
       drop-shadow(0 0 2px #ffe080)
-      drop-shadow(0 0 7px #f0c040)
-      drop-shadow(0 0 12px #d49520);
+      drop-shadow(0 0 10px #e0a830);
   }
 }
 .hook-glow-gilded { animation: hook-glow-gilded 4.5s ease-in-out infinite; }
@@ -567,20 +552,17 @@ textarea,
   0%, 100% {
     filter:
       drop-shadow(0 0 4px #e0c8ff)
-      drop-shadow(0 0 16px #a78bfa)
-      drop-shadow(0 0 36px #7c3aed);
+      drop-shadow(0 0 28px #8b5cf6);
   }
   33% {
     filter:
       drop-shadow(0 0 8px #ffffff)
-      drop-shadow(0 0 24px #d8b4fe)
-      drop-shadow(0 0 56px #a855f7);
+      drop-shadow(0 0 44px #a855f7);
   }
   66% {
     filter:
       drop-shadow(0 0 6px #c8d0ff)
-      drop-shadow(0 0 20px #818cf8)
-      drop-shadow(0 0 48px #4f46e5);
+      drop-shadow(0 0 36px #6366f1);
   }
 }
 .hook-glow-arcane { animation: hook-glow-arcane 5.5s ease-in-out infinite; }
@@ -592,14 +574,12 @@ textarea,
   0%, 100% {
     filter:
       drop-shadow(0 0 3px #fca5a5)
-      drop-shadow(0 0 14px #dc2626)
-      drop-shadow(0 0 32px #7f1d1d);
+      drop-shadow(0 0 24px #a01818);
   }
   50% {
     filter:
       drop-shadow(0 0 6px #ff4d4d)
-      drop-shadow(0 0 24px #b91c1c)
-      drop-shadow(0 0 52px #450a0a);
+      drop-shadow(0 0 40px #7f1d1d);
   }
 }
 .hook-glow-cursed { animation: hook-glow-cursed 4.0s ease-in-out infinite; }
@@ -610,27 +590,23 @@ textarea,
 @keyframes hook-glow-mythic {
   0%, 100% {
     filter:
-      drop-shadow(0 0 5px #ffffff)
-      drop-shadow(0 0 20px #ff6b35)
-      drop-shadow(0 0 48px #ff3300);
+      drop-shadow(0 0 6px #ffffff)
+      drop-shadow(0 0 36px #ff4a18);
   }
   25% {
     filter:
       drop-shadow(0 0 8px #fff2c0)
-      drop-shadow(0 0 28px #f0c040)
-      drop-shadow(0 0 68px #ff6b35);
+      drop-shadow(0 0 50px #ff8030);
   }
   50% {
     filter:
-      drop-shadow(0 0 10px #ffffff)
-      drop-shadow(0 0 36px #ff6b35)
-      drop-shadow(0 0 80px #ff2200);
+      drop-shadow(0 0 12px #ffffff)
+      drop-shadow(0 0 60px #ff3300);
   }
   75% {
     filter:
       drop-shadow(0 0 8px #ffe080)
-      drop-shadow(0 0 26px #ff8533)
-      drop-shadow(0 0 60px #cc3300);
+      drop-shadow(0 0 44px #e64a14);
   }
 }
 .hook-glow-mythic { animation: hook-glow-mythic 3.5s ease-in-out infinite; }
