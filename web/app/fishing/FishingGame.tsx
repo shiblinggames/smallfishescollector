@@ -3644,7 +3644,13 @@ export default function FishingGame({
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', paddingBottom: '1rem' }}>
 
                   <div style={{ minHeight: '1.6rem' }}>
-                    {(phase === 'reeling' || currentZone) && (
+                    {/* Only render the status pill during reeling. Showing the
+                        current dial zone label during catching produced a
+                        pill that visually echoed the just-dismissed "you've
+                        got a bite" banner one position up — read as the
+                        hooked banner flashing in twice. The dial itself
+                        already communicates the zones visually. */}
+                    {phase === 'reeling' && (
                       <div style={{
                         display: 'inline-block',
                         background: 'rgba(4,10,18,0.52)',
@@ -3658,7 +3664,7 @@ export default function FishingGame({
                             color: retryFlash ? '#fb923c' : (currentZone?.color ?? '#e8e4de'),
                             textShadow: retryFlash ? '0 0 16px rgba(251,146,60,0.7)' : currentZone ? `0 0 16px ${currentZone.color}70` : 'none',
                           }}>
-                          {retryFlash ? 'Second Wind!' : (phase === 'reeling' && bossStageCleared) ? `Stage ${bossStage - 1}/3 — Hold On!` : phase === 'reeling' ? 'Reeling in…' : (currentZone?.label ?? '')}
+                          {retryFlash ? 'Second Wind!' : bossStageCleared ? `Stage ${bossStage - 1}/3 — Hold On!` : 'Reeling in…'}
                         </p>
                       </div>
                     )}
