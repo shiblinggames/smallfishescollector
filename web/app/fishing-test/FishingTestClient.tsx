@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { RODS } from '@/lib/rods'
-import { HOOKS } from '@/lib/hooks'
+import { HOOKS, hookGlowClass } from '@/lib/hooks'
 import { BADGES, BADGE_SLOT_POSITIONS, type BadgePos, type BadgeFrame } from '@/lib/badges'
 import { BOATS } from '@/lib/boats'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -288,7 +288,7 @@ export default function FishingTestClient() {
             )}
 
             {hook.imageUrl && !hc.hidden && (
-              <img src={hook.imageUrl} alt="hook" className={hook.glow ? 'rod-glow' : undefined} style={{
+              <img src={hook.imageUrl} alt="hook" className={hookGlowClass(hook)} style={{
                 position: 'absolute', top: `${hc.top}%`, left: `${hc.left}%`,
                 width: `${hc.width}%`, transform: `rotate(${hc.rotate}deg)`,
                 transformOrigin: 'center center', pointerEvents: 'none',

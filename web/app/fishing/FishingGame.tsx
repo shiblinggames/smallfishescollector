@@ -37,7 +37,7 @@ import { buyHook } from '@/app/hooks/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
-import { getHook, HOOKS } from '@/lib/hooks'
+import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, RODS, rodGlowClass, type RodDef } from '@/lib/rods'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
@@ -3229,7 +3229,7 @@ export default function FishingGame({
                     maxWidth: 'none' bypasses Tailwind preflight cap so the
                     >100% width values actually render. */}
                 {hook.imageUrl && !hc.hidden && (
-                  <img src={hook.imageUrl} alt="" className={hook.glow ? 'rod-glow' : undefined} style={{
+                  <img src={hook.imageUrl} alt="" className={hookGlowClass(hook)} style={{
                     position: 'absolute', top: `${hc.top}%`, left: `${hc.left}%`,
                     width: `${hc.width}%`,
                     transform: `rotate(${hc.rotate}deg)`,

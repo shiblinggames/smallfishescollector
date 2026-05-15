@@ -6,7 +6,7 @@ import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { addCrewMember, removeCrewMember } from '@/app/social/actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
-import { getHook } from '@/lib/hooks'
+import { getHook, hookGlowClass } from '@/lib/hooks'
 import { getRod, rodGlowClass } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { getShip } from '@/lib/ships'
@@ -357,7 +357,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                 )}
                 {/* Hook — mirrors CHAR_HOOK_OVERLAY.rest from FishingGame. */}
                 {hook.imageUrl && (
-                  <img src={hook.imageUrl} alt="" className={hook.glow ? 'rod-glow' : undefined} style={{
+                  <img src={hook.imageUrl} alt="" className={hookGlowClass(hook)} style={{
                     position: 'absolute', top: '39.5%', left: '-10.5%', width: '204.5%',
                     transformOrigin: 'center center',
                     pointerEvents: 'none',

@@ -16,7 +16,7 @@ import { getHat } from '@/lib/hats'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import { getRod, rodGlowClass } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
-import { getHook } from '@/lib/hooks'
+import { getHook, hookGlowClass } from '@/lib/hooks'
 import { getShip } from '@/lib/ships'
 import { getShipSkin } from '@/lib/shipSkins'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
@@ -658,7 +658,7 @@ export default function ProfileClient({
                 {/* Hook — mirrors CHAR_HOOK_OVERLAY.rest from FishingGame
                     so the profile silhouette matches the live game. */}
                 {hook.imageUrl && (
-                  <img src={hook.imageUrl} alt="" className={hook.glow ? 'rod-glow' : undefined} style={{
+                  <img src={hook.imageUrl} alt="" className={hookGlowClass(hook)} style={{
                     position: 'absolute', top: '39.5%', left: '-10.5%', width: '204.5%',
                     transformOrigin: 'center center',
                     pointerEvents: 'none',

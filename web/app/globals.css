@@ -520,6 +520,121 @@ textarea,
 }
 .rod-glow-tech { animation: rod-glow-tech 2.8s ease-in-out infinite; }
 
+/* ── Hook glows (per-theme animated effects) ──
+   Used by lib/hooks.ts via hookGlowClass(). chrome / gilded are very
+   subtle so silver / gold hooks read as polished metal; arcane / cursed
+   are moderate accents for enchanted / abyssal; mythic is the multi-
+   layer legendary showpiece. */
+
+/* Silver — chrome: very subtle cool white-gray breath. Reads as polished
+   metal catching ambient light, not as a magical aura. */
+@keyframes hook-glow-chrome {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 1px #e8e8e8)
+      drop-shadow(0 0 3px #d4d4d8);
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 2px #ffffff)
+      drop-shadow(0 0 6px #d4d4d8)
+      drop-shadow(0 0 10px #a3a3a3);
+  }
+}
+.hook-glow-chrome { animation: hook-glow-chrome 4.5s ease-in-out infinite; }
+
+/* Gold — gilded: warm sibling of chrome. Soft amber breath. Stays
+   subtle — gold hook just sits one tier above silver, not a marquee. */
+@keyframes hook-glow-gilded {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 1px #fff2c0)
+      drop-shadow(0 0 4px #f0c040);
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 2px #ffe080)
+      drop-shadow(0 0 7px #f0c040)
+      drop-shadow(0 0 12px #d49520);
+  }
+}
+.hook-glow-gilded { animation: hook-glow-gilded 4.5s ease-in-out infinite; }
+
+/* Enchanted — arcane: violet base that drifts through magenta and indigo
+   across the cycle so it reads as mystical / spectral rather than a
+   simple pulse. */
+@keyframes hook-glow-arcane {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 2px #d8c0ff)
+      drop-shadow(0 0 8px #a78bfa)
+      drop-shadow(0 0 16px #6d28d9);
+  }
+  33% {
+    filter:
+      drop-shadow(0 0 3px #e8c8ff)
+      drop-shadow(0 0 12px #c084fc)
+      drop-shadow(0 0 22px #7c3aed);
+  }
+  66% {
+    filter:
+      drop-shadow(0 0 3px #c8d0ff)
+      drop-shadow(0 0 10px #818cf8)
+      drop-shadow(0 0 20px #4338ca);
+  }
+}
+.hook-glow-arcane { animation: hook-glow-arcane 5.5s ease-in-out infinite; }
+
+/* Abyssal — cursed: deep crimson / blood-red pulse. Slow and heavy so it
+   feels ominous rather than energetic — drawn-from-the-dark vibe. */
+@keyframes hook-glow-cursed {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 2px #7f1d1d)
+      drop-shadow(0 0 8px #991b1b)
+      drop-shadow(0 0 16px #450a0a);
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 4px #b91c1c)
+      drop-shadow(0 0 14px #7f1d1d)
+      drop-shadow(0 0 28px #450a0a);
+  }
+}
+.hook-glow-cursed { animation: hook-glow-cursed 4.0s ease-in-out infinite; }
+
+/* Legendary — mythic: layered multi-color radiance that cycles through
+   white-hot, gold, orange, and deep red across a 3.5s loop. Multiple
+   shadow radii give a "champion's aura" depth that reads as the most
+   impressive hook in the lineup. */
+@keyframes hook-glow-mythic {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 3px #ffffff)
+      drop-shadow(0 0 10px #ff6b35)
+      drop-shadow(0 0 24px #ff3300);
+  }
+  25% {
+    filter:
+      drop-shadow(0 0 5px #fff2c0)
+      drop-shadow(0 0 16px #f0c040)
+      drop-shadow(0 0 32px #ff6b35);
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 6px #ffffff)
+      drop-shadow(0 0 20px #ff6b35)
+      drop-shadow(0 0 40px #ff2200);
+  }
+  75% {
+    filter:
+      drop-shadow(0 0 5px #ffe080)
+      drop-shadow(0 0 14px #ff8533)
+      drop-shadow(0 0 30px #cc3300);
+  }
+}
+.hook-glow-mythic { animation: hook-glow-mythic 3.5s ease-in-out infinite; }
+
 /* ── Boat glow (Ethereal — bob + iridescent shimmer at different periods) ── */
 /* Two animations layered: a 3.6s vertical hover (transform) and a 7s color */
 /* shift through pale gold → cool white → lavender → seafoam (filter). The   */

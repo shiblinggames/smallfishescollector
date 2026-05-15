@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getHook, HOOKS } from '@/lib/hooks'
+import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, RODS, rodGlowClass } from '@/lib/rods'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
@@ -388,7 +388,7 @@ export default function GearScreen({
           <GearSlot label="Rod" image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glowClass={rodGlowClass(rod)} notify={rodHasAffordable} onClick={() => setOpenSlot('rod')} />
         </div>
         <div style={{ gridColumn: '1', gridRow: '2' }}>
-          <GearSlot label="Hook" image={hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null} itemName={hook.name} color={hook.color} glowClass={hook.glow ? 'rod-glow' : undefined} notify={hookHasAffordable} onClick={() => setOpenSlot('hook')} />
+          <GearSlot label="Hook" image={hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null} itemName={hook.name} color={hook.color} glowClass={hookGlowClass(hook)} notify={hookHasAffordable} onClick={() => setOpenSlot('hook')} />
         </div>
 
         {/* Center row 1: Hat / Bandana */}
@@ -880,10 +880,10 @@ export default function GearScreen({
                         <img
                           src={hook.imageUrl.replace(/\.png$/, '_thumb.png')}
                           alt={hook.name}
-                          className={hook.glow ? 'rod-glow' : undefined}
+                          className={hookGlowClass(hook)}
                           style={{
                             width: 44, height: 44, objectFit: 'contain',
-                            ...(hook.glow ? { ['--rod-glow-color' as string]: hook.color } : { filter: `drop-shadow(0 2px 8px ${hook.color}66)` }),
+                            ...(hook.glow ? {} : { filter: `drop-shadow(0 2px 8px ${hook.color}66)` }),
                           } as React.CSSProperties}
                         />
                       )}
@@ -919,12 +919,10 @@ export default function GearScreen({
                           <img
                             src={nextHook.imageUrl.replace(/\.png$/, '_thumb.png')}
                             alt={nextHook.name}
-                            className={nextHook.glow ? 'rod-glow' : undefined}
+                            className={hookGlowClass(nextHook)}
                             style={{
                               width: 44, height: 44, objectFit: 'contain', flexShrink: 0,
-                              ...(nextHook.glow
-                                ? { ['--rod-glow-color' as string]: nextHook.color }
-                                : { filter: `drop-shadow(0 1px 6px ${nextHook.color}66)` }),
+                              ...(nextHook.glow ? {} : { filter: `drop-shadow(0 1px 6px ${nextHook.color}66)` }),
                               opacity: canAffordHook ? 1 : 0.65,
                             } as React.CSSProperties}
                           />
