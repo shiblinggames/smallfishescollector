@@ -22,6 +22,7 @@ import { HATS, getHat } from '@/lib/hats'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
+import { zoneRewardDoubloons } from '@/lib/zoneRewards'
 import { updateCharacterColor } from '@/app/u/actions'
 import { equipBadge, unequipBadge } from '@/app/achievements/badgeActions'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS } from '@/lib/badges'
@@ -152,12 +153,6 @@ const EVENT_TYPES: EventType[] = ['bloom', 'fullmoon', 'redtide', 'glassy']
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ZONE_REWARD_DOUBLOONS_UI: Record<string, number> = {
-  shallows:    10000,
-  open_waters: 20000,
-  deep:        50000,
-  abyss:       100000,
-}
 
 function toRoman(n: number): string {
   const vals: [number, string][] = [[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']]
@@ -4624,7 +4619,7 @@ export default function FishingGame({
                         </div>
                         <p className="font-karla font-600"
                           style={{ fontSize: '0.68rem', color: isClaimed ? zoneColor + '99' : 'rgba(240,192,64,0.65)' }}>
-                          {isClaimed ? '✓ reward claimed' : `${(ZONE_REWARD_DOUBLOONS_UI[zone] ?? 0).toLocaleString()} ⟡ on completion`}
+                          {isClaimed ? '✓ reward claimed' : `${zoneRewardDoubloons(zone, prestigeLevels[zone] ?? 0).toLocaleString()} ⟡ on completion`}
                         </p>
                       </div>
                     </div>
@@ -4667,7 +4662,7 @@ export default function FishingGame({
                       </div>
                       <p className="font-cinzel font-700"
                         style={{ fontSize: '0.88rem', color: '#f0c040' }}>
-                        {isClaiming ? '…' : `${(ZONE_REWARD_DOUBLOONS_UI[zone] ?? 0).toLocaleString()} ⟡`}
+                        {isClaiming ? '…' : `${zoneRewardDoubloons(zone, prestigeLevels[zone] ?? 0).toLocaleString()} ⟡`}
                       </p>
                     </motion.button>
                   )}

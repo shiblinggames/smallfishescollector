@@ -12,6 +12,7 @@ import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
 import { getLineForSpeciesCount } from '@/lib/lines'
 import { getSpecialItem } from '@/lib/specialItems'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
+import { zoneRewardDoubloons } from '@/lib/zoneRewards'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -715,12 +716,6 @@ export async function checkLeaderboardPosition(
   return null
 }
 
-const ZONE_REWARD_DOUBLOONS: Record<string, number> = {
-  shallows:    10000,
-  open_waters: 20000,
-  deep:        50000,
-  abyss:       100000,
-}
 const ZONE_REWARD_COL: Record<string, string> = {
   shallows:    'zone_shallows_rewarded',
   open_waters: 'zone_open_waters_rewarded',
@@ -734,13 +729,12 @@ export async function claimZoneReward(zone: string): Promise<{ doubloons: number
   if (!user) return { error: 'Unauthorized' }
 
   const rewardCol = ZONE_REWARD_COL[zone]
-  const earned = ZONE_REWARD_DOUBLOONS[zone]
-  if (!rewardCol || !earned) return { error: 'Invalid zone' }
+  if (!rewardCol) return { error: 'Invalid zone' }
 
   const admin = createAdminClient()
 
   const [{ data: profile }, { data: zoneSpecies }, { count: caughtCount }] = await Promise.all([
-    admin.from('profiles').select('doubloons, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, prestige_levels, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded').eq('id', user.id).single(),
     admin.from('fish_species').select('id').eq('habitat', zone),
     admin.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
       .in('fish_id', (await admin.from('fish_species').select('id').eq('habitat', zone)).data?.map((f: { id: number }) => f.id) ?? []),
@@ -757,6 +751,10 @@ export async function claimZoneReward(zone: string): Promise<{ doubloons: number
 
   const totalInZone = (zoneSpecies ?? []).length
   if ((caughtCount ?? 0) < totalInZone || totalInZone === 0) return { error: 'Zone not complete' }
+
+  const prestigeLevel = ((profile.prestige_levels as Record<string, number> | null) ?? {})[zone] ?? 0
+  const earned = zoneRewardDoubloons(zone, prestigeLevel)
+  if (!earned) return { error: 'Invalid zone' }
 
   const newDoubloons = (profile.doubloons ?? 0) + earned
   await Promise.all([
