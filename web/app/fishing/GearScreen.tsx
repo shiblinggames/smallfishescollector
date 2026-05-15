@@ -438,7 +438,7 @@ export default function GearScreen({
         </div>
 
         <div style={{ gridColumn: '3', gridRow: '1' }}>
-          <GearSlot label="Reel" image={reel.imageUrl ?? null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} notify={reelHasAffordable} onClick={() => setOpenSlot('reel')} />
+          <GearSlot label="Reel" image={reel.imageUrl ? reel.imageUrl.replace(/\.png$/, '_thumb.png') : null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} notify={reelHasAffordable} onClick={() => setOpenSlot('reel')} />
         </div>
         <div style={{ gridColumn: '3', gridRow: '2' }}>
           <GearSlot label="Line" image={line.imageUrl ?? null} itemName={line.name} color={line.color} onClick={() => setOpenSlot('line')} />
@@ -800,7 +800,7 @@ export default function GearScreen({
                         {nextReel.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={nextReel.imageUrl}
+                            src={nextReel.imageUrl.replace(/\.png$/, '_thumb.png')}
                             alt={nextReel.name}
                             style={{
                               width: 44, height: 44, objectFit: 'contain', flexShrink: 0,
