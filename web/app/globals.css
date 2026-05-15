@@ -484,6 +484,42 @@ textarea,
 }
 .rod-glow-electric { animation: rod-glow-electric 5.5s linear infinite; }
 
+/* Moonwood — moon: soft silvery-lavender breath, low intensity. Cooler
+   than the marquee glows; one slow swell per long cycle reads as the
+   rod catching moonlight rather than radiating power. */
+@keyframes rod-glow-moon {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 2px #d8c8ff)
+      drop-shadow(0 0 6px #a78bfa);
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 5px #ece0ff)
+      drop-shadow(0 0 14px #c4adff)
+      drop-shadow(0 0 22px #a78bfa);
+  }
+}
+.rod-glow-moon { animation: rod-glow-moon 6.0s ease-in-out infinite; }
+
+/* Carbon — tech: subtle mint LED hum. Tight radii + low contrast so it
+   reads as a precision indicator rather than an aura. The shorter
+   cycle reinforces the "precision-engineered" / "responsive" vibe. */
+@keyframes rod-glow-tech {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 1.5px #86efac)
+      drop-shadow(0 0 5px #4ade80);
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 3px #bbf7d0)
+      drop-shadow(0 0 9px #4ade80)
+      drop-shadow(0 0 16px #22c55e);
+  }
+}
+.rod-glow-tech { animation: rod-glow-tech 2.8s ease-in-out infinite; }
+
 /* ── Boat glow (Ethereal — bob + iridescent shimmer at different periods) ── */
 /* Two animations layered: a 3.6s vertical hover (transform) and a 7s color */
 /* shift through pale gold → cool white → lavender → seafoam (filter). The   */

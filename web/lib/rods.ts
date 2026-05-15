@@ -21,9 +21,9 @@ export interface RodDef {
   imageUrl?: string          // legacy single-sprite fallback (deprecated; kept for rods without 3-pose art)
   glow?: boolean             // enable any glow aura at all
   // Theme of the glow effect. Driven by per-keyframe CSS in globals.css
-  // (rod-glow-fire / rod-glow-sparkle / rod-glow-electric). Falls back to
-  // the generic .rod-glow pulse when omitted.
-  glowType?: 'fire' | 'sparkle' | 'electric'
+  // (rod-glow-fire / sparkle / electric for marquee rods; moon / tech as
+  // subtler accents). Falls back to the generic .rod-glow pulse when omitted.
+  glowType?: 'fire' | 'sparkle' | 'electric' | 'moon' | 'tech'
 }
 
 // Resolve the CSS class for a rod's glow aura. Single source of truth so
@@ -75,7 +75,7 @@ export const RODS: RodDef[] = [
     description: 'Carved from driftwood blessed by a full moon. Bites 10% faster with a wider catch window.',
     color: '#a78bfa', rarityBonus: 0, biteIntervalMs: 3420, catchZoneBonus: 10,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    slug: 'rod_moonwood',
+    slug: 'rod_moonwood', glow: true, glowType: 'moon',
   },
   {
     tier: 6, name: 'Graphite Rod', cost: 22000,
@@ -96,7 +96,7 @@ export const RODS: RodDef[] = [
     description: 'Precision-engineered. Bites come 35% faster than baseline.',
     color: '#4ade80', rarityBonus: 0, biteIntervalMs: 2470, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    slug: 'rod_carbon',
+    slug: 'rod_carbon', glow: true, glowType: 'tech',
   },
   {
     tier: 9, name: 'Deep Diver', cost: 90000,
