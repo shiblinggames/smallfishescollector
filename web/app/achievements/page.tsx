@@ -19,12 +19,6 @@ export default async function AchievementsPage() {
 
   const unlocked: string[] = (profile?.unlocked_badges as string[]) ?? []
 
-  // Mark this visit so the nav badge dismisses until a new achievement is earned.
-  await admin
-    .from('profiles')
-    .update({ last_viewed_achievements_at: new Date().toISOString() })
-    .eq('id', user.id)
-
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />

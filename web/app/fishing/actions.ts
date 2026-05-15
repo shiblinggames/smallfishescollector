@@ -5,7 +5,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
 import { getRod } from '@/lib/rods'
 import { getFishHold } from '@/lib/fishHold'
-import { checkAchievements } from '@/lib/checkAchievements'
 import { unlockBadge } from '@/app/achievements/badgeActions'
 import { recordChallengeScore } from '@/app/social/challengeActions'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
@@ -249,8 +248,8 @@ export async function reelIn(
   streakBonus = 0,
   jackpotMultiplier = 1,
 ): Promise<
-  | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; newAchievements: string[]; xpGained: number; newXP: number; dailyProgress: [number, number, number]; unlockedSkinId?: string }
-  | { caught: false; newAchievements: string[] }
+  | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; xpGained: number; newXP: number; dailyProgress: [number, number, number]; unlockedSkinId?: string }
+  | { caught: false }
   | { error: string }
 > {
   const supabase = await createClient()
@@ -278,12 +277,7 @@ export async function reelIn(
     }
   }
 
-  if (!isCatch) {
-    const newAchievements = await checkAchievements(user.id, {
-      type: 'fishing', result, depthId: 0, abyssStreak: 0,
-    })
-    return { caught: false, newAchievements }
-  }
+  if (!isCatch) return { caught: false }
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
@@ -313,8 +307,7 @@ export async function reelIn(
       await unlockBadge('ancient_ones')
     }
     await admin.from('profiles').update(updates).eq('id', user.id)
-    const newAchievements = await checkAchievements(user.id, { type: 'fishing', result, depthId: 4, abyssStreak: 0 })
-    return { caught: true, fish: fish as FishSpecies, baitSaved: false, isNewSpecies: isNewTrophy, newAchievements, xpGained, newXP, dailyProgress: [0, 0, 0], unlockedSkinId }
+    return { caught: true, fish: fish as FishSpecies, baitSaved: false, isNewSpecies: isNewTrophy, xpGained, newXP, dailyProgress: [0, 0, 0], unlockedSkinId }
   }
 
   // Perfect: 50% chance to return the bait used for this cast; Phantom Hook: additional 25% on any catch
@@ -418,14 +411,6 @@ export async function reelIn(
   // Record challenge score (fire and forget)
   recordChallengeScore(user.id, fish.sell_value * catchQty, result === 'perfect').catch(() => {})
 
-  // Check achievements
-  const newAchievements = await checkAchievements(user.id, {
-    type: 'fishing',
-    result,
-    depthId: ['shallows', 'open_waters', 'deep', 'abyss'].indexOf(fish.habitat),
-    abyssStreak: newAbyssStreak,
-  })
-
   // Update daily challenge progress
   const dailyDate = getTodayUTC()
   const dailyChallenges = await getEffectiveDailyChallenges(dailyDate, admin)
@@ -457,7 +442,7 @@ export async function reelIn(
     { onConflict: 'user_id,date' },
   )
 
-  return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, newAchievements, xpGained, newXP, dailyProgress: newP, unlockedSkinId: reelInUnlockedSkin }
+  return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, xpGained, newXP, dailyProgress: newP, unlockedSkinId: reelInUnlockedSkin }
 }
 
 // Crate loot tables — doubloons and bait pool depend on crate tier, not zone.

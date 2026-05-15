@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { claimDailyBonus, claimDailyWorms } from '@/app/actions/dailyBonus'
 import { claimDailyPack } from '@/app/actions/dailyPack'
-import AchievementToast from '@/components/AchievementToast'
 
 interface Props {
   dailyClaimed: boolean
@@ -26,7 +25,6 @@ export default function DailyBonusClient({
   const [loadingDaily, setLoadingDaily] = useState(false)
   const [loadingPack, setLoadingPack] = useState(false)
   const [loadingWorms, setLoadingWorms] = useState(false)
-  const [achievementKeys, setAchievementKeys] = useState<string[]>([])
 
   async function handleClaimDaily() {
     if (dailyClaimed || loadingDaily) return
@@ -35,7 +33,6 @@ export default function DailyBonusClient({
     if (result.claimed) {
       setDailyClaimed(true)
       if (result.gems !== undefined) window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.gems }))
-      if (result.newAchievements?.length) setAchievementKeys(result.newAchievements)
     }
     setLoadingDaily(false)
   }
@@ -57,9 +54,7 @@ export default function DailyBonusClient({
   }
 
   return (
-    <>
-      <AchievementToast keys={achievementKeys} onDone={() => setAchievementKeys([])} />
-      <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
 
         {/* Base daily gems */}
         <ClaimCard
@@ -97,8 +92,7 @@ export default function DailyBonusClient({
           badge={isPremium ? 'Member' : undefined}
         />
 
-      </div>
-    </>
+    </div>
   )
 }
 

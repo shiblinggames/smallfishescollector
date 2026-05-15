@@ -2,7 +2,6 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { checkAchievements } from '@/lib/checkAchievements'
 import { getTodaysFishPuzzle } from './fish-of-the-day/generate'
 
 const MAX_GUESSES    = 4
@@ -212,7 +211,6 @@ export async function submitFishGuess(guessName: string): Promise<{
   isOver: boolean
   streak?: number
   milestoneReward?: number
-  newAchievements?: string[]
   answer?: FishAnswer
   gemsRemaining: number
 } | { error: string }> {
@@ -302,19 +300,12 @@ export async function submitFishGuess(guessName: string): Promise<{
       }
       await Promise.all(writes)
 
-      const newAchievements = await checkAchievements(user.id, {
-        type: 'fotd',
-        streak: newStreak,
-        guessCount: correct ? newGuesses.length : MAX_GUESSES,
-      })
-
       return {
         correct,
         gems: correct ? guessGems : 0,
         isOver,
         streak: newStreak,
         milestoneReward: bonus > 0 ? bonus : undefined,
-        newAchievements,
         answer,
         gemsRemaining: remaining,
       }

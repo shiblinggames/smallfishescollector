@@ -2,14 +2,13 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { checkAchievements } from '@/lib/checkAchievements'
 import { isPremiumActive } from '@/lib/premium'
 
 const DAILY_BONUS = 50
 const PREMIUM_DAILY_BONUS = 100
 const DAILY_WORMS = 20
 
-export async function claimDailyBonus(): Promise<{ claimed: boolean; gems?: number; newAchievements?: string[] }> {
+export async function claimDailyBonus(): Promise<{ claimed: boolean; gems?: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { claimed: false }
@@ -36,9 +35,7 @@ export async function claimDailyBonus(): Promise<{ claimed: boolean; gems?: numb
     }),
   ])
 
-  const newAchievements = await checkAchievements(user.id, { type: 'bonus' })
-
-  return { claimed: true, gems: newGems, newAchievements }
+  return { claimed: true, gems: newGems }
 }
 
 export async function claimDailyWorms(): Promise<{ claimed: boolean }> {

@@ -49,7 +49,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   const tint = PAGE_TINTS.find(([p]) => pathname === p || pathname.startsWith(p + '/'))?.[1]
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-  const [achievementsBadge, setAchievementsBadge] = useState(false)
   const [voyageBadge, setVoyageBadge] = useState(false)
   const [showInstallEntry, setShowInstallEntry] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
@@ -74,13 +73,9 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       Promise.all([
-        supabase.from('profiles').select('last_viewed_achievements_at, character_color, equipped_hat, avatar_bg_color, avatar_border_color').eq('id', user.id).single(),
-        supabase.from('user_achievements').select('unlocked_at').eq('user_id', user.id).order('unlocked_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('profiles').select('character_color, equipped_hat, avatar_bg_color, avatar_border_color').eq('id', user.id).single(),
         supabase.from('daily_voyages').select('created_at, duration_ms').eq('user_id', user.id).eq('status', 'pending'),
-      ]).then(([{ data: profile }, { data: latestAchievement }, { data: voyages }]) => {
-        const lastViewed = profile?.last_viewed_achievements_at
-        const latestUnlocked = latestAchievement?.unlocked_at
-        setAchievementsBadge(!!latestUnlocked && (!lastViewed || latestUnlocked > lastViewed))
+      ]).then(([{ data: profile }, { data: voyages }]) => {
         const cc = (profile?.character_color as string | null) ?? null
         const hat = (profile?.equipped_hat as string | null) ?? null
         const bg = (profile?.avatar_bg_color as string | null) ?? null
@@ -234,7 +229,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
-    { href: '/achievements', label: 'Achievements', badge: achievementsBadge,
+    { href: '/achievements', label: 'Achievements', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
           <path d="M6 9H4V4h16v5h-2"/>
@@ -254,7 +249,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   ]
 
   const desktopOnlyLinks = [
-    { href: '/achievements', label: 'Achievements', badge: achievementsBadge ? true : null },
+    { href: '/achievements', label: 'Achievements', badge: null },
     { href: '/social',       label: 'Social',        badge: null },
   ]
 
@@ -418,9 +413,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
             <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#a0a09a', borderRadius: 1, transition: 'background 0.15s' }} />
             <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#a0a09a', borderRadius: 1, transition: 'background 0.15s' }} />
             <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#a0a09a', borderRadius: 1, transition: 'background 0.15s' }} />
-            {achievementsBadge && (
-              <span style={{ position: 'absolute', top: 2, right: 2, width: 6, height: 6, borderRadius: '50%', background: '#f0c040' }} />
-            )}
           </button>
         </div>
 

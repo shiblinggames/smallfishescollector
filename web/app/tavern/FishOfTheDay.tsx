@@ -3,7 +3,6 @@
 import { useState, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { submitFishGuess, purchaseHint } from './fishActions'
-import AchievementToast from '@/components/AchievementToast'
 import type { FishPuzzleState, FishAnswer, HintType, RevealedHints, HintsUsed } from './fishActions'
 
 function nextMilestone(streak: number): { day: number; reward: number } {
@@ -85,7 +84,6 @@ export default function FishOfTheDay({
   const [hintPending, setHintPending] = useState<HintType | null>(null)
   const [hintError, setHintError] = useState<string | null>(null)
   const [milestoneReward, setMilestoneReward] = useState<number | undefined>(undefined)
-  const [achievementKeys, setAchievementKeys] = useState<string[]>([])
 
   const alreadyGuessed = new Set(puzzle.guesses.map(g => g.toLowerCase()))
   const filteredFish = allFishNames.filter(n =>
@@ -119,7 +117,6 @@ export default function FishOfTheDay({
       if ('error' in result) return
 
       if (result.milestoneReward) setMilestoneReward(result.milestoneReward)
-      if (result.newAchievements?.length) setAchievementKeys(result.newAchievements)
 
       setPuzzle(prev => ({
         ...prev,
@@ -160,7 +157,6 @@ export default function FishOfTheDay({
 
   return (
     <div className="flex flex-col gap-3.5 w-full">
-      <AchievementToast keys={achievementKeys} onDone={() => setAchievementKeys([])} />
 
       {!puzzle.isOver && <HeaderStrip gems={puzzle.gemsRemaining} guesses={puzzle.guesses.length} maxGuesses={puzzle.maxGuesses} solved={puzzle.solved} />}
 

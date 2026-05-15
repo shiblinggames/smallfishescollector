@@ -9,7 +9,6 @@ import PrizeModal from '@/components/PrizeModal'
 import { openPack as openPackAction, buyPacksWithGems } from './actions'
 import type { DrawnCard } from '@/lib/types'
 import type { OpenPackResponse } from './actions'
-import AchievementToast from '@/components/AchievementToast'
 
 
 interface Props {
@@ -37,8 +36,6 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
   const [shockwaveCards, setShockwaveCards] = useState<Set<number>>(new Set())
   const [mythicFeatured, setMythicFeatured] = useState<number | null>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
-  const [achievementKeys, setAchievementKeys] = useState<string[]>([])
-  const pendingAchievements = useRef<string[]>([])
   const [peekGlows, setPeekGlows] = useState<string[]>([])
   const peekTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
   const peekActive = useRef<Set<number>>(new Set())
@@ -129,7 +126,6 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     setNewVariantIds(new Set(result.newVariantIds ?? []))
     setIsGodPack(result.isGodPack ?? false)
     setRankUp(result.rankUp ?? null)
-    pendingAchievements.current = result.newAchievements ?? []
     setCards(result.drawn)
     setFlipped(new Array(result.drawn.length).fill(false))
     setGlowClasses(new Array(result.drawn.length).fill(''))
@@ -212,13 +208,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     setFlipped((prev) => {
       const n = [...prev]
       n[i] = true
-      if (n.every(Boolean)) setTimeout(() => {
-        setPhase('done')
-        if (pendingAchievements.current.length) {
-          setAchievementKeys(pendingAchievements.current)
-          pendingAchievements.current = []
-        }
-      }, 700)
+      if (n.every(Boolean)) setTimeout(() => setPhase('done'), 700)
       return n
     })
   }
@@ -236,13 +226,7 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
         setFlipped(prev => { const n = [...prev]; n[i] = true; return n })
       }, delay)
     })
-    setTimeout(() => {
-      setPhase('done')
-      if (pendingAchievements.current.length) {
-        setAchievementKeys(pendingAchievements.current)
-        pendingAchievements.current = []
-      }
-    }, lastIdx * 480 + 500 + 700)
+    setTimeout(() => setPhase('done'), lastIdx * 480 + 500 + 700)
   }
 
   function reset() {
@@ -258,7 +242,6 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
     setNewVariantIds(new Set())
     setShockwaveCards(new Set())
     setMythicFeatured(null)
-    pendingAchievements.current = []
     router.refresh()
   }
 
@@ -565,7 +548,6 @@ export default function PackOpener({ packsAvailable: initialPacks, gems: initial
 
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-10 w-full">
-      <AchievementToast keys={achievementKeys} onDone={() => setAchievementKeys([])} />
       {flash && <div key={flash.key} className={`reveal-flash reveal-flash-${flash.type}`} />}
       {prize && (
         <PrizeModal
