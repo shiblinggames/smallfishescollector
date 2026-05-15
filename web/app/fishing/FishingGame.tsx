@@ -3673,18 +3673,28 @@ export default function FishingGame({
                   exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: '1rem', paddingBottom: '1rem' }}>
 
-                  {/* Suction wrapper — when handleCastAgain captures the
-                      delta to the hold button into resultSuction, the card
-                      glides into the hold tab before the phase changes. */}
-                  <motion.div
+                  {/* Suction wrapper — plain div + CSS transition rather
+                      than a motion.div, because framer-motion's animate
+                      prop reconciliation here was churning the scheduler
+                      every parent render (which made the catching needle
+                      stutter once this was added) and leaving a ghost
+                      outline after exit. transform/opacity are GPU layers,
+                      and willChange is only on during the actual suction
+                      so there's no idle compositing cost. */}
+                  <div
                     ref={resultCardWrapperRef}
-                    animate={resultSuction
-                      ? { x: resultSuction.x, y: resultSuction.y, scale: 0.05, opacity: 0 }
-                      : { x: 0, y: 0, scale: 1, opacity: 1 }}
-                    transition={resultSuction
-                      ? { duration: 0.35, ease: [0.5, 0, 0.75, 0] }
-                      : { duration: 0 }}
-                    style={{ transformOrigin: 'center center' }}
+                    style={{
+                      transformOrigin: 'center center',
+                      transform: resultSuction
+                        ? `translate(${resultSuction.x}px, ${resultSuction.y}px) scale(0.05)`
+                        : undefined,
+                      opacity: resultSuction ? 0 : 1,
+                      transition: resultSuction
+                        ? 'transform 0.35s cubic-bezier(0.5, 0, 0.75, 0), opacity 0.35s cubic-bezier(0.5, 0, 0.75, 0)'
+                        : undefined,
+                      willChange: resultSuction ? 'transform, opacity' : undefined,
+                      pointerEvents: resultSuction ? 'none' : undefined,
+                    }}
                   >
                   {crateResult ? (
                     <motion.div
@@ -3917,7 +3927,7 @@ export default function FishingGame({
                       )}
                     </motion.div>
                   ) : null}
-                  </motion.div>
+                  </div>
 
                 </motion.div>
               )}
