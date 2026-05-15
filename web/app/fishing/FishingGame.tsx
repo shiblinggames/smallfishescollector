@@ -3078,6 +3078,12 @@ export default function FishingGame({
                 bottom: `${p.bottom}%`,
                 left: `${p.left}%`,
                 width: `${p.width}%`,
+                // Character sprite is 900×800. Lock the container's aspect
+                // ratio so the boat/rod overlays (positioned via top: X%) have
+                // a stable reference height *before* the sprite finishes
+                // decoding — otherwise they collapse to the container bottom
+                // and visibly jump up once the image lands.
+                aspectRatio: '900 / 800',
                 visibility: visible ? 'visible' : 'hidden',
               }}>
                 <img src={charSrc[f]} alt="" style={{ width: '100%', display: 'block' }} />
