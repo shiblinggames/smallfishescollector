@@ -1647,6 +1647,30 @@ function PerkLine({ label, value }: { label: string; value: string }) {
   )
 }
 
+/** Live countdown to the next midnight UTC — used in the Daily Challenges
+ *  drawer header so the player can see exactly when challenges reset. */
+function DailyResetCountdown() {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    // Once per minute is plenty — the seconds tick adds noise without
+    // useful information for a multi-hour countdown.
+    const t = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(t)
+  }, [])
+  const next = new Date(now)
+  next.setUTCHours(24, 0, 0, 0)
+  const msLeft = next.getTime() - now
+  const hours = Math.floor(msLeft / 3_600_000)
+  const mins  = Math.floor((msLeft % 3_600_000) / 60_000)
+  const label = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
+  return (
+    <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#6a7488', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#7a9bc4', boxShadow: '0 0 6px rgba(122,155,196,0.6)', flexShrink: 0 }} />
+      Resets in {label}
+    </p>
+  )
+}
+
 /** Tiny live-countdown shown inside the Finn-challenge HUD chip for speed
  *  challenges. Re-renders ~4× a second; cheap. */
 function SpeedClock({ endsAt }: { endsAt: number }) {
@@ -5116,81 +5140,158 @@ export default function FishingGame({
             }}
           >
             <DrawerHandle />
-            <div className="flex items-center justify-between mb-5" style={{ paddingTop: '0.75rem' }}>
+            <div className="flex items-start justify-between mb-4" style={{ paddingTop: '0.75rem' }}>
               <div>
-                <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                  style={{ fontSize: '0.72rem', color: '#c8c4bc' }}>Daily Challenges</p>
-                <p className="font-karla font-400 mt-0.5"
-                  style={{ fontSize: '0.65rem', color: '#6a6764' }}>Resets at midnight UTC</p>
+                <p className="font-karla font-700 uppercase tracking-[0.20em]"
+                  style={{ fontSize: '0.6rem', color: '#7a9bc4', marginBottom: 4 }}>Captain&rsquo;s Log</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1.1, marginBottom: 4 }}>
+                  Daily Challenges
+                </p>
+                <DailyResetCountdown />
               </div>
               <button onClick={() => setDailyOpen(false)}
-                style={{ color: '#9a9488', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+                aria-label="Close"
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 8, width: 30, height: 30,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#9a9488', fontSize: '0.85rem', lineHeight: 1, cursor: 'pointer',
+                }}>✕</button>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
               {dailyChallenges.map((challenge: DailyChallenge, i) => {
                 const progress = dailyProgress[i]
                 const claimed = dailyClaimed[i]
                 const done = progress >= challenge.target
                 const isClaiming = claimingDaily === i
                 const pct = Math.min(progress / challenge.target, 1)
-                const accent = i === 0 ? '#60a5fa' : i === 1 ? '#f0c040' : '#f87171'
+                // Difficulty palette: easy/medium/hard — accent stays color-coded
+                // until claimed, then everything shifts to a muted "done" tone.
+                const accent    = i === 0 ? '#60a5fa' : i === 1 ? '#f0c040' : '#f87171'
+                const accentRgb = i === 0 ? '96,165,250' : i === 1 ? '240,192,64' : '248,113,113'
+                const tier      = i === 0 ? 'Easy' : i === 1 ? 'Medium' : 'Hard'
+                // Gradient + top-accent chrome matches the rest of the new UI.
+                // Three visual states: in-progress (subtle), ready-to-claim (glow),
+                // claimed (muted slate).
+                const bg = claimed
+                  ? 'linear-gradient(180deg, rgba(120,130,160,0.10) 0%, rgba(120,130,160,0.02) 100%), #0a0e16'
+                  : done
+                    ? `linear-gradient(180deg, rgba(${accentRgb},0.22) 0%, rgba(${accentRgb},0.06) 100%), #0d1320`
+                    : `linear-gradient(180deg, rgba(${accentRgb},0.10) 0%, rgba(${accentRgb},0.02) 100%), #06101c`
+                const borderColor    = claimed ? 'rgba(120,130,160,0.22)' : done ? `rgba(${accentRgb},0.50)` : `rgba(${accentRgb},0.28)`
+                const borderTopColor = claimed ? 'rgba(120,130,160,0.38)' : done ? `rgba(${accentRgb},0.80)` : `rgba(${accentRgb},0.52)`
+                const glow           = done && !claimed ? `0 0 18px rgba(${accentRgb},0.28)` : 'none'
+
                 return (
                   <div key={i} style={{
-                    background: done ? `${accent}0d` : 'rgba(4,10,18,0.72)',
-                    border: `1px solid ${done ? accent + '45' : 'rgba(255,255,255,0.12)'}`,
-                    borderRadius: 14, padding: '0.9rem 1rem',
+                    background: bg,
+                    border: `1px solid ${borderColor}`,
+                    borderTop: `1px solid ${borderTopColor}`,
+                    borderRadius: 12,
+                    padding: '0.85rem 0.95rem',
+                    boxShadow: glow,
+                    transition: 'box-shadow 0.25s ease',
                   }}>
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-karla font-700 uppercase tracking-[0.08em]"
-                            style={{ fontSize: '0.6rem', color: accent }}>
-                            {i === 0 ? 'Easy' : i === 1 ? 'Medium' : 'Hard'}
+                    {/* Top row — difficulty tag + reward */}
+                    <div className="flex items-center justify-between mb-2" style={{ gap: 10 }}>
+                      <div className="flex items-center" style={{ gap: 7 }}>
+                        <span className="font-karla font-700 uppercase"
+                          style={{
+                            fontSize: '0.54rem',
+                            color: claimed ? '#7a8090' : accent,
+                            letterSpacing: '0.20em',
+                            padding: '0.2rem 0.5rem',
+                            background: claimed ? 'rgba(120,130,160,0.10)' : `rgba(${accentRgb},0.12)`,
+                            border: `1px solid ${claimed ? 'rgba(120,130,160,0.28)' : `rgba(${accentRgb},0.36)`}`,
+                            borderRadius: 999,
+                          }}>
+                          {tier}
+                        </span>
+                        {claimed && (
+                          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', color: '#86efac', letterSpacing: '0.16em' }}>
+                            ✓ Claimed
                           </span>
-                          {claimed && (
-                            <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4ade80' }}>✓ Claimed</span>
-                          )}
-                        </div>
-                        <p className="font-karla font-600"
-                          style={{ fontSize: '0.85rem', color: done ? '#f0ede8' : '#c8c4bc', lineHeight: 1.35 }}>
-                          {challenge.label}
-                        </p>
+                        )}
                       </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0c040' }}>
-                          +{challenge.reward.toLocaleString()} ⟡
-                        </p>
-                        <p className="font-karla font-400 mt-0.5" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
-                          {progress.toLocaleString()} / {challenge.target.toLocaleString()}
-                        </p>
+                      <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', alignItems: 'baseline', gap: 3 }}>
+                        <span className="font-cinzel font-700" style={{
+                          fontSize: done && !claimed ? '1.1rem' : '0.9rem',
+                          color: claimed ? '#7a8090' : '#f0c040',
+                          textShadow: done && !claimed ? '0 0 12px rgba(240,192,64,0.4)' : 'none',
+                          lineHeight: 1,
+                          transition: 'font-size 0.2s ease',
+                        }}>
+                          +{challenge.reward.toLocaleString()}
+                        </span>
+                        <span className="font-cinzel font-700" style={{ fontSize: '0.7rem', color: claimed ? '#7a8090' : '#f0c040', lineHeight: 1 }}>⟡</span>
                       </div>
                     </div>
 
-                    {/* Progress bar */}
-                    <div style={{ height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, marginBottom: done && !claimed ? '0.65rem' : 0 }}>
-                      <motion.div
-                        animate={{ width: `${pct * 100}%` }}
-                        transition={{ duration: 0.4, ease: 'easeOut' }}
-                        style={{ height: '100%', borderRadius: 2, background: done ? accent : `linear-gradient(90deg, ${accent}80, ${accent})` }}
-                      />
+                    {/* Challenge label */}
+                    <p className="font-karla font-600"
+                      style={{
+                        fontSize: '0.88rem',
+                        color: claimed ? '#9a9890' : done ? '#f0ede8' : '#c8c4bc',
+                        lineHeight: 1.35,
+                        marginBottom: '0.55rem',
+                      }}>
+                      {challenge.label}
+                    </p>
+
+                    {/* Progress bar + count */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: done && !claimed ? '0.7rem' : 0 }}>
+                      <div style={{
+                        flex: 1, height: 5, background: 'rgba(255,255,255,0.08)',
+                        borderRadius: 3, overflow: 'hidden',
+                      }}>
+                        <motion.div
+                          animate={{ width: `${pct * 100}%` }}
+                          transition={{ duration: 0.4, ease: 'easeOut' }}
+                          style={{
+                            height: '100%', borderRadius: 3,
+                            background: claimed
+                              ? 'rgba(120,130,160,0.45)'
+                              : done
+                                ? accent
+                                : `linear-gradient(90deg, ${accent}88, ${accent})`,
+                            boxShadow: done && !claimed ? `0 0 8px ${accent}88` : 'none',
+                          }}
+                        />
+                      </div>
+                      <span className="font-karla font-700 tabular-nums" style={{
+                        fontSize: '0.66rem',
+                        color: claimed ? '#7a8090' : done ? accent : '#9a9488',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                      }}>
+                        {progress.toLocaleString()} / {challenge.target.toLocaleString()}
+                      </span>
                     </div>
 
-                    {/* Claim button */}
+                    {/* Claim button — only shows when done & unclaimed */}
                     {done && !claimed && (
-                      <button
+                      <motion.button
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
                         onClick={() => handleClaimDaily(i as 0 | 1 | 2)}
                         disabled={isClaiming}
-                        className="font-karla font-700 uppercase tracking-[0.1em] w-full"
+                        className="font-cinzel font-700 uppercase tracking-[0.14em] w-full"
                         style={{
-                          fontSize: '0.72rem', padding: '0.55rem', borderRadius: 8,
-                          background: `${accent}20`, border: `1px solid ${accent}55`,
-                          color: accent, opacity: isClaiming ? 0.5 : 1,
+                          fontSize: '0.78rem', padding: '0.6rem', borderRadius: 10,
+                          background: `linear-gradient(180deg, rgba(240,192,64,0.28) 0%, rgba(240,192,64,0.08) 100%)`,
+                          border: '1px solid rgba(240,192,64,0.55)',
+                          borderTop: '1px solid rgba(240,192,64,0.85)',
+                          color: '#f0c040',
+                          boxShadow: '0 0 14px rgba(240,192,64,0.25)',
+                          opacity: isClaiming ? 0.5 : 1,
                           cursor: isClaiming ? 'default' : 'pointer',
                         }}
                       >
-                        {isClaiming ? '…' : `Claim ${challenge.reward.toLocaleString()} ⟡`}
-                      </button>
+                        {isClaiming ? 'Claiming…' : `Claim ${challenge.reward.toLocaleString()} ⟡`}
+                      </motion.button>
                     )}
                   </div>
                 )
