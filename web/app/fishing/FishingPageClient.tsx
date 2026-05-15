@@ -109,6 +109,20 @@ export default function FishingPageClient({
     setPersistedUnlockedHats(unlocked)
   }, [])
 
+  // Daily challenge progress + claimed flags survive zone remounts. The
+  // server snapshot in initialDailyChallenge is only fresh at page load;
+  // without lifting state here, a player who claims on Zone A and then
+  // switches to Zone B sees the claim UI again (stale prop) and the
+  // second click silently no-ops since the server returns 'Already claimed'.
+  const [persistedDailyChallenge, setPersistedDailyChallenge] =
+    useState<DailyChallengeState | null>(initialDailyChallenge)
+  const handleDailyChallengeChange = useCallback(
+    (progress: [number, number, number], claimed: [boolean, boolean, boolean]) => {
+      setPersistedDailyChallenge(prev => prev ? { ...prev, progress, claimed } : prev)
+    },
+    [],
+  )
+
   const [selectedZone, setSelectedZone] = useState<ZoneKey | null>(() => {
     if (typeof window === 'undefined') return null
     const saved = localStorage.getItem(LAST_ZONE_KEY) as ZoneKey | null
@@ -163,7 +177,8 @@ export default function FishingPageClient({
       onBack={goBack}
       activeSession={activeSession}
       zoneRewardsClaimed={zoneRewardsClaimed}
-      initialDailyChallenge={initialDailyChallenge}
+      initialDailyChallenge={persistedDailyChallenge}
+      onDailyChallengeChange={handleDailyChallengeChange}
       hasTideTurner={hasTideTurner}
       initialTideTurnerSkipsLeft={initialTideTurnerSkipsLeft}
       initialEquippedSpecial={initialEquippedSpecial}

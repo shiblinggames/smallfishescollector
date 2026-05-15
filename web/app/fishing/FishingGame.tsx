@@ -1676,7 +1676,7 @@ export default function FishingGame({
   initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
-  initialDailyChallenge,
+  initialDailyChallenge, onDailyChallengeChange,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster,
   initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
@@ -1704,6 +1704,12 @@ export default function FishingGame({
   activeSession?: ActiveSession
   zoneRewardsClaimed: Record<string, boolean>
   initialDailyChallenge: DailyChallengeState | null
+  /** Fired whenever local progress/claimed updates so the parent
+   *  (FishingPageClient) can preserve the state across zone remounts. */
+  onDailyChallengeChange?: (
+    progress: [number, number, number],
+    claimed: [boolean, boolean, boolean],
+  ) => void
   hasTideTurner: boolean
   initialTideTurnerSkipsLeft: number
   initialEquippedSpecial: string | null
@@ -1916,6 +1922,14 @@ export default function FishingGame({
   const dailyChallenges = initialDailyChallenge ? initialDailyChallenge.challenges : getDailyChallenges(new Date().toISOString().slice(0, 10))
   const [dailyProgress, setDailyProgress] = useState<[number, number, number]>(initialDailyChallenge?.progress ?? [0, 0, 0])
   const [dailyClaimed, setDailyClaimed] = useState<[boolean, boolean, boolean]>(initialDailyChallenge?.claimed ?? [false, false, false])
+  // Push local progress + claimed up to the parent on every change so the
+  // state survives a ZoneLanding remount when the player switches zones.
+  // Without this the second zone reads a stale server snapshot and the
+  // claim UI reappears for an already-claimed challenge.
+  useEffect(() => {
+    onDailyChallengeChange?.(dailyProgress, dailyClaimed)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dailyProgress, dailyClaimed])
   const [dailyOpen, setDailyOpen] = useState(false)
   const [dailyJustCompleted, setDailyJustCompleted] = useState<number | null>(null)
   const [claimingDaily, setClaimingDaily] = useState<number | null>(null)
@@ -2886,7 +2900,17 @@ export default function FishingGame({
     setClaimingDaily(index)
     const res = await claimDailyReward(index)
     setClaimingDaily(null)
-    if ('error' in res) return
+    if ('error' in res) {
+      // If the server says it's already claimed, our local state is
+      // stale (e.g. a previous tab claimed it, or a zone remount lost
+      // the flag). Reconcile by marking it claimed locally so the
+      // button disappears and the player isn't stuck staring at a
+      // no-op Collect.
+      if (res.error === 'Already claimed') {
+        setDailyClaimed(prev => { const n = [...prev] as [boolean, boolean, boolean]; n[index] = true; return n })
+      }
+      return
+    }
     setDailyClaimed(prev => { const n = [...prev] as [boolean, boolean, boolean]; n[index] = true; return n })
     setDoubloons(res.doubloons)
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
