@@ -561,76 +561,76 @@ textarea,
 .hook-glow-gilded { animation: hook-glow-gilded 4.5s ease-in-out infinite; }
 
 /* Enchanted — arcane: violet base that drifts through magenta and indigo
-   across the cycle so it reads as mystical / spectral rather than a
-   simple pulse. */
+   across the cycle. Radii pushed wide so the spectral halo is clearly
+   visible at both icon size and the bigger in-game / shop renders. */
 @keyframes hook-glow-arcane {
   0%, 100% {
     filter:
-      drop-shadow(0 0 2px #d8c0ff)
-      drop-shadow(0 0 8px #a78bfa)
-      drop-shadow(0 0 16px #6d28d9);
+      drop-shadow(0 0 4px #e0c8ff)
+      drop-shadow(0 0 16px #a78bfa)
+      drop-shadow(0 0 36px #7c3aed);
   }
   33% {
     filter:
-      drop-shadow(0 0 3px #e8c8ff)
-      drop-shadow(0 0 12px #c084fc)
-      drop-shadow(0 0 22px #7c3aed);
+      drop-shadow(0 0 8px #ffffff)
+      drop-shadow(0 0 24px #d8b4fe)
+      drop-shadow(0 0 56px #a855f7);
   }
   66% {
     filter:
-      drop-shadow(0 0 3px #c8d0ff)
-      drop-shadow(0 0 10px #818cf8)
-      drop-shadow(0 0 20px #4338ca);
+      drop-shadow(0 0 6px #c8d0ff)
+      drop-shadow(0 0 20px #818cf8)
+      drop-shadow(0 0 48px #4f46e5);
   }
 }
 .hook-glow-arcane { animation: hook-glow-arcane 5.5s ease-in-out infinite; }
 
-/* Abyssal — cursed: deep crimson / blood-red pulse. Slow and heavy so it
-   feels ominous rather than energetic — drawn-from-the-dark vibe. */
+/* Abyssal — cursed: deep crimson / blood-red pulse. Brighter peak so
+   the menace actually reads; longer outer radii spread the halo wider
+   for the "drawn-from-the-dark" vibe. */
 @keyframes hook-glow-cursed {
   0%, 100% {
     filter:
-      drop-shadow(0 0 2px #7f1d1d)
-      drop-shadow(0 0 8px #991b1b)
-      drop-shadow(0 0 16px #450a0a);
+      drop-shadow(0 0 3px #fca5a5)
+      drop-shadow(0 0 14px #dc2626)
+      drop-shadow(0 0 32px #7f1d1d);
   }
   50% {
     filter:
-      drop-shadow(0 0 4px #b91c1c)
-      drop-shadow(0 0 14px #7f1d1d)
-      drop-shadow(0 0 28px #450a0a);
+      drop-shadow(0 0 6px #ff4d4d)
+      drop-shadow(0 0 24px #b91c1c)
+      drop-shadow(0 0 52px #450a0a);
   }
 }
 .hook-glow-cursed { animation: hook-glow-cursed 4.0s ease-in-out infinite; }
 
-/* Legendary — mythic: layered multi-color radiance that cycles through
-   white-hot, gold, orange, and deep red across a 3.5s loop. Multiple
-   shadow radii give a "champion's aura" depth that reads as the most
-   impressive hook in the lineup. */
+/* Legendary — mythic: layered multi-color radiance cycling through
+   white-hot / gold / orange / deep red. Pushed to the largest radii of
+   any glow so the legendary hook stands out clearly as the showpiece. */
 @keyframes hook-glow-mythic {
   0%, 100% {
     filter:
-      drop-shadow(0 0 3px #ffffff)
-      drop-shadow(0 0 10px #ff6b35)
-      drop-shadow(0 0 24px #ff3300);
+      drop-shadow(0 0 5px #ffffff)
+      drop-shadow(0 0 20px #ff6b35)
+      drop-shadow(0 0 48px #ff3300);
   }
   25% {
     filter:
-      drop-shadow(0 0 5px #fff2c0)
-      drop-shadow(0 0 16px #f0c040)
-      drop-shadow(0 0 32px #ff6b35);
+      drop-shadow(0 0 8px #fff2c0)
+      drop-shadow(0 0 28px #f0c040)
+      drop-shadow(0 0 68px #ff6b35);
   }
   50% {
     filter:
-      drop-shadow(0 0 6px #ffffff)
-      drop-shadow(0 0 20px #ff6b35)
-      drop-shadow(0 0 40px #ff2200);
+      drop-shadow(0 0 10px #ffffff)
+      drop-shadow(0 0 36px #ff6b35)
+      drop-shadow(0 0 80px #ff2200);
   }
   75% {
     filter:
-      drop-shadow(0 0 5px #ffe080)
-      drop-shadow(0 0 14px #ff8533)
-      drop-shadow(0 0 30px #cc3300);
+      drop-shadow(0 0 8px #ffe080)
+      drop-shadow(0 0 26px #ff8533)
+      drop-shadow(0 0 60px #cc3300);
   }
 }
 .hook-glow-mythic { animation: hook-glow-mythic 3.5s ease-in-out infinite; }
