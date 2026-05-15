@@ -3086,10 +3086,14 @@ export default function FishingGame({
             entire compositied set of children (character + hat + boat +
             rod + reel + hook + badges), which is the most expensive
             filter operation on mobile GPUs. Moved to the character img
-            individually below so we only blur the character silhouette. */}
+            individually below so we only blur the character silhouette.
+            pause-glows freezes the rod + hook glow CSS animations during
+            the dial / reel phase so the GPU has spare budget for the
+            needle on mobile (see .pause-glows in globals.css). */}
         <motion.div
           animate={bgBobAnimate}
           transition={bgBobTransition}
+          className={(phase === 'catching' || phase === 'reeling') ? 'pause-glows' : undefined}
           style={{ position: 'absolute', inset: 0, pointerEvents: 'none', willChange: 'transform' }}
         >
           {(Object.keys(charSrc) as CharFrame[]).map(f => {

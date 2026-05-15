@@ -611,6 +611,28 @@ textarea,
 }
 .hook-glow-mythic { animation: hook-glow-mythic 3.5s ease-in-out infinite; }
 
+/* During the dial / reeling phase the needle is the most attention-
+   sensitive thing on screen and mobile GPUs struggle to drive needle
+   updates + multi-radius drop-shadow filter animations at the same
+   time. Freeze every rod + hook glow under any element with this class
+   so the GPU only has to repaint a static blur instead of animating
+   filters per frame. animation-play-state: paused keeps the last
+   computed frame visible — the glow doesn't disappear, it just stops
+   redrawing. */
+.pause-glows .rod-glow,
+.pause-glows .rod-glow-fire,
+.pause-glows .rod-glow-sparkle,
+.pause-glows .rod-glow-electric,
+.pause-glows .rod-glow-moon,
+.pause-glows .rod-glow-tech,
+.pause-glows .hook-glow-chrome,
+.pause-glows .hook-glow-gilded,
+.pause-glows .hook-glow-arcane,
+.pause-glows .hook-glow-cursed,
+.pause-glows .hook-glow-mythic {
+  animation-play-state: paused;
+}
+
 /* ── Boat glow (Ethereal — bob + iridescent shimmer at different periods) ── */
 /* Two animations layered: a 3.6s vertical hover (transform) and a 7s color */
 /* shift through pale gold → cool white → lavender → seafoam (filter). The   */
