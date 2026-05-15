@@ -224,6 +224,10 @@ export default function FishingTestClient() {
                   // legacy single-sprite path uses bottom-right because the
                   // rod is rotated through ~70° between rest and cast there.
                   transformOrigin: 'center center', pointerEvents: 'none',
+                  // Tailwind preflight applies img { max-width: 100% }, which
+                  // silently caps the rod at 100% of its parent. Raw-quadrant
+                  // canvases need values much higher than that.
+                  maxWidth: 'none',
                 }}
               />
             ) : rod.imageUrl && (
@@ -231,6 +235,7 @@ export default function FishingTestClient() {
                 position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
                 width: `${rc.width}%`, transform: `rotate(${rc.rotate}deg)`,
                 transformOrigin: 'bottom right', pointerEvents: 'none',
+                maxWidth: 'none',
                 ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
               } as React.CSSProperties} />
             )}
