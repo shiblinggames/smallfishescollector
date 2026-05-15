@@ -381,7 +381,7 @@ export default function GearScreen({
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gridTemplateRows: 'auto auto', gap: 6 }}>
 
         <div style={{ gridColumn: '1', gridRow: '1' }}>
-          <GearSlot label="Rod" image={rod.slug ? `/${rod.slug}_rest.png` : (rod.imageUrl ?? '/rod_bamboo_rest.png')} itemName={rod.name} color={rod.color} glow={rod.glow} notify={rodHasAffordable} onClick={() => setOpenSlot('rod')} />
+          <GearSlot label="Rod" image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glow={rod.glow} notify={rodHasAffordable} onClick={() => setOpenSlot('rod')} />
         </div>
         <div style={{ gridColumn: '1', gridRow: '2' }}>
           <GearSlot label="Hook" image={hook.imageUrl ?? null} itemName={hook.name} color={hook.color} glow={hook.glow} notify={hookHasAffordable} onClick={() => setOpenSlot('hook')} />
@@ -651,7 +651,7 @@ export default function GearScreen({
                             <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
-                                src={r.slug ? `/${r.slug}_rest.png` : (r.imageUrl ?? '/rod_bamboo_rest.png')}
+                                src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
                                 alt=""
                                 className={r.glow ? 'rod-glow' : undefined}
                                 style={{
@@ -705,7 +705,7 @@ export default function GearScreen({
                                 <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
                                   <img
-                                    src={r.slug ? `/${r.slug}_rest.png` : (r.imageUrl ?? '/rod_bamboo_rest.png')}
+                                    src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
                                     alt=""
                                     className={r.glow ? 'rod-glow' : undefined}
                                     style={{

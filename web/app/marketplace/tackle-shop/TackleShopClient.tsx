@@ -148,8 +148,8 @@ export default function TackleShopClient({
   const CATEGORIES: { key: Exclude<Section, null>; label: string; desc: string; color: string; imageUrl?: string }[] = [
     { key: 'bait',  label: 'Bait',  color: '#34d399', desc: 'Consumables used per cast.',           imageUrl: '/worms.png' },
     { key: 'hook',  label: 'Hooks', color: '#f0c040', desc: 'Widens the catch zone on the dial.',  imageUrl: '/models/hooks/steel-hook.png' },
-    { key: 'rod',   label: 'Rods',  color: '#b8956a', desc: 'Every rod has a unique ability.',       imageUrl: '/rod_driftwood_rest.png' },
-    { key: 'reel',  label: 'Reels', color: '#60a5fa', desc: 'Slows the needle for easier timing.',   imageUrl: '/reel_basic.png' },
+    { key: 'rod',   label: 'Rods',  color: '#b8956a', desc: 'Every rod has a unique ability.',       imageUrl: '/rod_driftwood_thumb.png' },
+    { key: 'reel',  label: 'Reels', color: '#60a5fa', desc: 'Slows the needle for easier timing.',   imageUrl: '/reel_basic_thumb.png' },
     { key: 'line',  label: 'Line',  color: '#4ade80', desc: 'Shrinks snag zones. Earned by species.',  imageUrl: '/monofilament.png' },
   ]
 
@@ -487,7 +487,7 @@ export default function TackleShopClient({
                   {(compRod.slug || compRod.imageUrl) && (
                     <div style={{ background: `${c}0a`, border: `1px solid ${c}25`, borderRadius: 12, padding: '1rem', display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={compRod.slug ? `/${compRod.slug}_rest.png` : compRod.imageUrl} alt={compRod.name} style={{ height: 140, objectFit: 'contain' }} />
+                      <img src={compRod.slug ? `/${compRod.slug}_thumb.png` : compRod.imageUrl} alt={compRod.name} style={{ height: 140, objectFit: 'contain' }} />
                     </div>
                   )}
                   <div className="flex flex-wrap gap-1.5 mb-4">
@@ -548,7 +548,7 @@ export default function TackleShopClient({
                       {(rod.slug || rod.imageUrl)
                         ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={rod.slug ? `/${rod.slug}_rest.png` : rod.imageUrl} alt={rod.name} className={owned && rod.glow ? 'rod-glow' : undefined} style={{
+                          <img src={rod.slug ? `/${rod.slug}_thumb.png` : rod.imageUrl} alt={rod.name} className={owned && rod.glow ? 'rod-glow' : undefined} style={{
                             height: '100%', maxWidth: '100%', objectFit: 'contain',
                             ...(owned && rod.glow
                               ? { ['--rod-glow-color' as string]: rod.color }
@@ -724,7 +724,7 @@ export default function TackleShopClient({
                 }}
               >
                 <div className="flex items-start gap-3">
-                  <ReelIcon color={c} owned={owned} isActive={isActive} imageUrl={reel.imageUrl} />
+                  <ReelIcon color={c} owned={owned} isActive={isActive} imageUrl={reel.imageUrl ? reel.imageUrl.replace(/\.png$/, '_thumb.png') : undefined} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <p className="font-cinzel font-700 text-sm" style={{ color: owned ? '#f0ede8' : '#6a6764' }}>
