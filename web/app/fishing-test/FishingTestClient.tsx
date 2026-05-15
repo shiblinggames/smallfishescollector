@@ -16,14 +16,15 @@ const ROD_OVERLAY: Record<Frame, { top: number; left: number; width: number; rot
   cast: { top: 24, left: 3,  width: 51, rotate: 49  },
 }
 
-// 3-pose rod defaults — each frame uses a fully-baked sprite, so rotation
-// is just a fine tweak. Bamboo values are tuned production-ready; cast
-// width is much lower than rest/wait because the cast sprite is tall +
-// narrow (~66x408) vs rest/wait's roughly square aspect.
+// 3-pose rod defaults — each frame uses a fully-baked sprite at a fixed
+// canvas size (rest/wait = 600×540, cast = 400×900). Same canvas across
+// every rod means one set of coords applies to all of them. Starting
+// values below are a rough guess; tune bamboo once and the values port
+// to rod_millionaires, rod_yolo, etc. via the rod picker.
 const ROD_3POSE_DEFAULT: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
-  rest: { top: 41.5, left: 19, width: 36.5, rotate: -1 },
-  wait: { top: 54.5, left: 17, width: 45.5, rotate: 0  },
-  cast: { top: 10.5, left: 52, width: 7.5,  rotate: 0  },
+  rest: { top: 28, left: 6,  width: 55, rotate: -1 },
+  wait: { top: 42, left: 4,  width: 65, rotate: 0  },
+  cast: { top: 4,  left: 46, width: 18, rotate: 0  },
 }
 
 const HOOK_OVERLAY: Record<Frame, { top: number; left: number; width: number; rotate: number; hidden?: boolean }> = {
@@ -407,6 +408,20 @@ export default function FishingTestClient() {
               style={{ width: '100%', marginBottom: 10, padding: '4px 6px', background: '#1e2d3e', color: '#fff', border: '1px solid #334', borderRadius: 6 }}
             >
               <option value="rod_bamboo">rod_bamboo</option>
+              <option value="rod_driftwood">rod_driftwood</option>
+              <option value="rod_fiberglass">rod_fiberglass</option>
+              <option value="rod_reefguard">rod_reefguard</option>
+              <option value="rod_telescoping">rod_telescoping</option>
+              <option value="rod_moonwood">rod_moonwood</option>
+              <option value="rod_graphite">rod_graphite</option>
+              <option value="rod_navigators">rod_navigators</option>
+              <option value="rod_carbon">rod_carbon</option>
+              <option value="rod_deepdiver">rod_deepdiver</option>
+              <option value="rod_legendary">rod_legendary</option>
+              <option value="rod_twinstrike">rod_twinstrike</option>
+              <option value="rod_secondwind">rod_secondwind</option>
+              <option value="rod_millionaires">rod_millionaires</option>
+              <option value="rod_yolo">rod_yolo</option>
             </select>
             <p style={{ fontWeight: 600, marginBottom: 4, color: '#e8c84a' }}>3-pose overlay ({frame})</p>
             <Slider label="top %"    value={rc.top}    min={-80} max={100}  step={0.5} onChange={v => setRod('top',    v)} />
@@ -538,7 +553,7 @@ export default function FishingTestClient() {
 
         {/* Config dump */}
         <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Current config</p>
-        <pre style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+        <pre className="select-text" style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap', cursor: 'text' }}>
 {`HAT:\n${JSON.stringify(hatCfg, null, 2)}\n\nBOAT:\n${JSON.stringify(boatCfg, null, 2)}${rodThreePose ? `\n\nROD (${rodThreePoseName}):\n${JSON.stringify(rodThreePoseCfg, null, 2)}` : ''}${reelEnabled ? `\n\nREEL:\n${JSON.stringify(reelCfg, null, 2)}` : ''}${showLegacyControls ? `\n\nCHAR:\n${JSON.stringify(charCfg, null, 2)}\n\nROD (legacy):\n${JSON.stringify(rodCfg, null, 2)}\n\nHOOK:\n${JSON.stringify(hookCfg, null, 2)}\n\nBADGES:\n${JSON.stringify(badgeCfg, null, 2)}` : ''}`}
         </pre>
       </div>

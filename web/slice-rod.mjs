@@ -8,9 +8,15 @@ import { argv, exit } from 'process'
 //   Right half           = cast
 //
 // Output: <name>_rest.png, <name>_wait.png, <name>_cast.png alongside the
-// source, each auto-trimmed of transparent padding.
+// source. Each is trimmed of fully transparent margins, then padded out
+// to a FIXED canvas size per frame so every rod's output has identical
+// dimensions. That means one set of position coordinates works for every
+// rod — bamboo, yolo, millionaires, etc. — and decorations get visual
+// breathing room (flames, sparkles, lightning, scopes) without changing
+// where the rod handle lands on screen.
 
-const files = argv.slice(2)
+const rawArgs = argv.slice(2)
+const files = rawArgs.filter(a => !a.startsWith('--'))
 
 if (files.length === 0) {
   console.error('Usage: node slice-rod.mjs <rod_name.png> [more.png ...]')
@@ -20,12 +26,27 @@ if (files.length === 0) {
   console.error('  <rod>_wait.png   (bottom-left quadrant)')
   console.error('  <rod>_cast.png   (right half)')
   console.error('')
-  console.error('All outputs are auto-trimmed of fully transparent padding.')
+  console.error('Each output is trimmed of transparent margins, then padded')
+  console.error('to a fixed per-frame canvas so every rod\'s sprite is the')
+  console.error('same size and a single set of overlay coordinates works for')
+  console.error('every rod.')
+  console.error('')
   console.error('Run from the web/ directory.')
   console.error('')
   console.error('Example:')
   console.error('  node slice-rod.mjs public/rod_bamboo.png')
   exit(1)
+}
+
+// Fixed output canvas per frame. Dimensions are large enough to comfortably
+// fit the rod silhouette plus a generous margin for current and future
+// decorations (flames, scopes, lightning, etc.). If a future rod's trimmed
+// content exceeds these, the slicer will warn and clip the padding to zero
+// on the over-running axis.
+const FRAMES = {
+  rest: { canvasW: 600, canvasH: 540 },
+  wait: { canvasW: 600, canvasH: 540 },
+  cast: { canvasW: 400, canvasH: 900 },
 }
 
 const QUADS = [
@@ -52,13 +73,35 @@ for (const file of files) {
       const cropped = await sharp(file)
         .extract({ left, top, width, height })
         .toBuffer()
-      const { data, info } = await sharp(cropped)
+      const trimmed = await sharp(cropped)
         .trim({ threshold: 1 })
         .toBuffer({ resolveWithObject: true })
 
+      // Pad to the fixed canvas size, content centered. If trimmed content
+      // exceeds the canvas, clamp the padding to 0 on the offending axis so
+      // we don't error — and warn so the artist knows the rod's decorations
+      // overran the standard sprite size.
+      const { canvasW, canvasH } = FRAMES[suffix]
+      const overW = trimmed.info.width  > canvasW
+      const overH = trimmed.info.height > canvasH
+      if (overW || overH) {
+        console.warn(`⚠ ${file} ${suffix}: trimmed ${trimmed.info.width}×${trimmed.info.height} exceeds canvas ${canvasW}×${canvasH} — sprite will be larger than other rods. Consider tightening the source art.`)
+      }
+      const padX = Math.max(0, canvasW - trimmed.info.width)
+      const padY = Math.max(0, canvasH - trimmed.info.height)
+      const padLeft   = Math.floor(padX / 2)
+      const padRight  = padX - padLeft
+      const padTop    = Math.floor(padY / 2)
+      const padBottom = padY - padTop
+
+      const padded = await sharp(trimmed.data)
+        .extend({ top: padTop, bottom: padBottom, left: padLeft, right: padRight,
+          background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .toBuffer({ resolveWithObject: true })
+
       const outPath = `${baseName}_${suffix}.png`
-      await writeFile(outPath, data)
-      console.log(`✓ ${outPath}: ${info.width}×${info.height} (${label})`)
+      await writeFile(outPath, padded.data)
+      console.log(`✓ ${outPath}: ${padded.info.width}×${padded.info.height} (${label}, trim ${trimmed.info.width}×${trimmed.info.height} → centered in ${canvasW}×${canvasH})`)
     }
   } catch (e) {
     failures++
