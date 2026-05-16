@@ -1031,7 +1031,16 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         // Plus a generous breathing gap above the tab bar so the action
         // buttons feel comfortably clear of it (was 8px, felt too tight).
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)',
-        minHeight: 'calc(100dvh - 44px - env(safe-area-inset-bottom, 0px))',
+        // Fixed-height scroll region (was minHeight only). On tall phones
+        // the combat fits and there's nothing to scroll; on short viewports
+        // the combat is taller than the screen, so this scrolls *internally*
+        // to reach the action buttons — body scroll is locked during a raid
+        // (see the overflow:hidden effect), so without this the bottom
+        // buttons were stuck behind the MobileTabBar with no way to reach
+        // them. RaidCombat's own overflow is relaxed so it spills into here.
+        height: 'calc(100dvh - 44px - env(safe-area-inset-bottom, 0px))',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
       }}>
         {/* Nav level bar — kept across all phases. NOTE: must NOT be
             position:sticky (or have transform/filter/will-change) — combined
@@ -1163,7 +1172,11 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
       <div className="flex flex-col items-center gap-2 select-none" style={{
         userSelect: 'none',
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)',
-        minHeight: 'calc(100dvh - 44px - env(safe-area-inset-bottom, 0px))',
+        // Same fixed-height scroll region as the playing phase so the
+        // Return to Port button is always reachable on short viewports.
+        height: 'calc(100dvh - 44px - env(safe-area-inset-bottom, 0px))',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
       }}>
         <div style={{ width: '100%' }}>
           <NavLevelBar xp={navXP} />

@@ -732,6 +732,13 @@ export default function RaidCombat({
 
   // ─── Render — Pokemon-style battle stage ──────────────────────────────────
 
+  // Outer card is content-sized (was flex:1 + minHeight:0). The old
+  // shrink-to-fit let the parent squeeze the battle stage down to its
+  // 320px floor and push the action panel behind the MobileTabBar with
+  // no way to scroll to it on short viewports. Sizing to content + the
+  // parent being an internal scroll region (see RaidGame phase wrappers)
+  // means the buttons are always reachable; on tall phones the battle
+  // stage still reads fine at its natural size.
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
@@ -740,7 +747,6 @@ export default function RaidCombat({
       borderRadius: 18,
       overflow: 'hidden',
       maxWidth: 580, margin: '0 auto',
-      flex: 1, minHeight: 0,
       width: '100%',
     }}>
       {/* Battle stage — ocean scene with ships and HP boxes.
