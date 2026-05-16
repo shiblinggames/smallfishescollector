@@ -121,7 +121,15 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
 
   useEffect(() => {
     function handleDoubloonsChanged(e: Event) {
-      setDisplayDoubloons((e as CustomEvent<number>).detail)
+      // Only accept a numeric detail. A caller that dispatches the event
+      // with no detail (CustomEvent .detail === null) would otherwise set
+      // displayDoubloons to null, and the render does
+      // displayDoubloons.toLocaleString() — null.toLocaleString() throws
+      // and, with no error.tsx, takes the whole page to Next's error
+      // screen. Callers should pass the new total; if one doesn't, just
+      // ignore it rather than crash.
+      const d = (e as CustomEvent<unknown>).detail
+      if (typeof d === 'number') setDisplayDoubloons(d)
     }
     window.addEventListener('doubloons-changed', handleDoubloonsChanged)
     return () => window.removeEventListener('doubloons-changed', handleDoubloonsChanged)
@@ -129,7 +137,11 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
 
   useEffect(() => {
     function handleGemsChanged(e: Event) {
-      setDisplayGems((e as CustomEvent<number>).detail)
+      // Same null-detail guard as doubloons — displayGems.toLocaleString()
+      // has no undefined guard in the render at all, so a detail-less
+      // dispatch here would crash even harder.
+      const d = (e as CustomEvent<unknown>).detail
+      if (typeof d === 'number') setDisplayGems(d)
     }
     window.addEventListener('gems-changed', handleGemsChanged)
     return () => window.removeEventListener('gems-changed', handleGemsChanged)
@@ -137,7 +149,8 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
 
   useEffect(() => {
     function handlePacksChanged(e: Event) {
-      setDisplayPacks((e as CustomEvent<number>).detail)
+      const d = (e as CustomEvent<unknown>).detail
+      if (typeof d === 'number') setDisplayPacks(d)
     }
     window.addEventListener('packs-changed', handlePacksChanged)
     return () => window.removeEventListener('packs-changed', handlePacksChanged)

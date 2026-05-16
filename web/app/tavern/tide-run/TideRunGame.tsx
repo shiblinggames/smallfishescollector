@@ -328,10 +328,12 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
         setCommittedToday(true)
         setCommitReward({ doubloons: result.doubloons })
         // Defer the nav refresh event so any listener-side re-fetches don't
-        // race with our local state flush.
+        // race with our local state flush. Pass the new total as detail —
+        // Nav reads e.detail; dispatching with no detail used to set its
+        // doubloon display to null and crash the page on render.
         if (typeof window !== 'undefined') {
           setTimeout(() => {
-            try { window.dispatchEvent(new CustomEvent('doubloons-changed')) } catch {}
+            try { window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloonTotal })) } catch {}
           }, 0)
         }
       } else {
