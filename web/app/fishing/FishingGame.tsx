@@ -284,6 +284,31 @@ const SKIN_TIPS = [
   "Tip: open fishing crates for a rare chance to find the Mint character color.",
 ]
 
+// General mechanics tips. Always in the pool (no unlock condition), so
+// they surface for every player. Keep them short, accurate, and in the
+// same voice as the zone wait-messages. Verify any number against the
+// source before adding — stale tips are worse than no tip.
+const GENERAL_TIPS = [
+  "Tip: prestige a zone and every catch there earns +10% XP per prestige level — forever.",
+  "Tip: a zone's completion reward grows each time you prestige it, up to double at Prestige 5.",
+  "Tip: quick-sell only pays 65%. Sell on the market or liquidate for far more.",
+  "Tip: each hook tier widens your catch zone by 3°. It adds up fast.",
+  "Tip: a better reel slows the needle — the single biggest skill upgrade.",
+  "Tip: the Twin-Strike rod has a 25% chance to land two fish at once.",
+  "Tip: the Millionaire's Rod catches two fish on every single catch.",
+  "Tip: the YOLO Rod has a 10% chance to haul in 100 fish at once.",
+  "Tip: the Telescoping Rod draws rarer fish to the surface.",
+  "Tip: sunken crates come in Wooden, Metal, Gold, and Diamond — bigger is better.",
+  "Tip: complete a zone's whole collection to claim a one-time doubloon reward.",
+  "Tip: daily challenges reset every day — easy doubloons and XP if you keep up.",
+  "Tip: badges are earned through milestones. Equip your favorites from your profile.",
+  "Tip: keep an eye out for Finn — a rival angler who shows up to challenge you.",
+  "Tip: upgrade your fish hold so a good run doesn't fill up and stall.",
+  "Tip: ancient_deep trophies never enter your hold — they go straight to your wall.",
+  "Tip: equip a boat and hat from the gear screen to customize your fisher.",
+  "Tip: a perfect catch keeps your streak alive — and the bonus XP compounds.",
+]
+
 type TipContext = { hasTideTurner: boolean; hasPhantomHook: boolean; hasAutoCaster: boolean }
 
 function pickWaitMessage(zone: ZoneKey, streak: number, ctx?: TipContext): string {
@@ -298,6 +323,7 @@ function pickWaitMessage(zone: ZoneKey, streak: number, ctx?: TipContext): strin
       if (condition(ctx)) available.push(tip)
     }
     available.push(...SKIN_TIPS)
+    available.push(...GENERAL_TIPS)
     if (available.length > 0) return available[Math.floor(Math.random() * available.length)]
   }
 
