@@ -414,12 +414,30 @@ export default function ProfileClient({
             </div>
           </form>
         ) : (
-          <div className="flex flex-col items-center gap-1">
+          <div className="flex flex-col items-center gap-2">
             <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>{username}</p>
-            {!usernameChanged && (
-              <button onClick={() => setShowUsernameForm(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                <span className="font-karla font-600" style={{ fontSize: '0.65rem', color: '#6a6764', textDecoration: 'underline', textUnderlineOffset: 3 }}>Rename</span>
+            {!usernameChanged ? (
+              <button
+                onClick={() => setShowUsernameForm(true)}
+                className="font-karla font-700 uppercase tracking-[0.1em]"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '0.45rem 1rem', borderRadius: '2rem',
+                  background: 'rgba(240,192,64,0.12)',
+                  border: '1px solid rgba(240,192,64,0.4)',
+                  color: '#f0c040', fontSize: '0.68rem', cursor: 'pointer',
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9"/>
+                  <path d="M16.5 3.5a2.12 2.12 0 113 3L7 19l-4 1 1-4z"/>
+                </svg>
+                Change username
               </button>
+            ) : (
+              <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
+                Username can only be changed once
+              </p>
             )}
           </div>
         )}
