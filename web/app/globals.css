@@ -55,6 +55,26 @@ textarea,
   footer { padding-bottom: env(safe-area-inset-bottom, 0px); }
 }
 
+/* Tailwind's .min-h-screen is min-height: 100vh. On mobile browsers
+   `100vh` is the *largest* viewport (toolbars hidden), so every page
+   reserves more height than is actually visible while the browser
+   chrome is shown — that surplus is the empty black scroll void below
+   the content, and it's why the fixed bottom nav looked detached. dvh
+   tracks the *current* visible viewport, so the page is exactly as tall
+   as the screen and `position: fixed; bottom: 0` sits where it should.
+   Scoped behind @supports so it only applies where dvh is understood
+   (every modern mobile browser); older engines keep the 100vh value. */
+@supports (min-height: 100dvh) {
+  .min-h-screen { min-height: 100dvh; }
+}
+
+/* Kill the iOS/Android rubber-band overscroll on the document. The
+   bounce briefly exposed the body background past the content and made
+   the fixed background / nav look like they were sliding away. */
+html, body {
+  overscroll-behavior-y: none;
+}
+
 .font-cinzel { font-family: var(--font-cinzel), serif; }
 .font-karla  { font-family: var(--font-karla), system-ui, sans-serif; }
 .font-pirata { font-family: var(--font-pirata), serif; }
