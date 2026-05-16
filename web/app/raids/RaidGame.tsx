@@ -1038,7 +1038,13 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         // (see the overflow:hidden effect), so without this the bottom
         // buttons were stuck behind the MobileTabBar with no way to reach
         // them. RaidCombat's own overflow is relaxed so it spills into here.
-        height: 'calc(100dvh - 44px - env(safe-area-inset-bottom, 0px))',
+        // 116px = 44 (in-flow mobile Nav spacer that sits ABOVE <main>)
+        //       + 24 (main's pt-6) + 48 (the inner div's pb-12).
+        // These ancestor offsets aren't in the viewport calc otherwise, so
+        // with body scroll locked the wrapper overran the visible area by
+        // 72px and its bottom (the action buttons) was clipped off-screen
+        // with no way to reach it. Keep in sync with raids/page.tsx.
+        height: 'calc(100dvh - 116px - env(safe-area-inset-bottom, 0px))',
         overflowY: 'auto',
         WebkitOverflowScrolling: 'touch',
       }}>
@@ -1047,7 +1053,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
             with framer-motion compositing inside RaidCombat, iOS Safari PWA
             mis-handles position:fixed for Nav header + MobileTabBar.
             See memory: feedback_pagetransition_ios_pwa.md */}
-        <div style={{ width: '100%' }}>
+        <div style={{ width: '100%', flexShrink: 0 }}>
           <NavLevelBar xp={navXP} />
           <AnimatePresence>
             {xpPopup && (
@@ -1072,7 +1078,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         </div>
 
         {/* Turn-based combat owns the rest of the playing-phase UI */}
-        <div style={{ width: '100%', padding: '0 0.5rem', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div style={{ width: '100%', padding: '0 0.5rem', flexShrink: 0 }}>
           {(() => {
             const currentEnemyId = getEnemyForRound(roundRef.current, config).id
             const reward = config.killRewards[currentEnemyId]
@@ -1174,14 +1180,20 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)',
         // Same fixed-height scroll region as the playing phase so the
         // Return to Port button is always reachable on short viewports.
-        height: 'calc(100dvh - 44px - env(safe-area-inset-bottom, 0px))',
+        // 116px = 44 (in-flow mobile Nav spacer that sits ABOVE <main>)
+        //       + 24 (main's pt-6) + 48 (the inner div's pb-12).
+        // These ancestor offsets aren't in the viewport calc otherwise, so
+        // with body scroll locked the wrapper overran the visible area by
+        // 72px and its bottom (the action buttons) was clipped off-screen
+        // with no way to reach it. Keep in sync with raids/page.tsx.
+        height: 'calc(100dvh - 116px - env(safe-area-inset-bottom, 0px))',
         overflowY: 'auto',
         WebkitOverflowScrolling: 'touch',
       }}>
-        <div style={{ width: '100%' }}>
+        <div style={{ width: '100%', flexShrink: 0 }}>
           <NavLevelBar xp={navXP} />
         </div>
-        <div style={{ width: '100%', padding: '0 0.5rem', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div style={{ width: '100%', padding: '0 0.5rem', flexShrink: 0 }}>
           <RaidLootStage
             boss={bossEnemy}
             killGold={winGold}
