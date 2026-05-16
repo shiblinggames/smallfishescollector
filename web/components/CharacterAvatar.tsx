@@ -49,28 +49,11 @@ export default function CharacterAvatar({
     : `radial-gradient(circle at 38% 35%, ${bgColor}ee 0%, ${bgColor}77 100%)`
   const resolvedBorder = borderStyle ?? (ringIsNone ? 'none' : `2px solid ${ringColor}`)
 
-  // Embossed bezel — an outer drop to lift the avatar off the page, a
-  // top inner highlight and a bottom inner shade so the ring reads as a
-  // raised 3D rim rather than a flat stroke. Offsets scale with size so
-  // it looks the same on the 28px nav avatar and the 84px profile one.
-  // Skipped entirely when there's no ring (the transparent 'none' case)
-  // so a borderless avatar stays truly flat.
-  const hasRing = !ringIsNone || (borderStyle && borderStyle !== 'none')
-  const u = Math.max(1, Math.round(size * 0.03))
-  const bevelShadow = hasRing
-    ? [
-        `0 ${u}px ${u * 2}px rgba(0,0,0,0.40)`,
-        `inset 0 ${u}px ${u * 1.5}px rgba(255,255,255,0.45)`,
-        `inset 0 -${u}px ${u * 1.5}px rgba(0,0,0,0.38)`,
-      ].join(', ')
-    : undefined
-
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
       background,
       border: resolvedBorder,
-      boxShadow: bevelShadow,
       overflow: 'hidden',
       position: 'relative',
       flexShrink: 0,
