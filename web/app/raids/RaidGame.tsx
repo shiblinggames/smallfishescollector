@@ -326,7 +326,19 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const playerActionMs    = Math.max(700, 2000 - shipSpeed * 100)
   const dodgeCooldownUse  = Math.max(500, 1600 - dodgeBonus)
 
+  // Body-scroll lock ONLY in an installed PWA. On iOS standalone the
+  // framer-motion compositing during combat detaches the fixed Nav header
+  // + MobileTabBar unless the document is frozen; the .raid-combat-region
+  // class turns into a fixed-height internal scroller there so the action
+  // buttons stay reachable. In a normal mobile browser we must NOT lock
+  // body scroll — doing so made raids completely unplayable (no way to
+  // scroll to FIRE/VOLLEY/DODGE); the document scrolls naturally instead,
+  // identical to every other page.
   useEffect(() => {
+    const standalone =
+      window.matchMedia?.('(display-mode: standalone)').matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true
+    if (!standalone) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
@@ -1022,31 +1034,13 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // ─── Playing phase: render the new turn-based combat ──────────────────────
   if (phase === 'playing') {
     return (
-      <div className="flex flex-col items-center gap-2 select-none" style={{
+      <div className="raid-combat-region flex flex-col items-center gap-2 select-none" style={{
         userSelect: 'none',
-        // Available height: viewport
-        //   - Nav header (44px mobile / 64px desktop — use mobile, it's the smaller window)
-        //   - MobileTabBar (~64px, hidden on sm+ but cheap to reserve)
-        //   - iOS safe-area-bottom (home indicator)
-        // Plus a generous breathing gap above the tab bar so the action
-        // buttons feel comfortably clear of it (was 8px, felt too tight).
+        // Breathing gap so the bottom action buttons clear the fixed
+        // MobileTabBar (~64px) + iOS home indicator + a comfort margin.
+        // Height/scroll behaviour lives in .raid-combat-region (browser =
+        // natural document scroll, PWA = fixed-height internal scroller).
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)',
-        // Fixed-height scroll region (was minHeight only). On tall phones
-        // the combat fits and there's nothing to scroll; on short viewports
-        // the combat is taller than the screen, so this scrolls *internally*
-        // to reach the action buttons — body scroll is locked during a raid
-        // (see the overflow:hidden effect), so without this the bottom
-        // buttons were stuck behind the MobileTabBar with no way to reach
-        // them. RaidCombat's own overflow is relaxed so it spills into here.
-        // 116px = 44 (in-flow mobile Nav spacer that sits ABOVE <main>)
-        //       + 24 (main's pt-6) + 48 (the inner div's pb-12).
-        // These ancestor offsets aren't in the viewport calc otherwise, so
-        // with body scroll locked the wrapper overran the visible area by
-        // 72px and its bottom (the action buttons) was clipped off-screen
-        // with no way to reach it. Keep in sync with raids/page.tsx.
-        height: 'calc(100dvh - 116px - env(safe-area-inset-bottom, 0px))',
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
       }}>
         {/* Nav level bar — kept across all phases. NOTE: must NOT be
             position:sticky (or have transform/filter/will-change) — combined
@@ -1175,20 +1169,11 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   if (phase === 'loot') {
     const bossEnemy = config.enemies[config.bossId]
     return (
-      <div className="flex flex-col items-center gap-2 select-none" style={{
+      <div className="raid-combat-region flex flex-col items-center gap-2 select-none" style={{
         userSelect: 'none',
+        // Same scroll behaviour as the playing phase (see .raid-combat-region)
+        // so the Return to Port button is always reachable.
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)',
-        // Same fixed-height scroll region as the playing phase so the
-        // Return to Port button is always reachable on short viewports.
-        // 116px = 44 (in-flow mobile Nav spacer that sits ABOVE <main>)
-        //       + 24 (main's pt-6) + 48 (the inner div's pb-12).
-        // These ancestor offsets aren't in the viewport calc otherwise, so
-        // with body scroll locked the wrapper overran the visible area by
-        // 72px and its bottom (the action buttons) was clipped off-screen
-        // with no way to reach it. Keep in sync with raids/page.tsx.
-        height: 'calc(100dvh - 116px - env(safe-area-inset-bottom, 0px))',
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
       }}>
         <div style={{ width: '100%', flexShrink: 0 }}>
           <NavLevelBar xp={navXP} />

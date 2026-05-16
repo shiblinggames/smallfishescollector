@@ -75,6 +75,32 @@ html, body {
   overscroll-behavior-y: none;
 }
 
+/* Raids combat region.
+   In a normal mobile browser the *document* scrolls (exactly like every
+   other page — slots, crown & anchor, etc.): just a min-height so short
+   combats still fill the screen, and the page grows + scrolls when the
+   combat is taller. RaidGame does NOT lock body scroll in browser mode,
+   so this Just Works and the action buttons are always reachable.
+
+   Installed as a PWA we *do* lock body scroll (framer-motion compositing
+   during combat otherwise detaches the fixed Nav header + MobileTabBar on
+   iOS standalone). With the body locked the document can't scroll, so the
+   region becomes a fixed-height internal scroller instead. The 116px is
+   the ancestor chrome the viewport calc doesn't see: 44 (in-flow mobile
+   Nav spacer above <main>) + 24 (main pt-6) + 48 (inner div pb-12). Keep
+   in sync with raids/page.tsx. */
+.raid-combat-region {
+  min-height: calc(100dvh - 116px - env(safe-area-inset-bottom, 0px));
+}
+@media all and (display-mode: standalone) {
+  .raid-combat-region {
+    height: calc(100dvh - 116px - env(safe-area-inset-bottom, 0px));
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 .font-cinzel { font-family: var(--font-cinzel), serif; }
 .font-karla  { font-family: var(--font-karla), system-ui, sans-serif; }
 .font-pirata { font-family: var(--font-pirata), serif; }
