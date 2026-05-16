@@ -68,11 +68,13 @@ textarea,
   .min-h-screen { min-height: 100dvh; }
 }
 
-/* Kill the iOS/Android rubber-band overscroll on the document. The
-   bounce briefly exposed the body background past the content and made
-   the fixed background / nav look like they were sliding away. */
+/* Keep the native iOS/Android rubber-band bounce at the top/bottom of
+   the document — `none` killed it entirely and the abrupt hard stop felt
+   broken. We intentionally accept the brief background peek during the
+   bounce; the natural feel is worth more than hiding that edge. Do NOT
+   set this back to `none`/`contain` without a deliberate product call. */
 html, body {
-  overscroll-behavior-y: none;
+  overscroll-behavior-y: auto;
 }
 
 /* Raids combat region.
