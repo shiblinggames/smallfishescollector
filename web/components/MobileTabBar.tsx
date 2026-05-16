@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 
 const PAGE_TINTS: [string, string][] = [
@@ -35,11 +35,11 @@ const LINKS = [
 
 export default function MobileTabBar() {
   const pathname = usePathname()
-  if (pathname === '/' || pathname === '/login') return null
-  const tint = PAGE_TINTS.find(([p]) => pathname === p || pathname.startsWith(p + '/'))?.[1]
-  const bg = tint ? `linear-gradient(${tint}, ${tint}), black` : 'black'
-
+  // Hooks must run unconditionally — the early-return below used to sit
+  // ABOVE these, which meant the hook count changed between routes
+  // (a Rules-of-Hooks violation). All hooks first, conditional return last.
   const [voyageBadge, setVoyageBadge] = useState(false)
+  const barRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const { createClient } = require('@/lib/supabase/client')
@@ -61,8 +61,48 @@ export default function MobileTabBar() {
     })
   }, [pathname])
 
+  // Mobile-browser fix: `position: fixed; bottom: 0` is measured against
+  // the LAYOUT viewport, but a mobile browser's collapsing toolbar makes
+  // the VISUAL viewport shorter, so the bar slides under / past the
+  // browser chrome while scrolling. PWA (standalone) has no such chrome,
+  // which is why it's already correct there. We pin the bar to the
+  // bottom of the visual viewport via a translateY, only in browser mode
+  // so the working PWA path is untouched.
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      ('standalone' in window.navigator && (window.navigator as { standalone?: boolean }).standalone === true)
+    if (isStandalone) return
+
+    const el = barRef.current
+    if (!el) return
+
+    const update = () => {
+      // How far the visible-area bottom sits above the layout-viewport
+      // bottom that `bottom: 0` is glued to. Lift the bar by that much.
+      const overlap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      el.style.transform = `translateZ(0) translateY(${-overlap}px)`
+    }
+    update()
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    window.addEventListener('scroll', update, { passive: true })
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+      window.removeEventListener('scroll', update)
+    }
+  }, [pathname])
+
+  if (pathname === '/' || pathname === '/login') return null
+  const tint = PAGE_TINTS.find(([p]) => pathname === p || pathname.startsWith(p + '/'))?.[1]
+  const bg = tint ? `linear-gradient(${tint}, ${tint}), black` : 'black'
+
   return (
     <div
+      ref={barRef}
       className="sm:hidden flex"
       style={{
         position: 'fixed',
