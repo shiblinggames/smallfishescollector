@@ -1390,6 +1390,29 @@ function DrawerHandle() {
   )
 }
 
+// Shared close button for the bottom-sheet drawers. The old inline ✕ was a
+// near-invisible 17px glyph (#4a4845, no hit area) that was hard to find and
+// hard to tap; this is a proper 34px circular target with a visible icon.
+function DrawerClose({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label="Close"
+      style={{
+        flexShrink: 0,
+        background: 'rgba(255,255,255,0.06)',
+        border: '1px solid rgba(255,255,255,0.16)',
+        borderRadius: '50%',
+        width: 34, height: 34, padding: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: '#e0ddd8', cursor: 'pointer', touchAction: 'manipulation',
+      }}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  )
+}
+
 function drawerDragProps(onClose: () => void) {
   return {
     drag: 'y' as const,
@@ -4684,8 +4707,7 @@ export default function FishingGame({
               style={{ padding: '1.25rem 1.1rem 0.75rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
                 style={{ fontSize: '0.82rem', color: '#6a6764' }}>Fish Collection</p>
-              <button onClick={() => { setCollectionOpen(false); setExpandedZone(null); setTappedFishId(null) }}
-                style={{ color: '#4a4845', fontSize: '1.2rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+              <DrawerClose onClick={() => { setCollectionOpen(false); setExpandedZone(null); setTappedFishId(null) }} />
             </div>
 
             {/* Scrollable body */}
@@ -5038,8 +5060,7 @@ export default function FishingGame({
             <div className="flex items-center justify-between mb-4" style={{ paddingTop: '0.75rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
                 style={{ fontSize: '0.6rem', color: '#6a6764' }}>Gear &amp; Shop</p>
-              <button onClick={() => setGearOpen(false)}
-                style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+              <DrawerClose onClick={() => setGearOpen(false)} />
             </div>
             <GearScreen
               baitInventory={baitInventory}
@@ -5201,8 +5222,7 @@ export default function FishingGame({
             <div className="flex items-center justify-between mb-4" style={{ paddingTop: '0.75rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
                 style={{ fontSize: '0.6rem', color: '#6a6764' }}>Bait</p>
-              <button onClick={() => setBaitOpen(false)}
-                style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+              <DrawerClose onClick={() => setBaitOpen(false)} />
             </div>
             <BaitSelector
               baitInventory={baitInventory}
@@ -5292,15 +5312,7 @@ export default function FishingGame({
                 </p>
                 <DailyResetCountdown />
               </div>
-              <button onClick={() => setDailyOpen(false)}
-                aria-label="Close"
-                style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: 8, width: 30, height: 30,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#9a9488', fontSize: '0.85rem', lineHeight: 1, cursor: 'pointer',
-                }}>✕</button>
+              <DrawerClose onClick={() => setDailyOpen(false)} />
             </div>
 
             <div className="flex flex-col gap-2.5">
@@ -5464,8 +5476,7 @@ export default function FishingGame({
             <div className="flex items-center justify-between mb-5" style={{ paddingTop: '0.75rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
                 style={{ fontSize: '0.6rem', color: '#6a6764' }}>Sell</p>
-              <button onClick={() => setSellOpen(false)}
-                style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+              <DrawerClose onClick={() => setSellOpen(false)} />
             </div>
 
             {inventory.length === 0 ? (
@@ -5871,8 +5882,7 @@ export default function FishingGame({
                     {holdTotalCount} <span style={{ fontSize: '1.1rem', color: '#6a6764' }}>/ {holdCapacity}</span>
                   </p>
                 </div>
-                <button onClick={() => setHoldOpen(false)}
-                  style={{ color: '#4a4845', fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+                <DrawerClose onClick={() => setHoldOpen(false)} />
               </div>
             </div>
 

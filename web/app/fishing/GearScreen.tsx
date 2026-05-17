@@ -595,7 +595,21 @@ export default function GearScreen({
                 <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)' }}>
                   {openSlot.charAt(0).toUpperCase() + openSlot.slice(1)}
                 </p>
-                <button onClick={() => setOpenSlot(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: '0 2px', touchAction: 'manipulation' }}>×</button>
+                <button
+                  onClick={() => setOpenSlot(null)}
+                  aria-label="Close"
+                  style={{
+                    flexShrink: 0,
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.16)',
+                    borderRadius: '50%',
+                    width: 34, height: 34, padding: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#e0ddd8', cursor: 'pointer', touchAction: 'manipulation',
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
               </div>
 
               {/* ── Rod ── */}
