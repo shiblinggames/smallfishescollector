@@ -79,19 +79,9 @@ const STEPS: TourStep[] = [
   },
 ]
 
-const TOUR_COMPLETED_KEY = 'tide-run-tour-completed'
-
-export function hasCompletedTideRunTour(): boolean {
-  if (typeof window === 'undefined') return true
-  return window.localStorage.getItem(TOUR_COMPLETED_KEY) === '1'
-}
-
-export function markTideRunTourCompleted() {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem(TOUR_COMPLETED_KEY, '1')
-}
-
 interface Props {
+  // Parent persists "seen" server-side (profiles.has_seen_tide_run_tour);
+  // this just closes the modal.
   onClose: () => void
 }
 
@@ -101,7 +91,6 @@ export default function TideRunTour({ onClose }: Props) {
   const isLast = step === STEPS.length - 1
 
   const finish = () => {
-    markTideRunTourCompleted()
     onClose()
   }
 

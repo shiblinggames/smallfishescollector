@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
 import { commitTideRun, submitTideRunBest } from './actions'
-import TideRunTour, { hasCompletedTideRunTour } from './TideRunTour'
+import TideRunTour from './TideRunTour'
+import { markTideRunTourSeen } from './tideRunTourAction'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
 const SHIP_X_RATIO    = 0.13   // boat sits ~13% from the left, giving ~87% lookahead
@@ -247,9 +248,10 @@ function seaSurfaceY(worldX: number, ch: number, distanceScrolled: number): numb
 interface TideRunGameProps {
   initialCommittedToday?: boolean
   initialBestDistance?: number
+  hasSeenTour?: boolean
 }
 
-export default function TideRunGame({ initialCommittedToday = false, initialBestDistance = 0 }: TideRunGameProps) {
+export default function TideRunGame({ initialCommittedToday = false, initialBestDistance = 0, hasSeenTour = false }: TideRunGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number | null>(null)
@@ -301,12 +303,17 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
   const [commitError, setCommitError] = useState<string | null>(null)
   const [showTour, setShowTour] = useState(false)
 
-  // First-time tour: show modal on mount if the player hasn't completed it
+  // First-time tour: show modal on mount if the player hasn't seen it.
+  // Persistence is server-side (profiles.has_seen_tide_run_tour) so it's
+  // per-account, not per-device — see closeTour below.
   useEffect(() => {
-    if (!hasCompletedTideRunTour()) {
-      setShowTour(true)
-    }
-  }, [])
+    if (!hasSeenTour) setShowTour(true)
+  }, [hasSeenTour])
+
+  function closeTour() {
+    setShowTour(false)
+    startTransition(() => { void markTideRunTourSeen() })
+  }
 
   // Reset commit reward feedback when a new run starts
   useEffect(() => {
@@ -1241,7 +1248,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
         </button>
       </div>
 
-      {showTour && <TideRunTour onClose={() => setShowTour(false)} />}
+      {showTour && <TideRunTour onClose={closeTour} />}
 
       <div
         ref={wrapperRef}

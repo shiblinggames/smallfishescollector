@@ -3,6 +3,7 @@
 import { useState, useEffect, useTransition, useCallback } from 'react'
 import Link from 'next/link'
 import { marketSellFish, liquidateAllFish } from './actions'
+import { markMarketTourSeen } from './marketTourAction'
 import type { MarketFishEntry, MarketState } from './page'
 
 const TOUR_STEPS = [
@@ -261,12 +262,14 @@ export default function MarketClient({
   marketState,
   doubloons: initialDoubloons,
   isPremium,
+  hasSeenTour,
 }: {
   portfolio: MarketFishEntry[]
   allMarket: MarketFishEntry[]
   marketState: MarketState
   doubloons: number
   isPremium: boolean
+  hasSeenTour: boolean
 }) {
   const [portfolio, setPortfolio] = useState(initialPortfolio)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
@@ -296,24 +299,25 @@ export default function MarketClient({
   }, [pendingSales.length])
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && !localStorage.getItem('market_tour_seen')) {
-      setTourStep(0)
-    }
-  }, [])
+    if (!hasSeenTour) setTourStep(0)
+  }, [hasSeenTour])
+
+  function endTour() {
+    setTourStep(null)
+    startTransition(() => { void markMarketTourSeen() })
+  }
 
   function advanceTour() {
     if (tourStep === null) return
     if (tourStep < TOUR_STEPS.length - 1) {
       setTourStep(tourStep + 1)
     } else {
-      localStorage.setItem('market_tour_seen', '1')
-      setTourStep(null)
+      endTour()
     }
   }
 
   function dismissTour() {
-    localStorage.setItem('market_tour_seen', '1')
-    setTourStep(null)
+    endTour()
   }
 
   const countdown = useCountdown(marketState.next_update_at)
