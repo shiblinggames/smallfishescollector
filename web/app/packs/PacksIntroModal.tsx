@@ -5,9 +5,9 @@ import StepTourModal from '@/components/StepTourModal'
 import { markPacksIntroSeen } from './packsIntroAction'
 
 const STEPS = [
-  { color: '#c8a870', title: 'Crew Notices',    placement: 'top'    as const, body: 'Your Crew Notice count is shown up here. Each notice lets you recruit 4 fish cards — tap Recruit Crew to spend one.' },
-  { color: '#f0ede8', title: 'Flipping Cards',  placement: 'center' as const, body: 'Four face-down cards will be dealt to you. Tap each card individually to flip it, or tap Reveal All to flip everything at once.' },
-  { color: '#a78bfa', title: 'Rarities',         placement: 'bottom' as const, body: 'Cards come in five tiers: Common (grey) · Rare (blue) · Epic (purple) · Legendary (gold) · Mythic (red). Mythic cards — Kraken, Davy Jones, Golden Age — are extraordinarily difficult to pull.' },
+  { color: '#c8a870', title: 'Crew Notices',  placement: 'top'    as const, body: 'Each Crew Notice deals you 4 fish cards. Your count is up top — tap Recruit Crew to open one.' },
+  { color: '#f0ede8', title: 'Flip your cards', placement: 'center' as const, body: 'Tap each card to flip it, or hit Reveal All to turn them all over at once.' },
+  { color: '#a78bfa', title: 'Rarities',       placement: 'bottom' as const, body: 'Five tiers: Common, Rare, Epic, Legendary, Mythic. Mythic cards (Kraken, Davy Jones, Golden Age) are incredibly rare.' },
 ]
 
 export default function PacksIntroModal() {

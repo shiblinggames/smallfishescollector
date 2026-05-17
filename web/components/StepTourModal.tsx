@@ -104,11 +104,11 @@ export default function StepTourModal({ steps, onDone }: Props) {
 
           <div className="flex items-center gap-2.5 mb-2">
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: current.color, flexShrink: 0 }} />
-            <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: current.color }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: current.color }}>
               {current.title}
             </p>
           </div>
-          <p className="font-karla font-400 mb-3" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.55 }}>
+          <p className="font-karla font-400 mb-3" style={{ fontSize: '0.92rem', color: 'rgba(255,255,255,0.82)', lineHeight: 1.55 }}>
             {current.body}
           </p>
           {current.cta && (
@@ -130,14 +130,14 @@ export default function StepTourModal({ steps, onDone }: Props) {
             </button>
           )}
           <div className="flex items-center justify-between">
-            <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845' }}>
+            <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#5a5856' }}>
               {step + 1} / {steps.length}
             </p>
             <button
               onClick={e => { e.stopPropagation(); advance() }}
               className="font-karla font-700 uppercase tracking-[0.12em]"
               style={{
-                fontSize: '0.68rem', cursor: 'pointer', touchAction: 'manipulation',
+                fontSize: '0.74rem', cursor: 'pointer', touchAction: 'manipulation',
                 color: current.color,
                 background: `${current.color}18`,
                 border: `1px solid ${current.color}50`,

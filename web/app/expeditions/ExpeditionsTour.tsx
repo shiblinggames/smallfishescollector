@@ -19,25 +19,25 @@ interface TourStep {
 const STEPS: TourStep[] = [
   {
     title: 'Welcome to Expeditions',
-    body: "The strategic side of the game. Send your crew on Voyages for steady daily rewards, or sail into Raids for turn-based ship combat against scripted bosses.",
+    body: "Send your crew out to earn while you play. Two ways in: Voyages for steady daily rewards, or Raids for ship battles.",
     cardStyle: { top: '50%', left: '1rem', right: '1rem', transform: 'translateY(-50%)' },
     arrowDir: 'none', arrowAlign: 'center',
   },
   {
-    title: 'Voyages: Daily Routes',
-    body: "Each day brings a fresh route — text-event journeys with risk and reward. Pick a path, set sail, then claim doubloons, gems, and rare drops when your crew returns.",
+    title: 'Voyages',
+    body: "Pick a route and set sail. Your crew comes back later carrying doubloons, gems, and rare drops. A fresh route each day.",
     cardStyle: { top: '26%', left: '1rem', right: '1rem' },
     arrowDir: 'down', arrowAlign: 'center',
   },
   {
-    title: 'Raids: Ship Combat',
-    body: "Turn-based broadside battles. Start with the Skirmish to learn enemy patterns, then take on Barnacle Pete for exclusive loot like the Corsair Cannon and Black Corsair skin.",
+    title: 'Raids',
+    body: "Ship-vs-ship battles. Try a Skirmish to learn how fights work, then take on Barnacle Pete for loot you can't get anywhere else.",
     cardStyle: { top: '38%', left: '1rem', right: '1rem' },
     arrowDir: 'down', arrowAlign: 'center',
   },
   {
-    title: 'Crew & Loadout',
-    body: "Your loadout drives both scores. Open View Loadout to set your captain (first slot — always returns), assign supporting crew, and equip raid items. Recruit new crew with packs or upgrade your ship at the shipyard to push your scores higher.",
+    title: 'Your crew',
+    body: "Tap View Loadout to pick your captain and crew. Stronger crew and a bigger ship mean bigger rewards on every trip.",
     cardStyle: { top: '54%', left: '1rem', right: '1rem' },
     arrowDir: 'up', arrowAlign: 'center',
   },
@@ -128,7 +128,7 @@ export default function ExpeditionsTour({ hasSeen }: { hasSeen: boolean }) {
             <p className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: '#f0ede8', marginBottom: '0.45rem', lineHeight: 1.2 }}>
               {STEPS[step].title}
             </p>
-            <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.78)', lineHeight: 1.55, marginBottom: '0.85rem' }}>
+            <p className="font-karla" style={{ fontSize: '0.92rem', color: 'rgba(240,237,232,0.85)', lineHeight: 1.55, marginBottom: '0.85rem' }}>
               {STEPS[step].body}
             </p>
 

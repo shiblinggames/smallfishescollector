@@ -14,11 +14,9 @@ const STEPS: TourStep[] = [
     title: 'The Cargo Run',
     body: (
       <>
-        You&apos;ve made off with a hold full of stolen gold and there&apos;s
-        trouble on your tail. Stay ahead of it for as long as you can.
-        <br />
-        <br />
-        The further you get, the bigger your haul.
+        You&apos;ve stolen a boat full of gold and there&apos;s trouble on your
+        tail. Stay ahead as long as you can — the further you get, the bigger
+        the payout.
       </>
     ),
   },
@@ -27,11 +25,8 @@ const STEPS: TourStep[] = [
     title: 'Hold to Jump',
     body: (
       <>
-        Press <span style={{ color: '#bda05a', fontWeight: 700 }}>anywhere on
-        the canvas</span> to jump. The longer you hold, the higher you go.
-        <br />
-        <br />
-        Quick tap = small hop. Long hold = full leap.
+        <span style={{ color: '#bda05a', fontWeight: 700 }}>Tap and hold
+        anywhere</span> to jump. Quick tap = small hop. Long hold = big leap.
       </>
     ),
   },
@@ -44,12 +39,10 @@ const STEPS: TourStep[] = [
         over them.
         <br />
         <span style={{ color: '#a0c8e0', fontWeight: 700 }}>Shoals</span>
-        {' '}(dark patches with submerged rocks) — clear them with a jump or
-        you wreck.
+        {' '}(dark water) — jump or you wreck.
         <br />
         <span style={{ color: '#dfeaef', fontWeight: 700 }}>Currents</span>
-        {' '}(pale foam) — ride through to slow down and gain reaction time,
-        or jump over to keep speed.
+        {' '}(white foam) — ride through to slow down, or jump to keep speed.
       </>
     ),
   },
@@ -58,15 +51,14 @@ const STEPS: TourStep[] = [
     title: 'Smash the Beacons',
     body: (
       <>
-        Some rocks have a small antenna and a pulsing amber light — those are
+        Some rocks have a blinking amber light — those are
         <span style={{ color: '#ffb84d', fontWeight: 700 }}> beacons</span>.
         <br />
         <br />
         <span style={{ color: '#9ae6b4', fontWeight: 700 }}>Smash through them
-        grounded</span> to take them out.
-        <br />
-        <span style={{ color: '#fda4a4', fontWeight: 700 }}>Jumping over one</span>
-        {' '}trips its alarm — instant wreck.
+        on the water</span> to take them out.{' '}
+        <span style={{ color: '#fda4a4', fontWeight: 700 }}>Jump over one</span>
+        {' '}and the alarm wrecks you.
       </>
     ),
   },
@@ -75,14 +67,13 @@ const STEPS: TourStep[] = [
     title: 'Pick Your Run',
     body: (
       <>
-        Play as much as you want — every run&apos;s distance counts toward your
-        personal best and the global leaderboard.
+        Play as much as you want — every run counts toward your best score.
         <br />
         <br />
-        Once a day you can <span style={{ color: '#bda05a', fontWeight: 700 }}>commit</span>
-        {' '}one run for <span style={{ color: '#bda05a' }}>⟡</span> based on its
-        distance. Pick the run you want to count;
-        <span style={{ color: '#bda05a', fontWeight: 700 }}> resets at midnight UTC</span>.
+        Once a day you can <span style={{ color: '#bda05a', fontWeight: 700 }}>cash
+        in</span> one run for <span style={{ color: '#bda05a' }}>⟡</span> based
+        on how far you got.
+        <span style={{ color: '#bda05a', fontWeight: 700 }}> Resets at midnight.</span>
       </>
     ),
   },
@@ -185,7 +176,7 @@ export default function TideRunTour({ onClose }: Props) {
         </p>
 
         {/* Body */}
-        <p className="font-karla font-300" style={{ fontSize: '0.85rem', color: 'rgba(240,237,232,0.85)', lineHeight: 1.55, minHeight: 110 }}>
+        <p className="font-karla font-300" style={{ fontSize: '0.92rem', color: 'rgba(240,237,232,0.9)', lineHeight: 1.55, minHeight: 92 }}>
           {s.body}
         </p>
 

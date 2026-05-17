@@ -336,28 +336,28 @@ function pickWaitMessage(zone: ZoneKey, streak: number, ctx?: TipContext): strin
 const CATCH_TOUR_STEPS = [
   {
     color: '#4ade80',
-    title: 'Catch Zone',
-    body: 'Land the dial anywhere in the green to catch the fish. Rarer fish have a narrower window — a better Hook widens it.',
+    title: 'Catch zone',
+    body: 'Stop the dial in the green to land the fish. A better Hook makes the green bigger.',
   },
   {
     color: '#f59e0b',
-    title: 'Perfect Zones',
-    body: 'The gold strips in the middle of the green are Perfect zones. Land here for an XP bonus and a chance to save your bait for a free recast.',
+    title: 'Perfect zone',
+    body: 'The gold strip is the Perfect zone. Land there for bonus XP and a shot at a free recast.',
   },
   {
     color: '#fb923c',
-    title: 'On Fire 🔥',
-    body: 'Chain two or more Perfect catches in a row and the dial lights on fire. Keep the streak alive for bonus XP on every perfect — one miss resets it.',
+    title: 'On fire 🔥',
+    body: 'Hit two Perfects in a row and you catch fire — extra XP on every Perfect. One miss puts it out.',
   },
   {
     color: '#f87171',
-    title: 'Snag Zones',
-    body: 'Hit a red zone and you lose the fish and your bait. Upgrade your Line to shrink these.',
+    title: 'Snag zone',
+    body: 'Land in the red and you lose the fish and your bait. A better Line shrinks the red.',
   },
   {
     color: '#94a3b8',
-    title: 'Dial Speed',
-    body: 'Harder fish spin the dial faster. The Abyss adds random speed bursts and direction reversals. A better Reel slows the needle down.',
+    title: 'Dial speed',
+    body: 'Tougher fish spin the dial faster, and the Abyss gets tricky. A better Reel slows it down.',
   },
 ]
 
@@ -375,34 +375,34 @@ type TourStep = {
 const TOUR_STEPS: TourStep[] = [
   {
     title: 'Zones',
-    body: 'Four zones — rarer fish the deeper you go. XP unlocks the next one.',
+    body: 'Go deeper for rarer fish. Earn XP to unlock the next zone.',
     cardStyle: { top: 96, left: 16, right: 16 },
     arrowDir: 'up', arrowAlign: 'center',
   },
   {
     title: 'Collection',
-    body: "Every species you catch is logged here. Tap any fish for details.",
+    body: "Every fish you catch is saved here. Tap one for details.",
     cardStyle: { top: 56, right: 16 },
     maxWidth: 210,
     arrowDir: 'up', arrowAlign: 'right',
   },
   {
     title: 'Gear',
-    body: 'Rod, reel, hook, line — plus boats, hats, badges. A green dot means an upgrade is in budget.',
+    body: 'Your rod, reel, hook and line. A green dot means you can afford an upgrade.',
     cardStyle: { bottom: 112, left: 16 },
     maxWidth: 220,
     arrowDir: 'down', arrowAlign: 'left',
   },
   {
     title: 'Bait',
-    body: 'Each bait changes how bites work. 10 free worms come in daily.',
+    body: 'Different baits change how bites work. 10 free worms every day.',
     cardStyle: { bottom: 112, left: 16, right: 16 },
     maxWidth: 220,
     arrowDir: 'down', arrowAlign: 'center',
   },
   {
-    title: 'Hold & Sell',
-    body: 'Quick-sell at 65%, liquidate (90% locked, 1h delay), or list at live market prices.',
+    title: 'Sell your fish',
+    body: 'Quick-sell for fast cash, or take them to the market for a lot more.',
     cardStyle: { bottom: 112, right: 16 },
     maxWidth: 220,
     arrowDir: 'down', arrowAlign: 'right',
@@ -4443,23 +4443,23 @@ export default function FishingGame({
               <div className="flex items-center gap-2.5 mb-2">
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: CATCH_TOUR_STEPS[catchTourStep].color, flexShrink: 0 }} />
                 <p className="font-cinzel font-700"
-                  style={{ fontSize: '0.85rem', color: CATCH_TOUR_STEPS[catchTourStep].color }}>
+                  style={{ fontSize: '0.98rem', color: CATCH_TOUR_STEPS[catchTourStep].color }}>
                   {CATCH_TOUR_STEPS[catchTourStep].title}
                 </p>
               </div>
               <p className="font-karla font-400 mb-3"
-                style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.55 }}>
+                style={{ fontSize: '0.92rem', color: 'rgba(255,255,255,0.82)', lineHeight: 1.55 }}>
                 {CATCH_TOUR_STEPS[catchTourStep].body}
               </p>
               <div className="flex items-center justify-between">
-                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845' }}>
+                <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#5a5856' }}>
                   {catchTourStep + 1} / {CATCH_TOUR_STEPS.length}
                 </p>
                 <button
                   onClick={e => { e.stopPropagation(); advanceCatchTour() }}
                   className="font-karla font-700 uppercase tracking-[0.12em]"
                   style={{
-                    fontSize: '0.68rem', cursor: 'pointer', touchAction: 'manipulation',
+                    fontSize: '0.74rem', cursor: 'pointer', touchAction: 'manipulation',
                     color: CATCH_TOUR_STEPS[catchTourStep].color,
                     background: `${CATCH_TOUR_STEPS[catchTourStep].color}18`,
                     border: `1px solid ${CATCH_TOUR_STEPS[catchTourStep].color}50`,
@@ -4518,22 +4518,22 @@ export default function FishingGame({
               })()}
 
               <p className="font-cinzel font-700 mb-1.5"
-                style={{ fontSize: '0.82rem', color: HABITAT_COLOR[selectedZone] }}>
+                style={{ fontSize: '0.95rem', color: HABITAT_COLOR[selectedZone] }}>
                 {TOUR_STEPS[tourStep].title}
               </p>
               <p className="font-karla font-400 mb-3"
-                style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
+                style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.82)', lineHeight: 1.5 }}>
                 {TOUR_STEPS[tourStep].body}
               </p>
               <div className="flex items-center justify-between">
-                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845' }}>
+                <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#5a5856' }}>
                   {tourStep + 1} / {TOUR_STEPS.length}
                 </p>
                 <button
                   onClick={e => { e.stopPropagation(); advanceTour() }}
                   className="font-karla font-700 uppercase tracking-[0.12em]"
                   style={{
-                    fontSize: '0.68rem', cursor: 'pointer', touchAction: 'manipulation',
+                    fontSize: '0.74rem', cursor: 'pointer', touchAction: 'manipulation',
                     color: HABITAT_COLOR[selectedZone],
                     background: `${HABITAT_COLOR[selectedZone]}18`,
                     border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,

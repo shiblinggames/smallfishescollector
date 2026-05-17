@@ -303,43 +303,43 @@ interface TourStep {
 const PRACTICE_TOUR: TourStep[] = [
   {
     title: 'Welcome aboard, Captain!',
-    body: "Battles are turn-based. Each turn, you and the enemy each pick one action — whoever's faster acts first.",
+    body: "Fights are turn-based. You and the enemy each pick a move — the faster ship goes first.",
     cardStyle: { top: '50%', left: '1rem', right: '1rem', transform: 'translateY(-50%)' },
     arrowDir: 'none', arrowAlign: 'center',
   },
   {
-    title: 'Your four actions',
-    body: 'RELOAD loads a cannonball (◆). FIRE spends one. VOLLEY spends three for 2× damage. DODGE evades the next attack — but you can only use it once in a row.',
+    title: 'Your four moves',
+    body: 'RELOAD loads a cannonball. FIRE spends one. VOLLEY spends three for double damage. DODGE avoids the next hit.',
     cardStyle: { bottom: '32%', left: '1rem', right: '1rem' },
     arrowDir: 'down', arrowAlign: 'center',
   },
   {
     title: 'Lock the aim',
-    body: 'When you Fire or Volley, a marker sweeps across an aim bar. Tap to lock it in the green zone for a Hit — or the tiny gold center for a Critical (1.5× damage).',
+    body: 'When you fire, a marker sweeps a bar. Tap to stop it in the green to hit — nail the gold center for a critical.',
     cardStyle: { bottom: '32%', left: '1rem', right: '1rem' },
     arrowDir: 'down', arrowAlign: 'center',
   },
   {
     title: 'Read the enemy',
-    body: "Enemies don't act randomly — each follows a scripted attack pattern. Watch their charges (◆) — at 3 a volley is coming. Reading the pattern is the difference between brawling and outsmarting them.",
+    body: "Enemies follow a pattern. Watch their cannonballs — at 3, a big volley is coming. Learn the pattern to beat them.",
     cardStyle: { top: '32%', left: '1rem', right: '1rem' },
     arrowDir: 'up', arrowAlign: 'left',
   },
   {
     title: 'Speed & dodging',
-    body: "Faster ships act first. If you've read the enemy and a volley's coming, Dodge that turn — even a failed dodge cuts the hit in half. But it's on cooldown for one turn after.",
+    body: "See a big volley coming? Dodge that turn — even a failed dodge cuts the hit in half. Then it needs a turn to recharge.",
     cardStyle: { bottom: '32%', left: '1rem', right: '1rem' },
     arrowDir: 'down', arrowAlign: 'right',
   },
   {
     title: 'Your stats',
-    body: "Tap your nameplate any time to see your ship's stats — power, speed, navigation, fortune, and HP. Crew and Nav level both feed into these numbers.",
+    body: "Tap your nameplate any time to see your ship's stats. Better crew and a higher Nav rank make them stronger.",
     cardStyle: { top: '32%', left: '1rem', right: '1rem' },
     arrowDir: 'down', arrowAlign: 'right',
   },
   {
     title: 'Skirmish vs Raid',
-    body: "This Skirmish is a single battle so you can practice. A full Raid (like Barnacle Pete's) is a chain of fights ending with a boss. Sink the enemy to earn doubloons and Nav XP — good hunting!",
+    body: "This Skirmish is one practice battle. A real Raid is a string of fights ending in a boss. Sink the enemy for doubloons and XP — good hunting!",
     cardStyle: { top: '50%', left: '1rem', right: '1rem', transform: 'translateY(-50%)' },
     arrowDir: 'none', arrowAlign: 'center',
   },
@@ -1041,7 +1041,7 @@ export default function PracticeRaidGame({
                 <p className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: '#f0ede8', marginBottom: '0.45rem', lineHeight: 1.2 }}>
                   {PRACTICE_TOUR[tourStep].title}
                 </p>
-                <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.78)', lineHeight: 1.55, marginBottom: '0.85rem' }}>
+                <p className="font-karla" style={{ fontSize: '0.92rem', color: 'rgba(240,237,232,0.85)', lineHeight: 1.55, marginBottom: '0.85rem' }}>
                   {PRACTICE_TOUR[tourStep].body}
                 </p>
 

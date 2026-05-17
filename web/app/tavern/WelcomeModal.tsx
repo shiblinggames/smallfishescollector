@@ -12,21 +12,21 @@ interface BeforeInstallPromptEvent extends Event {
 const BASE_STEPS: TourStep[] = [
   {
     color: '#60a5fa',
-    title: 'Welcome to Small Fishes',
+    title: 'Welcome aboard!',
     placement: 'center',
-    body: "Start by heading to the fishing dock. Cast your line, catch fish, sell them for doubloons. That's the core loop — everything else opens up from there.",
+    body: "Head to the fishing dock and cast your line. Catch fish, sell them for doubloons. That's the heart of the game.",
   },
   {
     color: '#c8a870',
-    title: 'Recruit Crew & Set Sail',
+    title: 'Build a crew',
     placement: 'top',
-    body: "Spend Crew Notices (the scroll icon) to recruit fish cards. Once you have a crew and a Sloop, you can send them on voyages — they run in the background and come back with doubloons, rare gear, and more.",
+    body: "Recruit fish cards, then send your crew on voyages. They sail off and bring back doubloons and gear while you keep playing.",
   },
   {
     color: '#f0c040',
-    title: 'Come Back Daily',
+    title: 'Come back daily',
     placement: 'center',
-    body: "Claim free doubloons and bait from the Daily Bonus. New bounty fish appear every week — catch them for extra rewards. Now go fish.",
+    body: "Free doubloons and bait every day, plus new fish to hunt each week. Now go fish!",
   },
 ]
 
@@ -63,15 +63,15 @@ export default function WelcomeModal() {
   // instructions instead (the menu also keeps the full icon hint).
   if (env && !env.standalone) {
     const iosLine = env.chromeIOS
-      ? ' On iPhone, tap the Share icon (top right), then View More → Add to Home Screen.'
+      ? ' Tap the Share icon, then Add to Home Screen.'
       : env.ios
-        ? ' On iPhone, tap the Share icon in Safari, then Add to Home Screen.'
-        : ' Find it any time in the menu under “Install the App”.'
+        ? ' Tap Share in Safari, then Add to Home Screen.'
+        : ' Find it in the menu under “Install the App”.'
     steps.push({
       color: '#5ab4c8',
-      title: 'Play It Like a Real App',
+      title: 'Play it like a real app',
       placement: 'center',
-      body: `Add Small Fishes to your home screen for full-screen, faster play — no browser bar in the way, and it launches like a real game.${iosLine}`,
+      body: `Add it to your home screen — full-screen, faster, and it feels like a real game.${iosLine}`,
       cta: deferred
         ? {
             label: 'Install App',

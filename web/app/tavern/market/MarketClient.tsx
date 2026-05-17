@@ -8,27 +8,27 @@ import type { MarketFishEntry, MarketState } from './page'
 const TOUR_STEPS = [
   {
     title: 'Fish Market',
-    body: 'This is where you sell your catch at live market prices — much better than the 65% quick-sell at the dock, but prices shift hourly.',
+    body: 'Sell your catch here for live prices — far more than the quick-sell at the dock. Prices change every hour.',
     color: '#38bdf8',
   },
   {
-    title: 'Market Mood',
-    body: 'The mood banner shows current market conditions. Calm = stable. Storm/Kraken = choppy (either direction). Tide Rising/Bounty Season = prices climbing. Low Tide/Cursed Waters = prices falling.',
+    title: 'Market mood',
+    body: 'The banner shows the mood. Calm = steady. Storm or Kraken = wild swings. Some moods push prices up, others drag them down.',
     color: '#f59e0b',
   },
   {
-    title: 'Your Portfolio',
-    body: 'Fish you\'re holding show up here with the live market price, sparkline history, and sell buttons. You can also Liquidate All at the bottom to cash out everything at 90% market price — doubloons arrive 1 hour after you lock in the price.',
+    title: 'Your portfolio',
+    body: 'Your fish show up here with their price and sell buttons. Liquidate All cashes out everything at once — it pays out an hour later.',
     color: '#4ade80',
   },
   {
-    title: 'Market Prices',
-    body: 'Below your portfolio you can browse prices for fish you\'ve already discovered. New species stay hidden until you catch them for the first time.',
+    title: 'Browse prices',
+    body: 'Scroll down to check prices for fish you’ve caught. New fish stay hidden until you catch one for the first time.',
     color: '#c084fc',
   },
   {
-    title: 'When should I sell?',
-    body: 'Check the sparkline — if a fish has been climbing, now might be a good time. Rarer fish move more dramatically. When the mood is Kraken, prices can go very high or very low.',
+    title: 'When do I sell?',
+    body: 'Watch the little price line. If a fish is climbing, it’s a good time to sell. Rarer fish swing harder.',
     color: '#fb923c',
   },
 ]
@@ -624,14 +624,25 @@ export default function MarketClient({
             }}
           >
             <div className="flex items-start justify-between gap-3 mb-2">
-              <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8' }}>
                 {TOUR_STEPS[tourStep].title}
               </p>
-              <button onClick={dismissTour} style={{ color: '#4a4845', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>
-                ✕
+              <button
+                onClick={dismissTour}
+                aria-label="Close"
+                style={{
+                  flexShrink: 0,
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.16)',
+                  borderRadius: '50%', width: 30, height: 30, padding: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#e0ddd8', cursor: 'pointer',
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
-            <p className="font-karla font-400" style={{ fontSize: '0.8rem', color: '#9a9488', lineHeight: 1.55, marginBottom: '1rem' }}>
+            <p className="font-karla font-400" style={{ fontSize: '0.9rem', color: '#b4afa6', lineHeight: 1.55, marginBottom: '1rem' }}>
               {TOUR_STEPS[tourStep].body}
             </p>
             <div className="flex items-center justify-between">
@@ -648,7 +659,7 @@ export default function MarketClient({
                 onClick={advanceTour}
                 className="font-karla font-700 uppercase tracking-[0.1em]"
                 style={{
-                  fontSize: '0.62rem', padding: '0.4rem 1rem', borderRadius: '2rem',
+                  fontSize: '0.72rem', padding: '0.45rem 1.1rem', borderRadius: '2rem',
                   background: `${TOUR_STEPS[tourStep].color}18`,
                   border: `1px solid ${TOUR_STEPS[tourStep].color}40`,
                   color: TOUR_STEPS[tourStep].color,
