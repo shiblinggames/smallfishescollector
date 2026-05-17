@@ -111,18 +111,18 @@ export default async function AchievementsPage() {
       accent: '#c8704a',
       goals: [
         badgeGoal('navigator', 'Navigator', 'Reach Navigation Level 50', navLevel, 50, '/expeditions'),
+        progressGoal('nav_100', 'Master Navigator', 'Reach Navigation Level 100', navLevel, 100, '/expeditions'),
         badgeGoal('fleet_admiral', 'Fleet Admiral', 'Complete 100 voyages', voyagesDone, 100, '/expeditions'),
         badgeGoal('corsairs_bane', "Corsair's Bane", 'Defeat Barnacle Pete in under 2 minutes', 0, 1, '/raids', { binary: true }),
         badgeGoal('ghost_ship', 'Ghost Ship', 'Defeat Barnacle Pete without taking damage', 0, 1, '/raids', { binary: true }),
-        badgeGoal('davy_jones', "Davy Jones' Victor", "Complete Davy Jones' Locker", 0, 1, '/raids', { binary: true }),
       ],
     },
     {
       title: 'Tavern & Records',
       accent: '#f0c040',
       goals: [
-        progressGoal('tide_run', 'Tide Run Distance', 'Reach 3,000 in a single run', tideBest, 3000, '/tavern/tide-run', { record: true }),
-        progressGoal('fotd_streak', 'Daily Detective', 'Solve Fish of the Day 7 days running', fotdBest, 7, '/tavern/fish-of-the-day', { record: true }),
+        progressGoal('tide_run', 'Tide Run Distance', 'Reach 500 in a single run', tideBest, 500, '/tavern/tide-run', { record: true }),
+        progressGoal('fotd_streak', 'Daily Detective', 'Solve Fish of the Day 10 days in a row', fotdBest, 10, '/tavern/fish-of-the-day', { record: true }),
       ],
     },
     {
