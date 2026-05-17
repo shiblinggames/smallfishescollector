@@ -3,36 +3,7 @@
 import { useState, useEffect, useTransition, useCallback } from 'react'
 import Link from 'next/link'
 import { marketSellFish, liquidateAllFish } from './actions'
-import { markMarketTourSeen } from './marketTourAction'
 import type { MarketFishEntry, MarketState } from './page'
-
-const TOUR_STEPS = [
-  {
-    title: 'Fish Market',
-    body: 'Sell your catch here for live prices — far more than the quick-sell at the dock. Prices change every hour.',
-    color: '#38bdf8',
-  },
-  {
-    title: 'Market mood',
-    body: 'The banner shows the mood. Calm = steady. Storm or Kraken = wild swings. Some moods push prices up, others drag them down.',
-    color: '#f59e0b',
-  },
-  {
-    title: 'Your portfolio',
-    body: 'Your fish show up here with their price and sell buttons. Liquidate All cashes out everything at once — it pays out an hour later.',
-    color: '#4ade80',
-  },
-  {
-    title: 'Browse prices',
-    body: 'Scroll down to check prices for fish you’ve caught. New fish stay hidden until you catch one for the first time.',
-    color: '#c084fc',
-  },
-  {
-    title: 'When do I sell?',
-    body: 'Watch the little price line. If a fish is climbing, it’s a good time to sell. Rarer fish swing harder.',
-    color: '#fb923c',
-  },
-]
 
 const HABITAT_COLOR: Record<string, string> = {
   shallows:    '#38bdf8',
@@ -262,20 +233,17 @@ export default function MarketClient({
   marketState,
   doubloons: initialDoubloons,
   isPremium,
-  hasSeenTour,
 }: {
   portfolio: MarketFishEntry[]
   allMarket: MarketFishEntry[]
   marketState: MarketState
   doubloons: number
   isPremium: boolean
-  hasSeenTour: boolean
 }) {
   const [portfolio, setPortfolio] = useState(initialPortfolio)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
   const [selling, setSelling] = useState<number | null>(null)
   const [toast, setToast] = useState<string | null>(null)
-  const [tourStep, setTourStep] = useState<number | null>(null)
   const [pendingSales, setPendingSales] = useState<{ id: string; amount: number; fishCount: number; reason: string; settlesAt: string }[]>([])
   const [pendingNow, setPendingNow] = useState(() => Date.now())
   const [, startTransition] = useTransition()
@@ -297,28 +265,6 @@ export default function MarketClient({
     const t = setInterval(() => setPendingNow(Date.now()), 30_000)
     return () => clearInterval(t)
   }, [pendingSales.length])
-
-  useEffect(() => {
-    if (!hasSeenTour) setTourStep(0)
-  }, [hasSeenTour])
-
-  function endTour() {
-    setTourStep(null)
-    startTransition(() => { void markMarketTourSeen() })
-  }
-
-  function advanceTour() {
-    if (tourStep === null) return
-    if (tourStep < TOUR_STEPS.length - 1) {
-      setTourStep(tourStep + 1)
-    } else {
-      endTour()
-    }
-  }
-
-  function dismissTour() {
-    endTour()
-  }
 
   const countdown = useCountdown(marketState.next_update_at)
   const mood = MOOD_CONFIG[marketState.mood] ?? MOOD_CONFIG.calm
@@ -608,73 +554,6 @@ export default function MarketClient({
         </div>
       )}
 
-      {/* Tour */}
-      {tourStep !== null && (
-        <>
-          <div
-            onClick={advanceTour}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 60, cursor: 'pointer' }}
-          />
-          <div
-            style={{
-              position: 'fixed', bottom: 100, left: 16, right: 16, zIndex: 61,
-              background: '#0d1520',
-              border: `1px solid rgba(255,255,255,0.1)`,
-              borderLeft: `3px solid ${TOUR_STEPS[tourStep].color}`,
-              borderRadius: 14,
-              padding: '1.1rem 1.1rem 1rem',
-              maxWidth: 460,
-              margin: '0 auto',
-            }}
-          >
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8' }}>
-                {TOUR_STEPS[tourStep].title}
-              </p>
-              <button
-                onClick={dismissTour}
-                aria-label="Close"
-                style={{
-                  flexShrink: 0,
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.16)',
-                  borderRadius: '50%', width: 30, height: 30, padding: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#e0ddd8', cursor: 'pointer',
-                }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-              </button>
-            </div>
-            <p className="font-karla font-400" style={{ fontSize: '0.9rem', color: '#b4afa6', lineHeight: 1.55, marginBottom: '1rem' }}>
-              {TOUR_STEPS[tourStep].body}
-            </p>
-            <div className="flex items-center justify-between">
-              <div className="flex gap-1.5">
-                {TOUR_STEPS.map((_, i) => (
-                  <span key={i} style={{
-                    width: i === tourStep ? 16 : 5, height: 5, borderRadius: 3,
-                    background: i === tourStep ? TOUR_STEPS[tourStep].color : 'rgba(255,255,255,0.15)',
-                    transition: 'all 0.2s',
-                  }} />
-                ))}
-              </div>
-              <button
-                onClick={advanceTour}
-                className="font-karla font-700 uppercase tracking-[0.1em]"
-                style={{
-                  fontSize: '0.72rem', padding: '0.45rem 1.1rem', borderRadius: '2rem',
-                  background: `${TOUR_STEPS[tourStep].color}18`,
-                  border: `1px solid ${TOUR_STEPS[tourStep].color}40`,
-                  color: TOUR_STEPS[tourStep].color,
-                  cursor: 'pointer',
-                }}>
-                {tourStep < TOUR_STEPS.length - 1 ? 'Next →' : 'Got it'}
-              </button>
-            </div>
-          </div>
-        </>
-      )}
     </main>
   )
 }
