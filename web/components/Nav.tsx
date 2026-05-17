@@ -560,7 +560,8 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', marginTop: '1rem' }}>
             {(isChromeIOS ? [
-              ['···', 'Tap the three dots — top right corner'],
+              ['Share', 'Tap the Share icon — top right'],
+              ['View More', 'Tap View More'],
               ['Add to Home Screen', 'Tap Add to Home Screen'],
             ] : [
               ['···', 'Tap the three dots — bottom right corner'],
