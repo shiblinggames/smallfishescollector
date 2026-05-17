@@ -24,6 +24,30 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+// Glyphs for the "add to home screen" step badges — drawn with
+// currentColor so they inherit the badge's dark-on-teal styling.
+const ICON_DOTS = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" />
+  </svg>
+)
+const ICON_SHARE = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 15V3" /><path d="M8 7l4-4 4 4" />
+    <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+  </svg>
+)
+const ICON_CARET = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+)
+const ICON_ADD_HOME = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="4" /><path d="M12 8.5v7M8.5 12h7" />
+  </svg>
+)
+
 // Cache for the desktop nav avatar fields so the avatar renders correctly
 // on the first paint after a tab switch (instead of flashing the default
 // while supabase round-trips). Keys are namespaced under `nav:` so they
@@ -560,36 +584,14 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', marginTop: '1rem' }}>
             {((isChromeIOS ? [
-              {
-                label: 'Share', desc: 'Tap the Share icon — top right',
-                icon: (
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 15V3" /><path d="M8 7l4-4 4 4" />
-                    <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
-                  </svg>
-                ),
-              },
-              {
-                label: 'View More', desc: 'Tap View More',
-                icon: (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                ),
-              },
-              {
-                label: 'Add to Home Screen', desc: 'Tap Add to Home Screen',
-                icon: (
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="4" /><path d="M12 8.5v7M8.5 12h7" />
-                  </svg>
-                ),
-              },
+              { label: 'Share', desc: 'Tap the Share icon — top right', icon: ICON_SHARE },
+              { label: 'View More', desc: 'Tap View More', icon: ICON_CARET },
+              { label: 'Add to Home Screen', desc: 'Tap Add to Home Screen', icon: ICON_ADD_HOME },
             ] : [
-              { label: '···', desc: 'Tap the three dots — bottom right corner' },
-              { label: 'Share', desc: 'Tap Share' },
-              { label: 'View More', desc: 'Tap View More' },
-              { label: 'Add to Home Screen', desc: 'Tap Add to Home Screen' },
+              { label: '···', desc: 'Tap the three dots — bottom right corner', icon: ICON_DOTS },
+              { label: 'Share', desc: 'Tap Share', icon: ICON_SHARE },
+              { label: 'View More', desc: 'Tap View More', icon: ICON_CARET },
+              { label: 'Add to Home Screen', desc: 'Tap Add to Home Screen', icon: ICON_ADD_HOME },
             ]) as { label: string; desc: string; icon?: ReactNode }[]).map(({ label, desc, icon }, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <span className="font-karla font-700" style={{
