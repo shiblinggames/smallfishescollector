@@ -875,9 +875,16 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     // detection beam plays). Grounded = smash through, mark shatteredAt for
     // the satisfying break-apart animation.
     if (!dead) {
+      // Fire on first bow contact with the beacon's footprint — not when the
+      // ship's *left edge* finally enters its span (that let the whole hull
+      // pass through before it cracked). Mirrors the rock hitbox test.
+      const shipHitL = shipScreenX + g.shipW * HITBOX_INSET.left
+      const shipHitR = shipScreenX + g.shipW * (1 - HITBOX_INSET.right)
       for (const cr of g.beacons) {
         if (cr.shatteredAt > 0) continue
-        if (boatWorldX < cr.x || boatWorldX > cr.x + cr.width) continue
+        const bL = cr.x - g.scrollX
+        const bR = cr.x + cr.width - g.scrollX
+        if (bR < shipHitL || bL > shipHitR) continue
         if (g.airborne) {
           // Start detection flash — gameplay freezes, beam plays, then death
           g.detectingUntil = performance.now() + BEACON_DETECT_FLASH_SEC * 1000
