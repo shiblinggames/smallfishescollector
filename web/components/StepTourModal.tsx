@@ -13,6 +13,10 @@ export interface TourStep {
   title: string
   body: string
   placement?: TourPlacement
+  // Optional primary action rendered as a prominent button inside the
+  // card (e.g. the browser-install step). Tapping it does NOT advance
+  // the tour — the footer Next/Got it still handles that.
+  cta?: { label: string; onClick: () => void }
 }
 
 interface Props {
@@ -107,6 +111,24 @@ export default function StepTourModal({ steps, onDone }: Props) {
           <p className="font-karla font-400 mb-3" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.55 }}>
             {current.body}
           </p>
+          {current.cta && (
+            <button
+              onClick={e => { e.stopPropagation(); current.cta!.onClick() }}
+              className="font-karla font-700 uppercase tracking-[0.1em] w-full"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                fontSize: '0.74rem', cursor: 'pointer', touchAction: 'manipulation',
+                color: '#04141a', background: current.color, border: 'none',
+                borderRadius: 9, padding: '0.65rem', marginBottom: '0.75rem',
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v12M8 11l4 4 4-4" />
+                <path d="M5 18v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1" />
+              </svg>
+              {current.cta.label}
+            </button>
+          )}
           <div className="flex items-center justify-between">
             <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845' }}>
               {step + 1} / {steps.length}
