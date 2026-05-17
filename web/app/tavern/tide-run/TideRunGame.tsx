@@ -96,6 +96,12 @@ const WAKE_BOW_OFFSET    = 0.80   // emit at this fraction of ship width (bow co
 const SPLASH_MAX_AGE_SEC = 0.55
 const SPLASH_GRAVITY     = 900    // particle gravity (px/s²)
 
+// Beacon-smash juice — chunky rock debris + an amber signal-pop ring.
+const DEBRIS_MAX_AGE_SEC = 0.75
+const DEBRIS_GRAVITY     = 1150   // px/s²
+const SMASH_RING_DUR_SEC = 0.42
+const SMASH_SHAKE_MS     = 200    // screen-shake window after a smash
+
 // Day/night cycle — palette interpolates over CYCLE_DISTANCE_M of distance.
 // Stops are: midday → dusk → night → dawn → loop. Long enough that typical
 // runs only drift partway through one transition (visible but not distracting).
@@ -155,6 +161,17 @@ interface SplashParticle {
   vx: number         // world-space px/s
   vy: number         // screen px/s (negative = up)
   age: number
+}
+
+interface DebrisParticle {
+  worldX: number
+  y: number
+  vx: number          // world-space px/s
+  vy: number          // screen px/s (negative = up)
+  age: number
+  rot: number         // current rotation (rad)
+  vr: number          // rotation velocity (rad/s)
+  size: number
 }
 
 interface SparkleParticle {
@@ -281,6 +298,10 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     wake: [] as WakeParticle[],
     wakeNextEmitX: 0,         // world x of next wake emit
     splashes: [] as SplashParticle[],
+    debris: [] as DebrisParticle[],          // beacon-smash rock chunks
+    smashRings: [] as { worldX: number; y: number; age: number }[],
+    shakeUntil: 0,            // performance.now() ts; canvas shakes while > now
+    shakeMag: 0,              // px shake amplitude at the start of the window
     sparkles: [] as SparkleParticle[],
     sparkleNextEmit: 0,       // performance.now() of next sparkle emit
     nextSpawnAt: 0,
@@ -417,6 +438,10 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     g.wake = []
     g.wakeNextEmitX = 0
     g.splashes = []
+    g.debris = []
+    g.smashRings = []
+    g.shakeUntil = 0
+    g.shakeMag = 0
     g.sparkles = []
     g.sparkleNextEmit = 0
     g.nextSpawnAt = HAZARD_WARMUP
@@ -782,6 +807,20 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     if (g.splashes.length > 0 && g.splashes[0].age > SPLASH_MAX_AGE_SEC) {
       g.splashes = g.splashes.filter(p => p.age < SPLASH_MAX_AGE_SEC)
     }
+    for (const d of g.debris) {
+      d.age += dt
+      d.worldX += d.vx * dt
+      d.y += d.vy * dt
+      d.vy += DEBRIS_GRAVITY * dt
+      d.rot += d.vr * dt
+    }
+    if (g.debris.length > 0 && g.debris[0].age > DEBRIS_MAX_AGE_SEC) {
+      g.debris = g.debris.filter(d => d.age < DEBRIS_MAX_AGE_SEC)
+    }
+    for (const r of g.smashRings) r.age += dt
+    if (g.smashRings.length > 0) {
+      g.smashRings = g.smashRings.filter(r => r.age < SMASH_RING_DUR_SEC)
+    }
     // Sparkles: age + prune; ambient specular highlights drifting on the sea
     for (const p of g.sparkles) p.age += dt
     if (g.sparkles.length > 0) {
@@ -847,19 +886,44 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
           setScore(Math.floor(g.distance))
           break
         } else {
-          cr.shatteredAt = performance.now()
-          // Burst of splash droplets at the beacon — makes the smash feel impactful
-          const beaconSurface = seaSurfaceY(cr.x + cr.width / 2, g.ch, g.scrollX)
-          for (let i = 0; i < 10; i++) {
-            const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.8
-            const speed = 130 + Math.random() * 100
+          const nowMs = performance.now()
+          cr.shatteredAt = nowMs
+          const cx = cr.x + cr.width / 2
+          const beaconSurface = seaSurfaceY(cx, g.ch, g.scrollX)
+          // Bigger water spray
+          for (let i = 0; i < 16; i++) {
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * 2.0
+            const speed = 150 + Math.random() * 140
             g.splashes.push({
-              worldX: cr.x + cr.width / 2 + (Math.random() - 0.5) * cr.width * 0.6,
+              worldX: cx + (Math.random() - 0.5) * cr.width * 0.7,
               y: beaconSurface,
-              vx: Math.cos(angle) * speed * 0.6,
+              vx: Math.cos(angle) * speed * 0.7,
               vy: Math.sin(angle) * speed,
               age: 0,
             })
+          }
+          // Chunky rock debris — this is the part that actually reads as
+          // "I just smashed through that". Biased forward by boat momentum.
+          for (let i = 0; i < 12; i++) {
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.7
+            const speed = 180 + Math.random() * 220
+            g.debris.push({
+              worldX: cx + (Math.random() - 0.5) * cr.width * 0.5,
+              y: beaconSurface - cr.height * (0.2 + Math.random() * 0.6),
+              vx: Math.cos(angle) * speed + 70,
+              vy: Math.sin(angle) * speed,
+              age: 0,
+              rot: Math.random() * Math.PI,
+              vr: (Math.random() - 0.5) * 14,
+              size: 3 + Math.random() * 5,
+            })
+          }
+          // Amber signal-light pop + brief screen shake + haptic thud.
+          g.smashRings.push({ worldX: cx, y: beaconSurface - cr.height * 0.5, age: 0 })
+          g.shakeUntil = nowMs + SMASH_SHAKE_MS
+          g.shakeMag = 7
+          if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+            navigator.vibrate(40)
           }
         }
       }
@@ -909,6 +973,19 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     const g = gRef.current
     const { cw, ch } = g
     if (cw === 0 || ch === 0) return
+
+    // ── Screen shake (beacon smash) — shift only the canvas inside the
+    //    clipped wrapper so the chrome stays put. Decays over the window. ──
+    const shakeNow = performance.now()
+    if (shakeNow < g.shakeUntil) {
+      const remain = (g.shakeUntil - shakeNow) / SMASH_SHAKE_MS
+      const amp = g.shakeMag * remain * remain
+      const sx = (Math.random() - 0.5) * 2 * amp
+      const sy = (Math.random() - 0.5) * 2 * amp
+      canvas.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px)`
+    } else if (canvas.style.transform) {
+      canvas.style.transform = ''
+    }
 
     // ── Cycle palette (day → dusk → night → dawn) ──
     const pal = currentPalette(g.distance)
@@ -1184,6 +1261,45 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       ctx.arc(screenX, p.y, r, 0, Math.PI * 2)
       ctx.fill()
     }
+
+    // ── Beacon-smash debris ──
+    for (const d of g.debris) {
+      const sx = d.worldX - g.scrollX
+      if (sx < -20 || sx > cw + 20) continue
+      const lf = d.age / DEBRIS_MAX_AGE_SEC
+      ctx.save()
+      ctx.globalAlpha = Math.max(0, 1 - lf)
+      ctx.translate(sx, d.y)
+      ctx.rotate(d.rot)
+      ctx.fillStyle = '#3b3b42'
+      ctx.fillRect(-d.size / 2, -d.size / 2, d.size, d.size * 0.82)
+      ctx.restore()
+    }
+    ctx.globalAlpha = 1
+
+    // ── Beacon-smash signal pop (amber ring + hot core) ──
+    for (const ring of g.smashRings) {
+      const sx = ring.worldX - g.scrollX
+      if (sx < -60 || sx > cw + 60) continue
+      const t = ring.age / SMASH_RING_DUR_SEC          // 0 → 1
+      ctx.save()
+      ctx.globalAlpha = (1 - t) * 0.9
+      ctx.strokeStyle = '#ffc34d'
+      ctx.lineWidth = 3 * (1 - t) + 1
+      ctx.beginPath()
+      ctx.arc(sx, ring.y, 6 + t * 46, 0, Math.PI * 2)
+      ctx.stroke()
+      if (t < 0.35) {
+        const c = 1 - t / 0.35
+        ctx.globalAlpha = c * 0.85
+        ctx.fillStyle = '#fff4d6'
+        ctx.beginPath()
+        ctx.arc(sx, ring.y, 8 * c + 3, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.restore()
+    }
+    ctx.globalAlpha = 1
 
     // ── Collision flash ──
     if (g.state === 'dead' && performance.now() < g.deathFlashUntil) {
