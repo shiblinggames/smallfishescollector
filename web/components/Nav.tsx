@@ -450,30 +450,41 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
                     setShowIOSHint(true)
                   }
                 }}
-                className="w-full flex items-center gap-3"
+                className="w-full flex items-center gap-3.5"
                 style={{
-                  padding: '0.85rem 1.25rem',
-                  background: 'rgba(14,116,144,0.12)',
+                  padding: '1.05rem 1.25rem',
+                  background: 'linear-gradient(90deg, rgba(14,116,144,0.26), rgba(14,116,144,0.10))',
                   border: 'none',
-                  borderBottom: '1px solid rgba(14,116,144,0.22)',
+                  borderBottom: '1px solid rgba(14,116,144,0.32)',
                   cursor: 'pointer',
                 }}
               >
                 <div style={{
-                  width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                  background: 'rgba(14,116,144,0.18)',
-                  border: '1px solid rgba(14,116,144,0.35)',
+                  width: 46, height: 46, borderRadius: 13, flexShrink: 0,
+                  background: 'rgba(14,116,144,0.30)',
+                  border: '1px solid rgba(90,180,200,0.50)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5ab4c8" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#8fd6e6" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 2v13M8 11l4 4 4-4"/>
                     <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
                   </svg>
                 </div>
-                <div style={{ textAlign: 'left' }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.74rem', color: '#7abbc8' }}>Install App</p>
-                  <p className="font-karla" style={{ fontSize: '0.6rem', color: '#4a7a88', marginTop: 2 }}>Play full-screen, no browser bar</p>
+                <div style={{ textAlign: 'left', flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <p className="font-karla font-700" style={{ fontSize: '0.98rem', color: '#d6eef3', letterSpacing: '0.01em' }}>Install the App</p>
+                    <span className="font-karla font-700 uppercase" style={{
+                      fontSize: '0.5rem', letterSpacing: '0.1em', color: '#04161a',
+                      background: '#5ab4c8', borderRadius: 999, padding: '0.12rem 0.42rem',
+                    }}>Free</span>
+                  </div>
+                  <p className="font-karla" style={{ fontSize: '0.76rem', color: '#9fc8d2', marginTop: 4, lineHeight: 1.4 }}>
+                    Full-screen &amp; faster — plays like a real game, no browser bar in the way.
+                  </p>
                 </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5ab4c8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
               </button>
             )}
             {mobileMenuLinks.map(({ href, label, icon, badge }) => {
@@ -518,17 +529,36 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         <div
           style={{
             position: 'fixed', bottom: 80, left: 16, right: 16, zIndex: 70,
-            background: '#111110',
-            border: '1px solid rgba(14,116,144,0.40)',
-            borderRadius: 16, padding: '1rem 1.1rem',
-            boxShadow: '0 4px 40px rgba(0,0,0,0.8)',
+            maxWidth: 440, margin: '0 auto',
+            background: '#0e1414',
+            border: '1px solid rgba(14,116,144,0.45)',
+            borderRadius: 18, padding: '1.2rem 1.25rem 1.3rem',
+            boxShadow: '0 4px 44px rgba(0,0,0,0.85)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.55rem' }}>
-            <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#f0ede8' }}>Add to Home Screen</p>
-            <button onClick={() => setShowIOSHint(false)} style={{ background: 'none', border: 'none', color: '#4a4845', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: 0, marginTop: 1 }}>✕</button>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1.2 }}>Get the App</p>
+              <p className="font-karla" style={{ fontSize: '0.82rem', color: '#92c0ca', marginTop: 5, lineHeight: 1.45 }}>
+                Full-screen &amp; faster — it really feels like a real game. Takes about 5 seconds:
+              </p>
+            </div>
+            <button
+              onClick={() => setShowIOSHint(false)}
+              aria-label="Close"
+              style={{
+                flexShrink: 0,
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.16)',
+                borderRadius: '50%', width: 32, height: 32, padding: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#e0ddd8', cursor: 'pointer', touchAction: 'manipulation',
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', marginTop: '1rem' }}>
             {(isChromeIOS ? [
               ['···', 'Tap the three dots — top right corner'],
               ['Add to Home Screen', 'Tap Add to Home Screen'],
@@ -538,16 +568,16 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
               ['View More', 'Tap View More'],
               ['Add to Home Screen', 'Tap Add to Home Screen'],
             ] as [string, string][]).map(([label, desc], i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <span className="font-karla font-700" style={{
-                  fontSize: '0.58rem', color: '#0a0a0a',
-                  background: '#a0c4cc', borderRadius: 4,
-                  padding: '0.12rem 0.45rem', flexShrink: 0, minWidth: 28, textAlign: 'center',
+                  fontSize: '0.82rem', color: '#04161a',
+                  background: '#6bc2d4', borderRadius: 8,
+                  padding: '0.22rem 0', flexShrink: 0, width: 28, textAlign: 'center',
                 }}>{i + 1}</span>
-                <div>
-                  <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#c0d8dc' }}>{label}</span>
-                  <span className="font-karla" style={{ fontSize: '0.68rem', color: '#4a7a88' }}> — {desc}</span>
-                </div>
+                <p className="font-karla" style={{ fontSize: '0.84rem', lineHeight: 1.35 }}>
+                  <span className="font-700" style={{ color: '#f0ede8' }}>{label}</span>
+                  <span style={{ color: '#8fb4be' }}> — {desc}</span>
+                </p>
               </div>
             ))}
           </div>
