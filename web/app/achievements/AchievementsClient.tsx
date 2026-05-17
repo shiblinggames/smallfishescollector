@@ -1,105 +1,178 @@
 'use client'
 
 import Link from 'next/link'
-import { type Badge } from '@/lib/badges'
 
-interface Props {
-  badges: Badge[]
-  unlocked: string[]
+export interface JourneyGoal {
+  id: string
+  label: string
+  desc: string
+  href: string
+  current: number
+  target: number
+  done: boolean
+  badgeImage?: string
+  binary?: boolean
+  record?: boolean
 }
 
-export default function AchievementsClient({ badges, unlocked }: Props) {
+export interface JourneyGroup {
+  title: string
+  accent: string
+  goals: JourneyGoal[]
+}
+
+interface Props {
+  groups: JourneyGroup[]
+  doneCount: number
+  totalCount: number
+}
+
+function valueText(g: JourneyGoal): { text: string; color: string } {
+  if (g.binary) {
+    return g.done
+      ? { text: 'Earned', color: '#4ade80' }
+      : { text: 'Locked', color: 'rgba(240,237,232,0.32)' }
+  }
+  if (g.done) {
+    return { text: g.badgeImage ? 'Earned' : 'Complete', color: '#4ade80' }
+  }
+  const cur = g.current.toLocaleString()
+  const tgt = g.target.toLocaleString()
+  return {
+    text: g.record ? `Best ${cur} / ${tgt}` : `${cur} / ${tgt}`,
+    color: 'rgba(240,237,232,0.6)',
+  }
+}
+
+export default function AchievementsClient({ groups, doneCount, totalCount }: Props) {
+  const overall = totalCount > 0 ? doneCount / totalCount : 0
+
   return (
     <div>
-
-      {/* Profile link */}
+      {/* Overall journey progress */}
       <div style={{
         background: 'rgba(4,10,18,0.72)', border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: 16, padding: '1rem', marginBottom: 24,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        borderRadius: 16, padding: '1rem 1.1rem', marginBottom: 16,
       }}>
-        <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
-          Equip earned badges on your profile page to display them on your boat.
-        </p>
-        <Link href="/profile" style={{
-          flexShrink: 0, padding: '0.4rem 0.9rem', borderRadius: '2rem',
-          background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.3)',
-          textDecoration: 'none',
-        }}>
-          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', color: '#f0c040', letterSpacing: '0.12em' }}>
-            My Profile →
-          </span>
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)' }}>
+            Journey Progress
+          </p>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0c040' }}>
+            {doneCount} <span style={{ color: 'rgba(255,255,255,0.28)' }}>/ {totalCount}</span>
+          </p>
+        </div>
+        <div style={{ height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${overall * 100}%`, background: '#f0c040', borderRadius: 4, transition: 'width 0.4s ease' }} />
+        </div>
       </div>
 
-      {/* Progress line */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-          All Badges
+      {/* Equip hint */}
+      <Link href="/profile" style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.22)',
+        borderRadius: 14, padding: '0.7rem 0.95rem', marginBottom: 22, textDecoration: 'none',
+      }}>
+        <p className="font-karla" style={{ fontSize: '0.75rem', color: 'rgba(240,237,232,0.55)', lineHeight: 1.45 }}>
+          Earned badges can be worn on your boat — equip them on your profile.
         </p>
-        <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#f0c040' }}>
-          {unlocked.length} <span style={{ color: 'rgba(255,255,255,0.25)' }}>/ {badges.length}</span>
-        </p>
-      </div>
+        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', color: '#f0c040', letterSpacing: '0.12em', flexShrink: 0 }}>
+          Profile →
+        </span>
+      </Link>
 
-      {/* Badge grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-        {badges.map(badge => {
-          const isUnlocked = unlocked.includes(badge.id)
-          return (
-            <div
-              key={badge.id}
-              style={{
-                background: isUnlocked ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
-                border: isUnlocked ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(255,255,255,0.06)',
-                borderRadius: 14, padding: '0.85rem 0.6rem',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-              }}
-            >
-              <div style={{
-                width: 52, height: 52, borderRadius: 10,
-                background: isUnlocked ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                filter: isUnlocked ? 'none' : 'grayscale(1)',
-                opacity: isUnlocked ? 1 : 0.35,
-              }}>
-                <img src={badge.imageUrl} alt={badge.name}
-                  style={{ width: 36, height: 36, objectFit: 'contain' }}
-                  onError={e => {
-                    const el = e.target as HTMLImageElement
-                    el.style.display = 'none'
-                    const parent = el.parentElement
-                    if (parent) parent.innerHTML = '<span style="font-size:1.3rem;opacity:0.4">🏅</span>'
-                  }}
-                />
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <p className="font-karla font-700" style={{
-                  fontSize: '0.68rem', lineHeight: 1.2,
-                  color: isUnlocked ? '#f0ede8' : 'rgba(240,237,232,0.3)',
-                }}>
-                  {badge.name}
-                </p>
-                <p className="font-karla" style={{
-                  fontSize: '0.6rem', lineHeight: 1.3, marginTop: 3,
-                  color: isUnlocked ? 'rgba(240,237,232,0.5)' : 'rgba(240,237,232,0.22)',
-                }}>
-                  {badge.description}
-                </p>
-              </div>
-              {isUnlocked && (
-                <span className="font-karla font-700" style={{
-                  fontSize: '0.55rem', color: '#4ade80',
-                  textTransform: 'uppercase', letterSpacing: '0.08em',
-                }}>
-                  Earned
-                </span>
-              )}
+      {/* Goal groups */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
+        {groups.map(group => (
+          <section key={group.title}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: group.accent, flexShrink: 0 }} />
+              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.74rem', color: group.accent }}>
+                {group.title}
+              </p>
             </div>
-          )
-        })}
-      </div>
 
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {group.goals.map(g => {
+                const v = valueText(g)
+                const pct = g.target > 0 ? Math.min(1, g.current / g.target) : (g.done ? 1 : 0)
+                return (
+                  <Link
+                    key={g.id}
+                    href={g.href}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      background: g.done ? 'rgba(255,255,255,0.055)' : 'rgba(255,255,255,0.022)',
+                      border: `1px solid ${g.done ? group.accent + '55' : 'rgba(255,255,255,0.07)'}`,
+                      borderRadius: 14, padding: '0.8rem 0.85rem', textDecoration: 'none',
+                    }}
+                  >
+                    {/* Badge art / accent marker */}
+                    <div style={{
+                      width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'rgba(255,255,255,0.04)',
+                    }}>
+                      {g.badgeImage ? (
+                        <img
+                          src={g.badgeImage} alt=""
+                          style={{
+                            width: 32, height: 32, objectFit: 'contain',
+                            filter: g.done ? 'none' : 'grayscale(1)',
+                            opacity: g.done ? 1 : 0.32,
+                          }}
+                          onError={e => {
+                            const el = e.target as HTMLImageElement
+                            el.style.display = 'none'
+                            const p = el.parentElement
+                            if (p) p.innerHTML = `<span style="font-size:1.1rem;opacity:${g.done ? 0.9 : 0.3}">🏅</span>`
+                          }}
+                        />
+                      ) : (
+                        <span style={{
+                          width: 14, height: 14, borderRadius: '50%',
+                          background: g.done ? group.accent : 'transparent',
+                          border: `2px solid ${group.accent}`, opacity: g.done ? 1 : 0.5,
+                        }} />
+                      )}
+                    </div>
+
+                    {/* Body */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                        <p className="font-karla font-700" style={{
+                          fontSize: '0.9rem', color: g.done ? '#f0ede8' : 'rgba(240,237,232,0.78)',
+                        }}>
+                          {g.label}
+                        </p>
+                        <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: v.color, flexShrink: 0 }}>
+                          {v.text}
+                        </p>
+                      </div>
+                      <p className="font-karla" style={{
+                        fontSize: '0.76rem', color: 'rgba(240,237,232,0.42)', lineHeight: 1.4, marginTop: 2,
+                      }}>
+                        {g.desc}
+                      </p>
+                      {!g.binary && (
+                        <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginTop: 8 }}>
+                          <div style={{
+                            height: '100%', width: `${pct * 100}%`,
+                            background: group.accent, borderRadius: 3,
+                            opacity: g.done ? 1 : 0.75, transition: 'width 0.4s ease',
+                          }} />
+                        </div>
+                      )}
+                    </div>
+
+                    <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '1rem', flexShrink: 0 }}>›</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
     </div>
   )
 }

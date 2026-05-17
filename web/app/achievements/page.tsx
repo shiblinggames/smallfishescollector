@@ -2,8 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
-import { BADGES } from '@/lib/badges'
-import AchievementsClient from './AchievementsClient'
+import { BADGE_MAP } from '@/lib/badges'
+import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
+import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
+import AchievementsClient, { type JourneyGroup, type JourneyGoal } from './AchievementsClient'
+
+const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 
 export default async function AchievementsPage() {
   const supabase = await createClient()
@@ -11,33 +15,142 @@ export default async function AchievementsPage() {
   if (!user) redirect('/login')
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('packs_available, doubloons, gems, unlocked_badges')
-    .eq('id', user.id)
-    .single()
 
-  const unlocked: string[] = (profile?.unlocked_badges as string[]) ?? []
+  const [{ data: profile }, collectionRes, speciesRes, voyageCountRes] = await Promise.all([
+    admin.from('profiles')
+      .select('packs_available, doubloons, gems, unlocked_badges, fishing_xp, expedition_xp, prestige_levels, trophy_catches, highest_perfect_streak, tide_run_best_distance, fotd_longest_streak')
+      .eq('id', user.id).single(),
+    admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
+    admin.from('fish_species').select('id, habitat'),
+    admin.from('daily_voyages').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'revealed'),
+  ])
+
+  // ── Derive everything from existing data — no new columns ────────────────
+  const unlocked: string[] = (profile?.unlocked_badges as string[] | null) ?? []
+  const has = (id: string) => unlocked.includes(id)
+
+  const fishLevel = fishLevelFromXP(Number(profile?.fishing_xp ?? 0))
+  const navLevel = navLevelFromXP(Number(profile?.expedition_xp ?? 0))
+
+  const prestige = (profile?.prestige_levels as Record<string, number> | null) ?? {}
+  const prestigedZones = ZONES.filter(z => (prestige[z] ?? 0) >= 1).length
+  const totalStars = ZONES.reduce((s, z) => s + Math.min(5, prestige[z] ?? 0), 0)
+
+  const trophies = ((profile?.trophy_catches as number[] | null) ?? []).length
+
+  const nonAncientIds = new Set(
+    ((speciesRes.data ?? []) as { id: number; habitat: string }[])
+      .filter(s => s.habitat !== 'ancient_deep')
+      .map(s => s.id),
+  )
+  const collectedIds = new Set(((collectionRes.data ?? []) as { fish_id: number }[]).map(r => r.fish_id))
+  const collected = [...nonAncientIds].filter(id => collectedIds.has(id)).length
+  const speciesTotal = nonAncientIds.size || 134
+
+  const voyagesDone = voyageCountRes.count ?? 0
+  const streakBest = profile?.highest_perfect_streak ?? 0
+  const tideBest = profile?.tide_run_best_distance ?? 0
+  const fotdBest = profile?.fotd_longest_streak ?? 0
+  const doubloons = profile?.doubloons ?? 0
+
+  // ── Goal builders ───────────────────────────────────────────────────────
+  // Badge-backed goal: shows live progress AND flips to "earned" once the
+  // badge is unlocked (badge = the cosmetic payoff for the pursuit).
+  function badgeGoal(
+    badgeId: string, label: string, desc: string,
+    current: number, target: number, href: string,
+    opts: { binary?: boolean; record?: boolean } = {},
+  ): JourneyGoal {
+    const earned = has(badgeId) || (!opts.binary && current >= target)
+    return {
+      id: badgeId, label, desc, href,
+      current: Math.min(current, target), target,
+      done: earned,
+      badgeImage: BADGE_MAP[badgeId]?.imageUrl,
+      binary: !!opts.binary,
+      record: !!opts.record,
+    }
+  }
+  // Pure progress goal (no badge art) — long arcs worth chasing that aren't
+  // in the 12-badge set. Makes this a journey, not just a trophy shelf.
+  function progressGoal(
+    id: string, label: string, desc: string,
+    current: number, target: number, href: string,
+    opts: { record?: boolean } = {},
+  ): JourneyGoal {
+    return {
+      id, label, desc, href,
+      current: Math.min(current, target), target,
+      done: current >= target,
+      record: !!opts.record,
+    }
+  }
+
+  const groups: JourneyGroup[] = [
+    {
+      title: 'Fishing Mastery',
+      accent: '#4ade80',
+      goals: [
+        badgeGoal('master_angler', 'Master Angler', 'Reach Fishing Level 100', fishLevel, 100, '/fishing'),
+        badgeGoal('unbroken', 'Unbroken', 'Land 10 perfect catches in a row', streakBest, 10, '/fishing'),
+        badgeGoal('prestige_i', 'Prestige I', 'Reach Prestige in any fishing zone', totalStars > 0 ? 1 : 0, 1, '/fishing', { binary: true }),
+        badgeGoal('zone_legend', 'Zone Legend', 'Reach Prestige in all 4 zones', prestigedZones, 4, '/fishing'),
+        progressGoal('prestige_stars', 'Prestige Stars', 'Earn all 20 prestige stars (5 per zone)', totalStars, 20, '/fishing'),
+      ],
+    },
+    {
+      title: 'The Collection',
+      accent: '#60a5fa',
+      goals: [
+        badgeGoal('full_collection', 'Full Collection', `Catch every fish species (${collected}/${speciesTotal})`, collected, speciesTotal, '/collection'),
+        badgeGoal('ancient_ones', 'Ancient Ones', 'Catch all 6 Ancient Deep trophies', trophies, 6, '/fishing'),
+      ],
+    },
+    {
+      title: 'Expeditions & Combat',
+      accent: '#c8704a',
+      goals: [
+        badgeGoal('navigator', 'Navigator', 'Reach Navigation Level 50', navLevel, 50, '/expeditions'),
+        badgeGoal('fleet_admiral', 'Fleet Admiral', 'Complete 100 voyages', voyagesDone, 100, '/expeditions'),
+        badgeGoal('corsairs_bane', "Corsair's Bane", 'Defeat Barnacle Pete in under 2 minutes', 0, 1, '/raids', { binary: true }),
+        badgeGoal('ghost_ship', 'Ghost Ship', 'Defeat Barnacle Pete without taking damage', 0, 1, '/raids', { binary: true }),
+        badgeGoal('davy_jones', "Davy Jones' Victor", "Complete Davy Jones' Locker", 0, 1, '/raids', { binary: true }),
+      ],
+    },
+    {
+      title: 'Tavern & Records',
+      accent: '#f0c040',
+      goals: [
+        progressGoal('tide_run', 'Tide Run Distance', 'Reach 3,000 in a single run', tideBest, 3000, '/tavern/tide-run', { record: true }),
+        progressGoal('fotd_streak', 'Daily Detective', 'Solve Fish of the Day 7 days running', fotdBest, 7, '/tavern/fish-of-the-day', { record: true }),
+      ],
+    },
+    {
+      title: 'Wealth',
+      accent: '#a78bfa',
+      goals: [
+        badgeGoal('deep_pockets', 'Deep Pockets', 'Hold 1,000,000 doubloons at once', doubloons, 1_000_000, '/fishing'),
+      ],
+    },
+  ]
+
+  const allGoals = groups.flatMap(g => g.goals)
+  const doneCount = allGoals.filter(g => g.done).length
 
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
       <main className="min-h-screen pt-8">
         <div className="px-6 max-w-2xl mx-auto pb-16">
-
-          <div className="mb-8">
-            <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Honors</p>
-            <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.4rem' }}>Badges</h1>
-            <p className="font-karla" style={{ fontSize: '0.75rem', color: 'rgba(240,237,232,0.45)', marginTop: 4 }}>
-              Earned through meaningful achievements.
+          <div className="mb-6">
+            <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Your Journey</p>
+            <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem' }}>The Logbook</h1>
+            <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.5)', marginTop: 4, lineHeight: 1.5 }}>
+              Every long voyage worth chasing. Tap a goal to set sail toward it.
             </p>
           </div>
 
-          <AchievementsClient
-            badges={BADGES}
-            unlocked={unlocked}
-          />
-
+          <AchievementsClient groups={groups} doneCount={doneCount} totalCount={allGoals.length} />
         </div>
       </main>
     </>
