@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
 import { commitTideRun, submitTideRunBest } from './actions'
 import TideRunTour from './TideRunTour'
@@ -1220,34 +1219,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
 
   // ── Render UI ──────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <Link href="/tavern" className="font-karla font-700 text-sm" style={{ color: '#bda05a' }}>
-          ← Tavern
-        </Link>
-        <p className="font-cinzel font-700 text-base" style={{ color: '#f0ede8' }}>Tide Run</p>
-        <button
-          onClick={() => setShowTour(true)}
-          aria-label="How to play"
-          className="font-karla font-700"
-          style={{
-            width: 26,
-            height: 26,
-            borderRadius: '50%',
-            border: '1px solid rgba(189,160,90,0.45)',
-            background: 'rgba(189,160,90,0.10)',
-            color: '#bda05a',
-            fontSize: '0.78rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          ?
-        </button>
-      </div>
-
+    <div className="flex flex-col">
       {showTour && <TideRunTour onClose={closeTour} />}
 
       <div
@@ -1259,11 +1231,12 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
         onContextMenu={(e) => e.preventDefault()}
         className="relative w-full overflow-hidden rounded-xl"
         style={{
-          // Fill available viewport above the mobile tab bar. The subtraction
-          // accounts for: top nav (~56) + main pt-3 (12) + game header + gap
-          // (~52) + clearance above tab bar (~64). Min/max keep it sane on
-          // very short or very tall displays.
-          height: 'min(900px, max(480px, calc(100dvh - 184px)))',
+          // Fill available viewport above the mobile tab bar. The page header
+          // (back button + title + ?) was removed and the ? moved into the
+          // canvas, so the game extends further up. Subtraction: top nav
+          // (~56) + main pt-3 (12) + clearance above tab bar (~64). Min/max
+          // keep it sane on very short or very tall displays.
+          height: 'min(900px, max(480px, calc(100dvh - 132px)))',
           background: '#062840',
           border: '1px solid rgba(255,255,255,0.10)',
           touchAction: 'none',
@@ -1281,6 +1254,29 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
           WebkitTouchCallout: 'none',
           WebkitUserSelect: 'none',
         }} />
+
+        {/* Help — moved into the canvas (top-left) so the page header could
+            be removed and the game extended upward. stopPropagation keeps a
+            tap on it from also starting the run / triggering a jump. */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowTour(true) }}
+          onPointerDown={(e) => e.stopPropagation()}
+          aria-label="How to play"
+          className="font-karla font-700"
+          style={{
+            position: 'absolute', top: 10, left: 10, zIndex: 5,
+            width: 30, height: 30, borderRadius: '50%',
+            border: '1px solid rgba(189,160,90,0.5)',
+            background: 'rgba(6,18,34,0.7)',
+            color: '#e8c87a',
+            fontSize: '0.85rem',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+          }}
+        >
+          ?
+        </button>
 
         {uiState === 'playing' && (
           <>
@@ -1320,27 +1316,38 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
 
         {uiState === 'ready' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none">
-            <p className="font-cinzel font-700 mb-2" style={{ fontSize: '1.6rem', color: '#ffffff', textShadow: '0 2px 8px rgba(0,0,0,0.55)' }}>
-              Tide Run
-            </p>
-            <p className="font-karla font-300 mb-5" style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)', maxWidth: 260 }}>
-              Hold to jump. The longer you hold, the higher you go. Time it for the rock ahead.
-            </p>
-            <div className="font-karla font-700 uppercase tracking-[0.18em]" style={{
-              fontSize: '0.72rem',
-              color: '#bda05a',
-              padding: '10px 18px',
-              borderRadius: 999,
-              background: 'rgba(0,0,0,0.4)',
-              border: '1px solid rgba(189,160,90,0.55)',
+            <div style={{
+              padding: '22px 26px',
+              borderRadius: 16,
+              background: 'rgba(6, 18, 34, 0.84)',
+              border: '1px solid rgba(189,160,90,0.5)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+              maxWidth: 340,
             }}>
-              Tap to start
-            </div>
-            {highScore > 0 && (
-              <p className="font-karla font-700 mt-5" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)' }}>
-                Best: {highScore}m
+              <p className="font-cinzel font-700" style={{ fontSize: '1.75rem', color: '#ffffff', lineHeight: 1.1, marginBottom: 12 }}>
+                Tide Run
               </p>
-            )}
+              <p className="font-karla" style={{ fontSize: '0.95rem', color: 'rgba(240,237,232,0.92)', lineHeight: 1.5, marginBottom: 20 }}>
+                Hold to jump — the longer you hold, the higher you go. Time it for the rock ahead.
+              </p>
+              <div className="font-karla font-700 uppercase tracking-[0.18em]" style={{
+                display: 'inline-block',
+                fontSize: '0.82rem',
+                color: '#f0d28a',
+                padding: '11px 22px',
+                borderRadius: 999,
+                background: 'rgba(0,0,0,0.45)',
+                border: '1px solid rgba(189,160,90,0.6)',
+              }}>
+                Tap to start
+              </div>
+              {highScore > 0 && (
+                <p className="font-karla font-700" style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.82)', marginTop: 18 }}>
+                  Best: {highScore}m
+                </p>
+              )}
+            </div>
           </div>
         )}
 
