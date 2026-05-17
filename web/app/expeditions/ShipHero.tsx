@@ -764,19 +764,22 @@ export default function ShipHero({
             <motion.div
               key="breakdown-backdrop"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 110 }}
-              onClick={() => setBreakdownScore(null)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 110, pointerEvents: 'none' }}
             />
-            {/* Flex-centering wrapper. Doesn't animate (so its own transform
-                is left alone), which lets the inner motion.div animate scale
-                + y without breaking the centering. pointer-events:none on
-                the wrapper so backdrop clicks still pass through. */}
+            {/* Full-screen scroll wrapper. The modal can be taller than the
+                viewport, so the *wrapper* scrolls (not a nested box) — that
+                keeps the top reachable. `margin: auto` on the modal centers
+                it when it's short and top-anchors it (still fully
+                scrollable) when it's tall. Tapping the empty area closes. */}
             <div
+              onClick={e => { if (e.target === e.currentTarget) setBreakdownScore(null) }}
               style={{
                 position: 'fixed', inset: 0, zIndex: 111,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                display: 'flex',
                 padding: '1rem',
-                pointerEvents: 'none',
+                overflowY: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'contain',
               }}
             >
               <motion.div
@@ -786,16 +789,13 @@ export default function ShipHero({
                 exit={{ opacity: 0, scale: 0.96, y: 4 }}
                 transition={{ duration: 0.18 }}
                 style={{
-                  pointerEvents: 'auto',
+                  margin: 'auto',
                   width: '100%',
                   maxWidth: 420,
-                  maxHeight: 'calc(100svh - 80px)',
                   background: 'rgba(8,14,24,0.98)',
                   border: '1px solid rgba(255,255,255,0.12)',
                   borderRadius: 18,
                   padding: '1.1rem 1rem 1.25rem',
-                  overflowY: 'auto',
-                  overscrollBehavior: 'contain',
                 }}
               >
                 {breakdownScore === 'voyage' ? (
