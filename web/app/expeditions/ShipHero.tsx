@@ -916,8 +916,8 @@ function VoyageScoreBreakdown({ power, dodge, fortune, total, onClose }: {
 
 function RaidScoreBreakdown({
   crewPower, crewDodge, crewFortune,
-  navLevel, navBonusPower, navBonusDodge, navBonusFortune, navBonusHp,
-  shipName, shipDurability, shipMin,
+  navBonusPower, navBonusDodge, navBonusFortune, navBonusHp,
+  shipDurability,
   rating, onClose,
 }: {
   crewPower: number; crewDodge: number; crewFortune: number
@@ -926,106 +926,94 @@ function RaidScoreBreakdown({
   rating: { offense: number; defense: number; total: number }
   onClose: () => void
 }) {
-  // Combined stats fed into the actual combat formula
-  const totalPower   = crewPower   + navBonusPower
-  const totalDodge   = crewDodge   + navBonusDodge
-  const totalFortune = crewFortune + navBonusFortune
-  const totalHp      = shipDurability + navBonusHp
-
-  const powerMax = shipMin + 2 + Math.floor(totalPower / 4)
-  const hitMin = Math.max(shipMin, Math.floor(powerMax * 0.4))
-  const avgHit = (hitMin + powerMax) / 2
-  const critRate = Math.min(totalFortune / 2, 50) / 100
-  const dodgeBoost = Math.min(totalDodge / 200, 0.5)
+  const stats = [
+    { label: 'Power',   value: crewPower   + navBonusPower,   color: '#f87171' },
+    { label: 'Nav',     value: crewDodge   + navBonusDodge,   color: '#60a5fa' },
+    { label: 'Fortune', value: crewFortune + navBonusFortune, color: '#f0c040' },
+    { label: 'HP',      value: shipDurability + navBonusHp,   color: '#4ade80' },
+  ]
 
   return (
     <>
       <BreakdownHeader title="Raid Score" color="#c8704a" onClose={onClose} />
-      <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#9a9488', lineHeight: 1.5, marginBottom: '0.85rem' }}>
-        Predicts your damage output and survivability in raid combat.
+
+      <p className="font-karla" style={{ fontSize: '0.88rem', color: '#c4bfb6', lineHeight: 1.55, marginBottom: '1rem' }}>
+        How tough your crew is in a raid. The higher it climbs, the
+        harder you hit and the longer you survive in a fight.
       </p>
 
-      {/* What contributes — crew + Nav + ship breakdown */}
-      <div style={{
-        padding: '0.6rem 0.75rem', marginBottom: '0.85rem',
-        background: 'rgba(200,112,74,0.05)', border: '1px solid rgba(200,112,74,0.20)', borderRadius: 8,
-      }}>
-        <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#c8704a', marginBottom: 6 }}>Stat contributions</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <ContributionRow label="Power"   total={totalPower}   parts={[ { v: crewPower,   src: 'crew' }, { v: navBonusPower,   src: `Nav lvl ${navLevel}` } ]} color="#f87171" />
-          <ContributionRow label="Nav"     total={totalDodge}   parts={[ { v: crewDodge,   src: 'crew' }, { v: navBonusDodge,   src: `Nav lvl ${navLevel}` } ]} color="#60a5fa" />
-          <ContributionRow label="Fortune" total={totalFortune} parts={[ { v: crewFortune, src: 'crew' }, { v: navBonusFortune, src: `Nav lvl ${navLevel}` } ]} color="#f0c040" />
-          <ContributionRow label="HP"      total={totalHp}      parts={[ { v: shipDurability, src: shipName }, { v: navBonusHp, src: `Nav lvl ${navLevel}` } ]} color="#4ade80" />
+      {/* Offense */}
+      <div style={{ padding: '0.85rem 0.95rem', background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.24)', borderRadius: 12, marginBottom: '0.6rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.8rem', color: '#f87171' }}>Offense</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>{rating.offense}</p>
         </div>
+        <p className="font-karla" style={{ fontSize: '0.84rem', color: '#cbb4ad', lineHeight: 1.5 }}>
+          The damage you deal. Grows with your crew&apos;s{' '}
+          <span style={{ color: '#f0ede8', fontWeight: 600 }}>Power</span>, with extra
+          punch from <span style={{ color: '#f0ede8', fontWeight: 600 }}>Fortune</span> (critical hits).
+        </p>
       </div>
 
-      {/* Offense block */}
-      <div style={{ padding: '0.7rem 0.85rem', background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.22)', borderRadius: 10, marginBottom: '0.55rem' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-          <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: '#f87171' }}>Offense</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8' }}>{rating.offense}</p>
+      {/* Defense */}
+      <div style={{ padding: '0.85rem 0.95rem', background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.24)', borderRadius: 12, marginBottom: '0.6rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.8rem', color: '#60a5fa' }}>Defense</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>{rating.defense}</p>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <BreakdownRow label={`Avg hit dmg (${shipName})`} value={`${hitMin}–${powerMax} → ${avgHit.toFixed(1)}`} />
-          <BreakdownRow label="Crit factor" value={`×${(1 + critRate).toFixed(2)} (Fortune ${totalFortune})`} />
-        </div>
-      </div>
-
-      {/* Defense block */}
-      <div style={{ padding: '0.7rem 0.85rem', background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.22)', borderRadius: 10, marginBottom: '0.85rem' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-          <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: '#60a5fa' }}>Defense</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8' }}>{rating.defense}</p>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <BreakdownRow label="Effective HP" value={`${totalHp}`} />
-          <BreakdownRow label="Dodge boost" value={`×${(1 + dodgeBoost).toFixed(2)} (Nav ${totalDodge})`} />
-        </div>
+        <p className="font-karla" style={{ fontSize: '0.84rem', color: '#aebfd4', lineHeight: 1.5 }}>
+          How much of a beating you can take. Grows with your ship&apos;s{' '}
+          <span style={{ color: '#f0ede8', fontWeight: 600 }}>HP</span>, plus{' '}
+          <span style={{ color: '#f0ede8', fontWeight: 600 }}>Nav</span> to dodge incoming hits.
+        </p>
       </div>
 
       {/* Total */}
-      <div style={{ padding: '0.7rem 0.85rem', background: 'rgba(200,112,74,0.08)', border: '1px solid rgba(200,112,74,0.30)', borderRadius: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#d4906a' }}>
-            Offense + Defense × 0.5
-          </p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>{rating.total}</p>
+      <div style={{ padding: '0.9rem 0.95rem', background: 'rgba(200,112,74,0.11)', border: '1px solid rgba(200,112,74,0.36)', borderRadius: 12, marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.8rem', color: '#e8a37a' }}>Raid Score</p>
+            <p className="font-karla" style={{ fontSize: '0.76rem', color: '#b88a6e', marginTop: 3 }}>Offense + half your Defense</p>
+          </div>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.75rem', color: '#f0ede8' }}>{rating.total}</p>
         </div>
       </div>
-    </>
-  )
-}
 
-function ContributionRow({ label, total, parts, color }: {
-  label: string
-  total: number
-  parts: { v: number; src: string }[]
-  color: string
-}) {
-  // Filter out zero contributions but keep the order so the breakdown stays readable
-  const nonZero = parts.filter(p => p.v > 0)
-  return (
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', minHeight: 14 }}>
-      <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color, width: 52, flexShrink: 0 }}>{label}</p>
-      <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#9a9488', flex: 1, lineHeight: 1.3 }}>
-        {nonZero.length > 0 ? nonZero.map((p, i) => (
-          <span key={p.src}>
-            {i > 0 && <span style={{ color: '#5a5856' }}> + </span>}
-            <span style={{ color: '#d8d4cf', fontFeatureSettings: '"tnum"' }}>{p.v}</span>
-            <span style={{ color: '#6a6764' }}> ({p.src})</span>
-          </span>
-        )) : <span style={{ color: '#5a5856' }}>—</span>}
+      {/* How to raise it */}
+      <div style={{ padding: '0.85rem 0.95rem', background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, marginBottom: '1rem' }}>
+        <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.74rem', color: '#c8704a', marginBottom: '0.6rem' }}>Raise it by</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+          {[
+            'Recruiting stronger crewmates — more Power, Fortune & Nav',
+            'Leveling up your Nav rank — it boosts every stat',
+            'Upgrading your ship — more HP to survive longer',
+          ].map(t => (
+            <div key={t} style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start' }}>
+              <span style={{ color: '#c8704a', fontSize: '0.84rem', lineHeight: 1.45, flexShrink: 0 }}>→</span>
+              <p className="font-karla" style={{ fontSize: '0.84rem', color: '#c4bfb6', lineHeight: 1.45 }}>{t}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Your current stats */}
+      <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.74rem', color: '#8a8784', marginBottom: '0.5rem' }}>Your stats right now</p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+        {stats.map(s => (
+          <div key={s.label} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '0.6rem 0.8rem',
+            background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10,
+          }}>
+            <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.74rem', color: s.color }}>{s.label}</span>
+            <span className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', fontFeatureSettings: '"tnum"' }}>{s.value}</span>
+          </div>
+        ))}
+      </div>
+
+      <p className="font-karla" style={{ fontSize: '0.74rem', color: '#6a6764', lineHeight: 1.45, marginTop: '0.7rem' }}>
+        Each stat already includes the bonus from your Nav rank.
       </p>
-      <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#e0ddd8', minWidth: 28, textAlign: 'right', fontFeatureSettings: '"tnum"' }}>{total}</p>
-    </div>
-  )
-}
-
-function BreakdownRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.5rem' }}>
-      <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8a8784' }}>{label}</p>
-      <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#d8d4cf', fontFeatureSettings: '"tnum"' }}>{value}</p>
-    </div>
+    </>
   )
 }
