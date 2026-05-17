@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import AnnouncementBanner from './AnnouncementBanner'
 import CharacterAvatar from './CharacterAvatar'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { motion } from 'framer-motion'
 
@@ -559,22 +559,45 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
             </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', marginTop: '1rem' }}>
-            {(isChromeIOS ? [
-              ['Share', 'Tap the Share icon — top right'],
-              ['View More', 'Tap View More'],
-              ['Add to Home Screen', 'Tap Add to Home Screen'],
+            {((isChromeIOS ? [
+              {
+                label: 'Share', desc: 'Tap the Share icon — top right',
+                icon: (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 15V3" /><path d="M8 7l4-4 4 4" />
+                    <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+                  </svg>
+                ),
+              },
+              {
+                label: 'View More', desc: 'Tap View More',
+                icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                ),
+              },
+              {
+                label: 'Add to Home Screen', desc: 'Tap Add to Home Screen',
+                icon: (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="4" /><path d="M12 8.5v7M8.5 12h7" />
+                  </svg>
+                ),
+              },
             ] : [
-              ['···', 'Tap the three dots — bottom right corner'],
-              ['Share', 'Tap Share'],
-              ['View More', 'Tap View More'],
-              ['Add to Home Screen', 'Tap Add to Home Screen'],
-            ] as [string, string][]).map(([label, desc], i) => (
+              { label: '···', desc: 'Tap the three dots — bottom right corner' },
+              { label: 'Share', desc: 'Tap Share' },
+              { label: 'View More', desc: 'Tap View More' },
+              { label: 'Add to Home Screen', desc: 'Tap Add to Home Screen' },
+            ]) as { label: string; desc: string; icon?: ReactNode }[]).map(({ label, desc, icon }, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <span className="font-karla font-700" style={{
                   fontSize: '0.82rem', color: '#04161a',
                   background: '#6bc2d4', borderRadius: 8,
-                  padding: '0.22rem 0', flexShrink: 0, width: 28, textAlign: 'center',
-                }}>{i + 1}</span>
+                  flexShrink: 0, width: 28, height: 26,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>{icon ?? i + 1}</span>
                 <p className="font-karla" style={{ fontSize: '0.84rem', lineHeight: 1.35 }}>
                   <span className="font-700" style={{ color: '#f0ede8' }}>{label}</span>
                   <span style={{ color: '#8fb4be' }}> — {desc}</span>
