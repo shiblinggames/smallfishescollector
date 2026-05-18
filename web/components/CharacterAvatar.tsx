@@ -83,7 +83,10 @@ export default function CharacterAvatar({
   if (isAurora) {
     // The rotating conic ring is its own layer behind a non-rotating inner
     // circle (inset by the ring thickness) so the sprite never spins.
-    const RING = 2
+    // Thickness scales with size so it's proportional everywhere — ~2px in
+    // the small nav, but a substantial ring on the large 132px profile
+    // avatar (a flat 2px read as a hairline there).
+    const RING = Math.max(2, Math.round(size * 0.06))
     return (
       <div style={{ width: size, height: size, position: 'relative', flexShrink: 0 }}>
         <div className="avatar-aurora" aria-hidden style={{ position: 'absolute', inset: 0 }} />
