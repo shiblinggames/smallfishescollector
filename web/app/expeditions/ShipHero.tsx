@@ -418,7 +418,7 @@ export default function ShipHero({
                   }}
                 />
                 {editingName ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                     <input
                       autoFocus
                       value={nameInput}
@@ -426,18 +426,42 @@ export default function ShipHero({
                       onKeyDown={e => { if (e.key === 'Enter') submitRename(); if (e.key === 'Escape') setEditingName(false) }}
                       maxLength={32}
                       placeholder={shipStats.name}
-                      style={{ background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.24)', borderRadius: 8, padding: '0.35rem 0.7rem', color: '#f0ede8', fontSize: '1rem', fontFamily: 'inherit', outline: 'none', textAlign: 'center', width: 200 }}
+                      style={{ background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(240,192,64,0.45)', borderRadius: 8, padding: '0.4rem 0.7rem', color: '#f0ede8', fontSize: '1rem', fontFamily: 'inherit', outline: 'none', textAlign: 'center', width: 190 }}
                     />
-                    <button onClick={submitRename} style={{ background: 'rgba(240,192,64,0.18)', border: '1px solid rgba(240,192,64,0.4)', borderRadius: 6, padding: '0.3rem 0.65rem', color: '#f0c040', cursor: 'pointer', fontSize: '0.74rem' }} className="font-karla font-700">Save</button>
-                    <button onClick={() => setEditingName(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8a7a6c', fontSize: '0.78rem' }}>✕</button>
+                    <button onClick={submitRename} style={{ background: 'rgba(240,192,64,0.2)', border: '1px solid rgba(240,192,64,0.5)', borderRadius: 8, padding: '0.45rem 0.85rem', color: '#f0c040', cursor: 'pointer', fontSize: '0.78rem' }} className="font-karla font-700">Save</button>
+                    <button
+                      onClick={() => setEditingName(false)}
+                      aria-label="Cancel"
+                      style={{
+                        flexShrink: 0, width: 30, height: 30, borderRadius: '50%', padding: 0,
+                        background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)',
+                        color: '#cfcabf', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
                   </div>
                 ) : (
                   <button
                     onClick={() => { setNameInput(shipName ?? ''); setEditingName(true) }}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                   >
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f0ede8' }}>{shipName ?? shipStats.name}</p>
-                    <span style={{ fontSize: '0.85rem', color: '#9a8050' }}>✎</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.55rem' }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f0ede8' }}>{shipName ?? shipStats.name}</p>
+                      <span style={{
+                        width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                        background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 113 3L7 19l-4 1 1-4z" />
+                        </svg>
+                      </span>
+                    </span>
+                    <span className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.12em', color: 'rgba(240,192,64,0.72)' }}>
+                      Tap to rename your ship
+                    </span>
                   </button>
                 )}
               </div>
