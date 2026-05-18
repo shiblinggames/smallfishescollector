@@ -114,19 +114,19 @@ export const RAID_MAP: RaidNode[] = [
     id: 'intro',
     type: 'story',
     label: 'A Loose Thread',
-    flavor: "The sea has gone quiet. Not calm. Quiet the way a tavern goes quiet when the wrong man walks in.",
+    flavor: "Barnacle Pete robs everyone blind and somehow stays dead broke. Funny, that.",
     detail: {
       description:
-        "Every dock from the warm shallows to the cold deep tells the same story. Barnacle Pete, scourge of the reef, terror of honest crews. They tell it well. They never tell the rest of it. Pete has burned and bled these waters for thirty years, and for thirty years he has died poor. The gold he takes does not stay taken. The prisoners do not come home, or they come home breathing and warm and entirely hollow, and not one of them will say whose orders they followed into the dark.\n\nThe harbor masters call it foul luck and pour another cup. You have watched too long to believe in luck so patient. Luck does not gather what it wins. Something does. So you will do the reckless thing wiser captains have always refused to do. You will find the loudest fool with a cannon, and you will pull on him until the whole drowned net comes up, and you will keep pulling no matter what it drags into the light.",
+        "Pete has been raiding these reefs for thirty years and he's still flat broke. For a man who steals everything that isn't nailed down, that's a neat trick. The loot goes somewhere. It just never seems to end up in Pete's pockets.\n\nNobody can be bothered to ask why. You, clearly, have nothing better to do. Go give the loudest pirate on the water a good shake and see what rattles loose.",
       drops: [
         {
           emoji: '📜',
           label: "Captain's Logbook, Fragment I",
-          sublabel: '"They never keep what they take." The same words, from sailors who never met.',
+          sublabel: '"He never keeps what he nicks." Three sailors said it. None of them had met.',
           rarity: 'common',
         },
       ],
-      dropsNote: 'Pull enough threads and these pages start to spell a name. You will not enjoy reading it.',
+      dropsNote: 'Pages pile up here as you go poking. Sooner or later they spell a name.',
       ctaLabel: 'Pull the Thread →',
     },
   },
