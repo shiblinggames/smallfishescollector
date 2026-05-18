@@ -323,6 +323,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
   const [committing, setCommitting] = useState(false)
   const [commitReward, setCommitReward] = useState<{ doubloons: number } | null>(null)
   const [commitError, setCommitError] = useState<string | null>(null)
+  const [confirmingCommit, setConfirmingCommit] = useState(false)
   const [showTour, setShowTour] = useState(false)
 
   // First-time tour: show modal on mount if the player hasn't seen it.
@@ -342,6 +343,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     if (uiState === 'playing') {
       setCommitReward(null)
       setCommitError(null)
+      setConfirmingCommit(false)
     }
   }, [uiState])
 
@@ -1541,36 +1543,80 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
                   </p>
                 </div>
               ) : score >= 1 ? (
-                <button
-                  onPointerDown={(e) => { e.stopPropagation() }}
-                  onClick={(e) => { e.stopPropagation(); handleCommit() }}
-                  disabled={committing}
-                  style={{
+                confirmingCommit ? (
+                  <div style={{
                     pointerEvents: 'auto',
                     marginTop: 14,
-                    padding: '11px 22px 12px',
+                    padding: '12px 14px 13px',
                     borderRadius: 12,
-                    background: 'linear-gradient(180deg, rgba(189,160,90,0.95), rgba(150,120,55,0.95))',
-                    border: '1px solid rgba(220,190,120,0.85)',
-                    color: '#1a0f02',
-                    boxShadow: '0 4px 12px rgba(189,160,90,0.4)',
-                    cursor: committing ? 'wait' : 'pointer',
-                    opacity: committing ? 0.7 : 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 2,
-                  }}
-                >
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', letterSpacing: '0.06em' }}>
-                    {committing ? 'Saving…' : 'Save Run'}
-                  </span>
-                  {!committing && (
+                    background: 'rgba(189,160,90,0.12)',
+                    border: '1px solid rgba(189,160,90,0.5)',
+                  }}>
+                    <p className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#f0ede8', lineHeight: 1.45, marginBottom: 10 }}>
+                      Commit this run for <span style={{ color: '#ffd56b' }}>{score} ⟡</span>?
+                      <br />
+                      <span className="font-300" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.65)' }}>
+                        You only get one commit per day.
+                      </span>
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                      <button
+                        onPointerDown={(e) => { e.stopPropagation() }}
+                        onClick={(e) => { e.stopPropagation(); setConfirmingCommit(false) }}
+                        className="font-karla font-700"
+                        style={{
+                          pointerEvents: 'auto', flex: 1, padding: '9px 0', borderRadius: 10,
+                          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)',
+                          color: 'rgba(255,255,255,0.7)', fontSize: '0.74rem', cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onPointerDown={(e) => { e.stopPropagation() }}
+                        onClick={(e) => { e.stopPropagation(); handleCommit() }}
+                        disabled={committing}
+                        className="font-cinzel font-700"
+                        style={{
+                          pointerEvents: 'auto', flex: 1, padding: '9px 0', borderRadius: 10,
+                          background: 'linear-gradient(180deg, rgba(189,160,90,0.95), rgba(150,120,55,0.95))',
+                          border: '1px solid rgba(220,190,120,0.85)', color: '#1a0f02',
+                          fontSize: '0.78rem', letterSpacing: '0.04em',
+                          cursor: committing ? 'wait' : 'pointer', opacity: committing ? 0.7 : 1,
+                        }}
+                      >
+                        {committing ? 'Saving…' : 'Commit'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onPointerDown={(e) => { e.stopPropagation() }}
+                    onClick={(e) => { e.stopPropagation(); setConfirmingCommit(true) }}
+                    style={{
+                      pointerEvents: 'auto',
+                      marginTop: 14,
+                      padding: '11px 22px 12px',
+                      borderRadius: 12,
+                      background: 'linear-gradient(180deg, rgba(189,160,90,0.95), rgba(150,120,55,0.95))',
+                      border: '1px solid rgba(220,190,120,0.85)',
+                      color: '#1a0f02',
+                      boxShadow: '0 4px 12px rgba(189,160,90,0.4)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 2,
+                    }}
+                  >
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', letterSpacing: '0.06em' }}>
+                      Save Run
+                    </span>
                     <span className="font-karla font-700" style={{ fontSize: '0.7rem', opacity: 0.82 }}>
                       {score} ⟡
                     </span>
-                  )}
-                </button>
+                  </button>
+                )
               ) : null}
 
               {commitError && !commitReward && (
