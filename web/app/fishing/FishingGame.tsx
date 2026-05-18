@@ -17,7 +17,7 @@ import {
   type FinnChallengeType,
 } from '@/lib/finn'
 import { liquidateAllFish } from '@/app/tavern/market/actions'
-import { BOATS, getBoat } from '@/lib/boats'
+import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
@@ -3197,7 +3197,7 @@ export default function FishingGame({
                       <img
                         src={src}
                         alt=""
-                        className={boatDef.glow ? 'boat-glow' : undefined}
+                        className={boatGlowClass(boatDef)}
                         style={{ width: '100%', display: 'block' }}
                       />
                     </div>

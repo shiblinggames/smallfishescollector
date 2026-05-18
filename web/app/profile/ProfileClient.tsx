@@ -11,7 +11,7 @@ import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_
 import { equipBadge, unequipBadge } from '@/app/achievements/badgeActions'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import CharacterAvatar from '@/components/CharacterAvatar'
-import { getBoat } from '@/lib/boats'
+import { getBoat, boatGlowClass } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import { getRod, rodGlowClass } from '@/lib/rods'
@@ -639,7 +639,7 @@ export default function ProfileClient({
                       transformOrigin: 'center center',
                       pointerEvents: 'none',
                     }}>
-                      <img src={bd.restImageUrl} alt="" className={bd.glow ? 'boat-glow' : undefined} style={{ width: '100%', display: 'block' }} />
+                      <img src={bd.restImageUrl} alt="" className={boatGlowClass(bd)} style={{ width: '100%', display: 'block' }} />
                     </div>
                   )
                 })()}

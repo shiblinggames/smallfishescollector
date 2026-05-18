@@ -678,7 +678,8 @@ html, body {
 .pause-glows .hook-glow-gilded,
 .pause-glows .hook-glow-arcane,
 .pause-glows .hook-glow-cursed,
-.pause-glows .hook-glow-mythic {
+.pause-glows .hook-glow-mythic,
+.pause-glows .boat-glow-ash {
   animation-play-state: paused;
 }
 
@@ -750,6 +751,26 @@ html, body {
   filter: blur(3px);
   pointer-events: none;
   animation: boat-glow-halo 3.2s ease-in-out infinite;
+}
+
+/* Charcoal boat — a dark, ashy smoulder. Deliberately MUCH subtler than
+   .boat-glow (Ethereal): no bob, no brightness/saturate pump, no bright
+   shadows — just a slow, low-opacity dark smoke aura that breathes. */
+@keyframes boat-glow-ash {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 3px  rgba(26,26,30,0.55))
+      drop-shadow(0 0 7px  rgba(58,56,64,0.24));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 5px  rgba(32,32,38,0.66))
+      drop-shadow(0 0 12px rgba(74,70,82,0.32));
+  }
+}
+.boat-glow-ash {
+  animation: boat-glow-ash 5s ease-in-out infinite;
+  will-change: filter;
 }
 
 /* ── Shop affordance pulse (gear button + slot tiles when an upgrade is in budget) ── */

@@ -21,8 +21,12 @@ export interface BoatDef {
   positions: Record<BoatFrame, BoatPos>
   /** Only obtainable from crates — hidden from the shop picker unless owned. */
   crateOnly?: boolean
-  /** Applies the `.boat-glow` CSS animation to the overlay image. */
+  /** Applies the `.boat-glow` CSS animation to the overlay image (Ethereal:
+   *  the bright divine shimmer). */
   glow?: boolean
+  /** A distinct, subtler glow variant. 'ash' = the Charcoal boat's dark
+   *  smouldering aura — much more restrained than `glow`. */
+  glowType?: 'ash'
 }
 
 /** Default "Driftwood" — no overlay; uses the base sprite's boat. */
@@ -101,6 +105,7 @@ export const BOATS: BoatDef[] = [
     castImageUrl: '/boat_charcoal_cast.png',
     positions: SHARED_POSITIONS,
     crateOnly: true,
+    glowType: 'ash',
   },
   {
     id: 'golden',
@@ -147,4 +152,14 @@ export const BOAT_MAP: Record<string, BoatDef> = Object.fromEntries(BOATS.map(b 
 export function getBoat(id: string | null | undefined): BoatDef | null {
   if (!id) return null
   return BOAT_MAP[id] ?? null
+}
+
+/** Single source of truth for which glow CSS class a boat's overlay image
+ *  gets. `glow` → Ethereal's bright shimmer; `glowType: 'ash'` → Charcoal's
+ *  subtle dark smoulder. Use this everywhere the boat is rendered. */
+export function boatGlowClass(boat: BoatDef | null | undefined): string | undefined {
+  if (!boat) return undefined
+  if (boat.glow) return 'boat-glow'
+  if (boat.glowType === 'ash') return 'boat-glow-ash'
+  return undefined
 }

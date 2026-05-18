@@ -13,7 +13,7 @@ import { getShip } from '@/lib/ships'
 import { getShipSkin } from '@/lib/shipSkins'
 import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
 import { getCharacterSprites } from '@/lib/characters'
-import { getBoat } from '@/lib/boats'
+import { getBoat, boatGlowClass } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 import { BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
@@ -324,7 +324,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                       transformOrigin: 'center center',
                       pointerEvents: 'none',
                     }}>
-                      <img src={bd.restImageUrl} alt="" className={bd.glow ? 'boat-glow' : undefined} style={{ width: '100%', display: 'block' }} />
+                      <img src={bd.restImageUrl} alt="" className={boatGlowClass(bd)} style={{ width: '100%', display: 'block' }} />
                     </div>
                   )
                 })()}
