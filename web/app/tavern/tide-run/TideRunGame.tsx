@@ -131,6 +131,7 @@ interface Hazard {
   x: number          // world x (left edge of hazard)
   width: number
   height: number     // sticks up above the surface by this many px
+  nm?: boolean       // near-miss FX already fired for this rock (one-shot)
 }
 
 interface Current {
@@ -304,10 +305,14 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     hitstopUntil: 0,          // performance.now() ts; sim frozen while > now (smash hitstop)
     shakeUntil: 0,            // performance.now() ts; canvas shakes while > now
     shakeMag: 0,              // px shake amplitude at the start of the window
+    shakeDur: 0,              // ms duration of the current shake (decay basis)
+    squash: 0,                // ship squash/stretch: >0 land-compress, <0 launch-stretch; eases to 0
+    nearMissUntil: 0,         // performance.now() ts; brief near-miss flash while > now
     sparkles: [] as SparkleParticle[],
     sparkleNextEmit: 0,       // performance.now() of next sparkle emit
     nextSpawnAt: 0,
     distance: 0,
+    pbMeters: initialBestDistance,   // PB to chase this run (drives the in-water marker)
     deathFlashUntil: 0,
     lastScoreUpdate: 0,
     holding: false,         // is the player currently holding to extend a jump?
@@ -319,6 +324,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
   const [uiState, setUiState] = useState<GameState>('ready')
   const [score, setScore] = useState(0)
   const [highScore, setHighScore] = useState(initialBestDistance)
+  const [deadCount, setDeadCount] = useState(0)   // wreck-screen count-up
   const [committedToday, setCommittedToday] = useState(initialCommittedToday)
   const [committing, setCommitting] = useState(false)
   const [commitReward, setCommitReward] = useState<{ doubloons: number } | null>(null)
@@ -337,6 +343,26 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     setShowTour(false)
     startTransition(() => { void markTideRunTourSeen() })
   }
+
+  // Keep the in-water PB marker driven off a ref (render() is []-memoized,
+  // so reading highScore state directly would go stale across retries).
+  useEffect(() => { gRef.current.pbMeters = highScore }, [highScore])
+
+  // Wreck-screen distance count-up (0 → score, ~620ms ease-out).
+  useEffect(() => {
+    if (uiState !== 'dead' || score <= 0) { setDeadCount(0); return }
+    let raf = 0
+    const start = performance.now()
+    const DUR = 620
+    const tick = (t: number) => {
+      const f = Math.min(1, (t - start) / DUR)
+      const eased = 1 - Math.pow(1 - f, 3)
+      setDeadCount(Math.round(score * eased))
+      if (f < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [uiState, score])
 
   // Reset commit reward feedback when a new run starts
   useEffect(() => {
@@ -447,6 +473,9 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     g.hitstopUntil = 0
     g.shakeUntil = 0
     g.shakeMag = 0
+    g.shakeDur = 0
+    g.squash = 0
+    g.nearMissUntil = 0
     g.sparkles = []
     g.sparkleNextEmit = 0
     g.nextSpawnAt = HAZARD_WARMUP
@@ -489,6 +518,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       g.airborne = true
       g.holding = true
       g.jumpHoldStart = performance.now()
+      g.squash = -0.10   // brief launch stretch (taller/narrower) — sells the spring
     }
   }, [reset])
 
@@ -753,6 +783,15 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
         if (hitboxBottom >= surfaceY) {
           // Landing splash — burst of droplets from the landing point
           const landingVy = g.shipVy
+          // Weighty landing: compress the hull + a short shake scaled to how
+          // hard you came down (tiny hops barely register either).
+          g.squash = Math.min(0.30, landingVy / 1500)
+          if (landingVy > 320) {
+            const lnow = performance.now()
+            g.shakeUntil = lnow + 150
+            g.shakeMag = Math.min(4, landingVy / 260)
+            g.shakeDur = 150
+          }
           const splashCount = Math.max(4, Math.min(10, Math.round(landingVy / 110)))
           for (let i = 0; i < splashCount; i++) {
             const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.6
@@ -940,6 +979,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
           g.smashRings.push({ worldX: cx, y: beaconSurface - cr.height * 0.5, age: 0 })
           g.shakeUntil = nowMs + SMASH_SHAKE_MS
           g.shakeMag = 7
+          g.shakeDur = SMASH_SHAKE_MS
           // Micro-freeze: the world stops dead for a beat, then the debris
           // erupts as motion resumes — that snap is what sells the hit.
           g.hitstopUntil = nowMs + HITSTOP_MS
@@ -967,6 +1007,46 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
         setScore(Math.floor(g.distance))
       }
     }
+
+    // ── Near-miss: airborne and *just* skimmed over a rock. One-shot per
+    //    rock (obs.nm). A small sensory payoff — sparkles + a faint flash
+    //    + a feather shake + soft haptic. No slow-mo (twitch game).
+    if (!dead && g.airborne) {
+      const hitL = shipScreenX + g.shipW * HITBOX_INSET.left + g.scrollX
+      const hitR = shipScreenX + g.shipW * (1 - HITBOX_INSET.right) + g.scrollX
+      const hitboxBottom = g.shipY + g.shipH * (1 - HITBOX_INSET.bottom)
+      for (const obs of g.hazards) {
+        if (obs.nm) continue
+        if (obs.x + obs.width < hitL || obs.x > hitR) continue
+        const rockTop = seaSurfaceY(obs.x + obs.width / 2, g.ch, g.scrollX) - obs.height
+        const clearance = rockTop - hitboxBottom
+        if (clearance > 0 && clearance < 16) {
+          obs.nm = true
+          const nmNow = performance.now()
+          const boatCx = shipScreenX + g.shipW / 2 + g.scrollX
+          for (let i = 0; i < 6; i++) {
+            g.sparkles.push({
+              worldX: boatCx + (Math.random() - 0.5) * g.shipW * 0.8,
+              y: hitboxBottom - 6 - Math.random() * 14,
+              age: 0,
+              life: 0.40 + Math.random() * 0.25,
+            })
+          }
+          g.nearMissUntil = nmNow + 170
+          if (nmNow >= g.shakeUntil) {       // don't stomp a bigger active shake
+            g.shakeUntil = nmNow + 110
+            g.shakeMag = 2.4
+            g.shakeDur = 110
+          }
+          if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+            navigator.vibrate(12)
+          }
+        }
+      }
+    }
+
+    // Ease the ship squash/stretch back to neutral (snappy spring).
+    g.squash += (0 - g.squash) * (1 - Math.exp(-14 * dt))
 
     // Smooth the ship pitch toward its instantaneous target so jumps don't
     // snap-tilt — gives the boat a sense of mass.
@@ -999,7 +1079,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     //    clipped wrapper so the chrome stays put. Decays over the window. ──
     const shakeNow = performance.now()
     if (shakeNow < g.shakeUntil) {
-      const remain = (g.shakeUntil - shakeNow) / SMASH_SHAKE_MS
+      const remain = (g.shakeUntil - shakeNow) / (g.shakeDur || SMASH_SHAKE_MS)
       const amp = g.shakeMag * remain * remain
       const sx = (Math.random() - 0.5) * 2 * amp
       const sy = (Math.random() - 0.5) * 2 * amp
@@ -1226,6 +1306,35 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       drawBeacon(ctx, ox, surfaceAtCr, cr.width, cr.height, cr.shatteredAt, g.scrollX)
     }
 
+    // ── Personal-best marker — a faint pennant in the water at your best
+    //    distance. You sail toward it; passing it = a new record. ──
+    if (g.pbMeters > 0) {
+      const pbScreenX = g.pbMeters / METERS_PER_PIXEL - g.scrollX
+      if (pbScreenX > -24 && pbScreenX < cw + 24) {
+        const surfY = seaSurfaceY(pbScreenX + g.scrollX, ch, g.scrollX)
+        const topY = Math.max(8, surfY - 78)
+        ctx.save()
+        ctx.strokeStyle = 'rgba(189,160,90,0.45)'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(pbScreenX, surfY + 2)
+        ctx.lineTo(pbScreenX, topY)
+        ctx.stroke()
+        ctx.fillStyle = 'rgba(189,160,90,0.55)'
+        ctx.beginPath()
+        ctx.moveTo(pbScreenX, topY)
+        ctx.lineTo(pbScreenX + 22, topY + 7)
+        ctx.lineTo(pbScreenX, topY + 14)
+        ctx.closePath()
+        ctx.fill()
+        ctx.fillStyle = 'rgba(240,225,190,0.7)'
+        ctx.font = '700 9px sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText('BEST', pbScreenX, topY - 5)
+        ctx.restore()
+      }
+    }
+
     // ── Detection beam (active while beacon detection flash plays) ──
     if (g.detectingUntil > 0) {
       const remaining = g.detectingUntil - performance.now()
@@ -1269,6 +1378,8 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       ctx.save()
       ctx.translate(shipX + g.shipW / 2, g.shipY + g.shipH / 2)
       ctx.rotate(g.pitch)
+      // Squash/stretch: compresses on landing, stretches on launch.
+      if (g.squash !== 0) ctx.scale(1 + g.squash * 0.32, 1 - g.squash * 0.55)
       ctx.drawImage(img, -g.shipW / 2, -g.shipH / 2, g.shipW, g.shipH)
       ctx.restore()
     }
@@ -1324,6 +1435,43 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       ctx.restore()
     }
     ctx.globalAlpha = 1
+
+    // ── Speed escalation cues — felt, not seen. Ramp in over the first
+    //    ~70s of climbing speed, then saturate. Pure canvas fills (cheap). ──
+    const speedFrac = Math.max(0, Math.min(1, (g.speed - BASE_SPEED) / 500))
+    if (speedFrac > 0.02) {
+      const tnow = performance.now()
+      // Fast horizontal streak lines sweeping right→left
+      ctx.save()
+      ctx.strokeStyle = `rgba(255,255,255,${(0.10 * speedFrac).toFixed(3)})`
+      ctx.lineWidth = 1
+      for (let i = 0; i < 7; i++) {
+        const yFrac = 0.30 + ((i * 0.107) % 0.62)
+        const sy = ch * yFrac
+        const period = cw + 160
+        const sx = period - ((tnow * (0.55 + speedFrac) * (0.9 + i * 0.13)) % period)
+        const len = 26 + i * 6 + speedFrac * 40
+        ctx.beginPath()
+        ctx.moveTo(sx, sy)
+        ctx.lineTo(sx - len, sy)
+        ctx.stroke()
+      }
+      ctx.restore()
+      // Tunnel-ish edge vignette that tightens with speed
+      const vig = ctx.createRadialGradient(cw / 2, ch / 2, ch * 0.32, cw / 2, ch / 2, ch * 0.78)
+      vig.addColorStop(0, 'rgba(0,0,0,0)')
+      vig.addColorStop(1, `rgba(4,10,18,${(0.20 * speedFrac).toFixed(3)})`)
+      ctx.fillStyle = vig
+      ctx.fillRect(0, 0, cw, ch)
+    }
+
+    // ── Near-miss flash — a quick faint white wash (sparkles handle the
+    //    rest). Subtle: peaks low and fades fast. ──
+    if (performance.now() < g.nearMissUntil) {
+      const f = (g.nearMissUntil - performance.now()) / 170
+      ctx.fillStyle = `rgba(255,255,255,${(f * 0.16).toFixed(3)})`
+      ctx.fillRect(0, 0, cw, ch)
+    }
 
     // ── Collision flash ──
     if (g.state === 'dead' && performance.now() < g.deathFlashUntil) {
@@ -1504,15 +1652,36 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
               backdropFilter: 'blur(6px)',
               maxWidth: 320,
             }}>
-              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.65rem', color: '#bda05a', marginBottom: 6 }}>
-                Wrecked
-              </p>
-              <p className="font-cinzel font-700" style={{ fontSize: '2.4rem', color: '#ffffff', lineHeight: 1 }}>
-                {score}<span style={{ fontSize: '1rem', marginLeft: 4, opacity: 0.75 }}>m</span>
-              </p>
-              <p className="font-karla font-300 mt-2" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)' }}>
-                {score === highScore && score > 0 ? 'New best!' : `Best ${highScore}m`}
-              </p>
+              {(() => {
+                const isNewBest = score > 0 && score === highScore
+                const shortBy = highScore - score
+                return (
+                  <>
+                    <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.65rem', color: '#bda05a', marginBottom: 6 }}>
+                      Wrecked
+                    </p>
+                    <p className="font-cinzel font-700" style={{
+                      fontSize: '2.4rem', lineHeight: 1,
+                      color: isNewBest ? '#ffd56b' : '#ffffff',
+                      textShadow: isNewBest ? '0 0 18px rgba(255,213,107,0.55)' : 'none',
+                    }}>
+                      {deadCount}<span style={{ fontSize: '1rem', marginLeft: 4, opacity: 0.75 }}>m</span>
+                    </p>
+                    {isNewBest ? (
+                      <p className="tr-newbest font-cinzel font-700 mt-2" style={{
+                        fontSize: '0.95rem', color: '#ffd56b', letterSpacing: '0.12em',
+                        textShadow: '0 0 14px rgba(255,213,107,0.6)',
+                      }}>
+                        ★ NEW BEST ★
+                      </p>
+                    ) : (
+                      <p className="font-karla font-300 mt-2" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)' }}>
+                        Best {highScore}m{shortBy > 0 ? ` · ${shortBy}m short` : ''}
+                      </p>
+                    )}
+                  </>
+                )
+              })()}
 
               {/* ── Commit run for daily reward ── */}
               {commitReward ? (
