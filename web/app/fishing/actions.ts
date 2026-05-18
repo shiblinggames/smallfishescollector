@@ -210,8 +210,10 @@ export async function castLine(baitType: string, habitat: string): Promise<
     if (pool.length === 0) return { error: 'You have caught all Ancient Deep trophies!' }
   }
 
-  // Crate encounter: 2% chance in all zones except ancient_deep
-  if (habitat !== 'ancient_deep' && Math.random() < 0.02) {
+  const rod = getRod(profile.rod_tier ?? 0)
+
+  // Crate encounter: 2% chance (× rod.crateChanceMult — Treasure Rod = 2×)
+  if (habitat !== 'ancient_deep' && Math.random() < 0.02 * (rod.crateChanceMult ?? 1)) {
     if (!noBait && baitRow) {
       await admin.from('bait_inventory').update({ quantity: baitRow.quantity - 1 }).eq('user_id', user.id).eq('bait_type', baitType)
     }
@@ -228,7 +230,6 @@ export async function castLine(baitType: string, habitat: string): Promise<
       .eq('bait_type', baitType)
   }
 
-  const rod = getRod(profile.rod_tier ?? 0)
   const fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus)
   const waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel)
 
@@ -281,7 +282,7 @@ export async function reelIn(
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, fish_hold_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches, unlocked_character_colors').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, fish_hold_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches, unlocked_character_colors').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -377,7 +378,10 @@ export async function reelIn(
   const prestigeLevels = (profile.prestige_levels as Record<string, number> | null) ?? {}
   const zonePrestige = prestigeLevels[fish.habitat] ?? 0
   const prestigeXPMult = 1 + zonePrestige * 0.10
-  const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + (result === 'perfect' ? streakBonus : 0)) * prestigeXPMult)
+  // Perfect Rod doubles XP on perfect catches (incl. the streak bonus, so
+  // it scales with streaks). Non-perfect catches are unaffected.
+  const perfectXpMult = result === 'perfect' ? (getRod(profile.rod_tier ?? 0).perfectXpMult ?? 1) : 1
+  const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + (result === 'perfect' ? streakBonus : 0)) * prestigeXPMult * perfectXpMult)
   const newXP = (profile.fishing_xp ?? 0) + xpGained
 
   // Fishing-level skin unlocks: Forest @ 50, Ice @ 75

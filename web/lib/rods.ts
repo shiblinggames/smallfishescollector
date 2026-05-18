@@ -14,6 +14,9 @@ export interface RodDef {
   perfectZoneBonus: number   // degrees added to the perfect zone (base is 5°)
   jackpotChance?: number     // chance to catch jackpotMultiplier fish at once (0–1)
   jackpotMultiplier?: number // how many fish on a jackpot hit
+  crateChanceMult?: number   // multiplies the per-cast crate spawn chance (default 1)
+  perfectXpMult?: number     // multiplies XP on a *perfect* catch — incl. the
+                             // streak bonus, so it scales with streaks (default 1)
   // 3-pose sprite slug. Loads /{slug}_rest.png / _wait.png / _cast.png.
   // Every rod's source sheet is sliced into raw quadrants by web/slice-rod.mjs
   // so a single CHAR_ROD_OVERLAY position applies to all of them.
@@ -146,6 +149,22 @@ export const RODS: RodDef[] = [
     description: 'Forged from the soul of every species in the sea. Every advantage, no compromises.',
     color: '#e8c84a', rarityBonus: 0.50, biteIntervalMs: 1000, catchZoneBonus: 16,
     doubleCatchChance: 1.0, retryOnMissChance: 0.50, snagImmune: true, perfectZoneBonus: 5,
+  },
+  {
+    tier: 16, name: 'Treasure Rod', cost: 200000,
+    description: 'Lures the deep’s lost hoards — doubles your chance of hooking a crate.',
+    color: '#e8b54a', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
+    doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    crateChanceMult: 2,
+    slug: 'rod_treasure', glow: true, glowType: 'sparkle',
+  },
+  {
+    tier: 17, name: 'Perfect Rod', cost: 200000,
+    description: 'Rewards flawless form — perfect catches grant double XP, and it scales with your streak.',
+    color: '#bfe3ff', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
+    doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    perfectXpMult: 2,
+    slug: 'rod_perfect', glow: true, glowType: 'moon',
   },
 ]
 
