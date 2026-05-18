@@ -17,6 +17,9 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'mint',    name: 'Mint',   free: false, unlockHint: 'Rare drop from fishing crates' },
   { id: 'autumn',  name: 'Autumn', free: false, unlockHint: 'Premium skin' },
   { id: 'ruby',    name: 'Ruby',   free: false, unlockHint: 'Premium skin' },
+  { id: 'ice',      name: 'Ice',      free: false, unlockHint: 'Reach Fishing Level 75' },
+  { id: 'lavender', name: 'Lavender', free: false, unlockHint: 'Rare drop from fishing crates' },
+  { id: 'storm',    name: 'Storm',    free: false, unlockHint: 'Rare drop from fishing crates' },
 ]
 
 export function getCharacterSprites(colorId: string) {

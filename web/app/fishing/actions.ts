@@ -380,16 +380,19 @@ export async function reelIn(
   const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + (result === 'perfect' ? streakBonus : 0)) * prestigeXPMult)
   const newXP = (profile.fishing_xp ?? 0) + xpGained
 
-  // Forest skin: unlock at fishing level 50
+  // Fishing-level skin unlocks: Forest @ 50, Ice @ 75
   const profileUpdates: Record<string, unknown> = { fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP }
   let reelInUnlockedSkin: string | undefined
   const oldFishingLevel = getLevelFromXP(profile.fishing_xp ?? 0)
   const newFishingLevel = getLevelFromXP(newXP)
-  if (oldFishingLevel < 50 && newFishingLevel >= 50) {
+  {
     const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
-    if (!currentUnlocked.includes('forest')) {
-      profileUpdates.unlocked_character_colors = [...currentUnlocked, 'forest']
-      reelInUnlockedSkin = 'forest'
+    const toAdd: string[] = []
+    if (oldFishingLevel < 50 && newFishingLevel >= 50 && !currentUnlocked.includes('forest')) toAdd.push('forest')
+    if (oldFishingLevel < 75 && newFishingLevel >= 75 && !currentUnlocked.includes('ice')) toAdd.push('ice')
+    if (toAdd.length > 0) {
+      profileUpdates.unlocked_character_colors = [...currentUnlocked, ...toAdd]
+      reelInUnlockedSkin = toAdd[toAdd.length - 1]
     }
   }
   if (oldFishingLevel < 100 && newFishingLevel >= 100) await unlockBadge('master_angler')
@@ -495,6 +498,8 @@ const CRATE_OUTCOME_WEIGHTS: Record<CrateTier, { doubloons: number; bait: number
 // Keep ids in sync with lib/boats.ts, lib/hats.ts, lib/characters.ts.
 const CRATE_COSMETIC_POOL = [
   { kind: 'skin' as const, id: 'mint',      name: 'Mint'                   },
+  { kind: 'skin' as const, id: 'lavender',  name: 'Lavender'               },
+  { kind: 'skin' as const, id: 'storm',     name: 'Storm'                  },
   { kind: 'boat' as const, id: 'charcoal',  name: 'Charcoal',  imageUrl: '/boat_charcoal_rest.png' },
   { kind: 'boat' as const, id: 'offwhite',  name: 'Offwhite',  imageUrl: '/boat_offwhite_rest.png' },
   { kind: 'hat'  as const, id: 'black',     name: 'Black',     imageUrl: '/hat_black_rest.png'     },
