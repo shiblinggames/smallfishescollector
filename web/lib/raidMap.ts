@@ -10,7 +10,31 @@
 // gated by `requiresNode` (+ optional Nav level); a cleared combat node
 // stays farmable.
 
+import { CORSAIRS_RECKONING, type RaidLootItem } from '@/lib/bossRaids'
+
 export type RaidNodeType = 'combat' | 'milestone' | 'shop'
+
+/** One row in a node's "possible drops" panel. */
+export interface RaidNodeDrop {
+  label: string
+  emoji: string
+  image?: string | null
+  rarity?: RaidLootItem['rarity']
+  /** Human-readable odds, e.g. "49%", "Guaranteed", "Every kill". */
+  chance?: string
+}
+
+/** Extra content shown when the player taps a node open. */
+export interface RaidNodeDetail {
+  /** Longer blurb for the detail sheet (falls back to `flavor`). */
+  description: string
+  /** Foes you'll face, in order (combat nodes). */
+  enemies?: string[]
+  /** Possible loot / rewards. */
+  drops?: RaidNodeDrop[]
+  /** Footnote under the drops list. */
+  dropsNote?: string
+}
 
 export interface RaidNode {
   id: string
@@ -27,6 +51,21 @@ export interface RaidNode {
   /** milestone: reach (not spend) `amount` doubloons to clear; optional
    *  one-time reward on claim. */
   milestone?: { amount: number; rewardDoubloons?: number }
+  /** Rich detail surfaced in the tap-to-open sheet. */
+  detail: RaidNodeDetail
+}
+
+/** Derive a drop list (with rolled-once odds) from a boss raid's loot
+ *  table so the node sheet and the live crate never drift apart. */
+function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
+  const total = loot.reduce((s, l) => s + l.weight, 0)
+  return loot.map(l => ({
+    label: l.label,
+    emoji: l.emoji,
+    image: l.image,
+    rarity: l.rarity,
+    chance: `${Math.round((l.weight / total) * 100)}%`,
+  }))
 }
 
 export const RAID_MAP: RaidNode[] = [
@@ -36,6 +75,16 @@ export const RAID_MAP: RaidNode[] = [
     label: 'Reef Skirmish',
     flavor: 'Learn the broadside system against a lone Reef Raider. Clear it once to set sail on the campaign.',
     route: '/raids/practice',
+    detail: {
+      description:
+        "A single training duel against a lone Reef Raider — no boss, no loot crate, no risk. Safe to repeat any time you want to drill the broadside system. Clearing it once charts the rest of the campaign.",
+      enemies: ['Reef Raider'],
+      drops: [
+        { label: 'Navigation XP', emoji: '✨', rarity: 'common', chance: 'Every kill' },
+        { label: 'Doubloons', emoji: '🪙', rarity: 'common', chance: 'Every kill' },
+      ],
+      dropsNote: 'Practice waters — modest, repeatable rewards. No loot crate.',
+    },
   },
   {
     id: 'pete',
@@ -44,6 +93,13 @@ export const RAID_MAP: RaidNode[] = [
     flavor: 'Barnacle Pete and his fleet have been spotted off the coast. Bring him to justice — dead or alive.',
     requiresNode: 'skirmish',
     route: '/raids',
+    detail: {
+      description:
+        "Pete's full campaign: six escalating ship battles with no breather, ending in the old corsair himself. Win the gauntlet to crack open his loot crate — the only place his contraband drops.",
+      enemies: ['Reef Raider ×2', "Crow's Nest Marksman ×2", 'Saltwater Corsair ×2', 'Barnacle Pete'],
+      drops: lootDrops(CORSAIRS_RECKONING.loot),
+      dropsNote: 'One crate per Pete clear, rolled once and scaled by your Fortune. Every kill along the way also pays gold + Nav XP.',
+    },
   },
   {
     id: 'bilge_milestone',
@@ -52,6 +108,14 @@ export const RAID_MAP: RaidNode[] = [
     flavor: 'Word of Pete’s fall spreads the docks over. Prove your coffers run deep enough to bankroll the next campaign.',
     requiresNode: 'pete',
     milestone: { amount: 2000, rewardDoubloons: 500 },
+    detail: {
+      description:
+        "Not a fight — a show of wealth. Hold 2,000 ⟡ in your coffers at once and the dock bosses will back your next campaign. You don't spend a coin; the milestone only checks you can carry the weight.",
+      drops: [
+        { label: '+500 ⟡ backing', emoji: '💰', rarity: 'uncommon', chance: 'Guaranteed' },
+      ],
+      dropsNote: 'You keep every doubloon you hold — the reward is paid on top when you claim.',
+    },
   },
   {
     id: 'quartermaster',
@@ -59,6 +123,16 @@ export const RAID_MAP: RaidNode[] = [
     label: "Quartermaster's Cache",
     flavor: 'A fence who deals in raid contraband — upgrades, oddities, contraband cannon. Opening soon.',
     requiresNode: 'bilge_milestone',
+    detail: {
+      description:
+        "A black-market fence who deals in raid contraband — stat upgrades, oddball trinkets, and contraband cannon, all paid for in hard-won doubloons. The stall isn't open for business yet.",
+      drops: [
+        { label: 'Raid items', emoji: '💣', rarity: 'rare' },
+        { label: 'Stat upgrades', emoji: '⚙️', rarity: 'uncommon' },
+        { label: 'Rare oddities', emoji: '🎲', rarity: 'epic' },
+      ],
+      dropsNote: 'Opening in a future update.',
+    },
   },
 ]
 

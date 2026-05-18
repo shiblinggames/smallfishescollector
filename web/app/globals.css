@@ -828,6 +828,18 @@ html, body {
   .tr-newbest { animation: none; }
 }
 
+/* Raid map "you are here" — the current (next-available) node breathes a
+   soft halo. Box-shadow only (no transform) so it never shifts the layout;
+   slow + low-amplitude per the juice-subtlety rule. */
+@keyframes raid-node-current {
+  0%, 100% { box-shadow: 0 0 10px rgba(255,214,140,0.30), 0 0 0 4px rgba(255,214,140,0.10); }
+  50%      { box-shadow: 0 0 18px rgba(255,214,140,0.55), 0 0 0 5px rgba(255,214,140,0.16); }
+}
+.raid-node-current { animation: raid-node-current 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .raid-node-current { animation: none; box-shadow: 0 0 12px rgba(255,214,140,0.4); }
+}
+
 /* ── Shop affordance pulse (gear button + slot tiles when an upgrade is in budget) ── */
 @keyframes shop-pulse {
   0%, 100% { transform: scale(1);    box-shadow: 0 0 6px rgba(74,222,128,0.7); }
