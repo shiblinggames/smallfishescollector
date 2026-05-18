@@ -679,7 +679,8 @@ html, body {
 .pause-glows .hook-glow-arcane,
 .pause-glows .hook-glow-cursed,
 .pause-glows .hook-glow-mythic,
-.pause-glows .boat-glow-ash {
+.pause-glows .boat-glow-ash,
+.pause-glows .boat-glow-gold {
   animation-play-state: paused;
 }
 
@@ -777,6 +778,26 @@ html, body {
 }
 .boat-glow-ash {
   animation: boat-glow-ash 5s ease-in-out infinite;
+  will-change: filter;
+}
+
+/* Golden boat — the SAME subtle glow amount as .boat-glow-ash (identical
+   blur radii, alphas, 5s timing), just warm gold instead of dark smoke,
+   and NO darken (the golden sprite stays bright). */
+@keyframes boat-glow-gold {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 3px  rgba(240,200,90,0.55))
+      drop-shadow(0 0 7px  rgba(220,170,60,0.24));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 5px  rgba(245,210,110,0.66))
+      drop-shadow(0 0 12px rgba(225,175,70,0.32));
+  }
+}
+.boat-glow-gold {
+  animation: boat-glow-gold 5s ease-in-out infinite;
   will-change: filter;
 }
 

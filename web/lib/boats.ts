@@ -24,9 +24,10 @@ export interface BoatDef {
   /** Applies the `.boat-glow` CSS animation to the overlay image (Ethereal:
    *  the bright divine shimmer). */
   glow?: boolean
-  /** A distinct, subtler glow variant. 'ash' = the Charcoal boat's dark
-   *  smouldering aura — much more restrained than `glow`. */
-  glowType?: 'ash'
+  /** A distinct, subtler glow variant (much more restrained than `glow`).
+   *  'ash'  = Charcoal's dark smoulder (also darkens the sprite).
+   *  'gold' = Golden's warm aura — same subtle amount as ash, no darken. */
+  glowType?: 'ash' | 'gold'
 }
 
 /** Default "Driftwood" — no overlay; uses the base sprite's boat. */
@@ -115,6 +116,7 @@ export const BOATS: BoatDef[] = [
     restImageUrl: '/boat_golden_rest.png',
     castImageUrl: '/boat_golden_cast.png',
     positions: SHARED_POSITIONS,
+    glowType: 'gold',
   },
   {
     id: 'offwhite',
@@ -169,5 +171,6 @@ export function boatGlowClass(boat: BoatDef | null | undefined): string | undefi
   if (!boat) return undefined
   if (boat.glow) return 'boat-glow'
   if (boat.glowType === 'ash') return 'boat-glow-ash'
+  if (boat.glowType === 'gold') return 'boat-glow-gold'
   return undefined
 }
