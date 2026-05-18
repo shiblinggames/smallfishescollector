@@ -8,7 +8,7 @@ import { getRod, RODS, rodGlowClass } from '@/lib/rods'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
-import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass } from '@/lib/boats'
+import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { BADGE_MAP, BADGES } from '@/lib/badges'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -1130,6 +1130,7 @@ export default function GearScreen({
                                   width: '170%', height: 'auto', display: 'block',
                                   position: 'absolute', top: '50%', left: '50%',
                                   transform: 'translate(-50%, -50%)',
+                                  filter: b.glowType === 'ash' ? BOAT_ASH_DARKEN : undefined,
                                 }}
                               />
                             </div>

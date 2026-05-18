@@ -753,17 +753,24 @@ html, body {
   animation: boat-glow-halo 3.2s ease-in-out infinite;
 }
 
-/* Charcoal boat — a dark, ashy smoulder. Deliberately MUCH subtler than
-   .boat-glow (Ethereal): no bob, no brightness/saturate pump, no bright
-   shadows — just a slow, low-opacity dark smoke aura that breathes. */
+/* Charcoal boat — a dark, ashy smoulder. The leading
+   brightness/contrast/saturate is a CONSTANT darken (same in every
+   keyframe) so the sprite reads as deep charcoal instead of plain grey —
+   it must live in the keyframes because the animation's `filter` replaces
+   any static filter on the element. Only the drop-shadows pulse, and
+   they're deliberately MUCH subtler than .boat-glow (Ethereal): no bob,
+   no brightness pump, no bright shadows — a low-opacity dark smoke aura.
+   Keep BOAT_ASH_DARKEN in lib/boats.ts in sync with the values here. */
 @keyframes boat-glow-ash {
   0%, 100% {
     filter:
+      brightness(0.58) contrast(1.1) saturate(0.85)
       drop-shadow(0 0 3px  rgba(26,26,30,0.55))
       drop-shadow(0 0 7px  rgba(58,56,64,0.24));
   }
   50% {
     filter:
+      brightness(0.58) contrast(1.1) saturate(0.85)
       drop-shadow(0 0 5px  rgba(32,32,38,0.66))
       drop-shadow(0 0 12px rgba(74,70,82,0.32));
   }

@@ -154,6 +154,14 @@ export function getBoat(id: string | null | undefined): BoatDef | null {
   return BOAT_MAP[id] ?? null
 }
 
+/** Constant darken applied to the Charcoal ('ash') skin so it reads as
+ *  deep charcoal, not plain grey. Where the ash glow animation runs, this
+ *  is baked into the `.boat-glow-ash` keyframes (an animated `filter`
+ *  replaces a static one). Use this string for renders that DON'T get the
+ *  glow class (e.g. the small gear picker tile). Keep in sync with the
+ *  brightness/contrast/saturate in `.boat-glow-ash` in globals.css. */
+export const BOAT_ASH_DARKEN = 'brightness(0.58) contrast(1.1) saturate(0.85)'
+
 /** Single source of truth for which glow CSS class a boat's overlay image
  *  gets. `glow` → Ethereal's bright shimmer; `glowType: 'ash'` → Charcoal's
  *  subtle dark smoulder. Use this everywhere the boat is rendered. */
