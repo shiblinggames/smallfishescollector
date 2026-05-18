@@ -1224,8 +1224,11 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       if (remaining > 0) {
         const totalMs = BEACON_DETECT_FLASH_SEC * 1000
         const t = 1 - remaining / totalMs            // 0 → 1 over flash duration
-        const beamX = g.detectingBeaconX - g.scrollX
-        const surfaceAtBeam = seaSurfaceY(g.detectingBeaconX, ch, g.scrollX)
+        // Anchor the beam to the middle of the (stationary) ship, not the
+        // beacon center — detection fires on bow contact, so the beacon
+        // center reads as the ship's front tip otherwise.
+        const beamX = cw * SHIP_X_RATIO + g.shipW / 2
+        const surfaceAtBeam = seaSurfaceY(beamX + g.scrollX, ch, g.scrollX)
 
         // A few flicker pulses across the duration for "Whoop! Whoop!" detection feel
         const flick = 0.7 + 0.3 * Math.sin(t * Math.PI * 6)
