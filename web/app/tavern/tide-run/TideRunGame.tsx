@@ -306,8 +306,6 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     shakeUntil: 0,            // performance.now() ts; canvas shakes while > now
     shakeMag: 0,              // px shake amplitude at the start of the window
     shakeDur: 0,              // ms duration of the current shake (decay basis)
-    squash: 0,                // ship squash/stretch: >0 land-compress, <0 launch-stretch; eases to 0
-    nearMissUntil: 0,         // performance.now() ts; brief near-miss flash while > now
     sparkles: [] as SparkleParticle[],
     sparkleNextEmit: 0,       // performance.now() of next sparkle emit
     nextSpawnAt: 0,
@@ -474,8 +472,6 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     g.shakeUntil = 0
     g.shakeMag = 0
     g.shakeDur = 0
-    g.squash = 0
-    g.nearMissUntil = 0
     g.sparkles = []
     g.sparkleNextEmit = 0
     g.nextSpawnAt = HAZARD_WARMUP
@@ -518,7 +514,6 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       g.airborne = true
       g.holding = true
       g.jumpHoldStart = performance.now()
-      g.squash = -0.10   // brief launch stretch (taller/narrower) — sells the spring
     }
   }, [reset])
 
@@ -783,15 +778,6 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
         if (hitboxBottom >= surfaceY) {
           // Landing splash — burst of droplets from the landing point
           const landingVy = g.shipVy
-          // Weighty landing: compress the hull + a short shake scaled to how
-          // hard you came down (tiny hops barely register either).
-          g.squash = Math.min(0.30, landingVy / 1500)
-          if (landingVy > 320) {
-            const lnow = performance.now()
-            g.shakeUntil = lnow + 150
-            g.shakeMag = Math.min(4, landingVy / 260)
-            g.shakeDur = 150
-          }
           const splashCount = Math.max(4, Math.min(10, Math.round(landingVy / 110)))
           for (let i = 0; i < splashCount; i++) {
             const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.6
@@ -1022,31 +1008,20 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
         const clearance = rockTop - hitboxBottom
         if (clearance > 0 && clearance < 16) {
           obs.nm = true
-          const nmNow = performance.now()
+          // Tiny localized sparkle only — no flash / shake / haptic (those
+          // read as distracting on a thing that happens constantly).
           const boatCx = shipScreenX + g.shipW / 2 + g.scrollX
-          for (let i = 0; i < 6; i++) {
+          for (let i = 0; i < 3; i++) {
             g.sparkles.push({
-              worldX: boatCx + (Math.random() - 0.5) * g.shipW * 0.8,
-              y: hitboxBottom - 6 - Math.random() * 14,
+              worldX: boatCx + (Math.random() - 0.5) * g.shipW * 0.6,
+              y: hitboxBottom - 6 - Math.random() * 10,
               age: 0,
-              life: 0.40 + Math.random() * 0.25,
+              life: 0.30 + Math.random() * 0.18,
             })
-          }
-          g.nearMissUntil = nmNow + 170
-          if (nmNow >= g.shakeUntil) {       // don't stomp a bigger active shake
-            g.shakeUntil = nmNow + 110
-            g.shakeMag = 2.4
-            g.shakeDur = 110
-          }
-          if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-            navigator.vibrate(12)
           }
         }
       }
     }
-
-    // Ease the ship squash/stretch back to neutral (snappy spring).
-    g.squash += (0 - g.squash) * (1 - Math.exp(-14 * dt))
 
     // Smooth the ship pitch toward its instantaneous target so jumps don't
     // snap-tilt — gives the boat a sense of mass.
@@ -1378,8 +1353,6 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       ctx.save()
       ctx.translate(shipX + g.shipW / 2, g.shipY + g.shipH / 2)
       ctx.rotate(g.pitch)
-      // Squash/stretch: compresses on landing, stretches on launch.
-      if (g.squash !== 0) ctx.scale(1 + g.squash * 0.32, 1 - g.squash * 0.55)
       ctx.drawImage(img, -g.shipW / 2, -g.shipH / 2, g.shipW, g.shipH)
       ctx.restore()
     }
@@ -1462,14 +1435,6 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       vig.addColorStop(0, 'rgba(0,0,0,0)')
       vig.addColorStop(1, `rgba(4,10,18,${(0.20 * speedFrac).toFixed(3)})`)
       ctx.fillStyle = vig
-      ctx.fillRect(0, 0, cw, ch)
-    }
-
-    // ── Near-miss flash — a quick faint white wash (sparkles handle the
-    //    rest). Subtle: peaks low and fades fast. ──
-    if (performance.now() < g.nearMissUntil) {
-      const f = (g.nearMissUntil - performance.now()) / 170
-      ctx.fillStyle = `rgba(255,255,255,${(f * 0.16).toFixed(3)})`
       ctx.fillRect(0, 0, cw, ch)
     }
 
