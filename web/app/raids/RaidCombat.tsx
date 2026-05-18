@@ -751,13 +751,13 @@ export default function RaidCombat({
     }}>
       {/* Battle stage — ocean scene with ships and HP boxes.
           flex:1 lets it grow into available vertical space on tall phones.
-          minHeight is a small floor so it stays readable on short viewports
-          but small enough that the action panel below never gets squeezed
-          behind the MobileTabBar. */}
+          minHeight is the floor on short viewports — the single-row action
+          panel frees enough vertical space that we can afford a taller floor
+          so the enemy ship clears the player XP bar overlay. */}
       <div style={{
         position: 'relative',
         flex: 1,
-        minHeight: 320,
+        minHeight: 400,
         background: 'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)',
         overflow: 'hidden',
       }}>
@@ -1591,48 +1591,153 @@ function HitsplatOverlay({ text, color, big }: { text: string; color: string; bi
   )
 }
 
-function ActionMenu({ canFire, canVolley, canDodge, onSelect, disabled = false, highlightedAction = null }: {
+// SVG glyphs for the circular action buttons (stroke = currentColor).
+const ACTION_ICON: Record<'dodge' | 'special' | 'reload' | 'fire' | 'volley', React.ReactNode> = {
+  dodge: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l7 3v6c0 4.2-2.9 7.4-7 9-4.1-1.6-7-4.8-7-9V6l7-3z"/><path d="M9.5 12l1.8 1.8L15 9.8"/></svg>,
+  special: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l2.1 5.5L20 10l-5 3.6L16.5 20 12 16.4 7.5 20 9 13.6 4 10l5.9-1.5z"/></svg>,
+  reload: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>,
+  fire: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c1 3-1.5 4.5-1.5 7A4.5 4.5 0 0 0 17 13c.4 3-1.6 8-5 8a5 5 0 0 1-5-5c0-3.6 3.5-5 5-13z"/></svg>,
+  volley: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="7" cy="9" r="2.4"/><circle cx="16" cy="7" r="2.4"/><circle cx="13" cy="16" r="2.4"/></svg>,
+}
+
+function CircleBtn({ icon, label, color, enabled, highlighted, onClick }: {
+  icon: React.ReactNode
+  label: string
+  color: string
+  enabled: boolean
+  highlighted: boolean
+  onClick: () => void
+}) {
+  const lit = enabled || highlighted
+  const borderColor = highlighted ? color : enabled ? `${color}cc` : '#2a3548'
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 }}>
+      <motion.button
+        whileTap={enabled ? { scale: 0.84 } : {}}
+        transition={{ type: 'spring', stiffness: 600, damping: 18 }}
+        disabled={!enabled}
+        onClick={onClick}
+        aria-label={label}
+        style={{
+          width: 58, height: 58, borderRadius: '50%',
+          background: highlighted ? `${color}26` : enabled ? '#1c2540' : '#0c1422',
+          border: `2px solid ${borderColor}`,
+          color: lit ? color : '#3f4a5e',
+          cursor: enabled ? 'pointer' : 'not-allowed',
+          opacity: enabled ? 1 : highlighted ? 0.9 : 0.5,
+          boxShadow: highlighted ? `0 0 14px ${color}66, inset 0 0 10px ${color}33` : enabled ? `0 2px 8px rgba(0,0,0,0.4)` : 'none',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          touchAction: 'manipulation',
+        }}
+      >
+        {icon}
+      </motion.button>
+      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{
+        fontSize: '0.56rem', color: lit ? color : '#4a5468',
+      }}>
+        {label}
+      </span>
+    </div>
+  )
+}
+
+function ActionMenu({ canFire, canVolley, canDodge, onSelect, disabled = false, highlightedAction = null, hasSpecial = false }: {
   canFire: boolean
   canVolley: boolean
   canDodge: boolean
   onSelect: (a: EnemyAction) => void
   /** When true, no buttons are clickable (we're in reveal / resolve phase). */
   disabled?: boolean
-  /** When set, the matching button keeps its accent border to show the chosen action. */
+  /** When set, the matching button keeps its accent border. Volley highlights Fire. */
   highlightedAction?: EnemyAction | null
+  /** No special abilities exist yet — the slot stays disabled until one does. */
+  hasSpecial?: boolean
 }) {
-  const btn = (action: EnemyAction, label: string, sub: string, enabledForAction: boolean, color: string) => {
-    const isHighlighted = highlightedAction === action
-    const enabled = enabledForAction && !disabled
-    // Highlighted (chosen this turn) keeps the accent border + faint glow even while disabled.
-    const borderColor = isHighlighted ? color : enabled ? color : '#2a3548'
-    return (
-      <motion.button
-        whileTap={enabled ? { scale: 0.94 } : {}}
-        disabled={!enabled}
-        onClick={() => onSelect(action)}
-        style={{
-          padding: '0.85rem 0.55rem',
-          background: isHighlighted ? '#1c2540' : enabled ? '#1c2540' : '#0a1422',
-          border: `2px solid ${borderColor}`,
-          borderRadius: 12,
-          cursor: enabled ? 'pointer' : 'not-allowed',
-          opacity: enabled ? 1 : isHighlighted ? 0.85 : 0.45,
-          boxShadow: isHighlighted ? `0 0 12px ${color}55` : 'none',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-        }}
-      >
-        <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: enabled || isHighlighted ? '#ffffff' : '#5a6478' }}>{label}</span>
-        <span className="font-karla" style={{ fontSize: '0.72rem', color: enabled || isHighlighted ? color : '#4a5468', textAlign: 'center', lineHeight: 1.25 }}>{sub}</span>
-      </motion.button>
-    )
+  const [fireMenu, setFireMenu] = useState(false)
+
+  const fireHighlighted = highlightedAction === 'fire' || highlightedAction === 'volley'
+  const reloadHighlighted = highlightedAction === 'reload'
+  const dodgeHighlighted = highlightedAction === 'dodge'
+
+  function tapFire() {
+    if (disabled || !canFire) return
+    if (canVolley) setFireMenu(true)   // enough charges → let the player pick
+    else onSelect('fire')
   }
+  function pick(a: EnemyAction) { setFireMenu(false); onSelect(a) }
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-      {btn('fire',    'FIRE',    'Attack · 1 ◆',                       canFire,   '#4ade80')}
-      {btn('volley',  'VOLLEY',  '2× attack · 3 ◆',                    canVolley, '#fbbf24')}
-      {btn('reload',  'RELOAD',  'Load +1 ◆',                          true,      '#a8b8d0')}
-      {btn('dodge',   'DODGE',   canDodge ? 'Avoid attack' : 'Recovering', canDodge,  '#38bdf8')}
+    <div style={{ position: 'relative' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+        <CircleBtn
+          icon={ACTION_ICON.dodge} label="Dodge" color="#38bdf8"
+          enabled={canDodge && !disabled} highlighted={dodgeHighlighted}
+          onClick={() => { if (canDodge && !disabled) onSelect('dodge') }}
+        />
+        <CircleBtn
+          icon={ACTION_ICON.special} label="Special" color="#c084fc"
+          enabled={hasSpecial && !disabled} highlighted={false}
+          onClick={() => { /* no special abilities yet */ }}
+        />
+        <CircleBtn
+          icon={ACTION_ICON.reload} label="Reload" color="#a8b8d0"
+          enabled={!disabled} highlighted={reloadHighlighted}
+          onClick={() => { if (!disabled) onSelect('reload') }}
+        />
+        <CircleBtn
+          icon={ACTION_ICON.fire} label="Fire" color="#4ade80"
+          enabled={canFire && !disabled} highlighted={fireHighlighted}
+          onClick={tapFire}
+        />
+      </div>
+
+      {/* Fire / Volley chooser — only when you have enough for a volley.
+          Anchored over the row so it doesn't shift the layout. */}
+      {fireMenu && (
+        <>
+          <div
+            onClick={() => setFireMenu(false)}
+            style={{ position: 'absolute', inset: '-200px 0 -8px 0', zIndex: 9 }}
+          />
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.14 }}
+            style={{
+              position: 'absolute', left: 0, right: 0, bottom: 'calc(100% + 10px)', zIndex: 10,
+              display: 'flex', gap: 8,
+              background: '#0a1422', border: '1px solid #2a3548',
+              borderRadius: 14, padding: 8,
+              boxShadow: '0 8px 28px rgba(0,0,0,0.6)',
+            }}
+          >
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => pick('fire')}
+              style={{
+                flex: 1, padding: '0.7rem 0.5rem', borderRadius: 10,
+                background: '#16241a', border: '2px solid #4ade80', cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+              }}
+            >
+              <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff' }}>Fire</span>
+              <span className="font-karla" style={{ fontSize: '0.62rem', color: '#4ade80' }}>1 ◆ · single</span>
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => pick('volley')}
+              style={{
+                flex: 1, padding: '0.7rem 0.5rem', borderRadius: 10,
+                background: '#241f10', border: '2px solid #fbbf24', cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+              }}
+            >
+              <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff' }}>Volley</span>
+              <span className="font-karla" style={{ fontSize: '0.62rem', color: '#fbbf24' }}>3 ◆ · 2× dmg</span>
+            </motion.button>
+          </motion.div>
+        </>
+      )}
     </div>
   )
 }
