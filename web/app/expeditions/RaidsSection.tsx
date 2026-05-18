@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { RaidNodeView } from '@/lib/raidMap'
@@ -288,16 +289,23 @@ function NodeDetailSheet({
     cta = <div className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '0.95rem', background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.25)', color: '#a78bfa' }}>Coming Soon</div>
   }
 
-  return (
+  const sheet = (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       onClick={onClose}
       style={{
-        position: 'fixed', inset: 0, zIndex: 200,
+        // zIndex sits above Nav + MobileTabBar (both z-50). This is
+        // portaled to <body> so it escapes the expeditions page's
+        // position:relative;z-index:1 wrapper — otherwise the tab bar
+        // (a body-root sibling) paints over the sheet's bottom.
+        position: 'fixed', inset: 0, zIndex: 1000,
         background: 'rgba(0,0,0,0.66)', backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        // Keep the sheet clear of the fixed header on tall content
+        // (mobile nav ~44px, desktop ~64px).
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 72px)',
       }}
     >
       <motion.div
@@ -308,15 +316,21 @@ function NodeDetailSheet({
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 480,
-          maxHeight: '85vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+          maxHeight: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain',
           background: 'linear-gradient(180deg, #14110d 0%, #0a0807 100%)',
           border: `1px solid ${accent}33`,
           borderBottom: 'none',
           borderRadius: '20px 20px 0 0',
-          padding: '1.1rem 1.15rem calc(1.4rem + env(safe-area-inset-bottom, 0px))',
+          padding: '0.85rem 1.15rem calc(1.4rem + env(safe-area-inset-bottom, 0px))',
         }}
       >
-        {/* Grab handle + close */}
+        {/* Grab handle */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.7rem' }}>
+          <div style={{ width: 38, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)' }} />
+        </div>
+
+        {/* Header + close */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.9rem' }}>
           <div style={{ display: 'flex', gap: '0.7rem', alignItems: 'center', minWidth: 0 }}>
             <div style={{
@@ -434,6 +448,8 @@ function NodeDetailSheet({
       </motion.div>
     </motion.div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(sheet, document.body) : null
 }
 
 /* ─────────────────────── Collapsible section ─────────────────── */
