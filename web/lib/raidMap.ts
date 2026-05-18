@@ -134,19 +134,19 @@ export const RAID_MAP: RaidNode[] = [
     id: 'skirmish',
     type: 'skirmish',
     label: 'Reef Skirmish',
-    flavor: 'Learn the broadside system against a lone Reef Raider. Clear it once to set sail on the campaign.',
+    flavor: "Pete doesn't sail alone. The reef crawls with his Reef Raiders. Start thinning them out.",
     requiresNode: 'intro',
     route: '/raids/practice',
     image: CORSAIRS_RECKONING.enemies.brute.portrait,
     detail: {
       description:
-        "A single training duel against a lone Reef Raider. No boss, no loot crate, no risk. Safe to repeat any time you want to drill the broadside system. Clearing it once charts the rest of the campaign.",
+        "Pete doesn't do his own dirty work. That's what the Reef Raiders are for. Sink one and there's usually another bobbing up to take its place.\n\nNo grand plan here. Pick them off one at a time and see who comes asking once enough of them stop coming home.",
       enemies: ['Reef Raider'],
       drops: [
         { label: 'Navigation XP', emoji: '✨', rarity: 'common', chance: 'Every kill' },
         { label: 'Doubloons', emoji: '🪙', rarity: 'common', chance: 'Every kill' },
       ],
-      dropsNote: 'Practice waters. Modest, repeatable rewards, and no loot crate.',
+      dropsNote: "Pete never runs short of Raiders. Drop by and thin the numbers whenever it suits you.",
     },
   },
   {

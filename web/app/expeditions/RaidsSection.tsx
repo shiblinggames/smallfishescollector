@@ -24,15 +24,25 @@ const TYPE_ACCENT: Record<string, string> = {
 // pattern repeats, so appending nodes to RAID_MAP just extends the route.
 const COLS = [50, 73, 27, 62, 38, 70, 30]
 const ROW = 116          // vertical pitch between node centres
-const TOKEN = 60         // token diameter
+const TOKEN = 60         // layout/max token diameter (drives spacing + viewBox)
 const PAD_TOP = 30
 const PAD_BOTTOM = 16
 
+// Visual token size by type: bigger node = bigger fight. A story beat
+// is the smallest, a skirmish small, a full raid the biggest.
+const TYPE_SIZE: Record<string, number> = {
+  story:     38,
+  skirmish:  46,
+  milestone: 52,
+  shop:      52,
+  raid:      60,
+}
+
 function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; size?: number }) {
   const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
-  // skirmish — crossed cutlasses (a single duel)
+  // skirmish: crossed cutlasses (a single duel)
   if (type === 'skirmish') return <svg {...common}><path d="M3 17l6-6M14.5 6.5L21 13M6 21l-3-3M9 3l12 12-3 3L6 6z" /></svg>
-  // raid — skull (the boss campaign)
+  // raid: skull (the boss campaign)
   if (type === 'raid') return (
     <svg {...common}>
       <path d="M12 3c-4.4 0-8 3.2-8 7.4 0 2.4 1.2 4.5 3 5.9V19a1 1 0 0 0 1 1h1.6v-2h2.8v2H17a1 1 0 0 0 1-1v-2.7c1.8-1.4 3-3.5 3-5.9C21 6.2 17.4 3 13 3z" />
@@ -41,11 +51,11 @@ function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; si
       <path d="M11 14.5h2" />
     </svg>
   )
-  // shop — market stall
+  // shop: market stall
   if (type === 'shop') return <svg {...common}><path d="M3 9l1.5-5h15L21 9M4 9v10a1 1 0 001 1h14a1 1 0 001-1V9M4 9h16M9 13h6" /></svg>
-  // story — open book
+  // story: open book
   if (type === 'story') return <svg {...common}><path d="M12 6.5C10.5 5 8 4.5 4 5v13c4-.5 6.5 0 8 1.5 1.5-1.5 4-2 8-1.5V5c-4-.5-6.5 0-8 1.5zM12 6.5V19" /></svg>
-  // milestone (default) — treasure star
+  // milestone (default): treasure star
   return <svg {...common}><path d="M12 2l2.4 6.9H22l-6 4.5 2.3 7L12 16.9 5.7 20.4 8 13.4 2 8.9h7.6z" /></svg>
 }
 
@@ -108,6 +118,9 @@ function RaidMap({
       {views.map((v, i) => {
         const { node, status } = v
         const accent = TYPE_ACCENT[node.type] ?? '#c4a96a'
+        const size = TYPE_SIZE[node.type] ?? 52
+        const glyph = Math.round(size * 0.42)
+        const badge = Math.max(15, Math.round(size * 0.34))
         const locked = status === 'locked'
         const cleared = status === 'cleared'
         const isCurrent = i === currentIdx
@@ -135,8 +148,8 @@ function RaidMap({
               aria-label={node.label}
               className={isCurrent ? 'raid-node-current' : undefined}
               style={{
-                width: TOKEN,
-                height: TOKEN,
+                width: size,
+                height: size,
                 borderRadius: '50%',
                 flexShrink: 0,
                 display: 'flex',
@@ -169,18 +182,18 @@ function RaidMap({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={node.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
-              ) : locked ? <LockGlyph size={20} /> : <NodeGlyph type={node.type} color={accent} size={24} />}
+              ) : locked ? <LockGlyph size={glyph} /> : <NodeGlyph type={node.type} color={accent} size={glyph} />}
 
               {locked && node.image && (
                 <span
                   style={{
                     position: 'absolute', right: -3, bottom: -3,
-                    width: 20, height: 20, borderRadius: '50%',
+                    width: badge, height: badge, borderRadius: '50%',
                     background: '#1a1814', border: '2px solid #0a0907',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}
                 >
-                  <LockGlyph size={10} />
+                  <LockGlyph size={Math.round(badge * 0.52)} />
                 </span>
               )}
 
@@ -188,12 +201,12 @@ function RaidMap({
                 <span
                   style={{
                     position: 'absolute', right: -3, bottom: -3,
-                    width: 20, height: 20, borderRadius: '50%',
+                    width: badge, height: badge, borderRadius: '50%',
                     background: '#1b3a24', border: '2px solid #0a0907',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}
                 >
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                  <svg width={Math.round(badge * 0.55)} height={Math.round(badge * 0.55)} viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                 </span>
               )}
             </motion.button>
@@ -264,7 +277,7 @@ function NodeDetailSheet({
     if (node.route) router.push(node.route)
   }
 
-  // Bottom CTA — varies by node type / state.
+  // Bottom CTA: varies by node type / state.
   let cta: React.ReactNode = null
   if (isCombatNode(node.type)) {
     cta = (
@@ -280,7 +293,7 @@ function NodeDetailSheet({
           cursor: locked ? 'not-allowed' : 'pointer',
         }}
       >
-        {locked ? 'Locked' : cleared ? 'Sail Again →' : node.type === 'skirmish' ? 'Begin Skirmish →' : 'Enter Raid →'}
+        {locked ? 'Locked' : cleared ? 'Sail Again →' : node.type === 'skirmish' ? 'Pick One Off →' : 'Enter Raid →'}
       </button>
     )
   } else if (node.type === 'milestone') {
@@ -313,7 +326,7 @@ function NodeDetailSheet({
             <div style={{ height: '100%', width: `${pct * 100}%`, background: accent, borderRadius: 4, transition: 'width 0.3s' }} />
           </div>
           <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: 8, textAlign: 'center' }}>
-            Hold {node.milestone.amount.toLocaleString()} ⟡ at once to claim — you won&apos;t spend it.
+            Hold {node.milestone.amount.toLocaleString()} ⟡ at once to claim. You won&apos;t spend it.
           </p>
         </div>
       )
@@ -348,7 +361,7 @@ function NodeDetailSheet({
       style={{
         // zIndex sits above Nav + MobileTabBar (both z-50). This is
         // portaled to <body> so it escapes the expeditions page's
-        // position:relative;z-index:1 wrapper — otherwise the tab bar
+        // position:relative;z-index:1 wrapper, otherwise the tab bar
         // (a body-root sibling) paints over the sheet's bottom.
         position: 'fixed', inset: 0, zIndex: 1000,
         background: 'rgba(0,0,0,0.66)', backdropFilter: 'blur(2px)',
