@@ -472,9 +472,13 @@ export default function GearScreen({
               itemName={boatName}
               onClick={() => setOpenSlot('cosmetic')}
               icon={
+                // Center via flex, NOT transform — the .boat-glow bob
+                // animates `transform`, which would otherwise clobber a
+                // transform-based centering offset (broke the Ethereal
+                // skin's thumbnail once equipped).
                 <div style={{
-                  position: 'relative',
                   width: 36, height: 36, overflow: 'hidden',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -482,9 +486,7 @@ export default function GearScreen({
                     alt=""
                     className={activeBoat?.glow ? 'boat-glow' : undefined}
                     style={{
-                      width: '170%', height: 'auto', display: 'block',
-                      position: 'absolute', top: '50%', left: '50%',
-                      transform: 'translate(-50%, -50%)',
+                      width: '170%', height: 'auto', display: 'block', flexShrink: 0,
                     }}
                   />
                 </div>
