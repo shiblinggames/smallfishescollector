@@ -2,7 +2,7 @@
 // (Slay-the-Spire-ish visually) inside the collapsible Raids section.
 //
 // Combat nodes route into the existing /raids screens; a node is "cleared"
-// when beaten at least once (derived from existing data — no raid-engine
+// when beaten at least once (derived from existing data, no raid-engine
 // changes). One-time nodes (milestone / shop) persist in
 // profiles.raid_node_progress jsonb: { cleared: string[] }.
 //
@@ -39,7 +39,7 @@ export interface RaidNodeDrop {
   sublabel?: string
   /** Solid swatch colour shown instead of an icon (ship skins). */
   swatch?: string
-  /** CSS filter applied to the swatch — the skin's actual effect. */
+  /** CSS filter applied to the swatch (the skin's actual effect). */
   swatchFilter?: string
 }
 
@@ -96,7 +96,7 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
       const skin = getShipSkin(l.shipSkinId)
       if (skin) {
         drop.label = skin.name
-        drop.sublabel = 'Ship skin — a new look for your ship (cosmetic only)'
+        drop.sublabel = 'Ship skin. A cosmetic new look for your ship.'
         drop.swatch = skin.color
         drop.swatchFilter = skin.filter
         drop.image = null
@@ -104,7 +104,7 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
     }
     // Raid item → surface its plain-English effect.
     const item = getRaidItem(l.id)
-    if (item) drop.sublabel = `Raid item — ${item.description}`
+    if (item) drop.sublabel = `Raid item. ${item.description}`
     return drop
   })
 }
@@ -114,20 +114,20 @@ export const RAID_MAP: RaidNode[] = [
     id: 'intro',
     type: 'story',
     label: 'A Loose Thread',
-    flavor: "The sea's gone quiet in a way that isn't peaceful. Someone should pull on that.",
+    flavor: "The sea has gone quiet. Not calm. Quiet the way a tavern goes quiet when the wrong man walks in.",
     detail: {
       description:
-        "You've heard the dock talk your whole life — Barnacle Pete, scourge of the reef, terror of honest crews. You've also heard the part nobody dwells on: Pete's raided these waters for thirty years and died poor every one of them. The gold goes somewhere. The prisoners go somewhere. Crews wash up still breathing but hollow, and not one will say who they served.\n\nEvery captain calls it bad luck. You're starting to think it's a someone. Pull the thread that's closest — the loud one with the cannon — and see what comes loose.",
+        "Every dock from the warm shallows to the cold deep tells the same story. Barnacle Pete, scourge of the reef, terror of honest crews. They tell it well. They never tell the rest of it. Pete has burned and bled these waters for thirty years, and for thirty years he has died poor. The gold he takes does not stay taken. The prisoners do not come home, or they come home breathing and warm and entirely hollow, and not one of them will say whose orders they followed into the dark.\n\nThe harbor masters call it foul luck and pour another cup. You have watched too long to believe in luck so patient. Luck does not gather what it wins. Something does. So you will do the reckless thing wiser captains have always refused to do. You will find the loudest fool with a cannon, and you will pull on him until the whole drowned net comes up, and you will keep pulling no matter what it drags into the light.",
       drops: [
         {
           emoji: '📜',
-          label: 'Captain’s Logbook — Fragment I',
-          sublabel: '“They never keep what they take.” — dockside rumour, unverified',
+          label: "Captain's Logbook, Fragment I",
+          sublabel: '"They never keep what they take." The same words, from sailors who never met.',
           rarity: 'common',
         },
       ],
-      dropsNote: 'Story fragments collect here as you unravel who Pete really answers to.',
-      ctaLabel: 'Begin the Hunt →',
+      dropsNote: 'Pull enough threads and these pages start to spell a name. You will not enjoy reading it.',
+      ctaLabel: 'Pull the Thread →',
     },
   },
   {
@@ -140,26 +140,26 @@ export const RAID_MAP: RaidNode[] = [
     image: CORSAIRS_RECKONING.enemies.brute.portrait,
     detail: {
       description:
-        "A single training duel against a lone Reef Raider — no boss, no loot crate, no risk. Safe to repeat any time you want to drill the broadside system. Clearing it once charts the rest of the campaign.",
+        "A single training duel against a lone Reef Raider. No boss, no loot crate, no risk. Safe to repeat any time you want to drill the broadside system. Clearing it once charts the rest of the campaign.",
       enemies: ['Reef Raider'],
       drops: [
         { label: 'Navigation XP', emoji: '✨', rarity: 'common', chance: 'Every kill' },
         { label: 'Doubloons', emoji: '🪙', rarity: 'common', chance: 'Every kill' },
       ],
-      dropsNote: 'Practice waters — modest, repeatable rewards. No loot crate.',
+      dropsNote: 'Practice waters. Modest, repeatable rewards, and no loot crate.',
     },
   },
   {
     id: 'pete',
     type: 'raid',
     label: "The Corsair's Reckoning",
-    flavor: 'Barnacle Pete and his fleet have been spotted off the coast. Bring him to justice — dead or alive.',
+    flavor: 'Barnacle Pete and his fleet have been spotted off the coast. Bring him to justice, dead or alive.',
     requiresNode: 'skirmish',
     route: '/raids',
     image: CORSAIRS_RECKONING.enemies.pete.portrait,
     detail: {
       description:
-        "Pete's full campaign: six escalating ship battles with no breather, ending in the old corsair himself. Win the gauntlet to crack open his loot crate — the only place his contraband drops.",
+        "Pete's full campaign: six escalating ship battles with no breather, ending in the old corsair himself. Win the gauntlet to crack open his loot crate, the only place his contraband drops.",
       enemies: ['Reef Raider ×2', "Crow's Nest Marksman ×2", 'Saltwater Corsair ×2', 'Barnacle Pete'],
       drops: lootDrops(CORSAIRS_RECKONING.loot),
       dropsNote: 'One crate per Pete clear, rolled once and scaled by your Fortune. Every kill along the way also pays gold + Nav XP.',
@@ -174,22 +174,22 @@ export const RAID_MAP: RaidNode[] = [
     milestone: { amount: 2000, rewardDoubloons: 500 },
     detail: {
       description:
-        "Not a fight — a show of wealth. Hold 2,000 ⟡ in your coffers at once and the dock bosses will back your next campaign. You don't spend a coin; the milestone only checks you can carry the weight.",
+        "This is not a fight. It is a show of wealth. Hold 2,000 ⟡ in your coffers at once and the dock bosses will back your next campaign. You don't spend a coin; the milestone only checks you can carry the weight.",
       drops: [
         { label: '+500 ⟡ backing', emoji: '💰', rarity: 'uncommon', chance: 'Guaranteed' },
       ],
-      dropsNote: 'You keep every doubloon you hold — the reward is paid on top when you claim.',
+      dropsNote: 'You keep every doubloon you hold; the reward is paid on top when you claim.',
     },
   },
   {
     id: 'quartermaster',
     type: 'shop',
     label: "Quartermaster's Cache",
-    flavor: 'A fence who deals in raid contraband — upgrades, oddities, contraband cannon. Opening soon.',
+    flavor: 'A fence who deals in raid contraband: upgrades, oddities, contraband cannon. Opening soon.',
     requiresNode: 'bilge_milestone',
     detail: {
       description:
-        "A black-market fence who deals in raid contraband — stat upgrades, oddball trinkets, and contraband cannon, all paid for in hard-won doubloons. The stall isn't open for business yet.",
+        "A black-market fence who deals in raid contraband: stat upgrades, oddball trinkets, and contraband cannon, all paid for in hard-won doubloons. The stall isn't open for business yet.",
       drops: [
         { label: 'Raid items', emoji: '💣', rarity: 'rare' },
         { label: 'Stat upgrades', emoji: '⚙️', rarity: 'uncommon' },
