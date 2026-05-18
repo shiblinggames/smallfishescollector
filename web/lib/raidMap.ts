@@ -14,7 +14,18 @@ import { CORSAIRS_RECKONING, type RaidLootItem } from '@/lib/bossRaids'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
-export type RaidNodeType = 'combat' | 'milestone' | 'shop'
+// Each type gets its own colour + glyph on the map:
+//  - skirmish  : a single practice battle
+//  - raid      : a full multi-encounter campaign / boss
+//  - milestone : a "collect / hold X" goal (no fight)
+//  - shop      : a contraband stall (future)
+//  - story     : an overarching-story beat (future)
+export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story'
+
+/** Routes into a combat screen + derives its clear from battle data. */
+export function isCombatNode(t: RaidNodeType): boolean {
+  return t === 'skirmish' || t === 'raid'
+}
 
 /** One row in a node's "possible drops" panel. */
 export interface RaidNodeDrop {
@@ -99,7 +110,7 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
 export const RAID_MAP: RaidNode[] = [
   {
     id: 'skirmish',
-    type: 'combat',
+    type: 'skirmish',
     label: 'Reef Skirmish',
     flavor: 'Learn the broadside system against a lone Reef Raider. Clear it once to set sail on the campaign.',
     route: '/raids/practice',
@@ -117,7 +128,7 @@ export const RAID_MAP: RaidNode[] = [
   },
   {
     id: 'pete',
-    type: 'combat',
+    type: 'raid',
     label: "The Corsair's Reckoning",
     flavor: 'Barnacle Pete and his fleet have been spotted off the coast. Bring him to justice — dead or alive.',
     requiresNode: 'skirmish',

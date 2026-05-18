@@ -4,14 +4,19 @@ import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { RaidNodeView } from '@/lib/raidMap'
+import { isCombatNode, type RaidNodeView } from '@/lib/raidMap'
 import { RARITY_COLOR } from '@/lib/bossRaids'
 import { claimMilestoneNode } from './raidMapActions'
 
+// Distinct border / glow colour per node type so the route reads at a
+// glance: cyan = practice, ember = boss raid, gold = collect goal,
+// violet = shop, sage = story.
 const TYPE_ACCENT: Record<string, string> = {
-  combat: '#f97316',
-  milestone: '#c4a96a',
-  shop: '#a78bfa',
+  skirmish:  '#46c3d6',
+  raid:      '#f0743a',
+  milestone: '#e0b358',
+  shop:      '#b08bf0',
+  story:     '#6fbf73',
 }
 
 // Winding sea-chart layout. Nodes cycle through these x positions (% of
@@ -25,8 +30,22 @@ const PAD_BOTTOM = 16
 
 function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; size?: number }) {
   const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
-  if (type === 'combat') return <svg {...common}><path d="M3 17l6-6M14.5 6.5L21 13M6 21l-3-3M9 3l12 12-3 3L6 6z" /></svg>
+  // skirmish — crossed cutlasses (a single duel)
+  if (type === 'skirmish') return <svg {...common}><path d="M3 17l6-6M14.5 6.5L21 13M6 21l-3-3M9 3l12 12-3 3L6 6z" /></svg>
+  // raid — skull (the boss campaign)
+  if (type === 'raid') return (
+    <svg {...common}>
+      <path d="M12 3c-4.4 0-8 3.2-8 7.4 0 2.4 1.2 4.5 3 5.9V19a1 1 0 0 0 1 1h1.6v-2h2.8v2H17a1 1 0 0 0 1-1v-2.7c1.8-1.4 3-3.5 3-5.9C21 6.2 17.4 3 13 3z" />
+      <circle cx="9.4" cy="11" r="1.5" fill={color} stroke="none" />
+      <circle cx="14.6" cy="11" r="1.5" fill={color} stroke="none" />
+      <path d="M11 14.5h2" />
+    </svg>
+  )
+  // shop — market stall
   if (type === 'shop') return <svg {...common}><path d="M3 9l1.5-5h15L21 9M4 9v10a1 1 0 001 1h14a1 1 0 001-1V9M4 9h16M9 13h6" /></svg>
+  // story — open book
+  if (type === 'story') return <svg {...common}><path d="M12 6.5C10.5 5 8 4.5 4 5v13c4-.5 6.5 0 8 1.5 1.5-1.5 4-2 8-1.5V5c-4-.5-6.5 0-8 1.5zM12 6.5V19" /></svg>
+  // milestone (default) — treasure star
   return <svg {...common}><path d="M12 2l2.4 6.9H22l-6 4.5 2.3 7L12 16.9 5.7 20.4 8 13.4 2 8.9h7.6z" /></svg>
 }
 
@@ -92,7 +111,7 @@ function RaidMap({
         const locked = status === 'locked'
         const cleared = status === 'cleared'
         const isCurrent = i === currentIdx
-        const statusWord = cleared ? (node.type === 'combat' ? 'Cleared' : 'Done') : locked ? 'Locked' : 'Available'
+        const statusWord = cleared ? (isCombatNode(node.type) ? 'Cleared' : 'Done') : locked ? 'Locked' : 'Available'
 
         return (
           <div
@@ -214,7 +233,7 @@ function NodeDetailSheet({
   const cleared = status === 'cleared'
   const detail = node.detail
 
-  const dropsTitle = node.type === 'combat' ? 'Possible Loot' : node.type === 'shop' ? 'Planned Stock' : 'Reward'
+  const dropsTitle = isCombatNode(node.type) ? 'Possible Loot' : node.type === 'shop' ? 'Planned Stock' : 'Reward'
 
   function claim() {
     setErr(null)
@@ -233,7 +252,7 @@ function NodeDetailSheet({
 
   // Bottom CTA — varies by node type / state.
   let cta: React.ReactNode = null
-  if (node.type === 'combat') {
+  if (isCombatNode(node.type)) {
     cta = (
       <button
         onClick={enter}
@@ -247,7 +266,7 @@ function NodeDetailSheet({
           cursor: locked ? 'not-allowed' : 'pointer',
         }}
       >
-        {locked ? 'Locked' : cleared ? 'Sail Again →' : 'Enter Raid →'}
+        {locked ? 'Locked' : cleared ? 'Sail Again →' : node.type === 'skirmish' ? 'Begin Skirmish →' : 'Enter Raid →'}
       </button>
     )
   } else if (node.type === 'milestone') {
@@ -272,7 +291,7 @@ function NodeDetailSheet({
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
             <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#8a8880' }}>Coffers</span>
-            <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#c4a96a' }}>
+            <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: accent }}>
               {Math.min(doubloons, node.milestone.amount).toLocaleString()} / {node.milestone.amount.toLocaleString()} ⟡
             </span>
           </div>
@@ -285,9 +304,10 @@ function NodeDetailSheet({
         </div>
       )
     }
-  } else {
-    cta = <div className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '0.95rem', background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.25)', color: '#a78bfa' }}>Coming Soon</div>
+  } else if (node.type === 'shop') {
+    cta = <div className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '0.95rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Coming Soon</div>
   }
+  // story (future): no CTA yet — the sheet still shows the description.
 
   const sheet = (
     <motion.div
@@ -355,7 +375,7 @@ function NodeDetailSheet({
                   background: cleared ? 'rgba(74,222,128,0.14)' : locked ? 'rgba(255,255,255,0.05)' : `${accent}1f`,
                   border: `1px solid ${cleared ? 'rgba(74,222,128,0.3)' : locked ? 'rgba(255,255,255,0.12)' : `${accent}40`}`,
                 }}>
-                  {cleared ? (node.type === 'combat' ? 'Cleared' : 'Done') : locked ? 'Locked' : 'Available'}
+                  {cleared ? (isCombatNode(node.type) ? 'Cleared' : 'Done') : locked ? 'Locked' : 'Available'}
                 </span>
               </div>
             </div>
