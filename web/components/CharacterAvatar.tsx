@@ -44,10 +44,58 @@ export default function CharacterAvatar({
   // Otherwise apply the player's chosen color as a soft radial gradient + ring.
   const bgIsNone     = !bgColor   || bgColor   === 'none'
   const ringIsNone   = !ringColor || ringColor === 'none'
+  // Aurora is a special animated ring, not a color. It only applies when
+  // the call site hasn't forced its own borderStyle.
+  const isAurora     = !borderStyle && ringColor === 'aurora'
   const background   = bgIsNone
     ? 'transparent'
     : `radial-gradient(circle at 38% 35%, ${bgColor}ee 0%, ${bgColor}77 100%)`
   const resolvedBorder = borderStyle ?? (ringIsNone ? 'none' : `2px solid ${ringColor}`)
+
+  const inner = (
+    <div style={{
+      position: 'absolute',
+      width: '317%',
+      left: '50%', top: '50%',
+      transform: 'translate(-63%, -65%)',
+      pointerEvents: 'none',
+    }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={sprites.rest} alt="" style={{ width: '100%', display: 'block' }} />
+      {hat && (() => {
+        const hp = hat.positions.rest
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={hat.restImageUrl} alt="" style={{
+            position: 'absolute',
+            top: `${hp.top}%`,
+            left: `${hp.left}%`,
+            width: `${hp.width}%`,
+            transform: `rotate(${hp.rotate}deg)`,
+            transformOrigin: 'center center',
+            pointerEvents: 'none',
+          }} />
+        )
+      })()}
+    </div>
+  )
+
+  if (isAurora) {
+    // The rotating conic ring is its own layer behind a non-rotating inner
+    // circle (inset by the ring thickness) so the sprite never spins.
+    const RING = 2
+    return (
+      <div style={{ width: size, height: size, position: 'relative', flexShrink: 0 }}>
+        <div className="avatar-aurora" aria-hidden style={{ position: 'absolute', inset: 0 }} />
+        <div style={{
+          position: 'absolute', inset: RING, borderRadius: '50%',
+          background, overflow: 'hidden',
+        }}>
+          {inner}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{
@@ -58,31 +106,7 @@ export default function CharacterAvatar({
       position: 'relative',
       flexShrink: 0,
     }}>
-      <div style={{
-        position: 'absolute',
-        width: '317%',
-        left: '50%', top: '50%',
-        transform: 'translate(-63%, -65%)',
-        pointerEvents: 'none',
-      }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={sprites.rest} alt="" style={{ width: '100%', display: 'block' }} />
-        {hat && (() => {
-          const hp = hat.positions.rest
-          return (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={hat.restImageUrl} alt="" style={{
-              position: 'absolute',
-              top: `${hp.top}%`,
-              left: `${hp.left}%`,
-              width: `${hp.width}%`,
-              transform: `rotate(${hp.rotate}deg)`,
-              transformOrigin: 'center center',
-              pointerEvents: 'none',
-            }} />
-          )
-        })()}
-      </div>
+      {inner}
     </div>
   )
 }

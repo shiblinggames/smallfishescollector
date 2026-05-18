@@ -47,9 +47,16 @@ export const AVATAR_PALETTE: AvatarColorOption[] = [
   { id: 'pink',   label: 'Pink',   hex: '#db2777', premiumOnly: true },
 ]
 
-/** Border-only extras — kept as a slot for future border-only colors.
- *  Currently empty; both bg and border draw from AVATAR_PALETTE. */
-export const AVATAR_BORDER_EXTRAS: AvatarColorOption[] = []
+/** Special sentinel: an animated rotating-prismatic ring (not a color).
+ *  CharacterAvatar renders it as the `.avatar-aurora` ring; pickers must
+ *  special-case the swatch. Premium-only flex cosmetic. */
+export const AURORA_VALUE = 'aurora' as const
+
+/** Border-only extras — border-only options that aren't plain colors.
+ *  Auto-included in ALLOWED_BORDER_HEXES + isPremiumBorder. */
+export const AVATAR_BORDER_EXTRAS: AvatarColorOption[] = [
+  { id: 'aurora', label: 'Aurora', hex: AURORA_VALUE, premiumOnly: true },
+]
 
 /** All allowed bg values. */
 export const ALLOWED_BG_HEXES: string[] = AVATAR_PALETTE.map(c => c.hex)

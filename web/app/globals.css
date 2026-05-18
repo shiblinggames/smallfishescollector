@@ -801,6 +801,23 @@ html, body {
   will-change: filter;
 }
 
+/* Aurora avatar border — a slowly rotating prismatic ring. Tuned to be a
+   subtle flex, NOT headache-inducing: 16s/rev (a drift, not a spin),
+   linear (no pulsing), muted/desaturated jewel tones, seam-matched (first
+   colour repeated last) so no hard band sweeps past. Honors
+   prefers-reduced-motion by freezing to a static gradient ring. */
+@keyframes avatar-aurora-spin { to { transform: rotate(360deg); } }
+.avatar-aurora {
+  border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    #6f6aa6, #4f8f99, #c3a258, #a96f86, #6f8aa8, #6f6aa6);
+  animation: avatar-aurora-spin 16s linear infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-aurora { animation: none; }
+}
+
 /* ── Shop affordance pulse (gear button + slot tiles when an upgrade is in budget) ── */
 @keyframes shop-pulse {
   0%, 100% { transform: scale(1);    box-shadow: 0 0 6px rgba(74,222,128,0.7); }
