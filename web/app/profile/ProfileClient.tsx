@@ -241,6 +241,18 @@ export default function ProfileClient({
   const [avatarBorder, setAvatarBorder] = useState<string | null>(initialAvatarBorder)
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false)
   const [avatarSaving, setAvatarSaving] = useState(false)
+  // The hero avatar is fixed-px, so on a big desktop page it reads small
+  // (and its proportional ring looks like a hairline). Bigger on >=md
+  // where there's room — the Aurora ring scales with size automatically.
+  // Defaults to the mobile size for SSR so there's no hydration mismatch.
+  const [avatarSize, setAvatarSize] = useState(132)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    const apply = () => setAvatarSize(mq.matches ? 176 : 132)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
   // Transient message shown when a premium-locked swatch is tapped.
   // Stays up long enough to read comfortably — was 2000ms, felt too quick.
   const [avatarLockMsg, setAvatarLockMsg] = useState<string | null>(null)
@@ -361,7 +373,7 @@ export default function ProfileClient({
           <CharacterAvatar
             characterColor={characterColor}
             equippedHat={equippedHat}
-            size={132}
+            size={avatarSize}
             bgColor={avatarBg ?? DEFAULT_AVATAR_BG_COLOR}
             ringColor={avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR}
           />
