@@ -101,6 +101,7 @@ const DEBRIS_MAX_AGE_SEC = 0.75
 const DEBRIS_GRAVITY     = 1150   // px/s²
 const SMASH_RING_DUR_SEC = 0.42
 const SMASH_SHAKE_MS     = 200    // screen-shake window after a smash
+const HITSTOP_MS         = 55     // micro-freeze on smash — subtle, sells the impact
 
 // Day/night cycle — palette interpolates over CYCLE_DISTANCE_M of distance.
 // Stops are: midday → dusk → night → dawn → loop. Long enough that typical
@@ -300,6 +301,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     splashes: [] as SplashParticle[],
     debris: [] as DebrisParticle[],          // beacon-smash rock chunks
     smashRings: [] as { worldX: number; y: number; age: number }[],
+    hitstopUntil: 0,          // performance.now() ts; sim frozen while > now (smash hitstop)
     shakeUntil: 0,            // performance.now() ts; canvas shakes while > now
     shakeMag: 0,              // px shake amplitude at the start of the window
     sparkles: [] as SparkleParticle[],
@@ -440,6 +442,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     g.splashes = []
     g.debris = []
     g.smashRings = []
+    g.hitstopUntil = 0
     g.shakeUntil = 0
     g.shakeMag = 0
     g.sparkles = []
@@ -929,6 +932,9 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
           g.smashRings.push({ worldX: cx, y: beaconSurface - cr.height * 0.5, age: 0 })
           g.shakeUntil = nowMs + SMASH_SHAKE_MS
           g.shakeMag = 7
+          // Micro-freeze: the world stops dead for a beat, then the debris
+          // erupts as motion resumes — that snap is what sells the hit.
+          g.hitstopUntil = nowMs + HITSTOP_MS
           if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
             navigator.vibrate(40)
           }
@@ -1321,7 +1327,10 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       const last = lastTsRef.current
       const dt = last === 0 ? 0 : Math.min((ts - last) / 1000, 0.05)
       lastTsRef.current = ts
-      step(dt)
+      // Hitstop: skip the sim for the freeze window but keep rendering, so
+      // the shake plays and the debris hangs mid-air, then snaps into motion
+      // when it resumes. (dt is clamped above, so no post-freeze time jump.)
+      if (performance.now() >= gRef.current.hitstopUntil) step(dt)
       render()
       rafRef.current = requestAnimationFrame(loop)
     }
