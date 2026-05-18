@@ -889,9 +889,15 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
         const bR = cr.x + cr.width - g.scrollX
         if (bR < shipHitL || bL > shipHitR) continue
         if (g.airborne) {
+          // Detection waits until the ship's *center* is over the beacon so
+          // the alarm beam (drawn at the beacon) reads as mid-ship, not at
+          // the bow. Until then leave it intact and re-check next frame.
+          const shipCenterWorldX = shipScreenX + g.shipW / 2 + g.scrollX
+          const beaconCenterWorldX = cr.x + cr.width / 2
+          if (shipCenterWorldX < beaconCenterWorldX) continue
           // Start detection flash — gameplay freezes, beam plays, then death
           g.detectingUntil = performance.now() + BEACON_DETECT_FLASH_SEC * 1000
-          g.detectingBeaconX = cr.x + cr.width / 2
+          g.detectingBeaconX = beaconCenterWorldX
           // Lock in the final score now (distance is frozen during flash)
           setScore(Math.floor(g.distance))
           break
@@ -1224,11 +1230,11 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       if (remaining > 0) {
         const totalMs = BEACON_DETECT_FLASH_SEC * 1000
         const t = 1 - remaining / totalMs            // 0 → 1 over flash duration
-        // Anchor the beam to the middle of the (stationary) ship, not the
-        // beacon center — detection fires on bow contact, so the beacon
-        // center reads as the ship's front tip otherwise.
-        const beamX = cw * SHIP_X_RATIO + g.shipW / 2
-        const surfaceAtBeam = seaSurfaceY(beamX + g.scrollX, ch, g.scrollX)
+        // Beam rises from the beacon itself (the alarm source). Detection
+        // only fires once the ship is centered over it, so it also reads
+        // as mid-ship without detaching the beam from the beacon.
+        const beamX = g.detectingBeaconX - g.scrollX
+        const surfaceAtBeam = seaSurfaceY(g.detectingBeaconX, ch, g.scrollX)
 
         // A few flicker pulses across the duration for "Whoop! Whoop!" detection feel
         const flick = 0.7 + 0.3 * Math.sin(t * Math.PI * 6)
