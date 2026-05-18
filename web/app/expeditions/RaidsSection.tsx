@@ -141,7 +141,28 @@ function RaidMap({
                 touchAction: 'manipulation',
               }}
             >
-              {locked ? <LockGlyph size={20} /> : <NodeGlyph type={node.type} color={accent} size={24} />}
+              {node.image ? (
+                <div style={{
+                  position: 'absolute', inset: 3, borderRadius: '50%', overflow: 'hidden',
+                  filter: locked ? 'grayscale(1) brightness(0.5)' : undefined,
+                }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={node.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              ) : locked ? <LockGlyph size={20} /> : <NodeGlyph type={node.type} color={accent} size={24} />}
+
+              {locked && node.image && (
+                <span
+                  style={{
+                    position: 'absolute', right: -3, bottom: -3,
+                    width: 20, height: 20, borderRadius: '50%',
+                    background: '#1a1814', border: '2px solid #0a0907',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <LockGlyph size={10} />
+                </span>
+              )}
 
               {cleared && (
                 <span
@@ -299,11 +320,14 @@ function NodeDetailSheet({
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.9rem' }}>
           <div style={{ display: 'flex', gap: '0.7rem', alignItems: 'center', minWidth: 0 }}>
             <div style={{
-              width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+              width: 50, height: 50, borderRadius: 12, flexShrink: 0, overflow: 'hidden',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: `${accent}1a`, border: `1px solid ${accent}3a`,
             }}>
-              {locked ? <LockGlyph size={20} /> : <NodeGlyph type={node.type} color={accent} size={22} />}
+              {node.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={node.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: locked ? 'grayscale(1) brightness(0.6)' : undefined }} />
+              ) : locked ? <LockGlyph size={20} /> : <NodeGlyph type={node.type} color={accent} size={22} />}
             </div>
             <div style={{ minWidth: 0 }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1.15 }}>{node.label}</p>

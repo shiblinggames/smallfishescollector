@@ -48,6 +48,9 @@ export interface RaidNode {
   requiresNavLevel?: number
   /** combat: route to the existing combat screen. */
   route?: string
+  /** Portrait shown in the map token + sheet header (e.g. the enemy you
+   *  face). Falls back to the type glyph when unset. */
+  image?: string
   /** milestone: reach (not spend) `amount` doubloons to clear; optional
    *  one-time reward on claim. */
   milestone?: { amount: number; rewardDoubloons?: number }
@@ -75,6 +78,7 @@ export const RAID_MAP: RaidNode[] = [
     label: 'Reef Skirmish',
     flavor: 'Learn the broadside system against a lone Reef Raider. Clear it once to set sail on the campaign.',
     route: '/raids/practice',
+    image: CORSAIRS_RECKONING.enemies.brute.portrait,
     detail: {
       description:
         "A single training duel against a lone Reef Raider — no boss, no loot crate, no risk. Safe to repeat any time you want to drill the broadside system. Clearing it once charts the rest of the campaign.",
@@ -93,6 +97,7 @@ export const RAID_MAP: RaidNode[] = [
     flavor: 'Barnacle Pete and his fleet have been spotted off the coast. Bring him to justice — dead or alive.',
     requiresNode: 'skirmish',
     route: '/raids',
+    image: CORSAIRS_RECKONING.enemies.pete.portrait,
     detail: {
       description:
         "Pete's full campaign: six escalating ship battles with no breather, ending in the old corsair himself. Win the gauntlet to crack open his loot crate — the only place his contraband drops.",
