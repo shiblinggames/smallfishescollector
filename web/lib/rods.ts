@@ -134,7 +134,7 @@ export const RODS: RodDef[] = [
     slug: 'rod_millionaires', glow: true, glowType: 'sparkle',
   },
   {
-    tier: 15, name: 'YOLO Rod', cost: 200000,
+    tier: 15, name: 'YOLO Rod', cost: 1000000,
     description: '10% chance to land 100 fish at once. The other 90%? Just a regular catch.',
     color: '#60d9ff', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
