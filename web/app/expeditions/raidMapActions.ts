@@ -87,3 +87,39 @@ export async function claimMilestoneNode(
 
   return { doubloons: newDoubloons }
 }
+
+// Story nodes have no fight and cost nothing — reading one marks it
+// done and unlocks whatever it gates. Same persistence as milestones
+// (raid_node_progress.cleared[]), no doubloon logic.
+export async function markStoryNodeRead(
+  nodeId: string,
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const node = RAID_MAP.find(n => n.id === nodeId)
+  if (!node || node.type !== 'story') return { error: 'Invalid node' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('has_completed_practice_raid, raid_node_progress')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+
+  const cleared = await buildClearedSet(admin, user.id, profile)
+  if (cleared.has(nodeId)) return { ok: true } // idempotent
+  if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
+
+  const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}
+  const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
+
+  await admin
+    .from('profiles')
+    .update({ raid_node_progress: { ...prog, cleared: newCleared } })
+    .eq('id', user.id)
+
+  return { ok: true }
+}

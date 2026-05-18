@@ -53,6 +53,8 @@ export interface RaidNodeDetail {
   drops?: RaidNodeDrop[]
   /** Footnote under the drops list. */
   dropsNote?: string
+  /** Override the primary button verb (story nodes). */
+  ctaLabel?: string
 }
 
 export interface RaidNode {
@@ -109,10 +111,31 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
 
 export const RAID_MAP: RaidNode[] = [
   {
+    id: 'intro',
+    type: 'story',
+    label: 'A Loose Thread',
+    flavor: "The sea's gone quiet in a way that isn't peaceful. Someone should pull on that.",
+    detail: {
+      description:
+        "You've heard the dock talk your whole life — Barnacle Pete, scourge of the reef, terror of honest crews. You've also heard the part nobody dwells on: Pete's raided these waters for thirty years and died poor every one of them. The gold goes somewhere. The prisoners go somewhere. Crews wash up still breathing but hollow, and not one will say who they served.\n\nEvery captain calls it bad luck. You're starting to think it's a someone. Pull the thread that's closest — the loud one with the cannon — and see what comes loose.",
+      drops: [
+        {
+          emoji: '📜',
+          label: 'Captain’s Logbook — Fragment I',
+          sublabel: '“They never keep what they take.” — dockside rumour, unverified',
+          rarity: 'common',
+        },
+      ],
+      dropsNote: 'Story fragments collect here as you unravel who Pete really answers to.',
+      ctaLabel: 'Begin the Hunt →',
+    },
+  },
+  {
     id: 'skirmish',
     type: 'skirmish',
     label: 'Reef Skirmish',
     flavor: 'Learn the broadside system against a lone Reef Raider. Clear it once to set sail on the campaign.',
+    requiresNode: 'intro',
     route: '/raids/practice',
     image: CORSAIRS_RECKONING.enemies.brute.portrait,
     detail: {
@@ -203,8 +226,10 @@ export function computeRaidMap(
     const prereqOk = !node.requiresNode || cleared.has(node.requiresNode)
     const navOk = !node.requiresNavLevel || navLevel >= node.requiresNavLevel
     if (!prereqOk || !navOk) {
+      const req = RAID_MAP.find(n => n.id === node.requiresNode)
+      const verb = req?.type === 'story' ? 'Read' : 'Clear'
       const reason = !prereqOk
-        ? `Clear ${RAID_MAP.find(n => n.id === node.requiresNode)?.label ?? 'the previous stop'} first`
+        ? `${verb} ${req?.label ?? 'the previous stop'} first`
         : `Reach Navigation Level ${node.requiresNavLevel}`
       return { node, status: 'locked' as const, claimable: false, lockReason: reason }
     }

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { isCombatNode, type RaidNodeView } from '@/lib/raidMap'
 import { RARITY_COLOR } from '@/lib/bossRaids'
-import { claimMilestoneNode } from './raidMapActions'
+import { claimMilestoneNode, markStoryNodeRead } from './raidMapActions'
 
 // Distinct border / glow colour per node type so the route reads at a
 // glance: cyan = practice, ember = boss raid, gold = collect goal,
@@ -233,7 +233,11 @@ function NodeDetailSheet({
   const cleared = status === 'cleared'
   const detail = node.detail
 
-  const dropsTitle = isCombatNode(node.type) ? 'Possible Loot' : node.type === 'shop' ? 'Planned Stock' : 'Reward'
+  const dropsTitle = isCombatNode(node.type)
+    ? 'Possible Loot'
+    : node.type === 'shop' ? 'Planned Stock'
+    : node.type === 'story' ? 'What You Uncover'
+    : 'Reward'
 
   function claim() {
     setErr(null)
@@ -241,6 +245,16 @@ function NodeDetailSheet({
       const res = await claimMilestoneNode(node.id)
       if ('error' in res) { setErr(res.error); return }
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+      router.refresh()
+      onClose()
+    })
+  }
+
+  function readStory() {
+    setErr(null)
+    startTransition(async () => {
+      const res = await markStoryNodeRead(node.id)
+      if ('error' in res) { setErr(res.error); return }
       router.refresh()
       onClose()
     })
@@ -306,8 +320,24 @@ function NodeDetailSheet({
     }
   } else if (node.type === 'shop') {
     cta = <div className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '0.95rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Coming Soon</div>
+  } else if (node.type === 'story') {
+    if (cleared) {
+      cta = <div className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '0.95rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Logged ✓</div>
+    } else if (locked) {
+      cta = <div className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '0.95rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
+    } else {
+      cta = (
+        <button
+          onClick={readStory}
+          disabled={pending}
+          className="font-cinzel font-700 uppercase tracking-[0.08em]"
+          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, border: 'none', fontSize: '0.95rem', background: accent, color: '#1a0f02', cursor: pending ? 'wait' : 'pointer' }}
+        >
+          {pending ? '…' : (detail.ctaLabel ?? 'Continue the Story →')}
+        </button>
+      )
+    }
   }
-  // story (future): no CTA yet — the sheet still shows the description.
 
   const sheet = (
     <motion.div
@@ -395,7 +425,7 @@ function NodeDetailSheet({
         </div>
 
         {/* Description */}
-        <p className="font-karla" style={{ fontSize: '0.85rem', lineHeight: 1.6, color: 'rgba(240,237,232,0.72)' }}>
+        <p className="font-karla" style={{ fontSize: '0.85rem', lineHeight: 1.6, color: 'rgba(240,237,232,0.72)', whiteSpace: 'pre-line' }}>
           {detail.description}
         </p>
 
