@@ -419,12 +419,19 @@ function NodeDetailSheet({
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: `${rc}1a`, fontSize: '1rem', overflow: 'hidden',
                     }}>
-                      {d.image
-                        // eslint-disable-next-line @next/next/no-img-element
-                        ? <img src={d.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                        : <span>{d.emoji}</span>}
+                      {d.swatch
+                        ? <div style={{ width: '100%', height: '100%', background: d.swatch, filter: d.swatchFilter }} />
+                        : d.image
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={d.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                          : <span>{d.emoji}</span>}
                     </div>
-                    <span className="font-karla font-600" style={{ flex: 1, minWidth: 0, fontSize: '0.78rem', color: '#e8e2d8' }}>{d.label}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.78rem', color: '#e8e2d8' }}>{d.label}</span>
+                      {d.sublabel && (
+                        <span className="font-karla" style={{ display: 'block', fontSize: '0.62rem', color: '#8a8880', lineHeight: 1.35, marginTop: 1 }}>{d.sublabel}</span>
+                      )}
+                    </div>
                     {d.chance && (
                       <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: rc, background: `${rc}1c`, border: `1px solid ${rc}40`, borderRadius: 6, padding: '0.22rem 0.45rem', flexShrink: 0 }}>
                         {d.chance}

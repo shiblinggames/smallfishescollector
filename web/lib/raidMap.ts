@@ -11,6 +11,8 @@
 // stays farmable.
 
 import { CORSAIRS_RECKONING, type RaidLootItem } from '@/lib/bossRaids'
+import { getShipSkin } from '@/lib/shipSkins'
+import { getRaidItem } from '@/lib/raidItems'
 
 export type RaidNodeType = 'combat' | 'milestone' | 'shop'
 
@@ -22,6 +24,12 @@ export interface RaidNodeDrop {
   rarity?: RaidLootItem['rarity']
   /** Human-readable odds, e.g. "49%", "Guaranteed", "Every kill". */
   chance?: string
+  /** Short, noob-friendly line under the label (what the thing is). */
+  sublabel?: string
+  /** Solid swatch colour shown instead of an icon (ship skins). */
+  swatch?: string
+  /** CSS filter applied to the swatch — the skin's actual effect. */
+  swatchFilter?: string
 }
 
 /** Extra content shown when the player taps a node open. */
@@ -62,13 +70,30 @@ export interface RaidNode {
  *  table so the node sheet and the live crate never drift apart. */
 function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
   const total = loot.reduce((s, l) => s + l.weight, 0)
-  return loot.map(l => ({
-    label: l.label,
-    emoji: l.emoji,
-    image: l.image,
-    rarity: l.rarity,
-    chance: `${Math.round((l.weight / total) * 100)}%`,
-  }))
+  return loot.map(l => {
+    const drop: RaidNodeDrop = {
+      label: l.label,
+      emoji: l.emoji,
+      image: l.image,
+      rarity: l.rarity,
+      chance: `${Math.round((l.weight / total) * 100)}%`,
+    }
+    // Ship skin → show its effect swatch + say it's a cosmetic.
+    if (l.shipSkinId) {
+      const skin = getShipSkin(l.shipSkinId)
+      if (skin) {
+        drop.label = skin.name
+        drop.sublabel = 'Ship skin — a new look for your ship (cosmetic only)'
+        drop.swatch = skin.color
+        drop.swatchFilter = skin.filter
+        drop.image = null
+      }
+    }
+    // Raid item → surface its plain-English effect.
+    const item = getRaidItem(l.id)
+    if (item) drop.sublabel = `Raid item — ${item.description}`
+    return drop
+  })
 }
 
 export const RAID_MAP: RaidNode[] = [
