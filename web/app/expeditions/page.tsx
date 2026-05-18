@@ -3,13 +3,13 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
-import RaidCard from './RaidCard'
+import RaidsSection from './RaidsSection'
 import ShipHero from './ShipHero'
 import DailyVoyagePanel from './DailyVoyagePanel'
 import ExpeditionsTour from './ExpeditionsTour'
 import { getCollectionForCrew } from './actions'
 import { getDailyVoyageState } from './voyageActions'
-import { getLevelFromXP } from '@/lib/expeditionLevel'
+import { getRaidMapView } from './raidMapActions'
 
 export default async function ExpeditionsPage() {
   const supabase = await createClient()
@@ -18,7 +18,7 @@ export default async function ExpeditionsPage() {
 
   const admin = createAdminClient()
 
-  const [{ data: profile }, collection, dailyVoyageState, { data: voyageHistoryRows }] = await Promise.all([
+  const [{ data: profile }, collection, dailyVoyageState, { data: voyageHistoryRows }, raidMap] = await Promise.all([
     admin.from('profiles')
       .select('packs_available, doubloons, ship_tier, gems, saved_crew, ship_name, expedition_xp, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, has_completed_practice_raid, has_seen_expeditions_tour')
       .eq('id', user.id)
@@ -31,11 +31,11 @@ export default async function ExpeditionsPage() {
       .eq('status', 'revealed')
       .order('created_at', { ascending: false })
       .limit(8),
+    getRaidMapView(),
   ])
 
   const shipTier = profile?.ship_tier ?? 0
   const doubloons = profile?.doubloons ?? 0
-  const navLevel = getLevelFromXP(profile?.expedition_xp ?? 0)
   const savedCrewVariantIds: number[] = (profile?.saved_crew as number[] | null) ?? []
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
 
@@ -91,11 +91,8 @@ export default async function ExpeditionsPage() {
             />
           </div>
 
-          {/* ── Raids ── */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Raids</p>
-            <RaidCard navLevel={navLevel} hasCompletedPracticeRaid={!!(profile?.has_completed_practice_raid)} />
-          </div>
+          {/* ── Raids — collapsible node-map progression ── */}
+          <RaidsSection views={raidMap.views} doubloons={raidMap.doubloons} />
 
           <div className="pb-16" />
         </div>
