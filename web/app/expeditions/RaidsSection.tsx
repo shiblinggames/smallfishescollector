@@ -210,8 +210,8 @@ function RaidMap({
               )}
             </motion.button>
 
-            {/* Title plate beside the token (open side), vertically
-                centred so it adds no height to the node. */}
+            {/* Title beside the token (open side), vertically centred
+                so it adds no height to the node. */}
             <div
               style={{
                 position: 'absolute',
@@ -219,20 +219,16 @@ function RaidMap({
                 transform: 'translateY(-50%)',
                 width: 'max-content',
                 maxWidth: 116,
-                boxSizing: 'border-box',
-                background: 'rgba(8,7,6,0.9)',
-                borderRadius: 6,
-                padding: '2px 7px',
                 pointerEvents: 'none',
                 ...(labelRight
-                  ? { left: '100%', marginLeft: 9, textAlign: 'left' as const }
-                  : { right: '100%', marginRight: 9, textAlign: 'right' as const }),
+                  ? { left: '100%', marginLeft: 11, textAlign: 'left' as const }
+                  : { right: '100%', marginRight: 11, textAlign: 'right' as const }),
               }}
             >
-              <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', lineHeight: 1.12, color: locked ? 'rgba(240,237,232,0.4)' : '#f0ede8' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', lineHeight: 1.12, color: locked ? 'rgba(240,237,232,0.4)' : '#f0ede8', textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}>
                 {node.label}
               </p>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.46rem', marginTop: 1, color: cleared ? '#4ade80' : locked ? '#5a5856' : accent }}>
+              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.46rem', marginTop: 1, color: cleared ? '#4ade80' : locked ? '#5a5856' : accent, textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}>
                 {statusWord}
               </p>
             </div>
