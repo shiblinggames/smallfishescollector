@@ -24,10 +24,10 @@ const TYPE_ACCENT: Record<string, string> = {
 // midpoint (opposite the route), so it zig-zags too and never lands on
 // the connector line. Pattern repeats as RAID_MAP grows.
 const COLS = [50, 73, 27, 62, 38, 70, 30]
-const ROW = 170          // vertical pitch between node centres
+const ROW = 128          // vertical pitch between node centres
 const TOKEN = 48         // layout/max token diameter (drives spacing + viewBox)
-const PAD_TOP = 30
-const PAD_BOTTOM = 20
+const PAD_TOP = 24
+const PAD_BOTTOM = 16
 
 // Visual token size by type: bigger node = bigger fight. A story beat
 // is the smallest, a skirmish small, a full raid the biggest.
@@ -141,11 +141,10 @@ function RaidMap({
               pointerEvents: 'none',
             }}
           >
-            <p className="font-karla" style={{
-              fontSize: '0.64rem',
-              lineHeight: 1.4,
-              fontStyle: 'italic',
-              color: v.status === 'cleared' ? 'rgba(240,237,232,0.66)' : 'rgba(240,237,232,0.34)',
+            <p className="font-karla font-600" style={{
+              fontSize: '0.66rem',
+              lineHeight: 1.35,
+              color: v.status === 'cleared' ? 'rgba(240,237,232,0.9)' : 'rgba(240,237,232,0.58)',
             }}>
               {v.node.bridge}
             </p>
