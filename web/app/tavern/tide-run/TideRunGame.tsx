@@ -126,6 +126,8 @@ const CURRENT_SPEED_MULT   = 0.55  // effective scroll speed when grounded insid
 const CURRENT_WARMUP_M     = 35    // currents don't appear until 35m into the run
 const CURRENT_ENTER_RATE   = 5.0   // 1/s — how fast the boat slows entering a current
 const CURRENT_EXIT_RATE    = 1.6   // 1/s — how slow the boat re-accelerates leaving one
+const CURRENT_RECOVERY_SEC = 1.6   // ~time for speed to recover after a current; a shoal
+                                   // within this window of one is forced narrow (fair)
 
 // Hitbox inset on the trimmed sprite
 const HITBOX_INSET = { top: 0.35, right: 0.12, bottom: 0.08, left: 0.08 }
@@ -581,9 +583,20 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
         const minCurrentGap = g.cw * 0.32
         g.currents = g.currents.filter(c => (c.x + c.width + minCurrentGap) < shoalStartX)
 
+        // A current that survived the overlap-sweep can still sit close
+        // enough that the boat reaches the shoal before its speed has
+        // recovered from the slowdown (~CURRENT_RECOVERY_SEC of travel).
+        // A long or cluster shoal there is unclearable while still slowed,
+        // so when one is in that window force a single, narrow, always
+        // tap-clearable shoal.
+        const recoveryDist = g.speed * CURRENT_RECOVERY_SEC
+        const currentBeforeShoal = g.currents.some(
+          c => c.x + c.width > shoalStartX - recoveryDist && c.x + c.width <= shoalStartX,
+        )
+
         // Cluster vs single: clusters introduce the "narrow rooftop" precision
         // mechanic — multiple shoals with safe-landing strips between them.
-        const wantCluster = distance > SHOAL_CLUSTER_WARMUP_M && Math.random() < SHOAL_CLUSTER_CHANCE
+        const wantCluster = !currentBeforeShoal && distance > SHOAL_CLUSTER_WARMUP_M && Math.random() < SHOAL_CLUSTER_CHANCE
         if (wantCluster) {
           const count = SHOAL_CLUSTER_MIN_COUNT +
             Math.floor(Math.random() * (SHOAL_CLUSTER_MAX_COUNT - SHOAL_CLUSTER_MIN_COUNT + 1))
@@ -603,8 +616,11 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
           }
           g.nextSpawnAt = curX + baseSpacing
         } else {
-          // Single shoal
-          const wpWidth = SHOAL_MIN_WIDTH + Math.random() * (maxClearableWidth - SHOAL_MIN_WIDTH)
+          // Single shoal — kept narrow if it follows a current still
+          // slowing the boat, else random up to the clearable max.
+          const wpWidth = currentBeforeShoal
+            ? SHOAL_MIN_WIDTH
+            : SHOAL_MIN_WIDTH + Math.random() * (maxClearableWidth - SHOAL_MIN_WIDTH)
           g.shoals.push({ x: shoalStartX, width: wpWidth })
           g.nextSpawnAt += wpWidth + baseSpacing
         }
