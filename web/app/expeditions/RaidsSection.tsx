@@ -125,6 +125,11 @@ function RaidMap({
         const locked = status === 'locked'
         const cleared = status === 'cleared'
         const isCurrent = i === currentIdx
+        const statusWord = cleared ? (isCombatNode(node.type) ? 'Cleared' : 'Done') : locked ? 'Locked' : 'Available'
+        // Put the title plate on whichever side has the most room: a
+        // node on the left half gets its label to the right, and vice
+        // versa. The plate's dark background hides the route behind it.
+        const labelRight = cx(i) < 50
         return (
           <div
             key={node.id}
@@ -204,6 +209,33 @@ function RaidMap({
                 </span>
               )}
             </motion.button>
+
+            {/* Title plate beside the token (open side), vertically
+                centred so it adds no height to the node. */}
+            <div
+              style={{
+                position: 'absolute',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: 'max-content',
+                maxWidth: 116,
+                boxSizing: 'border-box',
+                background: 'rgba(8,7,6,0.9)',
+                borderRadius: 6,
+                padding: '2px 7px',
+                pointerEvents: 'none',
+                ...(labelRight
+                  ? { left: '100%', marginLeft: 9, textAlign: 'left' as const }
+                  : { right: '100%', marginRight: 9, textAlign: 'right' as const }),
+              }}
+            >
+              <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', lineHeight: 1.12, color: locked ? 'rgba(240,237,232,0.4)' : '#f0ede8' }}>
+                {node.label}
+              </p>
+              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.46rem', marginTop: 1, color: cleared ? '#4ade80' : locked ? '#5a5856' : accent }}>
+                {statusWord}
+              </p>
+            </div>
           </div>
         )
       })}
