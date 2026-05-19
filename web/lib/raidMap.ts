@@ -128,6 +128,7 @@ export const RAID_MAP: RaidNode[] = [
     label: 'A Loose Thread',
     flavor: "Barnacle Pete has bled the weak for years, and every coin of it sails off to someone bigger.",
     bridge: "Every trail runs back to one reef, where Pete's little fish do his collecting.",
+    image: '/raidlog.png',
     detail: {
       description:
         "Pete is not some broke old chancer. He is good at what he does, and what he does is prey on the weak. Small crews, fishing folk, anyone too slight to fight back. Years of it, up and down this coast.\n\nThe strange part is the coin. Pete robs plenty and keeps almost none. He is a cash cow, milked by someone he answers to. Nobody can be bothered to ask who. You, clearly, have nothing better to do. Go give the loudest pirate on the water a good shake and see what falls out.",
@@ -188,6 +189,7 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "Pete's books name the Finndicate. One sealed letter names someone else, and points the way.",
     bridge: "The letter's heading runs straight through the Bilge Strait. To follow C.K.'s cargo you have to get past the thugs who own that water.",
     requiresNode: 'pete',
+    image: '/raidlog.png',
     detail: {
       description:
         "Pete's strongbox was not empty. It was full of someone else's bookkeeping: cut sheets, courier routes, a tally of years, and one word stamped on every page. The Finndicate. Pete was no kingpin. He was a cash cow, milked dry and bled like everyone he ever robbed.\n\nUnder the ledgers sits a sealed shipment letter. No name on it, just two initials pressed into the wax: C.K. The manifest is heavy and the route is half burned away, but the heading survives. It runs out past the Bilge Strait, into the cold water beyond. Whoever C.K. is, the Finndicate trusts them with a great deal of cargo, and now you know which way it sails.",
@@ -218,6 +220,7 @@ export const RAID_MAP: RaidNode[] = [
     requiresNode: 'syndicate',
     requiresNavLevel: 10,
     milestone: { amount: 1000, spend: true },
+    image: '/bilge_eel.jpeg',
     detail: {
       description:
         "The letter never gave an address, only a heading: out past the Bilge Strait into the cold water. That is enough to follow, and it is exactly the stretch the Bilge Eels own.\n\nThey answer to no one. Not Finndicate, not you, just a knot of thugs charging toll on the only water that points where C.K.'s cargo went. There is no fighting through at your size. They treat only with captains who have sailed enough to be worth the breath (Navigation 10), and even then it costs. Slide them 1,000 ⟡ and they wave you through, onto C.K.'s trail. Refuse, and the trail goes cold.",
@@ -248,6 +251,7 @@ export const RAID_MAP: RaidNode[] = [
     flavor: 'Two initials on a sealed letter. The fence on the cold side of the strait can read the rest.',
     bridge: "Captain Krust. He runs the Finndicate's freight, and every hold he fills is a hold you can empty. His consignment is out there now.",
     requiresNode: 'quartermaster',
+    image: '/raidlog.png',
     detail: {
       description:
         "The wax on Pete's letter only ever gave you two letters: C.K. The fence past the strait gives you the rest, for the price of looking like he did you no favour.\n\nCaptain Krust. An old, hard hand the Finndicate trusts with its freight, the kind of captain who never asks whose name is on a manifest and has lasted a lifetime for exactly that. He does not raid the weak the way Pete did. He moves cargo, on schedule, in bulk, and the Finndicate counts on every crate of it. He is no kingpin either. He answers upward like all of them. But he is a long way above a barnacled chancer, and his consignment is sailing the cold water right now.",
