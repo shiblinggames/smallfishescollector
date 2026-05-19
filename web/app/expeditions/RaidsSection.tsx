@@ -24,7 +24,7 @@ const TYPE_ACCENT: Record<string, string> = {
 // midpoint (opposite the route), so it zig-zags too and never lands on
 // the connector line. Pattern repeats as RAID_MAP grows.
 const COLS = [50, 73, 27, 62, 38, 70, 30]
-const ROW = 120          // vertical pitch between node centres
+const ROW = 158          // vertical pitch between node centres
 const TOKEN = 48         // layout/max token diameter (drives spacing + viewBox)
 const PAD_TOP = 24
 const PAD_BOTTOM = 16
@@ -126,7 +126,7 @@ function RaidMap({
         // so it never touches the line, and align it toward the route.
         const mid = (cx(i) + cx(i + 1)) / 2
         const onLeft = mid >= 50
-        const GUT = 9
+        const GUT = 10
         const sidePos = onLeft
           ? { left: '2%', right: `${100 - (mid - GUT)}%`, textAlign: 'right' as const }
           : { left: `${mid + GUT}%`, right: '2%', textAlign: 'left' as const }
