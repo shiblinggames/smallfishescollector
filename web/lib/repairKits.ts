@@ -34,7 +34,7 @@ export const REPAIR_KITS: RepairKitDef[] = [
     baseMin: 1,
     baseMax: 10,
     emoji: '🛠️',
-    image: null,
+    image: '/basicrepair.png',
     rarity: 'common',
     source: 'Every captain starts with one.',
   },
