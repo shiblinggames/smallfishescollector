@@ -9,6 +9,13 @@ import LeaderboardModal from '@/components/LeaderboardModal'
 // ── Tunable constants ────────────────────────────────────────────────────────
 const SHIP_X_RATIO    = 0.13   // boat sits ~13% from the left, giving ~87% lookahead
 const SHIP_HEIGHT_PCT = 0.095  // small Canabalt-style sprite (~9.5% of canvas height)
+// The world (scroll speed, hazard spacing, shoals, jump physics) is in
+// absolute px, but the canvas is up to ~900px tall on desktop vs ~560-700
+// on mobile. Sizing the ship off raw canvas height made it ~50% bigger on
+// desktop and the game felt "zoomed in". Clamp the height used for ship
+// sizing to a mobile-representative reference so the ship stays its tuned
+// pixel size on tall screens (mobile unchanged). Tuned 2026-05-19.
+const SHIP_SIZING_REF_H = 620
 const SHIP_ASPECT     = 1031 / 672   // trimmed boatrun.png
 
 // Ship physics — Canabalt feel. Boat rides the wave surface; press-and-hold
@@ -433,7 +440,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     const g = gRef.current
     g.cw = rect.width
     g.ch = rect.height
-    g.shipH = rect.height * SHIP_HEIGHT_PCT
+    g.shipH = Math.min(rect.height, SHIP_SIZING_REF_H) * SHIP_HEIGHT_PCT
     g.shipW = g.shipH * SHIP_ASPECT
     if (g.state === 'ready') {
       // Park the ship sitting on the sea surface at its screen x
