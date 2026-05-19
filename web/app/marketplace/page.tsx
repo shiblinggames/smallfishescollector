@@ -65,7 +65,7 @@ export default async function MarketplacePage() {
               <Link href="/marketplace/tackle-shop" style={{ textDecoration: 'none', display: 'block' }}>
                 <DestCard
                   accent="#22d3ee"
-                  art="/rod_treasure_thumb.png"
+                  art="/rod_legendary_thumb.png"
                   eyebrow="Tackle"
                   title="Tackle Shop"
                   description="Rods, reels, hooks, and bait. Each piece changes how you fish."
