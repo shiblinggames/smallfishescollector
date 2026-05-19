@@ -19,11 +19,11 @@ const TYPE_ACCENT: Record<string, string> = {
   story:     '#6fbf73',
 }
 
-// Winding sea-chart layout: nodes zig-zag across the width (% of width,
-// cycled top→bottom). The wide row pitch is intentional now: the gap
-// between two nodes carries a one-line narrative recap of what beating
-// the upper node set in motion. Pattern repeats as RAID_MAP grows.
-const COLS = [50, 73, 27, 62, 38, 70, 30]
+// Winding sea-chart layout. Nodes zig-zag but stay in the LEFT band
+// (% of width, cycled top→bottom) so the connector line never crosses
+// into the right column, where the between-node narrative recap lives.
+// That keeps the text beside the route, never on it. Repeats as grows.
+const COLS = [24, 36, 16, 34, 20, 36, 18]
 const ROW = 150          // vertical pitch between node centres
 const TOKEN = 48         // layout/max token diameter (drives spacing + viewBox)
 const PAD_TOP = 30
@@ -125,11 +125,11 @@ function RaidMap({
             key={`bridge-${v.node.id}`}
             style={{
               position: 'absolute',
-              left: '9%',
-              right: '9%',
+              left: '50%',
+              right: '4%',
               top: cy(i) + ROW / 2,
               transform: 'translateY(-50%)',
-              textAlign: 'center',
+              textAlign: 'left',
               pointerEvents: 'none',
             }}
           >
@@ -168,7 +168,7 @@ function RaidMap({
               flexDirection: 'column',
               alignItems: 'center',
               gap: 6,
-              width: 124,
+              width: 92,
             }}
           >
             <motion.button
@@ -241,7 +241,7 @@ function RaidMap({
               )}
             </motion.button>
 
-            <div style={{ textAlign: 'center', maxWidth: 124 }}>
+            <div style={{ textAlign: 'center', maxWidth: 92 }}>
               <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', lineHeight: 1.2, color: locked ? 'rgba(240,237,232,0.4)' : '#f0ede8' }}>
                 {node.label}
               </p>
