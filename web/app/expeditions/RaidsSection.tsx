@@ -496,19 +496,24 @@ function NodeDetailSheet({
         {detail.drops && detail.drops.length > 0 && (
           <div style={{ marginTop: '1.1rem' }}>
             <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>{dropsTitle}</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
               {detail.drops.map(d => {
                 const rc = d.rarity ? RARITY_COLOR[d.rarity] : '#9ca3af'
+                // Plain loot packs two-up; anything with a description
+                // (or a lone reward) spans the row so its text stays
+                // readable.
+                const full = !!d.sublabel || detail.drops!.length === 1
                 return (
                   <div key={d.label} style={{
-                    display: 'flex', alignItems: 'center', gap: '0.65rem',
+                    gridColumn: full ? '1 / -1' : undefined,
+                    display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0,
                     background: 'rgba(255,255,255,0.03)', border: `1px solid ${rc}26`,
-                    borderRadius: 10, padding: '0.5rem 0.7rem',
+                    borderRadius: 9, padding: '0.4rem 0.5rem',
                   }}>
                     <div style={{
-                      width: 30, height: 30, borderRadius: 7, flexShrink: 0,
+                      width: 26, height: 26, borderRadius: 6, flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: `${rc}1a`, fontSize: '1rem', overflow: 'hidden',
+                      background: `${rc}1a`, fontSize: '0.9rem', overflow: 'hidden',
                     }}>
                       {d.swatch
                         ? <div style={{ width: '100%', height: '100%', background: d.swatch, filter: d.swatchFilter }} />
@@ -518,13 +523,13 @@ function NodeDetailSheet({
                           : <span>{d.emoji}</span>}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.78rem', color: '#e8e2d8' }}>{d.label}</span>
+                      <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.74rem', color: '#e8e2d8', whiteSpace: full ? 'normal' : 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.label}</span>
                       {d.sublabel && (
                         <span className="font-karla" style={{ display: 'block', fontSize: '0.62rem', color: '#8a8880', lineHeight: 1.35, marginTop: 1 }}>{d.sublabel}</span>
                       )}
                     </div>
                     {d.chance && (
-                      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: rc, background: `${rc}1c`, border: `1px solid ${rc}40`, borderRadius: 6, padding: '0.22rem 0.45rem', flexShrink: 0 }}>
+                      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.54rem', color: rc, background: `${rc}1c`, border: `1px solid ${rc}40`, borderRadius: 5, padding: '0.2rem 0.4rem', flexShrink: 0 }}>
                         {d.chance}
                       </span>
                     )}
