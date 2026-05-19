@@ -165,7 +165,7 @@ export const RAID_MAP: RaidNode[] = [
     type: 'raid',
     label: "The Corsair's Reckoning",
     flavor: 'Barnacle Pete and his fleet have been spotted off the coast. Bring him to justice, dead or alive.',
-    bridge: "Pete goes down hard, and his strongbox spills more than coin. He was never the top of this. He was paying someone.",
+    bridge: "Pete goes down hard, and his strongbox spills more than coin. Ledgers. A sealed letter. He was never the top of this. He was feeding someone bigger.",
     requiresNode: 'skirmish',
     route: '/raids',
     image: CORSAIRS_RECKONING.enemies.pete.portrait,
@@ -181,12 +181,12 @@ export const RAID_MAP: RaidNode[] = [
     id: 'syndicate',
     type: 'story',
     label: 'A Bigger Fish',
-    flavor: "Pete was a collector, not a kingpin. His books name the hand that milked him.",
-    bridge: "Hunting a syndicate burns coin and buys informants. Fill the war chest before you knock on their doors.",
+    flavor: "Pete's books name the Finndicate. One sealed letter names someone else, and points the way.",
+    bridge: "The letter's heading runs straight through the Bilge Strait. To follow C.K.'s cargo you have to get past the thugs who own that water.",
     requiresNode: 'pete',
     detail: {
       description:
-        "Pete's strongbox was not empty. It was full of someone else's bookkeeping. Cut sheets, courier routes, a tally of years, and one word stamped on every page: the Finndicate.\n\nHe was never a kingpin. He was a cash cow, milked dry and bled like everyone he ever robbed. The Finndicate is far bigger than one fat corsair. Somewhere out there is a counting house where his deliveries were logged, and a base where the muscle that guards them sleeps. Get the paperwork. Find the door. Then go kick it in.",
+        "Pete's strongbox was not empty. It was full of someone else's bookkeeping: cut sheets, courier routes, a tally of years, and one word stamped on every page. The Finndicate. Pete was no kingpin. He was a cash cow, milked dry and bled like everyone he ever robbed.\n\nUnder the ledgers sits a sealed shipment letter. No name on it, just two initials pressed into the wax: C.K. The manifest is heavy and the route is half burned away, but the heading survives. It runs out past the Bilge Strait, into the cold water beyond. Whoever C.K. is, the Finndicate trusts them with a great deal of cargo, and now you know which way it sails.",
       drops: [
         {
           emoji: '📜',
@@ -194,25 +194,31 @@ export const RAID_MAP: RaidNode[] = [
           sublabel: '"The Finndicate does not lose men. It loses ledgers." Scratched inside the strongbox lid.',
           rarity: 'uncommon',
         },
+        {
+          emoji: '✉️',
+          label: 'Sealed Shipment Letter',
+          sublabel: 'Addressed only to "C.K." A heavy manifest bound past the Bilge Strait.',
+          rarity: 'rare',
+        },
       ],
-      dropsNote: 'A name at last: the Finndicate. The next page is somewhere in their books.',
-      ctaLabel: 'Follow the Ledger →',
+      dropsNote: 'A name (the Finndicate) and a lead (C.K., and the way the cargo sails). Both run through the Bilge Strait.',
+      ctaLabel: 'Follow the Trail →',
     },
   },
   {
     id: 'bilge_milestone',
     type: 'milestone',
     label: 'The Bilge Rats',
-    flavor: 'Neutral thugs who own the Bilge Strait. No flag, no loyalty, just a toll. The only way to the syndicate base runs through their water.',
-    bridge: "Coin buys passage where steel only buys a fight. The strait opens, and the fence on the far side already knows your name.",
+    flavor: "Neutral thugs who own the Bilge Strait. No flag, no loyalty, just a toll. C.K.'s cargo sails right through their water.",
+    bridge: "Past the strait the water turns Finndicate. C.K. is moving cargo somewhere ahead, and a fence here already knows your name.",
     requiresNode: 'syndicate',
     requiresNavLevel: 10,
     milestone: { amount: 1000, spend: true },
     detail: {
       description:
-        "The Bilge Rats answer to no one. They are not Finndicate and they are not your friends, just a pack of pirate thugs who happen to own the Bilge Strait. The syndicate base sits on the far side of it.\n\nThere is no fighting your way through, not at your size. They only treat with captains who have sailed enough water to be worth the breath (Navigation 10), and even then it costs. Slide them 1,000 ⟡ and they wave you past. Refuse, and you simply do not get there.",
+        "The letter never gave an address, only a heading: out past the Bilge Strait into the cold water. That is enough to follow, and it is exactly the stretch the Bilge Rats own.\n\nThey answer to no one. Not Finndicate, not you, just a pack of thugs charging toll on the only water that points where C.K.'s cargo went. There is no fighting through at your size. They treat only with captains who have sailed enough to be worth the breath (Navigation 10), and even then it costs. Slide them 1,000 ⟡ and they wave you through, onto C.K.'s trail. Refuse, and the trail goes cold.",
       drops: [
-        { emoji: '🗺️', label: 'Passage through the Bilge Strait', sublabel: 'The only route to the syndicate base', rarity: 'uncommon' },
+        { emoji: '🗺️', label: "The trail toward C.K.", sublabel: 'Passage through the Bilge Strait, following the shipment heading', rarity: 'uncommon' },
       ],
       dropsNote: 'A one-time bribe. The 1,000 ⟡ is spent for good, not held or refunded.',
     },
