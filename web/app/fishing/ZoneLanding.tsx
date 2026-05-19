@@ -4,6 +4,7 @@ import { useState, useEffect, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { updateUsername } from '@/app/u/actions'
+import LeaderboardModal from '@/components/LeaderboardModal'
 
 const AUTO_NAME_RE = /^crew_[0-9a-f]{5}$/
 const DISMISSED_KEY = 'sf_username_prompt_dismissed'
@@ -183,21 +184,24 @@ export default function ZoneLanding({
                 Choose your zone
               </p>
             </div>
-            <button
-              onClick={() => setModalOpen(true)}
-              aria-label="How fishing works"
-              style={{
-                width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.18)',
-                color: 'rgba(255,255,255,0.6)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', touchAction: 'manipulation',
-                fontSize: '0.75rem', fontFamily: 'serif', fontStyle: 'italic', fontWeight: 700,
-              }}
-            >
-              i
-            </button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <LeaderboardModal boards={['perfectStreak', 'fishingLevel']} title="Fishing Leaderboard" />
+              <button
+                onClick={() => setModalOpen(true)}
+                aria-label="How fishing works"
+                style={{
+                  width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  color: 'rgba(255,255,255,0.6)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', touchAction: 'manipulation',
+                  fontSize: '0.75rem', fontFamily: 'serif', fontStyle: 'italic', fontWeight: 700,
+                }}
+              >
+                i
+              </button>
+            </div>
           </div>
 
           {/* Cumulative stats strip */}

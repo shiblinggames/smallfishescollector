@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, startTransition } from 'react
 import { commitTideRun, submitTideRunBest } from './actions'
 import TideRunTour from './TideRunTour'
 import { markTideRunTourSeen } from './tideRunTourAction'
+import LeaderboardModal from '@/components/LeaderboardModal'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
 const SHIP_X_RATIO    = 0.13   // boat sits ~13% from the left, giving ~87% lookahead
@@ -1533,6 +1534,18 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
         >
           ?
         </button>
+
+        {/* Leaderboard — top-right, only off the run. stopPropagation so
+            opening it doesn't also start the run / trigger a jump. */}
+        {uiState !== 'playing' && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            style={{ position: 'absolute', top: 10, right: 10, zIndex: 5 }}
+          >
+            <LeaderboardModal boards={['tideRun']} title="Tide Run Leaderboard" />
+          </div>
+        )}
 
         {uiState === 'playing' && (
           <>
