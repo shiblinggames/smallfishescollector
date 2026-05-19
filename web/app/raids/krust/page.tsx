@@ -47,6 +47,7 @@ export default async function KrustRaidPage() {
             equippedShipSkin={stats.equippedShipSkin}
             shipSkins={stats.shipSkins}
             equippedItems={stats.equippedRaidItems}
+            equippedRepairKit={stats.equippedRepairKit}
             initialExpeditionXP={profile?.expedition_xp ?? 0}
           />
         </div>

@@ -1,6 +1,10 @@
 export const ENEMY_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/'
 
-export type EnemyAction = 'reload' | 'fire' | 'volley' | 'dodge'
+// 'repair' is a player-only action (consumes a turn to use a repair kit).
+// Enemy `pattern` arrays never include it and `pickEnemyAction` never
+// returns it — it lives in this union only so the same action type
+// flows through resolveTurn for both sides.
+export type EnemyAction = 'reload' | 'fire' | 'volley' | 'dodge' | 'repair'
 
 export interface BroadsideEnemy {
   id: string

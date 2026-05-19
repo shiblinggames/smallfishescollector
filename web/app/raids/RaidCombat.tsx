@@ -24,6 +24,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
 import { getActiveEffects, getRaidItem } from '@/lib/raidItems'
+import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKits'
 import CharacterAvatar from '@/components/CharacterAvatar'
 
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical'
@@ -150,6 +151,10 @@ export interface RaidCombatProps {
    *  player-stats breakdown popup (tap the player nameplate). */
   totalFortune?: number
   equippedRaidItems: string[]
+  /** Player's equipped repair kit id (e.g. 'basic_repair_kit'). Drives the
+   *  Special action: once per battle, takes a turn, heals using the kit's
+   *  range + Fortune scaling. Omitted/unknown id => Special stays disabled. */
+  equippedRepairKit?: string
   /** Gold + XP awarded for killing this enemy; streamed into the log on kill
    *  Pokemon-style so the parent doesn't need a separate "Round Clear" overlay. */
   killReward?: { gold: number; xp: number }
@@ -177,6 +182,7 @@ export default function RaidCombat({
   shipMinDamage, shipSpeed, totalPower, totalNavigation,
   totalFortune = 0,
   equippedRaidItems,
+  equippedRepairKit,
   killReward,
   onEnemyDefeated, onPlayerDefeated, onLeave,
   anchorSaveAvailable = false, onAnchorSave,
@@ -184,6 +190,11 @@ export default function RaidCombat({
   // Anchor save can fire at most once per RaidCombat mount (the parent
   // tracks the per-run charge across encounter remounts via onAnchorSave).
   const anchorUsedRef = useRef(false)
+  // Repair kit: resolve the equipped kit once, then track per-battle use.
+  // Special action stays disabled when the kit is missing, used, or the
+  // player is at full HP (can't waste a heal accidentally).
+  const repairKit = getRepairKit(equippedRepairKit)
+  const [kitUsed, setKitUsed] = useState(false)
   // The label shown in-fight + on the ledger popup. Defaults to the boat
   // name when the parent didn't pass a player-specific name through.
   const nameplate = playerLabel ?? shipName
@@ -381,6 +392,11 @@ export default function RaidCombat({
     if (action === 'fire'   && !canFire)   return
     if (action === 'volley' && !canVolley) return
     if (action === 'dodge'  && !canDodge)  return
+    if (action === 'repair') {
+      if (!repairKit || kitUsed || playerHp >= playerHpMax) return
+      // Mark consumed at selection — no take-backs once the kit is cracked.
+      setKitUsed(true)
+    }
 
     setPlayerAction(action)
     if (action === 'fire' || action === 'volley') {
@@ -533,6 +549,21 @@ export default function RaidCombat({
       if (action === 'reload') {
         if (who === 'player') { pCharges = Math.min(MAX_CHARGES, pCharges + 1); stepLines.push(`You load a cannonball. (${pCharges}/${MAX_CHARGES})`) }
         else                  { eCharges = Math.min(MAX_CHARGES, eCharges + 1); stepLines.push(`Enemy loads a cannonball. (${eCharges}/${MAX_CHARGES})`) }
+      } else if (action === 'repair') {
+        // Player-only consumable: heal the hull, lose the offensive
+        // half of this turn. Roll uses the kit's [min, max+Fortune*scale].
+        // Enemy actions never include 'repair' so the else branch is dead.
+        if (who === 'player' && repairKit) {
+          const roll = rollRepairKitHeal(repairKit, totalFortune)
+          const before = pHp
+          pHp = Math.min(playerHpMax, pHp + roll)
+          const healed = pHp - before
+          stepLines.push(`You crack open the ${repairKit.name}.`)
+          stepLines.push(`The hull patches up for ${healed} HP.`)
+          splatTarget = 'player'
+          splatText = `+${healed}`
+          splatColor = '#4ade80'
+        }
       } else if (action === 'dodge') {
         stepLines.push(who === 'player' ? `You brace, ready to dodge.` : `Enemy braces, ready to dodge.`)
       } else if (action === 'fire' || action === 'volley') {
@@ -1201,6 +1232,7 @@ export default function RaidCombat({
           onSelect={selectAction}
           disabled={subPhase !== 'await_input'}
           highlightedAction={subPhase === 'await_input' ? null : playerAction}
+          hasSpecial={!!repairKit && !kitUsed && playerHp < playerHpMax}
         />
       </div>
 
@@ -1714,7 +1746,7 @@ function ActionMenu({ canFire, canVolley, canDodge, onSelect, disabled = false, 
         <CircleBtn
           icon={ACTION_ICON.special} label="Special" color="#c084fc"
           enabled={hasSpecial && !disabled} highlighted={false}
-          onClick={() => { /* no special abilities yet */ }}
+          onClick={() => { if (hasSpecial && !disabled) onSelect('repair') }}
         />
         <CircleBtn
           icon={ACTION_ICON.reload} label="Reload" color="#a8b8d0"

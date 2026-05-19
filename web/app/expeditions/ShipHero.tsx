@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { ShipStats } from '@/lib/expeditions'
 import { RARITY_COLORS, computeCombatRating, computeVoyageScore } from '@/lib/expeditions'
 import { SHIP_SKINS } from '@/lib/shipSkins'
+import { getRepairKit, repairKitRange } from '@/lib/repairKits'
 import { saveCrew, equipShipSkin, saveEquippedRaidItems } from './actions'
 import { RAID_ITEMS, getRaidItem } from '@/lib/raidItems'
 import { renameShip } from '@/app/shipyard/actions'
@@ -51,6 +52,7 @@ interface Props {
   savedCrewVariantIds: number[]
   ownedRaidItems: string[]
   equippedRaidItems: string[]
+  equippedRepairKit: string
   raidRepairOwed: number
   doubloons: number
 }
@@ -79,6 +81,7 @@ export default function ShipHero({
   equippedShipSkin: initialEquippedSkin, shipSkins: ownedSkins,
   collection, savedCrewVariantIds,
   ownedRaidItems, equippedRaidItems: initialEquippedRaidItems,
+  equippedRepairKit,
   raidRepairOwed, doubloons,
 }: Props) {
   const router = useRouter()
@@ -713,6 +716,52 @@ export default function ShipHero({
               </>)}
 
               {loadoutTab === 'items' && (<>
+              {/* ── Repair Kits ── once-per-battle hull patch in the Special
+                  action slot. Heal floor stays at the kit's baseMin; max
+                  scales with Fortune (FORTUNE_HEAL_SCALE in lib/repairKits).
+                  Only one kit exists for now; the section is structured for
+                  swap-UI when more arrive. */}
+              {(() => {
+                const kit = getRepairKit(equippedRepairKit) ?? getRepairKit('basic_repair_kit')!
+                const range = repairKitRange(kit, ratedFortune)
+                return (
+                  <>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>Repair Kit</p>
+                    <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.8rem', lineHeight: 1.45 }}>
+                      Used from the Special action in combat. Once per battle, costs the turn.
+                    </p>
+                    <div style={{
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: 14, padding: '0.85rem 0.95rem', marginBottom: '1.5rem',
+                      display: 'flex', alignItems: 'center', gap: '0.85rem',
+                    }}>
+                      <div style={{
+                        width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'rgba(192,132,252,0.12)', border: '1px solid rgba(192,132,252,0.35)',
+                        fontSize: '1.4rem', lineHeight: 1,
+                      }}>
+                        {kit.image
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={kit.image} alt="" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+                          : <span>{kit.emoji}</span>}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 3 }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0ede8' }}>{kit.name}</p>
+                          <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#4ade80' }}>
+                            +{range.min}-{range.max} HP
+                          </p>
+                        </div>
+                        <p className="font-karla" style={{ fontSize: '0.7rem', color: '#8a8480', lineHeight: 1.4 }}>
+                          {kit.description.replace(/\s*Once per battle\.\s*$/i, '').trim()} Fortune scales the max ({range.max - kit.baseMax > 0 ? `+${range.max - kit.baseMax}` : 'no'} bonus from your {ratedFortune} Fortune).
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )
+              })()}
+
               {/* ── Raid Items ── */}
               <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>Raid Items</p>
               <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.8rem', lineHeight: 1.45 }}>

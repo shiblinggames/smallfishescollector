@@ -359,6 +359,7 @@ export default function PracticeRaidGame({
   shipImageUrl, shipName, username, playerHPMax, shipMinDamage, shipSpeed,
   totalPower, totalDodge, totalFortune, crewMembers, equippedShipSkin,
   equippedRaidItems = [],
+  equippedRepairKit,
   hasSeenTutorial, hasCompletedPractice, initialExpeditionXP,
   playerCharacterColor, playerEquippedHat,
   playerAvatarBg, playerAvatarBorder,
@@ -375,6 +376,7 @@ export default function PracticeRaidGame({
   crewMembers: RaidCrewMember[]
   equippedShipSkin: string | null
   equippedRaidItems?: string[]
+  equippedRepairKit?: string
   playerCharacterColor: string | null
   playerEquippedHat: string | null
   playerAvatarBg: string | null
@@ -933,6 +935,7 @@ export default function PracticeRaidGame({
             totalNavigation={totalDodge}
             totalFortune={totalFortune}
             equippedRaidItems={equippedRaidItems}
+            equippedRepairKit={equippedRepairKit}
             killReward={{ gold: e.killGold, xp: e.killXP }}
             onEnemyDefeated={handleEnemyDefeated}
             onPlayerDefeated={handlePlayerDefeated}

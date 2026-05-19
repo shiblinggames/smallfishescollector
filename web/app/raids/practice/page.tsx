@@ -44,6 +44,7 @@ export default async function PracticeRaidPage() {
             crewMembers={stats.crewMembers}
             equippedShipSkin={stats.equippedShipSkin}
             equippedRaidItems={stats.equippedRaidItems}
+            equippedRepairKit={stats.equippedRepairKit}
             hasSeenTutorial={stats.hasSeenRaidTutorial}
             hasCompletedPractice={!!(profile?.has_completed_practice_raid)}
             initialExpeditionXP={profile?.expedition_xp ?? 0}

@@ -292,6 +292,7 @@ interface RaidCrewMember {
 }
 
 export default function RaidGame({ config, equippedShipSkin, shipSkins, equippedItems,
+  equippedRepairKit,
   shipImageUrl, shipName, username, playerHPMax, shipMinDamage, shipSpeed,
   totalPower, totalDodge, totalFortune, crewCount, crewMembers, initialExpeditionXP,
   playerCharacterColor, playerEquippedHat,
@@ -312,6 +313,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   equippedShipSkin: string | null
   shipSkins: string[]
   equippedItems: string[]
+  equippedRepairKit: string
   initialExpeditionXP: number
   playerCharacterColor: string | null
   playerEquippedHat: string | null
@@ -1117,6 +1119,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 totalNavigation={totalDodge}
                 totalFortune={totalFortune}
                 equippedRaidItems={equippedItems}
+                equippedRepairKit={equippedRepairKit}
                 killReward={reward ? { gold: reward.gold, xp: reward.xp } : undefined}
                 onEnemyDefeated={handleEnemyDefeated}
                 onPlayerDefeated={handlePlayerDefeated}

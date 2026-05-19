@@ -36,6 +36,7 @@ export interface RaidPlayerStats {
   equippedShipSkin: string | null
   shipSkins: string[]
   equippedRaidItems: string[]
+  equippedRepairKit: string
   hasSeenRaidTutorial: boolean
 }
 
@@ -44,7 +45,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, equipped_raid_items, has_seen_raid_tutorial, expedition_xp')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp')
     .eq('id', userId)
     .single()
 
@@ -107,6 +108,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     equippedShipSkin:     (profile?.equipped_ship_skin as string | null) ?? null,
     shipSkins:            (profile?.ship_skins as string[] | null) ?? [],
     equippedRaidItems:    (profile?.equipped_raid_items as string[] | null) ?? [],
+    equippedRepairKit:    (profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit',
     hasSeenRaidTutorial:  (profile?.has_seen_raid_tutorial as boolean | null) ?? false,
   }
 }
