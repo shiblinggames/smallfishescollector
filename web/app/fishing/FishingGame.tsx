@@ -3129,6 +3129,12 @@ export default function FishingGame({
           />
         </motion.div>
 
+        {/* Ambient cloud drift over the painted sky. Sibling of the bg
+            so it doesn't inherit the wave-bob — clouds blow horizontally,
+            the boat bobs vertically, motions stay independent. CSS-only
+            (see .fishing-clouds-overlay in globals.css). */}
+        <div aria-hidden className="fishing-clouds-overlay" />
+
         {/* Character + rod + hook overlay — all 3 frames always in DOM so
             sprites are pre-decoded. willChange + transform: translateZ(0)
             forces a stable compositing layer on mobile; the drop-shadow

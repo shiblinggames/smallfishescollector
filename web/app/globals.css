@@ -1180,3 +1180,29 @@ html, body {
   from { opacity: 0; transform: translateY(36px) scale(0.93); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* Ambient cloud drift over the fishing scene's painted sky. The strip
+   (8000px wide) translates horizontally and loops via background-repeat.
+   At 180s the motion is subliminal — the player rarely catches the
+   cycle. mask-image soft-fades the bottom so the clouds don't hard-cut
+   into the painted water. */
+@keyframes cloudsDrift {
+  from { background-position-x: 0; }
+  to   { background-position-x: -8000px; }
+}
+.fishing-clouds-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 55%;
+  pointer-events: none;
+  background-image: url(/clouds1.png);
+  background-repeat: repeat-x;
+  background-position: top left;
+  background-size: auto 100%;
+  opacity: 0.7;
+  animation: cloudsDrift 180s linear infinite;
+  -webkit-mask-image: linear-gradient(to bottom, black 65%, transparent 100%);
+          mask-image: linear-gradient(to bottom, black 65%, transparent 100%);
+}
