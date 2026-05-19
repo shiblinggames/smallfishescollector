@@ -115,6 +115,10 @@ export default function ShipHero({
   // Raid item state
   const [equippedItems, setEquippedItems] = useState<string[]>(initialEquippedRaidItems)
 
+  // Loadout drawer section tab. Items first/default — it's the most
+  // important loadout decision; cosmetics (skins) live last.
+  const [loadoutTab, setLoadoutTab] = useState<'items' | 'crew' | 'skins'>('items')
+
   // Ship name state
   const [shipName, setShipName] = useState(initialShipName)
 
@@ -361,7 +365,7 @@ export default function ShipHero({
               cursor: 'pointer',
             }}
           >
-            <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.82rem', color: '#f0c040', textAlign: 'center', lineHeight: 1.1 }}>Manage Crew</span>
+            <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.82rem', color: '#f0c040', textAlign: 'center', lineHeight: 1.1 }}>Manage Ship</span>
           </button>
           <Link
             href="/marketplace/shipyard"
@@ -509,6 +513,47 @@ export default function ShipHero({
                 )}
               </div>
 
+              {/* ── Section tabs ── Items first (the key loadout call),
+                  cosmetics (Skins) last. Subtle styling, no loud fill. */}
+              <div
+                role="tablist"
+                aria-label="Loadout sections"
+                style={{
+                  display: 'flex', gap: 6, padding: 4, marginBottom: '1.4rem',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 12,
+                }}
+              >
+                {([
+                  ['items', 'Items'],
+                  ['crew', 'Crew'],
+                  ['skins', 'Skins'],
+                ] as const).map(([id, label]) => {
+                  const active = loadoutTab === id
+                  return (
+                    <button
+                      key={id}
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setLoadoutTab(id)}
+                      className="font-cinzel font-700 uppercase tracking-[0.06em]"
+                      style={{
+                        flex: 1, padding: '0.55rem', borderRadius: 9,
+                        border: active ? '1px solid rgba(255,255,255,0.14)' : '1px solid transparent',
+                        cursor: 'pointer', fontSize: '0.78rem',
+                        background: active ? 'rgba(255,255,255,0.08)' : 'transparent',
+                        color: active ? '#f0ede8' : 'rgba(240,237,232,0.42)',
+                        transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {loadoutTab === 'crew' && (<>
               {/* ── Crew ── */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', marginBottom: '0.7rem' }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', letterSpacing: '0.04em' }}>Crew</p>
@@ -585,6 +630,9 @@ export default function ShipHero({
                 )}
               </div>
 
+              </>)}
+
+              {loadoutTab === 'skins' && (<>
               {/* ── Ship Skins ── grid layout (mirrors fishing GearScreen boat picker) */}
               <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>Ship Skins</p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: '1.5rem' }}>
@@ -662,12 +710,18 @@ export default function ShipHero({
                 })}
               </div>
 
-              {/* ── Items ── */}
-              <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>Items</p>
+              </>)}
+
+              {loadoutTab === 'items' && (<>
+              {/* ── Raid Items ── */}
+              <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>Raid Items</p>
+              <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.8rem', lineHeight: 1.45 }}>
+                Equip up to 3. Their effects only apply in raids, not voyages.
+              </p>
               <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, overflow: 'hidden', marginBottom: '1.5rem' }}>
                 {/* Equip slots */}
                 <div style={{ padding: '1rem', borderBottom: ownedRaidItems.length > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
-                  <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#8a8480', marginBottom: '0.7rem' }}>Equip up to 3 — effects apply in raids</p>
+                  <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.62rem', color: '#8a8480', marginBottom: '0.7rem' }}>Equipped · {equippedItems.length}/3</p>
                   <div style={{ display: 'flex', gap: '0.7rem' }}>
                     {[0, 1, 2].map(i => {
                       const itemId  = equippedItems[i]
@@ -694,9 +748,12 @@ export default function ShipHero({
                               <p className="font-karla font-600 truncate text-center" style={{ fontSize: '0.62rem', color: color ?? '#b8b3ac', maxWidth: 64, lineHeight: 1.2 }}>{itemDef.name}</p>
                             </>
                           ) : (
-                            <div style={{ width: 64, height: 64, borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1.5px dashed rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                            </div>
+                            <>
+                              <div style={{ width: 64, height: 64, borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1.5px dashed rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                              </div>
+                              <p className="font-karla font-600 text-center" style={{ fontSize: '0.62rem', color: '#5a5550', maxWidth: 64, lineHeight: 1.2 }}>Empty</p>
+                            </>
                           )}
                         </div>
                       )
@@ -731,7 +788,7 @@ export default function ShipHero({
                             <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4 }}>{def.description}</p>
                           </div>
                           <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.62rem', color: equipped ? color : '#7a7674', flexShrink: 0 }}>
-                            {equipped ? 'Equipped' : 'Equip'}
+                            {equipped ? 'Equipped' : full ? 'Full' : 'Equip'}
                           </span>
                         </button>
                       )
@@ -743,6 +800,7 @@ export default function ShipHero({
                   </div>
                 )}
               </div>
+              </>)}
               </div>{/* end scrollable */}
             </motion.div>
 

@@ -19,9 +19,9 @@ export const SHIP_SKINS: ShipSkinDef[] = [
   {
     id: 'verdigris_hull',
     name: 'Verdigris Hull',
-    description: 'Cold-water barnacle and old sea-green rot, stripped straight off Krust\'s consignment fleet.',
-    filter: 'brightness(0.82) saturate(1.5) hue-rotate(115deg) contrast(1.08) drop-shadow(0 0 5px rgba(70,200,170,0.3))',
-    color: '#4f9e8a',
+    description: 'A hull rotted a deep, ominous green by years buried in Krust\'s cold cargo holds.',
+    filter: 'brightness(0.46) saturate(1.4) hue-rotate(95deg) contrast(1.18) drop-shadow(0 0 5px rgba(10,55,32,0.55))',
+    color: '#1d4a30',
     source: "Krust's Consignment",
   },
 ]
