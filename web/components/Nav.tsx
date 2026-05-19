@@ -253,10 +253,19 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   ]
 
   // Mobile hamburger menu — the secondary destinations that don't fit in
-  // the 5-slot bottom tab bar. Order: market, achievements, social
-  // (matches the canonical nav order: tavern/fishing/expeditions/profile/
-  // leaderboards in the bottom bar, then the rest live here).
+  // the 5-slot bottom tab bar. Order: leaderboard, market, achievements,
+  // social (matches the canonical nav order: tavern/fishing/expeditions/
+  // profile in the bottom bar, then the rest live here).
   const mobileMenuLinks = [
+    { href: '/leaderboard', label: 'Leaderboard', badge: false,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="14" width="5" height="7" rx="1"/>
+          <rect x="9.5" y="9" width="5" height="12" rx="1"/>
+          <rect x="17" y="4" width="5" height="17" rx="1"/>
+        </svg>
+      )
+    },
     { href: '/marketplace', label: 'Market', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
