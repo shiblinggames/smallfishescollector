@@ -76,9 +76,10 @@ export interface RaidNode {
   /** Portrait shown in the map token + sheet header (e.g. the enemy you
    *  face). Falls back to the type glyph when unset. */
   image?: string
-  /** milestone: reach (not spend) `amount` doubloons to clear; optional
-   *  one-time reward on claim. */
-  milestone?: { amount: number; rewardDoubloons?: number }
+  /** milestone: needs `amount` doubloons. Default = hold (not spent) +
+   *  optional `rewardDoubloons`. With `spend: true` it's a bribe/toll:
+   *  `amount` is deducted and there is no reward. */
+  milestone?: { amount: number; rewardDoubloons?: number; spend?: boolean }
   /** Rich detail surfaced in the tap-to-open sheet. */
   detail: RaidNodeDetail
 }
@@ -198,17 +199,18 @@ export const RAID_MAP: RaidNode[] = [
     id: 'bilge_milestone',
     type: 'milestone',
     label: 'The Bilge Rats',
-    flavor: 'Word of Pete’s fall spreads the docks over. Prove your coffers run deep enough to bankroll the next campaign.',
-    bridge: "Coin opens doors a cutlass only dents. A careful fence starts asking after you by name.",
+    flavor: 'Neutral thugs who own the Bilge Strait. No flag, no loyalty, just a toll. The only way to the syndicate base runs through their water.',
+    bridge: "Coin buys passage where steel only buys a fight. The strait opens, and the fence on the far side already knows your name.",
     requiresNode: 'syndicate',
-    milestone: { amount: 2000, rewardDoubloons: 500 },
+    requiresNavLevel: 10,
+    milestone: { amount: 1000, spend: true },
     detail: {
       description:
-        "This is not a fight. It is a show of wealth. Hold 2,000 ⟡ in your coffers at once and the dock bosses will back your next campaign. You don't spend a coin; the milestone only checks you can carry the weight.",
+        "The Bilge Rats answer to no one. They are not Finndicate and they are not your friends, just a pack of pirate thugs who happen to own the Bilge Strait. The syndicate base sits on the far side of it.\n\nThere is no fighting your way through, not at your size. They only treat with captains who have sailed enough water to be worth the breath (Navigation 10), and even then it costs. Slide them 1,000 ⟡ and they wave you past. Refuse, and you simply do not get there.",
       drops: [
-        { label: '+500 ⟡ backing', emoji: '💰', rarity: 'uncommon', chance: 'Guaranteed' },
+        { emoji: '🗺️', label: 'Passage through the Bilge Strait', sublabel: 'The only route to the syndicate base', rarity: 'uncommon' },
       ],
-      dropsNote: 'You keep every doubloon you hold; the reward is paid on top when you claim.',
+      dropsNote: 'A one-time bribe. The 1,000 ⟡ is spent for good, not held or refunded.',
     },
   },
   {

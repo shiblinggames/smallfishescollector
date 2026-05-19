@@ -61,7 +61,7 @@ export async function claimMilestoneNode(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, has_completed_practice_raid, raid_node_progress')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
@@ -69,13 +69,19 @@ export async function claimMilestoneNode(
   const cleared = await buildClearedSet(admin, user.id, profile)
   if (cleared.has(nodeId)) return { error: 'Already claimed' }
   if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
+  if (node.requiresNavLevel) {
+    const navLevel = getLevelFromXP((profile.expedition_xp as number | null) ?? 0)
+    if (navLevel < node.requiresNavLevel) return { error: 'Locked' }
+  }
 
   const doubloons = profile.doubloons ?? 0
   if (doubloons < node.milestone.amount) return { error: 'Not enough doubloons' }
 
   const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}
   const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
-  const newDoubloons = doubloons + (node.milestone.rewardDoubloons ?? 0)
+  const newDoubloons = node.milestone.spend
+    ? doubloons - node.milestone.amount
+    : doubloons + (node.milestone.rewardDoubloons ?? 0)
 
   await admin
     .from('profiles')

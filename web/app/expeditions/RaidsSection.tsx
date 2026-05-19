@@ -318,7 +318,7 @@ function NodeDetailSheet({
     )
   } else if (node.type === 'milestone') {
     if (cleared) {
-      cta = <div className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '0.95rem', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.3)', color: '#4ade80' }}>Backing Secured ✓</div>
+      cta = <div className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '0.95rem', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.3)', color: '#4ade80' }}>{node.milestone?.spend ? 'Passage Bought ✓' : 'Backing Secured ✓'}</div>
     } else if (locked) {
       cta = <div className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '0.95rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
     } else if (claimable) {
@@ -329,7 +329,7 @@ function NodeDetailSheet({
           className="font-cinzel font-700 uppercase tracking-[0.08em]"
           style={{ width: '100%', padding: '0.85rem', borderRadius: 12, border: 'none', fontSize: '0.95rem', background: accent, color: '#1a0f02', cursor: pending ? 'wait' : 'pointer' }}
         >
-          {pending ? '…' : `Claim${node.milestone?.rewardDoubloons ? ` · +${node.milestone.rewardDoubloons} ⟡` : ''}`}
+          {pending ? '…' : node.milestone?.spend ? `Pay · ${node.milestone.amount.toLocaleString()} ⟡` : `Claim${node.milestone?.rewardDoubloons ? ` · +${node.milestone.rewardDoubloons} ⟡` : ''}`}
         </button>
       )
     } else if (node.milestone) {
@@ -346,7 +346,9 @@ function NodeDetailSheet({
             <div style={{ height: '100%', width: `${pct * 100}%`, background: accent, borderRadius: 4, transition: 'width 0.3s' }} />
           </div>
           <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: 8, textAlign: 'center' }}>
-            Hold {node.milestone.amount.toLocaleString()} ⟡ at once to claim. You won&apos;t spend it.
+            {node.milestone.spend
+              ? `Pay ${node.milestone.amount.toLocaleString()} ⟡ to bribe them into letting you pass.`
+              : <>Hold {node.milestone.amount.toLocaleString()} ⟡ at once to claim. You won&apos;t spend it.</>}
           </p>
         </div>
       )
