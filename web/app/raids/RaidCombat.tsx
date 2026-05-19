@@ -155,6 +155,12 @@ export interface RaidCombatProps {
   killReward?: { gold: number; xp: number }
   onEnemyDefeated: (remainingPlayerHp: number) => void
   onPlayerDefeated: () => void
+  /** Quartermaster's Anchor: when true, the next killing blow leaves the
+   *  player at 1 HP instead of sinking (raids only — wired by RaidGame,
+   *  never PracticeRaidGame). `onAnchorSave` fires once when consumed so
+   *  the parent can spend the per-run charge. */
+  anchorSaveAvailable?: boolean
+  onAnchorSave?: () => void
   /** When provided, renders a small ← icon in the top-right of the battle
    *  stage so the player can back out without a dedicated row above the
    *  game screen. Parent wires the destination (e.g. /expeditions). */
@@ -173,7 +179,11 @@ export default function RaidCombat({
   equippedRaidItems,
   killReward,
   onEnemyDefeated, onPlayerDefeated, onLeave,
+  anchorSaveAvailable = false, onAnchorSave,
 }: RaidCombatProps) {
+  // Anchor save can fire at most once per RaidCombat mount (the parent
+  // tracks the per-run charge across encounter remounts via onAnchorSave).
+  const anchorUsedRef = useRef(false)
   // The label shown in-fight + on the ledger popup. Defaults to the boat
   // name when the parent didn't pass a player-specific name through.
   const nameplate = playerLabel ?? shipName
@@ -451,8 +461,12 @@ export default function RaidCombat({
     const eAction = pickEnemyAction()
     setEnemyAction(eAction)
 
-    // Speed roll for turn order
-    const pSpeedRoll = rollSpeed(shipSpeed, totalNavigation)
+    // Speed roll for turn order. Navigator's Compass adds a fraction of
+    // Navigation on top (the turn-order roll only).
+    const compassNavPct = getActiveEffects(equippedRaidItems)
+      .filter(e => e.type === 'speed_roll_nav_pct')
+      .reduce((a, e) => a + e.value, 0)
+    const pSpeedRoll = rollSpeed(shipSpeed, totalNavigation) + Math.floor(totalNavigation * compassNavPct)
     const eSpeedRoll = rollSpeed(enemy.shipSpeed, 0)
     const first: Actor = pSpeedRoll >= eSpeedRoll ? 'player' : 'enemy'
     setFirstActor(first)
@@ -633,7 +647,20 @@ export default function RaidCombat({
     function playStep(i: number) {
       if (i >= steps.length) {
         setTimeout(() => {
-          if (pHp <= 0) { setSubPhase('done'); onPlayerDefeated(); return }
+          if (pHp <= 0) {
+            if (anchorSaveAvailable && !anchorUsedRef.current) {
+              // Quartermaster's Anchor: cling on at 1 HP instead of
+              // sinking. Once per mount; parent spends the run charge.
+              anchorUsedRef.current = true
+              onAnchorSave?.()
+              pHp = 1
+              setPlayerHp(1)
+              setResolveLog(prev => [...prev, 'The anchor holds. You cling on at 1 HP.'])
+              // fall through to the normal next-turn continuation below
+            } else {
+              setSubPhase('done'); onPlayerDefeated(); return
+            }
+          }
           if (eHp <= 0) {
             // Pokemon-style victory beat: stream the kill into the log,
             // then hand control back to the parent. The parent uses this

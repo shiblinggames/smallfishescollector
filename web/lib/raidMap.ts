@@ -80,6 +80,10 @@ export interface RaidNode {
    *  optional `rewardDoubloons`. With `spend: true` it's a bribe/toll:
    *  `amount` is deducted and there is no reward. */
   milestone?: { amount: number; rewardDoubloons?: number; spend?: boolean }
+  /** A one-time pick-one grant (Quartermaster's Cache). `items` are
+   *  raid-item ids (lib/raidItems). Choosing one adds it to the
+   *  player's raid_items permanently and clears the node. */
+  choice?: { items: string[] }
   /** Rich detail surfaced in the tap-to-open sheet. */
   detail: RaidNodeDetail
 }
@@ -217,17 +221,13 @@ export const RAID_MAP: RaidNode[] = [
     id: 'quartermaster',
     type: 'shop',
     label: "Quartermaster's Cache",
-    flavor: 'A fence who deals in raid contraband: upgrades, oddities, contraband cannon. Opening soon.',
+    flavor: 'Past the strait, a fence lays out two pieces of contraband. You may walk away with one.',
     requiresNode: 'bilge_milestone',
+    choice: { items: ['quartermasters_anchor', 'navigators_compass'] },
     detail: {
       description:
-        "A black-market fence who deals in raid contraband: stat upgrades, oddball trinkets, and contraband cannon, all paid for in hard-won doubloons. The stall isn't open for business yet.",
-      drops: [
-        { label: 'Raid items', emoji: '💣', rarity: 'rare' },
-        { label: 'Stat upgrades', emoji: '⚙️', rarity: 'uncommon' },
-        { label: 'Rare oddities', emoji: '🎲', rarity: 'epic' },
-      ],
-      dropsNote: 'Opening in a future update.',
+        "The fence on the far side of the Bilge Strait does not haggle. He sets two pieces of contraband on the barrel between you, the kind that does not come up twice, and tells you to choose. One, not both. The other goes back in the cache and you never see it again.\n\nWhatever you pick is yours for good, ready to equip in your raid loadout alongside the rest.",
+      dropsNote: 'Pick one. Permanent, equippable, and you cannot come back for the other.',
     },
   },
 ]

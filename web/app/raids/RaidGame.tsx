@@ -344,6 +344,16 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     return () => { document.body.style.overflow = prev }
   }, [])
 
+  // Quartermaster's Anchor — once-per-RUN lethal save (raids only, this
+  // wrapper; never PracticeRaidGame). Persists across encounter remounts
+  // because RaidCombat is keyed/remounted per fight but this ref lives
+  // on the run wrapper.
+  const anchorSavesLeftRef = useRef(
+    getActiveEffects(equippedItems)
+      .filter(e => e.type === 'lethal_save')
+      .reduce((a, e) => a + e.value, 0),
+  )
+
   const [phase, setPhase]               = useState<GamePhase>('idle')
   const [playerHP, setPlayerHP]         = useState(playerHPMax)
   const [enemyHP, setEnemyHP]           = useState(0)
@@ -1110,6 +1120,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 killReward={reward ? { gold: reward.gold, xp: reward.xp } : undefined}
                 onEnemyDefeated={handleEnemyDefeated}
                 onPlayerDefeated={handlePlayerDefeated}
+                anchorSaveAvailable={anchorSavesLeftRef.current > 0}
+                onAnchorSave={() => { anchorSavesLeftRef.current = Math.max(0, anchorSavesLeftRef.current - 1) }}
                 onLeave={() => router.push('/expeditions')}
               />
             )

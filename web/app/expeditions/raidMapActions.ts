@@ -129,3 +129,50 @@ export async function markStoryNodeRead(
 
   return { ok: true }
 }
+
+// Quartermaster's Cache: a one-time pick-one. The chosen raid item is
+// added to raid_items permanently and the node is cleared so the other
+// option is gone for good.
+export async function claimQuartermasterChoice(
+  nodeId: string,
+  itemId: string,
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const node = RAID_MAP.find(n => n.id === nodeId)
+  if (!node || !node.choice) return { error: 'Invalid node' }
+  if (!node.choice.items.includes(itemId)) return { error: 'Invalid choice' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('has_completed_practice_raid, raid_node_progress, raid_items, expedition_xp')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+
+  const cleared = await buildClearedSet(admin, user.id, profile)
+  if (cleared.has(nodeId)) return { error: 'Already chosen' }
+  if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
+  if (node.requiresNavLevel) {
+    const navLevel = getLevelFromXP((profile.expedition_xp as number | null) ?? 0)
+    if (navLevel < node.requiresNavLevel) return { error: 'Locked' }
+  }
+
+  const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}
+  const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
+  const ownedItems = (profile.raid_items as string[] | null) ?? []
+  const newItems = [...new Set([...ownedItems, itemId])]
+
+  await admin
+    .from('profiles')
+    .update({
+      raid_items: newItems,
+      raid_node_progress: { ...prog, cleared: newCleared },
+    })
+    .eq('id', user.id)
+
+  return { ok: true }
+}

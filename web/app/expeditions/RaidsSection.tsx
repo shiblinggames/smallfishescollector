@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { isCombatNode, type RaidNodeView } from '@/lib/raidMap'
 import { RARITY_COLOR } from '@/lib/bossRaids'
-import { claimMilestoneNode, markStoryNodeRead } from './raidMapActions'
+import { getRaidItem } from '@/lib/raidItems'
+import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice } from './raidMapActions'
 
 // Distinct border / glow colour per node type so the route reads at a
 // glance: cyan = practice, ember = boss raid, gold = collect goal,
@@ -251,10 +252,12 @@ function RaidMap({
 function NodeDetailSheet({
   view,
   doubloons,
+  ownedRaidItems,
   onClose,
 }: {
   view: RaidNodeView
   doubloons: number
+  ownedRaidItems: string[]
   onClose: () => void
 }) {
   const router = useRouter()
@@ -287,6 +290,16 @@ function NodeDetailSheet({
     setErr(null)
     startTransition(async () => {
       const res = await markStoryNodeRead(node.id)
+      if ('error' in res) { setErr(res.error); return }
+      router.refresh()
+      onClose()
+    })
+  }
+
+  function chooseItem(itemId: string) {
+    setErr(null)
+    startTransition(async () => {
+      const res = await claimQuartermasterChoice(node.id, itemId)
       if ('error' in res) { setErr(res.error); return }
       router.refresh()
       onClose()
@@ -353,7 +366,7 @@ function NodeDetailSheet({
         </div>
       )
     }
-  } else if (node.type === 'shop') {
+  } else if (node.type === 'shop' && !node.choice) {
     cta = <div className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '0.95rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Coming Soon</div>
   } else if (node.type === 'story') {
     if (cleared) {
@@ -501,6 +514,71 @@ function NodeDetailSheet({
           </div>
         )}
 
+        {/* Quartermaster's Cache: pick one, permanent */}
+        {node.choice && (
+          <div style={{ marginTop: '1.1rem' }}>
+            <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
+              {cleared ? 'You Chose' : 'Choose One'}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {node.choice.items.map(itemId => {
+                const item = getRaidItem(itemId)
+                if (!item) return null
+                const owned = ownedRaidItems.includes(itemId)
+                const rc = RARITY_COLOR[item.rarity] ?? '#9ca3af'
+                const dimmed = cleared && !owned
+                return (
+                  <div key={itemId} style={{
+                    display: 'flex', flexDirection: 'column', gap: 8,
+                    background: cleared && owned ? `${rc}1f` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${cleared && owned ? `${rc}80` : `${rc}26`}`,
+                    borderRadius: 10, padding: '0.7rem 0.75rem',
+                    opacity: dimmed ? 0.45 : 1,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <div style={{ width: 30, height: 30, borderRadius: 7, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${rc}1a`, fontSize: '1rem', overflow: 'hidden' }}>
+                        {item.image
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={item.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                          : <span>{item.emoji}</span>}
+                      </div>
+                      <span className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '0.84rem', color: '#f0ede8' }}>{item.name}</span>
+                      {cleared && owned && (
+                        <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: rc, background: `${rc}1c`, border: `1px solid ${rc}40`, borderRadius: 5, padding: '0.2rem 0.45rem', flexShrink: 0 }}>Chosen ✓</span>
+                      )}
+                      {cleared && !owned && (
+                        <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#6a6764', flexShrink: 0 }}>Gone</span>
+                      )}
+                    </div>
+                    <span className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.62)', lineHeight: 1.45 }}>{item.description}</span>
+                    {!cleared && (
+                      <button
+                        onClick={() => chooseItem(itemId)}
+                        disabled={pending || locked}
+                        className="font-cinzel font-700 uppercase tracking-[0.06em]"
+                        style={{
+                          marginTop: 2, padding: '0.6rem', borderRadius: 9, border: 'none',
+                          fontSize: '0.82rem',
+                          background: locked ? 'rgba(255,255,255,0.06)' : rc,
+                          color: locked ? '#5a5856' : '#1a0f02',
+                          cursor: pending ? 'wait' : locked ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {pending ? '…' : locked ? 'Locked' : `Choose ${item.name}`}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            {detail.dropsNote && (
+              <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: '0.55rem', lineHeight: 1.5 }}>
+                {detail.dropsNote}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Drops / rewards */}
         {detail.drops && detail.drops.length > 0 && (
           <div style={{ marginTop: '1.1rem' }}>
@@ -556,7 +634,7 @@ function NodeDetailSheet({
 
         {err && <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#f08a8a', marginTop: '0.9rem' }}>{err}</p>}
 
-        <div style={{ marginTop: '1.3rem' }}>{cta}</div>
+        {cta && <div style={{ marginTop: '1.3rem' }}>{cta}</div>}
       </motion.div>
     </motion.div>
   )
@@ -566,7 +644,7 @@ function NodeDetailSheet({
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
-export default function RaidsSection({ views, doubloons, repairOwed }: { views: RaidNodeView[]; doubloons: number; repairOwed: number }) {
+export default function RaidsSection({ views, doubloons, repairOwed, ownedRaidItems }: { views: RaidNodeView[]; doubloons: number; repairOwed: number; ownedRaidItems: string[] }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   const clearedCount = views.filter(v => v.status === 'cleared').length
@@ -606,6 +684,7 @@ export default function RaidsSection({ views, doubloons, repairOwed }: { views: 
             key={selected.node.id}
             view={selected}
             doubloons={doubloons}
+            ownedRaidItems={ownedRaidItems}
             onClose={() => setSelected(null)}
           />
         )}

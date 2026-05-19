@@ -94,7 +94,7 @@ export default async function ExpeditionsPage() {
           </div>
 
           {/* ── Raids — collapsible node-map progression ── */}
-          <RaidsSection views={raidMap.views} doubloons={raidMap.doubloons} repairOwed={profile?.raid_repair_owed ?? 0} />
+          <RaidsSection views={raidMap.views} doubloons={raidMap.doubloons} repairOwed={profile?.raid_repair_owed ?? 0} ownedRaidItems={(profile?.raid_items as string[] | null) ?? []} />
 
           <div className="pb-16" />
         </div>
