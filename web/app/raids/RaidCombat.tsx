@@ -210,7 +210,6 @@ export default function RaidCombat({
   const indicatorRef = useRef<HTMLDivElement>(null)
   const zoneRef      = useRef<HTMLDivElement>(null)
   const barFlashRef  = useRef<HTMLDivElement>(null)
-  const bottomPanelRef = useRef<HTMLDivElement>(null)
   const rafRef       = useRef(0)
 
   const enemyPatternIdxRef = useRef(0)
@@ -264,20 +263,6 @@ export default function RaidCombat({
   const enemyHpRef  = useRef(enemy.hpBase)
   useEffect(() => { playerHpRef.current = playerHp }, [playerHp])
   useEffect(() => { enemyHpRef.current = enemyHp }, [enemyHp])
-
-  // When the aim minigame starts, pull the action panel into view so the
-  // time-sensitive lock button is never stuck behind the fixed
-  // MobileTabBar on short devices. Double-rAF so the AimPanel has laid
-  // out before we measure/scroll.
-  useEffect(() => {
-    if (subPhase !== 'aiming') return
-    const id = requestAnimationFrame(() =>
-      requestAnimationFrame(() =>
-        bottomPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
-      ),
-    )
-    return () => cancelAnimationFrame(id)
-  }, [subPhase])
 
   // Reset when enemy changes (parent unmounts/remounts on encounter switch).
   // The log is seeded with an intro line + the prompt so each fight opens
@@ -1155,37 +1140,35 @@ export default function RaidCombat({
 
       </div>
 
-      {/* Bottom panel — persistent log + action UI */}
-      <div ref={bottomPanelRef} style={{
+      {/* Bottom panel — persistent log + action UI. position:relative so
+          the aim minigame can overlay it without shifting any layout. */}
+      <div style={{
+        position: 'relative',
         background: '#060c14',
         borderTop: '2px solid #2a3548',
         padding: '0.7rem 0.85rem 0.95rem',
         display: 'flex', flexDirection: 'column', gap: 8,
-        scrollMarginBottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)',
       }}>
         {/* Action log — shows this turn's events (cleared at start of each resolve) */}
         <LogBox lines={resolveLog} turn={turn} />
 
-        {/* Action panel — kept structurally stable so the layout doesn't
-            shift between subphases. Aiming gets its own panel (the user is
-            focused on the aim bar). Otherwise the ActionMenu stays mounted
-            so the buttons don't pop in/out; we just disable them when it
-            isn't the player's input phase. The "who went first" info is
-            already in the log box above (Speed: ... → ... first). */}
-        {subPhase === 'aiming' ? (
+        {/* Action menu is ALWAYS mounted so nothing shifts. The aim
+            minigame renders as an absolute overlay on top of this panel
+            (aim bar over the log, lock button over the action row), so
+            the layout never moves and the button stays where the thumb
+            already is. */}
+        <ActionMenu
+          canFire={canFire}
+          canVolley={canVolley}
+          canDodge={canDodge}
+          onSelect={selectAction}
+          disabled={subPhase !== 'await_input'}
+          highlightedAction={subPhase === 'await_input' ? null : playerAction}
+        />
+        {subPhase === 'aiming' && (
           <AimPanel
             indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef}
             onLock={lockShot}
-            actionLabel={playerAction === 'volley' ? 'VOLLEY' : 'FIRE'}
-          />
-        ) : (
-          <ActionMenu
-            canFire={canFire}
-            canVolley={canVolley}
-            canDodge={canDodge}
-            onSelect={selectAction}
-            disabled={subPhase !== 'await_input'}
-            highlightedAction={subPhase === 'await_input' ? null : playerAction}
           />
         )}
       </div>
@@ -1801,18 +1784,22 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
   )
 }
 
-function AimPanel({ indicatorRef, zoneRef, flashRef, onLock, actionLabel }: {
+// Renders as an absolute overlay filling the bottom panel: aim bar over
+// the log, Lock button over the action-button row. Nothing in the
+// layout shifts, and the button lands where the thumb already is.
+function AimPanel({ indicatorRef, zoneRef, flashRef, onLock }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
   onLock: () => void
-  actionLabel: string
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: '#fbbf24', textAlign: 'center' }}>
-        Lock your shot · {actionLabel}
-      </p>
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 20,
+      background: '#060c14',
+      display: 'flex', flexDirection: 'column',
+      padding: '0.7rem 0.85rem 0.95rem',
+    }}>
       <div style={{ position: 'relative', height: 44, background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, overflow: 'hidden' }}>
         {/* Bar-wide flash overlay — fires on lock to punch the result */}
         <div ref={flashRef} style={{
@@ -1828,13 +1815,18 @@ function AimPanel({ indicatorRef, zoneRef, flashRef, onLock, actionLabel }: {
         {/* Indicator */}
         <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />
       </div>
+
+      {/* Push the Lock button down so it lands over the action row */}
+      <div style={{ flex: 1, minHeight: 10 }} />
+
       <motion.button
         whileTap={{ scale: 0.96 }}
         onClick={onLock}
         className="font-cinzel font-700"
         style={{
-          padding: '0.85rem', borderRadius: 14, background: '#4ade80', color: '#0a1422',
-          border: 'none', fontSize: '0.95rem', cursor: 'pointer',
+          width: '100%',
+          padding: '0.95rem', borderRadius: 14, background: '#4ade80', color: '#0a1422',
+          border: 'none', fontSize: '1rem', cursor: 'pointer',
         }}
       >
         Lock Shot
