@@ -20,6 +20,7 @@
 // Per-enemy AI follows BroadsideEnemy.pattern cycle.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
 import { getActiveEffects, getRaidItem } from '@/lib/raidItems'
@@ -1140,10 +1141,11 @@ export default function RaidCombat({
 
       </div>
 
-      {/* Bottom panel — persistent log + action UI. position:relative so
-          the aim minigame can overlay it without shifting any layout. */}
+      {/* Bottom panel — persistent log + action UI. NO position/transform
+          here: it's an ancestor of heavy framer-motion content, and a
+          compositing ancestor breaks iOS PWA fixed Nav/MobileTabBar.
+          See memory: feedback_pagetransition_ios_pwa. */}
       <div style={{
-        position: 'relative',
         background: '#060c14',
         borderTop: '2px solid #2a3548',
         padding: '0.7rem 0.85rem 0.95rem',
@@ -1152,11 +1154,10 @@ export default function RaidCombat({
         {/* Action log — shows this turn's events (cleared at start of each resolve) */}
         <LogBox lines={resolveLog} turn={turn} />
 
-        {/* Action menu is ALWAYS mounted so nothing shifts. The aim
-            minigame renders as an absolute overlay on top of this panel
-            (aim bar over the log, lock button over the action row), so
-            the layout never moves and the button stays where the thumb
-            already is. */}
+        {/* ActionMenu is ALWAYS mounted so nothing shifts. The aim
+            minigame is a body-portaled fixed overlay (rendered after
+            this div) — it never becomes a layout/compositing ancestor
+            here, which is what broke the fixed nav. */}
         <ActionMenu
           canFire={canFire}
           canVolley={canVolley}
@@ -1165,13 +1166,14 @@ export default function RaidCombat({
           disabled={subPhase !== 'await_input'}
           highlightedAction={subPhase === 'await_input' ? null : playerAction}
         />
-        {subPhase === 'aiming' && (
-          <AimPanel
-            indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef}
-            onLock={lockShot}
-          />
-        )}
       </div>
+
+      {subPhase === 'aiming' && (
+        <AimPanel
+          indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef}
+          onLock={lockShot}
+        />
+      )}
 
       {/* Full-screen crit flash — fixed, matches the existing raid */}
       {critFlash && (
@@ -1784,54 +1786,64 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
   )
 }
 
-// Renders as an absolute overlay filling the bottom panel: aim bar over
-// the log, Lock button over the action-button row. Nothing in the
-// layout shifts, and the button lands where the thumb already is.
+// Body-portaled fixed overlay anchored just above the MobileTabBar. It
+// is NOT a descendant of the framer-motion-heavy RaidCombat tree, so it
+// can't pull the body's fixed Nav/MobileTabBar into a compositing layer
+// (the regression — see memory feedback_pagetransition_ios_pwa). The
+// layout never shifts (ActionMenu stays mounted) and the Lock button
+// lands at the bottom where the thumb already is.
 function AimPanel({ indicatorRef, zoneRef, flashRef, onLock }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
   onLock: () => void
 }) {
-  return (
+  if (typeof document === 'undefined') return null
+  return createPortal(
     <div style={{
-      position: 'absolute', inset: 0, zIndex: 20,
-      background: '#060c14',
-      display: 'flex', flexDirection: 'column',
-      padding: '0.7rem 0.85rem 0.95rem',
+      position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 55,
+      display: 'flex', justifyContent: 'center', pointerEvents: 'none',
     }}>
-      <div style={{ position: 'relative', height: 44, background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, overflow: 'hidden' }}>
-        {/* Bar-wide flash overlay — fires on lock to punch the result */}
-        <div ref={flashRef} style={{
-          position: 'absolute', inset: 0, opacity: 0, background: 'transparent',
-          pointerEvents: 'none', zIndex: 3,
-        }} />
-        {/* Moving target zone */}
-        <div ref={zoneRef} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 0, zIndex: 1 }}>
-          <div style={{ position: 'absolute', inset: '3px 0', background: 'rgba(148,163,184,0.15)', borderRadius: 4 }} />
-          <div style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${(GRAZE_W / (HIT_W + GRAZE_W)) * 50}%`, width: `${(HIT_W / (HIT_W + GRAZE_W)) * 100}%`, background: 'rgba(74,222,128,0.22)' }} />
-          <div style={{ position: 'absolute', top: '20%', bottom: '20%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
+      <div style={{
+        pointerEvents: 'auto',
+        width: '100%', maxWidth: 580,
+        background: '#060c14',
+        borderTop: '2px solid #2a3548',
+        // Bottom pad clears the fixed MobileTabBar (~64px) + safe area.
+        padding: '0.85rem 0.85rem calc(env(safe-area-inset-bottom, 0px) + 72px)',
+        display: 'flex', flexDirection: 'column', gap: 12,
+      }}>
+        <div style={{ position: 'relative', height: 44, background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, overflow: 'hidden' }}>
+          {/* Bar-wide flash overlay — fires on lock to punch the result */}
+          <div ref={flashRef} style={{
+            position: 'absolute', inset: 0, opacity: 0, background: 'transparent',
+            pointerEvents: 'none', zIndex: 3,
+          }} />
+          {/* Moving target zone */}
+          <div ref={zoneRef} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 0, zIndex: 1 }}>
+            <div style={{ position: 'absolute', inset: '3px 0', background: 'rgba(148,163,184,0.15)', borderRadius: 4 }} />
+            <div style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${(GRAZE_W / (HIT_W + GRAZE_W)) * 50}%`, width: `${(HIT_W / (HIT_W + GRAZE_W)) * 100}%`, background: 'rgba(74,222,128,0.22)' }} />
+            <div style={{ position: 'absolute', top: '20%', bottom: '20%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
+          </div>
+          {/* Indicator */}
+          <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />
         </div>
-        {/* Indicator */}
-        <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />
+
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          onClick={onLock}
+          className="font-cinzel font-700"
+          style={{
+            width: '100%',
+            padding: '0.95rem', borderRadius: 14, background: '#4ade80', color: '#0a1422',
+            border: 'none', fontSize: '1rem', cursor: 'pointer',
+          }}
+        >
+          Lock Shot
+        </motion.button>
       </div>
-
-      {/* Push the Lock button down so it lands over the action row */}
-      <div style={{ flex: 1, minHeight: 10 }} />
-
-      <motion.button
-        whileTap={{ scale: 0.96 }}
-        onClick={onLock}
-        className="font-cinzel font-700"
-        style={{
-          width: '100%',
-          padding: '0.95rem', borderRadius: 14, background: '#4ade80', color: '#0a1422',
-          border: 'none', fontSize: '1rem', cursor: 'pointer',
-        }}
-      >
-        Lock Shot
-      </motion.button>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
