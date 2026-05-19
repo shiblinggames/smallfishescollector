@@ -25,18 +25,18 @@ const TYPE_ACCENT: Record<string, string> = {
 // the upper node set in motion. Pattern repeats as RAID_MAP grows.
 const COLS = [50, 73, 27, 62, 38, 70, 30]
 const ROW = 150          // vertical pitch between node centres
-const TOKEN = 60         // layout/max token diameter (drives spacing + viewBox)
+const TOKEN = 48         // layout/max token diameter (drives spacing + viewBox)
 const PAD_TOP = 30
 const PAD_BOTTOM = 20
 
 // Visual token size by type: bigger node = bigger fight. A story beat
 // is the smallest, a skirmish small, a full raid the biggest.
 const TYPE_SIZE: Record<string, number> = {
-  story:     38,
-  skirmish:  46,
-  milestone: 52,
-  shop:      52,
-  raid:      60,
+  story:     30,
+  skirmish:  36,
+  milestone: 42,
+  shop:      42,
+  raid:      48,
 }
 
 function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; size?: number }) {
