@@ -32,9 +32,15 @@ export async function submitTideRunBest(distance: number): Promise<{ ok: true; b
     const currentBest = (profile.tide_run_best_distance as number | null) ?? 0
     if (meters <= currentBest) return { ok: true, best: currentBest }
 
+    // Stamp the moment alongside the new best so the leaderboard tiebreaks
+    // ties on first-to-reach (see leaderboard_tide_run view + the
+    // tide_run_best_distance_set_at backfill migration).
     const { error: updateErr } = await admin
       .from('profiles')
-      .update({ tide_run_best_distance: meters })
+      .update({
+        tide_run_best_distance: meters,
+        tide_run_best_distance_set_at: new Date().toISOString(),
+      })
       .eq('id', user.id)
     if (updateErr) return { error: 'Update failed' }
 
