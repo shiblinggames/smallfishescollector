@@ -44,43 +44,9 @@ function valueText(g: JourneyGoal): { text: string; color: string } {
   }
 }
 
-export default function AchievementsClient({ groups, doneCount, totalCount }: Props) {
-  const overall = totalCount > 0 ? doneCount / totalCount : 0
-
+export default function AchievementsClient({ groups }: Props) {
   return (
     <div>
-      {/* Overall journey progress */}
-      <div style={{
-        background: 'rgba(4,10,18,0.72)', border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: 16, padding: '1rem 1.1rem', marginBottom: 16,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
-          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)' }}>
-            Journey Progress
-          </p>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0c040' }}>
-            {doneCount} <span style={{ color: 'rgba(255,255,255,0.28)' }}>/ {totalCount}</span>
-          </p>
-        </div>
-        <div style={{ height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${overall * 100}%`, background: '#f0c040', borderRadius: 4, transition: 'width 0.4s ease' }} />
-        </div>
-      </div>
-
-      {/* Equip hint */}
-      <Link href="/profile" style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-        background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.22)',
-        borderRadius: 14, padding: '0.7rem 0.95rem', marginBottom: 22, textDecoration: 'none',
-      }}>
-        <p className="font-karla" style={{ fontSize: '0.75rem', color: 'rgba(240,237,232,0.55)', lineHeight: 1.45 }}>
-          Earned badges can be worn on your boat — equip them on your profile.
-        </p>
-        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', color: '#f0c040', letterSpacing: '0.12em', flexShrink: 0 }}>
-          Profile →
-        </span>
-      </Link>
-
       {/* Goal groups */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
         {groups.map(group => (

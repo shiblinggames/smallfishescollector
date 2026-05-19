@@ -5,8 +5,8 @@ import StoryLog, { type StoryLogData } from './StoryLog'
 import AchievementsClient, { type JourneyGroup } from './AchievementsClient'
 
 const TABS = [
-  { id: 'goals', label: 'Goals' },
   { id: 'story', label: 'Story' },
+  { id: 'goals', label: 'Goals' },
 ] as const
 type TabId = (typeof TABS)[number]['id']
 
@@ -21,7 +21,7 @@ export default function LogTabs({
   doneCount: number
   totalCount: number
 }) {
-  const [tab, setTab] = useState<TabId>('goals')
+  const [tab, setTab] = useState<TabId>('story')
 
   return (
     <div>
