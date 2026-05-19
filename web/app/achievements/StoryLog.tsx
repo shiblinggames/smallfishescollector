@@ -1,6 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import CharacterAvatar from '@/components/CharacterAvatar'
+import { FINN_AVATAR } from '@/lib/finn'
+import { CORSAIRS_RECKONING } from '@/lib/bossRaids'
+
+const PETE_PORTRAIT = CORSAIRS_RECKONING.enemies.pete.portrait ?? ''
 
 export interface StoryLogData {
   finn: {
@@ -42,7 +47,7 @@ function Beat({ lines, accent }: { lines: string[]; accent: string }) {
 function Panel({
   icon, title, accent, chip, children, defaultOpen = false,
 }: {
-  icon: string
+  icon: React.ReactNode
   title: string
   accent: string
   chip: string
@@ -65,7 +70,10 @@ function Panel({
           cursor: 'pointer', textAlign: 'left',
         }}
       >
-        <span aria-hidden style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0 }}>{icon}</span>
+        <span aria-hidden style={{
+          width: 32, height: 32, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>{icon}</span>
         <span style={{ flex: 1, minWidth: 0 }}>
           <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.95rem', color: '#f0ede8' }}>{title}</span>
           <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ display: 'block', fontSize: '0.56rem', color: accent, marginTop: 2 }}>{chip}</span>
@@ -93,8 +101,16 @@ export default function StoryLog({ data }: { data: StoryLogData }) {
 
         {/* ── Finn ── */}
         <Panel
-          icon="🎣"
-          title="The Old Man on the Dock"
+          icon={
+            <CharacterAvatar
+              characterColor={FINN_AVATAR.characterColor}
+              equippedHat={FINN_AVATAR.equippedHat}
+              size={32}
+              bgColor={FINN_AVATAR.bgColor}
+              ringColor={FINN_AVATAR.borderColor}
+            />
+          }
+          title="The Rival on the Dock"
           accent={FINN_ACCENT}
           chip={`${finn.discovered} / ${finn.total} moments uncovered`}
         >
@@ -134,7 +150,27 @@ export default function StoryLog({ data }: { data: StoryLogData }) {
 
         {/* ── Raid arc ── */}
         <Panel
-          icon="⚔️"
+          icon={
+            <span style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: `${RAID_ACCENT}22`,
+              border: `1px solid ${RAID_ACCENT}44`,
+              overflow: 'hidden', display: 'block', position: 'relative',
+            }}>
+              {PETE_PORTRAIT && (
+                <img
+                  src={PETE_PORTRAIT}
+                  alt=""
+                  aria-hidden
+                  style={{
+                    position: 'absolute', inset: 0,
+                    width: '100%', height: '100%', objectFit: 'cover',
+                    filter: 'brightness(0) opacity(0.6)',
+                  }}
+                />
+              )}
+            </span>
+          }
           title="The Sunken Hand"
           accent={RAID_ACCENT}
           chip={`${raid.clearedCount} / ${raid.total} stops cleared`}
