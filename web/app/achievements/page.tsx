@@ -5,8 +5,9 @@ import Nav from '@/components/Nav'
 import { BADGE_MAP } from '@/lib/badges'
 import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
-import AchievementsClient, { type JourneyGroup, type JourneyGoal } from './AchievementsClient'
-import StoryLog, { type StoryLogData } from './StoryLog'
+import { type JourneyGroup, type JourneyGoal } from './AchievementsClient'
+import { type StoryLogData } from './StoryLog'
+import LogTabs from './LogTabs'
 import { FINN_ENCOUNTER_BEATS, FINN_WIN_BEATS, FINN_REVEAL_BEAT } from '@/lib/finn'
 import { getRaidMapView } from '@/app/expeditions/raidMapActions'
 import { isCombatNode } from '@/lib/raidMap'
@@ -202,9 +203,12 @@ export default async function AchievementsPage() {
             </p>
           </div>
 
-          <StoryLog data={storyData} />
-
-          <AchievementsClient groups={groups} doneCount={doneCount} totalCount={allGoals.length} />
+          <LogTabs
+            storyData={storyData}
+            groups={groups}
+            doneCount={doneCount}
+            totalCount={allGoals.length}
+          />
         </div>
       </main>
     </>
