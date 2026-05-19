@@ -338,23 +338,22 @@ export default function ShipHero({
           </div>
         </div>
 
-        {/* Expedition controls — three CTAs in one row so the player sees
-            all paths to power (loadout, recruit, upgrade) at a glance.
-            Color-coded by destination: gold for the primary loadout
-            action, blue for packs, green for the shipyard. */}
+        {/* Two clear CTAs: manage your crew (opens the loadout drawer,
+            where you also recruit) and upgrade your ship. Titles say
+            exactly what they do, no subtext. */}
         <div style={{
           borderTop: '1px solid rgba(255,255,255,0.06)',
           padding: '0.7rem 0.7rem 0.8rem',
           background: 'rgba(255,255,255,0.015)',
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: 'repeat(2, 1fr)',
           gap: 6,
         }}>
           <button
             onClick={() => setLoadoutOpen(true)}
             style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-              padding: '0.6rem 0.35rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '0.75rem 0.5rem',
               background: 'linear-gradient(180deg, rgba(240,192,64,0.14) 0%, rgba(240,192,64,0.03) 100%)',
               border: '1px solid rgba(240,192,64,0.34)',
               borderTop: '1px solid rgba(240,192,64,0.62)',
@@ -362,29 +361,13 @@ export default function ShipHero({
               cursor: 'pointer',
             }}
           >
-            <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: '#f0c040', textAlign: 'center', lineHeight: 1.1 }}>Edit Loadout</span>
-            <span className="font-karla" style={{ fontSize: '0.54rem', color: '#a88a48' }}>Assign crew ›</span>
+            <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.82rem', color: '#f0c040', textAlign: 'center', lineHeight: 1.1 }}>Manage Crew</span>
           </button>
-          <Link
-            href="/packs"
-            style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-              padding: '0.6rem 0.35rem',
-              background: 'linear-gradient(180deg, rgba(96,165,250,0.10) 0%, rgba(96,165,250,0.02) 100%)',
-              border: '1px solid rgba(96,165,250,0.26)',
-              borderTop: '1px solid rgba(96,165,250,0.50)',
-              borderRadius: 10,
-              textDecoration: 'none',
-            }}
-          >
-            <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: '#9ec6ff', textAlign: 'center', lineHeight: 1.1 }}>Recruit Crew</span>
-            <span className="font-karla" style={{ fontSize: '0.54rem', color: '#6a88a8' }}>Open packs ›</span>
-          </Link>
           <Link
             href="/marketplace/shipyard"
             style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-              padding: '0.6rem 0.35rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '0.75rem 0.5rem',
               background: 'linear-gradient(180deg, rgba(160,210,160,0.10) 0%, rgba(160,210,160,0.02) 100%)',
               border: '1px solid rgba(160,210,160,0.26)',
               borderTop: '1px solid rgba(160,210,160,0.50)',
@@ -392,8 +375,7 @@ export default function ShipHero({
               textDecoration: 'none',
             }}
           >
-            <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.7rem', color: '#a8e0a8', textAlign: 'center', lineHeight: 1.1 }}>Upgrade Ship</span>
-            <span className="font-karla" style={{ fontSize: '0.54rem', color: '#6a986a' }}>Shipyard ›</span>
+            <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.82rem', color: '#a8e0a8', textAlign: 'center', lineHeight: 1.1 }}>Upgrade Ship</span>
           </Link>
         </div>
       </div>
@@ -528,7 +510,26 @@ export default function ShipHero({
               </div>
 
               {/* ── Crew ── */}
-              <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>Crew</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', marginBottom: '0.7rem' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', letterSpacing: '0.04em' }}>Crew</p>
+                <Link
+                  href="/packs"
+                  className="font-cinzel font-700 uppercase tracking-[0.06em]"
+                  style={{
+                    flexShrink: 0,
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '0.5rem 0.9rem',
+                    fontSize: '0.72rem', color: '#9ec6ff',
+                    background: 'linear-gradient(180deg, rgba(96,165,250,0.16) 0%, rgba(96,165,250,0.04) 100%)',
+                    border: '1px solid rgba(96,165,250,0.4)',
+                    borderRadius: 999,
+                    textDecoration: 'none',
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+                  Recruit Crew
+                </Link>
+              </div>
               <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, overflow: 'hidden', marginBottom: '1.5rem' }}>
                 <div style={{ padding: '1rem', borderBottom: hasCrew ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
                   <div style={{ display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
