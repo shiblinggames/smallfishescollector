@@ -720,7 +720,12 @@ export default function ShipHero({
                           disabled={full}
                           style={{ background: equipped ? `${color}14` : 'rgba(255,255,255,0.04)', border: `1.5px solid ${equipped ? color + '60' : 'rgba(255,255,255,0.12)'}`, borderRadius: 10, padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: full ? 'default' : 'pointer', opacity: full ? 0.45 : 1, width: '100%', textAlign: 'left' }}
                         >
-                          <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>{def.emoji}</span>
+                          {def.image ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img src={def.image} alt="" style={{ width: 36, height: 36, objectFit: 'contain', flexShrink: 0 }} />
+                          ) : (
+                            <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>{def.emoji}</span>
+                          )}
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: equipped ? color : '#f0ede8', marginBottom: 3 }}>{def.name}</p>
                             <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4 }}>{def.description}</p>
