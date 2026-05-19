@@ -19,11 +19,11 @@ const TYPE_ACCENT: Record<string, string> = {
   story:     '#6fbf73',
 }
 
-// Full winding sea-chart zig-zag (% of width, cycled top→bottom).
-// Story now lives in the node modal, so nodes pack tight: ROW is just
-// the node cell plus a short connector. Pattern repeats as map grows.
-const COLS = [50, 73, 27, 62, 38, 70, 30]
-const ROW = 104          // vertical pitch between node centres
+// Aggressive winding sea-chart zig-zag (% of width, cycled top→bottom)
+// so the route sweeps the full width and fills the side space. Story
+// lives in the node modal, so nodes pack tight vertically. Repeats.
+const COLS = [50, 83, 17, 74, 22, 80, 20]
+const ROW = 108          // vertical pitch between node centres
 const TOKEN = 48         // layout/max token diameter (drives spacing + viewBox)
 const PAD_TOP = 20
 const PAD_BOTTOM = 14
@@ -138,7 +138,7 @@ function RaidMap({
               flexDirection: 'column',
               alignItems: 'center',
               gap: 4,
-              width: 104,
+              width: 96,
             }}
           >
             <motion.button
@@ -215,7 +215,7 @@ function RaidMap({
                 doesn't cut through the text. */}
             <div style={{
               textAlign: 'center',
-              maxWidth: 104,
+              maxWidth: 96,
               boxSizing: 'border-box',
               background: 'rgba(8,7,6,0.9)',
               borderRadius: 6,
