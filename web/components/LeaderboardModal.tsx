@@ -12,7 +12,7 @@ import { getLeaderboardBoards, type LeaderboardBoardsResult } from '@/app/leader
 
 export default function LeaderboardModal({
   boards,
-  label = 'Leaderboard',
+  label = 'Ranks',
   title = 'Leaderboard',
   triggerStyle,
 }: {
@@ -145,14 +145,20 @@ export default function LeaderboardModal({
         onClick={openModal}
         className="font-karla font-700 uppercase tracking-[0.1em]"
         style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '0.45rem 0.85rem',
-          borderRadius: 999,
-          background: 'linear-gradient(180deg, #f6c84e 0%, #e0a82e 100%)',
-          border: '1px solid #f7d878',
-          color: '#241701',
-          fontSize: '0.64rem',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.45), 0 0 10px rgba(240,192,64,0.35)',
+          // Subtle compact pill — same shape as the FishingGame HUD's
+          // zone-tinted variant, but with a neutral gold tint so it's
+          // the right baseline everywhere (Tide Run, ZoneLanding, etc.)
+          // without each caller having to restyle. Callers that want a
+          // tinted version (e.g. FishingGame in a zone) still override
+          // via `triggerStyle`.
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: '0.28rem 0.65rem',
+          borderRadius: 20,
+          background: 'rgba(4,10,18,0.72)',
+          border: '1px solid rgba(240,192,64,0.4)',
+          color: '#f0c040',
+          fontSize: '0.5rem',
+          boxShadow: 'none',
           cursor: 'pointer',
           touchAction: 'manipulation',
           ...triggerStyle,
