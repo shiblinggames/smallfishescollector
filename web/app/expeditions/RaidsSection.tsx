@@ -19,13 +19,15 @@ const TYPE_ACCENT: Record<string, string> = {
   story:     '#6fbf73',
 }
 
-// Winding sea-chart zig-zag (% of width, cycled top→bottom). Story
-// lives in the node modal, so nodes pack tight vertically. Repeats.
+// Winding sea-chart zig-zag (% of width, cycled top→bottom). Map is
+// pure icon-nodes (label + story live in the tap modal), so they pack
+// very tight. ROW floor is set by the cleared/lock badge overhang so
+// it doesn't collide with the next token. Repeats as map grows.
 const COLS = [50, 73, 27, 62, 38, 70, 30]
-const ROW = 90           // vertical pitch between node centres
+const ROW = 60           // vertical pitch between node centres
 const TOKEN = 48         // layout/max token diameter (drives spacing + viewBox)
-const PAD_TOP = 20
-const PAD_BOTTOM = 14
+const PAD_TOP = 16
+const PAD_BOTTOM = 12
 
 // Visual token size by type: bigger node = bigger fight. A story beat
 // is the smallest, a skirmish small, a full raid the biggest.
@@ -123,8 +125,6 @@ function RaidMap({
         const locked = status === 'locked'
         const cleared = status === 'cleared'
         const isCurrent = i === currentIdx
-        const statusWord = cleared ? (isCombatNode(node.type) ? 'Cleared' : 'Done') : locked ? 'Locked' : 'Available'
-
         return (
           <div
             key={node.id}
@@ -133,11 +133,6 @@ function RaidMap({
               left: `${cx(i)}%`,
               top: cy(i),
               transform: 'translate(-50%, -50%)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 3,
-              width: 104,
             }}
           >
             <motion.button
@@ -209,24 +204,6 @@ function RaidMap({
                 </span>
               )}
             </motion.button>
-
-            {/* Backing plate so the connector line behind the title
-                doesn't cut through the text. */}
-            <div style={{
-              textAlign: 'center',
-              maxWidth: 104,
-              boxSizing: 'border-box',
-              background: 'rgba(8,7,6,0.9)',
-              borderRadius: 6,
-              padding: '2px 6px',
-            }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.64rem', lineHeight: 1.1, color: locked ? 'rgba(240,237,232,0.4)' : '#f0ede8' }}>
-                {node.label}
-              </p>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', marginTop: 1, color: cleared ? '#4ade80' : locked ? '#5a5856' : accent }}>
-                {statusWord}
-              </p>
-            </div>
           </div>
         )
       })}
