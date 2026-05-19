@@ -248,7 +248,16 @@ function RaidMap({
               )}
             </motion.button>
 
-            <div style={{ textAlign: 'center', maxWidth: 104 }}>
+            {/* Backing plate so the connector line behind the title
+                doesn't cut through the text. */}
+            <div style={{
+              textAlign: 'center',
+              maxWidth: 104,
+              boxSizing: 'border-box',
+              background: 'rgba(8,7,6,0.9)',
+              borderRadius: 7,
+              padding: '3px 7px',
+            }}>
               <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', lineHeight: 1.2, color: locked ? 'rgba(240,237,232,0.4)' : '#f0ede8' }}>
                 {node.label}
               </p>
