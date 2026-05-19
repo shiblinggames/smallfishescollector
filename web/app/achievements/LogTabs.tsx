@@ -51,14 +51,12 @@ export default function LogTabs({
                 flex: 1,
                 padding: '0.62rem',
                 borderRadius: 9,
-                border: 'none',
+                border: active ? '1px solid rgba(255,255,255,0.14)' : '1px solid transparent',
                 cursor: 'pointer',
                 fontSize: '0.82rem',
-                background: active
-                  ? 'linear-gradient(180deg, #f6c84e 0%, #e0a82e 100%)'
-                  : 'transparent',
-                color: active ? '#241701' : 'rgba(240,237,232,0.5)',
-                transition: 'background 0.15s, color 0.15s',
+                background: active ? 'rgba(255,255,255,0.08)' : 'transparent',
+                color: active ? '#f0ede8' : 'rgba(240,237,232,0.42)',
+                transition: 'background 0.15s, color 0.15s, border-color 0.15s',
               }}
             >
               {t.label}

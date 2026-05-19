@@ -196,11 +196,7 @@ export default async function AchievementsPage() {
       <main className="min-h-screen pt-8">
         <div className="px-6 max-w-2xl mx-auto pb-16">
           <div className="mb-6">
-            <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Your Journey</p>
             <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem' }}>Captain&apos;s Log</h1>
-            <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.5)', marginTop: 4, lineHeight: 1.5 }}>
-              The story so far, and every long voyage still worth chasing.
-            </p>
           </div>
 
           <LogTabs
