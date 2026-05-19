@@ -1232,7 +1232,30 @@ export default function RaidCombat({
           onSelect={selectAction}
           disabled={subPhase !== 'await_input'}
           highlightedAction={subPhase === 'await_input' ? null : playerAction}
-          hasSpecial={!!repairKit && !kitUsed && playerHp < playerHpMax}
+          specialItems={(() => {
+            // Special chooser items. Today this is just the repair kit;
+            // future special abilities (potions, boat skills, etc.) drop
+            // in here without engine churn. Per-entry `disabled` keeps
+            // an item visible with its reason, so the player understands
+            // why the slot didn't fire instead of seeing it just grey out.
+            if (!repairKit) return []
+            const atFull = playerHp >= playerHpMax
+            const range = repairKitRange(repairKit, totalFortune)
+            return [{
+              id: 'repair',
+              label: repairKit.name,
+              sub: kitUsed
+                ? 'Already used this battle.'
+                : atFull
+                  ? 'Hull already at full HP.'
+                  : `Heals ${range.min}-${range.max} HP. Costs your turn.`,
+              color: '#4ade80',
+              emoji: repairKit.emoji,
+              image: repairKit.image,
+              disabled: kitUsed || atFull,
+              onClick: () => selectAction('repair'),
+            }]
+          })()}
         />
       </div>
 
@@ -1710,7 +1733,24 @@ function CircleBtn({ icon, label, color, enabled, highlighted, onClick }: {
   )
 }
 
-function ActionMenu({ canFire, canVolley, canDodge, onSelect, disabled = false, highlightedAction = null, hasSpecial = false }: {
+/** One entry in the Special chooser popover. The parent owns the list so
+ *  future special items (potions, abilities, etc.) drop in without
+ *  touching ActionMenu. */
+export interface SpecialItem {
+  id: string
+  label: string
+  /** Short line under the label — the effect, or why it can't be used. */
+  sub: string
+  /** Accent color for the card border + label. */
+  color: string
+  /** Greys the card and blocks clicks. Use for "already used", "at full HP", etc. */
+  disabled?: boolean
+  emoji?: string
+  image?: string | null
+  onClick: () => void
+}
+
+function ActionMenu({ canFire, canVolley, canDodge, onSelect, disabled = false, highlightedAction = null, specialItems = [] }: {
   canFire: boolean
   canVolley: boolean
   canDodge: boolean
@@ -1719,21 +1759,35 @@ function ActionMenu({ canFire, canVolley, canDodge, onSelect, disabled = false, 
   disabled?: boolean
   /** When set, the matching button keeps its accent border. Volley highlights Fire. */
   highlightedAction?: EnemyAction | null
-  /** No special abilities exist yet — the slot stays disabled until one does. */
-  hasSpecial?: boolean
+  /** Special items the player can choose from. Empty list = Special slot
+   *  greys out. Tapping Special opens a chooser; tapping an entry fires
+   *  its onClick. Per-entry `disabled` keeps the entry visible (so the
+   *  player still sees the item exists) but blocks the action. */
+  specialItems?: SpecialItem[]
 }) {
   const [fireMenu, setFireMenu] = useState(false)
+  const [specialMenu, setSpecialMenu] = useState(false)
 
   const fireHighlighted = highlightedAction === 'fire' || highlightedAction === 'volley'
   const reloadHighlighted = highlightedAction === 'reload'
   const dodgeHighlighted = highlightedAction === 'dodge'
+  const hasSpecial = specialItems.length > 0
 
   function tapFire() {
     if (disabled || !canFire) return
     if (canVolley) setFireMenu(true)   // enough charges → let the player pick
     else onSelect('fire')
   }
+  function tapSpecial() {
+    if (disabled || !hasSpecial) return
+    setSpecialMenu(true)
+  }
   function pick(a: EnemyAction) { setFireMenu(false); onSelect(a) }
+  function pickSpecial(item: SpecialItem) {
+    if (item.disabled) return
+    setSpecialMenu(false)
+    item.onClick()
+  }
 
   return (
     <div style={{ position: 'relative' }}>
@@ -1746,7 +1800,7 @@ function ActionMenu({ canFire, canVolley, canDodge, onSelect, disabled = false, 
         <CircleBtn
           icon={ACTION_ICON.special} label="Special" color="#c084fc"
           enabled={hasSpecial && !disabled} highlighted={false}
-          onClick={() => { if (hasSpecial && !disabled) onSelect('repair') }}
+          onClick={tapSpecial}
         />
         <CircleBtn
           icon={ACTION_ICON.reload} label="Reload" color="#a8b8d0"
@@ -1759,6 +1813,61 @@ function ActionMenu({ canFire, canVolley, canDodge, onSelect, disabled = false, 
           onClick={tapFire}
         />
       </div>
+
+      {/* Special chooser — vertical stack so it scales as more items
+          arrive. Per-entry disabled state surfaces "why not" inline. */}
+      {specialMenu && (
+        <>
+          <div
+            onClick={() => setSpecialMenu(false)}
+            style={{ position: 'absolute', inset: '-200px 0 -8px 0', zIndex: 9 }}
+          />
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.14 }}
+            style={{
+              position: 'absolute', left: 0, right: 0, bottom: 'calc(100% + 10px)', zIndex: 10,
+              display: 'flex', flexDirection: 'column', gap: 6,
+              background: '#0a1422', border: '1px solid #2a3548',
+              borderRadius: 14, padding: 8,
+              boxShadow: '0 8px 28px rgba(0,0,0,0.6)',
+            }}
+          >
+            {specialItems.map(item => (
+              <motion.button
+                key={item.id}
+                whileTap={item.disabled ? undefined : { scale: 0.97 }}
+                onClick={() => pickSpecial(item)}
+                disabled={item.disabled}
+                style={{
+                  padding: '0.6rem 0.7rem', borderRadius: 10,
+                  background: item.disabled ? 'rgba(255,255,255,0.04)' : `${item.color}14`,
+                  border: `2px solid ${item.disabled ? 'rgba(255,255,255,0.12)' : item.color}`,
+                  cursor: item.disabled ? 'not-allowed' : 'pointer',
+                  opacity: item.disabled ? 0.55 : 1,
+                  display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+                }}
+              >
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: `${item.color}22`, fontSize: '1.1rem', lineHeight: 1, overflow: 'hidden',
+                }}>
+                  {item.image
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={item.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    : <span>{item.emoji ?? '✦'}</span>}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: item.disabled ? '#7a7674' : '#ffffff', lineHeight: 1.15 }}>{item.label}</p>
+                  <p className="font-karla" style={{ fontSize: '0.66rem', color: item.disabled ? '#6a6460' : `${item.color}cc`, marginTop: 2, lineHeight: 1.3 }}>{item.sub}</p>
+                </div>
+              </motion.button>
+            ))}
+          </motion.div>
+        </>
+      )}
 
       {/* Fire / Volley chooser — only when you have enough for a volley.
           Anchored over the row so it doesn't shift the layout. */}
