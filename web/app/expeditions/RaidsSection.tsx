@@ -19,15 +19,14 @@ const TYPE_ACCENT: Record<string, string> = {
   story:     '#6fbf73',
 }
 
-// Full winding sea-chart zig-zag (% of width, cycled top→bottom). The
-// between-node recap sits on whichever side is open at that segment's
-// midpoint (opposite the route), so it zig-zags too and never lands on
-// the connector line. Pattern repeats as RAID_MAP grows.
+// Full winding sea-chart zig-zag (% of width, cycled top→bottom).
+// Story now lives in the node modal, so nodes pack tight: ROW is just
+// the node cell plus a short connector. Pattern repeats as map grows.
 const COLS = [50, 73, 27, 62, 38, 70, 30]
-const ROW = 158          // vertical pitch between node centres
+const ROW = 104          // vertical pitch between node centres
 const TOKEN = 48         // layout/max token diameter (drives spacing + viewBox)
-const PAD_TOP = 24
-const PAD_BOTTOM = 16
+const PAD_TOP = 20
+const PAD_BOTTOM = 14
 
 // Visual token size by type: bigger node = bigger fight. A story beat
 // is the smallest, a skirmish small, a full raid the biggest.
@@ -115,42 +114,6 @@ function RaidMap({
           )
         })}
       </svg>
-
-      {/* Narrative recap sitting in the gap between two nodes: what
-          beating the upper node set in motion. Brighter once it's
-          actually been done; a faint foreshadow until then. */}
-      {views.slice(0, -1).map((v, i) => {
-        if (!v.node.bridge) return null
-        // At this segment's midpoint the connector sits near x=mid. Put
-        // the recap on the open side (opposite the route) with a gutter
-        // so it never touches the line, and align it toward the route.
-        const mid = (cx(i) + cx(i + 1)) / 2
-        const onLeft = mid >= 50
-        const GUT = 10
-        const sidePos = onLeft
-          ? { left: '2%', right: `${100 - (mid - GUT)}%`, textAlign: 'right' as const }
-          : { left: `${mid + GUT}%`, right: '2%', textAlign: 'left' as const }
-        return (
-          <div
-            key={`bridge-${v.node.id}`}
-            style={{
-              position: 'absolute',
-              top: cy(i) + ROW / 2,
-              transform: 'translateY(-50%)',
-              ...sidePos,
-              pointerEvents: 'none',
-            }}
-          >
-            <p className="font-karla font-600" style={{
-              fontSize: '0.66rem',
-              lineHeight: 1.35,
-              color: v.status === 'cleared' ? 'rgba(240,237,232,0.9)' : 'rgba(240,237,232,0.58)',
-            }}>
-              {v.node.bridge}
-            </p>
-          </div>
-        )
-      })}
 
       {views.map((v, i) => {
         const { node, status } = v
@@ -487,6 +450,21 @@ function NodeDetailSheet({
         <p className="font-karla" style={{ fontSize: '0.85rem', lineHeight: 1.6, color: 'rgba(240,237,232,0.72)', whiteSpace: 'pre-line' }}>
           {detail.description}
         </p>
+
+        {/* Where beating this leads: the story beat */}
+        {node.bridge && (
+          <p className="font-karla" style={{
+            marginTop: '0.85rem',
+            paddingLeft: '0.7rem',
+            borderLeft: `2px solid ${accent}66`,
+            fontSize: '0.8rem',
+            lineHeight: 1.55,
+            fontStyle: 'italic',
+            color: cleared ? 'rgba(240,237,232,0.66)' : 'rgba(240,237,232,0.5)',
+          }}>
+            {node.bridge}
+          </p>
+        )}
 
         {/* Locked reason */}
         {locked && lockReason && (
