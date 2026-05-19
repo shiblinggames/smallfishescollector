@@ -2,10 +2,11 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 
-// Subtle full-screen tap gate used at the end of a raid kill beat. The combat
-// scene stays visible underneath (transparent backdrop); a small pulsing
-// "Tap to continue" hint sits near the bottom so the player knows to advance
-// when they're ready instead of being auto-pushed into the next fight.
+// Full-screen tap gate used at the end of a raid kill beat. The combat
+// scene stays visible underneath (transparent backdrop); a bold pulsing
+// "Tap to continue" banner sits over the action-log area (where the
+// player's eyes already are reading the kill narration) so it's
+// impossible to miss, then they advance when ready.
 
 interface Props {
   visible: boolean
@@ -31,34 +32,37 @@ export default function TapToContinueGate({ visible, onTap }: Props) {
             border: 'none',
             cursor: 'pointer',
             padding: 0,
-            // Hint sits near the bottom so it doesn't cover the action log
-            // or the player nameplate. Pure tap-anywhere catcher.
+            // Float the banner up over the action-log area (above the
+            // action buttons, where the kill narration just streamed) so
+            // it lands where the player is already looking. Tap anywhere.
             display: 'flex',
             alignItems: 'flex-end',
             justifyContent: 'center',
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 168px)',
           }}
         >
           <motion.span
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: [0.55, 1, 0.55], y: 0 }}
+            initial={{ opacity: 0, y: 8, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: [1, 1.045, 1] }}
             transition={{
-              opacity: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' },
+              scale:   { duration: 1.5, repeat: Infinity, ease: 'easeInOut' },
+              opacity: { duration: 0.22, ease: 'easeOut' },
               y:       { duration: 0.25, ease: 'easeOut' },
             }}
-            className="font-karla font-700 uppercase"
+            className="font-cinzel font-700 uppercase"
             style={{
-              fontSize: '0.7rem', letterSpacing: '0.16em',
-              color: 'rgba(240,237,232,0.85)',
-              background: 'rgba(6,12,20,0.78)',
-              border: '1px solid rgba(240,237,232,0.18)',
+              fontSize: '0.95rem', letterSpacing: '0.12em',
+              color: '#1a0f02',
+              background: '#f0c040',
+              border: '1px solid #f7d878',
               borderRadius: 999,
-              padding: '0.5rem 1.1rem',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.5)',
+              padding: '0.7rem 1.6rem',
+              boxShadow: '0 0 22px rgba(240,192,64,0.5), 0 6px 18px rgba(0,0,0,0.55)',
               pointerEvents: 'none',
+              whiteSpace: 'nowrap',
             }}
           >
-            Tap to continue
+            Tap to continue →
           </motion.span>
         </motion.button>
       )}
