@@ -266,7 +266,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
-    { href: '/achievements', label: 'Achievements', badge: false,
+    { href: '/achievements', label: "Captain's Log", badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
           <path d="M6 9H4V4h16v5h-2"/>
@@ -286,7 +286,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   ]
 
   const desktopOnlyLinks = [
-    { href: '/achievements', label: 'Achievements', badge: null },
+    { href: '/achievements', label: "Captain's Log", badge: null },
     { href: '/social',       label: 'Social',        badge: null },
   ]
 

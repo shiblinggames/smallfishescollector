@@ -6,6 +6,10 @@ import { BADGE_MAP } from '@/lib/badges'
 import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import AchievementsClient, { type JourneyGroup, type JourneyGoal } from './AchievementsClient'
+import StoryLog, { type StoryLogData } from './StoryLog'
+import { FINN_ENCOUNTER_BEATS, FINN_WIN_BEATS, FINN_REVEAL_BEAT } from '@/lib/finn'
+import { getRaidMapView } from '@/app/expeditions/raidMapActions'
+import { isCombatNode } from '@/lib/raidMap'
 
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 
@@ -16,13 +20,14 @@ export default async function AchievementsPage() {
 
   const admin = createAdminClient()
 
-  const [{ data: profile }, collectionRes, speciesRes, voyageCountRes] = await Promise.all([
+  const [{ data: profile }, collectionRes, speciesRes, voyageCountRes, raidMap] = await Promise.all([
     admin.from('profiles')
-      .select('packs_available, doubloons, gems, unlocked_badges, fishing_xp, expedition_xp, prestige_levels, trophy_catches, highest_perfect_streak, tide_run_best_distance, fotd_longest_streak')
+      .select('packs_available, doubloons, gems, unlocked_badges, fishing_xp, expedition_xp, prestige_levels, trophy_catches, highest_perfect_streak, tide_run_best_distance, fotd_longest_streak, finn_seen_beats, finn_revealed')
       .eq('id', user.id).single(),
     admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
     admin.from('fish_species').select('id, habitat'),
     admin.from('daily_voyages').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'revealed'),
+    getRaidMapView(),
   ])
 
   // ── Derive everything from existing data — no new columns ────────────────
@@ -137,6 +142,53 @@ export default async function AchievementsPage() {
   const allGoals = groups.flatMap(g => g.goals)
   const doneCount = allGoals.filter(g => g.done).length
 
+  // ── Story recap — what each arc has revealed up to where you are ─────────
+  const seenFinn = new Set((profile?.finn_seen_beats as string[] | null) ?? [])
+  const finnRevealed = !!profile?.finn_revealed || seenFinn.has('reveal')
+  const finnEncounter = FINN_ENCOUNTER_BEATS.filter(b => seenFinn.has(b.id)).map(b => ({ id: b.id, lines: b.lines }))
+  const finnWin = FINN_WIN_BEATS.filter(b => seenFinn.has(b.id)).map(b => ({ id: b.id, lines: b.lines }))
+
+  const raidViews = raidMap.views
+  const raidDone = raidViews
+    .filter(v => v.status === 'cleared')
+    .map(v => {
+      const n = v.node
+      const kind: 'story' | 'combat' | 'milestone' | 'shop' =
+        n.type === 'story' ? 'story' : isCombatNode(n.type) ? 'combat' : n.type === 'milestone' ? 'milestone' : 'shop'
+      const lines: string[] = []
+      if (n.type === 'story') {
+        lines.push(n.detail.description)
+        const frag = n.detail.drops?.[0]
+        if (frag) lines.push(`${frag.emoji ?? '📜'} ${frag.label}${frag.sublabel ? ` — ${frag.sublabel}` : ''}`)
+      } else if (n.bridge) {
+        lines.push(n.bridge)
+      } else {
+        lines.push(n.flavor)
+      }
+      return { label: n.label, kind, lines }
+    })
+  const raidNextView = raidViews.find(v => v.status === 'available')
+  const raidNext = raidNextView
+    ? { label: raidNextView.node.label, flavor: raidNextView.node.flavor }
+    : null
+
+  const storyData: StoryLogData = {
+    finn: {
+      encounter: finnEncounter,
+      win: finnWin,
+      revealed: finnRevealed,
+      revealLines: finnRevealed ? FINN_REVEAL_BEAT.lines : [],
+      discovered: finnEncounter.length + finnWin.length + (finnRevealed ? 1 : 0),
+      total: FINN_ENCOUNTER_BEATS.length + FINN_WIN_BEATS.length + 1,
+    },
+    raid: {
+      done: raidDone,
+      next: raidNext,
+      clearedCount: raidDone.length,
+      total: raidViews.length,
+    },
+  }
+
   return (
     <>
       <Nav packsAvailable={profile?.packs_available ?? 0} doubloons={profile?.doubloons ?? 0} gems={profile?.gems ?? 0} />
@@ -144,11 +196,13 @@ export default async function AchievementsPage() {
         <div className="px-6 max-w-2xl mx-auto pb-16">
           <div className="mb-6">
             <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>Your Journey</p>
-            <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem' }}>The Logbook</h1>
+            <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem' }}>Captain&apos;s Log</h1>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.5)', marginTop: 4, lineHeight: 1.5 }}>
-              Every long voyage worth chasing. Tap a goal to set sail toward it.
+              The story so far, and every long voyage still worth chasing.
             </p>
           </div>
+
+          <StoryLog data={storyData} />
 
           <AchievementsClient groups={groups} doneCount={doneCount} totalCount={allGoals.length} />
         </div>

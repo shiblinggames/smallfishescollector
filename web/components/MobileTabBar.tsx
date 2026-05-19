@@ -12,9 +12,10 @@ const PAGE_TINTS: [string, string][] = [
   ['/marketplace', 'rgba(120,80,180,0.08)'],
 ]
 
-// Order matches the canonical nav ordering: tavern, fishing, expeditions,
-// profile, leaderboards. Market + achievements + social moved into the
-// mobile hamburger menu (in Nav.tsx).
+// Order: tavern, fishing, expeditions, profile, captain's log. The
+// leaderboard moved off the tab bar (it's now per-section modals +
+// still the desktop nav). Market + social live in the mobile hamburger
+// menu (in Nav.tsx).
 const LINKS = [
   { href: '/tavern', label: 'Tavern',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 3h14l-1 9H6L5 3z"/><path d="M18 6h2a1 1 0 011 1v3a1 1 0 01-1 1h-2"/><path d="M6 21h12M8 17v4M16 17v4"/><path d="M6 12c0 3 2 5 6 5s6-2 6-5"/></svg>,
@@ -28,8 +29,8 @@ const LINKS = [
   { href: '/profile', label: 'Profile',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>,
   },
-  { href: '/leaderboard', label: 'Ranks',
-    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="14" width="5" height="7" rx="1"/><rect x="9.5" y="9" width="5" height="12" rx="1"/><rect x="17" y="4" width="5" height="17" rx="1"/></svg>,
+  { href: '/achievements', label: "Captain's Log",
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 6.5C10.5 5 8 4.5 4 5v14c4-.5 6.5 0 8 1.5 1.5-1.5 4-2 8-1.5V5c-4-.5-6.5 0-8 1.5z"/><path d="M12 6.5V19"/></svg>,
   },
 ]
 
