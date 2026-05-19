@@ -25,7 +25,7 @@ const JUMP_IMPULSE             = 590   // px/s upward kick when press starts a j
 const JUMP_HOLD_GRAVITY_MULT   = 0.30  // gravity multiplier while hold is active (sustained jump)
 const JUMP_MAX_HOLD_SEC        = 0.40  // hold beyond this no longer extends the jump
 const BASE_SPEED               = 290   // px/s horizontal scroll (Canabalt rolls)
-const SPEED_RAMP               = 7     // px/s² — gentle, unbounded climb (Canabalt-style)
+const SPEED_RAMP               = 5     // px/s² — gentle climb (was 7; eased 2026-05-19, hiscore plateaued ~311m/42s for a month)
 const MAX_SPEED                = 1500  // soft safety cap; reached only after ~3 min of perfect play
 
 // Sea surface — gentle long-period swells so the boat "runs" along the wave.
