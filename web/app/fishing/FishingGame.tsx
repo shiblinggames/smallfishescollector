@@ -31,6 +31,7 @@ const CRATE_FISH_ID = -1
 import { claimDailyReward } from './dailyChallengeActions'
 import { getDailyChallenges, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
+import LeaderboardModal from '@/components/LeaderboardModal'
 import { finishSession, type ActiveSession } from '@/app/social/challengeActions'
 import { equipRod, purchaseRod, buyReel } from '@/app/marketplace/tackle-shop/actions'
 import { buyHook } from '@/app/hooks/actions'
@@ -3340,6 +3341,25 @@ export default function FishingGame({
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              {/* Leaderboard — subtle HUD-matching pill so it blends with
+                  the zone-tinted header instead of the bold default. */}
+              <LeaderboardModal
+                boards={['perfectStreak', 'fishingLevel']}
+                title="Fishing Leaderboard"
+                label="Ranks"
+                triggerStyle={{
+                  background: 'rgba(4,10,18,0.72)',
+                  border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
+                  color: HABITAT_COLOR[selectedZone],
+                  boxShadow: 'none',
+                  fontSize: '0.5rem',
+                  padding: '0.28rem 0.6rem',
+                  borderRadius: 20,
+                  letterSpacing: '0.1em',
+                  gap: 4,
+                }}
+              />
+
               {/* Daily challenge icon */}
               {(() => {
                 const claimable = dailyChallenges.some((c, i) => dailyProgress[i] >= c.target && !dailyClaimed[i])

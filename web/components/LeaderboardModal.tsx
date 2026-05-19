@@ -146,18 +146,19 @@ export default function LeaderboardModal({
         className="font-karla font-700 uppercase tracking-[0.1em]"
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '0.4rem 0.8rem',
+          padding: '0.45rem 0.85rem',
           borderRadius: 999,
-          background: 'rgba(240,192,64,0.14)',
-          border: '1px solid rgba(240,192,64,0.4)',
-          color: '#f0c040',
-          fontSize: '0.62rem',
+          background: 'linear-gradient(180deg, #f6c84e 0%, #e0a82e 100%)',
+          border: '1px solid #f7d878',
+          color: '#241701',
+          fontSize: '0.64rem',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.45), 0 0 10px rgba(240,192,64,0.35)',
           cursor: 'pointer',
           touchAction: 'manipulation',
           ...triggerStyle,
         }}
       >
-        <span aria-hidden style={{ fontSize: '0.8rem', lineHeight: 1 }}>🏆</span>
+        <span aria-hidden style={{ fontSize: '0.82rem', lineHeight: 1 }}>🏆</span>
         {label}
       </button>
 
