@@ -20,6 +20,12 @@ const TYPE_ACCENT: Record<string, string> = {
   story:     '#6fbf73',
 }
 
+// Default art per node type, used when a node has no own `image`. Lets
+// every shop (and any future shops) share one icon without per-node data.
+const TYPE_IMAGE: Record<string, string | undefined> = {
+  shop: '/raidshop.jpeg',
+}
+
 // Winding sea-chart zig-zag (% of width, cycled top→bottom). Map is
 // pure icon-nodes (label + story live in the tap modal), so they pack
 // very tight. ROW floor is set by the cleared/lock badge overhang so
@@ -122,6 +128,7 @@ function RaidMap({
       {views.map((v, i) => {
         const { node, status } = v
         const accent = TYPE_ACCENT[node.type] ?? '#c4a96a'
+        const img = node.image ?? TYPE_IMAGE[node.type]
         const size = TYPE_SIZE[node.type] ?? 52
         const glyph = Math.round(size * 0.42)
         const badge = Math.max(15, Math.round(size * 0.34))
@@ -181,17 +188,17 @@ function RaidMap({
                 touchAction: 'manipulation',
               }}
             >
-              {node.image ? (
+              {img ? (
                 <span style={{
                   position: 'absolute', inset: 3, borderRadius: '50%', overflow: 'hidden',
                   filter: locked ? 'grayscale(1) brightness(0.5)' : undefined,
                 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={node.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </span>
               ) : locked ? <LockGlyph size={glyph} /> : <NodeGlyph type={node.type} color={accent} size={glyph} />}
 
-              {locked && node.image && (
+              {locked && img && (
                 <span
                   style={{
                     position: 'absolute', right: -3, bottom: -3,
@@ -265,6 +272,7 @@ function NodeDetailSheet({
   const [err, setErr] = useState<string | null>(null)
   const { node, status, claimable, lockReason } = view
   const accent = TYPE_ACCENT[node.type] ?? '#c4a96a'
+  const img = node.image ?? TYPE_IMAGE[node.type]
   const locked = status === 'locked'
   const cleared = status === 'cleared'
   const detail = node.detail
@@ -436,9 +444,9 @@ function NodeDetailSheet({
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: `${accent}1a`, border: `1px solid ${accent}3a`,
             }}>
-              {node.image ? (
+              {img ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={node.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: locked ? 'grayscale(1) brightness(0.6)' : undefined }} />
+                <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: locked ? 'grayscale(1) brightness(0.6)' : undefined }} />
               ) : locked ? <LockGlyph size={20} /> : <NodeGlyph type={node.type} color={accent} size={22} />}
             </div>
             <div style={{ minWidth: 0 }}>
