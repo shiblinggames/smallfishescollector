@@ -11,9 +11,12 @@ export default async function RaidPage() {
   if (!user) redirect('/login')
 
   const [{ data: profile }, stats] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, gems, expedition_xp').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, gems, expedition_xp, raid_repair_owed').eq('id', user.id).single(),
     getRaidPlayerStats(user.id),
   ])
+
+  // Ship sunk and unrepaired: no raiding until it's patched up at port.
+  if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (
     <>

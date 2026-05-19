@@ -56,6 +56,24 @@ export const EXPEDITION_SHIP_STATS: Record<number, ShipStats> = Object.fromEntri
   SHIPS.map(s => [s.tier, { name: s.name, image: s.imageUrl ?? '', ...EXPEDITION_COMBAT_STATS[s.tier] }])
 )
 
+// ── Raid sink penalty ─────────────────────────────────────────────────────────
+// If your ship sinks in a real raid you owe a repair fee before you can raid
+// again. Scales by ship tier (a bigger boat costs more to patch up). Moderate
+// scale: roughly one good raid's take at mid tiers, recoverable.
+const RAID_REPAIR_COST: Record<number, number> = {
+  0: 100,
+  1: 175,
+  2: 300,
+  3: 475,
+  4: 700,
+  5: 1000,
+  6: 1400,
+}
+
+export function raidRepairCost(shipTier: number): number {
+  return RAID_REPAIR_COST[shipTier] ?? RAID_REPAIR_COST[0]
+}
+
 // ── Crew variant stat boosts ──────────────────────────────────────────────────
 
 const MYTHIC_VARIANTS = new Set(['Kraken', 'Davy Jones', 'Golden Age', 'Wanted', 'Maelstrom', 'GOD'])

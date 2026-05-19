@@ -11,9 +11,12 @@ export default async function PracticeRaidPage() {
   if (!user) redirect('/login')
 
   const [{ data: profile }, stats] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, gems, expedition_xp, has_seen_raid_tutorial, has_completed_practice_raid').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, gems, expedition_xp, has_seen_raid_tutorial, has_completed_practice_raid, raid_repair_owed').eq('id', user.id).single(),
     getRaidPlayerStats(user.id),
   ])
+
+  // A sunk ship can't sail anywhere, not even to practice, until repaired.
+  if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (
     <>

@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { applyVariantBoosts, EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
+import { applyVariantBoosts, EXPEDITION_SHIP_STATS, raidRepairCost } from '@/lib/expeditions'
 import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
 import { unlockBadge } from '@/app/achievements/badgeActions'
 
@@ -109,6 +109,62 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     equippedRaidItems:    (profile?.equipped_raid_items as string[] | null) ?? [],
     hasSeenRaidTutorial:  (profile?.has_seen_raid_tutorial as boolean | null) ?? false,
   }
+}
+
+// ── Raid sink penalty ─────────────────────────────────────────────────────────
+
+// Called when the player's ship sinks in a real raid (NOT the practice
+// skirmish). Snapshots the tier-scaled repair fee onto the profile. Only
+// sets it if nothing is owed yet, so dying again before repairing can't
+// stack (you can't raid while owing anyway).
+export async function reportRaidSink(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('ship_tier, raid_repair_owed')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return
+  if ((profile.raid_repair_owed ?? 0) > 0) return
+
+  const fee = raidRepairCost(profile.ship_tier ?? 0)
+  await admin.from('profiles').update({ raid_repair_owed: fee }).eq('id', user.id)
+}
+
+// Pay the outstanding repair fee. Returns the new doubloon total, or an
+// error if the player can't cover it.
+export async function repairShip(): Promise<
+  { newDoubloonTotal: number } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('doubloons, raid_repair_owed')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+
+  const owed = profile.raid_repair_owed ?? 0
+  if (owed <= 0) return { newDoubloonTotal: profile.doubloons ?? 0 }
+
+  const doubloons = profile.doubloons ?? 0
+  if (doubloons < owed) return { error: 'Not enough doubloons' }
+
+  const newTotal = doubloons - owed
+  await admin
+    .from('profiles')
+    .update({ doubloons: newTotal, raid_repair_owed: 0 })
+    .eq('id', user.id)
+
+  return { newDoubloonTotal: newTotal }
 }
 
 // Item IDs and what they grant

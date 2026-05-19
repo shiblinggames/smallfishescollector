@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { claimRaidLoot } from './actions'
+import { claimRaidLoot, reportRaidSink } from './actions'
 import { awardRaidKill } from './raidXPActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
@@ -534,6 +534,16 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     })
     return () => { if (autoStartRafRef.current) cancelAnimationFrame(autoStartRafRef.current) }
   }, [startGame])
+
+  // Ship sank in this real raid: owe the tier-scaled repair fee. Fires
+  // once; the player pays it from /expeditions before raiding again.
+  const sinkReportedRef = useRef(false)
+  useEffect(() => {
+    if (phase === 'dead' && !sinkReportedRef.current) {
+      sinkReportedRef.current = true
+      reportRaidSink().catch(() => {})
+    }
+  }, [phase])
 
   useEffect(() => {
     // Disabled: the playing phase now runs inside <RaidCombat />, which owns

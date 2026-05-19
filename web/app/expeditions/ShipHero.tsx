@@ -2,6 +2,8 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { repairShip } from '@/app/raids/actions'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ShipStats } from '@/lib/expeditions'
 import { RARITY_COLORS, computeCombatRating, computeVoyageScore } from '@/lib/expeditions'
@@ -49,6 +51,8 @@ interface Props {
   savedCrewVariantIds: number[]
   ownedRaidItems: string[]
   equippedRaidItems: string[]
+  raidRepairOwed: number
+  doubloons: number
 }
 
 function DrawerHandle() {
@@ -75,8 +79,23 @@ export default function ShipHero({
   equippedShipSkin: initialEquippedSkin, shipSkins: ownedSkins,
   collection, savedCrewVariantIds,
   ownedRaidItems, equippedRaidItems: initialEquippedRaidItems,
+  raidRepairOwed, doubloons,
 }: Props) {
+  const router = useRouter()
   const xpProgress = getXPProgress(expeditionXP)
+
+  const [repairing, startRepair] = useTransition()
+  const [repairErr, setRepairErr] = useState<string | null>(null)
+  const canAffordRepair = doubloons >= raidRepairOwed
+  function doRepair() {
+    setRepairErr(null)
+    startRepair(async () => {
+      const res = await repairShip()
+      if ('error' in res) { setRepairErr(res.error); return }
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+      router.refresh()
+    })
+  }
 
   // Crew state — managed here so scores update live when loadout changes
   const [slots, setSlots] = useState<(CollectionCard | null)[]>(() => {
@@ -215,6 +234,48 @@ export default function ShipHero({
         marginBottom: '1.5rem',
         overflow: 'hidden',
       }}>
+        {/* ── Sunk: repair banner ── */}
+        {raidRepairOwed > 0 && (
+          <div style={{
+            background: 'linear-gradient(180deg, rgba(120,30,24,0.5) 0%, rgba(70,18,14,0.5) 100%)',
+            borderBottom: '1px solid rgba(240,120,90,0.35)',
+            padding: '0.75rem 0.9rem',
+            display: 'flex', alignItems: 'center', gap: '0.7rem',
+          }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0a890', lineHeight: 1.2 }}>
+                Your ship lies on the seabed
+              </p>
+              <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#c89a90', marginTop: 2, lineHeight: 1.35 }}>
+                {canAffordRepair
+                  ? 'Patch her up before you sail into another fight.'
+                  : `You need ${raidRepairOwed.toLocaleString()} ⟡ to raise her. Go earn it.`}
+              </p>
+              {repairErr && (
+                <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#f08a8a', marginTop: 4 }}>{repairErr}</p>
+              )}
+            </div>
+            <button
+              onClick={doRepair}
+              disabled={repairing || !canAffordRepair}
+              className="font-cinzel font-700 uppercase tracking-[0.06em]"
+              style={{
+                flexShrink: 0,
+                padding: '0.55rem 0.9rem',
+                borderRadius: 10,
+                border: 'none',
+                fontSize: '0.78rem',
+                background: canAffordRepair ? '#f0734a' : 'rgba(255,255,255,0.07)',
+                color: canAffordRepair ? '#1a0f02' : '#7a6a64',
+                cursor: repairing ? 'wait' : canAffordRepair ? 'pointer' : 'not-allowed',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {repairing ? '…' : `Repair · ${raidRepairOwed.toLocaleString()} ⟡`}
+            </button>
+          </div>
+        )}
+
         {/* Main content — ship left, info right */}
         <div style={{ display: 'flex', alignItems: 'stretch' }}>
           {/* Ship image — left column, fills height */}

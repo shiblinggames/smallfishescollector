@@ -74,10 +74,12 @@ function RaidMap({
   views,
   doubloons,
   onSelect,
+  repairOwed,
 }: {
   views: RaidNodeView[]
   doubloons: number
   onSelect: (v: RaidNodeView) => void
+  repairOwed: number
 }) {
   const n = views.length
   const height = PAD_TOP + TOKEN / 2 + (n - 1) * ROW + TOKEN / 2 + PAD_BOTTOM
@@ -124,8 +126,11 @@ function RaidMap({
         const badge = Math.max(15, Math.round(size * 0.34))
         const locked = status === 'locked'
         const cleared = status === 'cleared'
+        // Ship sunk: no entering any combat node until it's repaired.
+        const raidBlocked = repairOwed > 0 && isCombatNode(node.type)
+        const interactive = !locked && !raidBlocked
         const isCurrent = i === currentIdx
-        const statusWord = cleared ? (isCombatNode(node.type) ? 'Cleared' : 'Done') : locked ? 'Locked' : 'Available'
+        const statusWord = cleared ? (isCombatNode(node.type) ? 'Cleared' : 'Done') : locked ? 'Locked' : raidBlocked ? 'Repair ship' : 'Available'
         // Put the title plate on whichever side has the most room: a
         // node on the left half gets its label to the right, and vice
         // versa. The plate's dark background hides the route behind it.
@@ -141,13 +146,13 @@ function RaidMap({
             }}
           >
             <motion.button
-              onClick={() => { if (!locked) onSelect(v) }}
-              whileTap={locked ? undefined : { scale: 0.9 }}
+              onClick={() => { if (interactive) onSelect(v) }}
+              whileTap={interactive ? { scale: 0.9 } : undefined}
               transition={{ type: 'spring', stiffness: 520, damping: 20 }}
               aria-label={node.label}
-              aria-disabled={locked || undefined}
-              disabled={locked}
-              className={isCurrent ? 'raid-node-current' : undefined}
+              aria-disabled={!interactive || undefined}
+              disabled={!interactive}
+              className={isCurrent && interactive ? 'raid-node-current' : undefined}
               style={{
                 width: size,
                 height: size,
@@ -157,7 +162,7 @@ function RaidMap({
                 alignItems: 'center',
                 justifyContent: 'center',
                 position: 'relative',
-                cursor: locked ? 'default' : 'pointer',
+                cursor: interactive ? 'pointer' : 'default',
                 background: locked
                   ? 'radial-gradient(circle at 35% 30%, #14110d, #0a0907)'
                   : cleared
@@ -169,9 +174,9 @@ function RaidMap({
                   : cleared
                     ? `0 0 0 4px ${accent}10`
                     : `0 0 14px ${accent}40, 0 0 0 4px ${accent}12`,
-                opacity: locked ? 0.6 : 1,
+                opacity: locked || raidBlocked ? 0.6 : 1,
                 // The pulse animation drives box-shadow; let it own the prop.
-                ...(isCurrent ? { boxShadow: undefined } : {}),
+                ...(isCurrent && interactive ? { boxShadow: undefined } : {}),
                 touchAction: 'manipulation',
               }}
             >
@@ -230,7 +235,7 @@ function RaidMap({
               <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', lineHeight: 1.12, color: locked ? 'rgba(240,237,232,0.4)' : '#f0ede8', textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}>
                 {node.label}
               </p>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.46rem', marginTop: 1, color: cleared ? '#4ade80' : locked ? '#5a5856' : accent, textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.46rem', marginTop: 1, color: cleared ? '#4ade80' : locked ? '#5a5856' : raidBlocked ? '#f0734a' : accent, textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}>
                 {statusWord}
               </p>
             </div>
@@ -559,7 +564,7 @@ function NodeDetailSheet({
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
-export default function RaidsSection({ views, doubloons }: { views: RaidNodeView[]; doubloons: number }) {
+export default function RaidsSection({ views, doubloons, repairOwed }: { views: RaidNodeView[]; doubloons: number; repairOwed: number }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   const clearedCount = views.filter(v => v.status === 'cleared').length
@@ -589,7 +594,7 @@ export default function RaidsSection({ views, doubloons }: { views: RaidNodeView
           borderRadius: 16,
           padding: '0.5rem 0.25rem',
         }}>
-          <RaidMap views={views} doubloons={doubloons} onSelect={setSelected} />
+          <RaidMap views={views} doubloons={doubloons} onSelect={setSelected} repairOwed={repairOwed} />
         </div>
       )}
 

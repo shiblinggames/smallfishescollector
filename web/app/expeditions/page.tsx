@@ -20,7 +20,7 @@ export default async function ExpeditionsPage() {
 
   const [{ data: profile }, collection, dailyVoyageState, { data: voyageHistoryRows }, raidMap] = await Promise.all([
     admin.from('profiles')
-      .select('packs_available, doubloons, ship_tier, gems, saved_crew, ship_name, expedition_xp, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, has_completed_practice_raid, has_seen_expeditions_tour')
+      .select('packs_available, doubloons, ship_tier, gems, saved_crew, ship_name, expedition_xp, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, has_completed_practice_raid, has_seen_expeditions_tour, raid_repair_owed')
       .eq('id', user.id)
       .single(),
     getCollectionForCrew(),
@@ -75,6 +75,8 @@ export default async function ExpeditionsPage() {
             savedCrewVariantIds={savedCrewVariantIds}
             ownedRaidItems={(profile?.raid_items as string[] | null) ?? []}
             equippedRaidItems={(profile?.equipped_raid_items as string[] | null) ?? []}
+            raidRepairOwed={profile?.raid_repair_owed ?? 0}
+            doubloons={doubloons}
           />
 
           {/* ── Voyage card ── */}
@@ -92,7 +94,7 @@ export default async function ExpeditionsPage() {
           </div>
 
           {/* ── Raids — collapsible node-map progression ── */}
-          <RaidsSection views={raidMap.views} doubloons={raidMap.doubloons} />
+          <RaidsSection views={raidMap.views} doubloons={raidMap.doubloons} repairOwed={profile?.raid_repair_owed ?? 0} />
 
           <div className="pb-16" />
         </div>
