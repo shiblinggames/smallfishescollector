@@ -507,6 +507,14 @@ export default function RaidCombat({
       logLines: string[]         // log lines to reveal when this step starts
     }
 
+    // Hull plating: equipped damage-reduction items cut INCOMING enemy
+    // damage only (raids + skirmishes). Never touches rollShotDamage —
+    // the player's outgoing formula is duplicated across files and must
+    // not drift. Applied per hit below, floored, min 1 so a shot stings.
+    const incomingDmgMult = getActiveEffects(equippedRaidItems)
+      .filter(e => e.type === 'incoming_damage_mult')
+      .reduce((a, e) => a * e.value, 1)
+
     let pHp = playerHpRef.current
     let eHp = enemyHpRef.current
     let pCharges = playerCharges
@@ -600,6 +608,7 @@ export default function RaidCombat({
             splatColor = '#ef4444'
           }
         } else {
+          if (incomingDmgMult < 1 && dmg > 0) dmg = Math.max(1, Math.floor(dmg * incomingDmgMult))
           pHp = Math.max(0, pHp - dmg)
           if (partialDodge) {
             stepLines.push(action === 'volley'

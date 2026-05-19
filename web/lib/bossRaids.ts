@@ -163,3 +163,105 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
     { speaker: 'boss', text: "Ready your guns. This is where your story ends." },
   ],
 }
+
+export const CAPTAIN_KRUST: BossRaidConfig = {
+  raidId: 'captain_krust',
+  raidTitle: "Krust's Consignment",
+  bossDefeatedText: 'Captain Krust Defeated',
+  enemies: {
+    // Tier-2 roster. Stiffer than Pete's reef: a Finndicate shipping
+    // crew that runs cargo on a schedule and does not like being late.
+    // 8-fight gauntlet (2 of each) escalating into Krust himself.
+    // Stats run roughly 2x the Corsair's Reckoning tier so the long
+    // run still bites at higher Navigation. All values are tuned
+    // starting points — adjust freely.
+    scout: {
+      id: 'scout', name: 'Bilge Runner', hpBase: 40, minDmg: 4, maxDmg: 8,
+      shipSpeed: 5, actionMs: 4200,
+      // Cannon fodder of the consignment crew. Pure trade, no tricks —
+      // the player can mash reload-fire and win. Difficulty starts next.
+      // Charges: 0→1→0→1→0
+      pattern: ['reload', 'fire', 'reload', 'fire'],
+      critChance: 0.03,
+      image: '/enemytier2scout.png',
+      portrait: '/krust_worker.jpeg',
+    },
+    reg: {
+      id: 'reg', name: 'Brine Deckhand', hpBase: 52, minDmg: 5, maxDmg: 11,
+      shipSpeed: 5, actionMs: 4600,
+      // 7-turn loop, two punish turns on the autopilot rhythm:
+      //   T4 dodge  → wastes the player's second charged shot
+      //   T7 volley → free 2x hit while the player reloads
+      // Charges: 0→1→0→1→1→2→3→0
+      pattern: ['reload', 'fire', 'reload', 'dodge', 'reload', 'reload', 'volley'],
+      critChance: 0.06,
+      image: '/enemytier2reg.png',
+      portrait: '/krust_soldier.jpeg',
+    },
+    brute: {
+      id: 'brute', name: 'Hull Breaker', hpBase: 70, minDmg: 9, maxDmg: 14,
+      shipSpeed: 4, actionMs: 5200,
+      // Tanky and slow. Telegraphs a big opening volley with three
+      // reloads, then steady heavy fire. Low speed loses most speed
+      // rolls, so its volley usually lands AFTER the player's reply —
+      // survivable if read, brutal if ignored.
+      // Charges: 0→1→2→3→0→1→0→1→0
+      pattern: ['reload', 'reload', 'reload', 'volley', 'reload', 'fire', 'reload', 'fire'],
+      critChance: 0.05,
+      image: '/enemytier2brute.png',
+      portrait: '/krust_brute.jpeg',
+    },
+    elite: {
+      id: 'elite', name: 'Krust Overseer', hpBase: 64, minDmg: 6, maxDmg: 13,
+      shipSpeed: 9, actionMs: 3400,
+      // Fastest ship in the run (speed 9) — wins most speed rolls, so
+      // its dodges and volleys resolve before the player's reply.
+      // 9-turn loop with four punish turns (T2 fire trade, T4 dodge,
+      // T7 volley, T9 fire). The real test before the boss.
+      // Charges: 0→1→0→1→1→2→3→0→1→0
+      pattern: ['reload', 'fire', 'reload', 'dodge', 'reload', 'reload', 'volley', 'reload', 'fire'],
+      critChance: 0.10,
+      image: '/enemytier2elite.png',
+      portrait: '/krust_overseer.jpeg',
+    },
+    krust: {
+      id: 'krust', name: 'Captain Krust', hpBase: 110, minDmg: 12, maxDmg: 22,
+      shipSpeed: 7, actionMs: 4200,
+      // 14-turn boss loop. Same brutal philosophy as Pete, dialed up:
+      // three reload-dodge pairs early (T2/T4/T6) shred the autopilot
+      // fire turns, a volley T7, a free fire T9, a fourth dodge T11,
+      // and a closing volley T14. 12-22 x2 volley x1.5 crit tops out
+      // near 66-damage single shots — read the pattern or sink.
+      // Charges: 0→1→1→2→2→3→3→0→1→0→1→1→2→3→0
+      pattern: ['reload', 'dodge', 'reload', 'dodge', 'reload', 'dodge', 'volley', 'reload', 'fire', 'reload', 'dodge', 'reload', 'reload', 'volley'],
+      critChance: 0.09,
+      image: '/enemytier2boss.png',
+      portrait: '/Captainkrust.jpeg',
+    },
+  },
+  sequence: ['scout', 'scout', 'reg', 'reg', 'brute', 'brute', 'elite', 'elite'],
+  bossId: 'krust',
+  loot: [
+    { id: 'doubloons_600',   label: '+600 ⟡',         image: '/smallpile.png',     emoji: '🪙', rarity: 'common',    weight: 50 },
+    { id: 'doubloons_1200',  label: '+1,200 ⟡',       image: '/dailybonus.png',    emoji: '💰', rarity: 'uncommon',  weight: 25 },
+    { id: 'gems_50',         label: '50 Gems',         image: null,                 emoji: '💎', rarity: 'rare',      weight: 15 },
+    { id: 'pack_2',          label: '2 Packs',         image: '/cardbacknew.png',   emoji: '📦', rarity: 'epic',      weight: 5  },
+    { id: 'verdigris_hull',  label: 'Verdigris Hull',  image: null,                 emoji: '🚢', rarity: 'epic',      weight: 5,  shipSkinId: 'verdigris_hull' },
+    { id: 'krusts_carapace', label: "Krust's Carapace", image: '/captainshull.png', emoji: '🛡️', rarity: 'legendary', weight: 3  },
+  ],
+  killRewards: {
+    scout: { gold: 40,  xp: 40  },
+    reg:   { gold: 55,  xp: 60  },
+    brute: { gold: 75,  xp: 80  },
+    elite: { gold: 90,  xp: 100 },
+    krust: { gold: 350, xp: 350 },
+  },
+  preFightDialogue: [
+    { speaker: 'narrator', text: "Past the Bilge Strait the water turns cold and the fog thins to a hard grey line. A long iron-sided carrack waits there, riding low under more cargo than any honest captain could explain. The wax on Pete's letter and the seal on her hull are the same." },
+    { speaker: 'boss', text: "C.K. So you're the little hook that's been snagging my freight. I wondered who kept making my couriers late." },
+    { speaker: 'player', text: "Captain Krust. Pete kept your letters but not his life. You run the Finndicate's cargo." },
+    { speaker: 'boss', text: "I move what I'm told to move and I don't ask whose name is on the manifest. That's why I've lasted, and that's why men like Pete are fodder and men like me are not." },
+    { speaker: 'boss', text: "But you've cost the Finndicate a season's haul, captain, and someone above me will want that back out of you. I'll just take it out first." },
+    { speaker: 'boss', text: "Strike your colours or strike your guns. Either way this consignment sails on without you." },
+  ],
+}

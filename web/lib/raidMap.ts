@@ -10,7 +10,7 @@
 // gated by `requiresNode` (+ optional Nav level); a cleared combat node
 // stays farmable.
 
-import { CORSAIRS_RECKONING, type RaidLootItem } from '@/lib/bossRaids'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, type RaidLootItem } from '@/lib/bossRaids'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
@@ -73,6 +73,9 @@ export interface RaidNode {
   requiresNavLevel?: number
   /** combat: route to the existing combat screen. */
   route?: string
+  /** raid only: the BossRaidConfig.raidId this node maps to, so its
+   *  clear can be derived from raid_completions.raid_id. */
+  raidId?: string
   /** Portrait shown in the map token + sheet header (e.g. the enemy you
    *  face). Falls back to the type glyph when unset. */
   image?: string
@@ -168,6 +171,7 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "Pete goes down hard, and his strongbox spills more than coin. Ledgers. A sealed letter. He was never the top of this. He was feeding someone bigger.",
     requiresNode: 'skirmish',
     route: '/raids',
+    raidId: CORSAIRS_RECKONING.raidId,
     image: CORSAIRS_RECKONING.enemies.pete.portrait,
     detail: {
       description:
@@ -228,12 +232,54 @@ export const RAID_MAP: RaidNode[] = [
     type: 'shop',
     label: "Quartermaster's Cache",
     flavor: 'Past the strait, a fence lays out two pieces of contraband. You may walk away with one.',
+    bridge: "The fence talks more than he sells. The cold water ahead belongs to one captain, and the wax on Pete's letter finally has a name to it.",
     requiresNode: 'bilge_milestone',
     choice: { items: ['quartermasters_anchor', 'navigators_compass'] },
     detail: {
       description:
         "The fence on the far side of the Bilge Strait does not haggle. He sets two pieces of contraband on the barrel between you, the kind that does not come up twice, and tells you to choose. One, not both. The other goes back in the cache and you never see it again.\n\nWhatever you pick is yours for good, ready to equip in your raid loadout alongside the rest.",
       dropsNote: 'Pick one. Permanent, equippable, and you cannot come back for the other.',
+    },
+  },
+  {
+    id: 'krust_reveal',
+    type: 'story',
+    label: 'The Name on the Wax',
+    flavor: 'Two initials on a sealed letter. The fence on the cold side of the strait can read the rest.',
+    bridge: "Captain Krust. He runs the Finndicate's freight, and every hold he fills is a hold you can empty. His consignment is out there now.",
+    requiresNode: 'quartermaster',
+    detail: {
+      description:
+        "The wax on Pete's letter only ever gave you two letters: C.K. The fence past the strait gives you the rest, for the price of looking like he did you no favour.\n\nCaptain Krust. An old, hard hand the Finndicate trusts with its freight, the kind of captain who never asks whose name is on a manifest and has lasted a lifetime for exactly that. He does not raid the weak the way Pete did. He moves cargo, on schedule, in bulk, and the Finndicate counts on every crate of it. He is no kingpin either. He answers upward like all of them. But he is a long way above a barnacled chancer, and his consignment is sailing the cold water right now.",
+      drops: [
+        {
+          emoji: '📜',
+          label: "Captain's Logbook, Fragment III",
+          sublabel: '"C.K. don\'t lose cargo. Lose his cargo and you find out why." Said by the fence, who would not be named either.',
+          rarity: 'rare',
+        },
+      ],
+      dropsNote: 'A name at last. The Finndicate has a face for its freight, and the freight has a heading.',
+      ctaLabel: 'Name the Devil →',
+    },
+  },
+  {
+    id: 'krust',
+    type: 'raid',
+    label: "Krust's Consignment",
+    flavor: "Captain Krust's freight runs the cold water past the Bilge Strait. Sink the consignment and the Finndicate feels it.",
+    bridge: "Krust goes down and his manifest goes overboard with him. He was no kingpin either. He kept saying someone above him would want this back.",
+    requiresNode: 'krust_reveal',
+    requiresNavLevel: 20,
+    route: '/raids/krust',
+    raidId: CAPTAIN_KRUST.raidId,
+    image: CAPTAIN_KRUST.enemies.krust.portrait,
+    detail: {
+      description:
+        "Krust's full run: eight escalating ship battles through his consignment crew with no breather, ending in the old captain and his iron-sided carrack. Sink the gauntlet to crack his loot crate, the only place his contraband drops. Stiffer than anything Pete's reef ever threw at you.",
+      enemies: ['Bilge Runner ×2', 'Brine Deckhand ×2', 'Hull Breaker ×2', 'Krust Overseer ×2', 'Captain Krust'],
+      drops: lootDrops(CAPTAIN_KRUST.loot),
+      dropsNote: 'One crate per Krust clear, rolled once and scaled by your Fortune. Every kill along the way also pays gold + Nav XP.',
     },
   },
 ]

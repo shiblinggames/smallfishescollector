@@ -2,6 +2,7 @@ export type RaidEffectType =
   | 'boss_damage_mult'      // value = damage multiplier on boss rounds
   | 'lethal_save'           // value = uses per raid run (raids only, not skirmishes)
   | 'speed_roll_nav_pct'    // value = fraction of Navigation added to the turn-order roll
+  | 'incoming_damage_mult'  // value = multiplier on incoming enemy damage (e.g. 0.85 = -15%)
 
 export interface RaidEffect {
   type: RaidEffectType
@@ -49,6 +50,16 @@ export const RAID_ITEMS: RaidItemDef[] = [
     rarity: 'epic',
     effects: [{ type: 'speed_roll_nav_pct', value: 0.25 }],
     source: "Quartermaster's Cache",
+  },
+  {
+    id: 'krusts_carapace',
+    name: "Krust's Carapace",
+    description: 'Cuts all incoming enemy fire by 15%. The same plated hide Krust hid behind for years.',
+    image: '/captainshull.png',
+    emoji: '🛡️',
+    rarity: 'epic',
+    effects: [{ type: 'incoming_damage_mult', value: 0.85 }],
+    source: "Krust's Consignment",
   },
 ]
 

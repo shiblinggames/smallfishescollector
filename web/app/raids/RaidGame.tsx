@@ -1225,7 +1225,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
               setLootClaimed(true)
               const elapsedMs = performance.now() - raidStartTimeRef.current
               try {
-                const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP)
+                const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP, config.raidId)
                 window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
               } catch { /* save failed, route anyway */ }
               router.push('/expeditions')

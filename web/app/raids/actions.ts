@@ -169,12 +169,17 @@ export async function repairShip(): Promise<
 
 // Item IDs and what they grant
 const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; packs?: number; shipSkin?: string; raidItem?: string }> = {
-  doubloons_300:  { doubloons: 300 },
-  doubloons_600:  { doubloons: 600 },
-  gems_25:        { gems: 25 },
-  pack:           { packs: 1 },
-  corsair_black:  { shipSkin: 'corsair_black' },
-  corsair_cannon: { raidItem: 'corsair_cannon' },
+  doubloons_300:   { doubloons: 300 },
+  doubloons_600:   { doubloons: 600 },
+  doubloons_1200:  { doubloons: 1200 },
+  gems_25:         { gems: 25 },
+  gems_50:         { gems: 50 },
+  pack:            { packs: 1 },
+  pack_2:          { packs: 2 },
+  corsair_black:   { shipSkin: 'corsair_black' },
+  corsair_cannon:  { raidItem: 'corsair_cannon' },
+  verdigris_hull:  { shipSkin: 'verdigris_hull' },
+  krusts_carapace: { raidItem: 'krusts_carapace' },
 }
 
 export async function claimRaidLoot(
@@ -182,12 +187,17 @@ export async function claimRaidLoot(
   rolledItemIds: string[],
   elapsedMs: number,
   damageTaken: number,
+  raidId: string = 'corsairs_reckoning',
 ): Promise<{ newShipSkins: string[]; newDoubloonTotal: number; newRaidItems: string[] }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
-  if (elapsedMs <= 120_000) await unlockBadge('corsairs_bane')
-  if (damageTaken === 0) await unlockBadge('ghost_ship')
+  // corsairs_bane / ghost_ship are Barnacle Pete feats — only the
+  // Corsair's Reckoning clear can earn them, never other raids.
+  if (raidId === 'corsairs_reckoning') {
+    if (elapsedMs <= 120_000) await unlockBadge('corsairs_bane')
+    if (damageTaken === 0) await unlockBadge('ghost_ship')
+  }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
@@ -227,7 +237,7 @@ export async function claimRaidLoot(
       .eq('id', user.id),
     admin
       .from('raid_completions')
-      .insert({ user_id: user.id, elapsed_ms: elapsedMs }),
+      .insert({ user_id: user.id, elapsed_ms: elapsedMs, raid_id: raidId }),
   ])
 
   return {
