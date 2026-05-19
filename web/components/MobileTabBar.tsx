@@ -12,10 +12,11 @@ const PAGE_TINTS: [string, string][] = [
   ['/marketplace', 'rgba(120,80,180,0.08)'],
 ]
 
-// Order: tavern, fishing, expeditions, profile, captain's log. The
-// leaderboard moved off the tab bar (it's now per-section modals +
-// still the desktop nav). Market + social live in the mobile hamburger
-// menu (in Nav.tsx).
+// Order: tavern, fishing, expeditions, log, profile. "Log" (the
+// Captain's Log / /achievements) sits before Profile so Profile stays
+// the last tab; label is short ("Log") to avoid tab-bar overflow. The
+// leaderboard moved off the tab bar (per-section modals + desktop nav).
+// Market + social live in the mobile hamburger menu (in Nav.tsx).
 const LINKS = [
   { href: '/tavern', label: 'Tavern',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 3h14l-1 9H6L5 3z"/><path d="M18 6h2a1 1 0 011 1v3a1 1 0 01-1 1h-2"/><path d="M6 21h12M8 17v4M16 17v4"/><path d="M6 12c0 3 2 5 6 5s6-2 6-5"/></svg>,
@@ -26,11 +27,11 @@ const LINKS = [
   { href: '/expeditions', label: 'Expeditions',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17c2 4 16 4 18 0"/><path d="M4 17L6 12l13 0 2 5"/><line x1="10" y1="12" x2="10" y2="4"/><path d="M10 4L17 9 10 12"/></svg>,
   },
+  { href: '/achievements', label: 'Log',
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 6.5C10.5 5 8 4.5 4 5v14c4-.5 6.5 0 8 1.5 1.5-1.5 4-2 8-1.5V5c-4-.5-6.5 0-8 1.5z"/><path d="M12 6.5V19"/></svg>,
+  },
   { href: '/profile', label: 'Profile',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>,
-  },
-  { href: '/achievements', label: "Captain's Log",
-    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 6.5C10.5 5 8 4.5 4 5v14c4-.5 6.5 0 8 1.5 1.5-1.5 4-2 8-1.5V5c-4-.5-6.5 0-8 1.5z"/><path d="M12 6.5V19"/></svg>,
   },
 ]
 
