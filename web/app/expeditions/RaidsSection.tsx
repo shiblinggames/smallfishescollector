@@ -141,10 +141,12 @@ function RaidMap({
             }}
           >
             <motion.button
-              onClick={() => onSelect(v)}
-              whileTap={{ scale: 0.9 }}
+              onClick={() => { if (!locked) onSelect(v) }}
+              whileTap={locked ? undefined : { scale: 0.9 }}
               transition={{ type: 'spring', stiffness: 520, damping: 20 }}
               aria-label={node.label}
+              aria-disabled={locked || undefined}
+              disabled={locked}
               className={isCurrent ? 'raid-node-current' : undefined}
               style={{
                 width: size,
@@ -155,7 +157,7 @@ function RaidMap({
                 alignItems: 'center',
                 justifyContent: 'center',
                 position: 'relative',
-                cursor: 'pointer',
+                cursor: locked ? 'default' : 'pointer',
                 background: locked
                   ? 'radial-gradient(circle at 35% 30%, #14110d, #0a0907)'
                   : cleared
