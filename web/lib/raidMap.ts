@@ -212,7 +212,7 @@ export const RAID_MAP: RaidNode[] = [
   {
     id: 'bilge_milestone',
     type: 'milestone',
-    label: 'The Bilge Rats',
+    label: 'The Bilge Eels',
     flavor: "Neutral thugs who own the Bilge Strait. No flag, no loyalty, just a toll. C.K.'s cargo sails right through their water.",
     bridge: "Past the strait the water turns Finndicate. C.K. is moving cargo somewhere ahead, and a fence here already knows your name.",
     requiresNode: 'syndicate',
@@ -220,7 +220,7 @@ export const RAID_MAP: RaidNode[] = [
     milestone: { amount: 1000, spend: true },
     detail: {
       description:
-        "The letter never gave an address, only a heading: out past the Bilge Strait into the cold water. That is enough to follow, and it is exactly the stretch the Bilge Rats own.\n\nThey answer to no one. Not Finndicate, not you, just a pack of thugs charging toll on the only water that points where C.K.'s cargo went. There is no fighting through at your size. They treat only with captains who have sailed enough to be worth the breath (Navigation 10), and even then it costs. Slide them 1,000 ⟡ and they wave you through, onto C.K.'s trail. Refuse, and the trail goes cold.",
+        "The letter never gave an address, only a heading: out past the Bilge Strait into the cold water. That is enough to follow, and it is exactly the stretch the Bilge Eels own.\n\nThey answer to no one. Not Finndicate, not you, just a knot of thugs charging toll on the only water that points where C.K.'s cargo went. There is no fighting through at your size. They treat only with captains who have sailed enough to be worth the breath (Navigation 10), and even then it costs. Slide them 1,000 ⟡ and they wave you through, onto C.K.'s trail. Refuse, and the trail goes cold.",
       drops: [
         { emoji: '🗺️', label: "The trail toward C.K.", sublabel: 'Passage through the Bilge Strait, following the shipment heading', rarity: 'uncommon' },
       ],
