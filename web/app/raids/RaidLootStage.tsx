@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import CharacterAvatar from '@/components/CharacterAvatar'
 import { type BroadsideEnemy, type RaidLootItem, RARITY_COLOR } from '@/lib/bossRaids'
 import { getShipSkin } from '@/lib/shipSkins'
 
@@ -49,9 +48,7 @@ export default function RaidLootStage(props: Props) {
   const {
     boss, killGold, killXP,
     loot, slotFinal, lootAmount, fortuneMult,
-    shipImageUrl, shipFilter, shipName, playerLabel,
-    playerCharacterColor, playerEquippedHat, playerAvatarBg, playerAvatarBorder,
-    playerHpMax, playerHp,
+    shipImageUrl, shipFilter, shipName,
     onClaim, claiming = false,
   } = props
 
@@ -122,7 +119,6 @@ export default function RaidLootStage(props: Props) {
   const landedColor = RARITY_COLOR[finalItem.rarity]
   const showLandedItem = phase === 'landed' || phase === 'revealed'
 
-  const playerHpPct = playerHpMax > 0 ? Math.max(0, Math.round((playerHp / playerHpMax) * 100)) : 0
 
   return (
     <div style={{
@@ -290,35 +286,10 @@ export default function RaidLootStage(props: Props) {
           )}
         </div>
 
-        {/* ── Player nameplate (bottom-right, mirrors RaidCombat) ─────── */}
-        <div style={{
-          position: 'absolute', bottom: 10, right: 10, zIndex: 4,
-          padding: '0.45rem 0.6rem 0.5rem 0.45rem',
-          background: 'rgba(6,12,20,0.9)',
-          border: '1px solid #2a3548',
-          borderRadius: 12,
-          minWidth: 160,
-          display: 'flex', alignItems: 'center', gap: 8,
-        }}>
-          <CharacterAvatar
-            characterColor={playerCharacterColor ?? null}
-            equippedHat={playerEquippedHat ?? null}
-            bgColor={playerAvatarBg ?? undefined}
-            ringColor={playerAvatarBorder ?? undefined}
-            size={50}
-          />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.72rem', color: '#e0ddd8' }}>
-              {playerLabel || shipName}
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
-              <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${playerHpPct}%`, background: '#60a5fa', borderRadius: 3 }} />
-              </div>
-              <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: '#9aaecc' }}>{playerHp}/{playerHpMax}</p>
-            </div>
-          </div>
-        </div>
+        {/* Player nameplate removed during the loot stage — it was sitting
+            over the chest reveal and the player already knows who they are
+            here. Kept as named props on the Props interface so parent calls
+            still type-check without touching every raid page. */}
 
         {/* Decorative ship in the lower-left (just to match the framing) */}
         <div style={{ position: 'absolute', bottom: '8%', left: '6%', width: 90, opacity: 0.85, filter: shipFilter ?? 'none', pointerEvents: 'none' }}>
