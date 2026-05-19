@@ -118,16 +118,16 @@ export const RAID_MAP: RaidNode[] = [
     id: 'intro',
     type: 'story',
     label: 'A Loose Thread',
-    flavor: "Barnacle Pete robs everyone blind and somehow stays dead broke. Funny, that.",
-    bridge: "Every answer points at one reef, where Pete's little fish do his fetching.",
+    flavor: "Barnacle Pete has bled the weak for years, and every coin of it sails off to someone bigger.",
+    bridge: "Every trail runs back to one reef, where Pete's little fish do his collecting.",
     detail: {
       description:
-        "Pete has been raiding these reefs for thirty years and he's still flat broke. For a man who steals everything that isn't nailed down, that's a neat trick. The loot goes somewhere. It just never seems to end up in Pete's pockets.\n\nNobody can be bothered to ask why. You, clearly, have nothing better to do. Go give the loudest pirate on the water a good shake and see what rattles loose.",
+        "Pete is not some broke old chancer. He is good at what he does, and what he does is prey on the weak. Small crews, fishing folk, anyone too slight to fight back. Years of it, up and down this coast.\n\nThe strange part is the coin. Pete robs plenty and keeps almost none. He is a cash cow, milked by someone he answers to. Nobody can be bothered to ask who. You, clearly, have nothing better to do. Go give the loudest pirate on the water a good shake and see what falls out.",
       drops: [
         {
           emoji: '📜',
           label: "Captain's Logbook, Fragment I",
-          sublabel: '"He never keeps what he nicks." Three sailors said it. None of them had met.',
+          sublabel: '"Pete don\'t spend his haul. He delivers it." Said once, by a man who would not say it twice.',
           rarity: 'common',
         },
       ],
@@ -160,7 +160,7 @@ export const RAID_MAP: RaidNode[] = [
     type: 'raid',
     label: "The Corsair's Reckoning",
     flavor: 'Barnacle Pete and his fleet have been spotted off the coast. Bring him to justice, dead or alive.',
-    bridge: "Pete sinks loud and broke. Thirty years of plunder, not a coin in his hold. Where did it go?",
+    bridge: "Pete goes down hard, and his strongbox spills more than coin. He was never the top of this. He was paying someone.",
     requiresNode: 'skirmish',
     route: '/raids',
     image: CORSAIRS_RECKONING.enemies.pete.portrait,
@@ -173,12 +173,34 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    id: 'syndicate',
+    type: 'story',
+    label: 'A Bigger Fish',
+    flavor: "Pete was a collector, not a kingpin. His books name the hand that milked him.",
+    bridge: "Hunting a syndicate burns coin and buys informants. Fill the war chest before you knock on their doors.",
+    requiresNode: 'pete',
+    detail: {
+      description:
+        "Pete's strongbox was not empty. It was full of someone else's bookkeeping. Cut sheets, courier routes, a tally of years, and one word stamped on every page: the Finndicate.\n\nHe was never a kingpin. He was a cash cow, milked dry and bled like everyone he ever robbed. The Finndicate is far bigger than one fat corsair. Somewhere out there is a counting house where his deliveries were logged, and a base where the muscle that guards them sleeps. Get the paperwork. Find the door. Then go kick it in.",
+      drops: [
+        {
+          emoji: '📜',
+          label: "Captain's Logbook, Fragment II",
+          sublabel: '"The Finndicate does not lose men. It loses ledgers." Scratched inside the strongbox lid.',
+          rarity: 'uncommon',
+        },
+      ],
+      dropsNote: 'A name at last: the Finndicate. The next page is somewhere in their books.',
+      ctaLabel: 'Follow the Ledger →',
+    },
+  },
+  {
     id: 'bilge_milestone',
     type: 'milestone',
     label: 'The Bilge Rats',
     flavor: 'Word of Pete’s fall spreads the docks over. Prove your coffers run deep enough to bankroll the next campaign.',
     bridge: "Coin opens doors a cutlass only dents. A careful fence starts asking after you by name.",
-    requiresNode: 'pete',
+    requiresNode: 'syndicate',
     milestone: { amount: 2000, rewardDoubloons: 500 },
     detail: {
       description:
