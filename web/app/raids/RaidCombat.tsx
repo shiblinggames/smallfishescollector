@@ -789,6 +789,17 @@ export default function RaidCombat({
             setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
           }
         }, PROJECTILE_FLIGHT_MS)
+      } else if (step.action === 'repair' && step.who === 'player') {
+        // Repair kit — brief beat so the "crack open" log line lands first,
+        // then bump the HP bar and float a green +HP splat. No shake (no
+        // hit), no projectile, just the patch landing.
+        setTimeout(() => {
+          setPlayerHp(step.pHp)
+          if (step.splatTarget === 'player') {
+            setPHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: false })
+            setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
+          }
+        }, PROJECTILE_FLIGHT_MS)
       }
       // reload / dodge: state already updated via charges above. No splat.
 
