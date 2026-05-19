@@ -19,11 +19,10 @@ const TYPE_ACCENT: Record<string, string> = {
   story:     '#6fbf73',
 }
 
-// Aggressive winding sea-chart zig-zag (% of width, cycled top→bottom)
-// so the route sweeps the full width and fills the side space. Story
+// Winding sea-chart zig-zag (% of width, cycled top→bottom). Story
 // lives in the node modal, so nodes pack tight vertically. Repeats.
-const COLS = [50, 83, 17, 74, 22, 80, 20]
-const ROW = 108          // vertical pitch between node centres
+const COLS = [50, 73, 27, 62, 38, 70, 30]
+const ROW = 90           // vertical pitch between node centres
 const TOKEN = 48         // layout/max token diameter (drives spacing + viewBox)
 const PAD_TOP = 20
 const PAD_BOTTOM = 14
@@ -31,11 +30,11 @@ const PAD_BOTTOM = 14
 // Visual token size by type: bigger node = bigger fight. A story beat
 // is the smallest, a skirmish small, a full raid the biggest.
 const TYPE_SIZE: Record<string, number> = {
-  story:     30,
-  skirmish:  36,
-  milestone: 42,
-  shop:      42,
-  raid:      48,
+  story:     28,
+  skirmish:  34,
+  milestone: 40,
+  shop:      40,
+  raid:      46,
 }
 
 function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; size?: number }) {
@@ -137,8 +136,8 @@ function RaidMap({
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 4,
-              width: 96,
+              gap: 3,
+              width: 104,
             }}
           >
             <motion.button
@@ -215,16 +214,16 @@ function RaidMap({
                 doesn't cut through the text. */}
             <div style={{
               textAlign: 'center',
-              maxWidth: 96,
+              maxWidth: 104,
               boxSizing: 'border-box',
               background: 'rgba(8,7,6,0.9)',
               borderRadius: 6,
               padding: '2px 6px',
             }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', lineHeight: 1.15, color: locked ? 'rgba(240,237,232,0.4)' : '#f0ede8' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.64rem', lineHeight: 1.1, color: locked ? 'rgba(240,237,232,0.4)' : '#f0ede8' }}>
                 {node.label}
               </p>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.46rem', marginTop: 1, color: cleared ? '#4ade80' : locked ? '#5a5856' : accent }}>
+              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', marginTop: 1, color: cleared ? '#4ade80' : locked ? '#5a5856' : accent }}>
                 {statusWord}
               </p>
             </div>
