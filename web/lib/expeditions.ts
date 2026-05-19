@@ -7,7 +7,6 @@ export interface ShipStats {
   image: string
   durability: number
   speed: number
-  armor: number
   crewSlots: number
   minDamage: number
 }
@@ -34,7 +33,7 @@ export interface TotalCrewStats {
 
 export interface RunBuff {
   source: string
-  effect: 'power' | 'dodge' | 'fortune' | 'armor' | 'durability'
+  effect: 'power' | 'dodge' | 'fortune' | 'durability'
   value: number
 }
 
@@ -43,13 +42,13 @@ export interface RunBuff {
 // name and image come from ships.ts — combat-specific stats defined here only.
 // Used by raids and daily voyages (for displayed crew score, captain bonuses).
 const EXPEDITION_COMBAT_STATS: Record<number, Omit<ShipStats, 'name' | 'image'>> = {
-  0: { durability: 20, speed: 2,  armor: 1, crewSlots: 1, minDamage: 1  },
-  1: { durability: 27, speed: 3,  armor: 1, crewSlots: 1, minDamage: 2  },
-  2: { durability: 35, speed: 4,  armor: 2, crewSlots: 2, minDamage: 3  },
-  3: { durability: 45, speed: 5,  armor: 3, crewSlots: 2, minDamage: 4  },
-  4: { durability: 55, speed: 6,  armor: 4, crewSlots: 3, minDamage: 6  },
-  5: { durability: 70, speed: 8,  armor: 5, crewSlots: 4, minDamage: 8  },
-  6: { durability: 90, speed: 11, armor: 8, crewSlots: 5, minDamage: 11 },
+  0: { durability: 20, speed: 2,  crewSlots: 1, minDamage: 1  },
+  1: { durability: 27, speed: 3,  crewSlots: 1, minDamage: 2  },
+  2: { durability: 35, speed: 4,  crewSlots: 2, minDamage: 3  },
+  3: { durability: 45, speed: 5,  crewSlots: 2, minDamage: 4  },
+  4: { durability: 55, speed: 6,  crewSlots: 3, minDamage: 6  },
+  5: { durability: 70, speed: 8,  crewSlots: 4, minDamage: 8  },
+  6: { durability: 90, speed: 11, crewSlots: 5, minDamage: 11 },
 }
 
 export const EXPEDITION_SHIP_STATS: Record<number, ShipStats> = Object.fromEntries(

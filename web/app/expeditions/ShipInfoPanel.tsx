@@ -9,7 +9,6 @@ import ShipViewer3D from '@/app/marketplace/shipyard/ShipViewer3D'
 const SHIP_STATS = [
   { key: 'durability' as const, label: 'Durability', icon: '🛡', color: '#60a5fa', max: 80 },
   { key: 'speed'      as const, label: 'Speed',      icon: '⚡', color: '#f0c040', max: 10 },
-  { key: 'armor'      as const, label: 'Armor',      icon: '⚓', color: '#4ade80', max: 6  },
 ]
 
 export default function ShipInfoPanel({ ship, shipTier }: { ship: ShipStats; shipTier: number }) {

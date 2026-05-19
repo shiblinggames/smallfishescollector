@@ -104,10 +104,9 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
         </div>
 
         {/* Active ship stats row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 5, marginTop: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5, marginTop: 10 }}>
           <HeroStat label="Crew"  value={activeStats?.crewSlots ?? 1} color={activeShip.color} />
           <HeroStat label="Hull"  value={activeStats?.durability ?? 0} color="#60a5fa" />
-          <HeroStat label="Armor" value={activeStats?.armor ?? 0}      color="#4ade80" />
           <HeroStat label="Speed" value={activeStats?.speed ?? 0}      color="#f0c040" />
           <HeroStat label="Min Dmg" value={activeStats?.minDamage ?? 0} color="#fb923c" />
         </div>
@@ -219,7 +218,6 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
               }}>
                 <StatChip label="Crew"  value={stats?.crewSlots  ?? 1} accent={c}       owned={owned} />
                 <StatChip label="Hull"  value={stats?.durability ?? 0} accent="#60a5fa" owned={owned} />
-                <StatChip label="Armor" value={stats?.armor      ?? 0} accent="#4ade80" owned={owned} />
                 <StatChip label="Speed" value={stats?.speed      ?? 0} accent="#f0c040" owned={owned} />
                 <StatChip label="Dmg"   value={stats?.minDamage  ?? 0} accent="#fb923c" owned={owned} />
               </div>
