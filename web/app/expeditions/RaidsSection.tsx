@@ -19,12 +19,12 @@ const TYPE_ACCENT: Record<string, string> = {
   story:     '#6fbf73',
 }
 
-// Winding sea-chart layout. Nodes zig-zag but stay in the LEFT band
-// (% of width, cycled top→bottom) so the connector line never crosses
-// into the right column, where the between-node narrative recap lives.
-// That keeps the text beside the route, never on it. Repeats as grows.
-const COLS = [24, 36, 16, 34, 20, 36, 18]
-const ROW = 150          // vertical pitch between node centres
+// Full winding sea-chart zig-zag (% of width, cycled top→bottom). The
+// between-node recap sits on whichever side is open at that segment's
+// midpoint (opposite the route), so it zig-zags too and never lands on
+// the connector line. Pattern repeats as RAID_MAP grows.
+const COLS = [50, 73, 27, 62, 38, 70, 30]
+const ROW = 170          // vertical pitch between node centres
 const TOKEN = 48         // layout/max token diameter (drives spacing + viewBox)
 const PAD_TOP = 30
 const PAD_BOTTOM = 20
@@ -119,31 +119,39 @@ function RaidMap({
       {/* Narrative recap sitting in the gap between two nodes: what
           beating the upper node set in motion. Brighter once it's
           actually been done; a faint foreshadow until then. */}
-      {views.slice(0, -1).map((v, i) => (
-        v.node.bridge ? (
+      {views.slice(0, -1).map((v, i) => {
+        if (!v.node.bridge) return null
+        // At this segment's midpoint the connector sits near x=mid. Put
+        // the recap on the open side (opposite the route) with a gutter
+        // so it never touches the line, and align it toward the route.
+        const mid = (cx(i) + cx(i + 1)) / 2
+        const onLeft = mid >= 50
+        const GUT = 12
+        const sidePos = onLeft
+          ? { left: '3%', right: `${100 - (mid - GUT)}%`, textAlign: 'right' as const }
+          : { left: `${mid + GUT}%`, right: '3%', textAlign: 'left' as const }
+        return (
           <div
             key={`bridge-${v.node.id}`}
             style={{
               position: 'absolute',
-              left: '50%',
-              right: '4%',
               top: cy(i) + ROW / 2,
               transform: 'translateY(-50%)',
-              textAlign: 'left',
+              ...sidePos,
               pointerEvents: 'none',
             }}
           >
             <p className="font-karla" style={{
-              fontSize: '0.66rem',
-              lineHeight: 1.45,
+              fontSize: '0.64rem',
+              lineHeight: 1.4,
               fontStyle: 'italic',
               color: v.status === 'cleared' ? 'rgba(240,237,232,0.66)' : 'rgba(240,237,232,0.34)',
             }}>
               {v.node.bridge}
             </p>
           </div>
-        ) : null
-      ))}
+        )
+      })}
 
       {views.map((v, i) => {
         const { node, status } = v
@@ -168,7 +176,7 @@ function RaidMap({
               flexDirection: 'column',
               alignItems: 'center',
               gap: 6,
-              width: 92,
+              width: 104,
             }}
           >
             <motion.button
@@ -241,7 +249,7 @@ function RaidMap({
               )}
             </motion.button>
 
-            <div style={{ textAlign: 'center', maxWidth: 92 }}>
+            <div style={{ textAlign: 'center', maxWidth: 104 }}>
               <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', lineHeight: 1.2, color: locked ? 'rgba(240,237,232,0.4)' : '#f0ede8' }}>
                 {node.label}
               </p>

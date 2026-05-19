@@ -119,7 +119,7 @@ export const RAID_MAP: RaidNode[] = [
     type: 'story',
     label: 'A Loose Thread',
     flavor: "Barnacle Pete robs everyone blind and somehow stays dead broke. Funny, that.",
-    bridge: "You pulled the thread. It runs straight to the reef, and the little fish doing Pete's dirty work.",
+    bridge: "The thread runs down to the reef, and Pete's little fish.",
     detail: {
       description:
         "Pete has been raiding these reefs for thirty years and he's still flat broke. For a man who steals everything that isn't nailed down, that's a neat trick. The loot goes somewhere. It just never seems to end up in Pete's pockets.\n\nNobody can be bothered to ask why. You, clearly, have nothing better to do. Go give the loudest pirate on the water a good shake and see what rattles loose.",
@@ -140,7 +140,7 @@ export const RAID_MAP: RaidNode[] = [
     type: 'skirmish',
     label: 'Reef Skirmish',
     flavor: "Pete doesn't sail alone. The reef crawls with his Reef Raiders. Start thinning them out.",
-    bridge: "Sink enough of his Raiders and Pete stops sending help. He sails out to deal with you himself.",
+    bridge: "Sink enough Raiders and Pete sails out himself.",
     requiresNode: 'intro',
     route: '/raids/practice',
     image: CORSAIRS_RECKONING.enemies.brute.portrait,
@@ -160,7 +160,7 @@ export const RAID_MAP: RaidNode[] = [
     type: 'raid',
     label: "The Corsair's Reckoning",
     flavor: 'Barnacle Pete and his fleet have been spotted off the coast. Bring him to justice, dead or alive.',
-    bridge: "Pete goes down with empty pockets, same as ever. So where did all his plunder sail off to? The docks have noticed you asking.",
+    bridge: "Pete sinks broke, same as ever. So where's the plunder?",
     requiresNode: 'skirmish',
     route: '/raids',
     image: CORSAIRS_RECKONING.enemies.pete.portrait,
@@ -177,7 +177,7 @@ export const RAID_MAP: RaidNode[] = [
     type: 'milestone',
     label: 'The Bilge Rats',
     flavor: 'Word of Pete’s fall spreads the docks over. Prove your coffers run deep enough to bankroll the next campaign.',
-    bridge: "Coin talks. Prove yours runs deep and a certain fence suddenly remembers your name.",
+    bridge: "Coin talks. A certain fence learns your name.",
     requiresNode: 'pete',
     milestone: { amount: 2000, rewardDoubloons: 500 },
     detail: {
