@@ -61,13 +61,13 @@ export const EXPEDITION_SHIP_STATS: Record<number, ShipStats> = Object.fromEntri
 // again. Scales by ship tier (a bigger boat costs more to patch up). Moderate
 // scale: roughly one good raid's take at mid tiers, recoverable.
 const RAID_REPAIR_COST: Record<number, number> = {
-  0: 100,
-  1: 175,
-  2: 300,
-  3: 475,
-  4: 700,
-  5: 1000,
-  6: 1400,
+  0: 50,
+  1: 90,
+  2: 150,
+  3: 240,
+  4: 350,
+  5: 500,
+  6: 700,
 }
 
 export function raidRepairCost(shipTier: number): number {
