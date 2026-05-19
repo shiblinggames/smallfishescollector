@@ -24,7 +24,7 @@ const TYPE_ACCENT: Record<string, string> = {
 // midpoint (opposite the route), so it zig-zags too and never lands on
 // the connector line. Pattern repeats as RAID_MAP grows.
 const COLS = [50, 73, 27, 62, 38, 70, 30]
-const ROW = 128          // vertical pitch between node centres
+const ROW = 120          // vertical pitch between node centres
 const TOKEN = 48         // layout/max token diameter (drives spacing + viewBox)
 const PAD_TOP = 24
 const PAD_BOTTOM = 16
@@ -126,10 +126,10 @@ function RaidMap({
         // so it never touches the line, and align it toward the route.
         const mid = (cx(i) + cx(i + 1)) / 2
         const onLeft = mid >= 50
-        const GUT = 12
+        const GUT = 9
         const sidePos = onLeft
-          ? { left: '3%', right: `${100 - (mid - GUT)}%`, textAlign: 'right' as const }
-          : { left: `${mid + GUT}%`, right: '3%', textAlign: 'left' as const }
+          ? { left: '2%', right: `${100 - (mid - GUT)}%`, textAlign: 'right' as const }
+          : { left: `${mid + GUT}%`, right: '2%', textAlign: 'left' as const }
         return (
           <div
             key={`bridge-${v.node.id}`}
@@ -174,7 +174,7 @@ function RaidMap({
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 6,
+              gap: 4,
               width: 104,
             }}
           >
@@ -255,13 +255,13 @@ function RaidMap({
               maxWidth: 104,
               boxSizing: 'border-box',
               background: 'rgba(8,7,6,0.9)',
-              borderRadius: 7,
-              padding: '3px 7px',
+              borderRadius: 6,
+              padding: '2px 6px',
             }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', lineHeight: 1.2, color: locked ? 'rgba(240,237,232,0.4)' : '#f0ede8' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', lineHeight: 1.15, color: locked ? 'rgba(240,237,232,0.4)' : '#f0ede8' }}>
                 {node.label}
               </p>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', marginTop: 2, color: cleared ? '#4ade80' : locked ? '#5a5856' : accent }}>
+              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.46rem', marginTop: 1, color: cleared ? '#4ade80' : locked ? '#5a5856' : accent }}>
                 {statusWord}
               </p>
             </div>
