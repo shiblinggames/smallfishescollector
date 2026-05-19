@@ -19,16 +19,15 @@ const TYPE_ACCENT: Record<string, string> = {
   story:     '#6fbf73',
 }
 
-// Tokens hug a gently winding LEFT spine (these are % of width, cycled
-// top→bottom) so there is always room for a one-line description to the
-// right of every node. The pattern repeats as RAID_MAP grows.
-const COLS = [17, 23, 13, 21, 16, 24, 14]
-const ROW = 84           // vertical pitch between node centres (tight)
+// Winding sea-chart layout: nodes zig-zag across the width (% of width,
+// cycled top→bottom). The wide row pitch is intentional now: the gap
+// between two nodes carries a one-line narrative recap of what beating
+// the upper node set in motion. Pattern repeats as RAID_MAP grows.
+const COLS = [50, 73, 27, 62, 38, 70, 30]
+const ROW = 150          // vertical pitch between node centres
 const TOKEN = 60         // layout/max token diameter (drives spacing + viewBox)
-const PAD_TOP = 24
-const PAD_BOTTOM = 12
-// Where the text column starts (clears the widest token + wobble).
-const TEXT_LEFT = '34%'
+const PAD_TOP = 30
+const PAD_BOTTOM = 20
 
 // Visual token size by type: bigger node = bigger fight. A story beat
 // is the smallest, a skirmish small, a full raid the biggest.
@@ -117,6 +116,35 @@ function RaidMap({
         })}
       </svg>
 
+      {/* Narrative recap sitting in the gap between two nodes: what
+          beating the upper node set in motion. Brighter once it's
+          actually been done; a faint foreshadow until then. */}
+      {views.slice(0, -1).map((v, i) => (
+        v.node.bridge ? (
+          <div
+            key={`bridge-${v.node.id}`}
+            style={{
+              position: 'absolute',
+              left: '9%',
+              right: '9%',
+              top: cy(i) + ROW / 2,
+              transform: 'translateY(-50%)',
+              textAlign: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <p className="font-karla" style={{
+              fontSize: '0.66rem',
+              lineHeight: 1.45,
+              fontStyle: 'italic',
+              color: v.status === 'cleared' ? 'rgba(240,237,232,0.66)' : 'rgba(240,237,232,0.34)',
+            }}>
+              {v.node.bridge}
+            </p>
+          </div>
+        ) : null
+      ))}
+
       {views.map((v, i) => {
         const { node, status } = v
         const accent = TYPE_ACCENT[node.type] ?? '#c4a96a'
@@ -133,113 +161,94 @@ function RaidMap({
             key={node.id}
             style={{
               position: 'absolute',
-              left: 0,
-              right: 0,
+              left: `${cx(i)}%`,
               top: cy(i),
-              transform: 'translateY(-50%)',
+              transform: 'translate(-50%, -50%)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 6,
+              width: 124,
             }}
           >
             <motion.button
               onClick={() => onSelect(v)}
-              whileTap={{ scale: 0.985 }}
-              transition={{ type: 'spring', stiffness: 520, damping: 22 }}
-              aria-label={`${node.label}. ${node.tagline}`}
+              whileTap={{ scale: 0.9 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 20 }}
+              aria-label={node.label}
+              className={isCurrent ? 'raid-node-current' : undefined}
               style={{
-                position: 'relative',
-                width: '100%',
-                minHeight: size,
+                width: size,
+                height: size,
+                borderRadius: '50%',
+                flexShrink: 0,
                 display: 'flex',
                 alignItems: 'center',
-                paddingLeft: TEXT_LEFT,
-                paddingRight: '4%',
-                background: 'none',
-                border: 'none',
-                textAlign: 'left',
+                justifyContent: 'center',
+                position: 'relative',
                 cursor: 'pointer',
+                background: locked
+                  ? 'radial-gradient(circle at 35% 30%, #14110d, #0a0907)'
+                  : cleared
+                    ? `radial-gradient(circle at 35% 30%, ${accent}33, ${accent}14)`
+                    : `radial-gradient(circle at 35% 30%, ${accent}26, #0c0a08)`,
+                border: `2px solid ${locked ? 'rgba(255,255,255,0.08)' : cleared ? `${accent}aa` : accent}`,
+                boxShadow: locked
+                  ? 'none'
+                  : cleared
+                    ? `0 0 0 4px ${accent}10`
+                    : `0 0 14px ${accent}40, 0 0 0 4px ${accent}12`,
+                opacity: locked ? 0.6 : 1,
+                // The pulse animation drives box-shadow; let it own the prop.
+                ...(isCurrent ? { boxShadow: undefined } : {}),
                 touchAction: 'manipulation',
               }}
             >
-              {/* Token on the spine */}
-              <span
-                className={isCurrent ? 'raid-node-current' : undefined}
-                style={{
-                  position: 'absolute',
-                  left: `${cx(i)}%`,
-                  top: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  width: size,
-                  height: size,
-                  borderRadius: '50%',
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: locked
-                    ? 'radial-gradient(circle at 35% 30%, #14110d, #0a0907)'
-                    : cleared
-                      ? `radial-gradient(circle at 35% 30%, ${accent}33, ${accent}14)`
-                      : `radial-gradient(circle at 35% 30%, ${accent}26, #0c0a08)`,
-                  border: `2px solid ${locked ? 'rgba(255,255,255,0.08)' : cleared ? `${accent}aa` : accent}`,
-                  boxShadow: locked
-                    ? 'none'
-                    : cleared
-                      ? `0 0 0 4px ${accent}10`
-                      : `0 0 14px ${accent}40, 0 0 0 4px ${accent}12`,
-                  opacity: locked ? 0.6 : 1,
-                  // The pulse animation drives box-shadow; let it own the prop.
-                  ...(isCurrent ? { boxShadow: undefined } : {}),
-                }}
-              >
-                {node.image ? (
-                  <span style={{
-                    position: 'absolute', inset: 3, borderRadius: '50%', overflow: 'hidden',
-                    filter: locked ? 'grayscale(1) brightness(0.5)' : undefined,
-                  }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={node.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </span>
-                ) : locked ? <LockGlyph size={glyph} /> : <NodeGlyph type={node.type} color={accent} size={glyph} />}
-
-                {locked && node.image && (
-                  <span
-                    style={{
-                      position: 'absolute', right: -3, bottom: -3,
-                      width: badge, height: badge, borderRadius: '50%',
-                      background: '#1a1814', border: '2px solid #0a0907',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}
-                  >
-                    <LockGlyph size={Math.round(badge * 0.52)} />
-                  </span>
-                )}
-
-                {cleared && (
-                  <span
-                    style={{
-                      position: 'absolute', right: -3, bottom: -3,
-                      width: badge, height: badge, borderRadius: '50%',
-                      background: '#1b3a24', border: '2px solid #0a0907',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}
-                  >
-                    <svg width={Math.round(badge * 0.55)} height={Math.round(badge * 0.55)} viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-                  </span>
-                )}
-              </span>
-
-              {/* At-a-glance description to the right */}
-              <span style={{ display: 'block', minWidth: 0 }}>
-                <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.84rem', lineHeight: 1.15, color: locked ? 'rgba(240,237,232,0.45)' : '#f0ede8' }}>
-                  {node.label}
+              {node.image ? (
+                <span style={{
+                  position: 'absolute', inset: 3, borderRadius: '50%', overflow: 'hidden',
+                  filter: locked ? 'grayscale(1) brightness(0.5)' : undefined,
+                }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={node.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </span>
-                <span className="font-karla" style={{ display: 'block', fontSize: '0.66rem', lineHeight: 1.3, marginTop: 2, color: locked ? '#6a6764' : 'rgba(240,237,232,0.6)' }}>
-                  {node.tagline}
+              ) : locked ? <LockGlyph size={glyph} /> : <NodeGlyph type={node.type} color={accent} size={glyph} />}
+
+              {locked && node.image && (
+                <span
+                  style={{
+                    position: 'absolute', right: -3, bottom: -3,
+                    width: badge, height: badge, borderRadius: '50%',
+                    background: '#1a1814', border: '2px solid #0a0907',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <LockGlyph size={Math.round(badge * 0.52)} />
                 </span>
-                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ display: 'block', fontSize: '0.5rem', marginTop: 4, color: cleared ? '#4ade80' : locked ? '#5a5856' : accent }}>
-                  {statusWord}
+              )}
+
+              {cleared && (
+                <span
+                  style={{
+                    position: 'absolute', right: -3, bottom: -3,
+                    width: badge, height: badge, borderRadius: '50%',
+                    background: '#1b3a24', border: '2px solid #0a0907',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <svg width={Math.round(badge * 0.55)} height={Math.round(badge * 0.55)} viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                 </span>
-              </span>
+              )}
             </motion.button>
+
+            <div style={{ textAlign: 'center', maxWidth: 124 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', lineHeight: 1.2, color: locked ? 'rgba(240,237,232,0.4)' : '#f0ede8' }}>
+                {node.label}
+              </p>
+              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', marginTop: 2, color: cleared ? '#4ade80' : locked ? '#5a5856' : accent }}>
+                {statusWord}
+              </p>
+            </div>
           </div>
         )
       })}

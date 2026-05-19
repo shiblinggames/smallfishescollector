@@ -61,10 +61,12 @@ export interface RaidNode {
   id: string
   type: RaidNodeType
   label: string
-  /** Super short at-a-glance line shown on the map beside the node. */
-  tagline: string
   /** Pirate-flavored blurb shown on the node. */
   flavor: string
+  /** One-line narrative recap shown on the route AFTER this node, i.e.
+   *  what beating it set in motion toward the next one. Omit on the
+   *  last node. */
+  bridge?: string
   /** Node id that must be cleared before this one unlocks (omit = start). */
   requiresNode?: string
   /** Optional extra gate: minimum Navigation level. */
@@ -116,8 +118,8 @@ export const RAID_MAP: RaidNode[] = [
     id: 'intro',
     type: 'story',
     label: 'A Loose Thread',
-    tagline: 'Where the trail starts',
     flavor: "Barnacle Pete robs everyone blind and somehow stays dead broke. Funny, that.",
+    bridge: "You pulled the thread. It runs straight to the reef, and the little fish doing Pete's dirty work.",
     detail: {
       description:
         "Pete has been raiding these reefs for thirty years and he's still flat broke. For a man who steals everything that isn't nailed down, that's a neat trick. The loot goes somewhere. It just never seems to end up in Pete's pockets.\n\nNobody can be bothered to ask why. You, clearly, have nothing better to do. Go give the loudest pirate on the water a good shake and see what rattles loose.",
@@ -137,8 +139,8 @@ export const RAID_MAP: RaidNode[] = [
     id: 'skirmish',
     type: 'skirmish',
     label: 'Reef Skirmish',
-    tagline: "Thin out Pete's Raiders",
     flavor: "Pete doesn't sail alone. The reef crawls with his Reef Raiders. Start thinning them out.",
+    bridge: "Sink enough of his Raiders and Pete stops sending help. He sails out to deal with you himself.",
     requiresNode: 'intro',
     route: '/raids/practice',
     image: CORSAIRS_RECKONING.enemies.brute.portrait,
@@ -157,8 +159,8 @@ export const RAID_MAP: RaidNode[] = [
     id: 'pete',
     type: 'raid',
     label: "The Corsair's Reckoning",
-    tagline: 'Hunt Barnacle Pete himself',
     flavor: 'Barnacle Pete and his fleet have been spotted off the coast. Bring him to justice, dead or alive.',
+    bridge: "Pete goes down with empty pockets, same as ever. So where did all his plunder sail off to? The docks have noticed you asking.",
     requiresNode: 'skirmish',
     route: '/raids',
     image: CORSAIRS_RECKONING.enemies.pete.portrait,
@@ -174,8 +176,8 @@ export const RAID_MAP: RaidNode[] = [
     id: 'bilge_milestone',
     type: 'milestone',
     label: 'The Bilge Rats',
-    tagline: 'Show them your coffers',
     flavor: 'Word of Pete’s fall spreads the docks over. Prove your coffers run deep enough to bankroll the next campaign.',
+    bridge: "Coin talks. Prove yours runs deep and a certain fence suddenly remembers your name.",
     requiresNode: 'pete',
     milestone: { amount: 2000, rewardDoubloons: 500 },
     detail: {
@@ -191,7 +193,6 @@ export const RAID_MAP: RaidNode[] = [
     id: 'quartermaster',
     type: 'shop',
     label: "Quartermaster's Cache",
-    tagline: 'Black-market stall (soon)',
     flavor: 'A fence who deals in raid contraband: upgrades, oddities, contraband cannon. Opening soon.',
     requiresNode: 'bilge_milestone',
     detail: {
