@@ -19,14 +19,16 @@ const TYPE_ACCENT: Record<string, string> = {
   story:     '#6fbf73',
 }
 
-// Winding sea-chart layout. Nodes cycle through these x positions (% of
-// width) top→bottom so the route zig-zags like a Slay-the-Spire map. The
-// pattern repeats, so appending nodes to RAID_MAP just extends the route.
-const COLS = [50, 73, 27, 62, 38, 70, 30]
-const ROW = 116          // vertical pitch between node centres
+// Tokens hug a gently winding LEFT spine (these are % of width, cycled
+// top→bottom) so there is always room for a one-line description to the
+// right of every node. The pattern repeats as RAID_MAP grows.
+const COLS = [17, 23, 13, 21, 16, 24, 14]
+const ROW = 84           // vertical pitch between node centres (tight)
 const TOKEN = 60         // layout/max token diameter (drives spacing + viewBox)
-const PAD_TOP = 30
-const PAD_BOTTOM = 16
+const PAD_TOP = 24
+const PAD_BOTTOM = 12
+// Where the text column starts (clears the widest token + wobble).
+const TEXT_LEFT = '34%'
 
 // Visual token size by type: bigger node = bigger fight. A story beat
 // is the smallest, a skirmish small, a full raid the biggest.
@@ -131,94 +133,113 @@ function RaidMap({
             key={node.id}
             style={{
               position: 'absolute',
-              left: `${cx(i)}%`,
+              left: 0,
+              right: 0,
               top: cy(i),
-              transform: 'translate(-50%, -50%)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 6,
-              width: 116,
+              transform: 'translateY(-50%)',
             }}
           >
             <motion.button
               onClick={() => onSelect(v)}
-              whileTap={{ scale: 0.9 }}
-              transition={{ type: 'spring', stiffness: 520, damping: 20 }}
-              aria-label={node.label}
-              className={isCurrent ? 'raid-node-current' : undefined}
+              whileTap={{ scale: 0.985 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 22 }}
+              aria-label={`${node.label}. ${node.tagline}`}
               style={{
-                width: size,
-                height: size,
-                borderRadius: '50%',
-                flexShrink: 0,
+                position: 'relative',
+                width: '100%',
+                minHeight: size,
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
+                paddingLeft: TEXT_LEFT,
+                paddingRight: '4%',
+                background: 'none',
+                border: 'none',
+                textAlign: 'left',
                 cursor: 'pointer',
-                background: locked
-                  ? 'radial-gradient(circle at 35% 30%, #14110d, #0a0907)'
-                  : cleared
-                    ? `radial-gradient(circle at 35% 30%, ${accent}33, ${accent}14)`
-                    : `radial-gradient(circle at 35% 30%, ${accent}26, #0c0a08)`,
-                border: `2px solid ${locked ? 'rgba(255,255,255,0.08)' : cleared ? `${accent}aa` : accent}`,
-                boxShadow: locked
-                  ? 'none'
-                  : cleared
-                    ? `0 0 0 4px ${accent}10`
-                    : `0 0 14px ${accent}40, 0 0 0 4px ${accent}12`,
-                opacity: locked ? 0.6 : 1,
-                // The pulse animation drives box-shadow; let it own the prop.
-                ...(isCurrent ? { boxShadow: undefined } : {}),
                 touchAction: 'manipulation',
               }}
             >
-              {node.image ? (
-                <div style={{
-                  position: 'absolute', inset: 3, borderRadius: '50%', overflow: 'hidden',
-                  filter: locked ? 'grayscale(1) brightness(0.5)' : undefined,
-                }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={node.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-              ) : locked ? <LockGlyph size={glyph} /> : <NodeGlyph type={node.type} color={accent} size={glyph} />}
+              {/* Token on the spine */}
+              <span
+                className={isCurrent ? 'raid-node-current' : undefined}
+                style={{
+                  position: 'absolute',
+                  left: `${cx(i)}%`,
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: size,
+                  height: size,
+                  borderRadius: '50%',
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: locked
+                    ? 'radial-gradient(circle at 35% 30%, #14110d, #0a0907)'
+                    : cleared
+                      ? `radial-gradient(circle at 35% 30%, ${accent}33, ${accent}14)`
+                      : `radial-gradient(circle at 35% 30%, ${accent}26, #0c0a08)`,
+                  border: `2px solid ${locked ? 'rgba(255,255,255,0.08)' : cleared ? `${accent}aa` : accent}`,
+                  boxShadow: locked
+                    ? 'none'
+                    : cleared
+                      ? `0 0 0 4px ${accent}10`
+                      : `0 0 14px ${accent}40, 0 0 0 4px ${accent}12`,
+                  opacity: locked ? 0.6 : 1,
+                  // The pulse animation drives box-shadow; let it own the prop.
+                  ...(isCurrent ? { boxShadow: undefined } : {}),
+                }}
+              >
+                {node.image ? (
+                  <span style={{
+                    position: 'absolute', inset: 3, borderRadius: '50%', overflow: 'hidden',
+                    filter: locked ? 'grayscale(1) brightness(0.5)' : undefined,
+                  }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={node.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </span>
+                ) : locked ? <LockGlyph size={glyph} /> : <NodeGlyph type={node.type} color={accent} size={glyph} />}
 
-              {locked && node.image && (
-                <span
-                  style={{
-                    position: 'absolute', right: -3, bottom: -3,
-                    width: badge, height: badge, borderRadius: '50%',
-                    background: '#1a1814', border: '2px solid #0a0907',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                >
-                  <LockGlyph size={Math.round(badge * 0.52)} />
-                </span>
-              )}
+                {locked && node.image && (
+                  <span
+                    style={{
+                      position: 'absolute', right: -3, bottom: -3,
+                      width: badge, height: badge, borderRadius: '50%',
+                      background: '#1a1814', border: '2px solid #0a0907',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    <LockGlyph size={Math.round(badge * 0.52)} />
+                  </span>
+                )}
 
-              {cleared && (
-                <span
-                  style={{
-                    position: 'absolute', right: -3, bottom: -3,
-                    width: badge, height: badge, borderRadius: '50%',
-                    background: '#1b3a24', border: '2px solid #0a0907',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                >
-                  <svg width={Math.round(badge * 0.55)} height={Math.round(badge * 0.55)} viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                {cleared && (
+                  <span
+                    style={{
+                      position: 'absolute', right: -3, bottom: -3,
+                      width: badge, height: badge, borderRadius: '50%',
+                      background: '#1b3a24', border: '2px solid #0a0907',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    <svg width={Math.round(badge * 0.55)} height={Math.round(badge * 0.55)} viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                  </span>
+                )}
+              </span>
+
+              {/* At-a-glance description to the right */}
+              <span style={{ display: 'block', minWidth: 0 }}>
+                <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.84rem', lineHeight: 1.15, color: locked ? 'rgba(240,237,232,0.45)' : '#f0ede8' }}>
+                  {node.label}
                 </span>
-              )}
+                <span className="font-karla" style={{ display: 'block', fontSize: '0.66rem', lineHeight: 1.3, marginTop: 2, color: locked ? '#6a6764' : 'rgba(240,237,232,0.6)' }}>
+                  {node.tagline}
+                </span>
+                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ display: 'block', fontSize: '0.5rem', marginTop: 4, color: cleared ? '#4ade80' : locked ? '#5a5856' : accent }}>
+                  {statusWord}
+                </span>
+              </span>
             </motion.button>
-
-            <div style={{ textAlign: 'center' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.7rem', lineHeight: 1.2, color: locked ? 'rgba(240,237,232,0.4)' : '#f0ede8' }}>
-                {node.label}
-              </p>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', marginTop: 2, color: cleared ? '#4ade80' : locked ? '#5a5856' : accent }}>
-                {statusWord}
-              </p>
-            </div>
           </div>
         )
       })}

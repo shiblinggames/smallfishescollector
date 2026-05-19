@@ -61,6 +61,8 @@ export interface RaidNode {
   id: string
   type: RaidNodeType
   label: string
+  /** Super short at-a-glance line shown on the map beside the node. */
+  tagline: string
   /** Pirate-flavored blurb shown on the node. */
   flavor: string
   /** Node id that must be cleared before this one unlocks (omit = start). */
@@ -114,6 +116,7 @@ export const RAID_MAP: RaidNode[] = [
     id: 'intro',
     type: 'story',
     label: 'A Loose Thread',
+    tagline: 'Where the trail starts',
     flavor: "Barnacle Pete robs everyone blind and somehow stays dead broke. Funny, that.",
     detail: {
       description:
@@ -134,6 +137,7 @@ export const RAID_MAP: RaidNode[] = [
     id: 'skirmish',
     type: 'skirmish',
     label: 'Reef Skirmish',
+    tagline: "Thin out Pete's Raiders",
     flavor: "Pete doesn't sail alone. The reef crawls with his Reef Raiders. Start thinning them out.",
     requiresNode: 'intro',
     route: '/raids/practice',
@@ -153,6 +157,7 @@ export const RAID_MAP: RaidNode[] = [
     id: 'pete',
     type: 'raid',
     label: "The Corsair's Reckoning",
+    tagline: 'Hunt Barnacle Pete himself',
     flavor: 'Barnacle Pete and his fleet have been spotted off the coast. Bring him to justice, dead or alive.',
     requiresNode: 'skirmish',
     route: '/raids',
@@ -169,6 +174,7 @@ export const RAID_MAP: RaidNode[] = [
     id: 'bilge_milestone',
     type: 'milestone',
     label: 'The Bilge Rats',
+    tagline: 'Show them your coffers',
     flavor: 'Word of Pete’s fall spreads the docks over. Prove your coffers run deep enough to bankroll the next campaign.',
     requiresNode: 'pete',
     milestone: { amount: 2000, rewardDoubloons: 500 },
@@ -185,6 +191,7 @@ export const RAID_MAP: RaidNode[] = [
     id: 'quartermaster',
     type: 'shop',
     label: "Quartermaster's Cache",
+    tagline: 'Black-market stall (soon)',
     flavor: 'A fence who deals in raid contraband: upgrades, oddities, contraband cannon. Opening soon.',
     requiresNode: 'bilge_milestone',
     detail: {
