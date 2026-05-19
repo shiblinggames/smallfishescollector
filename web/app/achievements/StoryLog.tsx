@@ -10,7 +10,6 @@ const PETE_PORTRAIT = CORSAIRS_RECKONING.enemies.pete.portrait ?? ''
 export interface StoryLogData {
   finn: {
     encounter: { id: string; lines: string[] }[]
-    win: { id: string; lines: string[] }[]
     revealed: boolean
     revealLines: string[]
     discovered: number
@@ -124,12 +123,6 @@ export default function StoryLog({ data }: { data: StoryLogData }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
                   <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: '#7a7875' }}>What he let slip</p>
                   {finn.encounter.map(b => <Beat key={b.id} lines={b.lines} accent={FINN_ACCENT} />)}
-                </div>
-              )}
-              {finn.win.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: '#7a7875' }}>As you beat him</p>
-                  {finn.win.map(b => <Beat key={b.id} lines={b.lines} accent={FINN_ACCENT} />)}
                 </div>
               )}
               {finn.revealed && (

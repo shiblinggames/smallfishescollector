@@ -8,7 +8,7 @@ import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { type JourneyGroup, type JourneyGoal } from './AchievementsClient'
 import { type StoryLogData } from './StoryLog'
 import LogTabs from './LogTabs'
-import { FINN_ENCOUNTER_BEATS, FINN_WIN_BEATS, FINN_REVEAL_BEAT } from '@/lib/finn'
+import { FINN_ENCOUNTER_BEATS, FINN_REVEAL_BEAT } from '@/lib/finn'
 import { getRaidMapView } from '@/app/expeditions/raidMapActions'
 import { isCombatNode } from '@/lib/raidMap'
 
@@ -147,7 +147,6 @@ export default async function AchievementsPage() {
   const seenFinn = new Set((profile?.finn_seen_beats as string[] | null) ?? [])
   const finnRevealed = !!profile?.finn_revealed || seenFinn.has('reveal')
   const finnEncounter = FINN_ENCOUNTER_BEATS.filter(b => seenFinn.has(b.id)).map(b => ({ id: b.id, lines: b.lines }))
-  const finnWin = FINN_WIN_BEATS.filter(b => seenFinn.has(b.id)).map(b => ({ id: b.id, lines: b.lines }))
 
   const raidViews = raidMap.views
   const raidDone = raidViews
@@ -176,11 +175,10 @@ export default async function AchievementsPage() {
   const storyData: StoryLogData = {
     finn: {
       encounter: finnEncounter,
-      win: finnWin,
       revealed: finnRevealed,
       revealLines: finnRevealed ? FINN_REVEAL_BEAT.lines : [],
-      discovered: finnEncounter.length + finnWin.length + (finnRevealed ? 1 : 0),
-      total: FINN_ENCOUNTER_BEATS.length + FINN_WIN_BEATS.length + 1,
+      discovered: finnEncounter.length + (finnRevealed ? 1 : 0),
+      total: FINN_ENCOUNTER_BEATS.length + 1,
     },
     raid: {
       done: raidDone,
