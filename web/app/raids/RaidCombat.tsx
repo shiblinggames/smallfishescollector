@@ -210,6 +210,7 @@ export default function RaidCombat({
   const indicatorRef = useRef<HTMLDivElement>(null)
   const zoneRef      = useRef<HTMLDivElement>(null)
   const barFlashRef  = useRef<HTMLDivElement>(null)
+  const bottomPanelRef = useRef<HTMLDivElement>(null)
   const rafRef       = useRef(0)
 
   const enemyPatternIdxRef = useRef(0)
@@ -263,6 +264,20 @@ export default function RaidCombat({
   const enemyHpRef  = useRef(enemy.hpBase)
   useEffect(() => { playerHpRef.current = playerHp }, [playerHp])
   useEffect(() => { enemyHpRef.current = enemyHp }, [enemyHp])
+
+  // When the aim minigame starts, pull the action panel into view so the
+  // time-sensitive lock button is never stuck behind the fixed
+  // MobileTabBar on short devices. Double-rAF so the AimPanel has laid
+  // out before we measure/scroll.
+  useEffect(() => {
+    if (subPhase !== 'aiming') return
+    const id = requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        bottomPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+      ),
+    )
+    return () => cancelAnimationFrame(id)
+  }, [subPhase])
 
   // Reset when enemy changes (parent unmounts/remounts on encounter switch).
   // The log is seeded with an intro line + the prompt so each fight opens
@@ -1141,11 +1156,12 @@ export default function RaidCombat({
       </div>
 
       {/* Bottom panel — persistent log + action UI */}
-      <div style={{
+      <div ref={bottomPanelRef} style={{
         background: '#060c14',
         borderTop: '2px solid #2a3548',
         padding: '0.7rem 0.85rem 0.95rem',
         display: 'flex', flexDirection: 'column', gap: 8,
+        scrollMarginBottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)',
       }}>
         {/* Action log — shows this turn's events (cleared at start of each resolve) */}
         <LogBox lines={resolveLog} turn={turn} />
