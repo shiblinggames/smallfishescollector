@@ -1388,6 +1388,14 @@ export default function ProfileClient({
                       WebkitAppearance: 'none',
                     }}
                   >
+                    {/* Inset dark disc so the animated gradient reads as a
+                        ring instead of a full-fill swatch, matching how the
+                        avatar itself renders these specials. */}
+                    <span aria-hidden style={{
+                      position: 'absolute', inset: 3,
+                      borderRadius: '50%',
+                      background: 'rgba(6,12,20,0.92)',
+                    }} />
                     {!owned && <LockBadge />}
                   </button>
                 )
