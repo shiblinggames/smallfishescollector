@@ -49,6 +49,9 @@ const TRACK_URL = '/fishingsoundtrack.ogg'
 let perfectSfxBytes: ArrayBuffer | null = null
 let perfectSfxBuffer: AudioBuffer | null = null
 let perfectSfxPrefetching = false
+let castSfxBytes: ArrayBuffer | null = null
+let castSfxBuffer: AudioBuffer | null = null
+let castSfxPrefetching = false
 
 // Dial loop cache.
 let dialBytes: ArrayBuffer | null = null
@@ -277,6 +280,23 @@ function tryDecodePerfectSfx() {
     .catch(() => {})
 }
 
+function prefetchCastSfx() {
+  if (castSfxBytes || castSfxPrefetching) return
+  if (typeof fetch === 'undefined') return
+  castSfxPrefetching = true
+  fetch('/fishingcast.mp3')
+    .then(r => r.arrayBuffer())
+    .then(b => { castSfxBytes = b; tryDecodeCastSfx() })
+    .catch(() => { castSfxPrefetching = false })
+}
+
+function tryDecodeCastSfx() {
+  if (castSfxBuffer || !castSfxBytes || !audioCtx) return
+  audioCtx.decodeAudioData(castSfxBytes.slice(0))
+    .then(buffer => { castSfxBuffer = buffer })
+    .catch(() => {})
+}
+
 function prefetchDial() {
   if (dialBytes || dialFetching) return
   if (typeof fetch === 'undefined') return
@@ -326,6 +346,8 @@ export function unlockFishingAudio(): void {
   primeBothElements()
   prefetchPerfectSfx()
   tryDecodePerfectSfx()
+  prefetchCastSfx()
+  tryDecodeCastSfx()
   prefetchDial()
   tryDecodeDial()
 }
@@ -380,6 +402,19 @@ export function playPerfectSfx(): void {
     const boost = audioCtx.createGain()
     boost.gain.value = PERFECT_SFX_GAIN
     source.connect(boost).connect(audioCtx.destination)
+    source.start(0)
+  } catch {}
+}
+
+/** Cast / Cast Again tap SFX. Direct unity-gain routing through the
+ *  ctx.destination — same path as the perfect SFX (without boost). */
+export function playCastSfx(): void {
+  if (!audioCtx || !castSfxBuffer) return
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
+    const source = audioCtx.createBufferSource()
+    source.buffer = castSfxBuffer
+    source.connect(audioCtx.destination)
     source.start(0)
   } catch {}
 }

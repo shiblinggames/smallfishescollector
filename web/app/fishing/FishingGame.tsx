@@ -21,7 +21,7 @@ import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
-import { startFishingMusic, setFishingMusicMuted, fadeOutFishingMusic, playPerfectSfx, startDialLoop, stopDialLoop } from '@/lib/fishingMusic'
+import { startFishingMusic, setFishingMusicMuted, fadeOutFishingMusic, playPerfectSfx, playCastSfx, startDialLoop, stopDialLoop } from '@/lib/fishingMusic'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
 import { updateCharacterColor } from '@/app/u/actions'
@@ -2717,6 +2717,7 @@ export default function FishingGame({
       fireFinnEncounter()
       return
     }
+    playCastSfx()
     setCastRippleKey(k => k + 1)
     setTimeout(() => setCastRippleKey(0), 1800)
     await doCast()
@@ -3095,6 +3096,7 @@ export default function FishingGame({
       fireFinnEncounter()
       return
     }
+    playCastSfx()
     setCastRippleKey(k => k + 1)
     setTimeout(() => setCastRippleKey(0), 1800)
     setCatchResult(null)
