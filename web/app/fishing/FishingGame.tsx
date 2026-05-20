@@ -22,7 +22,7 @@ import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
-import { startFishingMusic, setFishingMusicMuted, fadeOutFishingMusic, playPerfectSfx } from '@/lib/fishingMusic'
+import { startFishingMusic, setFishingMusicMuted, fadeOutFishingMusic, playPerfectSfx, startDialLoop, stopDialLoop } from '@/lib/fishingMusic'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
 import { updateCharacterColor } from '@/app/u/actions'
@@ -2285,6 +2285,15 @@ export default function FishingGame({
   // retryKey increments on Second Wind retry to restart animation with fresh randomization
   }, [phase, hookedFish, reel.needleSpeedMultiplier, retryKey])
 
+  // Dial sound — loops while the reel dial is on screen (phase='catching')
+  // and stops the instant the player taps Reel In (handleReelIn also calls
+  // stopDialLoop synchronously so the stop hits before the phase change
+  // propagates here, giving the snappiest possible audio cut).
+  useEffect(() => {
+    if (phase === 'catching') { startDialLoop(); return () => stopDialLoop() }
+    stopDialLoop()
+  }, [phase])
+
   // Drift mechanic: Plesiosaurus rotates the zone arc continuously while the needle spins
   useEffect(() => {
     if (phase !== 'catching' || activeBossMechanic !== 'drift') return
@@ -2612,6 +2621,9 @@ export default function FishingGame({
   // Phase 2 — reel in
   async function handleReelIn() {
     if (phase !== 'catching' || !hookedFishRef.current) return
+    // Cut the dial sound immediately on tap — don't wait for the phase
+    // change useEffect to clean it up.
+    stopDialLoop()
     // Cancel the rAF first so no further ticks queue new setAngle updates.
     if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
     // Freeze the needle at exactly what the player saw when they clicked.

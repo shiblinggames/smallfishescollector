@@ -28,6 +28,15 @@ let perfectSfxBytes: ArrayBuffer | null = null
 let perfectSfxBuffer: AudioBuffer | null = null
 let perfectSfxPrefetching = false
 
+// Dial loop — plays for the duration of the catching phase. Same Web
+// Audio path as the music BufferSource but with its own active source so
+// stop() is instant.
+let dialBytes: ArrayBuffer | null = null
+let dialBuffer: AudioBuffer | null = null
+let dialFetching = false
+let dialSource: AudioBufferSourceNode | null = null
+let dialPendingStart = false
+
 const ENTRY_FADE_MS  = 3000
 const EXIT_FADE_MS   = 3000
 const TOGGLE_FADE_MS = 400
@@ -67,6 +76,27 @@ function tryDecodeTrack() {
   if (audioBuffer || !trackBytes || !audioCtx) return
   audioCtx.decodeAudioData(trackBytes.slice(0))
     .then(buffer => { audioBuffer = buffer })
+    .catch(() => {})
+}
+
+function prefetchDial() {
+  if (dialBytes || dialFetching) return
+  if (typeof fetch === 'undefined') return
+  dialFetching = true
+  fetch('/fishingdial.ogg')
+    .then(r => r.arrayBuffer())
+    .then(b => { dialBytes = b; tryDecodeDial() })
+    .catch(() => { dialFetching = false })
+}
+
+function tryDecodeDial() {
+  if (dialBuffer || !dialBytes || !audioCtx) return
+  audioCtx.decodeAudioData(dialBytes.slice(0))
+    .then(buffer => {
+      dialBuffer = buffer
+      // If start was requested while we were decoding, fire it now.
+      if (dialPendingStart) { dialPendingStart = false; startDialLoop() }
+    })
     .catch(() => {})
 }
 
@@ -157,6 +187,38 @@ export function unlockFishingAudio(): void {
   tryDecodeTrack()
   prefetchPerfectSfx()
   tryDecodePerfectSfx()
+  prefetchDial()
+  tryDecodeDial()
+}
+
+/** Start the looping dial sound. Stays playing until stopDialLoop().
+ *  If the buffer isn't decoded yet, queues the start for when decode
+ *  completes. Safe to call repeatedly — already-playing is a no-op. */
+export function startDialLoop(): void {
+  if (!audioCtx) return
+  if (dialSource) return
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
+  if (!dialBuffer) {
+    dialPendingStart = true
+    return
+  }
+  try {
+    const source = audioCtx.createBufferSource()
+    source.buffer = dialBuffer
+    source.loop = true
+    source.connect(audioCtx.destination)
+    source.start(0)
+    dialSource = source
+  } catch {}
+}
+
+/** Stop the dial loop immediately. */
+export function stopDialLoop(): void {
+  dialPendingStart = false
+  if (!dialSource) return
+  try { dialSource.stop() } catch {}
+  try { dialSource.disconnect() } catch {}
+  dialSource = null
 }
 
 /** Called when /fishing mounts. Always fades in (when not muted), waiting
