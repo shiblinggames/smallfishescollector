@@ -1874,71 +1874,53 @@ export default function FishingGame({
   const hook = getHook(hookTier)
   const line = getLine(lineTier)
 
-  // Background soundtrack — played via Web Audio API so the loop is
-  // sample-accurate (gapless). iOS Safari + PWA standalone mode require
-  // the AudioContext to be *created* inside a user-gesture call stack, not
-  // just resumed. So we prefetch the MP3 bytes on mount but defer ctx
-  // creation + source.start until the speaker icon is tapped. That tap is
-  // a guaranteed gesture handler — iOS-safe.
-  const audioCtxRef = useRef<AudioContext | null>(null)
-  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
-  const audioGainRef = useRef<GainNode | null>(null)
-  const audioBytesRef = useRef<ArrayBuffer | null>(null)
+  // Background soundtrack — uses an HTML <audio loop> element instead of
+  // Web Audio API because iOS PWA standalone mode uses a different audio
+  // session for Web Audio that silently outputs nothing. <audio> uses the
+  // "media playback" session which works in PWAs. Starts muted so autoplay
+  // is permitted; the speaker icon toggles audio.muted (which is a
+  // gesture-safe operation on iOS). Persists preference via localStorage.
+  // Tradeoff: <audio loop> has a tiny gap at the loop boundary from MP3
+  // encoder padding — re-export the track with leading/trailing silence
+  // trimmed if the gap is audible.
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   const [audioMuted, setAudioMuted] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true
     const saved = window.localStorage.getItem('fishingAudioMuted')
     return saved === null ? true : saved === 'true'
   })
 
-  // Prefetch MP3 bytes once on mount so the first speaker tap can decode
-  // synchronously without waiting on the network.
+  // Sync mute state to the audio element + persist.
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch('/fishingsoundtrack.mp3')
-        const bytes = await res.arrayBuffer()
-        if (!cancelled) audioBytesRef.current = bytes
-      } catch {
-        // Non-fatal — game still works without music.
-      }
-    })()
-    return () => { cancelled = true }
-  }, [])
-
-  // Unmount: fade out then close. If nothing was ever created (user never
-  // tapped speaker) this is a no-op.
-  useEffect(() => {
-    return () => {
-      const closingSource = audioSourceRef.current
-      const closingCtx = audioCtxRef.current
-      const closingGain = audioGainRef.current
-      audioSourceRef.current = null
-      audioGainRef.current = null
-      audioCtxRef.current = null
-      if (!closingCtx) return
-      const FADE_S = 0.8
-      if (closingGain && closingCtx.state === 'running' && closingGain.gain.value > 0) {
-        try {
-          closingGain.gain.cancelScheduledValues(closingCtx.currentTime)
-          closingGain.gain.setValueAtTime(closingGain.gain.value, closingCtx.currentTime)
-          closingGain.gain.linearRampToValueAtTime(0, closingCtx.currentTime + FADE_S)
-        } catch {}
-        setTimeout(() => {
-          try { closingSource?.stop() } catch {}
-          closingCtx.close().catch(() => {})
-        }, FADE_S * 1000 + 50)
-      } else {
-        try { closingSource?.stop() } catch {}
-        closingCtx.close().catch(() => {})
-      }
-    }
-  }, [])
-
-  // Persist mute preference.
-  useEffect(() => {
+    const a = audioRef.current
+    if (a) a.muted = audioMuted
     try { window.localStorage.setItem('fishingAudioMuted', String(audioMuted)) } catch {}
   }, [audioMuted])
+
+  // Unmount: fade volume to 0 over 800ms then pause. Manual rAF ramp since
+  // <audio> elements don't have a built-in volume automation API.
+  useEffect(() => {
+    return () => {
+      const a = audioRef.current
+      if (!a || a.muted || a.paused) {
+        try { a?.pause() } catch {}
+        return
+      }
+      const startVol = a.volume
+      const startedAt = performance.now()
+      const FADE_MS = 800
+      const tick = () => {
+        const t = (performance.now() - startedAt) / FADE_MS
+        if (t >= 1) {
+          try { a.volume = 0; a.pause(); a.volume = startVol } catch {}
+          return
+        }
+        try { a.volume = Math.max(0, startVol * (1 - t)) } catch {}
+        requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    }
+  }, [])
 
   // Game state
   const [phase, setPhase]           = useState<Phase>('idle')
@@ -3224,9 +3206,18 @@ export default function FishingGame({
         style={{ height: '100%' }}
       >
 
-        {/* Background soundtrack lives on the Web Audio graph — see the
-            mount effect at the top of FishingGame. The speaker icon below
-            controls the GainNode for sample-accurate gapless looping. */}
+        {/* Background soundtrack — autoplays muted (so browsers allow it).
+            Speaker icon toggles audio.muted. */}
+        <audio
+          ref={audioRef}
+          src="/fishingsoundtrack.mp3"
+          loop
+          autoPlay
+          muted
+          playsInline
+          preload="auto"
+          aria-hidden
+        />
 
         {/* Mute / unmute toggle — left edge, below the back-button row so
             it doesn't fight the header. Floats over the gameplay scene. */}
@@ -3234,44 +3225,14 @@ export default function FishingGame({
           type="button"
           onClick={() => {
             const nextMuted = !audioMuted
-            // Lazy-create the AudioContext on the very first tap. iOS PWA
-            // requires the ctx to be both created AND resumed inside the
-            // gesture's call stack — anything async (await, setTimeout)
-            // forfeits the user-activation, so we do it all synchronously
-            // and let decodeAudioData resolve in the background.
-            if (!audioCtxRef.current) {
-              const Ctx: typeof AudioContext | undefined =
-                window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-              if (Ctx) {
-                const ctx = new Ctx()
-                audioCtxRef.current = ctx
-                const gain = ctx.createGain()
-                gain.gain.setValueAtTime(nextMuted ? 0 : 1, ctx.currentTime)
-                gain.connect(ctx.destination)
-                audioGainRef.current = gain
-                // Resume synchronously — must be in this call stack for iOS.
-                if (ctx.state === 'suspended') ctx.resume().catch(() => {})
-                // Decode + start are async, but the gesture has already
-                // unlocked the context. Use a copy of the bytes since
-                // decodeAudioData detaches the buffer.
-                const bytes = audioBytesRef.current
-                if (bytes) {
-                  ctx.decodeAudioData(bytes.slice(0)).then(buffer => {
-                    if (audioCtxRef.current !== ctx) return // unmounted
-                    const source = ctx.createBufferSource()
-                    source.buffer = buffer
-                    source.loop = true
-                    source.connect(gain)
-                    source.start(0)
-                    audioSourceRef.current = source
-                  }).catch(() => {})
-                }
-              }
-            } else {
-              const ctx = audioCtxRef.current
-              const gain = audioGainRef.current
-              if (ctx.state === 'suspended') ctx.resume().catch(() => {})
-              if (gain) gain.gain.setValueAtTime(nextMuted ? 0 : 1, ctx.currentTime)
+            const a = audioRef.current
+            if (a) {
+              // Run play() synchronously inside the gesture — iOS PWA only
+              // permits unmuted playback when play() is in the user-gesture
+              // call stack. Update audio.muted first so the same play()
+              // call carries audible output.
+              a.muted = nextMuted
+              if (!nextMuted) a.play().catch(() => {})
             }
             setAudioMuted(nextMuted)
           }}
