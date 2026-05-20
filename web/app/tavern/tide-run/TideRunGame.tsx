@@ -823,14 +823,11 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
           g.shipVy = 0
           g.airborne = false
           // Splash SFX — fires the instant the boat touches back down,
-          // in sync with the spray particles. Volume scales with impact
-          // velocity (which mirrors jump height) so tiny hops barely
-          // register and big arcs land with a real plop. landingVy ~ 200
-          // for a small hop to ~1300 for a max-height drop.
-          {
-            const splashIntensity = Math.max(0, Math.min(1, (landingVy - 200) / 900))
-            playSplashSfx(splashIntensity)
-          }
+          // in sync with the spray particles. Volume is baked into the
+          // asset; per-jump intensity scaling via Web Audio gain caused
+          // iOS PWA to mute ALL tide-run SFX (best guess: a very-low
+          // gain node demoted the session to ambient).
+          playSplashSfx()
           // Holding through a landing doesn't auto-jump; require a release+press
           g.holding = false
         }

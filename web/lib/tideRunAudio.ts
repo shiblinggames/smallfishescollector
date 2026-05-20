@@ -110,19 +110,13 @@ export function unlockTideRunAudio(): void {
   tryDecodeSplash()
 }
 
-function play(buffer: AudioBuffer | null, gain: number = 1): void {
+function play(buffer: AudioBuffer | null): void {
   if (!audioCtx || !buffer) return
   try {
     if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
     const source = audioCtx.createBufferSource()
     source.buffer = buffer
-    if (gain !== 1) {
-      const g = audioCtx.createGain()
-      g.gain.value = gain
-      source.connect(g).connect(audioCtx.destination)
-    } else {
-      source.connect(audioCtx.destination)
-    }
+    source.connect(audioCtx.destination)
     source.start(0)
   } catch {}
 }
@@ -135,13 +129,9 @@ export function playBeaconCatchSfx(): void { play(catchBuffer) }
  *  exact moment the beacon shatters. */
 export function playBeaconCrashSfx(): void { play(crashBuffer) }
 
-/** Boat touched down on the water after a jump.
- *  intensity: 0–1 scale — small hops are nearly silent, max jumps land
- *  with a soft plop. Tuned to be subtle ambient feedback, not a hit. */
-export function playSplashSfx(intensity: number = 1): void {
-  const t = Math.max(0, Math.min(1, intensity))
-  // Very quiet floor + low ceiling so even max-height jumps stay
-  // subtle next to the rest of the game's audio.
-  const gain = 0.03 + t * 0.22
-  play(splashBuffer, gain)
-}
+/** Boat touched down on the water after a jump. The volume is baked into
+ *  the asset itself (-14 dB vs the originals), not applied via a Web Audio
+ *  GainNode — on iOS PWA, routing playback through a very-low-gain node
+ *  appeared to demote the whole AudioContext's session to silent ambient
+ *  mode and killed all subsequent SFX. */
+export function playSplashSfx(): void { play(splashBuffer) }
