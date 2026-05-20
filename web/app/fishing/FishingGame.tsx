@@ -3207,17 +3207,20 @@ export default function FishingGame({
       >
 
         {/* Background soundtrack — autoplays muted (so browsers allow it).
-            Speaker icon toggles audio.muted. */}
+            OGG first so supporting browsers get a gapless loop (no MP3
+            encoder padding); MP3 stays as fallback for older WebKit. */}
         <audio
           ref={audioRef}
-          src="/fishingsoundtrack.mp3"
           loop
           autoPlay
           muted
           playsInline
           preload="auto"
           aria-hidden
-        />
+        >
+          <source src="/fishingsoundtrack.ogg" type="audio/ogg" />
+          <source src="/fishingsoundtrack.mp3" type="audio/mpeg" />
+        </audio>
 
         {/* Mute / unmute toggle — left edge, below the back-button row so
             it doesn't fight the header. Floats over the gameplay scene. */}
