@@ -85,7 +85,7 @@ export default function ClaimContent() {
             <span className="text-[#f0ede8]">{emailParam}</span></>
           )}
         </p>
-        <Link href={loginUrl} className="btn-ghost block w-full text-center">
+        <Link href={loginUrl} className="btn-gold block w-full text-center">
           Sign In
         </Link>
       </div>
@@ -99,7 +99,7 @@ export default function ClaimContent() {
           <p className="font-cinzel font-700 text-[#f0c040] text-lg">✦ {packs} Crew Notice{packs !== 1 ? 's' : ''} Added</p>
           <p className="font-karla font-300 text-[#a0a09a] text-xs tracking-wide">Ready to recruit from your account</p>
         </div>
-        <button onClick={() => router.push('/packs')} className="btn-ghost w-full">
+        <button onClick={() => router.push('/packs')} className="btn-gold w-full">
           Recruit Crew
         </button>
       </div>

@@ -94,7 +94,7 @@ export default function LoginForm() {
             className="sg-input"
             placeholder="your@email.com"
           />
-          <button type="submit" disabled={loading} className="btn-ghost w-full">
+          <button type="submit" disabled={loading} className="btn-gold w-full">
             {loading ? 'Sending…' : 'Send Sign-In Link'}
           </button>
         </form>

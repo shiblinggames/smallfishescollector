@@ -59,7 +59,7 @@ export default function MarketRedeemBar() {
           spellCheck={false}
           maxLength={30}
         />
-        <button type="submit" disabled={status === 'loading'} className="btn-ghost text-xs shrink-0" style={{ padding: '0 1rem' }}>
+        <button type="submit" disabled={status === 'loading'} className="btn-gold text-xs shrink-0" style={{ padding: '0 1rem' }}>
           {status === 'loading' ? '…' : 'Redeem'}
         </button>
       </form>

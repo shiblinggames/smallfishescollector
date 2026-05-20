@@ -417,7 +417,7 @@ export default function ProfileClient({
               3–20 chars · letters, numbers, underscores · can only be changed once
             </p>
             <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-              <button type="submit" disabled={pending} className="btn-ghost" style={{ fontSize: '0.72rem', padding: '0.45rem 1.25rem' }}>
+              <button type="submit" disabled={pending} className="btn-gold" style={{ fontSize: '0.72rem', padding: '0.45rem 1.25rem' }}>
                 {pending ? '…' : 'Save'}
               </button>
               <button type="button" onClick={() => { setShowUsernameForm(false); setUsernameError('') }} className="btn-ghost" style={{ fontSize: '0.72rem', padding: '0.45rem 1.25rem' }}>
@@ -1056,7 +1056,7 @@ export default function ProfileClient({
             </div>
 
             <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid rgba(255,255,255,0.09)', flexShrink: 0 }}>
-              <button onClick={handleSaveShowcase} disabled={pending} className="btn-ghost w-full" style={{ opacity: pending ? 0.5 : 1 }}>
+              <button onClick={handleSaveShowcase} disabled={pending} className="btn-gold w-full" style={{ opacity: pending ? 0.5 : 1 }}>
                 {pending ? 'Saving…' : 'Save Showcase'}
               </button>
             </div>

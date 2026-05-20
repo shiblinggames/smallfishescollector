@@ -102,12 +102,12 @@ export default function RedeemPage() {
               />
             </div>
 
-            <button type="submit" disabled={status === 'loading'} className="btn-ghost w-full">
+            <button type="submit" disabled={status === 'loading'} className="btn-gold w-full">
               {status === 'loading' ? 'Checking…' : 'Redeem Code'}
             </button>
 
             {status === 'success' && (
-              <button type="button" onClick={() => router.push('/packs')} className="btn-ghost w-full">
+              <button type="button" onClick={() => router.push('/packs')} className="btn-gold w-full">
                 Open Your Pack
               </button>
             )}

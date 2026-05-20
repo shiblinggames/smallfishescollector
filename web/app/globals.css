@@ -108,26 +108,30 @@ html, body {
 .font-karla  { font-family: var(--font-karla), system-ui, sans-serif; }
 .font-pirata { font-family: var(--font-pirata), serif; }
 
-/* ── Buttons ── */
+/* ── Buttons ──
+   .btn-gold is the modern primary-CTA pill (gradient + glow,
+   Cinzel uppercase). Use for Save / Submit / Redeem / Confirm.
+   .btn-ghost stays the secondary / cancel / navigate option. */
 .btn-gold {
   display: inline-block;
-  font-family: var(--font-karla), sans-serif;
-  font-weight: 600;
-  font-size: 0.8125rem;
+  font-family: var(--font-cinzel), serif;
+  font-weight: 700;
+  font-size: 0.82rem;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: #000000;
-  background: #f0c040;
-  border: 1px solid #f0c040;
-  border-radius: 10px;
-  padding: 0.75rem 2rem;
+  letter-spacing: 0.08em;
+  color: #241701;
+  background: linear-gradient(180deg, #f6c84e 0%, #e0a82e 100%);
+  border: 1px solid #f7d878;
+  border-radius: 12px;
+  padding: 0.7rem 1.6rem;
   text-decoration: none;
   text-align: center;
-  transition: background 0.22s, color 0.22s, border-color 0.22s, transform 0.22s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35), 0 0 14px rgba(240,192,64,0.18);
+  transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
   cursor: pointer;
 }
-.btn-gold:hover  { background: transparent; color: #f0c040; transform: translateY(-2px); }
-.btn-gold:disabled { opacity: 0.45; pointer-events: none; }
+.btn-gold:hover  { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 22px rgba(240,192,64,0.32); }
+.btn-gold:disabled, .btn-gold[disabled] { opacity: 0.45; pointer-events: none; }
 
 .btn-ghost {
   display: inline-block;

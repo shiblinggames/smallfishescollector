@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface Props {
   href: string
@@ -26,6 +28,98 @@ export default function ShopCard({ href, eyebrow, title, description, info, icon
       router.push(href)
     }
   }
+
+  // Body-portaled bottom sheet — escapes stacking contexts (e.g. the
+  // MobileTabBar) and clears Nav + safe-area at top/bottom, matching
+  // the LeaderboardModal / RaidsSection NodeDetailSheet pattern.
+  const sheet = (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={() => setShowModal(false)}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(2px)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 56px)',
+      }}
+    >
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 480,
+          maxHeight: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain',
+          background: 'linear-gradient(180deg, #0b1420 0%, #060c14 100%)',
+          border: `1px solid ${accentColor}33`,
+          borderBottom: 'none',
+          borderRadius: '20px 20px 0 0',
+          padding: '0.85rem 1.15rem calc(1.4rem + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
+        {/* Grab handle */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.7rem' }}>
+          <div style={{ width: 38, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)' }} />
+        </div>
+
+        {/* Header + close button */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.7rem', marginBottom: '0.95rem' }}>
+          <div style={{ display: 'flex', gap: '0.7rem', alignItems: 'center', minWidth: 0 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 11, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: `${accentColor}1c`, border: `1px solid ${accentColor}3a`,
+              color: accentColor,
+            }}>
+              {icon}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p className="sg-eyebrow" style={{ color: `${accentColor}aa`, marginBottom: 2 }}>{eyebrow}</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1.15 }}>{title}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowModal(false)}
+            aria-label="Close"
+            style={{
+              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+              color: '#9a9690', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        {/* Description */}
+        <p className="font-karla" style={{ fontSize: '0.85rem', lineHeight: 1.55, color: 'rgba(240,237,232,0.7)', marginBottom: '1rem' }}>
+          {description}
+        </p>
+
+        {/* Info list */}
+        <ul style={{ display: 'flex', flexDirection: 'column', gap: 8, listStyle: 'none', padding: 0, margin: 0 }}>
+          {info.map((item, i) => (
+            <li key={i} style={{
+              display: 'flex', alignItems: 'flex-start', gap: 10,
+              background: 'rgba(255,255,255,0.03)',
+              border: `1px solid ${accentColor}1f`,
+              borderRadius: 10,
+              padding: '0.6rem 0.75rem',
+            }}>
+              <span style={{ color: accentColor, fontSize: '0.65rem', lineHeight: '1.5rem', flexShrink: 0 }}>✦</span>
+              <span className="font-karla" style={{ fontSize: '0.78rem', lineHeight: 1.5, color: 'rgba(240,237,232,0.78)' }}>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </motion.div>
+    </motion.div>
+  )
 
   return (
     <>
@@ -83,50 +177,9 @@ export default function ShopCard({ href, eyebrow, title, description, info, icon
         </p>
       </div>
 
-      {showModal && (
-        <div
-          onClick={() => setShowModal(false)}
-          style={{
-            position: 'fixed', inset: 0,
-            background: 'rgba(0,0,0,0.65)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 50,
-            padding: '1.5rem',
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: '#1c1917',
-              border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: '18px',
-              padding: '1.5rem',
-              width: '100%',
-              maxWidth: '22rem',
-            }}
-          >
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <div>
-                <p className="sg-eyebrow mb-1" style={{ color: '#9a9488' }}>{eyebrow}</p>
-                <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.1rem' }}>{title}</p>
-              </div>
-              <button onClick={() => setShowModal(false)} style={{ color: '#6a6764', lineHeight: 1, marginTop: 2, flexShrink: 0 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginBottom: '1rem' }} />
-            <ul className="flex flex-col gap-2">
-              {info.map((item, i) => (
-                <li key={i} className="flex items-start gap-2.5">
-                  <span style={{ color: '#f0c040', fontSize: '0.5rem', lineHeight: '1.8rem', flexShrink: 0 }}>✦</span>
-                  <span className="font-karla text-[#a0a09a]" style={{ fontSize: '0.82rem', lineHeight: 1.55 }}>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>{showModal && sheet}</AnimatePresence>,
+        document.body,
       )}
     </>
   )
