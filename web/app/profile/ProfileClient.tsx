@@ -1273,15 +1273,6 @@ export default function ProfileClient({
                   </button>
                 )
               })}
-            </div>
-
-            {/* Animated background specials — gem purchase */}
-            <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
-              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#fde68a', letterSpacing: '0.14em' }}>
-                Animated · 500 ◆
-              </p>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 14 }}>
               {AVATAR_SPECIALS.filter(s => s.kind === 'bg').map(s => {
                 const isActive = (avatarBg ?? DEFAULT_AVATAR_BG_COLOR) === s.hex
                 const owned = unlockedSpecials.includes(s.id)
@@ -1367,15 +1358,6 @@ export default function ProfileClient({
                   </button>
                 )
               })}
-            </div>
-
-            {/* Animated border specials — gem purchase */}
-            <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
-              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#fde68a', letterSpacing: '0.14em' }}>
-                Animated · 300 ◆
-              </p>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 16 }}>
               {AVATAR_SPECIALS.filter(s => s.kind === 'border').map(s => {
                 const isActive = (avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR) === s.hex
                 const owned = unlockedSpecials.includes(s.id)
