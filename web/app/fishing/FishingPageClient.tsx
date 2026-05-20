@@ -43,7 +43,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 
 export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
-  initialDoubloons, initialFishingXP, initialBait, initialInventory, uniqueSpeciesCaught,
+  initialDoubloons, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught,
   fishHoldTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, activeSession, username, zoneRewardsClaimed,
   initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, equippedHat, unlockedHats,
@@ -56,6 +56,7 @@ export default function FishingPageClient({
   initialDoubloons: number
   initialFishingXP: number
   initialBait: BaitItem[]
+  initialLastUsedBait: string | null
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
   fishHoldTier: number
@@ -163,6 +164,7 @@ export default function FishingPageClient({
       initialDoubloons={initialDoubloons}
       initialFishingXP={initialFishingXP}
       initialBait={initialBait}
+      initialLastUsedBait={initialLastUsedBait}
       initialInventory={initialInventory}
       uniqueSpeciesCaught={uniqueSpeciesCaught}
       fishHoldTier={fishHoldTier}

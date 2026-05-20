@@ -1783,7 +1783,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 
 export default function FishingGame({
   hookTier: initialHookTier, rodTier, reelTier: initialReelTier, lineTier,
-  initialDoubloons, initialFishingXP, initialBait, initialInventory,
+  initialDoubloons, initialFishingXP, initialBait, initialLastUsedBait, initialInventory,
   fishHoldTier: initialFishHoldTier,
   ownedRods: initialOwnedRods,
   allFishSpecies, initialCaughtFishIds,
@@ -1804,6 +1804,7 @@ export default function FishingGame({
   initialDoubloons: number
   initialFishingXP: number
   initialBait: BaitItem[]
+  initialLastUsedBait: string | null
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
   fishHoldTier: number
@@ -1877,6 +1878,13 @@ export default function FishingGame({
   const [phase, setPhase]           = useState<Phase>('idle')
   const selectedZone = initialZone
   const [selectedBait, setSelectedBait] = useState<string>(() => {
+    // Prefer last-used bait if the player still has at least one — saved
+    // to profile.last_used_bait by castLine on every cast. Falls back to
+    // the first bait with quantity > 0, then 'worm' as a final default.
+    if (initialLastUsedBait) {
+      const last = initialBait.find(b => b.bait_type === initialLastUsedBait && b.quantity > 0)
+      if (last) return last.bait_type
+    }
     const first = initialBait.find(b => b.quantity > 0)
     return first?.bait_type ?? 'worm'
   })

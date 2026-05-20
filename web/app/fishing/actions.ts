@@ -212,6 +212,11 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const rod = getRod(profile.rod_tier ?? 0)
 
+  // Remember this bait so the fishing UI auto-selects it on next open
+  // (FishingGame.tsx seeds selectedBait from profile.last_used_bait).
+  // Fire-and-forget — failure here mustn't block the cast result.
+  void admin.from('profiles').update({ last_used_bait: baitType }).eq('id', user.id).then(() => {}, () => {})
+
   // Crate encounter: 2% chance (× rod.crateChanceMult — Treasure Rod = 2×)
   if (habitat !== 'ancient_deep' && Math.random() < 0.02 * (rod.crateChanceMult ?? 1)) {
     if (!noBait && baitRow) {
