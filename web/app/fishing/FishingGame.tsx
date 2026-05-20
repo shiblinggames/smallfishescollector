@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
-import { flushSync } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
@@ -467,7 +466,7 @@ function getZone(zones: ZoneDef[], deg: number, rotation = 0): ZoneDef {
 // ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 function DialSVG({
-  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0,
+  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0, needleGroupRef,
 }: {
   zones: ZoneDef[]
   angle: number
@@ -477,10 +476,24 @@ function DialSVG({
   fireLevel?: 0 | 1 | 2
   snapKey?: number
   perfectBurstKey?: number
+  /** Optional ref to the needle's rotating <g>. When provided, the parent
+   *  drives the rotation via setAttribute on this element directly — no
+   *  React state on the hot path, so the needle snaps to the player's
+   *  click without a queued render moving it one tick further. */
+  needleGroupRef?: React.RefObject<SVGGElement | null>
 }) {
   const needleTipY  = CY - (INNER_R - 8)
   const perfectZone = zones.find(z => z.type === 'perfect')
   const penaltyZones = zones.filter(z => z.type === 'penalty')
+
+  // Initial transform set from `angle` prop. The parent's rAF tick takes
+  // over after this, writing setAttribute directly so re-renders from
+  // sibling state (blackout opacity, etc.) don't reset our needle.
+  // useLayoutEffect so the attribute is set before the first paint.
+  React.useLayoutEffect(() => {
+    const g = needleGroupRef?.current
+    if (g) g.setAttribute('transform', `rotate(${angle}, ${CX}, ${CY})`)
+  }, [angle, needleGroupRef])
 
   // Snap/bounce + ripple on reel-in tap
   const [snapAnim, setSnapAnim] = useState(false)
@@ -554,7 +567,11 @@ function DialSVG({
             transition={{ duration: 0.7, ease: 'easeOut' }}
           />
         )}
-        <g transform={`rotate(${angle}, ${CX}, ${CY})`}>
+        {/* No transform prop in JSX — the parent's rAF tick writes the
+            rotation to this element via needleGroupRef.setAttribute, so
+            React re-renders elsewhere can't overwrite it. The initial
+            value is set by a useLayoutEffect on `angle` below. */}
+        <g ref={needleGroupRef}>
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={needleColor} strokeWidth="10" strokeOpacity="0.12" strokeLinecap="round" />
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={needleColor} strokeWidth="2.5" strokeLinecap="round" />
           <circle cx={CX} cy={needleTipY} r="5" fill={needleColor} />
@@ -2149,6 +2166,11 @@ export default function FishingGame({
   const [retryKey, setRetryKey]     = useState(0)
   const [blackoutOpacity, setBlackoutOpacity] = useState(0)
   const angleRef        = useRef(270)
+  // Ref to the SVG <g> wrapping the needle. The rAF tick writes its
+  // transform attribute directly so the needle's render isn't in React's
+  // state path — eliminates the "creep after click" caused by queued
+  // setState commits firing post-handler.
+  const needleGroupRef  = useRef<SVGGElement | null>(null)
   const speedRef        = useRef(0)
   const dirRef          = useRef(1)
   const phaseRef        = useRef<Phase>('idle')
@@ -2317,7 +2339,14 @@ export default function FishingGame({
         }
         nextChgMsRef.current = elapsedMsRef.current + (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
       }
-      setAngle(angleRef.current)
+      // Write the rotation directly to the SVG <g> via the ref. This skips
+      // React's render path so there's no batched state update that could
+      // commit AFTER the player clicks Reel In and visually nudge the
+      // needle one position past where they locked it. State is still
+      // kept in sync (cheaper for the very first render and for snapshots
+      // taken elsewhere) but the per-frame visual is ref-driven.
+      const ng = needleGroupRef.current
+      if (ng) ng.setAttribute('transform', `rotate(${angleRef.current}, ${CX}, ${CY})`)
       animRef.current = requestAnimationFrame(tick)
     }
     animRef.current = requestAnimationFrame(tick)
@@ -2675,20 +2704,14 @@ export default function FishingGame({
   // Phase 2 — reel in
   async function handleReelIn() {
     if (phase !== 'catching' || !hookedFishRef.current) return
-    // Cut the dial sound immediately on tap — don't wait for the phase
-    // change useEffect to clean it up.
+    // Cut the dial sound immediately on tap.
     stopDialLoop()
-    // Cancel the rAF first so no further ticks queue new setAngle updates.
+    // Cancel the rAF. The needle's SVG transform was being written by
+    // the tick directly via the needleGroupRef setAttribute path, so the
+    // DOM stays at whatever the tick set last — no queued React state
+    // update can creep it past the click position. angleRef.current is
+    // also already in sync with the visual since the tick updated both.
     if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
-    // Freeze the needle at exactly what the player saw when they clicked.
-    // React 18 batches setAngle from rAF ticks; without flushSync, a queued
-    // update from the just-fired tick would commit AFTER this handler runs
-    // and visually "creep" the needle one position past where they locked
-    // it. flushSync forces the queued commit now, and then we pin the ref
-    // to the resulting state so the zone calculation uses the same angle
-    // the player saw.
-    flushSync(() => { /* drain any pending state updates from rAF */ })
-    angleRef.current = angle
     setSnapKey(k => k + 1)
     setReelRippleKey(k => k + 1)
     setTimeout(() => setReelRippleKey(0), 1800)
@@ -3953,7 +3976,8 @@ export default function FishingGame({
                     <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}
                       needleColor={needleColor()} zoneOpacityFn={zoneOpacity}
                       fireLevel={perfectStreak >= 3 ? 2 : perfectStreak === 2 ? 1 : 0}
-                      snapKey={snapKey} perfectBurstKey={perfectBurstKey} />
+                      snapKey={snapKey} perfectBurstKey={perfectBurstKey}
+                      needleGroupRef={needleGroupRef} />
                   </div>
                 </motion.div>
               )}
