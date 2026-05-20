@@ -1199,14 +1199,15 @@ html, body {
   pointer-events: none;
   background-image: url(/clouds1.png);
   background-repeat: repeat-x;
-  background-position: top left;
+  background-position: 0px top;
   /* Fixed pixel height keeps cloud puffs the same physical size across
      screens. The band's height still scales with the scene (% inline in
      FishingGame.tsx) so the band ends near the painted horizon, but
-     the cloud texture INSIDE the band stays a constant size. */
-  background-size: auto 260px;
-  opacity: 0.7;
-  animation: cloudsDrift 480s linear infinite;
-  -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
-          mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+     the cloud texture INSIDE the band stays a constant size.
+     Values dialed in via /dev/clouds tuner 2026-05-19. */
+  background-size: auto 350px;
+  opacity: 0.65;
+  animation: cloudsDrift 1200s linear infinite;
+  -webkit-mask-image: linear-gradient(to bottom, black 68%, transparent 100%);
+          mask-image: linear-gradient(to bottom, black 68%, transparent 100%);
 }
