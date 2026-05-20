@@ -6,7 +6,7 @@ import AnnouncementBanner from './AnnouncementBanner'
 import CharacterAvatar from './CharacterAvatar'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const PAGE_TINTS: [string, string][] = [
   ['/tavern',      'rgba(180,120,30,0.10)'],
@@ -449,110 +449,247 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
               {displayDoubloons.toLocaleString()} ⟡
             </span>
           )}
-          {/* Hamburger */}
+          {/* Hamburger — animates into an X when open. */}
           <button
             onClick={() => setMenuOpen(o => !o)}
-            className="relative flex flex-col items-center justify-center gap-[4px] w-7 h-7 rounded-md transition-colors"
-            style={{ background: menuOpen ? 'rgba(255,255,255,0.15)' : 'transparent', border: 'none' }}
-            aria-label="Menu"
+            className="relative flex flex-col items-center justify-center w-8 h-8 rounded-md transition-colors"
+            style={{ background: menuOpen ? 'rgba(255,255,255,0.10)' : 'transparent', border: 'none', gap: 0 }}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
           >
-            <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#a0a09a', borderRadius: 1, transition: 'background 0.15s' }} />
-            <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#a0a09a', borderRadius: 1, transition: 'background 0.15s' }} />
-            <span style={{ display: 'block', width: 14, height: 1.5, background: menuOpen ? '#f0ede8' : '#a0a09a', borderRadius: 1, transition: 'background 0.15s' }} />
+            <span style={{
+              position: 'absolute', display: 'block', width: 16, height: 1.6,
+              background: menuOpen ? '#f0ede8' : '#a0a09a', borderRadius: 1,
+              transformOrigin: 'center',
+              transform: menuOpen ? 'translateY(0) rotate(45deg)' : 'translateY(-5px) rotate(0)',
+              transition: 'transform 0.22s cubic-bezier(0.4,0,0.2,1), background 0.15s',
+            }} />
+            <span style={{
+              position: 'absolute', display: 'block', width: 16, height: 1.6,
+              background: menuOpen ? '#f0ede8' : '#a0a09a', borderRadius: 1,
+              opacity: menuOpen ? 0 : 1,
+              transform: menuOpen ? 'scaleX(0.4)' : 'scaleX(1)',
+              transition: 'opacity 0.15s, transform 0.22s cubic-bezier(0.4,0,0.2,1), background 0.15s',
+            }} />
+            <span style={{
+              position: 'absolute', display: 'block', width: 16, height: 1.6,
+              background: menuOpen ? '#f0ede8' : '#a0a09a', borderRadius: 1,
+              transformOrigin: 'center',
+              transform: menuOpen ? 'translateY(0) rotate(-45deg)' : 'translateY(5px) rotate(0)',
+              transition: 'transform 0.22s cubic-bezier(0.4,0,0.2,1), background 0.15s',
+            }} />
           </button>
         </div>
 
-        {/* Dropdown */}
-        {menuOpen && (
-          <div
-            className="absolute top-full left-0 right-0"
-            style={{
-              background: tint ? `linear-gradient(${tint}, ${tint}), #0a0a0a` : '#0a0a0a',
-              borderBottom: '1px solid rgba(255,255,255,0.15)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-            }}
-          >
-            {showInstallEntry && (
-              <button
-                onClick={() => {
-                  setMenuOpen(false)
-                  if (deferredPrompt) {
-                    deferredPrompt.prompt()
-                    deferredPrompt.userChoice.then(() => setDeferredPrompt(null))
-                  } else if (isIOS) {
-                    setShowIOSHint(true)
-                  }
-                }}
-                className="w-full flex items-center gap-3.5"
+        {/* Dropdown — modernised 2026-05-19: bigger tap rows with icon
+            tiles, identity strip at top, Sign Out separated and muted,
+            smooth slide-fade open/close. */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              key="nav-menu"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+              className="absolute top-full left-0 right-0"
+              style={{
+                background: tint
+                  ? `linear-gradient(${tint}, ${tint}), linear-gradient(180deg, #0c1320 0%, #060912 100%)`
+                  : 'linear-gradient(180deg, #0c1320 0%, #060912 100%)',
+                borderBottom: '1px solid rgba(255,255,255,0.10)',
+                boxShadow: '0 14px 38px rgba(0,0,0,0.65)',
+                padding: '0.4rem 0',
+                willChange: 'transform, opacity',
+              }}
+            >
+              {/* Identity strip — tap to jump to /profile. Pulls the
+                  same avatar the rest of the app uses. */}
+              <Link
+                href="/profile"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3"
                 style={{
-                  padding: '1.05rem 1.25rem',
-                  background: 'linear-gradient(90deg, rgba(14,116,144,0.26), rgba(14,116,144,0.10))',
-                  border: 'none',
-                  borderBottom: '1px solid rgba(14,116,144,0.32)',
-                  cursor: 'pointer',
+                  textDecoration: 'none',
+                  padding: '0.7rem 1rem',
+                  margin: '0 0.5rem',
+                  borderRadius: 12,
+                  background: 'rgba(255,255,255,0.025)',
+                  border: '1px solid rgba(255,255,255,0.06)',
                 }}
               >
-                <div style={{
-                  width: 46, height: 46, borderRadius: 13, flexShrink: 0,
-                  background: 'rgba(14,116,144,0.30)',
-                  border: '1px solid rgba(90,180,200,0.50)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#8fd6e6" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2v13M8 11l4 4 4-4"/>
-                    <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
-                  </svg>
-                </div>
-                <div style={{ textAlign: 'left', flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <p className="font-karla font-700" style={{ fontSize: '0.98rem', color: '#d6eef3', letterSpacing: '0.01em' }}>Install the App</p>
-                    <span className="font-karla font-700 uppercase" style={{
-                      fontSize: '0.5rem', letterSpacing: '0.1em', color: '#04161a',
-                      background: '#5ab4c8', borderRadius: 999, padding: '0.12rem 0.42rem',
-                    }}>Free</span>
-                  </div>
-                  <p className="font-karla" style={{ fontSize: '0.76rem', color: '#9fc8d2', marginTop: 4, lineHeight: 1.4 }}>
-                    Full-screen &amp; faster — plays like a real game, no browser bar in the way.
+                <CharacterAvatar
+                  characterColor={characterColor}
+                  equippedHat={equippedHat}
+                  size={40}
+                  bgColor={avatarBg ?? undefined}
+                  ringColor={avatarBorder ?? undefined}
+                  borderStyle="none"
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#7a7674' }}>
+                    Account
+                  </p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0ede8', marginTop: 1 }}>
+                    My Profile
                   </p>
                 </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5ab4c8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.32)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   <path d="M9 18l6-6-6-6"/>
                 </svg>
-              </button>
-            )}
-            {mobileMenuLinks.map(({ href, label, icon, badge }) => {
-              const active = pathname === href || pathname.startsWith(href + '/')
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className="flex items-center gap-3 px-5 py-3.5"
+              </Link>
+
+              {showInstallEntry && (
+                <button
+                  onClick={() => {
+                    setMenuOpen(false)
+                    if (deferredPrompt) {
+                      deferredPrompt.prompt()
+                      deferredPrompt.userChoice.then(() => setDeferredPrompt(null))
+                    } else if (isIOS) {
+                      setShowIOSHint(true)
+                    }
+                  }}
+                  className="w-full flex items-center gap-3"
                   style={{
-                    color: active ? '#f0ede8' : '#a0a09a',
-                    borderBottom: '1px solid rgba(255,255,255,0.09)',
-                    textDecoration: 'none',
+                    margin: '0.45rem 0.5rem 0.25rem',
+                    padding: '0.7rem 1rem',
+                    width: 'calc(100% - 1rem)',
+                    borderRadius: 12,
+                    background: 'linear-gradient(135deg, rgba(14,116,144,0.32), rgba(14,116,144,0.10))',
+                    border: '1px solid rgba(90,180,200,0.42)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
                   }}
                 >
-                  <span style={{ color: active ? '#f0c040' : '#4a4845' }}>{icon}</span>
-                  <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem' }}>{label}</span>
-                  {badge && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f0c040', flexShrink: 0 }} />}
-                </Link>
-              )
-            })}
-            <button
-              onClick={signOut}
-              className="w-full flex items-center gap-3 px-5 py-3.5"
-              style={{ color: '#6a6764', background: 'none', border: 'none', cursor: 'pointer' }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
-              <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem' }}>Sign Out</span>
-            </button>
-          </div>
-        )}
+                  <div style={{
+                    width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                    background: 'rgba(14,116,144,0.34)',
+                    border: '1px solid rgba(90,180,200,0.55)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8fd6e6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2v13M8 11l4 4 4-4"/>
+                      <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+                    </svg>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#d6eef3' }}>Install the App</p>
+                      <span className="font-karla font-700 uppercase" style={{
+                        fontSize: '0.5rem', letterSpacing: '0.1em', color: '#04161a',
+                        background: '#5ab4c8', borderRadius: 999, padding: '0.12rem 0.42rem',
+                      }}>Free</span>
+                    </div>
+                    <p className="font-karla" style={{ fontSize: '0.7rem', color: '#9fc8d2', marginTop: 2, lineHeight: 1.35 }}>
+                      Full-screen, no browser chrome.
+                    </p>
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5ab4c8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                </button>
+              )}
+
+              {/* Section label */}
+              <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{
+                fontSize: '0.52rem', color: '#5a5550',
+                padding: '0.6rem 1.1rem 0.25rem',
+              }}>
+                Navigate
+              </p>
+
+              <div style={{ padding: '0 0.5rem' }}>
+                {mobileMenuLinks.map(({ href, label, icon, badge }) => {
+                  const active = pathname === href || pathname.startsWith(href + '/')
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3"
+                      style={{
+                        textDecoration: 'none',
+                        padding: '0.55rem 0.7rem',
+                        borderRadius: 10,
+                        background: active ? 'rgba(240,192,64,0.08)' : 'transparent',
+                      }}
+                    >
+                      <div style={{
+                        width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+                        background: active ? 'rgba(240,192,64,0.14)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${active ? 'rgba(240,192,64,0.42)' : 'rgba(255,255,255,0.08)'}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: active ? '#f0c040' : '#8a8580',
+                        transition: 'background 0.15s, border-color 0.15s, color 0.15s',
+                      }}>
+                        {icon}
+                      </div>
+                      <span className="font-cinzel font-700" style={{
+                        flex: 1, fontSize: '0.86rem',
+                        color: active ? '#f0ede8' : '#cfcabf',
+                        letterSpacing: '0.02em',
+                      }}>
+                        {label}
+                      </span>
+                      {badge && (
+                        <span style={{
+                          width: 7, height: 7, borderRadius: '50%',
+                          background: '#f0c040', boxShadow: '0 0 6px rgba(240,192,64,0.7)',
+                          flexShrink: 0,
+                        }} />
+                      )}
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                        stroke={active ? 'rgba(240,192,64,0.55)' : 'rgba(255,255,255,0.18)'}
+                        strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+                        style={{ flexShrink: 0 }}>
+                        <path d="M9 18l6-6-6-6"/>
+                      </svg>
+                    </Link>
+                  )
+                })}
+              </div>
+
+              {/* Sign Out — visually separated and muted-red so it
+                  doesn't compete with the navigation rows. */}
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '0.4rem', padding: '0.4rem 0.5rem 0.5rem' }}>
+                <button
+                  onClick={signOut}
+                  className="w-full flex items-center gap-3"
+                  style={{
+                    padding: '0.55rem 0.7rem',
+                    background: 'transparent',
+                    border: 'none',
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div style={{
+                    width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+                    background: 'rgba(239,68,68,0.06)',
+                    border: '1px solid rgba(239,68,68,0.18)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'rgba(239,68,68,0.72)',
+                  }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                      <polyline points="16 17 21 12 16 7"/>
+                      <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                  </div>
+                  <span className="font-cinzel font-700" style={{
+                    flex: 1, fontSize: '0.82rem',
+                    color: 'rgba(239,68,68,0.72)',
+                    letterSpacing: '0.02em',
+                  }}>
+                    Sign Out
+                  </span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <AnnouncementBanner />
