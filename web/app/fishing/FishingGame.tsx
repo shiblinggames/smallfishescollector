@@ -2306,6 +2306,11 @@ export default function FishingGame({
     if (phase !== 'casting') { setCastAnimDone(false); return }
     setCastAnimDone(false)
     setCharFrame('cast')
+    // First cast SFX — fired here, paired with setCharFrame('cast') so
+    // it lands with the visual cast pose. Previously we fired it on
+    // the button onPointerDown which played ~200 ms before the pose
+    // appeared and felt premature.
+    playCastSfx()
     // Second cast SFX — fires the instant the cast animation finishes
     // and the line hits the water. We fire the audio ~50 ms before
     // setCharFrame('wait') because Web Audio BufferSource.start has a
@@ -2736,7 +2741,9 @@ export default function FishingGame({
       fireFinnEncounter()
       return
     }
-    playCastSfx()
+    // cast SFX is fired from the charFrame useEffect when the pose
+    // actually flips to 'cast' — keeps audio synced to the visible
+    // animation rather than the click.
     setCastRippleKey(k => k + 1)
     setTimeout(() => setCastRippleKey(0), 1800)
     await doCast()
@@ -3115,7 +3122,7 @@ export default function FishingGame({
       fireFinnEncounter()
       return
     }
-    playCastSfx()
+    // cast SFX fires from the charFrame useEffect — same as handleCast.
     setCastRippleKey(k => k + 1)
     setTimeout(() => setCastRippleKey(0), 1800)
     setCatchResult(null)
