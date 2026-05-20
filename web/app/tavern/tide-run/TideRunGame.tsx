@@ -5,7 +5,7 @@ import { commitTideRun, submitTideRunBest } from './actions'
 import TideRunTour from './TideRunTour'
 import { markTideRunTourSeen } from './tideRunTourAction'
 import LeaderboardModal from '@/components/LeaderboardModal'
-import { prefetchTideRunAudio, playBeaconCatchSfx, playBeaconCrashSfx, playSplashSfx, playCrashSfx } from '@/lib/tideRunAudio'
+import { prefetchTideRunAudio, playBeaconCatchSfx, playBeaconCrashSfx, playSplashSfx, playCrashSfx, getTideRunMuted, setTideRunMuted } from '@/lib/tideRunAudio'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
 const SHIP_X_RATIO    = 0.13   // boat sits ~13% from the left, giving ~87% lookahead
@@ -290,6 +290,10 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
   // Kick off the beacon SFX prefetch on mount so the buffers are ready by
   // the time the player encounters their first beacon.
   useEffect(() => { prefetchTideRunAudio() }, [])
+
+  // Speaker toggle state — mirrors the persisted preference in the audio
+  // singleton. UI in render below.
+  const [audioMuted, setAudioMutedState] = useState<boolean>(() => getTideRunMuted())
 
   // All mutable game state lives in a single ref. React state is only for UI.
   const gRef = useRef({
@@ -1581,6 +1585,47 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
           }}
         >
           ?
+        </button>
+
+        {/* Speaker toggle — bottom-left, parallel placement to the fishing
+            game's mute button. stopPropagation so tapping it doesn't also
+            trigger a jump. */}
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            const next = !audioMuted
+            setTideRunMuted(next)
+            setAudioMutedState(next)
+          }}
+          aria-label={audioMuted ? 'Unmute sounds' : 'Mute sounds'}
+          style={{
+            position: 'absolute', bottom: 10, left: 10, zIndex: 5,
+            width: 34, height: 34,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(8,18,28,0.6)',
+            border: '1px solid rgba(255,255,255,0.18)',
+            borderRadius: '50%',
+            color: 'rgba(240,237,232,0.85)',
+            cursor: 'pointer',
+            padding: 0,
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+          }}
+        >
+          {audioMuted ? (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <line x1="23" y1="9" x2="17" y2="15"/>
+              <line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+          ) : (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
+          )}
         </button>
 
         {/* Leaderboard — top-right, only off the run. stopPropagation so

@@ -30,6 +30,10 @@ let deathFetching = false
 let sessionKeeper: HTMLAudioElement | null = null
 let sessionKeeperStarted = false
 let sessionKeeperRouted = false
+let muted: boolean = (() => {
+  if (typeof window === 'undefined') return false
+  return window.localStorage.getItem('tideRunAudioMuted') === 'true'
+})()
 
 function ensureContext(): boolean {
   if (audioCtx) return true
@@ -193,6 +197,7 @@ export function unlockTideRunAudio(): void {
 }
 
 function play(buffer: AudioBuffer | null): void {
+  if (muted) return
   if (!audioCtx || !buffer) return
   try {
     if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
@@ -201,6 +206,16 @@ function play(buffer: AudioBuffer | null): void {
     source.connect(audioCtx.destination)
     source.start(0)
   } catch {}
+}
+
+/** Returns whether tide-run SFX are currently muted. */
+export function getTideRunMuted(): boolean { return muted }
+
+/** Toggle tide-run SFX on/off. Persists to localStorage so the choice
+ *  survives reloads. */
+export function setTideRunMuted(next: boolean): void {
+  muted = next
+  try { window.localStorage.setItem('tideRunAudioMuted', String(next)) } catch {}
 }
 
 /** Beacon detected the airborne ship — beam fires up and catches the
