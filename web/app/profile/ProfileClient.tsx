@@ -58,6 +58,7 @@ interface Props {
   characterColor: string
   unlockedColors: string[]
   doubloons: number
+  gems: number
   equippedBadges: string[]
   unlockedBadges: string[]
   avatarBgColor: string | null
@@ -218,6 +219,7 @@ export default function ProfileClient({
   characterColor: initialCharacterColor,
   unlockedColors: initialUnlockedColors,
   doubloons: initialDoubloons,
+  gems: initialGems,
   equippedBadges: initialEquippedBadges,
   unlockedBadges,
   avatarBgColor: initialAvatarBg,
@@ -238,7 +240,8 @@ export default function ProfileClient({
   const [colorSaving, setColorSaving] = useState(false)
   const [unlockedColors, setUnlockedColors] = useState<string[]>(initialUnlockedColors)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
-  const [purchasePrompt, setPurchasePrompt] = useState<{ id: string; name: string; price: number } | null>(null)
+  const [gems, setGems] = useState(initialGems)
+  const [purchasePrompt, setPurchasePrompt] = useState<{ id: string; name: string; price: number; currency: 'doubloons' | 'gems' } | null>(null)
   const [purchasing, setPurchasing] = useState(false)
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
   const [equippedBadges, setEquippedBadges] = useState<string[]>(initialEquippedBadges)
@@ -1148,9 +1151,14 @@ export default function ProfileClient({
                     disabled={colorSaving}
                     onClick={async () => {
                       if (!isUnlocked) {
-                        if (c.price) {
+                        if (c.price || c.gemPrice) {
                           setPurchaseError(null)
-                          setPurchasePrompt({ id: c.id, name: c.name, price: c.price })
+                          setPurchasePrompt({
+                            id: c.id,
+                            name: c.name,
+                            price: (c.gemPrice ?? c.price)!,
+                            currency: c.gemPrice ? 'gems' : 'doubloons',
+                          })
                         } else {
                           flashLockMsg(c.unlockHint ? `${c.name} — ${c.unlockHint}` : `${c.name} — locked`)
                         }
@@ -1388,10 +1396,10 @@ export default function ProfileClient({
               Buy {purchasePrompt.name} Skin
             </p>
             <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.75)', lineHeight: 1.5, marginBottom: 14 }}>
-              {purchasePrompt.price.toLocaleString()} ⟡ — yours forever once bought.
+              {purchasePrompt.price.toLocaleString()} {purchasePrompt.currency === 'gems' ? '◆' : '⟡'} — yours forever once bought.
             </p>
             <p className="font-karla text-center" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.55)', marginBottom: 14 }}>
-              Your purse: {doubloons.toLocaleString()} ⟡
+              Your purse: {(purchasePrompt.currency === 'gems' ? gems : doubloons).toLocaleString()} {purchasePrompt.currency === 'gems' ? '◆' : '⟡'}
             </p>
             {purchaseError && (
               <p className="font-karla font-700 text-center" style={{ fontSize: '0.72rem', color: '#f87171', marginBottom: 10 }}>
@@ -1426,7 +1434,12 @@ export default function ProfileClient({
                   if ('error' in result) { setPurchaseError(result.error); return }
                   setUnlockedColors(result.unlockedColors)
                   setDoubloons(result.doubloons)
-                  window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.doubloons }))
+                  setGems(result.gems)
+                  if (purchasePrompt.currency === 'gems') {
+                    window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.gems }))
+                  } else {
+                    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.doubloons }))
+                  }
                   setPurchasePrompt(null)
                 }}
                 className="btn-gold font-karla font-700 uppercase tracking-[0.08em]"
@@ -1437,7 +1450,7 @@ export default function ProfileClient({
                   opacity: purchasing ? 0.65 : 1,
                 }}
               >
-                {purchasing ? 'Buying…' : `Buy for ${purchasePrompt.price.toLocaleString()} ⟡`}
+                {purchasing ? 'Buying…' : `Buy for ${purchasePrompt.price.toLocaleString()} ${purchasePrompt.currency === 'gems' ? '◆' : '⟡'}`}
               </button>
             </div>
           </div>

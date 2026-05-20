@@ -5,6 +5,8 @@ export interface CharacterColor {
   unlockHint?: string
   /** If set, the locked swatch can be purchased outright with doubloons. */
   price?: number
+  /** If set, the locked swatch can be purchased outright with gems. */
+  gemPrice?: number
 }
 
 export const CHARACTER_COLORS: CharacterColor[] = [
@@ -17,8 +19,8 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'golden',  name: 'Golden', free: false, unlockHint: '1,000,000 ⟡', price: 1_000_000 },
   { id: 'forest',  name: 'Forest', free: false, unlockHint: 'Reach Fishing Level 50' },
   { id: 'mint',    name: 'Mint',   free: false, unlockHint: 'Rare drop from fishing crates' },
-  { id: 'autumn',  name: 'Autumn', free: false, unlockHint: 'Premium skin' },
-  { id: 'ruby',    name: 'Ruby',   free: false, unlockHint: 'Premium skin' },
+  { id: 'autumn',  name: 'Autumn', free: false, unlockHint: '250 ◆', gemPrice: 250 },
+  { id: 'ruby',    name: 'Ruby',   free: false, unlockHint: '250 ◆', gemPrice: 250 },
   { id: 'ice',      name: 'Ice',      free: false, unlockHint: 'Reach Fishing Level 75' },
   { id: 'lavender', name: 'Lavender', free: false, unlockHint: 'Rare drop from fishing crates' },
   { id: 'storm',    name: 'Storm',    free: false, unlockHint: 'Rare drop from fishing crates' },

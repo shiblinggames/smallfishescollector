@@ -118,6 +118,7 @@ export default async function ProfilePage() {
           characterColor={profile?.character_color ?? 'default'}
           unlockedColors={unlockedColors}
           doubloons={profile?.doubloons ?? 0}
+          gems={profile?.gems ?? 0}
           equippedBadges={(profile?.equipped_badges as string[] | null) ?? []}
           equippedBoat={(profile?.equipped_boat as string | null) ?? null}
           equippedHat={(profile?.equipped_hat as string | null) ?? null}

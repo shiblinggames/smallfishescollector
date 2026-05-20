@@ -68,43 +68,50 @@ export async function updateShowcase(variantIds: number[]): Promise<{ error?: st
 }
 
 export async function purchaseCharacterColor(colorId: string): Promise<
-  { doubloons: number; unlockedColors: string[] } | { error: string }
+  { doubloons: number; gems: number; unlockedColors: string[] } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
   const color = CHARACTER_COLORS.find(c => c.id === colorId)
-  if (!color || !color.price) return { error: 'Not for sale' }
+  if (!color || (!color.price && !color.gemPrice)) return { error: 'Not for sale' }
+  const useGems = !!color.gemPrice
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, unlocked_character_colors')
+    .select('doubloons, gems, unlocked_character_colors')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
 
   const unlocked = (profile.unlocked_character_colors as string[] | null) ?? []
   if (unlocked.includes(colorId)) return { error: 'Already owned' }
-  if (profile.doubloons < color.price) {
-    return { error: `Need ${color.price.toLocaleString()} ⟡` }
+
+  const cost = (useGems ? color.gemPrice : color.price)!
+  const balance = useGems ? (profile.gems ?? 0) : profile.doubloons
+  if (balance < cost) {
+    return { error: `Need ${cost.toLocaleString()} ${useGems ? '◆' : '⟡'}` }
   }
 
-  const newDoubloons = profile.doubloons - color.price
+  const newDoubloons = useGems ? profile.doubloons : profile.doubloons - cost
+  const newGems = useGems ? (profile.gems ?? 0) - cost : (profile.gems ?? 0)
   const newUnlocked = [...unlocked, colorId]
+  const profileUpdate: Record<string, unknown> = { unlocked_character_colors: newUnlocked }
+  if (useGems) profileUpdate.gems = newGems
+  else profileUpdate.doubloons = newDoubloons
+
   await Promise.all([
-    admin.from('profiles')
-      .update({ doubloons: newDoubloons, unlocked_character_colors: newUnlocked })
-      .eq('id', user.id),
-    admin.from('doubloon_transactions').insert({
+    admin.from('profiles').update(profileUpdate).eq('id', user.id),
+    admin.from(useGems ? 'gem_transactions' : 'doubloon_transactions').insert({
       user_id: user.id,
-      amount: -color.price,
+      amount: -cost,
       reason: `Bought ${color.name} skin`,
     }),
   ])
 
-  return { doubloons: newDoubloons, unlockedColors: newUnlocked }
+  return { doubloons: newDoubloons, gems: newGems, unlockedColors: newUnlocked }
 }
 
 export async function updateCharacterColor(colorId: string): Promise<{ error?: string }> {
