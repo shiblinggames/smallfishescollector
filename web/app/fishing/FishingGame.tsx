@@ -3139,30 +3139,41 @@ export default function FishingGame({
     return s + Math.floor(i.fish_species.sell_value * mult * 0.90 * liquidateFee) * i.quantity
   }, 0)
 
-  const isBobbing = charFrame === 'wait' && (phase === 'casting' || phase === 'hooked')
+  // Active bobbing — calm casting wait + hooked-fish struggle. The world
+  // bob (painted scene shake) is gated to phase==='hooked' AND this flag.
+  const isActiveBobbing = charFrame === 'wait' && (phase === 'casting' || phase === 'hooked')
+  // Ambient idle bob — gentle rise/fall on the boat+character even when
+  // the player is just sitting on /fishing, so the scene reads as "on the
+  // water" instead of frozen. Smaller amplitude + slower period than the
+  // casting bob so it doesn't compete visually.
+  const isIdleBobbing = charFrame === 'rest'
 
   const cp  = CHAR_POS[charFrame]
   const crc = CHAR_ROD_OVERLAY[charFrame]
   const chc = CHAR_HOOK_OVERLAY[charFrame]
 
   const hookedRarity = hookedFish?.biteRarity ?? 1
-  const bgBobAnimate = !isBobbing
-    ? { x: 0, y: 0 }
-    : phase !== 'hooked'
-      ? { x: 0, y: [0, -6, 0] }
-      : hookedRarity >= 5 ? { x: [0, -8, 8, -6, 6, -3, 0], y: [0, 15, -4, 13, -1, 0] }
-      : hookedRarity >= 4 ? { x: [0, -4, 4, -2, 0],         y: [0, 11, -1, 9, 0] }
-      : hookedRarity >= 3 ? { x: 0,                          y: [0, 8, 0] }
-      : hookedRarity >= 2 ? { x: 0,                          y: [0, 5, 0] }
-      :                     { x: 0,                          y: [0, 3, 0] }
-  const bgBobTransition = !isBobbing
-    ? { duration: 0.12 }
-    : phase !== 'hooked'
-      ? { duration: 2.5, repeat: Infinity, ease: 'easeInOut' as const }
-      : {
-          duration: hookedRarity >= 5 ? 0.32 : hookedRarity >= 4 ? 0.40 : hookedRarity >= 3 ? 0.50 : hookedRarity >= 2 ? 0.60 : 0.72,
-          repeat: Infinity, ease: 'easeInOut' as const,
-        }
+  const bgBobAnimate = isIdleBobbing
+    ? { x: 0, y: [0, -4, 0] }
+    : !isActiveBobbing
+      ? { x: 0, y: 0 }
+      : phase !== 'hooked'
+        ? { x: 0, y: [0, -6, 0] }
+        : hookedRarity >= 5 ? { x: [0, -8, 8, -6, 6, -3, 0], y: [0, 15, -4, 13, -1, 0] }
+        : hookedRarity >= 4 ? { x: [0, -4, 4, -2, 0],         y: [0, 11, -1, 9, 0] }
+        : hookedRarity >= 3 ? { x: 0,                          y: [0, 8, 0] }
+        : hookedRarity >= 2 ? { x: 0,                          y: [0, 5, 0] }
+        :                     { x: 0,                          y: [0, 3, 0] }
+  const bgBobTransition = isIdleBobbing
+    ? { duration: 3.4, repeat: Infinity, ease: 'easeInOut' as const }
+    : !isActiveBobbing
+      ? { duration: 0.12 }
+      : phase !== 'hooked'
+        ? { duration: 2.5, repeat: Infinity, ease: 'easeInOut' as const }
+        : {
+            duration: hookedRarity >= 5 ? 0.32 : hookedRarity >= 4 ? 0.40 : hookedRarity >= 3 ? 0.50 : hookedRarity >= 2 ? 0.60 : 0.72,
+            repeat: Infinity, ease: 'easeInOut' as const,
+          }
 
   // World bob — only fires during the hooked-fish struggle so the
   // painted scene shakes for that dramatic moment. Calm casting and
@@ -3170,8 +3181,8 @@ export default function FishingGame({
   // bob (the boat rocking against a stable horizon reads more like
   // "on the water" than "the camera is shaking"). Reuses bgBobAnimate's
   // hooked-phase values when active.
-  const worldBobAnimate    = phase === 'hooked' && isBobbing ? bgBobAnimate    : { x: 0, y: 0 }
-  const worldBobTransition = phase === 'hooked' && isBobbing ? bgBobTransition : { duration: 0.12 }
+  const worldBobAnimate    = phase === 'hooked' && isActiveBobbing ? bgBobAnimate    : { x: 0, y: 0 }
+  const worldBobTransition = phase === 'hooked' && isActiveBobbing ? bgBobTransition : { duration: 0.12 }
 
   return (
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0" style={{ background: '#08121c', zIndex: 40, display: 'flex', justifyContent: 'center' }}>
