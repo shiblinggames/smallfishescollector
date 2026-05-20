@@ -1312,3 +1312,14 @@ html, body {
     rgba(180,200,255,0.045) 90%,
     transparent 100%);
 }
+
+/* Freeze ambient layers during the dial / reel phase so the GPU has
+   spare budget for the aim needle on lower-end mobile. Same rationale
+   as `pause-glows` on the rod/hook. animation-play-state pauses (vs.
+   removing) so the overlays stay visually present — they just stop
+   drifting until the player finishes the catch. */
+.ambient-paused .fishing-clouds-overlay,
+.ambient-paused .fishing-clouds-reflection,
+.ambient-paused .fishing-water-shimmer {
+  animation-play-state: paused;
+}

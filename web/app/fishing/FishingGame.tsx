@@ -3145,7 +3145,10 @@ export default function FishingGame({
 
   return (
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0" style={{ background: '#08121c', zIndex: 40, display: 'flex', justifyContent: 'center' }}>
-      <div className="relative w-full max-w-md overflow-hidden" style={{ height: '100%' }}>
+      <div
+        className={`relative w-full max-w-md overflow-hidden${(phase === 'catching' || phase === 'reeling') ? ' ambient-paused' : ''}`}
+        style={{ height: '100%' }}
+      >
 
         {/* Background — gated to worldBobAnimate so the painted scene
             stays still during calm casting (only the boat/character
