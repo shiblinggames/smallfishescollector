@@ -2334,6 +2334,15 @@ export default function FishingGame({
     elapsedMsRef.current = 0
     nextChgMsRef.current = (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
 
+    // Throttle setState ticks for `angle` so React only renders the zone
+    // highlight ~20 Hz instead of 60 Hz. The needle position is
+    // ref-driven via setAttribute below, so visual smoothness is
+    // unaffected by this throttle — but cutting the React render rate
+    // by 3× eliminates main-thread frame-drops that show up as needle
+    // stutter on slower devices.
+    let lastSetAngleAt = 0
+    const ANGLE_STATE_THROTTLE_MS = 50
+
     const tick = (timestamp: number) => {
       if (phaseRef.current !== 'catching') return
       if (lastTimeRef.current === 0) lastTimeRef.current = timestamp
@@ -2371,9 +2380,13 @@ export default function FishingGame({
       const ng = needleGroupRef.current
       if (ng) ng.setAttribute('transform', `rotate(${angleRef.current}, ${CX}, ${CY})`)
       // Keep React state in sync too — `angle` drives currentZone (zone
-      // label + zone highlight opacity). Without this, the dial UI is
-      // stuck on whatever zone was under the initial angle.
-      setAngle(angleRef.current)
+      // label + zone highlight opacity). Throttled so we render that UI
+      // at ~20 Hz instead of every frame; needle position itself is
+      // ref-driven so visual smoothness isn't affected.
+      if (timestamp - lastSetAngleAt >= ANGLE_STATE_THROTTLE_MS) {
+        lastSetAngleAt = timestamp
+        setAngle(angleRef.current)
+      }
       animRef.current = requestAnimationFrame(tick)
     }
     animRef.current = requestAnimationFrame(tick)
