@@ -92,16 +92,21 @@ export interface RaidNode {
 }
 
 /** Derive a drop list (with rolled-once odds) from a boss raid's loot
- *  table so the node sheet and the live crate never drift apart. */
+ *  table so the node sheet and the live crate never drift apart.
+ *  Doubloons entries skip the % chip — the % feels transactional for
+ *  currency and only really tells the player "you'll probably get gold",
+ *  which they already assume. The chip stays on items / skins / packs
+ *  where the rarity actually matters to the player's chase decision. */
 function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
   const total = loot.reduce((s, l) => s + l.weight, 0)
   return loot.map(l => {
+    const isDoubloons = l.id.startsWith('doubloons_')
     const drop: RaidNodeDrop = {
       label: l.label,
       emoji: l.emoji,
       image: l.image,
       rarity: l.rarity,
-      chance: `${Math.round((l.weight / total) * 100)}%`,
+      ...(isDoubloons ? {} : { chance: `${Math.round((l.weight / total) * 100)}%` }),
     }
     // Ship skin → show its effect swatch + say it's a cosmetic.
     if (l.shipSkinId) {
@@ -158,8 +163,14 @@ export const RAID_MAP: RaidNode[] = [
         "Pete doesn't do his own dirty work. That's what the Reef Raiders are for. Sink one and there's usually another bobbing up to take its place.\n\nNo grand plan here. Pick them off one at a time and see who comes asking once enough of them stop coming home.",
       enemies: ['Reef Raider'],
       drops: [
-        { label: 'Navigation XP', emoji: '✨', rarity: 'common', chance: 'Every kill' },
-        { label: 'Doubloons', emoji: '🪙', rarity: 'common', chance: 'Every kill' },
+        // Single combined-reward line — skirmish is "kill a raider, get
+        // XP + gold." Two separate rows with "Every kill" chips was
+        // redundant; one line spells out the actual amounts up-front.
+        {
+          label: `Every kill: +${CORSAIRS_RECKONING.killRewards.brute.xp} Nav XP · +${CORSAIRS_RECKONING.killRewards.brute.gold} ⟡`,
+          emoji: '⚔️',
+          rarity: 'common',
+        },
       ],
       dropsNote: "Pete never runs short of Raiders. Drop by and thin the numbers whenever it suits you.",
     },

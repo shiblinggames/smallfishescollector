@@ -325,10 +325,10 @@ function NodeDetailSheet({
       <button
         onClick={enter}
         disabled={locked}
-        className="font-cinzel font-700 uppercase tracking-[0.08em]"
+        className="font-cinzel font-800 uppercase tracking-[0.04em]"
         style={{
           width: '100%', padding: '0.85rem', borderRadius: 12, border: 'none',
-          fontSize: '0.95rem',
+          fontSize: '1.02rem',
           background: locked ? 'rgba(255,255,255,0.06)' : accent,
           color: locked ? '#5a5856' : '#1a0f02',
           cursor: locked ? 'not-allowed' : 'pointer',
@@ -339,16 +339,16 @@ function NodeDetailSheet({
     )
   } else if (node.type === 'milestone') {
     if (cleared) {
-      cta = <div className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '0.95rem', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.3)', color: '#4ade80' }}>{node.milestone?.spend ? 'Passage Bought ✓' : 'Backing Secured ✓'}</div>
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.3)', color: '#4ade80' }}>{node.milestone?.spend ? 'Passage Bought ✓' : 'Backing Secured ✓'}</div>
     } else if (locked) {
-      cta = <div className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '0.95rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
     } else if (claimable) {
       cta = (
         <button
           onClick={claim}
           disabled={pending}
-          className="font-cinzel font-700 uppercase tracking-[0.08em]"
-          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, border: 'none', fontSize: '0.95rem', background: accent, color: '#1a0f02', cursor: pending ? 'wait' : 'pointer' }}
+          className="font-cinzel font-800 uppercase tracking-[0.04em]"
+          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, border: 'none', fontSize: '1.02rem', background: accent, color: '#1a0f02', cursor: pending ? 'wait' : 'pointer' }}
         >
           {pending ? '…' : node.milestone?.spend ? `Pay · ${node.milestone.amount.toLocaleString()} ⟡` : `Claim${node.milestone?.rewardDoubloons ? ` · +${node.milestone.rewardDoubloons} ⟡` : ''}`}
         </button>
@@ -375,19 +375,19 @@ function NodeDetailSheet({
       )
     }
   } else if (node.type === 'shop' && !node.choice) {
-    cta = <div className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '0.95rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Coming Soon</div>
+    cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Coming Soon</div>
   } else if (node.type === 'story') {
     if (cleared) {
-      cta = <div className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '0.95rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Logged ✓</div>
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Logged ✓</div>
     } else if (locked) {
-      cta = <div className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '0.95rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
     } else {
       cta = (
         <button
           onClick={readStory}
           disabled={pending}
-          className="font-cinzel font-700 uppercase tracking-[0.08em]"
-          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, border: 'none', fontSize: '0.95rem', background: accent, color: '#1a0f02', cursor: pending ? 'wait' : 'pointer' }}
+          className="font-cinzel font-800 uppercase tracking-[0.04em]"
+          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, border: 'none', fontSize: '1.02rem', background: accent, color: '#1a0f02', cursor: pending ? 'wait' : 'pointer' }}
         >
           {pending ? '…' : (detail.ctaLabel ?? 'Continue the Story →')}
         </button>
