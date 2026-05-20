@@ -1944,11 +1944,30 @@ export default function FishingGame({
       window.removeEventListener('touchstart', resumeOnce)
       window.removeEventListener('click', resumeOnce)
       window.removeEventListener('keydown', resumeOnce)
-      try { audioSourceRef.current?.stop() } catch {}
+      // Fade out before closing the context so leaving the screen doesn't
+      // chop the music abruptly. If the audio was already silent (muted /
+      // context never resumed) just close immediately.
+      const closingSource = audioSourceRef.current
+      const closingCtx = ctx
+      const closingGain = gain
       audioSourceRef.current = null
       audioGainRef.current = null
-      ctx.close().catch(() => {})
       audioCtxRef.current = null
+      const FADE_S = 0.8
+      if (closingCtx.state === 'running' && closingGain.gain.value > 0) {
+        try {
+          closingGain.gain.cancelScheduledValues(closingCtx.currentTime)
+          closingGain.gain.setValueAtTime(closingGain.gain.value, closingCtx.currentTime)
+          closingGain.gain.linearRampToValueAtTime(0, closingCtx.currentTime + FADE_S)
+        } catch {}
+        setTimeout(() => {
+          try { closingSource?.stop() } catch {}
+          closingCtx.close().catch(() => {})
+        }, FADE_S * 1000 + 50)
+      } else {
+        try { closingSource?.stop() } catch {}
+        closingCtx.close().catch(() => {})
+      }
     }
   }, [])
 
@@ -3257,7 +3276,21 @@ export default function FishingGame({
             it doesn't fight the header. Floats over the gameplay scene. */}
         <button
           type="button"
-          onClick={() => setAudioMuted(m => !m)}
+          onClick={() => {
+            // iOS Safari + PWA standalone only resume an AudioContext when
+            // resume() is called synchronously inside the gesture call stack.
+            // If we deferred to the audioMuted useEffect, the gesture context
+            // would be gone by then and resume() would silently fail. Set the
+            // gain here too so an audio-ready PWA goes straight to playing.
+            const ctx = audioCtxRef.current
+            const gain = audioGainRef.current
+            const nextMuted = !audioMuted
+            if (ctx) {
+              if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+              if (gain) gain.gain.setValueAtTime(nextMuted ? 0 : 1, ctx.currentTime)
+            }
+            setAudioMuted(nextMuted)
+          }}
           aria-label={audioMuted ? 'Unmute soundtrack' : 'Mute soundtrack'}
           style={{
             position: 'absolute', bottom: 110, left: 10, zIndex: 60,
