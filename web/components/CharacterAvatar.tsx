@@ -45,11 +45,8 @@ export default function CharacterAvatar({
   // Otherwise apply the player's chosen color as a soft radial gradient + ring.
   const bgIsNone     = !bgColor   || bgColor   === 'none'
   const ringIsNone   = !ringColor || ringColor === 'none'
-  // Aurora is a special animated ring, not a color. It only applies when
-  // the call site hasn't forced its own borderStyle.
-  const isAurora     = !borderStyle && ringColor === 'aurora'
-  // Animated specials (Ember/Tide borders, Sunset/Nebula/Biolum bgs) — each
-  // has a CSS class on globals.css that paints the layer.
+  // Animated specials (Aurora/Ember/Tide borders, Sunset/Nebula/Biolum bgs) —
+  // each has a CSS class on globals.css that paints the layer.
   const borderSpecial = !borderStyle ? getAvatarSpecial(ringColor) : undefined
   const bgSpecial     = getAvatarSpecial(bgColor)
   const isBgSpecial   = !!bgSpecial && bgSpecial.kind === 'bg'
@@ -87,14 +84,14 @@ export default function CharacterAvatar({
     </div>
   )
 
-  if (isAurora || isBorderSpecial) {
+  if (isBorderSpecial) {
     // The animated conic ring is its own layer behind a non-rotating inner
     // circle (inset by the ring thickness) so the sprite never spins.
     // Thickness scales with size so it's proportional everywhere — ~2px in
     // the small nav, ~6px on the large 132px profile avatar (a flat 2px
     // read as a hairline there, 8px felt too bulky).
     const RING = Math.max(2, Math.round(size * 0.045))
-    const ringClass = isAurora ? 'avatar-aurora' : (borderSpecial!.cssClass)
+    const ringClass = borderSpecial!.cssClass
     return (
       <div style={{ width: size, height: size, position: 'relative', flexShrink: 0 }}>
         <div className={ringClass} aria-hidden style={{ position: 'absolute', inset: 0 }} />

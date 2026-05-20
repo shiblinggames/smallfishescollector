@@ -73,6 +73,7 @@ export interface AvatarSpecial {
 }
 
 export const AVATAR_SPECIALS: AvatarSpecial[] = [
+  { id: 'aurora', label: 'Aurora',        hex: AURORA_VALUE, kind: 'border', gemPrice: 300, cssClass: 'avatar-aurora' },
   { id: 'ember',  label: 'Ember',         hex: EMBER_VALUE,  kind: 'border', gemPrice: 300, cssClass: 'avatar-ember' },
   { id: 'tide',   label: 'Tide',          hex: TIDE_VALUE,   kind: 'border', gemPrice: 300, cssClass: 'avatar-tide' },
   { id: 'sunset', label: 'Sunset',        hex: SUNSET_VALUE, kind: 'bg',     gemPrice: 500, cssClass: 'avatar-bg-sunset' },
@@ -86,10 +87,9 @@ export function getAvatarSpecial(hex: string | null | undefined): AvatarSpecial 
 }
 
 /** Border-only extras — border-only options that aren't plain colors.
- *  Auto-included in ALLOWED_BORDER_HEXES + isPremiumBorder. */
-export const AVATAR_BORDER_EXTRAS: AvatarColorOption[] = [
-  { id: 'aurora', label: 'Aurora', hex: AURORA_VALUE, premiumOnly: true },
-]
+ *  Currently empty; kept as a slot for future border-only swatches that
+ *  don't fit the gem-purchase animated specials model. */
+export const AVATAR_BORDER_EXTRAS: AvatarColorOption[] = []
 
 /** All allowed bg values: free/premium palette + animated bg specials. */
 export const ALLOWED_BG_HEXES: string[] = [

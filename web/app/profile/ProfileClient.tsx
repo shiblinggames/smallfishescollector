@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { updateUsername, updateShowcase, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial } from '@/app/u/actions'
-import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, AVATAR_SPECIALS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE, AURORA_VALUE } from '@/lib/avatarColors'
+import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, AVATAR_SPECIALS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE } from '@/lib/avatarColors'
 import { equipBadge, unequipBadge } from '@/app/achievements/badgeActions'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import CharacterAvatar from '@/components/CharacterAvatar'
@@ -1319,13 +1319,11 @@ export default function ProfileClient({
               {[...AVATAR_PALETTE, ...AVATAR_BORDER_EXTRAS].map(c => {
                 const isActive = (avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR) === c.hex
                 const isNone = c.hex === NONE_VALUE
-                const isAurora = c.hex === AURORA_VALUE
                 const locked = !!c.premiumOnly && !isPremium
                 return (
                   <button
                     key={`bd-${c.id}`}
                     type="button"
-                    className={isAurora ? 'avatar-aurora' : undefined}
                     onClick={() => {
                       if (locked) { flashLockMsg('Requires Premium membership'); return }
                       setAvatarBorder(c.hex)
@@ -1335,19 +1333,19 @@ export default function ProfileClient({
                     style={{
                       width: '100%', aspectRatio: '1 / 1',
                       borderRadius: '50%',
-                      backgroundColor: isAurora ? undefined : 'rgba(6,12,20,0.7)',
+                      backgroundColor: 'rgba(6,12,20,0.7)',
                       backgroundImage: isNone
                         ? 'linear-gradient(45deg, rgba(255,255,255,0.18) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0.18) 75%, transparent 75%, transparent)'
                         : undefined,
                       backgroundSize: isNone ? '8px 8px' : undefined,
-                      border: isNone ? '1px dashed rgba(255,255,255,0.4)' : isAurora ? 'none' : `3px solid ${c.hex}`,
+                      border: isNone ? '1px dashed rgba(255,255,255,0.4)' : `3px solid ${c.hex}`,
                       outline: isActive ? '2px solid #f0c040' : 'none',
                       outlineOffset: 2,
                       cursor: 'pointer',
                       padding: 0,
                       opacity: locked ? 0.55 : 1,
                       position: 'relative',
-                      boxShadow: c.premiumOnly && !locked && !isAurora
+                      boxShadow: c.premiumOnly && !locked
                         ? `0 0 10px ${c.hex}55, inset 0 0 6px ${c.hex}44`
                         : undefined,
                       appearance: 'none',
