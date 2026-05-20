@@ -1487,9 +1487,12 @@ export default function ProfileClient({
                   setAvatarSaving(false)
                   setAvatarPickerOpen(false)
                 }}
-                className="btn-gold font-karla font-700 uppercase tracking-[0.1em]"
+                className="font-karla font-700 uppercase tracking-[0.1em]"
                 style={{
                   flex: 2, padding: '0.85rem 0',
+                  background: 'rgba(96,165,250,0.16)',
+                  border: '1px solid rgba(96,165,250,0.55)',
+                  color: '#cfe2ff',
                   borderRadius: 12, fontSize: '0.8rem',
                   cursor: avatarSaving ? 'default' : 'pointer',
                   opacity: avatarSaving ? 0.6 : 1,
