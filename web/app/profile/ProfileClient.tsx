@@ -1282,6 +1282,10 @@ export default function ProfileClient({
                     type="button"
                     onClick={() => {
                       if (!owned) {
+                        if (!isPremium) {
+                          flashLockMsg(`${s.label} — Premium membership required`)
+                          return
+                        }
                         setPurchaseError(null)
                         setPurchasePrompt({ kind: 'special', id: s.id, name: s.label, price: s.gemPrice, currency: 'gems' })
                         return
@@ -1366,6 +1370,10 @@ export default function ProfileClient({
                     className={s.cssClass}
                     onClick={() => {
                       if (!owned) {
+                        if (!isPremium) {
+                          flashLockMsg(`${s.label} — Premium membership required`)
+                          return
+                        }
                         setPurchaseError(null)
                         setPurchasePrompt({ kind: 'special', id: s.id, name: s.label, price: s.gemPrice, currency: 'gems' })
                         return

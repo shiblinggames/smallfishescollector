@@ -845,6 +845,19 @@ html, body {
   .avatar-tide { animation: none; }
 }
 
+/* Sovereign border — flagship gold conic with a brighter highlight sweep
+   layered over a deeper base. Faster spin to read as showpiece. */
+.avatar-sovereign {
+  border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    #fef3c7, #fbbf24, #b45309, #fde68a, #f59e0b, #fef9c3, #fbbf24, #fef3c7);
+  animation: avatar-aurora-spin 9s linear infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-sovereign { animation: none; }
+}
+
 /* Animated avatar backgrounds — render via inset overflow:hidden so the
    sprite/character above stays static while the bg breathes.
 
@@ -917,6 +930,32 @@ html, body {
   .avatar-bg-nebula::after,
   .avatar-bg-biolum::before,
   .avatar-bg-biolum::after { animation: none; }
+}
+
+/* Treasure background — rotating golden sunburst over a warm amber core.
+   The conic overlay is blurred + semi-transparent so it reads as light
+   shafts sweeping over a deep gold base, not a hard ray pattern. */
+@keyframes avatar-bg-treasure-spin { to { transform: rotate(360deg); } }
+.avatar-bg-treasure {
+  position: relative;
+  background: radial-gradient(circle at 50% 45%, #fde68a 0%, #b45309 55%, #4a2007 100%);
+  overflow: hidden;
+}
+.avatar-bg-treasure::after {
+  content: '';
+  position: absolute;
+  inset: -30%;
+  background: conic-gradient(from 0deg,
+    rgba(255, 248, 200, 0.55), rgba(255, 248, 200, 0) 22%,
+    rgba(255, 248, 200, 0.45), rgba(255, 248, 200, 0) 50%,
+    rgba(255, 248, 200, 0.55), rgba(255, 248, 200, 0) 78%,
+    rgba(255, 248, 200, 0.55));
+  filter: blur(4px);
+  animation: avatar-bg-treasure-spin 14s linear infinite;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-bg-treasure::after { animation: none; }
 }
 
 /* Tide Run "NEW BEST" — a gentle celebratory pulse (subtle, not flashy). */

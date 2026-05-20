@@ -188,7 +188,8 @@ export async function updateAvatarColors(input: {
   return {}
 }
 
-/** Purchase an animated avatar special (border or bg) with gems. */
+/** Purchase an animated avatar special (border or bg) with gems.
+ *  Requires an active Premium membership AND enough gems. */
 export async function purchaseAvatarSpecial(specialId: string): Promise<
   { gems: number; unlockedSpecials: string[] } | { error: string }
 > {
@@ -202,10 +203,12 @@ export async function purchaseAvatarSpecial(specialId: string): Promise<
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gems, unlocked_avatar_specials')
+    .select('gems, unlocked_avatar_specials, is_premium, premium_expires_at')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
+
+  if (!isPremiumActive(profile)) return { error: 'Premium membership required' }
 
   const owned = (profile.unlocked_avatar_specials as string[] | null) ?? []
   if (owned.includes(specialId)) return { error: 'Already owned' }
