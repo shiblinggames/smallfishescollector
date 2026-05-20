@@ -16,7 +16,7 @@ export default async function HomePage() {
     <main className="min-h-screen flex flex-col items-center justify-center px-6 py-16 relative overflow-hidden">
       {/* Background */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/loginbackground.jpeg" alt="" aria-hidden style={{
+      <img src="/loginbackground.webp" alt="" aria-hidden style={{
         position: 'fixed', inset: 0, width: '100%', height: '100%',
         objectFit: 'cover', objectPosition: 'top center', zIndex: 0, pointerEvents: 'none',
       }} />

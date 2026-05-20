@@ -1197,7 +1197,7 @@ html, body {
   left: 0;
   right: 0;
   pointer-events: none;
-  background-image: url(/clouds1.png);
+  background-image: url(/clouds1.webp);
   background-repeat: repeat-x;
   background-position: 0px top;
   /* Fixed pixel height keeps cloud puffs the same physical size across
@@ -1242,7 +1242,7 @@ html, body {
   left: 0;
   right: 0;
   pointer-events: none;
-  background-image: url(/clouds1.png);
+  background-image: url(/clouds1.webp);
   background-repeat: repeat-x;
   background-position: 0 top;
   background-size: auto 180px;

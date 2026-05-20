@@ -160,7 +160,7 @@ export default function ZoneLanding({
       <div className="relative w-full max-w-md overflow-hidden" style={{ height: '100%' }}>
 
         {/* Background */}
-        <img src="/fishing.jpeg" alt="" style={{
+        <img src="/fishing.webp" alt="" style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%',
           objectFit: 'cover', objectPosition: 'top center',
         }} />

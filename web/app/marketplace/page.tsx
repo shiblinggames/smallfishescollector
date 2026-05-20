@@ -113,7 +113,7 @@ export default async function MarketplacePage() {
               <a href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block' }}>
                 <DestCard
                   accent="#a78bfa"
-                  art="/physicalboardgame.png"
+                  art="/physicalboardgame.webp"
                   artWidth={145}
                   eyebrow="Board game"
                   title="Seas the Booty"

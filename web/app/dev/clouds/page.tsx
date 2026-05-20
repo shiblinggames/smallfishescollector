@@ -107,7 +107,7 @@ export default function CloudsTunerPage() {
   left: 0;
   right: 0;
   pointer-events: none;
-  background-image: url(/clouds1.png);
+  background-image: url(/clouds1.webp);
   background-repeat: repeat-x;
   background-position: ${posOffsetPx}px top;
   background-size: auto ${cloudHeightPx}px;
@@ -122,7 +122,7 @@ export default function CloudsTunerPage() {
   left: 0;
   right: 0;
   pointer-events: none;
-  background-image: url(/clouds1.png);
+  background-image: url(/clouds1.webp);
   background-repeat: repeat-x;
   background-position: 0 top;
   background-size: auto ${reflectCloudHeightPx}px;
@@ -258,7 +258,7 @@ const ZONE_CLOUD_VARIANT: Record<string, CloudVariant> = {
                   top: 0, left: 0, right: 0,
                   height: `${horizonPct}%`,
                   pointerEvents: 'none',
-                  backgroundImage: 'url(/clouds1.png)',
+                  backgroundImage: 'url(/clouds1.webp)',
                   backgroundRepeat: 'repeat-x',
                   backgroundPosition: `${posOffsetPx}px top`,
                   backgroundSize: `auto ${cloudHeightPx}px`,
