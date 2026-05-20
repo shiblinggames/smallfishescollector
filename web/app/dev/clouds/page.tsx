@@ -67,6 +67,22 @@ export default function CloudsTunerPage() {
   const [opacity, setOpacity]       = useState(0.65)
   const [maskStartPct, setMaskStart] = useState(68)
   const [posOffsetPx, setPosOffset] = useState(0)     // background-position-x phase offset
+
+  // Cloud reflection on water — defaults match .fishing-clouds-reflection
+  // in globals.css. Inline-overridden on the preview div so sliders are live.
+  const [reflectBandPctOfScene, setReflectBandPct] = useState(14)  // band height as % of scene
+  const [reflectCloudHeightPx, setReflectCloudHeight] = useState(180)
+  const [reflectOpacity, setReflectOpacity] = useState(0.22)
+  const [reflectDriftSec, setReflectDrift] = useState(1500)
+  const [reflectMaskTop, setReflectMaskTop] = useState(25)
+  const [reflectMaskBottom, setReflectMaskBottom] = useState(78)
+
+  // Water shimmer — defaults match .fishing-water-shimmer in globals.css.
+  const [shimmerBandPx, setShimmerBand] = useState(1600)
+  const [shimmerDriftSec, setShimmerDrift] = useState(120)
+  const [shimmerLayerOpacity, setShimmerOpacity] = useState(1.0)
+  const [shimmerMaskTop, setShimmerMaskTop] = useState(18)
+  const [shimmerMaskBottom, setShimmerMaskBottom] = useState(82)
   // Preview frame size — test mobile vs desktop without resizing window.
   const [previewW, setPreviewW] = useState(448)
   const [previewH, setPreviewH] = useState(720)
@@ -93,7 +109,51 @@ export default function CloudsTunerPage() {
   animation: cloudsDrift ${driftSec}s linear infinite;
   -webkit-mask-image: linear-gradient(to bottom, black ${maskStartPct}%, transparent 100%);
           mask-image: linear-gradient(to bottom, black ${maskStartPct}%, transparent 100%);
-}`
+}
+
+.fishing-clouds-reflection {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  background-image: url(/clouds1.png);
+  background-repeat: repeat-x;
+  background-position: 0 top;
+  background-size: auto ${reflectCloudHeightPx}px;
+  opacity: ${reflectOpacity.toFixed(2)};
+  transform: scaleY(-1);
+  animation: cloudsReflectDrift ${reflectDriftSec}s linear infinite;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black ${reflectMaskTop}%, black ${reflectMaskBottom}%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, black ${reflectMaskTop}%, black ${reflectMaskBottom}%, transparent 100%);
+}
+/* Note: reflection band height (currently ${reflectBandPctOfScene}% of scene)
+   is set inline on the div in FishingGame.tsx via the height style. */
+
+.fishing-water-shimmer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  background-image: linear-gradient(85deg,
+    transparent 0%,
+    rgba(255,255,255,0.08) 12%,
+    transparent 22%,
+    transparent 48%,
+    rgba(255,255,255,0.06) 55%,
+    transparent 64%,
+    transparent 82%,
+    rgba(255,255,255,0.05) 90%,
+    transparent 100%);
+  background-size: ${shimmerBandPx}px 100%;
+  background-repeat: repeat-x;
+  opacity: ${shimmerLayerOpacity.toFixed(2)};
+  animation: waterShimmerDrift ${shimmerDriftSec}s linear infinite;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black ${shimmerMaskTop}%, black ${shimmerMaskBottom}%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, black ${shimmerMaskTop}%, black ${shimmerMaskBottom}%, transparent 100%);
+}
+/* Variant tints (--sunset / --night) for clouds, reflection, and shimmer
+   are unchanged by the tuner — edit the filter / gradient stops directly
+   in globals.css if you want to dial those. */`
 
   const generatedHorizon = `const ZONE_HORIZON_PCT: Record<string, number> = {
   shallows:     ${horizon.shallows},
@@ -205,25 +265,41 @@ const ZONE_CLOUD_VARIANT: Record<string, CloudVariant> = {
               />
             )}
 
-            {/* Cloud reflection on water — pulled straight from globals.css
-                (className picks up the live styles + variant tint). Lets
-                you preview both layers in context against the painted
-                backdrop while you're tuning the sky overlay above. */}
+            {/* Cloud reflection on water — className supplies the bg
+                image + animation name + variant filter + scaleY flip.
+                Inline overrides the tunable bits so sliders are live. */}
             {showCloud && (
               <div
                 aria-hidden
                 className={`fishing-clouds-reflection${tintSuffix ? ` fishing-clouds-reflection${tintSuffix}` : ''}`}
-                style={{ top: `${horizonPct}%`, height: '14%' }}
+                style={{
+                  top: `${horizonPct}%`,
+                  height: `${reflectBandPctOfScene}%`,
+                  backgroundSize: `auto ${reflectCloudHeightPx}px`,
+                  opacity: reflectOpacity,
+                  animationDuration: `${reflectDriftSec}s`,
+                  WebkitMaskImage: `linear-gradient(to bottom, transparent 0%, black ${reflectMaskTop}%, black ${reflectMaskBottom}%, transparent 100%)`,
+                  maskImage: `linear-gradient(to bottom, transparent 0%, black ${reflectMaskTop}%, black ${reflectMaskBottom}%, transparent 100%)`,
+                }}
               />
             )}
 
-            {/* Water surface shimmer — universal, lives on every zone with
-                a visible water band. Uses the live globals.css rule. */}
+            {/* Water surface shimmer — className supplies the gradient
+                bands (per-variant color) + animation name. Inline
+                overrides size, drift, opacity, mask. */}
             {showShimmer && (
               <div
                 aria-hidden
                 className={`fishing-water-shimmer${tintSuffix ? ` fishing-water-shimmer${tintSuffix}` : ''}`}
-                style={{ top: `${horizonPct}%`, bottom: 0 }}
+                style={{
+                  top: `${horizonPct}%`,
+                  bottom: 0,
+                  backgroundSize: `${shimmerBandPx}px 100%`,
+                  animationDuration: `${shimmerDriftSec}s`,
+                  opacity: shimmerLayerOpacity,
+                  WebkitMaskImage: `linear-gradient(to bottom, transparent 0%, black ${shimmerMaskTop}%, black ${shimmerMaskBottom}%, transparent 100%)`,
+                  maskImage: `linear-gradient(to bottom, transparent 0%, black ${shimmerMaskTop}%, black ${shimmerMaskBottom}%, transparent 100%)`,
+                }}
               />
             )}
 
@@ -266,12 +342,35 @@ const ZONE_CLOUD_VARIANT: Record<string, CloudVariant> = {
             </p>
           </Section>
 
-          <Section title="Cloud appearance (shared across zones)">
+          <Section title="Sky clouds (shared across zones)">
             <Slider label="Cloud height" value={cloudHeightPx} min={80} max={600} step={5} unit="px" onChange={setCloudHeightPx} />
             <Slider label="Drift speed"  value={driftSec}      min={60} max={1200} step={10} unit="s loop" onChange={setDriftSec} />
             <Slider label="Opacity"      value={opacity}       min={0} max={1} step={0.05} onChange={setOpacity} />
             <Slider label="Mask start"   value={maskStartPct}  min={20} max={100} step={1} unit="%" onChange={setMaskStart} />
             <Slider label="Pos offset"   value={posOffsetPx}   min={-8000} max={0} step={20} unit="px" onChange={setPosOffset} />
+          </Section>
+
+          <Section title="Cloud reflection (mirrored on water)">
+            <Slider label="Band height"  value={reflectBandPctOfScene} min={0} max={40} step={1} unit="% of scene" onChange={setReflectBandPct} />
+            <Slider label="Cloud height" value={reflectCloudHeightPx}  min={60} max={400} step={5} unit="px" onChange={setReflectCloudHeight} />
+            <Slider label="Opacity"      value={reflectOpacity}        min={0} max={1} step={0.02} onChange={setReflectOpacity} />
+            <Slider label="Drift speed"  value={reflectDriftSec}       min={60} max={2400} step={20} unit="s loop" onChange={setReflectDrift} />
+            <Slider label="Mask top"     value={reflectMaskTop}        min={0} max={50} step={1} unit="%" onChange={setReflectMaskTop} />
+            <Slider label="Mask bottom"  value={reflectMaskBottom}     min={50} max={100} step={1} unit="%" onChange={setReflectMaskBottom} />
+          </Section>
+
+          <Section title="Water shimmer (light bands sweeping the water)">
+            <Slider label="Band width"   value={shimmerBandPx}       min={400} max={3000} step={20} unit="px" onChange={setShimmerBand} />
+            <Slider label="Drift speed"  value={shimmerDriftSec}     min={30} max={400} step={5} unit="s loop" onChange={setShimmerDrift} />
+            <Slider label="Layer opacity" value={shimmerLayerOpacity} min={0} max={1} step={0.05} onChange={setShimmerOpacity} />
+            <Slider label="Mask top"     value={shimmerMaskTop}      min={0} max={50} step={1} unit="%" onChange={setShimmerMaskTop} />
+            <Slider label="Mask bottom"  value={shimmerMaskBottom}   min={50} max={100} step={1} unit="%" onChange={setShimmerMaskBottom} />
+            <p style={{ gridColumn: '1 / -1', fontSize: '0.62rem', color: '#7a7674', lineHeight: 1.4, marginTop: '0.2rem' }}>
+              The shimmer&apos;s highlight color is set per-variant via CSS class
+              (warm amber for sunset, cool blue for night). To dial the
+              colors themselves, edit the linear-gradient stops in
+              globals.css directly.
+            </p>
           </Section>
         </div>
       </div>
