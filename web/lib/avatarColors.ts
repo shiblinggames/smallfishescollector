@@ -52,18 +52,55 @@ export const AVATAR_PALETTE: AvatarColorOption[] = [
  *  special-case the swatch. Premium-only flex cosmetic. */
 export const AURORA_VALUE = 'aurora' as const
 
+/** Gem-purchasable animated specials. Each renders via a dedicated CSS class
+ *  in CharacterAvatar; pickers special-case the preview swatch.
+ *  Borders are 300 ◆, backgrounds are 500 ◆. */
+export const EMBER_VALUE  = 'ember'  as const  // border — rotating fire ring
+export const TIDE_VALUE   = 'tide'   as const  // border — flowing blue/cyan
+export const SUNSET_VALUE = 'sunset' as const  // bg — panning orange→pink→purple
+export const NEBULA_VALUE = 'nebula' as const  // bg — slow purple/blue swirl
+export const BIOLUM_VALUE = 'biolum' as const  // bg — deep blue + floating shimmer
+
+export interface AvatarSpecial {
+  id: string
+  label: string
+  hex: string
+  kind: 'border' | 'bg'
+  /** Gems required to unlock. */
+  gemPrice: number
+  /** CSS class that renders the animation on the preview swatch. */
+  cssClass: string
+}
+
+export const AVATAR_SPECIALS: AvatarSpecial[] = [
+  { id: 'ember',  label: 'Ember',         hex: EMBER_VALUE,  kind: 'border', gemPrice: 300, cssClass: 'avatar-ember' },
+  { id: 'tide',   label: 'Tide',          hex: TIDE_VALUE,   kind: 'border', gemPrice: 300, cssClass: 'avatar-tide' },
+  { id: 'sunset', label: 'Sunset',        hex: SUNSET_VALUE, kind: 'bg',     gemPrice: 500, cssClass: 'avatar-bg-sunset' },
+  { id: 'nebula', label: 'Nebula',        hex: NEBULA_VALUE, kind: 'bg',     gemPrice: 500, cssClass: 'avatar-bg-nebula' },
+  { id: 'biolum', label: 'Bioluminescent',hex: BIOLUM_VALUE, kind: 'bg',     gemPrice: 500, cssClass: 'avatar-bg-biolum' },
+]
+
+export function getAvatarSpecial(hex: string | null | undefined): AvatarSpecial | undefined {
+  if (!hex) return undefined
+  return AVATAR_SPECIALS.find(s => s.hex === hex)
+}
+
 /** Border-only extras — border-only options that aren't plain colors.
  *  Auto-included in ALLOWED_BORDER_HEXES + isPremiumBorder. */
 export const AVATAR_BORDER_EXTRAS: AvatarColorOption[] = [
   { id: 'aurora', label: 'Aurora', hex: AURORA_VALUE, premiumOnly: true },
 ]
 
-/** All allowed bg values. */
-export const ALLOWED_BG_HEXES: string[] = AVATAR_PALETTE.map(c => c.hex)
-/** All allowed border values (palette + premium extras). */
+/** All allowed bg values: free/premium palette + animated bg specials. */
+export const ALLOWED_BG_HEXES: string[] = [
+  ...AVATAR_PALETTE.map(c => c.hex),
+  ...AVATAR_SPECIALS.filter(s => s.kind === 'bg').map(s => s.hex),
+]
+/** All allowed border values: palette + premium aurora + animated border specials. */
 export const ALLOWED_BORDER_HEXES: string[] = [
   ...AVATAR_PALETTE.map(c => c.hex),
   ...AVATAR_BORDER_EXTRAS.map(c => c.hex),
+  ...AVATAR_SPECIALS.filter(s => s.kind === 'border').map(s => s.hex),
 ]
 
 /** True if this border hex requires a premium membership to use. */

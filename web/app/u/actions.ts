@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { CHARACTER_COLORS } from '@/lib/characters'
-import { ALLOWED_BG_HEXES, ALLOWED_BORDER_HEXES, isPremiumBg, isPremiumBorder } from '@/lib/avatarColors'
+import { ALLOWED_BG_HEXES, ALLOWED_BORDER_HEXES, isPremiumBg, isPremiumBorder, getAvatarSpecial, AVATAR_SPECIALS } from '@/lib/avatarColors'
 import { isPremiumActive } from '@/lib/premium'
 
 export async function updateUsername(username: string): Promise<{ error?: string }> {
@@ -154,17 +154,29 @@ export async function updateAvatarColors(input: {
   const bg     = input.bgColor === null     ? null : (bgAllowed.has(input.bgColor)         ? input.bgColor     : null)
   const border = input.borderColor === null ? null : (borderAllowed.has(input.borderColor) ? input.borderColor : null)
 
-  // Premium gate — applies to both bg and border. Only fetch the profile
-  // once if either choice is gated.
+  // Gating — premium swatches need active membership; animated specials need
+  // to be in unlocked_avatar_specials (purchased with gems).
+  const bgSpecial     = bg     ? getAvatarSpecial(bg)     : undefined
+  const borderSpecial = border ? getAvatarSpecial(border) : undefined
   const needsPremiumCheck = (bg && isPremiumBg(bg)) || (border && isPremiumBorder(border))
-  if (needsPremiumCheck) {
+  const needsOwnedCheck   = !!bgSpecial || !!borderSpecial
+
+  if (needsPremiumCheck || needsOwnedCheck) {
     const admin0 = createAdminClient()
     const { data: profile } = await admin0
       .from('profiles')
-      .select('is_premium, premium_expires_at')
+      .select('is_premium, premium_expires_at, unlocked_avatar_specials')
       .eq('id', user.id)
       .single()
-    if (!isPremiumActive(profile)) return { error: 'That color requires Premium membership.' }
+
+    if (needsPremiumCheck && !isPremiumActive(profile)) {
+      return { error: 'That color requires Premium membership.' }
+    }
+    if (needsOwnedCheck) {
+      const owned = (profile?.unlocked_avatar_specials as string[] | null) ?? []
+      if (bgSpecial && !owned.includes(bgSpecial.id))         return { error: `${bgSpecial.label} not unlocked` }
+      if (borderSpecial && !owned.includes(borderSpecial.id)) return { error: `${borderSpecial.label} not unlocked` }
+    }
   }
 
   const admin = createAdminClient()
@@ -174,6 +186,46 @@ export async function updateAvatarColors(input: {
     .eq('id', user.id)
   if (error) return { error: 'Something went wrong. Please try again.' }
   return {}
+}
+
+/** Purchase an animated avatar special (border or bg) with gems. */
+export async function purchaseAvatarSpecial(specialId: string): Promise<
+  { gems: number; unlockedSpecials: string[] } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const special = AVATAR_SPECIALS.find(s => s.id === specialId)
+  if (!special) return { error: 'Not for sale' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('gems, unlocked_avatar_specials')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+
+  const owned = (profile.unlocked_avatar_specials as string[] | null) ?? []
+  if (owned.includes(specialId)) return { error: 'Already owned' }
+  const balance = profile.gems ?? 0
+  if (balance < special.gemPrice) return { error: `Need ${special.gemPrice.toLocaleString()} ◆` }
+
+  const newGems = balance - special.gemPrice
+  const newOwned = [...owned, specialId]
+  await Promise.all([
+    admin.from('profiles')
+      .update({ gems: newGems, unlocked_avatar_specials: newOwned })
+      .eq('id', user.id),
+    admin.from('gem_transactions').insert({
+      user_id: user.id,
+      amount: -special.gemPrice,
+      reason: `Bought ${special.label} ${special.kind === 'border' ? 'border' : 'background'}`,
+    }),
+  ])
+
+  return { gems: newGems, unlockedSpecials: newOwned }
 }
 
 export async function searchUsers(query: string): Promise<{ username: string; showcaseVariant: unknown }[]> {

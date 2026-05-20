@@ -822,6 +822,103 @@ html, body {
   .avatar-aurora { animation: none; }
 }
 
+/* Ember border — rotating fire conic ring. Hotter palette than aurora and
+   slightly faster spin so it reads as a different cosmetic. */
+.avatar-ember {
+  border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    #ff7a18, #ffb347, #fde04a, #ff5a2a, #c01818, #ff7a18);
+  animation: avatar-aurora-spin 11s linear infinite;
+  will-change: transform;
+}
+
+/* Tide border — flowing cool blue/cyan conic ring, slower than ember. */
+.avatar-tide {
+  border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    #0ea5e9, #22d3ee, #06b6d4, #38bdf8, #6dd5ed, #0ea5e9);
+  animation: avatar-aurora-spin 14s linear infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-ember,
+  .avatar-tide { animation: none; }
+}
+
+/* Animated avatar backgrounds — render via inset overflow:hidden so the
+   sprite/character above stays static while the bg breathes.
+
+   Sunset: a 3-stop sky panning gently behind the silhouette. */
+@keyframes avatar-bg-sunset-pan {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+.avatar-bg-sunset {
+  background: linear-gradient(90deg,
+    #f97316, #f43f5e, #a855f7, #f43f5e, #f97316);
+  background-size: 220% 100%;
+  animation: avatar-bg-sunset-pan 9s ease-in-out infinite;
+}
+
+/* Nebula: slow rotating swirl of purple/blue. */
+@keyframes avatar-bg-nebula-spin { to { transform: rotate(360deg); } }
+.avatar-bg-nebula {
+  position: relative;
+  background: radial-gradient(circle at 30% 35%, #6d28d9 0%, #1e1b4b 60%, #0b0a24 100%);
+  overflow: hidden;
+}
+.avatar-bg-nebula::after {
+  content: '';
+  position: absolute;
+  inset: -25%;
+  background: conic-gradient(from 0deg,
+    rgba(168,85,247,0.55), rgba(56,189,248,0.0), rgba(168,85,247,0.0),
+    rgba(236,72,153,0.45), rgba(168,85,247,0.0), rgba(168,85,247,0.55));
+  filter: blur(6px);
+  animation: avatar-bg-nebula-spin 22s linear infinite;
+  pointer-events: none;
+}
+
+/* Bioluminescent: deep blue with two floating teal "glow" specks that drift. */
+@keyframes avatar-bg-biolum-drift-a {
+  0%, 100% { transform: translate(0%, 0%); opacity: 0.85; }
+  50%      { transform: translate(35%, 25%); opacity: 1; }
+}
+@keyframes avatar-bg-biolum-drift-b {
+  0%, 100% { transform: translate(0%, 0%); opacity: 0.65; }
+  50%      { transform: translate(-30%, -20%); opacity: 0.95; }
+}
+.avatar-bg-biolum {
+  position: relative;
+  background: radial-gradient(circle at 50% 55%, #0c4a6e 0%, #082f49 60%, #051825 100%);
+  overflow: hidden;
+}
+.avatar-bg-biolum::before,
+.avatar-bg-biolum::after {
+  content: '';
+  position: absolute;
+  width: 55%; height: 55%;
+  border-radius: 50%;
+  filter: blur(8px);
+  pointer-events: none;
+}
+.avatar-bg-biolum::before {
+  left: 10%; top: 15%;
+  background: radial-gradient(circle, rgba(45,212,191,0.85) 0%, rgba(45,212,191,0.0) 70%);
+  animation: avatar-bg-biolum-drift-a 7s ease-in-out infinite;
+}
+.avatar-bg-biolum::after {
+  right: 10%; bottom: 15%;
+  background: radial-gradient(circle, rgba(34,211,238,0.7) 0%, rgba(34,211,238,0.0) 70%);
+  animation: avatar-bg-biolum-drift-b 9s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-bg-sunset,
+  .avatar-bg-nebula::after,
+  .avatar-bg-biolum::before,
+  .avatar-bg-biolum::after { animation: none; }
+}
+
 /* Tide Run "NEW BEST" — a gentle celebratory pulse (subtle, not flashy). */
 @keyframes tr-newbest {
   0%, 100% { transform: scale(1);    opacity: 0.9; }

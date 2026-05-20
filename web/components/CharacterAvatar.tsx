@@ -13,6 +13,7 @@ import { getHat } from '@/lib/hats'
 import {
   DEFAULT_AVATAR_BG_COLOR,
   DEFAULT_AVATAR_BORDER_COLOR,
+  getAvatarSpecial,
 } from '@/lib/avatarColors'
 
 interface Props {
@@ -47,10 +48,16 @@ export default function CharacterAvatar({
   // Aurora is a special animated ring, not a color. It only applies when
   // the call site hasn't forced its own borderStyle.
   const isAurora     = !borderStyle && ringColor === 'aurora'
-  const background   = bgIsNone
+  // Animated specials (Ember/Tide borders, Sunset/Nebula/Biolum bgs) — each
+  // has a CSS class on globals.css that paints the layer.
+  const borderSpecial = !borderStyle ? getAvatarSpecial(ringColor) : undefined
+  const bgSpecial     = getAvatarSpecial(bgColor)
+  const isBgSpecial   = !!bgSpecial && bgSpecial.kind === 'bg'
+  const isBorderSpecial = !!borderSpecial && borderSpecial.kind === 'border'
+  const background   = bgIsNone || isBgSpecial
     ? 'transparent'
     : `radial-gradient(circle at 38% 35%, ${bgColor}ee 0%, ${bgColor}77 100%)`
-  const resolvedBorder = borderStyle ?? (ringIsNone ? 'none' : `2px solid ${ringColor}`)
+  const resolvedBorder = borderStyle ?? (ringIsNone || isBorderSpecial ? 'none' : `2px solid ${ringColor}`)
 
   const inner = (
     <div style={{
@@ -80,20 +87,24 @@ export default function CharacterAvatar({
     </div>
   )
 
-  if (isAurora) {
-    // The rotating conic ring is its own layer behind a non-rotating inner
+  if (isAurora || isBorderSpecial) {
+    // The animated conic ring is its own layer behind a non-rotating inner
     // circle (inset by the ring thickness) so the sprite never spins.
     // Thickness scales with size so it's proportional everywhere — ~2px in
     // the small nav, ~6px on the large 132px profile avatar (a flat 2px
     // read as a hairline there, 8px felt too bulky).
     const RING = Math.max(2, Math.round(size * 0.045))
+    const ringClass = isAurora ? 'avatar-aurora' : (borderSpecial!.cssClass)
     return (
       <div style={{ width: size, height: size, position: 'relative', flexShrink: 0 }}>
-        <div className="avatar-aurora" aria-hidden style={{ position: 'absolute', inset: 0 }} />
+        <div className={ringClass} aria-hidden style={{ position: 'absolute', inset: 0 }} />
         <div style={{
           position: 'absolute', inset: RING, borderRadius: '50%',
           background, overflow: 'hidden',
         }}>
+          {isBgSpecial && (
+            <div className={bgSpecial!.cssClass} aria-hidden style={{ position: 'absolute', inset: 0 }} />
+          )}
           {inner}
         </div>
       </div>
@@ -109,6 +120,9 @@ export default function CharacterAvatar({
       position: 'relative',
       flexShrink: 0,
     }}>
+      {isBgSpecial && (
+        <div className={bgSpecial!.cssClass} aria-hidden style={{ position: 'absolute', inset: 0 }} />
+      )}
       {inner}
     </div>
   )

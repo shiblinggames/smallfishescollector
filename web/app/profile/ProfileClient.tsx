@@ -6,8 +6,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
-import { updateUsername, updateShowcase, updateCharacterColor, updateAvatarColors, purchaseCharacterColor } from '@/app/u/actions'
-import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE, AURORA_VALUE } from '@/lib/avatarColors'
+import { updateUsername, updateShowcase, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial } from '@/app/u/actions'
+import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, AVATAR_SPECIALS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE, AURORA_VALUE } from '@/lib/avatarColors'
 import { equipBadge, unequipBadge } from '@/app/achievements/badgeActions'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import CharacterAvatar from '@/components/CharacterAvatar'
@@ -63,6 +63,7 @@ interface Props {
   unlockedBadges: string[]
   avatarBgColor: string | null
   avatarBorderColor: string | null
+  unlockedAvatarSpecials: string[]
 }
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
@@ -224,6 +225,7 @@ export default function ProfileClient({
   unlockedBadges,
   avatarBgColor: initialAvatarBg,
   avatarBorderColor: initialAvatarBorder,
+  unlockedAvatarSpecials: initialUnlockedSpecials,
 }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -239,9 +241,14 @@ export default function ProfileClient({
   const [characterColor, setCharacterColor] = useState(initialCharacterColor)
   const [colorSaving, setColorSaving] = useState(false)
   const [unlockedColors, setUnlockedColors] = useState<string[]>(initialUnlockedColors)
+  const [unlockedSpecials, setUnlockedSpecials] = useState<string[]>(initialUnlockedSpecials)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
   const [gems, setGems] = useState(initialGems)
-  const [purchasePrompt, setPurchasePrompt] = useState<{ id: string; name: string; price: number; currency: 'doubloons' | 'gems' } | null>(null)
+  const [purchasePrompt, setPurchasePrompt] = useState<
+    | { kind: 'skin';    id: string; name: string; price: number; currency: 'doubloons' | 'gems' }
+    | { kind: 'special'; id: string; name: string; price: number; currency: 'gems' }
+    | null
+  >(null)
   const [purchasing, setPurchasing] = useState(false)
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
   const [equippedBadges, setEquippedBadges] = useState<string[]>(initialEquippedBadges)
@@ -1181,6 +1188,7 @@ export default function ProfileClient({
                         if (c.price || c.gemPrice) {
                           setPurchaseError(null)
                           setPurchasePrompt({
+                            kind: 'skin',
                             id: c.id,
                             name: c.name,
                             price: (c.gemPrice ?? c.price)!,
@@ -1267,6 +1275,51 @@ export default function ProfileClient({
               })}
             </div>
 
+            {/* Animated background specials — gem purchase */}
+            <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#fde68a', letterSpacing: '0.14em' }}>
+                Animated · 500 ◆
+              </p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 14 }}>
+              {AVATAR_SPECIALS.filter(s => s.kind === 'bg').map(s => {
+                const isActive = (avatarBg ?? DEFAULT_AVATAR_BG_COLOR) === s.hex
+                const owned = unlockedSpecials.includes(s.id)
+                return (
+                  <button
+                    key={`bg-${s.id}`}
+                    type="button"
+                    onClick={() => {
+                      if (!owned) {
+                        setPurchaseError(null)
+                        setPurchasePrompt({ kind: 'special', id: s.id, name: s.label, price: s.gemPrice, currency: 'gems' })
+                        return
+                      }
+                      setAvatarBg(s.hex)
+                    }}
+                    aria-label={`Background ${s.label}${!owned ? ` (${s.gemPrice} gems)` : ''}`}
+                    title={owned ? s.label : `${s.label} — ${s.gemPrice} ◆`}
+                    style={{
+                      width: '100%', aspectRatio: '1 / 1',
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      border: isActive ? `2px solid #f0c040` : '1px solid rgba(255,255,255,0.18)',
+                      boxShadow: isActive ? `0 0 10px rgba(240,192,64,0.35)` : 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                      opacity: !owned ? 0.7 : 1,
+                      position: 'relative',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                    }}
+                  >
+                    <div className={s.cssClass} aria-hidden style={{ position: 'absolute', inset: 0 }} />
+                    {!owned && <LockBadge />}
+                  </button>
+                )
+              })}
+            </div>
+
             {/* Border swatches */}
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 6 }}>
               Border
@@ -1311,6 +1364,51 @@ export default function ProfileClient({
                     }}
                   >
                     {locked && <LockBadge />}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Animated border specials — gem purchase */}
+            <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#fde68a', letterSpacing: '0.14em' }}>
+                Animated · 300 ◆
+              </p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 16 }}>
+              {AVATAR_SPECIALS.filter(s => s.kind === 'border').map(s => {
+                const isActive = (avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR) === s.hex
+                const owned = unlockedSpecials.includes(s.id)
+                return (
+                  <button
+                    key={`bd-${s.id}`}
+                    type="button"
+                    className={s.cssClass}
+                    onClick={() => {
+                      if (!owned) {
+                        setPurchaseError(null)
+                        setPurchasePrompt({ kind: 'special', id: s.id, name: s.label, price: s.gemPrice, currency: 'gems' })
+                        return
+                      }
+                      setAvatarBorder(s.hex)
+                    }}
+                    aria-label={`Border ${s.label}${!owned ? ` (${s.gemPrice} gems)` : ''}`}
+                    title={owned ? s.label : `${s.label} — ${s.gemPrice} ◆`}
+                    style={{
+                      width: '100%', aspectRatio: '1 / 1',
+                      borderRadius: '50%',
+                      border: 'none',
+                      outline: isActive ? '2px solid #f0c040' : 'none',
+                      outlineOffset: 2,
+                      cursor: 'pointer',
+                      padding: 0,
+                      opacity: !owned ? 0.7 : 1,
+                      position: 'relative',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                    }}
+                  >
+                    {!owned && <LockBadge />}
                   </button>
                 )
               })}
@@ -1464,16 +1562,25 @@ export default function ProfileClient({
                 onClick={async () => {
                   setPurchasing(true)
                   setPurchaseError(null)
-                  const result = await purchaseCharacterColor(purchasePrompt.id)
-                  setPurchasing(false)
-                  if ('error' in result) { setPurchaseError(result.error); return }
-                  setUnlockedColors(result.unlockedColors)
-                  setDoubloons(result.doubloons)
-                  setGems(result.gems)
-                  if (purchasePrompt.currency === 'gems') {
-                    window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.gems }))
+                  if (purchasePrompt.kind === 'skin') {
+                    const result = await purchaseCharacterColor(purchasePrompt.id)
+                    setPurchasing(false)
+                    if ('error' in result) { setPurchaseError(result.error); return }
+                    setUnlockedColors(result.unlockedColors)
+                    setDoubloons(result.doubloons)
+                    setGems(result.gems)
+                    if (purchasePrompt.currency === 'gems') {
+                      window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.gems }))
+                    } else {
+                      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.doubloons }))
+                    }
                   } else {
-                    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.doubloons }))
+                    const result = await purchaseAvatarSpecial(purchasePrompt.id)
+                    setPurchasing(false)
+                    if ('error' in result) { setPurchaseError(result.error); return }
+                    setUnlockedSpecials(result.unlockedSpecials)
+                    setGems(result.gems)
+                    window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.gems }))
                   }
                   setPurchasePrompt(null)
                 }}
