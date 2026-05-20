@@ -3134,16 +3134,29 @@ export default function FishingGame({
           repeat: Infinity, ease: 'easeInOut' as const,
         }
 
+  // World bob — only fires during the hooked-fish struggle so the
+  // painted scene shakes for that dramatic moment. Calm casting and
+  // idle keep the world locked still while only the boat/character
+  // bob (the boat rocking against a stable horizon reads more like
+  // "on the water" than "the camera is shaking"). Reuses bgBobAnimate's
+  // hooked-phase values when active.
+  const worldBobAnimate    = phase === 'hooked' && isBobbing ? bgBobAnimate    : { x: 0, y: 0 }
+  const worldBobTransition = phase === 'hooked' && isBobbing ? bgBobTransition : { duration: 0.12 }
+
   return (
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0" style={{ background: '#08121c', zIndex: 40, display: 'flex', justifyContent: 'center' }}>
       <div className="relative w-full max-w-md overflow-hidden" style={{ height: '100%' }}>
 
-        {/* Background — willChange: 'transform' promotes this to its own
-            GPU layer so the bobbing animation doesn't force the browser
-            to re-rasterize a 1920x1080 image every frame on mobile. */}
+        {/* Background — gated to worldBobAnimate so the painted scene
+            stays still during calm casting (only the boat/character
+            bob, matching how a real boat sits against a stable
+            horizon) and shakes only during the hooked-fish struggle.
+            willChange: 'transform' promotes this to its own GPU layer
+            so the bobbing animation doesn't force the browser to
+            re-rasterize a 1920x1080 image every frame on mobile. */}
         <motion.div
-          animate={bgBobAnimate}
-          transition={bgBobTransition}
+          animate={worldBobAnimate}
+          transition={worldBobTransition}
           style={{ position: 'absolute', inset: '-14px', willChange: 'transform' }}
         >
           <img
