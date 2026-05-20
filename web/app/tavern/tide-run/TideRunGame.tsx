@@ -5,7 +5,7 @@ import { commitTideRun, submitTideRunBest } from './actions'
 import TideRunTour from './TideRunTour'
 import { markTideRunTourSeen } from './tideRunTourAction'
 import LeaderboardModal from '@/components/LeaderboardModal'
-import { prefetchTideRunAudio, playBeaconCatchSfx, playBeaconCrashSfx, playSplashSfx } from '@/lib/tideRunAudio'
+import { prefetchTideRunAudio, playBeaconCatchSfx, playBeaconCrashSfx, playSplashSfx, playCrashSfx } from '@/lib/tideRunAudio'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
 const SHIP_X_RATIO    = 0.13   // boat sits ~13% from the left, giving ~87% lookahead
@@ -1022,6 +1022,10 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     }
 
     if (dead) {
+      // Crash SFX — fires on rock/shoal deaths. Beacon catch deaths go
+      // through the detectingUntil → 'dead' path above (which has its
+      // own beacon-catch alarm), so they don't double-play.
+      playCrashSfx()
       g.state = 'dead'
       g.deathFlashUntil = performance.now() + 250
       const finalMeters = Math.floor(g.distance)

@@ -18,12 +18,15 @@ let audioCtx: AudioContext | null = null
 let catchBytes: ArrayBuffer | null = null
 let crashBytes: ArrayBuffer | null = null
 let splashBytes: ArrayBuffer | null = null
+let deathBytes: ArrayBuffer | null = null
 let catchBuffer: AudioBuffer | null = null
 let crashBuffer: AudioBuffer | null = null
 let splashBuffer: AudioBuffer | null = null
+let deathBuffer: AudioBuffer | null = null
 let catchFetching = false
 let crashFetching = false
 let splashFetching = false
+let deathFetching = false
 let sessionKeeper: HTMLAudioElement | null = null
 let sessionKeeperStarted = false
 let sessionKeeperRouted = false
@@ -107,6 +110,13 @@ function tryDecodeSplash() {
     .catch(() => {})
 }
 
+function tryDecodeDeath() {
+  if (deathBuffer || !deathBytes || !audioCtx) return
+  audioCtx.decodeAudioData(deathBytes.slice(0))
+    .then(buffer => { deathBuffer = buffer })
+    .catch(() => {})
+}
+
 function fetchCatch() {
   if (catchBytes || catchFetching || typeof fetch === 'undefined') return
   catchFetching = true
@@ -134,6 +144,15 @@ function fetchSplash() {
     .catch(() => { splashFetching = false })
 }
 
+function fetchDeath() {
+  if (deathBytes || deathFetching || typeof fetch === 'undefined') return
+  deathFetching = true
+  fetch('/tiderun_crash.mp3')
+    .then(r => r.arrayBuffer())
+    .then(b => { deathBytes = b; tryDecodeDeath() })
+    .catch(() => { deathFetching = false })
+}
+
 /** Called from TideRunGame mount — only kicks off the byte fetches.
  *  Doesn't create the AudioContext: iOS may permanently sandbox audio
  *  output from a context created outside a user-gesture call stack. The
@@ -145,6 +164,7 @@ export function prefetchTideRunAudio(): void {
   fetchCatch()
   fetchCrash()
   fetchSplash()
+  fetchDeath()
 }
 
 /** Called by the global GameAudioPrimer on every user gesture. iOS needs
@@ -169,6 +189,7 @@ export function unlockTideRunAudio(): void {
   tryDecodeCatch()
   tryDecodeCrash()
   tryDecodeSplash()
+  tryDecodeDeath()
 }
 
 function play(buffer: AudioBuffer | null): void {
@@ -196,3 +217,7 @@ export function playBeaconCrashSfx(): void { play(crashBuffer) }
  *  appeared to demote the whole AudioContext's session to silent ambient
  *  mode and killed all subsequent SFX. */
 export function playSplashSfx(): void { play(splashBuffer) }
+
+/** Boat crashed into a non-beacon obstacle (rock, shoal) and the player
+ *  lost the run. */
+export function playCrashSfx(): void { play(deathBuffer) }
