@@ -2289,10 +2289,20 @@ export default function FishingGame({
   // and stops the instant the player taps Reel In (handleReelIn also calls
   // stopDialLoop synchronously so the stop hits before the phase change
   // propagates here, giving the snappiest possible audio cut).
+  //
+  // Playback rate scales with the fish's catch difficulty (1–5) so harder
+  // fish get a faster, higher-pitched ticking — adds urgency in audio to
+  // match the faster needle speed already in play visually.
+  //   diff 1 → 1.00×    diff 3 → 1.30×    diff 5 → 1.60×
   useEffect(() => {
-    if (phase === 'catching') { startDialLoop(); return () => stopDialLoop() }
+    if (phase === 'catching' && hookedFish) {
+      const diff = Math.max(1, Math.min(5, hookedFish.catchDifficulty))
+      const rate = 1 + (diff - 1) * 0.15
+      startDialLoop(rate)
+      return () => stopDialLoop()
+    }
     stopDialLoop()
-  }, [phase])
+  }, [phase, hookedFish])
 
   // Drift mechanic: Plesiosaurus rotates the zone arc continuously while the needle spins
   useEffect(() => {

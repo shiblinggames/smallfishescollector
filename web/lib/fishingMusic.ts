@@ -289,7 +289,7 @@ function tryDecodeDial() {
   audioCtx.decodeAudioData(dialBytes.slice(0))
     .then(buffer => {
       dialBuffer = buffer
-      if (dialPendingStart) { dialPendingStart = false; startDialLoop() }
+      if (dialPendingStart) { dialPendingStart = false; startDialLoop(dialPendingRate) }
     })
     .catch(() => {})
 }
@@ -368,15 +368,24 @@ export function playPerfectSfx(): void {
   } catch {}
 }
 
-export function startDialLoop(): void {
+// Track the most-recently-requested playback rate so the queued-start
+// path (when the buffer hasn't decoded yet) uses the right speed.
+let dialPendingRate = 1
+export function startDialLoop(rate: number = 1): void {
+  dialPendingRate = rate
   if (!audioCtx) return
-  if (dialSource) return
+  // If already playing, just adjust the rate live.
+  if (dialSource) {
+    try { dialSource.playbackRate.setValueAtTime(rate, audioCtx.currentTime) } catch {}
+    return
+  }
   if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
   if (!dialBuffer) { dialPendingStart = true; return }
   try {
     const source = audioCtx.createBufferSource()
     source.buffer = dialBuffer
     source.loop = true
+    source.playbackRate.value = rate
     source.connect(audioCtx.destination)
     source.start(0)
     dialSource = source
