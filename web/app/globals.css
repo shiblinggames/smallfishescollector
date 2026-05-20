@@ -1211,3 +1211,94 @@ html, body {
   -webkit-mask-image: linear-gradient(to bottom, black 68%, transparent 100%);
           mask-image: linear-gradient(to bottom, black 68%, transparent 100%);
 }
+/* Zone-tinted cloud variants — reuse the same PNG, recolor via filter
+   so we don't need separate art for sunset / night skies. Per-zone
+   variant selection lives in ZONE_CLOUD_VARIANT in FishingGame.tsx. */
+.fishing-clouds-overlay--sunset {
+  filter: sepia(0.55) saturate(1.8) hue-rotate(332deg) brightness(0.94);
+}
+.fishing-clouds-overlay--night {
+  filter: brightness(0.32) saturate(0.55) hue-rotate(210deg) contrast(1.12);
+}
+
+/* Cloud reflection on the water — vertically flipped strip below the
+   horizon, dimmer + slower drift than the sky version, masked at both
+   ends so it dissolves into the water surface and the deeper water. */
+@keyframes cloudsReflectDrift {
+  from { background-position-x: 0; }
+  to   { background-position-x: -8000px; }
+}
+.fishing-clouds-reflection {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  background-image: url(/clouds1.png);
+  background-repeat: repeat-x;
+  background-position: 0 top;
+  background-size: auto 180px;
+  opacity: 0.22;
+  transform: scaleY(-1);
+  animation: cloudsReflectDrift 1500s linear infinite;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 78%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 78%, transparent 100%);
+}
+.fishing-clouds-reflection--sunset {
+  filter: sepia(0.55) saturate(1.7) hue-rotate(332deg) brightness(0.82);
+}
+.fishing-clouds-reflection--night {
+  filter: brightness(0.28) saturate(0.55) hue-rotate(210deg) contrast(1.12);
+}
+
+/* Water surface shimmer — animated light bands suggest the surface is
+   alive even when no other motion is happening. Sits below the horizon
+   line; masked at top + bottom so it fades into the water naturally. */
+@keyframes waterShimmerDrift {
+  from { background-position-x: 0px; }
+  to   { background-position-x: -1600px; }
+}
+.fishing-water-shimmer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  background-image: linear-gradient(85deg,
+    transparent 0%,
+    rgba(255,255,255,0.08) 12%,
+    transparent 22%,
+    transparent 48%,
+    rgba(255,255,255,0.06) 55%,
+    transparent 64%,
+    transparent 82%,
+    rgba(255,255,255,0.05) 90%,
+    transparent 100%);
+  background-size: 1600px 100%;
+  background-repeat: repeat-x;
+  animation: waterShimmerDrift 120s linear infinite;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+}
+.fishing-water-shimmer--sunset {
+  background-image: linear-gradient(85deg,
+    transparent 0%,
+    rgba(255,200,140,0.12) 12%,
+    transparent 22%,
+    transparent 48%,
+    rgba(255,180,120,0.09) 55%,
+    transparent 64%,
+    transparent 82%,
+    rgba(255,200,140,0.08) 90%,
+    transparent 100%);
+}
+.fishing-water-shimmer--night {
+  background-image: linear-gradient(85deg,
+    transparent 0%,
+    rgba(180,200,255,0.07) 12%,
+    transparent 22%,
+    transparent 48%,
+    rgba(180,200,255,0.05) 55%,
+    transparent 64%,
+    transparent 82%,
+    rgba(180,200,255,0.045) 90%,
+    transparent 100%);
+}

@@ -34,9 +34,26 @@ const ZONE_LABEL: Record<ZoneKey, string> = {
 const INITIAL_HORIZON: Record<ZoneKey, number> = {
   shallows:     34,
   open_waters:  34,
-  deep:         0,
-  abyss:        0,
+  deep:         38,
+  abyss:        40,
   ancient_deep: 0,
+}
+
+type CloudVariant = 'day' | 'sunset' | 'night' | 'none'
+const ZONE_VARIANT: Record<ZoneKey, CloudVariant> = {
+  shallows:     'day',
+  open_waters:  'day',
+  deep:         'sunset',
+  abyss:        'night',
+  ancient_deep: 'none',
+}
+// Mirror of the variant filters in globals.css so the tuner's
+// inline-styled cloud overlay tints the same way the live game will.
+const CLOUD_FILTER: Record<CloudVariant, string> = {
+  day:    'none',
+  sunset: 'sepia(0.55) saturate(1.8) hue-rotate(332deg) brightness(0.94)',
+  night:  'brightness(0.32) saturate(0.55) hue-rotate(210deg) contrast(1.12)',
+  none:   'none',
 }
 
 export default function CloudsTunerPage() {
@@ -53,7 +70,12 @@ export default function CloudsTunerPage() {
   const [previewH, setPreviewH] = useState(720)
 
   const horizonPct = horizon[zone]
-  const showCloud  = horizonPct > 0
+  const variant    = ZONE_VARIANT[zone]
+  const showCloud  = horizonPct > 0 && variant !== 'none'
+  const showShimmer = variant !== 'none'
+  const tintSuffix =
+    variant === 'sunset' ? '--sunset' :
+    variant === 'night'  ? '--night'  : ''
 
   const generatedCss = `.fishing-clouds-overlay {
   position: absolute;
@@ -77,6 +99,17 @@ export default function CloudsTunerPage() {
   deep:         ${horizon.deep},
   abyss:        ${horizon.abyss},
   ancient_deep: ${horizon.ancient_deep},
+}
+
+// Per-zone time-of-day tint. Drives the variant modifier class applied
+// to the cloud / reflection / shimmer overlays. Unchanged by the tuner.
+type CloudVariant = 'day' | 'sunset' | 'night' | 'none'
+const ZONE_CLOUD_VARIANT: Record<string, CloudVariant> = {
+  shallows:     'day',
+  open_waters:  'day',
+  deep:         'sunset',
+  abyss:        'night',
+  ancient_deep: 'none',
 }`
 
   function setZoneHorizon(z: ZoneKey, v: number) {
@@ -146,7 +179,9 @@ export default function CloudsTunerPage() {
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
             />
 
-            {/* Cloud overlay — applies the tunable values inline */}
+            {/* Cloud overlay — applies the tunable values inline. The
+                variant `filter` mirrors what the live game's
+                .fishing-clouds-overlay--{sunset,night} class does. */}
             {showCloud && (
               <div
                 aria-hidden
@@ -161,9 +196,32 @@ export default function CloudsTunerPage() {
                   backgroundSize: `auto ${cloudHeightPx}px`,
                   opacity,
                   animation: `cloudsDriftTuner ${driftSec}s linear infinite`,
+                  filter: CLOUD_FILTER[variant],
                   WebkitMaskImage: `linear-gradient(to bottom, black ${maskStartPct}%, transparent 100%)`,
                   maskImage: `linear-gradient(to bottom, black ${maskStartPct}%, transparent 100%)`,
                 }}
+              />
+            )}
+
+            {/* Cloud reflection on water — pulled straight from globals.css
+                (className picks up the live styles + variant tint). Lets
+                you preview both layers in context against the painted
+                backdrop while you're tuning the sky overlay above. */}
+            {showCloud && (
+              <div
+                aria-hidden
+                className={`fishing-clouds-reflection${tintSuffix ? ` fishing-clouds-reflection${tintSuffix}` : ''}`}
+                style={{ top: `${horizonPct}%`, height: '14%' }}
+              />
+            )}
+
+            {/* Water surface shimmer — universal, lives on every zone with
+                a visible water band. Uses the live globals.css rule. */}
+            {showShimmer && (
+              <div
+                aria-hidden
+                className={`fishing-water-shimmer${tintSuffix ? ` fishing-water-shimmer${tintSuffix}` : ''}`}
+                style={{ top: `${horizonPct}%`, bottom: 0 }}
               />
             )}
 

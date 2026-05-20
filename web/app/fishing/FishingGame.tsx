@@ -118,14 +118,27 @@ const ZONE_BG: Record<string, string> = {
 }
 // Per-zone horizon position (% from the top of the scene). Drives where
 // the cloud overlay's bottom edge sits — clouds fill from 0 down to the
-// horizon, fading at the bottom. Set to 0 for underwater zones to skip
-// the overlay entirely. Tune by eye against each painted backdrop.
+// horizon, fading at the bottom. Set to 0 for zones with no visible sky
+// (currently just ancient_deep). Tune by eye against each painted
+// backdrop via /dev/clouds.
 const ZONE_HORIZON_PCT: Record<string, number> = {
   shallows:     34,
   open_waters:  34,
-  deep:         0,
-  abyss:        0,
+  deep:         38,
+  abyss:        40,
   ancient_deep: 0,
+}
+
+// Per-zone time-of-day for cloud / reflection / shimmer tinting. 'day'
+// is the unfiltered baseline (Shallows + Open Waters). Deep is a sunset
+// painted backdrop, Abyss is night, Ancient Deep is unhandled (no sky).
+type CloudVariant = 'day' | 'sunset' | 'night' | 'none'
+const ZONE_CLOUD_VARIANT: Record<string, CloudVariant> = {
+  shallows:     'day',
+  open_waters:  'day',
+  deep:         'sunset',
+  abyss:        'night',
+  ancient_deep: 'none',
 }
 
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep'] as const
@@ -3140,18 +3153,34 @@ export default function FishingGame({
           />
         </motion.div>
 
-        {/* Ambient cloud drift over the painted sky. Sibling of the bg
-            so it doesn't inherit the wave-bob — clouds blow horizontally,
-            the boat bobs vertically, motions stay independent. Height is
-            per-zone (ZONE_HORIZON_PCT) so the band ends at that zone's
-            painted horizon; 0 hides the overlay on underwater zones. */}
-        {(ZONE_HORIZON_PCT[selectedZone] ?? 0) > 0 && (
-          <div
-            aria-hidden
-            className="fishing-clouds-overlay"
-            style={{ height: `${ZONE_HORIZON_PCT[selectedZone]}%` }}
-          />
-        )}
+        {/* Ambient layers — clouds in the sky, mirrored cloud reflection
+            on the water just below the horizon, and a slow shimmer that
+            sweeps the rest of the water band. Each picks up the zone's
+            time-of-day tint (sunset / night) via a variant modifier
+            class. Sibling of the bg motion.div so cloud drift stays
+            decoupled from the wave-bob. */}
+        {(() => {
+          const horizonPct = ZONE_HORIZON_PCT[selectedZone] ?? 0
+          const variant    = ZONE_CLOUD_VARIANT[selectedZone] ?? 'none'
+          if (variant === 'none') return null
+          const tint =
+            variant === 'sunset' ? '--sunset' :
+            variant === 'night'  ? '--night'  : ''
+          const cloudClass    = 'fishing-clouds-overlay'    + (tint ? ` fishing-clouds-overlay${tint}` : '')
+          const reflectClass  = 'fishing-clouds-reflection' + (tint ? ` fishing-clouds-reflection${tint}` : '')
+          const shimmerClass  = 'fishing-water-shimmer'     + (tint ? ` fishing-water-shimmer${tint}` : '')
+          return (
+            <>
+              {horizonPct > 0 && (
+                <>
+                  <div aria-hidden className={cloudClass}   style={{ height: `${horizonPct}%` }} />
+                  <div aria-hidden className={reflectClass} style={{ top: `${horizonPct}%`, height: '14%' }} />
+                </>
+              )}
+              <div aria-hidden className={shimmerClass} style={{ top: `${horizonPct}%`, bottom: 0 }} />
+            </>
+          )
+        })()}
 
         {/* Character + rod + hook overlay — all 3 frames always in DOM so
             sprites are pre-decoded. willChange + transform: translateZ(0)
