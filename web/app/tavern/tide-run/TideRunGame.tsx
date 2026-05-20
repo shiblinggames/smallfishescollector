@@ -5,6 +5,7 @@ import { commitTideRun, submitTideRunBest } from './actions'
 import TideRunTour from './TideRunTour'
 import { markTideRunTourSeen } from './tideRunTourAction'
 import LeaderboardModal from '@/components/LeaderboardModal'
+import { prefetchTideRunAudio, playBeaconCatchSfx, playBeaconCrashSfx } from '@/lib/tideRunAudio'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
 const SHIP_X_RATIO    = 0.13   // boat sits ~13% from the left, giving ~87% lookahead
@@ -285,6 +286,10 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
   const rafRef = useRef<number | null>(null)
   const lastTsRef = useRef<number>(0)
   const shipImgRef = useRef<HTMLImageElement | null>(null)
+
+  // Kick off the beacon SFX prefetch on mount so the buffers are ready by
+  // the time the player encounters their first beacon.
+  useEffect(() => { prefetchTideRunAudio() }, [])
 
   // All mutable game state lives in a single ref. React state is only for UI.
   const gRef = useRef({
@@ -955,10 +960,16 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
           g.detectingBeaconX = beaconCenterWorldX
           // Lock in the final score now (distance is frozen during flash)
           setScore(Math.floor(g.distance))
+          // Alarm SFX — fires the instant the beacon catches the airborne
+          // ship, before the death overlay.
+          playBeaconCatchSfx()
           break
         } else {
           const nowMs = performance.now()
           cr.shatteredAt = nowMs
+          // Crash SFX — fires the instant the boat smashes through the
+          // grounded beacon, in sync with the debris + ring + shake.
+          playBeaconCrashSfx()
           const cx = cr.x + cr.width / 2
           const beaconSurface = seaSurfaceY(cx, g.ch, g.scrollX)
           // Bigger water spray
