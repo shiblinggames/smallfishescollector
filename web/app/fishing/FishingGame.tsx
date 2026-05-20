@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
+import { flushSync } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
@@ -2611,10 +2612,20 @@ export default function FishingGame({
   // Phase 2 — reel in
   async function handleReelIn() {
     if (phase !== 'catching' || !hookedFishRef.current) return
+    // Cancel the rAF first so no further ticks queue new setAngle updates.
+    if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
+    // Freeze the needle at exactly what the player saw when they clicked.
+    // React 18 batches setAngle from rAF ticks; without flushSync, a queued
+    // update from the just-fired tick would commit AFTER this handler runs
+    // and visually "creep" the needle one position past where they locked
+    // it. flushSync forces the queued commit now, and then we pin the ref
+    // to the resulting state so the zone calculation uses the same angle
+    // the player saw.
+    flushSync(() => { /* drain any pending state updates from rAF */ })
+    angleRef.current = angle
     setSnapKey(k => k + 1)
     setReelRippleKey(k => k + 1)
     setTimeout(() => setReelRippleKey(0), 1800)
-    if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
 
     const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
     const baitBonus = getBait(selectedBaitRef.current).catchZoneBonus
