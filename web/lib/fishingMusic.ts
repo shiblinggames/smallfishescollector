@@ -26,7 +26,9 @@ let gainNode: GainNode | null = null
 let webAudioReady = false
 let pendingPauseTimeout: ReturnType<typeof setTimeout> | null = null
 
-const ENTRY_FADE_MS  = 2000
+// Entry and exit symmetrize — coming back to fishing fades up over the
+// same duration the previous fade-out used.
+const ENTRY_FADE_MS  = 3000
 const EXIT_FADE_MS   = 3000
 const TOGGLE_FADE_MS = 400
 
@@ -180,6 +182,59 @@ function ramp(target: number, ms: number, pauseAtEnd = false) {
   requestAnimationFrame(step)
 }
 
+/** Force the GainNode to a specific value AT NOW, then ramp to target.
+ *  Uses the direct .value setter alongside setValueAtTime because Safari
+ *  has a documented quirk where reading gain.value immediately after
+ *  setValueAtTime returns the previous value — so a subsequent ramp that
+ *  reads gain.value would start from the wrong place. Setting .value
+ *  directly pins the parameter regardless of read-back behavior. */
+function rampFrom(fromValue: number, target: number, ms: number, pauseAtEnd = false) {
+  if (!elA || !elB) return
+  clearPendingPause()
+  if (webAudioReady && audioCtx && gainNode) {
+    const now = audioCtx.currentTime
+    gainNode.gain.cancelScheduledValues(now)
+    gainNode.gain.value = fromValue
+    gainNode.gain.setValueAtTime(fromValue, now)
+    if (ms <= 0) gainNode.gain.setValueAtTime(target, now)
+    else gainNode.gain.linearRampToValueAtTime(target, now + ms / 1000)
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
+    if (pauseAtEnd && target === 0) {
+      pendingPauseTimeout = setTimeout(() => {
+        try { elA?.pause() } catch {}
+        try { elB?.pause() } catch {}
+        pendingPauseTimeout = null
+      }, ms + 80)
+    }
+    return
+  }
+  // rAF fallback for pre-gesture (no Web Audio yet). audio.volume is a
+  // no-op on iOS, so on those browsers this fallback just plays at full
+  // until the next pauseAtEnd or until Web Audio is wired up.
+  try { elA.volume = fromValue; elB.volume = fromValue } catch {}
+  if (ms <= 0 || Math.abs(target - fromValue) < 0.001) {
+    try { elA.volume = target; elB.volume = target } catch {}
+    if (pauseAtEnd && target === 0) {
+      try { elA.pause(); elB.pause() } catch {}
+    }
+    return
+  }
+  const startedAt = performance.now()
+  const step = () => {
+    const t = Math.min(1, (performance.now() - startedAt) / ms)
+    const v = Math.max(0, Math.min(1, fromValue + (target - fromValue) * t))
+    try { elA!.volume = v; elB!.volume = v } catch {}
+    if (t >= 1) {
+      if (pauseAtEnd && target === 0) {
+        try { elA!.pause(); elB!.pause() } catch {}
+      }
+      return
+    }
+    requestAnimationFrame(step)
+  }
+  requestAnimationFrame(step)
+}
+
 export function startFishingMusic(muted: boolean): void {
   const a = ensure()
   if (!a) return
@@ -187,24 +242,13 @@ export function startFishingMusic(muted: boolean): void {
   if (elA) elA.muted = muted
   if (elB) elB.muted = muted
   if (muted) {
-    if (webAudioReady && gainNode && audioCtx) {
-      gainNode.gain.cancelScheduledValues(audioCtx.currentTime)
-      gainNode.gain.setValueAtTime(1, audioCtx.currentTime)
-    } else {
-      if (elA) elA.volume = 1
-      if (elB) elB.volume = 1
-    }
+    // Pin gain at 1 so a future unmute starts loud — the muted property
+    // gates output regardless.
+    rampFrom(1, 1, 0)
     return
   }
-  if (webAudioReady && gainNode && audioCtx) {
-    gainNode.gain.cancelScheduledValues(audioCtx.currentTime)
-    gainNode.gain.setValueAtTime(0, audioCtx.currentTime)
-  } else {
-    if (elA) elA.volume = 0
-    if (elB) elB.volume = 0
-  }
   a.play().catch(() => {})
-  ramp(1, ENTRY_FADE_MS)
+  rampFrom(0, 1, ENTRY_FADE_MS)
 }
 
 export function setFishingMusicMuted(muted: boolean): void {
@@ -216,15 +260,8 @@ export function setFishingMusicMuted(muted: boolean): void {
   if (elA) elA.muted = muted
   if (elB) elB.muted = muted
   if (muted) return
-  if (webAudioReady && gainNode && audioCtx) {
-    gainNode.gain.cancelScheduledValues(audioCtx.currentTime)
-    gainNode.gain.setValueAtTime(0, audioCtx.currentTime)
-  } else {
-    if (elA) elA.volume = 0
-    if (elB) elB.volume = 0
-  }
   a.play().catch(() => {})
-  ramp(1, TOGGLE_FADE_MS)
+  rampFrom(0, 1, TOGGLE_FADE_MS)
 }
 
 export function fadeOutFishingMusic(ms: number = EXIT_FADE_MS): void {
