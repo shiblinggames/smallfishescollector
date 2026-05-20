@@ -2307,11 +2307,14 @@ export default function FishingGame({
     setCastAnimDone(false)
     setCharFrame('cast')
     // Second cast SFX — fires the instant the cast animation finishes
-    // and the line hits the water (the 'wait' frame). Synced with the
-    // pose flip so the audio lands with the visual.
-    const t1 = setTimeout(() => { setCharFrame('wait'); playCast2Sfx() }, 650)
+    // and the line hits the water. We fire the audio ~50 ms before
+    // setCharFrame('wait') because Web Audio BufferSource.start has a
+    // small startup latency on iOS (~30–60 ms); without the lead, the
+    // sound feels slightly behind the visual pose flip.
+    const t0 = setTimeout(() => playCast2Sfx(), 600)
+    const t1 = setTimeout(() => setCharFrame('wait'), 650)
     const t2 = setTimeout(() => setCastAnimDone(true), 1500)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
+    return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2) }
   }, [phase])
 
   // Needle animation during catching phase
@@ -4478,7 +4481,12 @@ export default function FishingGame({
                 </motion.div>
               )}
               {phase === 'idle' && !allAncientCaught && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && hasBait && selectedBaitQty > 0 && (
-                <motion.button key="cast" onClick={handleCast}
+                <motion.button key="cast"
+                  // pointerdown rather than onClick — fires on tap-start
+                  // (~50–100 ms earlier than click on touch devices), so
+                  // the cast SFX lands in sync with the player's tap
+                  // instead of trailing it. Mirrors the Reel In button.
+                  onPointerDown={(e) => { e.preventDefault(); handleCast() }}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
                     width: 88, height: 88, borderRadius: '50%',
@@ -4550,7 +4558,8 @@ export default function FishingGame({
                 </motion.div>
               )}
               {phase === 'result' && holdTotalCount < holdCapacity && (!crateResult || cratePhase === 'revealed' || !!catchResult || !!missResult) && (
-                <motion.button key="again" onClick={handleCastAgain}
+                <motion.button key="again"
+                  onPointerDown={(e) => { e.preventDefault(); handleCastAgain() }}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
                     width: 88, height: 88, borderRadius: '50%',
