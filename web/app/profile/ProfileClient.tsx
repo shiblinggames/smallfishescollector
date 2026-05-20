@@ -1090,6 +1090,16 @@ export default function ProfileClient({
               borderRadius: 18,
               padding: '1.1rem 1rem 0.95rem',
               width: '100%', maxWidth: 360,
+              // Cap the panel to the available padded area and scroll
+              // internally when content overflows — the picker is tall
+              // (character grid + bg grid + border grid + buttons), so
+              // on phones it can exceed viewport height even with the
+              // top/bottom padding above. Without these the Save row
+              // gets pushed off the bottom edge.
+              maxHeight: '100%',
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehavior: 'contain',
               cursor: 'default',
               boxShadow: '0 18px 60px rgba(0,0,0,0.55)',
             }}
