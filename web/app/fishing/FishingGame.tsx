@@ -1874,26 +1874,82 @@ export default function FishingGame({
   const hook = getHook(hookTier)
   const line = getLine(lineTier)
 
-  // Background soundtrack — starts muted so browsers allow autoplay; the
-  // speaker icon top-left toggles mute. Preference persists across sessions
-  // via localStorage so returning players keep their sound choice.
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  // Background soundtrack — played via Web Audio API so the loop is
+  // sample-accurate (gapless). HTML <audio loop> + MP3 leaves a tiny click
+  // from MP3 encoder padding; Web Audio decodes to PCM and loops the buffer
+  // exactly. Speaker icon toggles via the GainNode. Preference persists
+  // across sessions via localStorage.
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
+  const audioGainRef = useRef<GainNode | null>(null)
   const [audioMuted, setAudioMuted] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true
     const saved = window.localStorage.getItem('fishingAudioMuted')
-    // Default to muted on first visit so we never violate autoplay policy
-    // and never blast a returning player who has the tab in the background.
     return saved === null ? true : saved === 'true'
   })
+
+  // Mount: build the audio graph, fetch + decode MP3, start a looped buffer
+  // source. The context may start in 'suspended' on browsers with a strict
+  // autoplay policy; a one-shot pointer/key listener resumes it on the first
+  // user gesture.
   useEffect(() => {
-    const a = audioRef.current
-    if (!a) return
-    a.muted = audioMuted
-    if (audioMuted) {
-      // Keep the element rolling even when muted so unmuting is instant.
-    } else {
-      a.play().catch(() => {})
+    let cancelled = false
+    const Ctx: typeof AudioContext | undefined =
+      window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!Ctx) return
+    const ctx = new Ctx()
+    audioCtxRef.current = ctx
+    const gain = ctx.createGain()
+    gain.gain.value = audioMuted ? 0 : 1
+    gain.connect(ctx.destination)
+    audioGainRef.current = gain
+
+    ;(async () => {
+      try {
+        const res = await fetch('/fishingsoundtrack.mp3')
+        const buf = await res.arrayBuffer()
+        if (cancelled) return
+        const audioBuf = await ctx.decodeAudioData(buf)
+        if (cancelled) return
+        const source = ctx.createBufferSource()
+        source.buffer = audioBuf
+        source.loop = true
+        source.connect(gain)
+        source.start(0)
+        audioSourceRef.current = source
+      } catch {
+        // Decode/fetch failure is non-fatal — game still works without music.
+      }
+    })()
+
+    const resumeOnce = () => {
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+      window.removeEventListener('pointerdown', resumeOnce)
+      window.removeEventListener('keydown', resumeOnce)
     }
+    window.addEventListener('pointerdown', resumeOnce, { once: true })
+    window.addEventListener('keydown', resumeOnce, { once: true })
+
+    return () => {
+      cancelled = true
+      window.removeEventListener('pointerdown', resumeOnce)
+      window.removeEventListener('keydown', resumeOnce)
+      try { audioSourceRef.current?.stop() } catch {}
+      audioSourceRef.current = null
+      audioGainRef.current = null
+      ctx.close().catch(() => {})
+      audioCtxRef.current = null
+    }
+  }, [])
+
+  // Mute toggle — ramp the gain over 50ms so unmute/mute is click-free.
+  useEffect(() => {
+    const ctx = audioCtxRef.current
+    const gain = audioGainRef.current
+    if (!ctx || !gain) return
+    gain.gain.cancelScheduledValues(ctx.currentTime)
+    gain.gain.linearRampToValueAtTime(audioMuted ? 0 : 1, ctx.currentTime + 0.05)
+    if (!audioMuted && ctx.state === 'suspended') ctx.resume().catch(() => {})
     try { window.localStorage.setItem('fishingAudioMuted', String(audioMuted)) } catch {}
   }, [audioMuted])
 
@@ -3181,20 +3237,9 @@ export default function FishingGame({
         style={{ height: '100%' }}
       >
 
-        {/* Background soundtrack — loops while the fishing screen is mounted.
-            Autoplay works because we start muted; the speaker icon below
-            toggles audio on. Pauses automatically when the component unmounts
-            (navigating away from /fishing). */}
-        <audio
-          ref={audioRef}
-          src="/fishingsoundtrack.mp3"
-          loop
-          autoPlay
-          muted
-          playsInline
-          preload="auto"
-          aria-hidden
-        />
+        {/* Background soundtrack lives on the Web Audio graph — see the
+            mount effect at the top of FishingGame. The speaker icon below
+            controls the GainNode for sample-accurate gapless looping. */}
 
         {/* Mute / unmute toggle — left edge, below the back-button row so
             it doesn't fight the header. Floats over the gameplay scene. */}
