@@ -253,9 +253,9 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   ]
 
   // Mobile hamburger menu — the secondary destinations that don't fit in
-  // the 5-slot bottom tab bar. Order: leaderboard, market, achievements,
-  // social (matches the canonical nav order: tavern/fishing/expeditions/
-  // profile in the bottom bar, then the rest live here).
+  // the 5-slot bottom tab bar. Order: leaderboard, market, social.
+  // Captain's Log is intentionally NOT here — it has its own slot on the
+  // bottom tab bar as "Log", so duplicating it would just be noise.
   const mobileMenuLinks = [
     { href: '/leaderboard', label: 'Leaderboard', badge: false,
       icon: (
@@ -275,15 +275,10 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
-    { href: '/achievements', label: "Captain's Log", badge: false,
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 9H4V4h16v5h-2"/>
-          <path d="M6 4v5a6 6 0 0 0 12 0V4"/>
-          <line x1="12" y1="15" x2="12" y2="19"/><line x1="8" y1="19" x2="16" y2="19"/>
-        </svg>
-      )
-    },
+    // Captain's Log intentionally NOT in this list — it lives as "Log"
+    // on the mobile bottom tab bar (MobileTabBar.tsx) so duplicating it
+    // here is just noise. Keep the desktopOnlyLinks entry below since
+    // desktop has no bottom bar.
     { href: '/social', label: 'Social', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
