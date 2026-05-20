@@ -1213,12 +1213,21 @@ html, body {
 }
 /* Zone-tinted cloud variants — reuse the same PNG, recolor via filter
    so we don't need separate art for sunset / night skies. Per-zone
-   variant selection lives in ZONE_CLOUD_VARIANT in FishingGame.tsx. */
+   variant selection lives in ZONE_CLOUD_VARIANT in FishingGame.tsx.
+   Filter chain order matters: sepia first (gives the white clouds a
+   chromatic base to rotate), then hue-rotate, then saturate (deepen),
+   then brightness last (so it doesn't get re-amplified). */
 .fishing-clouds-overlay--sunset {
-  filter: sepia(0.55) saturate(1.8) hue-rotate(332deg) brightness(0.94);
+  /* Warm sunset glow — orange/pink/red. */
+  filter: sepia(0.8) hue-rotate(335deg) saturate(2.3) brightness(0.93);
 }
 .fishing-clouds-overlay--night {
-  filter: brightness(0.32) saturate(0.55) hue-rotate(210deg) contrast(1.12);
+  /* Midnight blue cloud cover. Opacity drop too — solid gray clouds
+     read as overlay sticker against the dark blue backdrop; making
+     the clouds themselves bluer + more translucent lets the painted
+     sky show through and they feel like they belong there. */
+  filter: sepia(0.7) hue-rotate(208deg) saturate(2.4) brightness(0.36) contrast(1.05);
+  opacity: 0.42;
 }
 
 /* Cloud reflection on the water — vertically flipped strip below the
@@ -1244,10 +1253,11 @@ html, body {
           mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 74%, transparent 100%);
 }
 .fishing-clouds-reflection--sunset {
-  filter: sepia(0.55) saturate(1.7) hue-rotate(332deg) brightness(0.82);
+  filter: sepia(0.8) hue-rotate(335deg) saturate(2.1) brightness(0.82);
 }
 .fishing-clouds-reflection--night {
-  filter: brightness(0.28) saturate(0.55) hue-rotate(210deg) contrast(1.12);
+  filter: sepia(0.7) hue-rotate(208deg) saturate(2.2) brightness(0.32) contrast(1.05);
+  opacity: 0.14;
 }
 
 /* Water surface shimmer — animated light bands suggest the surface is

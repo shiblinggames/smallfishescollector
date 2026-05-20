@@ -51,9 +51,15 @@ const ZONE_VARIANT: Record<ZoneKey, CloudVariant> = {
 // inline-styled cloud overlay tints the same way the live game will.
 const CLOUD_FILTER: Record<CloudVariant, string> = {
   day:    'none',
-  sunset: 'sepia(0.55) saturate(1.8) hue-rotate(332deg) brightness(0.94)',
-  night:  'brightness(0.32) saturate(0.55) hue-rotate(210deg) contrast(1.12)',
+  sunset: 'sepia(0.8) hue-rotate(335deg) saturate(2.3) brightness(0.93)',
+  night:  'sepia(0.7) hue-rotate(208deg) saturate(2.4) brightness(0.36) contrast(1.05)',
   none:   'none',
+}
+// Variants that override the base opacity in globals.css. Keep in sync
+// so the tuner reflects the live look (e.g. night clouds are more
+// translucent to let the dark sky show through).
+const CLOUD_OPACITY_OVERRIDE: Partial<Record<CloudVariant, number>> = {
+  night: 0.42,
 }
 
 export default function CloudsTunerPage() {
@@ -256,7 +262,7 @@ const ZONE_CLOUD_VARIANT: Record<string, CloudVariant> = {
                   backgroundRepeat: 'repeat-x',
                   backgroundPosition: `${posOffsetPx}px top`,
                   backgroundSize: `auto ${cloudHeightPx}px`,
-                  opacity,
+                  opacity: CLOUD_OPACITY_OVERRIDE[variant] ?? opacity,
                   animation: `cloudsDriftTuner ${driftSec}s linear infinite`,
                   filter: CLOUD_FILTER[variant],
                   WebkitMaskImage: `linear-gradient(to bottom, black ${maskStartPct}%, transparent 100%)`,
