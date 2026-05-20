@@ -5,7 +5,7 @@ import { commitTideRun, submitTideRunBest } from './actions'
 import TideRunTour from './TideRunTour'
 import { markTideRunTourSeen } from './tideRunTourAction'
 import LeaderboardModal from '@/components/LeaderboardModal'
-import { prefetchTideRunAudio, playBeaconCatchSfx, playBeaconCrashSfx } from '@/lib/tideRunAudio'
+import { prefetchTideRunAudio, playBeaconCatchSfx, playBeaconCrashSfx, playSplashSfx } from '@/lib/tideRunAudio'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
 const SHIP_X_RATIO    = 0.13   // boat sits ~13% from the left, giving ~87% lookahead
@@ -822,6 +822,9 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
           g.shipY = surfaceY - g.shipH * (1 - HITBOX_INSET.bottom)
           g.shipVy = 0
           g.airborne = false
+          // Splash SFX — fires the instant the boat touches back down
+          // after a jump, in sync with the spray particles being emitted.
+          playSplashSfx()
           // Holding through a landing doesn't auto-jump; require a release+press
           g.holding = false
         }

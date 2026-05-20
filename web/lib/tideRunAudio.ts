@@ -11,10 +11,13 @@
 let audioCtx: AudioContext | null = null
 let catchBytes: ArrayBuffer | null = null
 let crashBytes: ArrayBuffer | null = null
+let splashBytes: ArrayBuffer | null = null
 let catchBuffer: AudioBuffer | null = null
 let crashBuffer: AudioBuffer | null = null
+let splashBuffer: AudioBuffer | null = null
 let catchFetching = false
 let crashFetching = false
+let splashFetching = false
 
 function ensureContext(): boolean {
   if (audioCtx) return true
@@ -44,6 +47,13 @@ function tryDecodeCrash() {
     .catch(() => {})
 }
 
+function tryDecodeSplash() {
+  if (splashBuffer || !splashBytes || !audioCtx) return
+  audioCtx.decodeAudioData(splashBytes.slice(0))
+    .then(buffer => { splashBuffer = buffer })
+    .catch(() => {})
+}
+
 function fetchCatch() {
   if (catchBytes || catchFetching || typeof fetch === 'undefined') return
   catchFetching = true
@@ -62,26 +72,42 @@ function fetchCrash() {
     .catch(() => { crashFetching = false })
 }
 
-/** Called from TideRunGame mount — kicks off byte prefetch + decode. */
-export function prefetchTideRunAudio(): void {
-  ensureContext()
-  fetchCatch()
-  fetchCrash()
-  tryDecodeCatch()
-  tryDecodeCrash()
+function fetchSplash() {
+  if (splashBytes || splashFetching || typeof fetch === 'undefined') return
+  splashFetching = true
+  fetch('/tiderun_splash.mp3')
+    .then(r => r.arrayBuffer())
+    .then(b => { splashBytes = b; tryDecodeSplash() })
+    .catch(() => { splashFetching = false })
 }
 
-/** Called by the global GameAudioPrimer on every user gesture. iOS only
- *  honors AudioContext.resume() inside a gesture call stack. Idempotent.
- *  Light path: only resumes an EXISTING context (does NOT create one),
- *  so players who never visit /tavern/tide-run don't pay any cost. */
+/** Called from TideRunGame mount — only kicks off the byte fetches.
+ *  Doesn't create the AudioContext: iOS may permanently sandbox audio
+ *  output from a context created outside a user-gesture call stack. The
+ *  primer creates the context on the first gesture (light work — just
+ *  `new AudioContext()` plus a resume), so playback is always sourced
+ *  from a context that was born inside a gesture. */
+export function prefetchTideRunAudio(): void {
+  fetchCatch()
+  fetchCrash()
+  fetchSplash()
+}
+
+/** Called by the global GameAudioPrimer on every user gesture. iOS needs
+ *  the AudioContext to be both created AND resumed inside a gesture
+ *  call stack — so we create it here (lazily) if it doesn't exist yet.
+ *  Idempotent: after the first gesture, subsequent calls just ensure
+ *  the ctx is running. Tide-run's ctx work is tiny — only the fishing
+ *  audio's heavy init (audio elements + 1.6 MB OGG fetch) is gated
+ *  separately on a "wanted" path. */
 export function unlockTideRunAudio(): void {
-  if (!audioCtx) return
-  if (audioCtx.state === 'suspended') {
+  if (!ensureContext()) return
+  if (audioCtx && audioCtx.state === 'suspended') {
     audioCtx.resume().catch(() => {})
   }
   tryDecodeCatch()
   tryDecodeCrash()
+  tryDecodeSplash()
 }
 
 function play(buffer: AudioBuffer | null): void {
@@ -102,3 +128,6 @@ export function playBeaconCatchSfx(): void { play(catchBuffer) }
 /** Boat ran through a grounded beacon and smashed it. Plays at the
  *  exact moment the beacon shatters. */
 export function playBeaconCrashSfx(): void { play(crashBuffer) }
+
+/** Boat touched down on the water after a jump. */
+export function playSplashSfx(): void { play(splashBuffer) }
