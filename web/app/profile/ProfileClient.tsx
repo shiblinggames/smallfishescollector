@@ -1583,9 +1583,12 @@ export default function ProfileClient({
                   }
                   setPurchasePrompt(null)
                 }}
-                className="btn-gold font-karla font-700 uppercase tracking-[0.08em]"
+                className="font-karla font-700 uppercase tracking-[0.08em]"
                 style={{
                   flex: 2, padding: '0.7rem 0',
+                  background: 'rgba(96,165,250,0.16)',
+                  border: '1px solid rgba(96,165,250,0.55)',
+                  color: '#cfe2ff',
                   borderRadius: 12, fontSize: '0.72rem',
                   cursor: purchasing ? 'default' : 'pointer',
                   opacity: purchasing ? 0.65 : 1,
