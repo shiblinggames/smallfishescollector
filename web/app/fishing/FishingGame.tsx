@@ -21,6 +21,7 @@ import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
+import { startFishingMusic, setFishingMusicMuted, fadeOutFishingMusic } from '@/lib/fishingMusic'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
 import { updateCharacterColor } from '@/app/u/actions'
@@ -1874,53 +1875,26 @@ export default function FishingGame({
   const hook = getHook(hookTier)
   const line = getLine(lineTier)
 
-  // Background soundtrack — uses an HTML <audio loop> element instead of
-  // Web Audio API because iOS PWA standalone mode uses a different audio
-  // session for Web Audio that silently outputs nothing. <audio> uses the
-  // "media playback" session which works in PWAs. Starts muted so autoplay
-  // is permitted; the speaker icon toggles audio.muted (which is a
-  // gesture-safe operation on iOS). Persists preference via localStorage.
-  // Tradeoff: <audio loop> has a tiny gap at the loop boundary from MP3
-  // encoder padding — re-export the track with leading/trailing silence
-  // trimmed if the gap is audible.
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  // Background soundtrack — managed by the module-level singleton in
+  // lib/fishingMusic so the audio element survives React unmount and the
+  // fade-out actually runs when the player leaves /fishing. Persists the
+  // mute preference via localStorage.
   const [audioMuted, setAudioMuted] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true
     const saved = window.localStorage.getItem('fishingAudioMuted')
     return saved === null ? true : saved === 'true'
   })
 
-  // Sync mute state to the audio element + persist.
   useEffect(() => {
-    const a = audioRef.current
-    if (a) a.muted = audioMuted
+    startFishingMusic(audioMuted)
+    return () => { fadeOutFishingMusic(800) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    setFishingMusicMuted(audioMuted)
     try { window.localStorage.setItem('fishingAudioMuted', String(audioMuted)) } catch {}
   }, [audioMuted])
-
-  // Unmount: fade volume to 0 over 800ms then pause. Manual rAF ramp since
-  // <audio> elements don't have a built-in volume automation API.
-  useEffect(() => {
-    return () => {
-      const a = audioRef.current
-      if (!a || a.muted || a.paused) {
-        try { a?.pause() } catch {}
-        return
-      }
-      const startVol = a.volume
-      const startedAt = performance.now()
-      const FADE_MS = 800
-      const tick = () => {
-        const t = (performance.now() - startedAt) / FADE_MS
-        if (t >= 1) {
-          try { a.volume = 0; a.pause(); a.volume = startVol } catch {}
-          return
-        }
-        try { a.volume = Math.max(0, startVol * (1 - t)) } catch {}
-        requestAnimationFrame(tick)
-      }
-      requestAnimationFrame(tick)
-    }
-  }, [])
 
   // Game state
   const [phase, setPhase]           = useState<Phase>('idle')
@@ -3206,37 +3180,19 @@ export default function FishingGame({
         style={{ height: '100%' }}
       >
 
-        {/* Background soundtrack — autoplays muted (so browsers allow it).
-            OGG first so supporting browsers get a gapless loop (no MP3
-            encoder padding); MP3 stays as fallback for older WebKit. */}
-        <audio
-          ref={audioRef}
-          loop
-          autoPlay
-          muted
-          playsInline
-          preload="auto"
-          aria-hidden
-        >
-          <source src="/fishingsoundtrack.ogg" type="audio/ogg" />
-          <source src="/fishingsoundtrack.mp3" type="audio/mpeg" />
-        </audio>
+        {/* Background soundtrack lives in lib/fishingMusic singleton —
+            kept outside React's tree so unmount fade-out actually runs. */}
 
         {/* Mute / unmute toggle — left edge, below the back-button row so
             it doesn't fight the header. Floats over the gameplay scene. */}
         <button
           type="button"
           onClick={() => {
+            // Set muted synchronously inside the gesture — the singleton
+            // calls play() in this same call stack so iOS PWA permits
+            // unmuted playback.
             const nextMuted = !audioMuted
-            const a = audioRef.current
-            if (a) {
-              // Run play() synchronously inside the gesture — iOS PWA only
-              // permits unmuted playback when play() is in the user-gesture
-              // call stack. Update audio.muted first so the same play()
-              // call carries audible output.
-              a.muted = nextMuted
-              if (!nextMuted) a.play().catch(() => {})
-            }
+            setFishingMusicMuted(nextMuted)
             setAudioMuted(nextMuted)
           }}
           aria-label={audioMuted ? 'Unmute soundtrack' : 'Mute soundtrack'}
