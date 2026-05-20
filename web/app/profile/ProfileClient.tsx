@@ -1098,22 +1098,49 @@ export default function ProfileClient({
               background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)',
               border: '1px solid rgba(96,165,250,0.18)',
               borderRadius: 18,
-              padding: '1.1rem 1rem 0.95rem',
               width: '100%', maxWidth: 360,
-              // Cap the panel to the available padded area and scroll
-              // internally when content overflows — the picker is tall
-              // (character grid + bg grid + border grid + buttons), so
-              // on phones it can exceed viewport height even with the
-              // top/bottom padding above. Without these the Save row
-              // gets pushed off the bottom edge.
+              // Flex column with scrollable body + sticky footer: the body
+              // takes the overflow, so the Reset/Save row is always pinned
+              // at the bottom no matter how tall the content gets.
               maxHeight: '100%',
+              display: 'flex', flexDirection: 'column',
+              cursor: 'default',
+              boxShadow: '0 18px 60px rgba(0,0,0,0.55)',
+              position: 'relative',
+            }}
+          >
+            {/* Close (X) */}
+            <button
+              type="button"
+              onClick={() => setAvatarPickerOpen(false)}
+              aria-label="Close"
+              style={{
+                position: 'absolute', top: 10, right: 10, zIndex: 2,
+                width: 32, height: 32,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '50%',
+                color: 'rgba(240,237,232,0.75)',
+                cursor: 'pointer',
+                padding: 0,
+                lineHeight: 1,
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+
+            {/* Scrollable body */}
+            <div style={{
+              flex: 1, minHeight: 0,
               overflowY: 'auto',
               WebkitOverflowScrolling: 'touch',
               overscrollBehavior: 'contain',
-              cursor: 'default',
-              boxShadow: '0 18px 60px rgba(0,0,0,0.55)',
-            }}
-          >
+              padding: '1.1rem 1rem 0.5rem',
+            }}>
             {/* Live preview */}
             <div className="flex items-center justify-center" style={{ marginBottom: 14 }}>
               <CharacterAvatar
@@ -1319,7 +1346,18 @@ export default function ProfileClient({
               ) : null}
             </div>
 
-            <div style={{ display: 'flex', gap: 8 }}>
+            </div>
+
+            {/* Sticky footer — Reset + Save always visible regardless of scroll */}
+            <div style={{
+              flexShrink: 0,
+              display: 'flex', gap: 10,
+              padding: '0.85rem 1rem calc(env(safe-area-inset-bottom, 0px) + 0.85rem)',
+              borderTop: '1px solid rgba(96,165,250,0.18)',
+              background: 'linear-gradient(180deg, rgba(6,16,28,0.85) 0%, rgba(6,16,28,1) 100%)',
+              borderBottomLeftRadius: 18,
+              borderBottomRightRadius: 18,
+            }}>
               <button
                 type="button"
                 disabled={avatarSaving}
@@ -1330,13 +1368,13 @@ export default function ProfileClient({
                   await updateAvatarColors({ bgColor: null, borderColor: null })
                   setAvatarSaving(false)
                 }}
-                className="font-karla font-700 uppercase tracking-[0.08em]"
+                className="font-karla font-700 uppercase tracking-[0.1em]"
                 style={{
-                  flex: 1, padding: '0.7rem 0',
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  color: 'rgba(240,237,232,0.65)',
-                  borderRadius: 12, fontSize: '0.75rem',
+                  flex: 1, padding: '0.85rem 0',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  color: 'rgba(240,237,232,0.78)',
+                  borderRadius: 12, fontSize: '0.8rem',
                   cursor: avatarSaving ? 'default' : 'pointer',
                 }}
               >
@@ -1351,13 +1389,10 @@ export default function ProfileClient({
                   setAvatarSaving(false)
                   setAvatarPickerOpen(false)
                 }}
-                className="font-karla font-700 uppercase tracking-[0.08em]"
+                className="btn-gold font-karla font-700 uppercase tracking-[0.1em]"
                 style={{
-                  flex: 2, padding: '0.7rem 0',
-                  background: 'rgba(96,165,250,0.14)',
-                  border: '1px solid rgba(96,165,250,0.45)',
-                  color: '#90c0ff',
-                  borderRadius: 12, fontSize: '0.75rem',
+                  flex: 2, padding: '0.85rem 0',
+                  borderRadius: 12, fontSize: '0.8rem',
                   cursor: avatarSaving ? 'default' : 'pointer',
                   opacity: avatarSaving ? 0.6 : 1,
                 }}
