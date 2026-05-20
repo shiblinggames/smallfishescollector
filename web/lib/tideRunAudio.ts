@@ -1,12 +1,18 @@
-// One-shot SFX for the Tide Run minigame. Same pattern as the fishing
-// SFX path: short MP3s fetched once, decoded into AudioBuffers, played
-// via a fresh BufferSource each fire. Routed direct to the destination.
+// One-shot SFX for the Tide Run minigame.
 //
-// Pure Web Audio (no <audio> element) is fine here because Tide Run is
-// SFX-only — there's no background music that would fall into iOS's
-// silent ambient session. Brief one-shots through BufferSource output
-// correctly on iOS PWA once the AudioContext has been resumed inside a
-// user gesture (the global app-shell primer handles that).
+// SFX themselves are plain Web Audio BufferSources (short MP3s decoded
+// once, played via a fresh source each fire, routed direct to the
+// destination).
+//
+// THE iOS PWA GOTCHA: pure-Web-Audio output drops into the silent
+// "ambient" audio session on iOS PWA standalone mode. Beacons + splash
+// would be completely silent there. Keeping an HTML <audio> element
+// playing keeps the "media playback" session alive, and any Web Audio
+// output through the same AudioContext then routes audibly.
+//
+// So we have a tiny silent.ogg (1s of literal zero samples) on loop,
+// muted to avoid any chance of audible interference, started on the
+// first user gesture inside the gesture call stack.
 
 let audioCtx: AudioContext | null = null
 let catchBytes: ArrayBuffer | null = null
@@ -18,6 +24,8 @@ let splashBuffer: AudioBuffer | null = null
 let catchFetching = false
 let crashFetching = false
 let splashFetching = false
+let sessionKeeper: HTMLAudioElement | null = null
+let sessionKeeperStarted = false
 
 function ensureContext(): boolean {
   if (audioCtx) return true
@@ -31,6 +39,32 @@ function ensureContext(): boolean {
   } catch {
     return false
   }
+}
+
+function ensureSessionKeeper(): void {
+  if (sessionKeeper) return
+  if (typeof document === 'undefined') return
+  const a = document.createElement('audio')
+  a.src = '/silent.ogg'
+  a.loop = true
+  a.preload = 'auto'
+  // Muted so there's zero chance of audible artifact, even if the file
+  // somehow contained anything other than silence. iOS still treats a
+  // playing-muted element as "active media", which is what keeps the
+  // PWA audio session in media-playback mode (where Web Audio output is
+  // actually audible).
+  a.muted = true
+  a.setAttribute('playsinline', '')
+  a.setAttribute('aria-hidden', 'true')
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  sessionKeeper = a
+}
+
+function startSessionKeeper(): void {
+  if (sessionKeeperStarted) return
+  if (!sessionKeeper) return
+  sessionKeeper.play().then(() => { sessionKeeperStarted = true }).catch(() => {})
 }
 
 function tryDecodeCatch() {
@@ -88,6 +122,7 @@ function fetchSplash() {
  *  `new AudioContext()` plus a resume), so playback is always sourced
  *  from a context that was born inside a gesture. */
 export function prefetchTideRunAudio(): void {
+  ensureSessionKeeper()
   fetchCatch()
   fetchCrash()
   fetchSplash()
@@ -105,6 +140,11 @@ export function unlockTideRunAudio(): void {
   if (audioCtx && audioCtx.state === 'suspended') {
     audioCtx.resume().catch(() => {})
   }
+  // Start the silent loop inside the gesture so iOS allows it. Once
+  // playing, it keeps the media-playback audio session alive so our
+  // BufferSource SFX output audibly.
+  ensureSessionKeeper()
+  startSessionKeeper()
   tryDecodeCatch()
   tryDecodeCrash()
   tryDecodeSplash()
