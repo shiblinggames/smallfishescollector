@@ -3452,7 +3452,14 @@ export default function FishingGame({
                 // decoding — otherwise they collapse to the container bottom
                 // and visibly jump up once the image lands.
                 aspectRatio: '900 / 800',
-                visibility: visible ? 'visible' : 'hidden',
+                // opacity rather than visibility: visibility:hidden lets
+                // browsers DEFER bitmap decode until the element is first
+                // shown, which produces a 1-frame flicker on each pose
+                // transition the first time through. opacity:0 leaves
+                // the element "visible to layout" so all sprite poses
+                // are eagerly decoded and the transitions are clean.
+                opacity: visible ? 1 : 0,
+                pointerEvents: visible ? 'auto' : 'none',
               }}>
                 <img src={charSrc[f]} alt="" style={{ width: '100%', display: 'block', filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))' }} />
                 {hatDef && (() => {
