@@ -2315,6 +2315,13 @@ export default function FishingGame({
   async function doCast() {
     const currentQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
     if (currentQty <= 0) { setPhase('idle'); return }
+    // Belt-and-suspenders: clear any stale crate state from a previous
+    // catch. handleCastAgain already does this, but handleCast (and the
+    // autocaster path) didn't — and a stuck crateResult will hide the
+    // Cast Again button on the next regular catch.
+    setCrateResult(null)
+    setCratePhase('closed')
+    setCrateRollDisplay(null)
 
     const ev = activeEventRef.current
     const isBloom = ev?.type === 'bloom'
@@ -4406,7 +4413,7 @@ export default function FishingGame({
                   <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#4a4845' }}>…</p>
                 </motion.div>
               )}
-              {phase === 'result' && holdTotalCount < holdCapacity && (!crateResult || cratePhase === 'revealed') && (
+              {phase === 'result' && holdTotalCount < holdCapacity && (!crateResult || cratePhase === 'revealed' || !!catchResult || !!missResult) && (
                 <motion.button key="again" onClick={handleCastAgain}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
