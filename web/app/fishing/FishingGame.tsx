@@ -3187,7 +3187,7 @@ export default function FishingGame({
             (navigating away from /fishing). */}
         <audio
           ref={audioRef}
-          src="/fishingsoundtrack.wav"
+          src="/fishingsoundtrack.mp3"
           loop
           autoPlay
           muted
