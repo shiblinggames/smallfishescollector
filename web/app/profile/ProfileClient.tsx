@@ -1373,7 +1373,7 @@ export default function ProfileClient({
         <div
           onClick={() => { if (!purchasing) setPurchasePrompt(null) }}
           style={{
-            position: 'fixed', inset: 0, zIndex: 70,
+            position: 'fixed', inset: 0, zIndex: 90,
             background: 'rgba(0,0,0,0.72)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '1.25rem',
