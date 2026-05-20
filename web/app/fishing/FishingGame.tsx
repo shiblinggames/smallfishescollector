@@ -116,6 +116,17 @@ const ZONE_BG: Record<string, string> = {
   abyss:        '/abyss.jpg',
   ancient_deep: '/ancient.jpg',
 }
+// Per-zone horizon position (% from the top of the scene). Drives where
+// the cloud overlay's bottom edge sits — clouds fill from 0 down to the
+// horizon, fading at the bottom. Set to 0 for underwater zones to skip
+// the overlay entirely. Tune by eye against each painted backdrop.
+const ZONE_HORIZON_PCT: Record<string, number> = {
+  shallows:     34,
+  open_waters:  34,
+  deep:         0,
+  abyss:        0,
+  ancient_deep: 0,
+}
 
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep'] as const
 type ZoneKey = typeof ZONES[number]
@@ -3131,9 +3142,16 @@ export default function FishingGame({
 
         {/* Ambient cloud drift over the painted sky. Sibling of the bg
             so it doesn't inherit the wave-bob — clouds blow horizontally,
-            the boat bobs vertically, motions stay independent. CSS-only
-            (see .fishing-clouds-overlay in globals.css). */}
-        <div aria-hidden className="fishing-clouds-overlay" />
+            the boat bobs vertically, motions stay independent. Height is
+            per-zone (ZONE_HORIZON_PCT) so the band ends at that zone's
+            painted horizon; 0 hides the overlay on underwater zones. */}
+        {(ZONE_HORIZON_PCT[selectedZone] ?? 0) > 0 && (
+          <div
+            aria-hidden
+            className="fishing-clouds-overlay"
+            style={{ height: `${ZONE_HORIZON_PCT[selectedZone]}%` }}
+          />
+        )}
 
         {/* Character + rod + hook overlay — all 3 frames always in DOM so
             sprites are pre-decoded. willChange + transform: translateZ(0)

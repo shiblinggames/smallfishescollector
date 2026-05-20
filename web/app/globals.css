@@ -1183,9 +1183,10 @@ html, body {
 
 /* Ambient cloud drift over the fishing scene's painted sky. The strip
    (8000px wide) translates horizontally and loops via background-repeat.
-   At 180s the motion is subliminal — the player rarely catches the
-   cycle. mask-image soft-fades the bottom so the clouds don't hard-cut
-   into the painted water. */
+   At 480s the motion is subliminal weather (~17 px/s) — the player
+   rarely catches the cycle. mask-image soft-fades the bottom so the
+   clouds don't hard-cut at the painted horizon. Height is set inline
+   per-zone (see ZONE_HORIZON_PCT in FishingGame.tsx). */
 @keyframes cloudsDrift {
   from { background-position-x: 0; }
   to   { background-position-x: -8000px; }
@@ -1195,14 +1196,13 @@ html, body {
   top: 0;
   left: 0;
   right: 0;
-  height: 55%;
   pointer-events: none;
   background-image: url(/clouds1.png);
   background-repeat: repeat-x;
   background-position: top left;
   background-size: auto 100%;
   opacity: 0.7;
-  animation: cloudsDrift 180s linear infinite;
-  -webkit-mask-image: linear-gradient(to bottom, black 65%, transparent 100%);
-          mask-image: linear-gradient(to bottom, black 65%, transparent 100%);
+  animation: cloudsDrift 480s linear infinite;
+  -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+          mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
 }
