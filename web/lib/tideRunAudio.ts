@@ -72,13 +72,14 @@ export function prefetchTideRunAudio(): void {
 }
 
 /** Called by the global GameAudioPrimer on every user gesture. iOS only
- *  honors AudioContext.resume() inside a gesture call stack. Idempotent. */
+ *  honors AudioContext.resume() inside a gesture call stack. Idempotent.
+ *  Light path: only resumes an EXISTING context (does NOT create one),
+ *  so players who never visit /tavern/tide-run don't pay any cost. */
 export function unlockTideRunAudio(): void {
-  if (!ensureContext()) return
-  if (audioCtx && audioCtx.state === 'suspended') {
+  if (!audioCtx) return
+  if (audioCtx.state === 'suspended') {
     audioCtx.resume().catch(() => {})
   }
-  // Re-attempt any deferred decodes now that the context is running.
   tryDecodeCatch()
   tryDecodeCrash()
 }

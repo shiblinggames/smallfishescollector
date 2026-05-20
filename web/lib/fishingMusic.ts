@@ -214,11 +214,14 @@ function doPreRollAndSwap(remainingMs: number) {
 }
 
 /** iOS unlocks each <audio> element individually — both need their own
- *  play()-during-gesture call to be unlocked. */
+ *  play()-during-gesture call to be unlocked. Only runs once per session
+ *  so repeated primer gestures don't kick a play()+pause() cycle on the
+ *  partner (which churns the audio session). */
+let elementsPrimed = false
 function primeBothElements(): void {
+  if (elementsPrimed) return
   if (!elA || !elB) return
-  // Whichever one is current stays playing audibly; the other is primed
-  // (play then immediate pause) so the handoff swap can later play it.
+  elementsPrimed = true
   const partner = current === elA ? elB : elA
   partner.play().then(() => {
     try { partner.pause(); partner.currentTime = 0 } catch {}
@@ -296,10 +299,23 @@ function tryDecodeDial() {
 
 // ─── Public API ─────────────────────────────────────────────────────────
 
-/** Called from a global gesture listener on every pointerdown/touchstart.
- *  Lazily builds the audio elements + Web Audio graph, resumes the
- *  AudioContext inside the gesture, and kicks off the SFX prefetch.
- *  Idempotent. */
+/** LIGHT path — called by the global gesture primer on every
+ *  pointerdown / touchstart. Resumes an EXISTING AudioContext if one is
+ *  suspended, and primes audio elements once on the first gesture. Does
+ *  NOT trigger any fetches or context creation — so players who never
+ *  visit /fishing don't pay the cost of 1.6 MB of OGG download + audio
+ *  element setup on every tap in other minigames. */
+export function resumeFishingAudioIfReady(): void {
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {})
+  }
+  primeBothElements()
+}
+
+/** HEAVY path — called by FishingGame's startFishingMusic /
+ *  setFishingMusicMuted when the player actually arrives at /fishing.
+ *  Builds the audio elements + Web Audio graph + kicks off the soundtrack
+ *  and SFX prefetches. Idempotent on second+ calls. */
 export function unlockFishingAudio(): void {
   if (typeof document === 'undefined') return
   ensureElements()
