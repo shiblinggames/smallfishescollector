@@ -1874,6 +1874,29 @@ export default function FishingGame({
   const hook = getHook(hookTier)
   const line = getLine(lineTier)
 
+  // Background soundtrack — starts muted so browsers allow autoplay; the
+  // speaker icon top-left toggles mute. Preference persists across sessions
+  // via localStorage so returning players keep their sound choice.
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const [audioMuted, setAudioMuted] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true
+    const saved = window.localStorage.getItem('fishingAudioMuted')
+    // Default to muted on first visit so we never violate autoplay policy
+    // and never blast a returning player who has the tab in the background.
+    return saved === null ? true : saved === 'true'
+  })
+  useEffect(() => {
+    const a = audioRef.current
+    if (!a) return
+    a.muted = audioMuted
+    if (audioMuted) {
+      // Keep the element rolling even when muted so unmuting is instant.
+    } else {
+      a.play().catch(() => {})
+    }
+    try { window.localStorage.setItem('fishingAudioMuted', String(audioMuted)) } catch {}
+  }, [audioMuted])
+
   // Game state
   const [phase, setPhase]           = useState<Phase>('idle')
   const selectedZone = initialZone
@@ -3157,6 +3180,56 @@ export default function FishingGame({
         className={`relative w-full max-w-md overflow-hidden${(phase === 'catching' || phase === 'reeling') ? ' ambient-paused' : ''}`}
         style={{ height: '100%' }}
       >
+
+        {/* Background soundtrack — loops while the fishing screen is mounted.
+            Autoplay works because we start muted; the speaker icon below
+            toggles audio on. Pauses automatically when the component unmounts
+            (navigating away from /fishing). */}
+        <audio
+          ref={audioRef}
+          src="/fishingsoundtrack.wav"
+          loop
+          autoPlay
+          muted
+          playsInline
+          preload="auto"
+          aria-hidden
+        />
+
+        {/* Mute / unmute toggle — left edge, below the back-button row so
+            it doesn't fight the header. Floats over the gameplay scene. */}
+        <button
+          type="button"
+          onClick={() => setAudioMuted(m => !m)}
+          aria-label={audioMuted ? 'Unmute soundtrack' : 'Mute soundtrack'}
+          style={{
+            position: 'absolute', top: 64, left: 10, zIndex: 60,
+            width: 34, height: 34,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(8,18,28,0.6)',
+            border: '1px solid rgba(255,255,255,0.18)',
+            borderRadius: '50%',
+            color: 'rgba(240,237,232,0.85)',
+            cursor: 'pointer',
+            padding: 0,
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+          }}
+        >
+          {audioMuted ? (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <line x1="23" y1="9" x2="17" y2="15"/>
+              <line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+          ) : (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
+          )}
+        </button>
 
         {/* Background — gated to worldBobAnimate so the painted scene
             stays still during calm casting (only the boat/character
