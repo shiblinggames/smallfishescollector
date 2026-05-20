@@ -195,17 +195,22 @@ export function unlockFishingAudio(): void {
 /** Fire-and-forget one-shot: perfect-catch SFX. Plays as close to "now"
  *  as the audio thread allows — Web Audio BufferSource.start(0) is
  *  sample-accurate, so latency from this call to first sample is well
- *  under one frame. Silent no-op if the buffer hasn't loaded yet. */
+ *  under one frame. Silent no-op if the buffer hasn't loaded yet.
+ *  Boosted ~1.8x via a dedicated GainNode so the chime cuts through the
+ *  soundtrack without needing to re-encode the asset. */
+const PERFECT_SFX_GAIN = 1.8
 export function playPerfectSfx(): void {
   if (!audioCtx || !perfectSfxBuffer) return
   try {
     if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
     const source = audioCtx.createBufferSource()
     source.buffer = perfectSfxBuffer
-    // Route straight to destination — SFX volume is independent of the
-    // music's GainNode so muting/fading the soundtrack doesn't mute the
-    // perfect chime.
-    source.connect(audioCtx.destination)
+    const boost = audioCtx.createGain()
+    boost.gain.value = PERFECT_SFX_GAIN
+    // Route through its own GainNode straight to destination — independent
+    // of the music's GainNode so muting/fading the soundtrack doesn't
+    // affect the chime.
+    source.connect(boost).connect(audioCtx.destination)
     source.start(0)
   } catch {
     // BufferSource.start can throw if called on a stale source; ignore.
