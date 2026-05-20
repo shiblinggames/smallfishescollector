@@ -916,9 +916,13 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     if (collidesWithHazard(shipScreenX)) {
       dead = true
     } else if (!g.airborne) {
-      // Grounded inside a shoal = die
+      // Grounded inside a shoal = die. Uses the boat's CENTER point
+      // ("where is the boat standing") rather than the sprite's left
+      // edge — left-edge was offset by ~one boat width and didn't
+      // match what the player visually expected to be "on the shoal".
+      const boatCenterWorldX = shipScreenX + g.shipW / 2 + g.scrollX
       for (const wp of g.shoals) {
-        if (boatWorldX >= wp.x && boatWorldX <= wp.x + wp.width) {
+        if (boatCenterWorldX >= wp.x && boatCenterWorldX <= wp.x + wp.width) {
           dead = true
           break
         }
