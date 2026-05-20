@@ -3203,7 +3203,7 @@ export default function FishingGame({
           onClick={() => setAudioMuted(m => !m)}
           aria-label={audioMuted ? 'Unmute soundtrack' : 'Mute soundtrack'}
           style={{
-            position: 'absolute', top: 64, left: 10, zIndex: 60,
+            position: 'absolute', bottom: 110, left: 10, zIndex: 60,
             width: 34, height: 34,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'rgba(8,18,28,0.6)',
