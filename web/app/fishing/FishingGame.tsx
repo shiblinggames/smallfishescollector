@@ -21,7 +21,7 @@ import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
-import { startFishingMusic, setFishingMusicMuted, fadeOutFishingMusic } from '@/lib/fishingMusic'
+import { startFishingMusic, setFishingMusicMuted, fadeOutFishingMusic, playPerfectSfx } from '@/lib/fishingMusic'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
 import { updateCharacterColor } from '@/app/u/actions'
@@ -2731,6 +2731,9 @@ export default function FishingGame({
     // Catch/perfect: freeze needle, wait for server before showing result
     const wasPerfect = zone.type === 'perfect'
     if (wasPerfect) {
+      // Fire the SFX FIRST (before any setState) so the audio call hits
+      // the same JS tick as the input — no render cycle in between.
+      playPerfectSfx()
       setPerfectBurstKey(k => k + 1)
       setPerfectFlash(true)
       if ('vibrate' in navigator) navigator.vibrate([40, 60, 80])

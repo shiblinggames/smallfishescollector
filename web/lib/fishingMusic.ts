@@ -25,6 +25,13 @@ let webAudioReady = false
 let pendingPauseTimeout: ReturnType<typeof setTimeout> | null = null
 let lastGainValue = 1
 
+// SFX cache — short one-shot sounds (perfect catch, etc.). Bytes are
+// fetched on first interaction so the buffer is decoded and ready well
+// before the player triggers the gameplay event that uses them.
+let perfectSfxBytes: ArrayBuffer | null = null
+let perfectSfxBuffer: AudioBuffer | null = null
+let perfectSfxPrefetching = false
+
 const ENTRY_FADE_MS  = 3000
 const EXIT_FADE_MS   = 3000
 const TOGGLE_FADE_MS = 400
@@ -149,6 +156,25 @@ function rampGain(fromValue: number, target: number, ms: number, pauseAtEnd = fa
   return true
 }
 
+function prefetchPerfectSfx() {
+  if (perfectSfxBytes || perfectSfxPrefetching) return
+  if (typeof fetch === 'undefined') return
+  perfectSfxPrefetching = true
+  fetch('/fishingperfect.mp3')
+    .then(r => r.arrayBuffer())
+    .then(b => { perfectSfxBytes = b; tryDecodePerfectSfx() })
+    .catch(() => { perfectSfxPrefetching = false })
+}
+
+function tryDecodePerfectSfx() {
+  if (perfectSfxBuffer || !perfectSfxBytes || !audioCtx) return
+  // slice(0) — decodeAudioData detaches the ArrayBuffer on success; copy
+  // so we can re-decode if a future context replaces this one.
+  audioCtx.decodeAudioData(perfectSfxBytes.slice(0))
+    .then(buffer => { perfectSfxBuffer = buffer })
+    .catch(() => {})
+}
+
 /** Public: called from a global gesture listener at the app shell on every
  *  pointerdown / touchstart. Lazily builds the audio graph on the first
  *  call and (crucially) resumes the AudioContext while we still have the
@@ -162,6 +188,28 @@ export function unlockFishingAudio(): void {
     audioCtx.resume().catch(() => {})
   }
   primePartner()
+  prefetchPerfectSfx()
+  tryDecodePerfectSfx()
+}
+
+/** Fire-and-forget one-shot: perfect-catch SFX. Plays as close to "now"
+ *  as the audio thread allows — Web Audio BufferSource.start(0) is
+ *  sample-accurate, so latency from this call to first sample is well
+ *  under one frame. Silent no-op if the buffer hasn't loaded yet. */
+export function playPerfectSfx(): void {
+  if (!audioCtx || !perfectSfxBuffer) return
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
+    const source = audioCtx.createBufferSource()
+    source.buffer = perfectSfxBuffer
+    // Route straight to destination — SFX volume is independent of the
+    // music's GainNode so muting/fading the soundtrack doesn't mute the
+    // perfect chime.
+    source.connect(audioCtx.destination)
+    source.start(0)
+  } catch {
+    // BufferSource.start can throw if called on a stale source; ignore.
+  }
 }
 
 /** Called when /fishing mounts. Always fades in from 0 to 1 (when not
