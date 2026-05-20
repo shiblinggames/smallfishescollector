@@ -2357,14 +2357,17 @@ export default function FishingGame({
         }
         nextChgMsRef.current = elapsedMsRef.current + (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
       }
-      // Write the rotation directly to the SVG <g> via the ref. This skips
-      // React's render path so there's no batched state update that could
-      // commit AFTER the player clicks Reel In and visually nudge the
-      // needle one position past where they locked it. State is still
-      // kept in sync (cheaper for the very first render and for snapshots
-      // taken elsewhere) but the per-frame visual is ref-driven.
+      // Write the rotation directly to the SVG <g> via the ref. The JSX
+      // no longer renders a transform prop on the needle's group, so React
+      // re-renders won't overwrite this attribute. Net: the needle's visual
+      // position is ref-driven and can't be creeped past a click by a
+      // queued setState commit.
       const ng = needleGroupRef.current
       if (ng) ng.setAttribute('transform', `rotate(${angleRef.current}, ${CX}, ${CY})`)
+      // Keep React state in sync too — `angle` drives currentZone (zone
+      // label + zone highlight opacity). Without this, the dial UI is
+      // stuck on whatever zone was under the initial angle.
+      setAngle(angleRef.current)
       animRef.current = requestAnimationFrame(tick)
     }
     animRef.current = requestAnimationFrame(tick)
