@@ -1890,8 +1890,9 @@ export default function FishingGame({
 
   // Mount: build the audio graph, fetch + decode MP3, start a looped buffer
   // source. The context may start in 'suspended' on browsers with a strict
-  // autoplay policy; a one-shot pointer/key listener resumes it on the first
-  // user gesture.
+  // autoplay policy; we try to resume immediately and also listen for the
+  // first user gesture to cover the iOS Safari case where only direct
+  // gesture handlers can resume the context.
   useEffect(() => {
     let cancelled = false
     const Ctx: typeof AudioContext | undefined =
@@ -1900,7 +1901,7 @@ export default function FishingGame({
     const ctx = new Ctx()
     audioCtxRef.current = ctx
     const gain = ctx.createGain()
-    gain.gain.value = audioMuted ? 0 : 1
+    gain.gain.setValueAtTime(audioMuted ? 0 : 1, ctx.currentTime)
     gain.connect(ctx.destination)
     audioGainRef.current = gain
 
@@ -1917,6 +1918,9 @@ export default function FishingGame({
         source.connect(gain)
         source.start(0)
         audioSourceRef.current = source
+        // Try resume once the source is queued — works on browsers where
+        // the page already has user-activation history (most desktop).
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {})
       } catch {
         // Decode/fetch failure is non-fatal — game still works without music.
       }
@@ -1925,14 +1929,20 @@ export default function FishingGame({
     const resumeOnce = () => {
       if (ctx.state === 'suspended') ctx.resume().catch(() => {})
       window.removeEventListener('pointerdown', resumeOnce)
+      window.removeEventListener('touchstart', resumeOnce)
+      window.removeEventListener('click', resumeOnce)
       window.removeEventListener('keydown', resumeOnce)
     }
     window.addEventListener('pointerdown', resumeOnce, { once: true })
+    window.addEventListener('touchstart', resumeOnce, { once: true })
+    window.addEventListener('click', resumeOnce, { once: true })
     window.addEventListener('keydown', resumeOnce, { once: true })
 
     return () => {
       cancelled = true
       window.removeEventListener('pointerdown', resumeOnce)
+      window.removeEventListener('touchstart', resumeOnce)
+      window.removeEventListener('click', resumeOnce)
       window.removeEventListener('keydown', resumeOnce)
       try { audioSourceRef.current?.stop() } catch {}
       audioSourceRef.current = null
@@ -1942,13 +1952,15 @@ export default function FishingGame({
     }
   }, [])
 
-  // Mute toggle — ramp the gain over 50ms so unmute/mute is click-free.
+  // Mute toggle — set the gain immediately so flips are reliable across
+  // suspended/running states. (We could ramp for a click-free transition,
+  // but suspended contexts have a frozen currentTime which can swallow the
+  // ramp; just set the value.)
   useEffect(() => {
     const ctx = audioCtxRef.current
     const gain = audioGainRef.current
     if (!ctx || !gain) return
-    gain.gain.cancelScheduledValues(ctx.currentTime)
-    gain.gain.linearRampToValueAtTime(audioMuted ? 0 : 1, ctx.currentTime + 0.05)
+    gain.gain.setValueAtTime(audioMuted ? 0 : 1, ctx.currentTime)
     if (!audioMuted && ctx.state === 'suspended') ctx.resume().catch(() => {})
     try { window.localStorage.setItem('fishingAudioMuted', String(audioMuted)) } catch {}
   }, [audioMuted])
