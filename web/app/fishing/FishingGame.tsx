@@ -495,6 +495,24 @@ function DialSVG({
     if (g) g.setAttribute('transform', `rotate(${angle}, ${CX}, ${CY})`)
   }, [angle, needleGroupRef])
 
+  // Perfect-hit flash on the needle — short gold burst with a thicker
+  // stroke so the needle reads as the thing the player nailed. Tied to
+  // perfectBurstKey so it fires at the exact same instant as the arc
+  // flash + expanding ring.
+  const [perfectFlash, setPerfectFlash] = useState(false)
+  const prevBurstRef = useRef(perfectBurstKey)
+  useEffect(() => {
+    if (perfectBurstKey > 0 && perfectBurstKey !== prevBurstRef.current) {
+      prevBurstRef.current = perfectBurstKey
+      setPerfectFlash(true)
+      const t = setTimeout(() => setPerfectFlash(false), 450)
+      return () => clearTimeout(t)
+    }
+  }, [perfectBurstKey])
+  const liveNeedleColor = perfectFlash ? '#fde68a' : needleColor
+  const liveNeedleStroke = perfectFlash ? 3.6 : 2.5
+  const liveTipRadius = perfectFlash ? 7 : 5
+
   // Snap/bounce + ripple on reel-in tap
   const [snapAnim, setSnapAnim] = useState(false)
   const [rippleKey, setRippleKey] = useState(0)
@@ -571,10 +589,10 @@ function DialSVG({
             rotation to this element via needleGroupRef.setAttribute, so
             React re-renders elsewhere can't overwrite it. The initial
             value is set by a useLayoutEffect on `angle` below. */}
-        <g ref={needleGroupRef}>
-          <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={needleColor} strokeWidth="10" strokeOpacity="0.12" strokeLinecap="round" />
-          <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={needleColor} strokeWidth="2.5" strokeLinecap="round" />
-          <circle cx={CX} cy={needleTipY} r="5" fill={needleColor} />
+        <g ref={needleGroupRef} style={{ filter: perfectFlash ? 'drop-shadow(0 0 6px #fde68a)' : undefined, transition: 'filter 0.15s ease-out' }}>
+          <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 12 : 10} strokeOpacity={perfectFlash ? 0.28 : 0.12} strokeLinecap="round" />
+          <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={liveNeedleStroke} strokeLinecap="round" />
+          <circle cx={CX} cy={needleTipY} r={liveTipRadius} fill={liveNeedleColor} />
         </g>
         <motion.circle cx={CX} cy={CY} r="8"
           fill="rgba(10,10,10,0.9)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"
