@@ -1887,7 +1887,7 @@ export default function FishingGame({
 
   useEffect(() => {
     startFishingMusic(audioMuted)
-    return () => { fadeOutFishingMusic(800) }
+    return () => { fadeOutFishingMusic() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
