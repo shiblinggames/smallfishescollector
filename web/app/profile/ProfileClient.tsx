@@ -1072,7 +1072,13 @@ export default function ProfileClient({
             position: 'fixed', inset: 0, zIndex: 80,
             background: 'rgba(0,0,0,0.78)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '1.25rem',
+            // Asymmetric padding clears the fixed Nav (top, ~44 mobile /
+            // ~60 desktop) and the fixed MobileTabBar (bottom, ~64 + safe
+            // area). Without this the centered modal can position itself
+            // behind the tab bar and the Save button is unreachable on
+            // taller content. Mirrors the pattern used by LeaderboardModal
+            // + RaidsSection NodeDetailSheet.
+            padding: 'calc(env(safe-area-inset-top, 0px) + 56px) 1.25rem calc(env(safe-area-inset-bottom, 0px) + 76px)',
             cursor: 'pointer',
           }}
         >
