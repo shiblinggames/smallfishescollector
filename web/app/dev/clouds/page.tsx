@@ -59,11 +59,13 @@ const CLOUD_FILTER: Record<CloudVariant, string> = {
 export default function CloudsTunerPage() {
   const [zone, setZone] = useState<ZoneKey>('shallows')
   const [horizon, setHorizon] = useState<Record<ZoneKey, number>>(INITIAL_HORIZON)
-  // Shared (non-per-zone) overlay properties.
-  const [cloudHeightPx, setCloudHeightPx] = useState(260)
-  const [driftSec, setDriftSec]     = useState(480)
-  const [opacity, setOpacity]       = useState(0.7)
-  const [maskStartPct, setMaskStart] = useState(70)   // where bottom fade begins (% of cloud band)
+  // Shared (non-per-zone) overlay properties. Defaults mirror the
+  // values currently in globals.css's .fishing-clouds-overlay rule so
+  // the tuner opens at the live state, not the pre-tuning starter set.
+  const [cloudHeightPx, setCloudHeightPx] = useState(350)
+  const [driftSec, setDriftSec]     = useState(1200)
+  const [opacity, setOpacity]       = useState(0.65)
+  const [maskStartPct, setMaskStart] = useState(68)
   const [posOffsetPx, setPosOffset] = useState(0)     // background-position-x phase offset
   // Preview frame size — test mobile vs desktop without resizing window.
   const [previewW, setPreviewW] = useState(448)
