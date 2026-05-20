@@ -26,6 +26,7 @@ let crashFetching = false
 let splashFetching = false
 let sessionKeeper: HTMLAudioElement | null = null
 let sessionKeeperStarted = false
+let sessionKeeperRouted = false
 
 function ensureContext(): boolean {
   if (audioCtx) return true
@@ -48,12 +49,12 @@ function ensureSessionKeeper(): void {
   a.src = '/silent.ogg'
   a.loop = true
   a.preload = 'auto'
-  // Muted so there's zero chance of audible artifact, even if the file
-  // somehow contained anything other than silence. iOS still treats a
-  // playing-muted element as "active media", which is what keeps the
-  // PWA audio session in media-playback mode (where Web Audio output is
-  // actually audible).
-  a.muted = true
+  // Intentionally UNMUTED: the asset is literal zero samples so it's
+  // inaudible anyway, but iOS classifies muted elements differently for
+  // audio-session purposes — keeping it unmuted is what gets the
+  // "media playback" session lit for everything else in the context.
+  a.muted = false
+  a.volume = 1
   a.setAttribute('playsinline', '')
   a.setAttribute('aria-hidden', 'true')
   a.style.display = 'none'
@@ -65,6 +66,24 @@ function startSessionKeeper(): void {
   if (sessionKeeperStarted) return
   if (!sessionKeeper) return
   sessionKeeper.play().then(() => { sessionKeeperStarted = true }).catch(() => {})
+}
+
+/** Wire the silent keeper into the AudioContext via MediaElementSource so
+ *  it lives on the same Web Audio graph as the SFX BufferSources. This
+ *  mirrors what fishingMusic does for its soundtrack — the same pattern
+ *  is what unlocks audible Web Audio output on iOS PWA. */
+function routeSessionKeeper(): void {
+  if (sessionKeeperRouted) return
+  if (!audioCtx || !sessionKeeper) return
+  try {
+    const src = audioCtx.createMediaElementSource(sessionKeeper)
+    src.connect(audioCtx.destination)
+    sessionKeeperRouted = true
+  } catch {
+    // Most likely cause: createMediaElementSource called twice on the
+    // same element. Either way, mark routed so we don't keep retrying.
+    sessionKeeperRouted = true
+  }
 }
 
 function tryDecodeCatch() {
@@ -140,10 +159,12 @@ export function unlockTideRunAudio(): void {
   if (audioCtx && audioCtx.state === 'suspended') {
     audioCtx.resume().catch(() => {})
   }
-  // Start the silent loop inside the gesture so iOS allows it. Once
-  // playing, it keeps the media-playback audio session alive so our
-  // BufferSource SFX output audibly.
+  // Start the silent loop inside the gesture so iOS allows it. Route it
+  // through the AudioContext via MediaElementSource so the keeper lives
+  // on the SAME Web Audio graph as the SFX — that's the pattern fishing
+  // uses to get audible output on iOS PWA.
   ensureSessionKeeper()
+  routeSessionKeeper()
   startSessionKeeper()
   tryDecodeCatch()
   tryDecodeCrash()
