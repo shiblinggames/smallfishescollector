@@ -235,20 +235,62 @@ function rampFrom(fromValue: number, target: number, ms: number, pauseAtEnd = fa
   requestAnimationFrame(step)
 }
 
+// One-shot gesture listener used when entry-fade has to wait for the next
+// interaction (iOS, suspended AudioContext after a tab hide, no Web Audio
+// wired up yet, etc.). Cleared if startFishingMusic is called again.
+let pendingArmGesture: (() => void) | null = null
+function clearPendingArm() {
+  if (pendingArmGesture) {
+    window.removeEventListener('pointerdown', pendingArmGesture, true)
+    window.removeEventListener('touchstart', pendingArmGesture, true)
+    window.removeEventListener('click', pendingArmGesture, true)
+    pendingArmGesture = null
+  }
+}
+
 export function startFishingMusic(muted: boolean): void {
   const a = ensure()
   if (!a) return
   clearPendingPause()
+  clearPendingArm()
   if (elA) elA.muted = muted
   if (elB) elB.muted = muted
   if (muted) {
-    // Pin gain at 1 so a future unmute starts loud — the muted property
-    // gates output regardless.
     rampFrom(1, 1, 0)
     return
   }
+  // For an unmuted entry we want a real fade-in. That needs Web Audio
+  // gain control because audio.volume is a no-op on iOS. Verify the
+  // context is wired AND running — if it's suspended, scheduled ramps
+  // can't start advancing until it resumes (which iOS won't do outside
+  // a gesture), so we'd slam the user with full volume. Defer to the
+  // next gesture instead.
+  const canFadeNow = webAudioReady && !!gainNode && audioCtx?.state === 'running'
+  if (canFadeNow) {
+    a.play().catch(() => {})
+    rampFrom(0, 1, ENTRY_FADE_MS)
+    return
+  }
+  // Defer: keep elements muted, prime them, fade in on first gesture.
+  if (elA) elA.muted = true
+  if (elB) elB.muted = true
   a.play().catch(() => {})
-  rampFrom(0, 1, ENTRY_FADE_MS)
+  const arm = () => {
+    clearPendingArm()
+    setupWebAudio()
+    primePartner()
+    if (elA) elA.muted = false
+    if (elB) elB.muted = false
+    const a2 = current ?? elA
+    a2?.play().catch(() => {})
+    // resume synchronously inside this gesture, then ramp
+    if (audioCtx?.state === 'suspended') audioCtx.resume().catch(() => {})
+    rampFrom(0, 1, ENTRY_FADE_MS)
+  }
+  pendingArmGesture = arm
+  window.addEventListener('pointerdown', arm, true)
+  window.addEventListener('touchstart', arm, true)
+  window.addEventListener('click', arm, true)
 }
 
 export function setFishingMusicMuted(muted: boolean): void {
@@ -265,6 +307,7 @@ export function setFishingMusicMuted(muted: boolean): void {
 }
 
 export function fadeOutFishingMusic(ms: number = EXIT_FADE_MS): void {
+  clearPendingArm()
   if (!elA || !elB) return
   const a = current ?? elA
   if (a.paused || a.muted) {
