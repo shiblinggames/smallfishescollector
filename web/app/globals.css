@@ -1237,11 +1237,11 @@ html, body {
   background-repeat: repeat-x;
   background-position: 0 top;
   background-size: auto 180px;
-  opacity: 0.22;
+  opacity: 0.18;
   transform: scaleY(-1);
   animation: cloudsReflectDrift 1500s linear infinite;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 78%, transparent 100%);
-          mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 78%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 74%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 74%, transparent 100%);
 }
 .fishing-clouds-reflection--sunset {
   filter: sepia(0.55) saturate(1.7) hue-rotate(332deg) brightness(0.82);
