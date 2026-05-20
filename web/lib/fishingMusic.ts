@@ -37,10 +37,10 @@ const EXIT_FADE_MS   = 3000
 const TOGGLE_FADE_MS = 400
 
 function pickSrc(): string {
-  if (typeof document === 'undefined') return '/fishingsoundtrack.mp3'
-  const probe = document.createElement('audio')
-  if (probe.canPlayType('audio/ogg; codecs="vorbis"')) return '/fishingsoundtrack.ogg'
-  return '/fishingsoundtrack.mp3'
+  // Single source of truth — OGG/Vorbis is the only file shipped. Browsers
+  // without OGG support won't get music; that's effectively no one in 2026
+  // (all evergreen browsers + iOS 17+ Safari support it).
+  return '/fishingsoundtrack.ogg'
 }
 
 function makeAudio(src: string): HTMLAudioElement {
@@ -55,13 +55,72 @@ function makeAudio(src: string): HTMLAudioElement {
   return audio
 }
 
-function attachHandoff(just: HTMLAudioElement, partner: HTMLAudioElement) {
-  just.addEventListener('ended', () => {
-    try { just.currentTime = 0 } catch {}
-    try { partner.currentTime = 0 } catch {}
-    partner.play().catch(() => {})
-    current = partner
-  })
+// Pre-scheduled loop handoff. The 'ended' event fires with significant
+// latency on iOS WebKit (often 100ms+) and partner.play() itself has
+// startup delay on mobile — those two delays compound into an audible gap.
+// Instead, schedule the swap based on the source's known duration: a
+// coarse setTimeout for the bulk of the wait, then an rAF tight-poll for
+// the last frame so the handoff fires within ~16ms of currentTime hitting
+// duration. The 'ended' listener stays as a safety net.
+let handoffCoarseTimer: ReturnType<typeof setTimeout> | null = null
+let handoffTightRaf: number | null = null
+
+function clearHandoff() {
+  if (handoffCoarseTimer !== null) { clearTimeout(handoffCoarseTimer); handoffCoarseTimer = null }
+  if (handoffTightRaf !== null) { cancelAnimationFrame(handoffTightRaf); handoffTightRaf = null }
+}
+
+function fireHandoff() {
+  clearHandoff()
+  if (!current || !elA || !elB) return
+  const partner = current === elA ? elB : elA
+  const old = current
+  try { partner.currentTime = 0 } catch {}
+  partner.play().catch(() => {})
+  current = partner
+  // Reset old after a beat so its next iteration starts at 0 instantly.
+  setTimeout(() => {
+    try { old.currentTime = 0 } catch {}
+    try { old.pause() } catch {}
+  }, 60)
+  scheduleNextHandoff()
+}
+
+function tightPollHandoff() {
+  if (!current) return
+  const dur = current.duration
+  if (!isFinite(dur) || dur <= 0) {
+    fireHandoff()
+    return
+  }
+  const remainingMs = (dur - current.currentTime) * 1000
+  if (remainingMs <= 0) {
+    fireHandoff()
+    return
+  }
+  handoffTightRaf = requestAnimationFrame(tightPollHandoff)
+}
+
+function scheduleNextHandoff() {
+  clearHandoff()
+  if (!current) return
+  if (current.paused) return
+  const dur = current.duration
+  if (!isFinite(dur) || dur <= 0) {
+    // Duration metadata not yet loaded; check back shortly.
+    handoffCoarseTimer = setTimeout(scheduleNextHandoff, 100)
+    return
+  }
+  const remainingMs = (dur - current.currentTime) * 1000
+  const TIGHT_WINDOW_MS = 80 // start tight rAF poll this far from the end
+  if (remainingMs <= TIGHT_WINDOW_MS) {
+    handoffTightRaf = requestAnimationFrame(tightPollHandoff)
+    return
+  }
+  handoffCoarseTimer = setTimeout(() => {
+    handoffCoarseTimer = null
+    handoffTightRaf = requestAnimationFrame(tightPollHandoff)
+  }, remainingMs - TIGHT_WINDOW_MS)
 }
 
 function ensureElements(): void {
@@ -75,10 +134,25 @@ function ensureElements(): void {
   elA = a
   elB = b
   current = a
-  attachHandoff(a, b)
-  attachHandoff(b, a)
-  // Muted autoplay so the element is "live" before any unmute. Safe on
-  // all browsers since muted autoplay is allowed.
+  // 'ended' as a safety net in case the scheduled handoff misses (tab
+  // throttled in background, duration unknown, etc.).
+  const onEnded = (just: HTMLAudioElement, partner: HTMLAudioElement) => () => {
+    if (current !== just) return // already handed off
+    try { just.currentTime = 0 } catch {}
+    try { partner.currentTime = 0 } catch {}
+    partner.play().catch(() => {})
+    current = partner
+    scheduleNextHandoff()
+  }
+  a.addEventListener('ended', onEnded(a, b))
+  b.addEventListener('ended', onEnded(b, a))
+  // Reschedule when metadata arrives (duration becomes known) or when
+  // playback resumes after a pause (currentTime may have changed).
+  a.addEventListener('loadedmetadata', () => { if (current === a) scheduleNextHandoff() })
+  b.addEventListener('loadedmetadata', () => { if (current === b) scheduleNextHandoff() })
+  a.addEventListener('play', () => { if (current === a) scheduleNextHandoff() })
+  b.addEventListener('play', () => { if (current === b) scheduleNextHandoff() })
+  // Muted autoplay so the element is "live" before any unmute.
   a.play().catch(() => {})
 }
 
@@ -148,6 +222,7 @@ function rampGain(fromValue: number, target: number, ms: number, pauseAtEnd = fa
   lastGainValue = target
   if (pauseAtEnd && target === 0) {
     pendingPauseTimeout = setTimeout(() => {
+      clearHandoff()
       try { elA?.pause() } catch {}
       try { elB?.pause() } catch {}
       pendingPauseTimeout = null
