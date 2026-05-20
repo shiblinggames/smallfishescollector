@@ -1876,6 +1876,50 @@ export default function FishingGame({
   const hook = getHook(hookTier)
   const line = getLine(lineTier)
 
+  // Sprite preload — every cosmetic image the player will see in the
+  // first few seconds (character poses, boat, hat, rod, reel, hook). We
+  // explicitly call img.decode() so the browser does the load + decode
+  // work UP FRONT, instead of stealing main-thread time during the
+  // bob animation's first few cycles. The bob is then gated on
+  // spritesReady so the player doesn't see stuttery frames while the
+  // decode is in progress. Re-runs whenever any sprite-affecting state
+  // changes (color / hat / boat / rod / reel / hook).
+  const [spritesReady, setSpritesReady] = useState(false)
+  useEffect(() => {
+    setSpritesReady(false)
+    const urls: string[] = []
+    const charSrcs = getCharSrc(localCharacterColor)
+    urls.push(charSrcs.rest, charSrcs.wait, charSrcs.cast)
+    if (boatDef) urls.push(boatDef.restImageUrl, boatDef.castImageUrl)
+    if (hatDef)  urls.push(hatDef.restImageUrl, hatDef.castImageUrl)
+    if (rod.slug) {
+      urls.push(`/${rod.slug}_rest.png`, `/${rod.slug}_wait.png`, `/${rod.slug}_cast.png`)
+    } else if (rod.imageUrl) {
+      urls.push(rod.imageUrl)
+    }
+    if (reel.imageUrl) urls.push(reel.imageUrl)
+    if (hook.imageUrl) urls.push(hook.imageUrl)
+    let cancelled = false
+    Promise.all(urls.map(src => {
+      const img = new Image()
+      img.src = src
+      // .decode() returns a promise that resolves when the bitmap is
+      // ready to paint. Some browsers don't support it → fall back to
+      // resolving on the load event.
+      if (typeof img.decode === 'function') {
+        return img.decode().catch(() => new Promise<void>(r => {
+          img.onload = () => r()
+          img.onerror = () => r()
+        }))
+      }
+      return new Promise<void>(r => {
+        img.onload = () => r()
+        img.onerror = () => r()
+      })
+    })).then(() => { if (!cancelled) setSpritesReady(true) })
+    return () => { cancelled = true }
+  }, [localCharacterColor, boatDef, hatDef, rod, reel.imageUrl, hook.imageUrl])
+
   // Background soundtrack — managed by the module-level singleton in
   // lib/fishingMusic so the audio element survives React unmount and the
   // fade-out actually runs when the player leaves /fishing. Persists the
@@ -3184,12 +3228,14 @@ export default function FishingGame({
 
   // Active bobbing — calm casting wait + hooked-fish struggle. The world
   // bob (painted scene shake) is gated to phase==='hooked' AND this flag.
-  const isActiveBobbing = charFrame === 'wait' && (phase === 'casting' || phase === 'hooked')
+  // Sprite decode must be done first or the bob would stutter as each
+  // overlay finishes loading (drops frames during the first 3 cycles).
+  const isActiveBobbing = spritesReady && charFrame === 'wait' && (phase === 'casting' || phase === 'hooked')
   // Ambient idle bob — gentle rise/fall on the boat+character even when
   // the player is just sitting on /fishing, so the scene reads as "on the
   // water" instead of frozen. Smaller amplitude + slower period than the
   // casting bob so it doesn't compete visually.
-  const isIdleBobbing = charFrame === 'rest'
+  const isIdleBobbing = spritesReady && charFrame === 'rest'
 
   const cp  = CHAR_POS[charFrame]
   const crc = CHAR_ROD_OVERLAY[charFrame]
