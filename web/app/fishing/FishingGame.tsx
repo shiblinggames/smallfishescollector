@@ -21,7 +21,7 @@ import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
-import { startFishingMusic, setFishingMusicMuted, fadeOutFishingMusic, playPerfectSfx, playCastSfx, startDialLoop, stopDialLoop } from '@/lib/fishingMusic'
+import { startFishingMusic, setFishingMusicMuted, fadeOutFishingMusic, playPerfectSfx, playCastSfx, playCast2Sfx, startDialLoop, stopDialLoop } from '@/lib/fishingMusic'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
 import { updateCharacterColor } from '@/app/u/actions'
@@ -2306,7 +2306,10 @@ export default function FishingGame({
     if (phase !== 'casting') { setCastAnimDone(false); return }
     setCastAnimDone(false)
     setCharFrame('cast')
-    const t1 = setTimeout(() => setCharFrame('wait'), 650)
+    // Second cast SFX — fires the instant the cast animation finishes
+    // and the line hits the water (the 'wait' frame). Synced with the
+    // pose flip so the audio lands with the visual.
+    const t1 = setTimeout(() => { setCharFrame('wait'); playCast2Sfx() }, 650)
     const t2 = setTimeout(() => setCastAnimDone(true), 1500)
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [phase])

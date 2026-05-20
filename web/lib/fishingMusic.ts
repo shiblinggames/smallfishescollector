@@ -52,6 +52,9 @@ let perfectSfxPrefetching = false
 let castSfxBytes: ArrayBuffer | null = null
 let castSfxBuffer: AudioBuffer | null = null
 let castSfxPrefetching = false
+let cast2SfxBytes: ArrayBuffer | null = null
+let cast2SfxBuffer: AudioBuffer | null = null
+let cast2SfxPrefetching = false
 
 // Dial loop cache.
 let dialBytes: ArrayBuffer | null = null
@@ -297,6 +300,23 @@ function tryDecodeCastSfx() {
     .catch(() => {})
 }
 
+function prefetchCast2Sfx() {
+  if (cast2SfxBytes || cast2SfxPrefetching) return
+  if (typeof fetch === 'undefined') return
+  cast2SfxPrefetching = true
+  fetch('/fishingcast2.mp3')
+    .then(r => r.arrayBuffer())
+    .then(b => { cast2SfxBytes = b; tryDecodeCast2Sfx() })
+    .catch(() => { cast2SfxPrefetching = false })
+}
+
+function tryDecodeCast2Sfx() {
+  if (cast2SfxBuffer || !cast2SfxBytes || !audioCtx) return
+  audioCtx.decodeAudioData(cast2SfxBytes.slice(0))
+    .then(buffer => { cast2SfxBuffer = buffer })
+    .catch(() => {})
+}
+
 function prefetchDial() {
   if (dialBytes || dialFetching) return
   if (typeof fetch === 'undefined') return
@@ -348,6 +368,8 @@ export function unlockFishingAudio(): void {
   tryDecodePerfectSfx()
   prefetchCastSfx()
   tryDecodeCastSfx()
+  prefetchCast2Sfx()
+  tryDecodeCast2Sfx()
   prefetchDial()
   tryDecodeDial()
 }
@@ -414,6 +436,19 @@ export function playCastSfx(): void {
     if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
     const source = audioCtx.createBufferSource()
     source.buffer = castSfxBuffer
+    source.connect(audioCtx.destination)
+    source.start(0)
+  } catch {}
+}
+
+/** Second cast SFX — fires when the cast animation completes and the
+ *  fishing/waiting phase begins (line in water). */
+export function playCast2Sfx(): void {
+  if (!audioCtx || !cast2SfxBuffer) return
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
+    const source = audioCtx.createBufferSource()
+    source.buffer = cast2SfxBuffer
     source.connect(audioCtx.destination)
     source.start(0)
   } catch {}
