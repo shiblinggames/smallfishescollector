@@ -35,7 +35,8 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     tagline: 'Open water. Some risk, decent reward.',
     riskLabel: 'Low Risk',
     color: '#f0c040',
-    payoutScale: 1.0,
+    // payoutScale tuned 2026-05-20: 1.0 → 0.55 (target avg ~500 ⟡/voyage).
+    payoutScale: 0.55,
     crewLossScale: 0.25,
     gemScale: 1.0,
     baseDoubloons: 120,
@@ -46,7 +47,8 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     tagline: 'Hostile open water. Real risk, real reward.',
     riskLabel: 'Dangerous',
     color: '#c084fc',
-    payoutScale: 1.5,
+    // payoutScale tuned 2026-05-20: 1.5 → 0.65 (target avg ~800 ⟡/voyage).
+    payoutScale: 0.65,
     crewLossScale: 0.5,
     gemScale: 1.5,
     baseDoubloons: 200,
@@ -57,7 +59,9 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     tagline: 'Ships go missing here. Few come back the same.',
     riskLabel: 'Extreme',
     color: '#f43f5e',
-    payoutScale: 2.2,
+    // payoutScale tuned 2026-05-20: 2.2 → 1.0 (target avg ~1500 ⟡/voyage).
+    // Real-data anchor showed ~2985 avg at the old 2.2× scale.
+    payoutScale: 1.0,
     crewLossScale: 1.0,
     gemScale: 2.2,
     baseDoubloons: 380,
