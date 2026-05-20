@@ -6,6 +6,7 @@ import ClientBackground from '@/components/ClientBackground'
 import MobileTabBar from '@/components/MobileTabBar'
 import BadgeWatcher from '@/components/BadgeWatcher'
 import PendingSalesWatcher from '@/components/PendingSalesWatcher'
+import FishingAudioPrimer from '@/components/FishingAudioPrimer'
 
 const cinzel = Cinzel({
   subsets: ['latin'],
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 <MobileTabBar />
         <BadgeWatcher />
         <PendingSalesWatcher />
+        <FishingAudioPrimer />
         <footer className="sm:pb-4 pt-3 text-center">
           <p className="font-karla font-300 text-[#3a3835]" style={{ fontSize: '0.65rem' }}>
             &copy; {new Date().getFullYear()} Shibling Games LLC
