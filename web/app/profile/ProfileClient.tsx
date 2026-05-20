@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
-import { updateUsername, updateShowcase, updateCharacterColor, updateAvatarColors } from '@/app/u/actions'
+import { updateUsername, updateShowcase, updateCharacterColor, updateAvatarColors, purchaseCharacterColor } from '@/app/u/actions'
 import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE, AURORA_VALUE } from '@/lib/avatarColors'
 import { equipBadge, unequipBadge } from '@/app/achievements/badgeActions'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -57,6 +57,7 @@ interface Props {
   equippedHat: string | null
   characterColor: string
   unlockedColors: string[]
+  doubloons: number
   equippedBadges: string[]
   unlockedBadges: string[]
   avatarBgColor: string | null
@@ -215,7 +216,8 @@ export default function ProfileClient({
   equippedBoat,
   equippedHat,
   characterColor: initialCharacterColor,
-  unlockedColors,
+  unlockedColors: initialUnlockedColors,
+  doubloons: initialDoubloons,
   equippedBadges: initialEquippedBadges,
   unlockedBadges,
   avatarBgColor: initialAvatarBg,
@@ -234,6 +236,11 @@ export default function ProfileClient({
   const [modalOpen, setModalOpen] = useState(false)
   const [characterColor, setCharacterColor] = useState(initialCharacterColor)
   const [colorSaving, setColorSaving] = useState(false)
+  const [unlockedColors, setUnlockedColors] = useState<string[]>(initialUnlockedColors)
+  const [doubloons, setDoubloons] = useState(initialDoubloons)
+  const [purchasePrompt, setPurchasePrompt] = useState<{ id: string; name: string; price: number } | null>(null)
+  const [purchasing, setPurchasing] = useState(false)
+  const [purchaseError, setPurchaseError] = useState<string | null>(null)
   const [equippedBadges, setEquippedBadges] = useState<string[]>(initialEquippedBadges)
   const [badgePickerOpen, setBadgePickerOpen] = useState(false)
   // Avatar colors — bg + border, saved per-user. null = use defaults.
@@ -1140,7 +1147,15 @@ export default function ProfileClient({
                     type="button"
                     disabled={colorSaving}
                     onClick={async () => {
-                      if (!isUnlocked) { flashLockMsg(c.unlockHint ? `${c.name} — ${c.unlockHint}` : `${c.name} — locked`); return }
+                      if (!isUnlocked) {
+                        if (c.price) {
+                          setPurchaseError(null)
+                          setPurchasePrompt({ id: c.id, name: c.name, price: c.price })
+                        } else {
+                          flashLockMsg(c.unlockHint ? `${c.name} — ${c.unlockHint}` : `${c.name} — locked`)
+                        }
+                        return
+                      }
                       if (isActive) return
                       setColorSaving(true)
                       setCharacterColor(c.id)
@@ -1340,6 +1355,89 @@ export default function ProfileClient({
                 }}
               >
                 {avatarSaving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {purchasePrompt && (
+        <div
+          onClick={() => { if (!purchasing) setPurchasePrompt(null) }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 70,
+            background: 'rgba(0,0,0,0.72)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1.25rem',
+            cursor: 'pointer',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(180deg, #1a1408 0%, #0c0a06 100%)',
+              border: '1px solid rgba(240,192,64,0.35)',
+              borderRadius: 18,
+              padding: '1.25rem 1.1rem 1rem',
+              width: '100%', maxWidth: 320,
+              boxShadow: '0 18px 60px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(240,192,64,0.08)',
+              cursor: 'default',
+            }}
+          >
+            <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.05rem', color: '#f0c040', marginBottom: 6 }}>
+              Buy {purchasePrompt.name} Skin
+            </p>
+            <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.75)', lineHeight: 1.5, marginBottom: 14 }}>
+              {purchasePrompt.price.toLocaleString()} ⟡ — yours forever once bought.
+            </p>
+            <p className="font-karla text-center" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.55)', marginBottom: 14 }}>
+              Your purse: {doubloons.toLocaleString()} ⟡
+            </p>
+            {purchaseError && (
+              <p className="font-karla font-700 text-center" style={{ fontSize: '0.72rem', color: '#f87171', marginBottom: 10 }}>
+                {purchaseError}
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                disabled={purchasing}
+                onClick={() => setPurchasePrompt(null)}
+                className="font-karla font-700 uppercase tracking-[0.08em]"
+                style={{
+                  flex: 1, padding: '0.7rem 0',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  color: 'rgba(240,237,232,0.65)',
+                  borderRadius: 12, fontSize: '0.72rem',
+                  cursor: purchasing ? 'default' : 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={purchasing}
+                onClick={async () => {
+                  setPurchasing(true)
+                  setPurchaseError(null)
+                  const result = await purchaseCharacterColor(purchasePrompt.id)
+                  setPurchasing(false)
+                  if ('error' in result) { setPurchaseError(result.error); return }
+                  setUnlockedColors(result.unlockedColors)
+                  setDoubloons(result.doubloons)
+                  window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.doubloons }))
+                  setPurchasePrompt(null)
+                }}
+                className="btn-gold font-karla font-700 uppercase tracking-[0.08em]"
+                style={{
+                  flex: 2, padding: '0.7rem 0',
+                  borderRadius: 12, fontSize: '0.72rem',
+                  cursor: purchasing ? 'default' : 'pointer',
+                  opacity: purchasing ? 0.65 : 1,
+                }}
+              >
+                {purchasing ? 'Buying…' : `Buy for ${purchasePrompt.price.toLocaleString()} ⟡`}
               </button>
             </div>
           </div>

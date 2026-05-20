@@ -67,6 +67,46 @@ export async function updateShowcase(variantIds: number[]): Promise<{ error?: st
   return {}
 }
 
+export async function purchaseCharacterColor(colorId: string): Promise<
+  { doubloons: number; unlockedColors: string[] } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const color = CHARACTER_COLORS.find(c => c.id === colorId)
+  if (!color || !color.price) return { error: 'Not for sale' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('doubloons, unlocked_character_colors')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+
+  const unlocked = (profile.unlocked_character_colors as string[] | null) ?? []
+  if (unlocked.includes(colorId)) return { error: 'Already owned' }
+  if (profile.doubloons < color.price) {
+    return { error: `Need ${color.price.toLocaleString()} ⟡` }
+  }
+
+  const newDoubloons = profile.doubloons - color.price
+  const newUnlocked = [...unlocked, colorId]
+  await Promise.all([
+    admin.from('profiles')
+      .update({ doubloons: newDoubloons, unlocked_character_colors: newUnlocked })
+      .eq('id', user.id),
+    admin.from('doubloon_transactions').insert({
+      user_id: user.id,
+      amount: -color.price,
+      reason: `Bought ${color.name} skin`,
+    }),
+  ])
+
+  return { doubloons: newDoubloons, unlockedColors: newUnlocked }
+}
+
 export async function updateCharacterColor(colorId: string): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

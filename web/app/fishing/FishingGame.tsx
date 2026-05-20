@@ -305,7 +305,7 @@ const SKIN_TIPS = [
   "Tip: reach Fishing Level 50 to unlock the Forest character color.",
   "Tip: prestige any zone 3 times to unlock the Sand character color.",
   "Tip: reach Navigation Level 50 on voyages to unlock the Sky character color.",
-  "Tip: catch all 6 Ancient Deep trophies to unlock the Golden character color.",
+  "Tip: the Golden character color can be bought for 1,000,000 doubloons at /profile.",
   "Tip: open fishing crates for a rare chance to find the Mint character color.",
 ]
 

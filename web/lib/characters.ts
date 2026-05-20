@@ -3,6 +3,8 @@ export interface CharacterColor {
   name: string
   free: boolean
   unlockHint?: string
+  /** If set, the locked swatch can be purchased outright with doubloons. */
+  price?: number
 }
 
 export const CHARACTER_COLORS: CharacterColor[] = [
@@ -12,7 +14,7 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'pink',    name: 'Pink',   free: true  },
   { id: 'sand',    name: 'Sand',   free: false, unlockHint: 'Reach Prestige 3 in any zone' },
   { id: 'sky',     name: 'Sky',    free: false, unlockHint: 'Reach Navigation Level 50' },
-  { id: 'golden',  name: 'Golden', free: false, unlockHint: 'Catch all 6 Ancient Deep trophies' },
+  { id: 'golden',  name: 'Golden', free: false, unlockHint: '1,000,000 ⟡', price: 1_000_000 },
   { id: 'forest',  name: 'Forest', free: false, unlockHint: 'Reach Fishing Level 50' },
   { id: 'mint',    name: 'Mint',   free: false, unlockHint: 'Rare drop from fishing crates' },
   { id: 'autumn',  name: 'Autumn', free: false, unlockHint: 'Premium skin' },

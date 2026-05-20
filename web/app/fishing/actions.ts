@@ -301,19 +301,10 @@ export async function reelIn(
     const newXP = (profile.fishing_xp ?? 0) + xpGained
     const updates: Record<string, unknown> = { fishing_xp: newXP }
     if (isNewTrophy) updates.trophy_catches = [...existing, fishId]
-    // Golden skin: unlock when all 6 trophies are caught
-    let unlockedSkinId: string | undefined
     const newTrophies = isNewTrophy ? [...existing, fishId] : existing
-    if (newTrophies.length >= 6) {
-      const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
-      if (!currentUnlocked.includes('golden')) {
-        updates.unlocked_character_colors = [...currentUnlocked, 'golden']
-        unlockedSkinId = 'golden'
-      }
-      await unlockBadge('ancient_ones')
-    }
+    if (newTrophies.length >= 6) await unlockBadge('ancient_ones')
     await admin.from('profiles').update(updates).eq('id', user.id)
-    return { caught: true, fish: fish as FishSpecies, baitSaved: false, isNewSpecies: isNewTrophy, xpGained, newXP, dailyProgress: [0, 0, 0], unlockedSkinId }
+    return { caught: true, fish: fish as FishSpecies, baitSaved: false, isNewSpecies: isNewTrophy, xpGained, newXP, dailyProgress: [0, 0, 0] }
   }
 
   // Perfect: 50% chance to return the bait used for this cast; Phantom Hook: additional 25% on any catch
