@@ -77,7 +77,14 @@ function PortfolioCard({
   selling: boolean
   isPremium: boolean
 }) {
-  const [qty, setQty] = useState(entry.quantity)
+  // Quantity is backed by a STRING so the field can be cleared and retyped
+  // freely on mobile (a controlled number input with a `|| 1` fallback
+  // snapped back to 1 the moment you cleared it, making custom amounts
+  // impossible — it felt like "1 or max only"). `qty` is the clamped
+  // numeric value derived for pricing + selling; the raw string is what
+  // the input shows while editing.
+  const [qtyStr, setQtyStr] = useState(String(entry.quantity))
+  const qty = Math.max(1, Math.min(entry.quantity, parseInt(qtyStr, 10) || 1))
   const fee = isPremium ? 1.0 : 0.97
 
   const pctChange = entry.prev_multiplier > 0
@@ -157,22 +164,66 @@ function PortfolioCard({
         </p>
       </div>
 
-      {/* Row 4: qty + sell */}
+      {/* Row 4: qty stepper + sell */}
       <div className="flex gap-2 items-center">
-        <input
-          type="number"
-          min={1}
-          max={entry.quantity}
-          value={qty}
-          onChange={e => setQty(Math.max(1, Math.min(entry.quantity, parseInt(e.target.value) || 1)))}
-          disabled={selling}
-          className="font-karla font-600"
+        <div className="flex items-center" style={{ flexShrink: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.2)' }}>
+          <button
+            type="button"
+            aria-label="Decrease quantity"
+            onClick={() => setQtyStr(String(Math.max(1, qty - 1)))}
+            disabled={selling || qty <= 1}
+            className="font-karla font-700"
+            style={{
+              width: 34, padding: '0.55rem 0', background: 'rgba(20,18,15,0.9)',
+              color: '#f0ede8', fontSize: '1rem', lineHeight: 1,
+              opacity: (selling || qty <= 1) ? 0.4 : 1, cursor: (selling || qty <= 1) ? 'default' : 'pointer',
+            }}
+          >−</button>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={entry.quantity}
+            value={qtyStr}
+            onChange={e => setQtyStr(e.target.value)}
+            onBlur={() => setQtyStr(String(qty))}
+            onFocus={e => e.target.select()}
+            disabled={selling}
+            className="font-karla font-600"
+            style={{
+              width: 54, padding: '0.55rem 0.25rem', textAlign: 'center',
+              background: 'rgba(20,18,15,0.9)', border: 'none',
+              borderLeft: '1px solid rgba(255,255,255,0.15)', borderRight: '1px solid rgba(255,255,255,0.15)',
+              color: '#f0ede8', fontSize: '0.75rem', outline: 'none',
+            }}
+          />
+          <button
+            type="button"
+            aria-label="Increase quantity"
+            onClick={() => setQtyStr(String(Math.min(entry.quantity, qty + 1)))}
+            disabled={selling || qty >= entry.quantity}
+            className="font-karla font-700"
+            style={{
+              width: 34, padding: '0.55rem 0', background: 'rgba(20,18,15,0.9)',
+              color: '#f0ede8', fontSize: '1rem', lineHeight: 1,
+              opacity: (selling || qty >= entry.quantity) ? 0.4 : 1, cursor: (selling || qty >= entry.quantity) ? 'default' : 'pointer',
+            }}
+          >+</button>
+        </div>
+        <button
+          type="button"
+          aria-label="Set quantity to max"
+          onClick={() => setQtyStr(String(entry.quantity))}
+          disabled={selling || qty >= entry.quantity}
+          className="font-karla font-700 uppercase tracking-[0.06em]"
           style={{
-            width: 64, padding: '0.55rem 0.5rem', borderRadius: 8, textAlign: 'center',
-            background: 'rgba(20,18,15,0.9)', border: '1px solid rgba(255,255,255,0.2)',
-            color: '#f0ede8', fontSize: '0.75rem', outline: 'none',
-          }}
-        />
+            fontSize: '0.6rem', padding: '0.6rem 0.5rem', borderRadius: 8, flexShrink: 0,
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)',
+            color: '#c0bdb8', opacity: (selling || qty >= entry.quantity) ? 0.4 : 1,
+            cursor: (selling || qty >= entry.quantity) ? 'default' : 'pointer',
+          }}>
+          Max
+        </button>
         <button
           onClick={() => onSell(entry.fish_id, Math.min(qty, entry.quantity))}
           disabled={selling}
