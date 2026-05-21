@@ -11,6 +11,8 @@ import { getBoat } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
 import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
+import { catchXP } from '@/lib/fishingLevel'
+import type { ZoneStat } from './ZoneLanding'
 
 export default async function FishingPage() {
   const supabase = await createClient()
@@ -51,7 +53,7 @@ export default async function FishingPage() {
       .select('rod_tier')
       .eq('user_id', user.id),
     admin.from('fish_species')
-      .select('id, name, scientific_name, fun_fact, habitat, bite_rarity, sell_value')
+      .select('id, name, scientific_name, fun_fact, habitat, bite_rarity, sell_value, catch_difficulty')
       .order('bite_rarity'),
     admin.from('fish_collection')
       .select('fish_id')
@@ -65,6 +67,26 @@ export default async function FishingPage() {
     marketMultipliers[row.fish_id] = Number(row.multiplier)
   }
   const isPremium = isPremiumActive(profile)
+
+  // Per-zone summary stats for the zone selector cards (avg sell value, avg
+  // catch XP, top catch). Ancient Deep trophies pay 3× XP (see actions.ts).
+  const ALL_ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep']
+  const zoneAgg: Record<string, { value: number; xp: number; top: number; n: number }> = {}
+  for (const f of (allSpecies ?? []) as { habitat: string; sell_value: number; catch_difficulty: number }[]) {
+    if (!ALL_ZONES.includes(f.habitat)) continue
+    const a = zoneAgg[f.habitat] ?? (zoneAgg[f.habitat] = { value: 0, xp: 0, top: 0, n: 0 })
+    a.value += f.sell_value
+    a.xp += catchXP(f.catch_difficulty, f.habitat, false) * (f.habitat === 'ancient_deep' ? 3 : 1)
+    a.top = Math.max(a.top, f.sell_value)
+    a.n++
+  }
+  const zoneStats: Record<string, ZoneStat> = {}
+  for (const z of ALL_ZONES) {
+    const a = zoneAgg[z]
+    zoneStats[z] = a && a.n > 0
+      ? { avgValue: Math.round(a.value / a.n), avgXp: Math.round(a.xp / a.n), topValue: a.top, count: a.n }
+      : { avgValue: 0, avgXp: 0, topValue: 0, count: 0 }
+  }
 
   const ownedRods = (rodRows ?? []).map((r: { rod_tier: number }) => r.rod_tier)
   const caughtFishIds = (collectionRows ?? []).map((r: { fish_id: number }) => r.fish_id)
@@ -129,6 +151,7 @@ export default async function FishingPage() {
           fishHoldTier={fishHoldTier}
           unlockedBadges={(profile?.unlocked_badges as string[] | null) ?? []}
           uniqueSpeciesCaught={uniqueSpeciesCaught ?? 0}
+          zoneStats={zoneStats}
           ownedRods={ownedRods}
           allFishSpecies={(allSpecies ?? []) as { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }[]}
           caughtFishIds={caughtFishIds}

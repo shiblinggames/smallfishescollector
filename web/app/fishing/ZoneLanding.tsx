@@ -51,28 +51,27 @@ const ZONE_DIFFICULTY_LABEL: Record<string, string> = {
   ancient_deep: 'Beyond Expert',
 }
 
-const ZONE_STATS: Record<string, { topSell: number }> = {
-  shallows:    { topSell: 360  },
-  open_waters: { topSell: 500  },
-  deep:        { topSell: 680  },
-  abyss:       { topSell: 1380 },
-  ancient_deep: { topSell: 6000 },
+/** Per-zone summary stats computed server-side (see fishing/page.tsx). */
+export type ZoneStat = { avgValue: number; avgXp: number; topValue: number; count: number }
+
+// The zone's painted scene, reused as the card background (same art as the
+// fishing scene + the profile backgrounds).
+const ZONE_BG: Record<string, string> = {
+  shallows:    '/shallows.jpg',
+  open_waters: '/openwaters.jpg',
+  deep:        '/deep.jpg',
+  abyss:       '/abyss.jpg',
+  ancient_deep: '/ancient.jpg',
 }
 
-// Mirrors ZONE_CRATE_TIERS in app/fishing/actions.ts. Ancient Deep has no crates.
-const ZONE_CRATE_DIST: Record<string, { wooden: number; metal: number; gold: number; diamond: number }> = {
-  shallows:    { wooden: 80, metal: 10, gold: 7,  diamond: 3  },
-  open_waters: { wooden: 60, metal: 20, gold: 12, diamond: 8  },
-  deep:        { wooden: 35, metal: 30, gold: 20, diamond: 15 },
-  abyss:       { wooden: 15, metal: 25, gold: 35, diamond: 25 },
+function ZoneStatCell({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <div style={{ flex: 1, minWidth: 0, textAlign: 'center', background: 'rgba(2,6,12,0.6)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 9, padding: '0.45rem 0.3rem', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}>
+      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</p>
+      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.6)', marginTop: 3 }}>{label}</p>
+    </div>
+  )
 }
-
-const CRATE_TIERS = [
-  { id: 'wooden',  label: 'Wood',    img: '/crateclosed.png',         color: '#a07858' },
-  { id: 'metal',   label: 'Metal',   img: '/metalcrateclosed.png',    color: '#9aa3ad' },
-  { id: 'gold',    label: 'Gold',    img: '/goldcrateclosed.png',     color: '#f0c040' },
-  { id: 'diamond', label: 'Diamond', img: '/diamondcrateclosed.png',  color: '#7dd3fc' },
-] as const
 
 const HOW_IT_WORKS = [
   {
@@ -100,23 +99,20 @@ const HOW_IT_WORKS = [
     body: "When your hold is full you can't cast — sell some catch from the Hold drawer to make room. You can also upgrade the hold for more capacity right from the Hold drawer on the fishing screen.",
   },
   {
-    title: 'Crates',
-    body: 'Every cast has a 2% chance of pulling up a crate instead of a fish. Crates come in four tiers — wooden, metal, gold, and diamond — and the tier mix shifts toward premium in deeper zones. Higher tiers drop more doubloons, rarer bait, and (gold+) crate-exclusive cosmetics.',
-  },
-  {
     title: 'Gear Summary',
     body: 'Rod → faster bites. Reel → slows the dial. Hook → widens the catch zone. Line → shrinks snag zones. Bait → faster bites + wider catch zone. Ship → fish hold capacity.',
   },
 ]
 
 export default function ZoneLanding({
-  fishingLevel, fishingXP, uniqueSpeciesCaught, highestPerfectStreak, username, onSelect,
+  fishingLevel, fishingXP, uniqueSpeciesCaught, highestPerfectStreak, username, zoneStats, onSelect,
 }: {
   fishingLevel: number
   fishingXP: number
   uniqueSpeciesCaught: number
   highestPerfectStreak: number
   username: string
+  zoneStats: Record<string, ZoneStat>
   onSelect: (zone: ZoneKey) => void
 }) {
   const [modalOpen, setModalOpen] = useState(false)
@@ -230,7 +226,7 @@ export default function ZoneLanding({
               const color = HABITAT_COLOR[zone]
               const difficulty = ZONE_DIFFICULTY[zone]
               const diffLabel = ZONE_DIFFICULTY_LABEL[zone]
-              const stats = ZONE_STATS[zone]
+              const stats = zoneStats[zone] ?? { avgValue: 0, avgXp: 0, topValue: 0, count: 0 }
               const isRecommended = accessible && ZONES.filter(z => fishingLevel >= (ZONE_MIN_LEVEL[z] ?? 1)).slice(-1)[0] === zone
 
               return (
@@ -240,31 +236,43 @@ export default function ZoneLanding({
                   transition={{ duration: 0.22, delay: i * 0.07 }}
                   onClick={() => accessible && onSelect(zone)}
                   style={{
+                    position: 'relative',
                     borderRadius: 16,
-                    border: `1px solid ${accessible ? color + '55' : 'rgba(255,255,255,0.1)'}`,
-                    borderLeft: `3px solid ${accessible ? color + 'cc' : 'rgba(255,255,255,0.15)'}`,
-                    background: accessible
-                      ? `linear-gradient(135deg, rgba(6,16,26,0.97) 0%, ${color}14 100%)`
-                      : 'rgba(255,255,255,0.04)',
-                    opacity: accessible ? 1 : 0.5,
-                    cursor: accessible ? 'pointer' : 'default',
                     overflow: 'hidden',
+                    border: `1px solid ${accessible ? color + '66' : 'rgba(255,255,255,0.12)'}`,
+                    minHeight: accessible ? 142 : 84,
+                    cursor: accessible ? 'pointer' : 'default',
                   }}
                 >
-                  {/* Top section */}
-                  <div style={{ padding: '0.9rem 1rem 0.7rem' }}>
+                  {/* Zone scene as the card background (same art as the fishing
+                      scene + the profile backgrounds). */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={ZONE_BG[zone]} alt="" style={{
+                    position: 'absolute', inset: 0, width: '100%', height: '100%',
+                    objectFit: 'cover', objectPosition: 'center',
+                    filter: accessible ? 'none' : 'grayscale(0.85) brightness(0.4)',
+                  }} />
+                  {/* Legibility scrim — darker toward the bottom where stats sit. */}
+                  <div style={{ position: 'absolute', inset: 0, background: accessible
+                    ? 'linear-gradient(180deg, rgba(4,10,18,0.5) 0%, rgba(4,10,18,0.34) 34%, rgba(4,10,18,0.88) 100%)'
+                    : 'rgba(4,10,18,0.72)' }} />
+                  {/* Accent edge in the zone color. */}
+                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: accessible ? color : 'rgba(255,255,255,0.18)' }} />
+
+                  <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column', padding: '0.9rem 1rem 0.85rem' }}>
+                    {/* Header */}
                     <div className="flex items-start justify-between">
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-cinzel font-700"
-                            style={{ fontSize: '1.1rem', color: accessible ? color : '#4a4845', letterSpacing: '0.04em', lineHeight: 1 }}>
+                            style={{ fontSize: '1.18rem', color: accessible ? '#f5f2ec' : '#6a6764', letterSpacing: '0.04em', lineHeight: 1, textShadow: accessible ? '0 1px 6px rgba(0,0,0,0.75)' : 'none' }}>
                             {HABITAT_LABEL[zone]}
                           </p>
                           {isRecommended && (
                             <span className="font-karla font-700 uppercase tracking-[0.1em]"
                               style={{
-                                fontSize: '0.55rem', color: color,
-                                background: `${color}1a`, border: `1px solid ${color}55`,
+                                fontSize: '0.55rem', color: '#fff',
+                                background: `${color}cc`, border: `1px solid ${color}`,
                                 padding: '0.18rem 0.5rem', borderRadius: '2rem', flexShrink: 0,
                               }}>
                               Recommended
@@ -272,116 +280,61 @@ export default function ZoneLanding({
                           )}
                         </div>
                         <p className="font-karla font-300 italic mt-1"
-                          style={{ fontSize: '0.74rem', color: accessible ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)' }}>
+                          style={{ fontSize: '0.74rem', color: accessible ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.3)', textShadow: accessible ? '0 1px 4px rgba(0,0,0,0.85)' : 'none' }}>
                           {HABITAT_TAGLINE[zone]}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1.5 shrink-0 ml-3">
                         <div className="flex gap-1">
-                          {[1, 2, 3, 4].map(d => (
+                          {[1, 2, 3, 4, 5].map(d => (
                             <div key={d} style={{
                               width: 6, height: 6, borderRadius: '50%',
                               background: d <= difficulty
                                 ? (accessible ? color : '#3a3835')
-                                : 'rgba(255,255,255,0.1)',
+                                : 'rgba(255,255,255,0.18)',
+                              boxShadow: accessible && d <= difficulty ? `0 0 4px ${color}` : 'none',
                             }} />
                           ))}
                         </div>
                         {accessible ? (
-                          <span className="font-karla font-600 uppercase tracking-[0.08em]"
-                            style={{ fontSize: '0.54rem', color: `${color}cc`, whiteSpace: 'nowrap' }}>
+                          <span className="font-karla font-700 uppercase tracking-[0.08em]"
+                            style={{ fontSize: '0.54rem', color: '#fff', whiteSpace: 'nowrap', textShadow: '0 1px 4px rgba(0,0,0,0.85)' }}>
                             {diffLabel}
                           </span>
                         ) : (
                           <span className="font-karla font-700 uppercase tracking-[0.1em]"
                             style={{
-                              fontSize: '0.6rem', color: '#7a7976',
-                              background: 'rgba(255,255,255,0.06)',
-                              border: '1px solid rgba(255,255,255,0.12)',
+                              fontSize: '0.6rem', color: '#cdd3da',
+                              background: 'rgba(2,6,12,0.6)',
+                              border: '1px solid rgba(255,255,255,0.18)',
                               padding: '0.2rem 0.55rem', borderRadius: '2rem',
                             }}>
-                            Lv {minLevel}
+                            Unlocks at Lv {minLevel}
                           </span>
                         )}
                       </div>
                     </div>
+
+                    {/* Zone stat row. Ancient Deep fish are kept trophies (no
+                        sell value), so it shows trophy/rarity stats instead. */}
+                    {accessible && (
+                      <div style={{ display: 'flex', gap: 6, marginTop: 'auto', paddingTop: '0.9rem' }}>
+                        {zone === 'ancient_deep' ? (
+                          <>
+                            <ZoneStatCell label="Trophies" value={`${stats.count}`} color="#c084fc" />
+                            <ZoneStatCell label="Avg XP" value={`+${stats.avgXp.toLocaleString()}`} color="#60a5fa" />
+                            <ZoneStatCell label="Rarity" value="Legendary" color="#f59e0b" />
+                          </>
+                        ) : (
+                          <>
+                            <ZoneStatCell label="Avg Value" value={`${stats.avgValue.toLocaleString()} ⟡`} color="#f0c040" />
+                            <ZoneStatCell label="Avg XP" value={`+${stats.avgXp.toLocaleString()}`} color="#60a5fa" />
+                            <ZoneStatCell label="Top Catch" value={`${stats.topValue.toLocaleString()} ⟡`} color="#f59e0b" />
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
-
-                  {accessible && (
-                    <div style={{ borderTop: `1px solid ${color}1f`, padding: '0.7rem 1rem 0.85rem', display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-                      {/* Top catch */}
-                      {zone !== 'ancient_deep' && (
-                        <div className="flex items-center justify-between">
-                          <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.42)' }}>
-                            Top Catch
-                          </span>
-                          <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f59e0b' }}>
-                            Up to {stats.topSell.toLocaleString()} ⟡
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Trophy reminder for ancient_deep */}
-                      {zone === 'ancient_deep' && (
-                        <div className="flex items-center justify-between">
-                          <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.42)' }}>
-                            Trophy Run
-                          </span>
-                          <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f59e0b' }}>
-                            Up to {stats.topSell.toLocaleString()} ⟡ each
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Crate odds */}
-                      {zone !== 'ancient_deep' && (
-                        <div>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.42)' }}>
-                              Crate Drops
-                            </span>
-                            <span className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.3)' }}>
-                              2% of casts
-                            </span>
-                          </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
-                            {CRATE_TIERS.map(t => {
-                              const pct = ZONE_CRATE_DIST[zone][t.id]
-                              return (
-                                <div key={t.id} style={{
-                                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                                  padding: '0.4rem 0.2rem 0.3rem',
-                                  background: `${t.color}0d`,
-                                  border: `1px solid ${t.color}25`,
-                                  borderRadius: 8,
-                                }}>
-                                  <img src={t.img} alt={t.label} style={{
-                                    width: 26, height: 26, objectFit: 'contain',
-                                    filter: `drop-shadow(0 0 5px ${t.color}40)`,
-                                  }} />
-                                  <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: t.color, lineHeight: 1 }}>
-                                    {pct}%
-                                  </span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* No crates note for ancient_deep */}
-                      {zone === 'ancient_deep' && (
-                        <div className="flex items-center justify-between">
-                          <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.42)' }}>
-                            Crate Drops
-                          </span>
-                          <span className="font-karla font-400 italic" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)' }}>
-                            None — trophies only
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </motion.div>
               )
             })}

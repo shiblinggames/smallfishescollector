@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { startFishingMusic, fadeOutFishingMusic } from '@/lib/fishingMusic'
-import ZoneLanding, { type ZoneKey } from './ZoneLanding'
+import ZoneLanding, { type ZoneKey, type ZoneStat } from './ZoneLanding'
 import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { ZONE_MIN_LEVEL } from './zoneData'
@@ -44,7 +44,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 
 export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
-  initialDoubloons, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught,
+  initialDoubloons, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats,
   fishHoldTier, ownedRods, allFishSpecies, caughtFishIds, initialHighestPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, activeSession, username, zoneRewardsClaimed,
   initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, equippedHat, unlockedHats,
@@ -60,6 +60,7 @@ export default function FishingPageClient({
   initialLastUsedBait: string | null
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
+  zoneStats: Record<string, ZoneStat>
   fishHoldTier: number
   ownedRods: number[]
   allFishSpecies: FishSpeciesBasic[]
@@ -161,6 +162,7 @@ export default function FishingPageClient({
         uniqueSpeciesCaught={uniqueSpeciesCaught}
         highestPerfectStreak={initialHighestPerfectStreak}
         username={username}
+        zoneStats={zoneStats}
         onSelect={selectZone}
       />
     )
