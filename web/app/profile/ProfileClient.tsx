@@ -512,7 +512,7 @@ export default function ProfileClient({
               <p className="font-karla font-300 text-red-400 text-center" style={{ fontSize: '0.72rem' }}>{usernameError}</p>
             )}
             <p className="font-karla font-300 text-center" style={{ fontSize: '0.65rem', color: '#bbb5ad' }}>
-              3–20 chars · letters, numbers, underscores · can only be changed once
+              3–20 chars · letters, numbers, underscores
             </p>
             <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
               <button type="submit" disabled={pending} className="btn-gold" style={{ fontSize: '0.72rem', padding: '0.45rem 1.25rem' }}>
@@ -536,7 +536,7 @@ export default function ProfileClient({
                 </span>
               )}
             </div>
-            {!usernameChanged ? (
+            {!usernameChanged && (
               <button
                 onClick={() => setShowUsernameForm(true)}
                 className="font-karla font-700 uppercase tracking-[0.1em]"
@@ -554,10 +554,6 @@ export default function ProfileClient({
                 </svg>
                 Change username
               </button>
-            ) : (
-              <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#bbb5ad' }}>
-                Username can only be changed once
-              </p>
             )}
           </div>
         )}
