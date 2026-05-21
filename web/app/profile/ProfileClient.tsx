@@ -258,6 +258,18 @@ export default function ProfileClient({
   const [avatarBorder, setAvatarBorder] = useState<string | null>(initialAvatarBorder)
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false)
   const [avatarSaving, setAvatarSaving] = useState(false)
+  // LOCAL-ONLY page-background preview (test). Not persisted, not gated, not
+  // shown to other users — just lets us eyeball the fishing zone paintings as
+  // a profile page backdrop before committing to a saved `profile_bg` column.
+  const [previewBg, setPreviewBg] = useState<string | null>(null)
+  const PREVIEW_BGS: { label: string; src: string | null }[] = [
+    { label: 'None',        src: null },
+    { label: 'Shallows',    src: '/shallows.jpg' },
+    { label: 'Open Waters', src: '/openwaters.jpg' },
+    { label: 'Deep',        src: '/deep.jpg' },
+    { label: 'Abyss',       src: '/abyss.jpg' },
+    { label: 'Ancient',     src: '/ancient.jpg' },
+  ]
   // The hero avatar is fixed-px, so on a big desktop page it reads small
   // (and its proportional ring looks like a hairline). Bigger on >=md
   // where there's room — the Aurora ring scales with size automatically.
@@ -370,7 +382,62 @@ export default function ProfileClient({
   }
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 1.25rem 3rem' }}>
+    <>
+      {/* LOCAL-ONLY preview background layer (test). Mirrors ClientBackground:
+          fixed full-screen image + a darkening scrim for legibility. */}
+      {previewBg && (
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={previewBg} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%)' }} />
+        </div>
+      )}
+    <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 1.25rem 3rem', position: 'relative', zIndex: 1 }}>
+
+      {/* ── Page background preview switcher (TEST — local only, not saved.
+            Gated to the dev account so live players never see it.) ── */}
+      {username?.toLowerCase() === 'kingkong' && (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+        margin: '0.75rem 0 0.25rem',
+        padding: '0.6rem 0.75rem',
+        borderRadius: 14,
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px dashed rgba(255,255,255,0.16)',
+      }}>
+        <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.5)' }}>
+          Page bg (test)
+        </span>
+        {PREVIEW_BGS.map(opt => {
+          const isActive = previewBg === opt.src
+          return (
+            <button
+              key={opt.label}
+              type="button"
+              onClick={() => setPreviewBg(opt.src)}
+              title={opt.label}
+              style={{
+                position: 'relative',
+                width: 38, height: 38, borderRadius: 8, overflow: 'hidden',
+                padding: 0, cursor: 'pointer',
+                border: isActive ? '2px solid #f0c040' : '1px solid rgba(255,255,255,0.18)',
+                boxShadow: isActive ? '0 0 8px rgba(240,192,64,0.4)' : 'none',
+                background: opt.src
+                  ? undefined
+                  : 'linear-gradient(45deg, rgba(255,255,255,0.14) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.14) 50%, rgba(255,255,255,0.14) 75%, transparent 75%, transparent)',
+                backgroundSize: opt.src ? undefined : '8px 8px',
+                appearance: 'none', WebkitAppearance: 'none',
+              }}
+            >
+              {opt.src && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={opt.src} alt={opt.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              )}
+            </button>
+          )
+        })}
+      </div>
+      )}
 
       {/* ── Identity header ── */}
       <div className="flex flex-col items-center gap-3 pt-2 pb-7">
@@ -1601,6 +1668,7 @@ export default function ProfileClient({
         </div>
       )}
     </div>
+    </>
   )
 }
 
