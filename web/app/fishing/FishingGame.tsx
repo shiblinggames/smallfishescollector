@@ -3667,9 +3667,10 @@ export default function FishingGame({
               onClick={onBack}
               className="font-karla font-600 uppercase tracking-[0.1em]"
               style={{
-                fontSize: '0.6rem', color: HABITAT_COLOR[selectedZone],
+                display: 'inline-flex', alignItems: 'center',
+                height: 26, padding: '0 0.7rem', borderRadius: 20,
+                fontSize: '0.55rem', color: HABITAT_COLOR[selectedZone],
                 background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
-                borderRadius: 20, padding: '0.3rem 0.65rem',
                 cursor: 'pointer', touchAction: 'manipulation',
               }}
             >
