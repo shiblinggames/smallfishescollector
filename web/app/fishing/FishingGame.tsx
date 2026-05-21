@@ -466,7 +466,7 @@ function getZone(zones: ZoneDef[], deg: number, rotation = 0): ZoneDef {
 // ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 function DialSVG({
-  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0, needleGroupRef,
+  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0,
 }: {
   zones: ZoneDef[]
   angle: number
@@ -476,24 +476,10 @@ function DialSVG({
   fireLevel?: 0 | 1 | 2
   snapKey?: number
   perfectBurstKey?: number
-  /** Optional ref to the needle's rotating <g>. When provided, the parent
-   *  drives the rotation via setAttribute on this element directly — no
-   *  React state on the hot path, so the needle snaps to the player's
-   *  click without a queued render moving it one tick further. */
-  needleGroupRef?: React.RefObject<SVGGElement | null>
 }) {
   const needleTipY  = CY - (INNER_R - 8)
   const perfectZone = zones.find(z => z.type === 'perfect')
   const penaltyZones = zones.filter(z => z.type === 'penalty')
-
-  // Initial transform set from `angle` prop. The parent's rAF tick takes
-  // over after this, writing setAttribute directly so re-renders from
-  // sibling state (blackout opacity, etc.) don't reset our needle.
-  // useLayoutEffect so the attribute is set before the first paint.
-  React.useLayoutEffect(() => {
-    const g = needleGroupRef?.current
-    if (g) g.setAttribute('transform', `rotate(${angle}, ${CX}, ${CY})`)
-  }, [angle, needleGroupRef])
 
   // Perfect-hit flash on the needle — short gold burst with a thicker
   // stroke so the needle reads as the thing the player nailed. Tied to
@@ -585,6 +571,20 @@ function DialSVG({
             transition={{ duration: 0.7, ease: 'easeOut' }}
           />
         )}
+        {/* Needle — rotated straight from `angle` state (React-driven).
+            Simple and smooth; the parent updates angle every frame. */}
+        <g transform={`rotate(${angle}, ${CX}, ${CY})`}
+           style={{ filter: perfectFlash ? 'drop-shadow(0 0 6px #fde68a)' : undefined, transition: 'filter 0.15s ease-out' }}>
+          <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 12 : 10} strokeOpacity={perfectFlash ? 0.28 : 0.12} strokeLinecap="round" />
+          <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={liveNeedleStroke} strokeLinecap="round" />
+          <circle cx={CX} cy={needleTipY} r={liveTipRadius} fill={liveNeedleColor} />
+        </g>
+        <motion.circle cx={CX} cy={CY} r="8"
+          fill="rgba(10,10,10,0.9)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"
+          animate={snapAnim ? { scale: [1, 1.8, 0.7, 1.15, 1] } : { scale: 1 }}
+          transition={{ duration: 0.32, ease: 'easeOut' }}
+          style={{ transformOrigin: `${CX}px ${CY}px` }}
+        />
         {/* Perfect zone burst — arc flash + expanding ring on tap */}
         {perfectBurstKey > 0 && perfectZone && (
           <g key={perfectBurstKey} transform={`rotate(${rotation}, ${CX}, ${CY})`}>
@@ -621,33 +621,6 @@ function DialSVG({
             transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
           />
         )}
-      </svg>
-
-      {/* Needle on a SEPARATE overlay SVG. The needle's bounding box sweeps
-          across most of the dial; if it lived in the main SVG above, every
-          rotation would re-rasterize the overlapped zone paths + radial
-          gradients — heavy on mobile, and the worst on the first cycle
-          before raster caches warm up. Isolating it here means the main
-          dial stays a static raster and only these three cheap shapes
-          re-paint per frame. The center cap rides along (drawn after the
-          needle so it covers the line convergence). */}
-      <svg viewBox="0 0 220 220" width="100%"
-        style={{ display: 'block', overflow: 'visible', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
-        {/* No transform prop in JSX — the parent's rAF tick writes the
-            rotation via needleGroupRef.setAttribute, so React re-renders
-            can't overwrite it. Initial value set by the useLayoutEffect
-            on `angle`. */}
-        <g ref={needleGroupRef} style={{ filter: perfectFlash ? 'drop-shadow(0 0 6px #fde68a)' : undefined, transition: 'filter 0.15s ease-out' }}>
-          <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 12 : 10} strokeOpacity={perfectFlash ? 0.28 : 0.12} strokeLinecap="round" />
-          <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={liveNeedleStroke} strokeLinecap="round" />
-          <circle cx={CX} cy={needleTipY} r={liveTipRadius} fill={liveNeedleColor} />
-        </g>
-        <motion.circle cx={CX} cy={CY} r="8"
-          fill="rgba(10,10,10,0.9)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"
-          animate={snapAnim ? { scale: [1, 1.8, 0.7, 1.15, 1] } : { scale: 1 }}
-          transition={{ duration: 0.32, ease: 'easeOut' }}
-          style={{ transformOrigin: `${CX}px ${CY}px` }}
-        />
       </svg>
     </div>
   )
@@ -2204,16 +2177,6 @@ export default function FishingGame({
   const [retryKey, setRetryKey]     = useState(0)
   const [blackoutOpacity, setBlackoutOpacity] = useState(0)
   const angleRef        = useRef(270)
-  // Ref to the SVG <g> wrapping the needle. The rAF tick writes its
-  // transform attribute directly so the needle's render isn't in React's
-  // state path — eliminates the "creep after click" caused by queued
-  // setState commits firing post-handler.
-  const needleGroupRef  = useRef<SVGGElement | null>(null)
-  // Latest catching zones + rotation, mirrored into refs so the needle
-  // rAF tick can detect zone-boundary crossings without React state on
-  // the hot path. (Synced from render via the effects further down.)
-  const catchingZonesRef = useRef<ZoneDef[]>([])
-  const zoneRotationRef  = useRef(0)
   const speedRef        = useRef(0)
   const dirRef          = useRef(1)
   const phaseRef        = useRef<Phase>('idle')
@@ -2364,20 +2327,6 @@ export default function FishingGame({
     elapsedMsRef.current = 0
     nextChgMsRef.current = (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
 
-    // The only thing `angle` state drives is the zone highlight + label
-    // (currentZone). That only changes when the needle crosses a zone
-    // boundary — NOT every frame. So we re-render React (via setAngle)
-    // only on zone change instead of on a timer. This eliminates the
-    // periodic full-DialSVG reconciliations that were blocking the rAF
-    // and causing needle stutter on mobile. The needle's own position is
-    // ref-driven (setAttribute) so its visual is unaffected either way.
-    //
-    // Compare by a stable string key, not object identity — catchingZones
-    // is a fresh array on every render, so the zone objects' identities
-    // change even when the logical zone hasn't.
-    const zoneKey = (z: ZoneDef | null) => (z ? `${z.type}:${z.from}:${z.to}` : '')
-    let lastZoneKey = ''
-
     const tick = (timestamp: number) => {
       if (phaseRef.current !== 'catching') return
       if (lastTimeRef.current === 0) lastTimeRef.current = timestamp
@@ -2407,37 +2356,11 @@ export default function FishingGame({
         }
         nextChgMsRef.current = elapsedMsRef.current + (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
       }
-      // Write the rotation directly to the SVG <g> via the ref. The JSX
-      // no longer renders a transform prop on the needle's group, so React
-      // re-renders won't overwrite this attribute. Net: the needle's visual
-      // position is ref-driven and can't be creeped past a click by a
-      // queued setState commit.
-      const ng = needleGroupRef.current
-      if (ng) ng.setAttribute('transform', `rotate(${angleRef.current}, ${CX}, ${CY})`)
-      // Re-render React only when the needle crosses into a new zone, so
-      // the highlight/label update but we don't reconcile every frame.
-      const zones = catchingZonesRef.current
-      if (zones.length) {
-        const keyNow = zoneKey(getZone(zones, angleRef.current, zoneRotationRef.current))
-        if (keyNow !== lastZoneKey) {
-          lastZoneKey = keyNow
-          setAngle(angleRef.current)
-        }
-      }
+      setAngle(angleRef.current)
       animRef.current = requestAnimationFrame(tick)
     }
-    // Defer the first rAF tick by ~100 ms after phase becomes 'catching'
-    // so the DialSVG initial mount paint + audio setup work on the
-    // catching transition finish before the needle starts spinning. That
-    // first-cycle frame-skip was rAF callbacks getting pre-empted by the
-    // mount-time main-thread burst. The needle visually starts from
-    // angle 270 in this window, which is the same value setHookedFish
-    // set just before this effect ran, so there's no visible jump.
-    const startDelay = setTimeout(() => {
-      animRef.current = requestAnimationFrame(tick)
-    }, 100)
+    animRef.current = requestAnimationFrame(tick)
     return () => {
-      clearTimeout(startDelay)
       if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
       if (blackoutTimerRef.current) { clearTimeout(blackoutTimerRef.current); blackoutTimerRef.current = null }
       setBlackoutOpacity(0)
@@ -2796,12 +2719,15 @@ export default function FishingGame({
     if (phase !== 'catching' || !hookedFishRef.current) return
     // Cut the dial sound immediately on tap.
     stopDialLoop()
-    // Cancel the rAF. The needle's SVG transform was being written by
-    // the tick directly via the needleGroupRef setAttribute path, so the
-    // DOM stays at whatever the tick set last — no queued React state
-    // update can creep it past the click position. angleRef.current is
-    // also already in sync with the visual since the tick updated both.
+    // Cancel the rAF so no further ticks advance the needle, then freeze
+    // the displayed angle at exactly what the player saw (the committed
+    // `angle` state). Using `angle` for both the freeze and the zone
+    // calc below keeps the catch result consistent with the visible
+    // needle and avoids the one-frame "creep" after the tap.
     if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
+    const lockedAngle = angle
+    setAngle(lockedAngle)
+    angleRef.current = lockedAngle
     setSnapKey(k => k + 1)
     setReelRippleKey(k => k + 1)
     setTimeout(() => setReelRippleKey(0), 1800)
@@ -3312,13 +3238,6 @@ export default function FishingGame({
     return selectedZone === 'ancient_deep' ? applyBossMods(base, activeBossMechanic, bossZoneShrink) : base
   })() : []
   const currentZone   = (phase === 'catching' || phase === 'reeling') ? getZone(catchingZones, angle, zoneRotation) : null
-  // Mirror the latest zones + rotation into refs so the needle rAF tick
-  // can detect zone-boundary crossings (it fires setAngle only on a
-  // boundary, not every frame). Assigning during render is the standard
-  // "latest value" ref idiom — safe here since these are only read inside
-  // the imperative rAF callback, never during React's render/commit.
-  catchingZonesRef.current = catchingZones
-  zoneRotationRef.current = zoneRotation
 
   function needleColor(): string {
     if ((phase === 'catching' || phase === 'reeling') && currentZone) return currentZone.color
@@ -4081,8 +4000,7 @@ export default function FishingGame({
                     <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}
                       needleColor={needleColor()} zoneOpacityFn={zoneOpacity}
                       fireLevel={perfectStreak >= 3 ? 2 : perfectStreak === 2 ? 1 : 0}
-                      snapKey={snapKey} perfectBurstKey={perfectBurstKey}
-                      needleGroupRef={needleGroupRef} />
+                      snapKey={snapKey} perfectBurstKey={perfectBurstKey} />
                   </div>
                 </motion.div>
               )}
