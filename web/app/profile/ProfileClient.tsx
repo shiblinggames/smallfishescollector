@@ -103,7 +103,7 @@ function cardTransform(off: number): { tx: number; tz: number; ry: number; scale
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.78rem', color: '#8a8782', marginBottom: 14 }}>
+    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.78rem', color: '#ccc7c0', marginBottom: 14 }}>
       {children}
     </p>
   )
@@ -163,7 +163,7 @@ function ShowcaseCarousel({ cards, onEdit }: { cards: PickerCard[]; onEdit: () =
         </p>
         {total > 1 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button onClick={prev} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a7775', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>‹</button>
+            <button onClick={prev} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c4bfb7', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>‹</button>
             <div style={{ display: 'flex', gap: 5 }}>
               {cards.map((_, i) => (
                 <button key={i} onClick={() => setActive(i)} style={{
@@ -174,7 +174,7 @@ function ShowcaseCarousel({ cards, onEdit }: { cards: PickerCard[]; onEdit: () =
                 }} />
               ))}
             </div>
-            <button onClick={next} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a7775', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>›</button>
+            <button onClick={next} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c4bfb7', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>›</button>
           </div>
         )}
         <button
@@ -484,7 +484,7 @@ export default function ProfileClient({
             </svg>
           </span>
         </button>
-        <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.55)', marginTop: 0, letterSpacing: '0.06em' }}>
+        <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.85)', marginTop: 0, letterSpacing: '0.06em' }}>
           Tap to customize colors
         </p>
 
@@ -504,7 +504,7 @@ export default function ProfileClient({
             {usernameError && (
               <p className="font-karla font-300 text-red-400 text-center" style={{ fontSize: '0.72rem' }}>{usernameError}</p>
             )}
-            <p className="font-karla font-300 text-center" style={{ fontSize: '0.65rem', color: '#6a6764' }}>
+            <p className="font-karla font-300 text-center" style={{ fontSize: '0.65rem', color: '#bbb5ad' }}>
               3–20 chars · letters, numbers, underscores · can only be changed once
             </p>
             <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
@@ -538,7 +538,7 @@ export default function ProfileClient({
                 Change username
               </button>
             ) : (
-              <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#6a6764' }}>
+              <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#bbb5ad' }}>
                 Username can only be changed once
               </p>
             )}
@@ -564,7 +564,7 @@ export default function ProfileClient({
               textDecoration: 'none',
             }}
           >
-            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#6a6764' }}>Public Profile ↗</span>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#bbb5ad' }}>Public Profile ↗</span>
           </Link>
           <Link
             href="/leaderboard"
@@ -575,7 +575,7 @@ export default function ProfileClient({
               textDecoration: 'none',
             }}
           >
-            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#6a6764' }}>Leaderboard ↗</span>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#bbb5ad' }}>Leaderboard ↗</span>
           </Link>
         </div>
       </div>
@@ -619,7 +619,7 @@ export default function ProfileClient({
                       ? equippedBadges.filter(Boolean).map(id => BADGE_MAP[id]?.name).join(', ')
                       : 'None equipped'}
                   </p>
-                  <p className="font-karla" style={{ fontSize: '0.56rem', color: '#5a5755', marginTop: 2 }}>Badges</p>
+                  <p className="font-karla" style={{ fontSize: '0.56rem', color: '#b4aea6', marginTop: 2 }}>Badges</p>
                 </div>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5a5755" strokeWidth="2.5" strokeLinecap="round"
                   style={{ transform: badgePickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>
@@ -629,7 +629,7 @@ export default function ProfileClient({
 
               {badgePickerOpen && (
                 <div style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem' }}>
-                  <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#5a5755', lineHeight: 1.4, marginBottom: 8 }}>
+                  <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#b4aea6', lineHeight: 1.4, marginBottom: 8 }}>
                     {selectedBadgeSlot !== null
                       ? `Slot ${selectedBadgeSlot + 1} selected — pick a badge to equip there.`
                       : 'Pick a slot first, or tap a badge to fill the next empty slot.'}
@@ -656,7 +656,7 @@ export default function ProfileClient({
                           {badge ? (
                             <img src={badge.imageUrl} alt={badge.name} style={{ width: 28, height: 28, objectFit: 'contain' }} />
                           ) : (
-                            <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)' }}>Empty</span>
+                            <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.55)' }}>Empty</span>
                           )}
                           <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: isSelected ? '#f0c040' : 'rgba(255,255,255,0.4)' }}>Slot {slot + 1}</span>
                         </button>
@@ -664,7 +664,7 @@ export default function ProfileClient({
                     })}
                   </div>
                   {unlockedBadges.length === 0 ? (
-                    <p className="font-karla" style={{ fontSize: '0.68rem', color: '#4a4845' }}>Earn badges by completing achievements.</p>
+                    <p className="font-karla" style={{ fontSize: '0.68rem', color: '#aaa49c' }}>Earn badges by completing achievements.</p>
                   ) : (
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       {BADGES.map(b => {
@@ -809,7 +809,7 @@ export default function ProfileClient({
               </div>
               <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
               <div style={{ textAlign: 'center', flex: 1 }}>
-                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(96,165,250,0.7)', marginBottom: 3 }}>Fishing Level</p>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(96,165,250,0.95)', marginBottom: 3 }}>Fishing Level</p>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#60a5fa', lineHeight: 1.2 }}>{level}</p>
               </div>
               <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
@@ -930,7 +930,7 @@ export default function ProfileClient({
                 </div>
 
                 <p className="font-karla font-300 italic" style={{
-                  fontSize: '0.62rem', color: 'rgba(254,226,226,0.55)',
+                  fontSize: '0.62rem', color: 'rgba(254,226,226,0.85)',
                   marginTop: 12, textAlign: 'center', letterSpacing: '0.04em',
                 }}>
                   &ldquo;From before the depth knew time.&rdquo;
@@ -976,7 +976,7 @@ export default function ProfileClient({
                 })}
               </div>
               {uniqueSpecies > 0 && (
-                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#6a6764', marginTop: 10, textAlign: 'center' }}>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#bbb5ad', marginTop: 10, textAlign: 'center' }}>
                   {uniqueSpecies.toLocaleString()} species caught
                 </p>
               )}
@@ -1038,7 +1038,7 @@ export default function ProfileClient({
               <ShowcaseCarousel cards={showcaseCards} onEdit={() => setModalOpen(true)} />
             ) : (
               <div style={{ textAlign: 'center', paddingTop: 8 }}>
-                <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#3a3835', marginBottom: 12 }}>
+                <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#a8a29a', marginBottom: 12 }}>
                   Pin your best catches to your profile
                 </p>
                 <button
@@ -1073,7 +1073,7 @@ export default function ProfileClient({
           <polyline points="16 17 21 12 16 7"/>
           <line x1="21" y1="12" x2="9" y2="12"/>
         </svg>
-        <span className="font-karla font-600 uppercase" style={{ fontSize: '0.72rem', color: '#6a6764', letterSpacing: '0.14em' }}>Sign Out</span>
+        <span className="font-karla font-600 uppercase" style={{ fontSize: '0.72rem', color: '#bbb5ad', letterSpacing: '0.14em' }}>Sign Out</span>
       </button>
 
       {/* ── Showcase picker modal ── */}
@@ -1096,21 +1096,21 @@ export default function ProfileClient({
             <div style={{ padding: '1.25rem 1.25rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
               <div>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>Pick Showcase</p>
-                <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#4a4845', marginTop: 2 }}>
+                <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#aaa49c', marginTop: 2 }}>
                   {selectedShowcase.length} / 5 selected
                   {selectedShowcase.length > 0 && (
-                    <button onClick={() => setSelectedShowcase([])} style={{ marginLeft: 8, color: '#6a6764', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.62rem', fontFamily: 'inherit' }}>
+                    <button onClick={() => setSelectedShowcase([])} style={{ marginLeft: 8, color: '#bbb5ad', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.62rem', fontFamily: 'inherit' }}>
                       Clear all
                     </button>
                   )}
                 </p>
               </div>
-              <button onClick={() => setModalOpen(false)} style={{ color: '#4a4845', fontSize: '1.2rem', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1 }}>✕</button>
+              <button onClick={() => setModalOpen(false)} style={{ color: '#aaa49c', fontSize: '1.2rem', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1 }}>✕</button>
             </div>
 
             <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
               {pickerCards.length === 0 ? (
-                <p className="font-karla font-300 text-center" style={{ fontSize: '0.72rem', color: '#4a4845', padding: '2rem 0' }}>
+                <p className="font-karla font-300 text-center" style={{ fontSize: '0.72rem', color: '#aaa49c', padding: '2rem 0' }}>
                   Open some packs first!
                 </p>
               ) : (
@@ -1655,7 +1655,7 @@ export default function ProfileClient({
             <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.75)', lineHeight: 1.5, marginBottom: 14 }}>
               {purchasePrompt.price.toLocaleString()} {purchasePrompt.currency === 'gems' ? '◆' : '⟡'} — yours forever once bought.
             </p>
-            <p className="font-karla text-center" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.55)', marginBottom: 14 }}>
+            <p className="font-karla text-center" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.85)', marginBottom: 14 }}>
               Your purse: {(purchasePrompt.currency === 'gems' ? gems : doubloons).toLocaleString()} {purchasePrompt.currency === 'gems' ? '◆' : '⟡'}
             </p>
             {purchaseError && (

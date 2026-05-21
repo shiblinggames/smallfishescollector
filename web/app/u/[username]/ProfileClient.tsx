@@ -114,7 +114,7 @@ function cardTransform(off: number): { tx: number; tz: number; ry: number; scale
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.78rem', color: '#8a8782', marginBottom: 14 }}>
+    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.78rem', color: '#ccc7c0', marginBottom: 14 }}>
       {children}
     </p>
   )
@@ -182,7 +182,7 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
         </p>
         {total > 1 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button onClick={prev} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a7775', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>‹</button>
+            <button onClick={prev} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c4bfb7', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>‹</button>
             <div style={{ display: 'flex', gap: 5 }}>
               {variants.map((_, i) => (
                 <button
@@ -197,7 +197,7 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
                 />
               ))}
             </div>
-            <button onClick={next} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7a7775', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>›</button>
+            <button onClick={next} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c4bfb7', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>›</button>
           </div>
         )}
       </div>
@@ -424,7 +424,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
               </div>
               <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
               <div style={{ textAlign: 'center', flex: 1 }}>
-                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(96,165,250,0.7)', marginBottom: 3 }}>Fishing Level</p>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(96,165,250,0.95)', marginBottom: 3 }}>Fishing Level</p>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#60a5fa', lineHeight: 1.2 }}>{fishingLevel}</p>
               </div>
               <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
@@ -487,7 +487,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                 })}
               </div>
               {stats.uniqueSpecies > 0 && (
-                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#6a6764', marginTop: 10, textAlign: 'center' }}>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#bbb5ad', marginTop: 10, textAlign: 'center' }}>
                   {stats.uniqueSpecies.toLocaleString()} species caught
                   {stats.highestPerfectStreak > 0 ? ` · ${stats.highestPerfectStreak}× best streak` : ''}
                 </p>
@@ -550,7 +550,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <SectionLabel>Crew</SectionLabel>
                 {stats.packsOpened > 0 && (
-                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#6a6764', marginBottom: 14 }}>
+                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#bbb5ad', marginBottom: 14 }}>
                     {stats.packsOpened.toLocaleString()} packs opened
                   </p>
                 )}
@@ -602,13 +602,13 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                               </span>
                             )}
                           </div>
-                          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#7a7572', marginTop: 4 }}>
+                          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#c4bfb7', marginTop: 4 }}>
                             {date}
                             {v.total_doubloons > 0 ? ` · +${v.total_doubloons.toLocaleString()} ⟡` : ''}
                             {v.total_gems > 0 ? ` · +${v.total_gems} gems` : ''}
                           </p>
                           {preview && !isExpanded && (
-                            <p className="font-karla" style={{ fontSize: '0.7rem', fontStyle: 'italic', color: 'rgba(255,255,255,0.32)', marginTop: 5, lineHeight: 1.55 }}>
+                            <p className="font-karla" style={{ fontSize: '0.7rem', fontStyle: 'italic', color: 'rgba(255,255,255,0.6)', marginTop: 5, lineHeight: 1.55 }}>
                               {preview}
                             </p>
                           )}
@@ -623,7 +623,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
 
                       {isExpanded && v.captains_log && (
                         <div style={{ padding: '0 1rem 1rem', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-                          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: 'rgba(180,120,30,0.6)', marginBottom: '0.5rem', paddingTop: '0.75rem' }}>
+                          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: 'rgba(214,162,74,0.92)', marginBottom: '0.5rem', paddingTop: '0.75rem' }}>
                             Captain&apos;s Log
                           </p>
                           <p className="font-karla" style={{ fontSize: '0.75rem', lineHeight: 1.75, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
@@ -634,7 +634,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
 
                       {isExpanded && !v.captains_log && (
                         <div style={{ padding: '0.5rem 1rem 1rem', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-                          <p className="font-karla" style={{ fontSize: '0.7rem', fontStyle: 'italic', color: '#6a6764' }}>Log not yet written.</p>
+                          <p className="font-karla" style={{ fontSize: '0.7rem', fontStyle: 'italic', color: '#bbb5ad' }}>Log not yet written.</p>
                         </div>
                       )}
                     </div>
@@ -647,7 +647,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                     style={{
                       background: 'none', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10,
                       padding: '0.7rem', cursor: 'pointer', width: '100%',
-                      color: '#7a7572', fontFamily: 'var(--font-karla)', fontWeight: 700,
+                      color: '#c4bfb7', fontFamily: 'var(--font-karla)', fontWeight: 700,
                       fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em',
                     }}
                   >
