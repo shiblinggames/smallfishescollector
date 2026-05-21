@@ -805,16 +805,16 @@ html, body {
   will-change: filter;
 }
 
-/* Aurora avatar border — a slowly rotating prismatic ring. Tuned to be a
-   subtle flex, NOT headache-inducing: 16s/rev (a drift, not a spin),
-   linear (no pulsing), muted/desaturated jewel tones, seam-matched (first
-   colour repeated last) so no hard band sweeps past. Honors
-   prefers-reduced-motion by freezing to a static gradient ring. */
+/* Aurora avatar border — a slowly rotating prismatic ring. A drift, not a
+   spin (16s/rev, linear, no pulsing), but a vivid aurora spectrum
+   (emerald → cyan → blue → violet → pink), seam-matched (first colour
+   repeated last) so no hard band sweeps past. Honors prefers-reduced-motion
+   by freezing to a static gradient ring. */
 @keyframes avatar-aurora-spin { to { transform: rotate(360deg); } }
 .avatar-aurora {
   border-radius: 50%;
   background: conic-gradient(from 0deg,
-    #6f6aa6, #4f8f99, #c3a258, #a96f86, #6f8aa8, #6f6aa6);
+    #34d399, #22d3ee, #3b82f6, #8b5cf6, #ec4899, #34d399);
   animation: avatar-aurora-spin 16s linear infinite;
   will-change: transform;
 }
@@ -838,13 +838,14 @@ html, body {
 /* Animated avatar backgrounds — render via inset overflow:hidden so the
    sprite/character above stays static while the bg breathes.
 
-   Aurora: prismatic jewel-tone swirl that pairs with the Aurora border —
-   a muted radial base under a slowly rotating, blurred conic overlay using
-   the same palette as the ring. */
+   Aurora: vivid prismatic swirl that pairs with the Aurora border. A deep
+   night-sky indigo/violet base (NOT gray) under a slowly rotating, lightly
+   blurred conic overlay in the same emerald → cyan → blue → violet → pink
+   spectrum, at high opacity so the colour actually reads. */
 @keyframes avatar-bg-aurora-spin { to { transform: rotate(360deg); } }
 .avatar-bg-aurora {
   position: relative;
-  background: radial-gradient(circle at 38% 35%, #3b3f6e 0%, #232a48 58%, #14182c 100%);
+  background: radial-gradient(circle at 38% 35%, #1e1b4b 0%, #2e1065 55%, #170b3b 100%);
   overflow: hidden;
 }
 .avatar-bg-aurora::after {
@@ -852,9 +853,9 @@ html, body {
   position: absolute;
   inset: -30%;
   background: conic-gradient(from 0deg,
-    rgba(111,106,166,0.55), rgba(79,143,153,0.45), rgba(195,162,88,0.40),
-    rgba(169,111,134,0.45), rgba(111,138,168,0.50), rgba(111,106,166,0.55));
-  filter: blur(6px);
+    rgba(52,211,153,0.85), rgba(34,211,238,0.80), rgba(59,130,246,0.75),
+    rgba(139,92,246,0.85), rgba(236,72,153,0.80), rgba(52,211,153,0.85));
+  filter: blur(5px);
   animation: avatar-bg-aurora-spin 18s linear infinite;
   pointer-events: none;
 }
