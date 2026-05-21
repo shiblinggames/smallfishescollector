@@ -68,11 +68,8 @@ let dialFetching = false
 let dialSource: AudioBufferSourceNode | null = null
 let dialPendingStart = false
 
-// Entry uses an exponential ramp from near-silence to full so the build
-// feels perceptually gradual (linear ramps sound "fast at start, slow at
-// end" because loudness perception is logarithmic). Exit can stay linear
-// — fades out feel natural either way and linear is more predictable.
-// Entry/exit durations are matched so arriving and leaving feel symmetric.
+// Entry and exit are both linear and the same duration, so arriving and
+// leaving the fishing page feel symmetric.
 const ENTRY_FADE_MS  = 3000
 const EXIT_FADE_MS   = 3000
 const TOGGLE_FADE_MS = 400
@@ -418,9 +415,8 @@ export function startFishingMusic(muted: boolean): void {
   if (muted) {
     rampMaster(0, 0, 0)
   } else {
-    // Exponential ramp + 6 s — feels like a true slow build because
-    // loudness perception is log scale (linear ramps sound front-loaded).
-    rampMaster(0, MUSIC_VOLUME, ENTRY_FADE_MS, /* pauseAtEnd */ false, /* exponential */ true)
+    // Linear ramp, matching the linear fade-out exactly.
+    rampMaster(0, MUSIC_VOLUME, ENTRY_FADE_MS)
   }
 }
 

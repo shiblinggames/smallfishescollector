@@ -23,6 +23,8 @@ export interface StoryLogData {
   }
 }
 
+type RaidStopData = StoryLogData['raid']['done'][number]
+
 const KIND_COLOR: Record<string, string> = {
   story: '#6fbf73', combat: '#f0743a', milestone: '#e0b358', shop: '#b08bf0',
 }
@@ -43,17 +45,32 @@ function Beat({ lines, accent }: { lines: string[]; accent: string }) {
   )
 }
 
+function RaidStop({ d }: { d: RaidStopData }) {
+  const accent = KIND_COLOR[d.kind] ?? '#c8704a'
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: accent, flexShrink: 0 }} />
+        <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: '#f0ede8' }}>{d.label}</span>
+      </div>
+      <div style={{ paddingLeft: 14 }}>
+        <Beat lines={d.lines} accent={accent} />
+      </div>
+    </div>
+  )
+}
+
+/** Card whose header + latest beat are always visible; older beats live
+ *  behind the inline "Show earlier" toggle (see EarlierToggle in children). */
 function Panel({
-  icon, title, accent, chip, children, defaultOpen = false,
+  icon, title, accent, chip, children,
 }: {
   icon: React.ReactNode
   title: string
   accent: string
   chip: string
   children: React.ReactNode
-  defaultOpen?: boolean
 }) {
-  const [open, setOpen] = useState(defaultOpen)
   return (
     <div style={{
       background: 'rgba(255,255,255,0.03)',
@@ -61,14 +78,7 @@ function Panel({
       borderRadius: 14,
       overflow: 'hidden',
     }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: '0.7rem',
-          padding: '0.85rem 1rem', background: 'none', border: 'none',
-          cursor: 'pointer', textAlign: 'left',
-        }}
-      >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.85rem 1rem 0.7rem' }}>
         <span aria-hidden style={{
           width: 32, height: 32, flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -77,14 +87,41 @@ function Panel({
           <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.95rem', color: '#f0ede8' }}>{title}</span>
           <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ display: 'block', fontSize: '0.56rem', color: accent, marginTop: 2 }}>{chip}</span>
         </span>
-        <span style={{ color: accent, fontSize: '0.85rem', flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▾</span>
-      </button>
-      {open && (
-        <div style={{ padding: '0 1rem 1.05rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {children}
-        </div>
-      )}
+      </div>
+      <div style={{ padding: '0 1rem 1.05rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {children}
+      </div>
     </div>
+  )
+}
+
+/** Collapsed-by-default reveal for the older beats of a storyline. */
+function EarlierToggle({ accent, count, children }: { accent: string; count: number; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  if (count <= 0) return null
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="font-karla font-700 uppercase tracking-[0.1em]"
+        style={{
+          alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 6,
+          background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: accent,
+        }}
+      >
+        <span style={{ fontSize: '0.6rem' }}>{open ? 'Hide earlier' : `Show ${count} earlier`}</span>
+        <span style={{ fontSize: '0.72rem', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▾</span>
+      </button>
+      {open && <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>{children}</div>}
+    </div>
+  )
+}
+
+function Eyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: '#7a7875' }}>
+      {children}
+    </p>
   )
 }
 
@@ -92,6 +129,14 @@ export default function StoryLog({ data }: { data: StoryLogData }) {
   const { finn, raid } = data
   const FINN_ACCENT = '#d8a24a'
   const RAID_ACCENT = '#c8704a'
+
+  // Finn: the Truth (if revealed) is the climax — otherwise the latest moment.
+  const finnLatestBeat = finn.encounter[finn.encounter.length - 1] ?? null
+  const finnEarlier = finn.revealed ? finn.encounter : finn.encounter.slice(0, -1)
+
+  // Raid: the most recently cleared stop leads; older stops collapse.
+  const raidLatest = raid.done[raid.done.length - 1] ?? null
+  const raidEarlier = raid.done.slice(0, -1)
 
   return (
     <div style={{ marginBottom: '1.5rem' }}>
@@ -119,13 +164,8 @@ export default function StoryLog({ data }: { data: StoryLogData }) {
             </p>
           ) : (
             <>
-              {finn.encounter.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: '#7a7875' }}>What he let slip</p>
-                  {finn.encounter.map(b => <Beat key={b.id} lines={b.lines} accent={FINN_ACCENT} />)}
-                </div>
-              )}
-              {finn.revealed && (
+              {/* Latest — the Truth if revealed, else the most recent moment */}
+              {finn.revealed ? (
                 <div style={{
                   background: `${FINN_ACCENT}14`, border: `1px solid ${FINN_ACCENT}44`,
                   borderRadius: 10, padding: '0.8rem 0.9rem',
@@ -136,7 +176,18 @@ export default function StoryLog({ data }: { data: StoryLogData }) {
                     <p key={i} className="font-karla" style={{ fontSize: '0.78rem', lineHeight: 1.55, color: 'rgba(240,237,232,0.74)' }}>{l}</p>
                   ))}
                 </div>
+              ) : finnLatestBeat && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <Eyebrow>Latest moment</Eyebrow>
+                  <Beat lines={finnLatestBeat.lines} accent={FINN_ACCENT} />
+                </div>
               )}
+
+              {/* Earlier moments behind the dropdown */}
+              <EarlierToggle accent={FINN_ACCENT} count={finnEarlier.length}>
+                <Eyebrow>What he let slip</Eyebrow>
+                {finnEarlier.map(b => <Beat key={b.id} lines={b.lines} accent={FINN_ACCENT} />)}
+              </EarlierToggle>
             </>
           )}
         </Panel>
@@ -173,19 +224,18 @@ export default function StoryLog({ data }: { data: StoryLogData }) {
             </p>
           ) : (
             <>
-              {raid.done.map((d, i) => (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: KIND_COLOR[d.kind] ?? RAID_ACCENT, flexShrink: 0 }} />
-                    <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: '#f0ede8' }}>{d.label}</span>
-                  </div>
-                  <div style={{ paddingLeft: 14 }}>
-                    <Beat lines={d.lines} accent={KIND_COLOR[d.kind] ?? RAID_ACCENT} />
-                  </div>
+              {raidLatest && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <Eyebrow>Latest stop</Eyebrow>
+                  <RaidStop d={raidLatest} />
                 </div>
-              ))}
+              )}
+              <EarlierToggle accent={RAID_ACCENT} count={raidEarlier.length}>
+                {raidEarlier.map((d, i) => <RaidStop key={i} d={d} />)}
+              </EarlierToggle>
             </>
           )}
+
           {raid.next && (
             <div style={{
               borderTop: '1px dashed rgba(255,255,255,0.12)', paddingTop: '0.85rem',
