@@ -261,14 +261,22 @@ export default function ProfileClient({
   // LOCAL-ONLY page-background preview (test). Not persisted, not gated, not
   // shown to other users — just lets us eyeball the fishing zone paintings as
   // a profile page backdrop before committing to a saved `profile_bg` column.
-  const [previewBg, setPreviewBg] = useState<string | null>(null)
-  const PREVIEW_BGS: { label: string; src: string | null }[] = [
-    { label: 'None',        src: null },
+  type PreviewBg = { label: string; src?: string; gradient?: string }
+  const [previewBg, setPreviewBg] = useState<PreviewBg | null>(null)
+  // The three blue zone paintings that read well + a range of distinct
+  // blue/teal shades sampled from that same ocean palette. Abyss + Ancient
+  // were dropped: abyss was indistinguishable from the black page bg, and
+  // ancient wasn't wanted.
+  const PREVIEW_BGS: PreviewBg[] = [
+    { label: 'None' },
     { label: 'Shallows',    src: '/shallows.jpg' },
     { label: 'Open Waters', src: '/openwaters.jpg' },
     { label: 'Deep',        src: '/deep.jpg' },
-    { label: 'Abyss',       src: '/abyss.jpg' },
-    { label: 'Ancient',     src: '/ancient.jpg' },
+    { label: 'Lagoon',   gradient: 'linear-gradient(180deg, #5fc6e6 0%, #2a93c4 55%, #185f8a 100%)' },
+    { label: 'Ocean',    gradient: 'linear-gradient(180deg, #2f9bd6 0%, #1e6fb0 55%, #133f72 100%)' },
+    { label: 'Cobalt',   gradient: 'linear-gradient(180deg, #3b6fe0 0%, #1d4ed8 55%, #122d6e 100%)' },
+    { label: 'Teal',     gradient: 'linear-gradient(180deg, #19a6ba 0%, #0e7490 55%, #0a4456 100%)' },
+    { label: 'Deep Sea', gradient: 'linear-gradient(180deg, #245a96 0%, #163768 55%, #0b1f42 100%)' },
   ]
   // The hero avatar is fixed-px, so on a big desktop page it reads small
   // (and its proportional ring looks like a hairline). Bigger on >=md
@@ -387,9 +395,13 @@ export default function ProfileClient({
           fixed full-screen image + a darkening scrim for legibility. */}
       {previewBg && (
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={previewBg} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%)' }} />
+          {previewBg.src ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={previewBg.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
+          ) : (
+            <div style={{ position: 'absolute', inset: 0, background: previewBg.gradient }} />
+          )}
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.74) 100%)' }} />
         </div>
       )}
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 1.25rem 3rem', position: 'relative', zIndex: 1 }}>
@@ -409,12 +421,13 @@ export default function ProfileClient({
           Page bg (test)
         </span>
         {PREVIEW_BGS.map(opt => {
-          const isActive = previewBg === opt.src
+          const isNone = !opt.src && !opt.gradient
+          const isActive = isNone ? previewBg === null : previewBg?.label === opt.label
           return (
             <button
               key={opt.label}
               type="button"
-              onClick={() => setPreviewBg(opt.src)}
+              onClick={() => setPreviewBg(isNone ? null : opt)}
               title={opt.label}
               style={{
                 position: 'relative',
@@ -422,10 +435,12 @@ export default function ProfileClient({
                 padding: 0, cursor: 'pointer',
                 border: isActive ? '2px solid #f0c040' : '1px solid rgba(255,255,255,0.18)',
                 boxShadow: isActive ? '0 0 8px rgba(240,192,64,0.4)' : 'none',
-                background: opt.src
-                  ? undefined
-                  : 'linear-gradient(45deg, rgba(255,255,255,0.14) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.14) 50%, rgba(255,255,255,0.14) 75%, transparent 75%, transparent)',
-                backgroundSize: opt.src ? undefined : '8px 8px',
+                background: opt.gradient
+                  ? opt.gradient
+                  : isNone
+                    ? 'linear-gradient(45deg, rgba(255,255,255,0.14) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.14) 50%, rgba(255,255,255,0.14) 75%, transparent 75%, transparent)'
+                    : undefined,
+                backgroundSize: isNone ? '8px 8px' : undefined,
                 appearance: 'none', WebkitAppearance: 'none',
               }}
             >
