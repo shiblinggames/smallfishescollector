@@ -52,12 +52,12 @@ export default function TapToContinueGate({ visible, onTap }: Props) {
             className="font-cinzel font-700 uppercase"
             style={{
               fontSize: '0.95rem', letterSpacing: '0.12em',
-              color: '#1a0f02',
-              background: '#f0c040',
-              border: '1px solid #f7d878',
+              color: '#eceae5',
+              background: 'rgba(12,18,26,0.82)',
+              border: '1px solid rgba(255,255,255,0.16)',
               borderRadius: 999,
               padding: '0.7rem 1.6rem',
-              boxShadow: '0 0 22px rgba(240,192,64,0.5), 0 6px 18px rgba(0,0,0,0.55)',
+              boxShadow: '0 0 20px rgba(200,220,255,0.16), 0 6px 18px rgba(0,0,0,0.6)',
               pointerEvents: 'none',
               whiteSpace: 'nowrap',
             }}
