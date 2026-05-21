@@ -217,6 +217,10 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // Fire-and-forget — failure here mustn't block the cast result.
   void admin.from('profiles').update({ last_used_bait: baitType }).eq('id', user.id).then(() => {}, () => {})
 
+  // Lifetime "Lines Cast" career stat — bump once per committed cast (covers
+  // both the crate and normal paths below). Fire-and-forget.
+  void admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_casts', n: 1 }).then(() => {}, () => {})
+
   // Crate encounter: 2% chance (× rod.crateChanceMult — Treasure Rod = 2×)
   if (habitat !== 'ancient_deep' && Math.random() < 0.02 * (rod.crateChanceMult ?? 1)) {
     if (!noBait && baitRow) {
