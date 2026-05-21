@@ -5797,14 +5797,12 @@ export default function FishingGame({
                         transition={{ duration: 0.2 }}
                         onClick={() => handleClaimDaily(i as 0 | 1 | 2)}
                         disabled={isClaiming}
-                        className="font-cinzel font-700 uppercase tracking-[0.14em] w-full"
+                        className="font-karla font-700 uppercase tracking-[0.1em] w-full"
                         style={{
                           fontSize: '0.78rem', padding: '0.6rem', borderRadius: 10,
-                          background: `linear-gradient(180deg, rgba(240,192,64,0.28) 0%, rgba(240,192,64,0.08) 100%)`,
-                          border: '1px solid rgba(240,192,64,0.55)',
-                          borderTop: '1px solid rgba(240,192,64,0.85)',
+                          background: 'rgba(240,192,64,0.16)',
+                          border: '1px solid rgba(240,192,64,0.5)',
                           color: '#f0c040',
-                          boxShadow: '0 0 14px rgba(240,192,64,0.25)',
                           opacity: isClaiming ? 0.5 : 1,
                           cursor: isClaiming ? 'default' : 'pointer',
                         }}
