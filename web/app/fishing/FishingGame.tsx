@@ -21,7 +21,7 @@ import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
-import { startFishingMusic, setFishingMusicMuted, fadeOutFishingMusic, playPerfectSfx, playCastSfx, playCast2Sfx, startDialLoop, stopDialLoop, getFishingSfxMuted, setFishingSfxMuted } from '@/lib/fishingMusic'
+import { setFishingMusicMuted, playPerfectSfx, playCastSfx, playCast2Sfx, startDialLoop, stopDialLoop, getFishingSfxMuted, setFishingSfxMuted } from '@/lib/fishingMusic'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
 import { updateCharacterColor } from '@/app/u/actions'
@@ -1958,15 +1958,10 @@ export default function FishingGame({
   // separate sfxGain node in lib/fishingMusic). Default ON (not muted).
   const [sfxMuted, setSfxMutedState] = useState<boolean>(() => getFishingSfxMuted())
 
-  useEffect(() => {
-    startFishingMusic(audioMuted)
-    return () => { fadeOutFishingMusic() }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Skip the FIRST run of this effect so we don't immediately overwrite
-  // the entry fade scheduled by startFishingMusic above with the much
-  // shorter TOGGLE_FADE_MS ramp. Only react to actual user toggles after.
+  // Music start/stop now lives in FishingPageClient so it persists across the
+  // ZoneLanding ↔ FishingGame views. Here we only react to the in-game mute
+  // toggle. Skip the FIRST run so mounting (music already playing) doesn't
+  // clobber the parent's entry fade with the shorter toggle ramp.
   const audioMutedInitialRunRef = useRef(true)
   useEffect(() => {
     if (audioMutedInitialRunRef.current) {
@@ -3343,8 +3338,15 @@ export default function FishingGame({
               muted: audioMuted,
               label: audioMuted ? 'Unmute music' : 'Mute music',
               toggle: () => { const n = !audioMuted; setFishingMusicMuted(n); setAudioMuted(n) },
-              // music note
-              icon: (
+              // music note — slashed when muted
+              icon: audioMuted ? (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18V5l12-2v13" />
+                  <circle cx="6" cy="18" r="3" />
+                  <circle cx="18" cy="16" r="3" />
+                  <line x1="3" y1="2.5" x2="21" y2="21.5" />
+                </svg>
+              ) : (
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 18V5l12-2v13" />
                   <circle cx="6" cy="18" r="3" />
@@ -3379,16 +3381,21 @@ export default function FishingGame({
               onClick={t.toggle}
               aria-label={t.label}
               style={{
+                position: 'relative',
                 width: 34, height: 34,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(8,18,28,0.6)',
-                border: '1px solid rgba(255,255,255,0.18)',
+                // On = lit blue chip; muted = dark + dim + slashed icon, so the
+                // state reads at a glance instead of relying on a faint opacity shift.
+                background: t.muted ? 'rgba(8,18,28,0.62)' : 'rgba(96,165,250,0.22)',
+                border: `1px solid ${t.muted ? 'rgba(255,255,255,0.14)' : 'rgba(96,165,250,0.6)'}`,
                 borderRadius: '50%',
-                color: t.muted ? 'rgba(240,237,232,0.45)' : 'rgba(240,237,232,0.85)',
+                color: t.muted ? 'rgba(240,237,232,0.4)' : '#cfe2ff',
+                boxShadow: t.muted ? 'none' : '0 0 8px rgba(96,165,250,0.4)',
                 cursor: 'pointer',
                 padding: 0,
                 backdropFilter: 'blur(4px)',
                 WebkitBackdropFilter: 'blur(4px)',
+                transition: 'background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s',
               }}
             >
               {t.icon}

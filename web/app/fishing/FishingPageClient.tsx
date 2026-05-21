@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { startFishingMusic, fadeOutFishingMusic } from '@/lib/fishingMusic'
 import ZoneLanding, { type ZoneKey } from './ZoneLanding'
 import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
@@ -94,6 +95,16 @@ export default function FishingPageClient({
   initialFinnLastOutcome: 'won' | 'lost' | 'passed' | null
 }) {
   const fishingLevel = getLevelFromXP(initialFishingXP)
+
+  // Soundtrack lifecycle lives here (NOT in FishingGame) so the music keeps
+  // playing across the ZoneLanding ↔ FishingGame views — it only fades when
+  // the player actually leaves /fishing (this client unmounts). Respects the
+  // saved mute pref; the in-game toggles still drive setFishingMusicMuted.
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? window.localStorage.getItem('fishingAudioMuted') : null
+    startFishingMusic(saved === null ? true : saved === 'true')
+    return () => { fadeOutFishingMusic() }
+  }, [])
 
   // Boat/hat state lives at this level so it persists across the
   // ZoneLanding ↔ FishingGame remount when the player switches zones.

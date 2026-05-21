@@ -76,6 +76,11 @@ const ENTRY_FADE_MS  = 6000
 const EXIT_FADE_MS   = 3000
 const TOGGLE_FADE_MS = 400
 
+// Music sits UNDER the SFX (which play at sfxGain = 1, perfect boosted 1.8×).
+// The soundtrack at full 1.0 drowned the cast/dial/perfect cues, so the
+// music's "on" level is held below the SFX bus. Tune here to rebalance.
+const MUSIC_VOLUME = 0.5
+
 function makeAudio(): HTMLAudioElement {
   const audio = document.createElement('audio')
   audio.src = TRACK_URL
@@ -138,9 +143,9 @@ function setupWebAudio(): boolean {
     const sfx = ctx.createGain()
     ga.gain.value = 1  // A starts as current
     gb.gain.value = 0
-    master.gain.value = 1
+    master.gain.value = MUSIC_VOLUME
     sfx.gain.value = sfxMuted ? 0 : 1
-    lastGainValue = 1
+    lastGainValue = MUSIC_VOLUME
     srcA.connect(ga).connect(master)
     srcB.connect(gb).connect(master)
     master.connect(ctx.destination)
@@ -414,7 +419,7 @@ export function startFishingMusic(muted: boolean): void {
   } else {
     // Exponential ramp + 6 s — feels like a true slow build because
     // loudness perception is log scale (linear ramps sound front-loaded).
-    rampMaster(0, 1, ENTRY_FADE_MS, /* pauseAtEnd */ false, /* exponential */ true)
+    rampMaster(0, MUSIC_VOLUME, ENTRY_FADE_MS, /* pauseAtEnd */ false, /* exponential */ true)
   }
 }
 
@@ -427,7 +432,7 @@ export function setFishingMusicMuted(muted: boolean): void {
   if (muted) {
     rampMaster(lastGainValue, 0, 0)
   } else {
-    rampMaster(0, 1, TOGGLE_FADE_MS)
+    rampMaster(0, MUSIC_VOLUME, TOGGLE_FADE_MS)
   }
 }
 
