@@ -188,12 +188,15 @@ function ClaimCard({
         <button
           onClick={onClaim}
           disabled={loading}
-          className="btn-gold w-full"
+          className="font-karla font-700 uppercase tracking-[0.1em] w-full"
           style={{
             marginTop: '0.85rem',
-            padding: '0.6rem',
+            padding: '0.7rem',
             fontSize: '0.78rem',
-            letterSpacing: '0.1em',
+            borderRadius: 12,
+            background: `${accent}22`,
+            border: `1px solid ${accent}66`,
+            color: accent,
             opacity: loading ? 0.65 : 1,
             cursor: loading ? 'default' : 'pointer',
           }}
