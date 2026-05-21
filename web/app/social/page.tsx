@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Nav from '@/components/Nav'
 import SocialClient from './SocialClient'
-import { getCrew, getNewFollowers } from './actions'
+import { getCrew, getNewFollowers, type CrewMember } from './actions'
 import { getChallenges, getWLRecord } from './challengeActions'
 
 export default async function SocialPage() {
@@ -11,16 +11,29 @@ export default async function SocialPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, crew, newFollowers, challenges, wlRecord, { data: baitRows }] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, gems, username').eq('id', user.id).single(),
+  const [{ data: profile }, crew, newFollowers, challenges, wlRecord, { data: baitRows }, { count: mySpecies }] = await Promise.all([
+    supabase.from('profiles').select('packs_available, doubloons, gems, username, fishing_xp, expedition_xp, highest_perfect_streak, character_color, equipped_hat, avatar_bg_color, avatar_border_color').eq('id', user.id).single(),
     getCrew(),
     getNewFollowers(),
     getChallenges(),
     getWLRecord(),
     supabase.from('bait_inventory').select('quantity').eq('user_id', user.id),
+    supabase.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
   ])
 
   const myBait = (baitRows ?? []).reduce((sum: number, row: { quantity: number }) => sum + (row.quantity ?? 0), 0)
+
+  const me: CrewMember = {
+    username:             profile?.username ?? '',
+    fishingXP:            profile?.fishing_xp ?? 0,
+    expeditionXP:         profile?.expedition_xp ?? 0,
+    highestPerfectStreak: profile?.highest_perfect_streak ?? 0,
+    species:             mySpecies ?? 0,
+    characterColor:      (profile?.character_color as string | null) ?? null,
+    equippedHat:         (profile?.equipped_hat as string | null) ?? null,
+    avatarBg:            (profile?.avatar_bg_color as string | null) ?? null,
+    avatarBorder:        (profile?.avatar_border_color as string | null) ?? null,
+  }
 
   return (
     <>
@@ -39,6 +52,7 @@ export default async function SocialPage() {
         )}
         <SocialClient
           initialCrew={crew}
+          me={me}
           username={profile?.username ?? ''}
           newFollowers={newFollowers}
           initialChallenges={challenges}

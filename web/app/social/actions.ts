@@ -8,19 +8,22 @@ export interface CrewMember {
   username: string
   fishingXP: number
   expeditionXP: number
+  highestPerfectStreak: number
+  species: number
   characterColor: string | null
   equippedHat: string | null
   avatarBg: string | null
   avatarBorder: string | null
 }
 
-const AVATAR_FIELDS = 'id, username, fishing_xp, expedition_xp, character_color, equipped_hat, avatar_bg_color, avatar_border_color'
+const AVATAR_FIELDS = 'id, username, fishing_xp, expedition_xp, highest_perfect_streak, character_color, equipped_hat, avatar_bg_color, avatar_border_color'
 
 type ProfileRow = {
   id: string
   username: string
   fishing_xp: number | null
   expedition_xp: number | null
+  highest_perfect_streak: number | null
   character_color: string | null
   equipped_hat: string | null
   avatar_bg_color: string | null
@@ -29,14 +32,26 @@ type ProfileRow = {
 
 function toCrewMember(p: ProfileRow): CrewMember {
   return {
-    username:       p.username,
-    fishingXP:      p.fishing_xp ?? 0,
-    expeditionXP:   p.expedition_xp ?? 0,
-    characterColor: p.character_color,
-    equippedHat:    p.equipped_hat,
-    avatarBg:       p.avatar_bg_color,
-    avatarBorder:   p.avatar_border_color,
+    username:             p.username,
+    fishingXP:            p.fishing_xp ?? 0,
+    expeditionXP:         p.expedition_xp ?? 0,
+    highestPerfectStreak: p.highest_perfect_streak ?? 0,
+    species:             0,
+    characterColor:      p.character_color,
+    equippedHat:         p.equipped_hat,
+    avatarBg:            p.avatar_bg_color,
+    avatarBorder:        p.avatar_border_color,
   }
+}
+
+/** Unique-species counts (one fish_collection row per species) for a set of
+ *  user ids, in a single query. */
+async function speciesCounts(admin: ReturnType<typeof createAdminClient>, ids: string[]): Promise<Record<string, number>> {
+  if (!ids.length) return {}
+  const { data } = await admin.from('fish_collection').select('user_id').in('user_id', ids)
+  const counts: Record<string, number> = {}
+  for (const r of (data ?? []) as { user_id: string }[]) counts[r.user_id] = (counts[r.user_id] ?? 0) + 1
+  return counts
 }
 
 export async function getCrew(): Promise<CrewMember[]> {
@@ -61,10 +76,11 @@ export async function getCrew(): Promise<CrewMember[]> {
     .in('id', ids)
 
   const byId = Object.fromEntries(((profiles ?? []) as ProfileRow[]).map(p => [p.id, p]))
+  const species = await speciesCounts(admin, ids)
   return ids
     .map(id => byId[id])
     .filter(Boolean)
-    .map(toCrewMember)
+    .map(p => ({ ...toCrewMember(p), species: species[p.id] ?? 0 }))
 }
 
 export async function addCrewMember(targetUsername: string): Promise<{ error?: string }> {
