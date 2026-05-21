@@ -261,7 +261,7 @@ export default function ProfileClient({
   // LOCAL-ONLY page-background preview (test). Not persisted, not gated, not
   // shown to other users — just lets us eyeball the fishing zone paintings as
   // a profile page backdrop before committing to a saved `profile_bg` column.
-  type PreviewBg = { label: string; src?: string; scrim?: string }
+  type PreviewBg = { label: string; src?: string; scrim?: string; position?: string }
   // Default darkening scrim for legibility. Abyss overrides it with a much
   // lighter one — the painting is already dark, so a heavy scrim crushed its
   // texture/colour into the black page bg.
@@ -271,7 +271,10 @@ export default function ProfileClient({
     { label: 'None' },
     { label: 'Shallows',    src: '/shallows.jpg' },
     { label: 'Open Waters', src: '/openwaters.jpg' },
-    { label: 'Deep',        src: '/deep.jpg' },
+    // Deep's sunset (sky + horizon glow) sits in the top ~15% of the art;
+    // a centre crop lands on plain water, so anchor to the top and lighten
+    // the upper scrim so the warm colours actually read.
+    { label: 'Deep',        src: '/deep.jpg', position: 'center top', scrim: 'linear-gradient(to bottom, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.48) 50%, rgba(0,0,0,0.72) 100%)' },
     { label: 'Abyss',       src: '/abyss.jpg', scrim: 'linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.24) 50%, rgba(0,0,0,0.46) 100%)' },
   ]
   // The hero avatar is fixed-px, so on a big desktop page it reads small
@@ -392,7 +395,7 @@ export default function ProfileClient({
       {previewBg?.src && (
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={previewBg.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
+          <img src={previewBg.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: previewBg.position ?? 'center', display: 'block' }} />
           <div style={{ position: 'absolute', inset: 0, background: previewBg.scrim ?? DEFAULT_SCRIM }} />
         </div>
       )}
@@ -436,7 +439,7 @@ export default function ProfileClient({
             >
               {opt.src && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={opt.src} alt={opt.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <img src={opt.src} alt={opt.label} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: opt.position ?? 'center', display: 'block' }} />
               )}
             </button>
           )
