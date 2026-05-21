@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { claimRaidLoot, reportRaidSink } from './actions'
+import { claimRaidLoot, reportRaidSink, recordRaidHit } from './actions'
 import { awardRaidKill } from './raidXPActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
@@ -1126,7 +1126,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 killReward={reward ? { gold: reward.gold, xp: reward.xp } : undefined}
                 onEnemyDefeated={handleEnemyDefeated}
                 onPlayerDefeated={handlePlayerDefeated}
-                onPlayerHit={(d) => { if (d > maxHitRef.current) maxHitRef.current = d }}
+                onPlayerHit={(d) => { if (d > maxHitRef.current) { maxHitRef.current = d; recordRaidHit(d).catch(() => {}) } }}
                 anchorSaveAvailable={anchorSavesLeftRef.current > 0}
                 onAnchorSave={() => { anchorSavesLeftRef.current = Math.max(0, anchorSavesLeftRef.current - 1) }}
                 onLeave={() => router.push('/expeditions')}
@@ -1232,7 +1232,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
               setLootClaimed(true)
               const elapsedMs = performance.now() - raidStartTimeRef.current
               try {
-                const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP, config.raidId, maxHitRef.current)
+                const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP, config.raidId)
                 window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
               } catch { /* save failed, route anyway */ }
               router.push('/expeditions')
