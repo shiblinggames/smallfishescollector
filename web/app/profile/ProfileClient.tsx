@@ -260,7 +260,16 @@ export default function ProfileClient({
   const [avatarBg, setAvatarBg] = useState<string | null>(initialAvatarBg)
   const [avatarBorder, setAvatarBorder] = useState<string | null>(initialAvatarBorder)
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false)
-  const [avatarSaving, setAvatarSaving] = useState(false)
+  // Avatar bg + border save on click now (no Save button). Pass the changed
+  // value plus the current other one so a single-field tap persists both.
+  function saveAvatarBg(hex: string) {
+    setAvatarBg(hex)
+    void updateAvatarColors({ bgColor: hex, borderColor: avatarBorder })
+  }
+  function saveAvatarBorder(hex: string) {
+    setAvatarBorder(hex)
+    void updateAvatarColors({ bgColor: avatarBg, borderColor: hex })
+  }
   // Which group the "Profile Look" modal is showing — splits the old long
   // scroll into tabs: character / avatar (bg+border) / page background.
   const [lookTab, setLookTab] = useState<'character' | 'avatar' | 'page'>('character')
@@ -1213,7 +1222,7 @@ export default function ProfileClient({
               overflowY: 'auto',
               WebkitOverflowScrolling: 'touch',
               overscrollBehavior: 'contain',
-              padding: '1.1rem 1rem 0.5rem',
+              padding: '1.1rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1.1rem)',
             }}>
             {/* Live preview */}
             <div className="flex items-center justify-center" style={{ marginBottom: 14 }}>
@@ -1337,7 +1346,7 @@ export default function ProfileClient({
                     type="button"
                     onClick={() => {
                       if (locked) { flashLockMsg('Requires Premium membership'); return }
-                      setAvatarBg(c.hex)
+                      saveAvatarBg(c.hex)
                     }}
                     aria-label={`Background ${c.label}${locked ? ' (premium)' : ''}`}
                     title={locked ? `${c.label} — premium only` : c.label}
@@ -1383,7 +1392,7 @@ export default function ProfileClient({
                         setPurchasePrompt({ kind: 'special', id: s.id, name: s.label, price: s.gemPrice, currency: 'gems' })
                         return
                       }
-                      setAvatarBg(s.hex)
+                      saveAvatarBg(s.hex)
                     }}
                     aria-label={`Background ${s.label}${!owned ? ` (${s.gemPrice} gems)` : ''}`}
                     title={owned ? s.label : `${s.label} — ${s.gemPrice} ◆`}
@@ -1423,7 +1432,7 @@ export default function ProfileClient({
                     type="button"
                     onClick={() => {
                       if (locked) { flashLockMsg('Requires Premium membership'); return }
-                      setAvatarBorder(c.hex)
+                      saveAvatarBorder(c.hex)
                     }}
                     aria-label={`Border ${c.label}${locked ? ' (premium)' : ''}`}
                     title={locked ? `${c.label} — premium only` : c.label}
@@ -1471,7 +1480,7 @@ export default function ProfileClient({
                         setPurchasePrompt({ kind: 'special', id: s.id, name: s.label, price: s.gemPrice, currency: 'gems' })
                         return
                       }
-                      setAvatarBorder(s.hex)
+                      saveAvatarBorder(s.hex)
                     }}
                     aria-label={`Border ${s.label}${!owned ? ` (${s.gemPrice} gems)` : ''}`}
                     title={owned ? s.label : `${s.label} — ${s.gemPrice} ◆`}
@@ -1612,62 +1621,6 @@ export default function ProfileClient({
               ) : null}
             </div>
 
-            </div>
-
-            {/* Sticky footer — Reset + Save always visible regardless of scroll */}
-            <div style={{
-              flexShrink: 0,
-              display: 'flex', gap: 10,
-              padding: '0.85rem 1rem calc(env(safe-area-inset-bottom, 0px) + 0.85rem)',
-              borderTop: '1px solid rgba(96,165,250,0.18)',
-              background: 'linear-gradient(180deg, rgba(6,16,28,0.85) 0%, rgba(6,16,28,1) 100%)',
-              borderBottomLeftRadius: 18,
-              borderBottomRightRadius: 18,
-            }}>
-              <button
-                type="button"
-                disabled={avatarSaving}
-                onClick={async () => {
-                  setAvatarSaving(true)
-                  setAvatarBg(null)
-                  setAvatarBorder(null)
-                  await updateAvatarColors({ bgColor: null, borderColor: null })
-                  setAvatarSaving(false)
-                }}
-                className="font-karla font-700 uppercase tracking-[0.1em]"
-                style={{
-                  flex: 1, padding: '0.85rem 0',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.18)',
-                  color: 'rgba(240,237,232,0.78)',
-                  borderRadius: 12, fontSize: '0.8rem',
-                  cursor: avatarSaving ? 'default' : 'pointer',
-                }}
-              >
-                Reset
-              </button>
-              <button
-                type="button"
-                disabled={avatarSaving}
-                onClick={async () => {
-                  setAvatarSaving(true)
-                  await updateAvatarColors({ bgColor: avatarBg, borderColor: avatarBorder })
-                  setAvatarSaving(false)
-                  setAvatarPickerOpen(false)
-                }}
-                className="font-karla font-700 uppercase tracking-[0.1em]"
-                style={{
-                  flex: 2, padding: '0.85rem 0',
-                  background: 'rgba(96,165,250,0.16)',
-                  border: '1px solid rgba(96,165,250,0.55)',
-                  color: '#cfe2ff',
-                  borderRadius: 12, fontSize: '0.8rem',
-                  cursor: avatarSaving ? 'default' : 'pointer',
-                  opacity: avatarSaving ? 0.6 : 1,
-                }}
-              >
-                {avatarSaving ? 'Saving…' : 'Save'}
-              </button>
             </div>
           </div>
         </div>
