@@ -442,6 +442,9 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const roundRef              = useRef(0)
   const streakRef             = useRef(0)
   const playerHPRef           = useRef(playerHPMax)
+  // Biggest single hit the player lands this run — reported to claimRaidLoot
+  // for the "Biggest Hit" career stat.
+  const maxHitRef             = useRef(0)
   const enemyHPRef            = useRef(0)
   const enemyHPMaxRef         = useRef(0)
   const phaseRef              = useRef<GamePhase>('idle')
@@ -1123,6 +1126,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 killReward={reward ? { gold: reward.gold, xp: reward.xp } : undefined}
                 onEnemyDefeated={handleEnemyDefeated}
                 onPlayerDefeated={handlePlayerDefeated}
+                onPlayerHit={(d) => { if (d > maxHitRef.current) maxHitRef.current = d }}
                 anchorSaveAvailable={anchorSavesLeftRef.current > 0}
                 onAnchorSave={() => { anchorSavesLeftRef.current = Math.max(0, anchorSavesLeftRef.current - 1) }}
                 onLeave={() => router.push('/expeditions')}
@@ -1228,7 +1232,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
               setLootClaimed(true)
               const elapsedMs = performance.now() - raidStartTimeRef.current
               try {
-                const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP, config.raidId)
+                const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP, config.raidId, maxHitRef.current)
                 window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
               } catch { /* save failed, route anyway */ }
               router.push('/expeditions')

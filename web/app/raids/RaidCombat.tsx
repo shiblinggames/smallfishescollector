@@ -160,6 +160,9 @@ export interface RaidCombatProps {
   killReward?: { gold: number; xp: number }
   onEnemyDefeated: (remainingPlayerHp: number) => void
   onPlayerDefeated: () => void
+  /** Fires with each damage value the player lands, so the parent can track
+   *  the biggest hit of the run (career stat). */
+  onPlayerHit?: (dmg: number) => void
   /** Quartermaster's Anchor: when true, the next killing blow leaves the
    *  player at 1 HP instead of sinking (raids only — wired by RaidGame,
    *  never PracticeRaidGame). `onAnchorSave` fires once when consumed so
@@ -184,7 +187,7 @@ export default function RaidCombat({
   equippedRaidItems,
   equippedRepairKit,
   killReward,
-  onEnemyDefeated, onPlayerDefeated, onLeave,
+  onEnemyDefeated, onPlayerDefeated, onLeave, onPlayerHit,
   anchorSaveAvailable = false, onAnchorSave,
 }: RaidCombatProps) {
   // Anchor save can fire at most once per RaidCombat mount (the parent
@@ -619,6 +622,7 @@ export default function RaidCombat({
 
         if (isAttackerPlayer) {
           eHp = Math.max(0, eHp - dmg)
+          if (dmg > 0) onPlayerHit?.(dmg)
           if (partialDodge) {
             stepLines.push(action === 'volley'
               ? `Enemy partially dodges your volley — grazed for ${dmg}.`

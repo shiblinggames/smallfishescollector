@@ -24,7 +24,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
     admin.from('profiles')
-      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color, profile_bg, fishing_casts, total_perfects')
+      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color, profile_bg, fishing_casts, total_perfects, highest_raid_damage')
       .ilike('username', username)
       .single(),
   ])
@@ -108,7 +108,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     fishSold: agg.fishSold ?? 0,
     raidsCompleted: agg.raidsCompleted ?? 0,
     voyageLoot: agg.voyageLoot ?? 0,
-    fastestRaidMs: agg.fastestRaidMs ?? null,
+    highestRaidDamage: (profile.highest_raid_damage as number | null) ?? 0,
   }
 
   const navProfile = navProfileData.data

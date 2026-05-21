@@ -14,8 +14,8 @@ export interface CareerStats {
   raidsCompleted: number
   /** Doubloons hauled home across all completed voyages. */
   voyageLoot: number
-  /** Fastest raid clear in ms (raid_completions min), or null if none. */
-  fastestRaidMs: number | null
+  /** Biggest single hit landed in a raid (profiles.highest_raid_damage). */
+  highestRaidDamage: number
 }
 
 /** Shape returned by the career_stats(uid) SQL function. */
@@ -23,13 +23,4 @@ export interface CareerAggregates {
   fishSold: number
   voyageLoot: number
   raidsCompleted: number
-  fastestRaidMs: number | null
-}
-
-export function formatRaidTime(ms: number | null): string {
-  if (!ms || ms <= 0) return '—'
-  const totalSec = Math.round(ms / 1000)
-  const m = Math.floor(totalSec / 60)
-  const s = totalSec % 60
-  return m > 0 ? `${m}:${s.toString().padStart(2, '0')}` : `${s}s`
 }

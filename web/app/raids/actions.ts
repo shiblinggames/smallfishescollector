@@ -190,6 +190,7 @@ export async function claimRaidLoot(
   elapsedMs: number,
   damageTaken: number,
   raidId: string = 'corsairs_reckoning',
+  highestHit: number = 0,
 ): Promise<{ newShipSkins: string[]; newDoubloonTotal: number; newRaidItems: string[] }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -204,7 +205,7 @@ export async function claimRaidLoot(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, gems, packs_available, ship_skins, equipped_ship_skin, raid_items')
+    .select('doubloons, gems, packs_available, ship_skins, equipped_ship_skin, raid_items, highest_raid_damage')
     .eq('id', user.id)
     .single()
 
@@ -232,10 +233,15 @@ export async function claimRaidLoot(
     }
   }
 
+  const profileUpdate: Record<string, unknown> = {
+    doubloons, gems, packs_available: packs, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems,
+  }
+  if (highestHit > (profile?.highest_raid_damage ?? 0)) profileUpdate.highest_raid_damage = highestHit
+
   await Promise.all([
     admin
       .from('profiles')
-      .update({ doubloons, gems, packs_available: packs, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems })
+      .update(profileUpdate)
       .eq('id', user.id),
     admin
       .from('raid_completions')

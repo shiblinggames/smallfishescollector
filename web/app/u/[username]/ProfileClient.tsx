@@ -21,7 +21,7 @@ import CharacterAvatar from '@/components/CharacterAvatar'
 import { DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avatarColors'
 import { getProfileBackground } from '@/lib/profileBackgrounds'
 import { StatTile } from '@/components/ProfileStats'
-import { type CareerStats, formatRaidTime } from '@/lib/careerStats'
+import type { CareerStats } from '@/lib/careerStats'
 
 interface CardVariant {
   id: number
@@ -533,7 +533,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
           <div style={{ display: 'flex', gap: 8 }}>
             <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
             <StatTile label="Voyage Loot" value={`${career.voyageLoot.toLocaleString()} ⟡`} color="#f0c040" />
-            <StatTile label="Fastest Raid" value={formatRaidTime(career.fastestRaidMs)} color="#60a5fa" />
+            <StatTile label="Biggest Hit" value={career.highestRaidDamage.toLocaleString()} color="#fb923c" />
           </div>
 
           {/* Ship Hero */}
