@@ -835,6 +835,21 @@ html, body {
   .avatar-sovereign { animation: none; }
 }
 
+/* Sterling border — polished chrome/silver. Hard jumps between bright white
+   highlights and dark steel are what sell "metal", so the conic alternates
+   #ffffff peaks with #1f2937/#334155 troughs. Same 9s showpiece spin as
+   the gold Sovereign so the silver/gold pair feel like a matched set. */
+.avatar-silver {
+  border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    #ffffff, #cbd5e1, #334155, #f1f5f9, #1f2937, #e2e8f0, #64748b, #ffffff);
+  animation: avatar-aurora-spin 9s linear infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-silver { animation: none; }
+}
+
 /* Animated avatar backgrounds — render via inset overflow:hidden so the
    sprite/character above stays static while the bg breathes.
 
@@ -887,6 +902,34 @@ html, body {
 }
 @media (prefers-reduced-motion: reduce) {
   .avatar-bg-treasure::after { animation: none; }
+}
+
+/* Quicksilver background — polished chrome dome. An off-center radial gives
+   the bright→steel falloff of a curved metal surface (the highlight at
+   42%/35% reads as a specular hot-spot), and a rotating ring of crisp white
+   shafts sweeps over it like light raking across chrome. Pairs with the
+   Sterling border. */
+@keyframes avatar-bg-silver-spin { to { transform: rotate(360deg); } }
+.avatar-bg-silver {
+  position: relative;
+  background: radial-gradient(circle at 42% 35%, #f8fafc 0%, #cbd5e1 38%, #64748b 72%, #2b3442 100%);
+  overflow: hidden;
+}
+.avatar-bg-silver::after {
+  content: '';
+  position: absolute;
+  inset: -30%;
+  background: conic-gradient(from 0deg,
+    rgba(255,255,255,0.9), rgba(255,255,255,0) 18%,
+    rgba(226,232,240,0.55), rgba(255,255,255,0) 44%,
+    rgba(255,255,255,0.95), rgba(255,255,255,0) 70%,
+    rgba(255,255,255,0.85));
+  filter: blur(4px);
+  animation: avatar-bg-silver-spin 13s linear infinite;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-bg-silver::after { animation: none; }
 }
 
 /* Tide Run "NEW BEST" — a gentle celebratory pulse (subtle, not flashy). */

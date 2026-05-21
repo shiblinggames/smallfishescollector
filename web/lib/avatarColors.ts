@@ -54,9 +54,11 @@ export const AURORA_VALUE = 'aurora' as const
 
 /** Gem-purchasable animated specials. Each renders via a dedicated CSS class
  *  in CharacterAvatar; pickers special-case the preview swatch. */
-export const SOVEREIGN_VALUE = 'sovereign' as const  // border — regal gold conic with shimmer
-export const AURORA_BG_VALUE = 'aurora_bg' as const  // bg — prismatic aurora swirl (pairs with the Aurora border)
-export const TREASURE_VALUE  = 'treasure'  as const  // bg — rotating gold sunburst over amber
+export const SOVEREIGN_VALUE   = 'sovereign'   as const  // border — regal gold conic with shimmer
+export const STERLING_VALUE    = 'sterling'    as const  // border — polished chrome/silver conic
+export const AURORA_BG_VALUE   = 'aurora_bg'   as const  // bg — prismatic aurora swirl (pairs with the Aurora border)
+export const TREASURE_VALUE    = 'treasure'    as const  // bg — rotating gold sunburst over amber
+export const QUICKSILVER_VALUE = 'quicksilver' as const  // bg — chrome/silver swirl (pairs with the Sterling border)
 
 export interface AvatarSpecial {
   id: string
@@ -70,10 +72,12 @@ export interface AvatarSpecial {
 }
 
 export const AVATAR_SPECIALS: AvatarSpecial[] = [
-  { id: 'aurora',    label: 'Aurora',    hex: AURORA_VALUE,    kind: 'border', gemPrice: 300,  cssClass: 'avatar-aurora' },
-  { id: 'sovereign', label: 'Sovereign', hex: SOVEREIGN_VALUE, kind: 'border', gemPrice: 1000, cssClass: 'avatar-sovereign' },
-  { id: 'aurora_bg', label: 'Aurora',    hex: AURORA_BG_VALUE, kind: 'bg',     gemPrice: 500,  cssClass: 'avatar-bg-aurora' },
-  { id: 'treasure',  label: 'Treasure',  hex: TREASURE_VALUE,  kind: 'bg',     gemPrice: 1500, cssClass: 'avatar-bg-treasure' },
+  { id: 'aurora',      label: 'Aurora',      hex: AURORA_VALUE,      kind: 'border', gemPrice: 300,  cssClass: 'avatar-aurora' },
+  { id: 'sovereign',   label: 'Sovereign',   hex: SOVEREIGN_VALUE,   kind: 'border', gemPrice: 1000, cssClass: 'avatar-sovereign' },
+  { id: 'sterling',    label: 'Sterling',    hex: STERLING_VALUE,    kind: 'border', gemPrice: 1000, cssClass: 'avatar-silver' },
+  { id: 'aurora_bg',   label: 'Aurora',      hex: AURORA_BG_VALUE,   kind: 'bg',     gemPrice: 500,  cssClass: 'avatar-bg-aurora' },
+  { id: 'treasure',    label: 'Treasure',    hex: TREASURE_VALUE,    kind: 'bg',     gemPrice: 1500, cssClass: 'avatar-bg-treasure' },
+  { id: 'quicksilver', label: 'Quicksilver', hex: QUICKSILVER_VALUE, kind: 'bg',     gemPrice: 1500, cssClass: 'avatar-bg-silver' },
 ]
 
 export function getAvatarSpecial(hex: string | null | undefined): AvatarSpecial | undefined {
