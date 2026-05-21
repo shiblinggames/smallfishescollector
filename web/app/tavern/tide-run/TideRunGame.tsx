@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
-import { commitTideRun, submitTideRunBest } from './actions'
+import { commitTideRun, submitTideRunBest, recordTideRunRun } from './actions'
 import TideRunTour from './TideRunTour'
 import { markTideRunTourSeen } from './tideRunTourAction'
 import LeaderboardModal from '@/components/LeaderboardModal'
@@ -336,6 +336,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     jumpHoldStart: 0,       // performance.now() of current jump's start
     lastHazardTier: null as 'small' | 'medium' | 'large' | null,
     speedMult: 1,           // smoothed effective scroll multiplier (current slowdown eases in/out)
+    beaconsSmashed: 0,      // grounded beacons smashed this run (lifetime stat)
   })
 
   const [uiState, setUiState] = useState<GameState>('ready')
@@ -495,6 +496,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     g.sparkleNextEmit = 0
     g.nextSpawnAt = HAZARD_WARMUP
     g.distance = 0
+    g.beaconsSmashed = 0
     g.deathFlashUntil = 0
     g.lastScoreUpdate = 0
     g.shipVy = 0
@@ -754,6 +756,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
         g.deathFlashUntil = performance.now() + 250
         setUiState('dead')
         const finalMeters = Math.floor(g.distance)
+        recordTideRunRun(finalMeters, g.beaconsSmashed).catch(() => {})
         if (finalMeters > highScore) {
           setHighScore(finalMeters)
           submitTideRunBest(finalMeters).catch(() => {})
@@ -977,6 +980,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
         } else {
           const nowMs = performance.now()
           cr.shatteredAt = nowMs
+          g.beaconsSmashed++
           // Crash SFX — fires the instant the boat smashes through the
           // grounded beacon, in sync with the debris + ring + shake.
           playBeaconCrashSfx()
@@ -1035,6 +1039,7 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
       const finalMeters = Math.floor(g.distance)
       setScore(finalMeters)
       setUiState('dead')
+      recordTideRunRun(finalMeters, g.beaconsSmashed).catch(() => {})
       if (finalMeters > highScore) {
         setHighScore(finalMeters)
         submitTideRunBest(finalMeters).catch(() => {})

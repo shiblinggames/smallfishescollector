@@ -50,6 +50,28 @@ export async function submitTideRunBest(distance: number): Promise<{ ok: true; b
   }
 }
 
+/**
+ * Accumulate lifetime Tide Run stats on EVERY run end (win or lose), unlike
+ * submitTideRunBest which only fires on a new record. Atomic increment via
+ * bump_tide_run_stats() so it's race-safe. Fire-and-forget from the client.
+ * These per-player counters let admins pull aggregates later (total distance
+ * sailed by everyone, most beacons smashed, etc.).
+ */
+export async function recordTideRunRun(distance: number, beacons: number): Promise<void> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const dist = Math.max(0, Math.min(100000, Math.floor(Number(distance) || 0)))
+    const smashed = Math.max(0, Math.min(10000, Math.floor(Number(beacons) || 0)))
+    if (dist === 0 && smashed === 0) return
+    const admin = createAdminClient()
+    await admin.rpc('bump_tide_run_stats', { uid: user.id, dist, beacons: smashed })
+  } catch {
+    // best-effort; never block the wreck screen
+  }
+}
+
 /** Today's date in UTC as YYYY-MM-DD — keyed against profiles.tide_run_committed_date. */
 function todayUTCDate(): string {
   return new Date().toISOString().slice(0, 10)
