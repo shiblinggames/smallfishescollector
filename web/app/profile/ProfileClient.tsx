@@ -261,22 +261,23 @@ export default function ProfileClient({
   // LOCAL-ONLY page-background preview (test). Not persisted, not gated, not
   // shown to other users — just lets us eyeball the fishing zone paintings as
   // a profile page backdrop before committing to a saved `profile_bg` column.
-  type PreviewBg = { label: string; src?: string; gradient?: string }
+  type PreviewBg = { label: string; src?: string; tint?: string }
   const [previewBg, setPreviewBg] = useState<PreviewBg | null>(null)
-  // The three blue zone paintings that read well + a range of distinct
-  // blue/teal shades sampled from that same ocean palette. Abyss + Ancient
-  // were dropped: abyss was indistinguishable from the black page bg, and
-  // ancient wasn't wanted.
+  // All image-based: the three blue zone paintings, plus several blue/teal
+  // *tints* of the open-waters scene so each pick is a visibly different shade
+  // of the same ocean while keeping the painted texture (not a flat colour).
+  // Abyss + Ancient were dropped (abyss read as the black page bg, ancient
+  // wasn't wanted).
   const PREVIEW_BGS: PreviewBg[] = [
     { label: 'None' },
     { label: 'Shallows',    src: '/shallows.jpg' },
     { label: 'Open Waters', src: '/openwaters.jpg' },
     { label: 'Deep',        src: '/deep.jpg' },
-    { label: 'Lagoon',   gradient: 'linear-gradient(180deg, #5fc6e6 0%, #2a93c4 55%, #185f8a 100%)' },
-    { label: 'Ocean',    gradient: 'linear-gradient(180deg, #2f9bd6 0%, #1e6fb0 55%, #133f72 100%)' },
-    { label: 'Cobalt',   gradient: 'linear-gradient(180deg, #3b6fe0 0%, #1d4ed8 55%, #122d6e 100%)' },
-    { label: 'Teal',     gradient: 'linear-gradient(180deg, #19a6ba 0%, #0e7490 55%, #0a4456 100%)' },
-    { label: 'Deep Sea', gradient: 'linear-gradient(180deg, #245a96 0%, #163768 55%, #0b1f42 100%)' },
+    { label: 'Lagoon',   src: '/openwaters.jpg', tint: 'rgba(45,212,200,0.45)' },
+    { label: 'Sky',      src: '/openwaters.jpg', tint: 'rgba(56,160,235,0.42)' },
+    { label: 'Cobalt',   src: '/openwaters.jpg', tint: 'rgba(37,99,235,0.50)' },
+    { label: 'Teal',     src: '/openwaters.jpg', tint: 'rgba(13,148,160,0.48)' },
+    { label: 'Deep Sea', src: '/openwaters.jpg', tint: 'rgba(20,46,104,0.55)' },
   ]
   // The hero avatar is fixed-px, so on a big desktop page it reads small
   // (and its proportional ring looks like a hairline). Bigger on >=md
@@ -393,14 +394,11 @@ export default function ProfileClient({
     <>
       {/* LOCAL-ONLY preview background layer (test). Mirrors ClientBackground:
           fixed full-screen image + a darkening scrim for legibility. */}
-      {previewBg && (
+      {previewBg?.src && (
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
-          {previewBg.src ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={previewBg.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
-          ) : (
-            <div style={{ position: 'absolute', inset: 0, background: previewBg.gradient }} />
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={previewBg.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
+          {previewBg.tint && <div style={{ position: 'absolute', inset: 0, background: previewBg.tint }} />}
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.74) 100%)' }} />
         </div>
       )}
@@ -421,7 +419,7 @@ export default function ProfileClient({
           Page bg (test)
         </span>
         {PREVIEW_BGS.map(opt => {
-          const isNone = !opt.src && !opt.gradient
+          const isNone = !opt.src
           const isActive = isNone ? previewBg === null : previewBg?.label === opt.label
           return (
             <button
@@ -435,18 +433,19 @@ export default function ProfileClient({
                 padding: 0, cursor: 'pointer',
                 border: isActive ? '2px solid #f0c040' : '1px solid rgba(255,255,255,0.18)',
                 boxShadow: isActive ? '0 0 8px rgba(240,192,64,0.4)' : 'none',
-                background: opt.gradient
-                  ? opt.gradient
-                  : isNone
-                    ? 'linear-gradient(45deg, rgba(255,255,255,0.14) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.14) 50%, rgba(255,255,255,0.14) 75%, transparent 75%, transparent)'
-                    : undefined,
+                background: isNone
+                  ? 'linear-gradient(45deg, rgba(255,255,255,0.14) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.14) 50%, rgba(255,255,255,0.14) 75%, transparent 75%, transparent)'
+                  : undefined,
                 backgroundSize: isNone ? '8px 8px' : undefined,
                 appearance: 'none', WebkitAppearance: 'none',
               }}
             >
               {opt.src && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={opt.src} alt={opt.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={opt.src} alt={opt.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  {opt.tint && <span style={{ position: 'absolute', inset: 0, background: opt.tint }} />}
+                </>
               )}
             </button>
           )
