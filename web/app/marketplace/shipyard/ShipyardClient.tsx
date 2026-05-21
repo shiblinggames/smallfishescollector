@@ -46,19 +46,16 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
 
   return (
     <div className="px-4 sm:px-6 max-w-md sm:max-w-2xl mx-auto pb-16">
-      <p className="font-karla font-700 uppercase tracking-[0.16em] mb-4 text-[0.7rem] sm:text-xs" style={{ color: '#a0a09a' }}>
-        Shipyard
-      </p>
+      <SectionLabel>Shipyard</SectionLabel>
 
       {/* ── Active ship hero ─────────────────────────────────────────── */}
       <div style={{
         position: 'relative',
-        background: `radial-gradient(ellipse 110% 80% at 50% 100%, ${activeShip.color}1c 0%, rgba(8,8,6,0.95) 65%)`,
-        border: `1px solid ${activeShip.color}55`,
+        background: `radial-gradient(ellipse 120% 85% at 50% 100%, ${activeShip.color}1a 0%, rgba(6,12,20,0.96) 68%)`,
+        border: `1px solid ${activeShip.color}45`,
         borderRadius: 20,
         padding: '1.25rem 1rem 1.1rem',
         marginBottom: 20,
-        boxShadow: `0 0 32px ${activeShip.color}1a, inset 0 1px 0 rgba(255,255,255,0.04)`,
         overflow: 'hidden',
       }}>
         <p className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.5rem', color: activeShip.color, marginBottom: 6, textAlign: 'center' }}>
@@ -114,8 +111,8 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
 
       {/* ── Combat mechanics primer ── */}
       <div style={{
-        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
-        borderRadius: 12, padding: '0.7rem 0.9rem', marginBottom: 22,
+        background: 'rgba(8,14,24,0.55)', border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: 14, padding: '0.75rem 0.95rem', marginBottom: 22,
       }}>
         <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#b5b3ae', lineHeight: 1.6 }}>
           <strong style={{ color: '#f0ede8', fontWeight: 700 }}>Reload</strong> stockpiles charges (max 3). <strong style={{ color: '#f0ede8', fontWeight: 700 }}>Fire</strong> spends 1. <strong style={{ color: '#f0ede8', fontWeight: 700 }}>Volley</strong> spends all 3 for double damage. <strong style={{ color: '#f0ede8', fontWeight: 700 }}>Speed</strong> determines who fires first.
@@ -123,9 +120,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
       </div>
 
       {/* ── Fleet ────────────────────────────────────────────────────── */}
-      <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.7rem', color: '#a0a09a', marginBottom: 12 }}>
-        Fleet
-      </p>
+      <SectionLabel>Fleet</SectionLabel>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {SHIPS.map(ship => {
@@ -142,17 +137,14 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
             <div key={ship.tier} style={{
               position: 'relative',
               background: isActive
-                ? `linear-gradient(160deg, ${c}1f 0%, rgba(8,8,6,0.95) 65%)`
-                : owned
-                  ? `linear-gradient(160deg, ${c}12 0%, rgba(8,8,6,0.92) 70%)`
-                  : isNext
-                    ? `linear-gradient(160deg, ${c}12 0%, rgba(8,8,6,0.92) 70%)`
-                    : 'rgba(10,10,8,0.85)',
-              border: `1px solid ${isActive ? c + '7a' : owned ? c + '38' : isNext ? c + '4a' : 'rgba(255,255,255,0.08)'}`,
+                ? `linear-gradient(160deg, ${c}1c 0%, rgba(6,12,20,0.96) 66%)`
+                : (owned || isNext)
+                  ? `linear-gradient(160deg, ${c}10 0%, rgba(6,12,20,0.94) 72%)`
+                  : 'rgba(8,14,24,0.7)',
+              border: `1px solid ${isActive ? c + '6a' : owned ? c + '38' : isNext ? c + '4a' : 'rgba(255,255,255,0.09)'}`,
               borderRadius: 16,
               padding: '0.9rem 0.95rem 0.95rem',
-              boxShadow: isActive ? `0 0 22px ${c}1c` : 'none',
-              opacity: locked ? 0.78 : 1,
+              opacity: locked ? 0.7 : 1,
               overflow: 'hidden',
             }}>
               {/* Hero image strip */}
@@ -227,21 +219,17 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
                 <button
                   onClick={() => handleBuyShip(ship.tier)}
                   disabled={!canAfford || isPending}
-                  className="font-cinzel font-700"
+                  className="font-karla font-700 uppercase tracking-[0.1em]"
                   style={{
                     width: '100%',
                     padding: '0.72rem 0.5rem',
                     borderRadius: 12,
-                    background: canAfford
-                      ? `linear-gradient(180deg, ${c}26 0%, ${c}12 100%)`
-                      : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${canAfford ? `${c}80` : 'rgba(255,255,255,0.1)'}`,
+                    background: canAfford ? `${c}1f` : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${canAfford ? `${c}66` : 'rgba(255,255,255,0.1)'}`,
                     color: canAfford ? c : '#f0c040',
                     cursor: canAfford && !isPending ? 'pointer' : 'default',
                     opacity: isPending ? 0.6 : 1,
-                    fontSize: '0.92rem',
-                    letterSpacing: '0.04em',
-                    boxShadow: canAfford ? `0 0 18px ${c}22` : 'none',
+                    fontSize: '0.78rem',
                   }}
                 >
                   {purchasing
@@ -267,12 +255,23 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
   )
 }
 
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+      <span aria-hidden style={{ width: 3, height: 13, borderRadius: 2, flexShrink: 0, background: 'linear-gradient(180deg, #f0c040 0%, rgba(240,192,64,0.15) 100%)' }} />
+      <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.72rem', color: '#d8d4cd' }}>
+        {children}
+      </p>
+    </div>
+  )
+}
+
 function HeroStat({ label, value, color }: { label: string; value: number | string; color: string }) {
   return (
     <div style={{
-      background: 'rgba(8,8,6,0.55)',
+      background: 'rgba(8,14,24,0.55)',
       border: `1px solid ${color}40`,
-      borderRadius: 9,
+      borderRadius: 10,
       padding: '0.5rem 0.25rem',
       textAlign: 'center',
     }}>
