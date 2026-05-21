@@ -276,6 +276,30 @@ export default function ProfileClient({
     { label: 'Deep',        src: '/deep.jpg', scrim: 'linear-gradient(to bottom, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.48) 50%, rgba(0,0,0,0.72) 100%)' },
     { label: 'Abyss',       src: '/abyss.jpg', scrim: 'linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.24) 50%, rgba(0,0,0,0.46) 100%)' },
   ]
+  // Scroll-linked darkening: a full-screen black layer over the fixed image
+  // whose opacity ramps with scroll progress, so the deeper you scroll the
+  // darker the backdrop (a "sinking" feel). Driven by a direct ref write in a
+  // rAF-throttled scroll handler — NOT React state — so this big component
+  // doesn't re-render on every scroll tick.
+  const scrollDarkenRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!previewBg?.src) return
+    let raf = 0
+    const onScroll = () => {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        const el = scrollDarkenRef.current
+        if (!el) return
+        const max = document.documentElement.scrollHeight - window.innerHeight
+        const p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0
+        el.style.opacity = String(p * 0.55)
+      })
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => { window.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf) }
+  }, [previewBg])
   // The hero avatar is fixed-px, so on a big desktop page it reads small
   // (and its proportional ring looks like a hairline). Bigger on >=md
   // where there's room — the Aurora ring scales with size automatically.
@@ -396,6 +420,7 @@ export default function ProfileClient({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={previewBg.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
           <div style={{ position: 'absolute', inset: 0, background: previewBg.scrim ?? DEFAULT_SCRIM }} />
+          <div ref={scrollDarkenRef} style={{ position: 'absolute', inset: 0, background: '#000', opacity: 0 }} />
         </div>
       )}
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 1.25rem 3rem', position: 'relative', zIndex: 1 }}>
