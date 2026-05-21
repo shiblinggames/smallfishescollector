@@ -3430,7 +3430,7 @@ export default function FishingGame({
           className={(phase === 'catching' || phase === 'reeling') ? 'pause-glows' : undefined}
           style={{ position: 'absolute', inset: 0, pointerEvents: 'none', willChange: 'transform' }}
         >
-          {(Object.keys(charSrc) as CharFrame[]).map(f => {
+          {(() => { const dialActive = phase === 'catching' || phase === 'reeling'; return (Object.keys(charSrc) as CharFrame[]).map(f => {
             const p   = CHAR_POS[f]
             const rc  = CHAR_ROD_OVERLAY[f]
             const rec = CHAR_REEL_OVERLAY[f]
@@ -3448,13 +3448,20 @@ export default function FishingGame({
                 // decoding — otherwise they collapse to the container bottom
                 // and visibly jump up once the image lands.
                 aspectRatio: '900 / 800',
-                // opacity rather than visibility: visibility:hidden lets
-                // browsers DEFER bitmap decode until the element is first
-                // shown, which produces a 1-frame flicker on each pose
-                // transition the first time through. opacity:0 leaves
-                // the element "visible to layout" so all sprite poses
-                // are eagerly decoded and the transitions are clean.
-                opacity: visible ? 1 : 0,
+                // Hidden-pose hiding strategy depends on phase:
+                //  - During the dial (catching/reeling) the needle animates
+                //    every frame; we want the fewest composited layers, so
+                //    hidden poses use visibility:hidden (dropped from the
+                //    compositor entirely).
+                //  - During the bob phases (idle/cast/wait) poses transition
+                //    constantly, and visibility:hidden defers bitmap decode
+                //    until first shown → a 1-frame flicker per transition.
+                //    opacity:0 keeps them decoded so transitions stay clean.
+                ...(visible
+                  ? null
+                  : dialActive
+                    ? { visibility: 'hidden' as const }
+                    : { opacity: 0 }),
                 pointerEvents: visible ? 'auto' : 'none',
               }}>
                 <img src={charSrc[f]} alt="" style={{ width: '100%', display: 'block', filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))' }} />
@@ -3577,7 +3584,7 @@ export default function FishingGame({
                 })}
               </div>
             )
-          })}
+          }) })()}
         </motion.div>
 
         {/* Zone darkness overlay — gradient from transparent (top 20%) to dark (bottom) */}
