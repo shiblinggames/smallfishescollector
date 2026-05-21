@@ -72,7 +72,8 @@ let dialPendingStart = false
 // feels perceptually gradual (linear ramps sound "fast at start, slow at
 // end" because loudness perception is logarithmic). Exit can stay linear
 // — fades out feel natural either way and linear is more predictable.
-const ENTRY_FADE_MS  = 6000
+// Entry/exit durations are matched so arriving and leaving feel symmetric.
+const ENTRY_FADE_MS  = 3000
 const EXIT_FADE_MS   = 3000
 const TOGGLE_FADE_MS = 400
 
