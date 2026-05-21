@@ -25,7 +25,7 @@ export default async function ProfilePage() {
     { data: allFishSpecies },
   ] = await Promise.all([
     supabase.from('profiles')
-      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, reel_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges, trophy_catches, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color, unlocked_avatar_specials')
+      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, reel_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges, trophy_catches, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color, unlocked_avatar_specials, profile_bg')
       .eq('id', user.id)
       .single(),
     admin.from('fish_collection')
@@ -126,6 +126,7 @@ export default async function ProfilePage() {
           avatarBgColor={(profile?.avatar_bg_color as string | null) ?? null}
           avatarBorderColor={(profile?.avatar_border_color as string | null) ?? null}
           unlockedAvatarSpecials={(profile?.unlocked_avatar_specials as string[] | null) ?? []}
+          initialProfileBg={(profile?.profile_bg as string | null) ?? null}
         />
       </main>
     </>

@@ -6,6 +6,8 @@ import { revalidatePath } from 'next/cache'
 import { CHARACTER_COLORS } from '@/lib/characters'
 import { ALLOWED_BG_HEXES, ALLOWED_BORDER_HEXES, isPremiumBg, isPremiumBorder, getAvatarSpecial, AVATAR_SPECIALS } from '@/lib/avatarColors'
 import { isPremiumActive } from '@/lib/premium'
+import { getLevelFromXP } from '@/lib/fishingLevel'
+import { getProfileBackground } from '@/lib/profileBackgrounds'
 
 export async function updateUsername(username: string): Promise<{ error?: string }> {
   const supabase = await createClient()
@@ -184,6 +186,34 @@ export async function updateAvatarColors(input: {
     .from('profiles')
     .update({ avatar_bg_color: bg, avatar_border_color: border })
     .eq('id', user.id)
+  if (error) return { error: 'Something went wrong. Please try again.' }
+  return {}
+}
+
+/** Set the player's profile-page background. `null` clears it. A zone
+ *  background requires the player's fishing level to meet that zone's
+ *  minimum (validated server-side against fishing_xp). */
+export async function updateProfileBg(bg: string | null): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+
+  if (bg === null) {
+    const { error } = await admin.from('profiles').update({ profile_bg: null }).eq('id', user.id)
+    if (error) return { error: 'Something went wrong. Please try again.' }
+    return {}
+  }
+
+  const def = getProfileBackground(bg)
+  if (!def) return { error: 'Unknown background' }
+
+  const { data: profile } = await admin.from('profiles').select('fishing_xp').eq('id', user.id).single()
+  const level = getLevelFromXP(profile?.fishing_xp ?? 0)
+  if (level < def.minLevel) return { error: `Unlocks at Level ${def.minLevel}` }
+
+  const { error } = await admin.from('profiles').update({ profile_bg: bg }).eq('id', user.id)
   if (error) return { error: 'Something went wrong. Please try again.' }
   return {}
 }

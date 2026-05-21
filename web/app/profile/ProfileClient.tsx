@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
-import { updateUsername, updateShowcase, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial } from '@/app/u/actions'
+import { updateUsername, updateShowcase, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial, updateProfileBg } from '@/app/u/actions'
+import { PROFILE_BACKGROUNDS, getProfileBackground } from '@/lib/profileBackgrounds'
 import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, AVATAR_SPECIALS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE } from '@/lib/avatarColors'
 import { equipBadge, unequipBadge } from '@/app/achievements/badgeActions'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -64,6 +65,7 @@ interface Props {
   avatarBgColor: string | null
   avatarBorderColor: string | null
   unlockedAvatarSpecials: string[]
+  initialProfileBg: string | null
 }
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
@@ -226,6 +228,7 @@ export default function ProfileClient({
   avatarBgColor: initialAvatarBg,
   avatarBorderColor: initialAvatarBorder,
   unlockedAvatarSpecials: initialUnlockedSpecials,
+  initialProfileBg,
 }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -261,21 +264,11 @@ export default function ProfileClient({
   // LOCAL-ONLY page-background preview (test). Not persisted, not gated, not
   // shown to other users — just lets us eyeball the fishing zone paintings as
   // a profile page backdrop before committing to a saved `profile_bg` column.
-  type PreviewBg = { label: string; src?: string; scrim?: string }
-  // Default darkening scrim for legibility. Abyss + Deep override it with a
-  // lighter one — those paintings are dark / their colour lives in the sky,
-  // so a heavy scrim crushed the texture and warm tones into the page bg.
-  const DEFAULT_SCRIM = 'linear-gradient(to bottom, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.74) 100%)'
-  // Every image is anchored to the top (objectPosition 'center top') so each
-  // zone's sky/horizon shows rather than a centre crop landing on plain water.
-  const [previewBg, setPreviewBg] = useState<PreviewBg | null>(null)
-  const PREVIEW_BGS: PreviewBg[] = [
-    { label: 'None' },
-    { label: 'Shallows',    src: '/shallows.jpg' },
-    { label: 'Open Waters', src: '/openwaters.jpg' },
-    { label: 'Deep',        src: '/deep.jpg', scrim: 'linear-gradient(to bottom, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.48) 50%, rgba(0,0,0,0.72) 100%)' },
-    { label: 'Abyss',       src: '/abyss.jpg', scrim: 'linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.24) 50%, rgba(0,0,0,0.46) 100%)' },
-  ]
+  // Page background — zone painting chosen in the avatar modal, persisted to
+  // profiles.profile_bg. null = plain page. Unlocks by fishing level.
+  const [profileBg, setProfileBg] = useState<string | null>(initialProfileBg)
+  const [profileBgSaving, setProfileBgSaving] = useState(false)
+  const activeBg = getProfileBackground(profileBg)
   // Scroll-linked pan: these zone paintings are very tall (~1:4), so instead
   // of a fixed crop we pan the cover image's vertical focal point from the top
   // (sky) to the bottom (deep water) as you scroll the page — revealing the
@@ -284,7 +277,7 @@ export default function ProfileClient({
   // NOT React state — so this big component doesn't re-render every scroll tick.
   const bgImgRef = useRef<HTMLImageElement | null>(null)
   useEffect(() => {
-    if (!previewBg?.src) return
+    if (!activeBg) return
     let raf = 0
     const onScroll = () => {
       if (raf) return
@@ -300,7 +293,22 @@ export default function ProfileClient({
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => { window.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf) }
-  }, [previewBg])
+  }, [activeBg])
+
+  // Pick a page background (saves immediately, like the character swatches).
+  // Locked zones flash the unlock hint; null clears the background.
+  async function selectProfileBg(id: string | null) {
+    if (id === profileBg) return
+    if (id !== null) {
+      const def = getProfileBackground(id)
+      if (def && level < def.minLevel) { flashLockMsg(`${def.label} — unlocks at Level ${def.minLevel}`); return }
+    }
+    setProfileBg(id)
+    setProfileBgSaving(true)
+    const res = await updateProfileBg(id)
+    setProfileBgSaving(false)
+    if (res?.error) { setProfileBg(profileBg); flashLockMsg(res.error) }
+  }
   // The hero avatar is fixed-px, so on a big desktop page it reads small
   // (and its proportional ring looks like a hairline). Bigger on >=md
   // where there's room — the Aurora ring scales with size automatically.
@@ -414,62 +422,17 @@ export default function ProfileClient({
 
   return (
     <>
-      {/* LOCAL-ONLY preview background layer (test). Mirrors ClientBackground:
-          fixed full-screen image + a darkening scrim for legibility. */}
-      {previewBg?.src && (
+      {/* Page background — saved zone painting, shown for everyone. Mirrors
+          ClientBackground: fixed full-screen image + a per-zone darkening
+          scrim. The image's focal point pans with scroll (see effect above). */}
+      {activeBg && (
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img ref={bgImgRef} src={previewBg.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
-          <div style={{ position: 'absolute', inset: 0, background: previewBg.scrim ?? DEFAULT_SCRIM }} />
+          <img ref={bgImgRef} src={activeBg.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
+          <div style={{ position: 'absolute', inset: 0, background: activeBg.scrim }} />
         </div>
       )}
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 1.25rem 3rem', position: 'relative', zIndex: 1 }}>
-
-      {/* ── Page background preview switcher (TEST — local only, not saved.
-            Gated to the dev account so live players never see it.) ── */}
-      {username?.toLowerCase() === 'kingkong' && (
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-        margin: '0.75rem 0 0.25rem',
-        padding: '0.6rem 0.75rem',
-        borderRadius: 14,
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px dashed rgba(255,255,255,0.16)',
-      }}>
-        <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.5)' }}>
-          Page bg (test)
-        </span>
-        {PREVIEW_BGS.map(opt => {
-          const isNone = !opt.src
-          const isActive = isNone ? previewBg === null : previewBg?.label === opt.label
-          return (
-            <button
-              key={opt.label}
-              type="button"
-              onClick={() => setPreviewBg(isNone ? null : opt)}
-              title={opt.label}
-              style={{
-                position: 'relative',
-                width: 38, height: 38, borderRadius: 8, overflow: 'hidden',
-                padding: 0, cursor: 'pointer',
-                border: isActive ? '2px solid #f0c040' : '1px solid rgba(255,255,255,0.18)',
-                boxShadow: isActive ? '0 0 8px rgba(240,192,64,0.4)' : 'none',
-                background: isNone
-                  ? 'linear-gradient(45deg, rgba(255,255,255,0.14) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.14) 50%, rgba(255,255,255,0.14) 75%, transparent 75%, transparent)'
-                  : undefined,
-                backgroundSize: isNone ? '8px 8px' : undefined,
-                appearance: 'none', WebkitAppearance: 'none',
-              }}
-            >
-              {opt.src && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={opt.src} alt={opt.label} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
-              )}
-            </button>
-          )
-        })}
-      </div>
-      )}
 
       {/* ── Identity header ── */}
       <div className="flex flex-col items-center gap-3 pt-2 pb-7">
@@ -1259,10 +1222,10 @@ export default function ProfileClient({
             </div>
 
             <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.05rem', color: '#f0ede8', marginBottom: 4 }}>
-              Avatar Colors
+              Profile Look
             </p>
             <p className="font-karla text-center" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.55)', marginBottom: 16 }}>
-              These appear everywhere your avatar shows up.
+              Your avatar shows up everywhere; the page background is just here.
             </p>
 
             {/* Character swatches — saves immediately on click (same as the
@@ -1504,6 +1467,82 @@ export default function ProfileClient({
                       background: 'rgba(6,12,20,0.92)',
                     }} />
                     {!owned && <LockBadge />}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Page Background — full-page zone painting, unlocks by fishing
+                level. Saves immediately on tap (like the character swatches). */}
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 6 }}>
+              Page Background
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
+              {/* None */}
+              <button
+                type="button"
+                disabled={profileBgSaving}
+                onClick={() => selectProfileBg(null)}
+                aria-label="No page background"
+                title="None"
+                style={{
+                  position: 'relative', width: '100%', aspectRatio: '16 / 10',
+                  borderRadius: 10, overflow: 'hidden', padding: 0,
+                  cursor: profileBgSaving ? 'default' : 'pointer',
+                  border: profileBg === null ? '2px solid #f0c040' : '1px solid rgba(255,255,255,0.18)',
+                  background: 'linear-gradient(45deg, rgba(255,255,255,0.12) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.12) 75%, transparent 75%, transparent)',
+                  backgroundSize: '8px 8px',
+                  appearance: 'none', WebkitAppearance: 'none',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: 'rgba(240,237,232,0.7)' }}>None</span>
+              </button>
+              {PROFILE_BACKGROUNDS.map(bg => {
+                const isActive = profileBg === bg.id
+                const locked = level < bg.minLevel
+                return (
+                  <button
+                    key={bg.id}
+                    type="button"
+                    disabled={profileBgSaving}
+                    onClick={() => selectProfileBg(bg.id)}
+                    aria-label={`Background ${bg.label}${locked ? ` (unlocks at level ${bg.minLevel})` : ''}`}
+                    title={locked ? `${bg.label} — unlocks at Level ${bg.minLevel}` : bg.label}
+                    style={{
+                      position: 'relative', width: '100%', aspectRatio: '16 / 10',
+                      borderRadius: 10, overflow: 'hidden', padding: 0,
+                      cursor: profileBgSaving ? 'default' : 'pointer',
+                      border: isActive ? '2px solid #f0c040' : '1px solid rgba(255,255,255,0.18)',
+                      appearance: 'none', WebkitAppearance: 'none',
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={bg.src}
+                      alt=""
+                      style={{
+                        width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block',
+                        filter: locked ? 'grayscale(0.6) brightness(0.45)' : undefined,
+                      }}
+                    />
+                    {/* Label strip */}
+                    <span style={{
+                      position: 'absolute', left: 0, right: 0, bottom: 0,
+                      padding: '0.45rem 0.35rem 0.2rem',
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)',
+                      textAlign: 'left',
+                    }}>
+                      <span className="font-karla font-700" style={{ fontSize: '0.54rem', color: '#f0ede8', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>{bg.label}</span>
+                    </span>
+                    {locked && (
+                      <span style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                        <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.9)' }}>Lv {bg.minLevel}</span>
+                      </span>
+                    )}
                   </button>
                 )
               })}
