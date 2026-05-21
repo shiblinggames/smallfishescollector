@@ -572,9 +572,15 @@ function DialSVG({
           />
         )}
         {/* Needle — rotated straight from `angle` state (React-driven).
-            Simple and smooth; the parent updates angle every frame. */}
+            Simple and smooth; the parent updates angle every frame.
+            IMPORTANT: no `style` (filter/transition) in the normal case.
+            The transform attribute changes every frame; a standing CSS
+            transition/filter declaration on the same element forces it
+            off the raster-cache fast path and causes per-frame stutter
+            (worst on mobile). The perfect-flash filter is applied only
+            during the brief flash window, where the extra cost is fine. */}
         <g transform={`rotate(${angle}, ${CX}, ${CY})`}
-           style={{ filter: perfectFlash ? 'drop-shadow(0 0 6px #fde68a)' : undefined, transition: 'filter 0.15s ease-out' }}>
+           style={perfectFlash ? { filter: 'drop-shadow(0 0 6px #fde68a)' } : undefined}>
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 12 : 10} strokeOpacity={perfectFlash ? 0.28 : 0.12} strokeLinecap="round" />
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={liveNeedleStroke} strokeLinecap="round" />
           <circle cx={CX} cy={needleTipY} r={liveTipRadius} fill={liveNeedleColor} />
