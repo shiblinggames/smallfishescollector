@@ -358,31 +358,35 @@ export default function ShipHero({
         }}>
           <button
             onClick={() => setLoadoutOpen(true)}
+            className="font-karla font-700 uppercase tracking-[0.08em]"
             style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '0.75rem 0.5rem',
-              background: 'linear-gradient(180deg, rgba(240,192,64,0.14) 0%, rgba(240,192,64,0.03) 100%)',
-              border: '1px solid rgba(240,192,64,0.34)',
-              borderTop: '1px solid rgba(240,192,64,0.62)',
-              borderRadius: 10,
-              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              padding: '0.7rem 0.5rem', borderRadius: 10,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)',
+              color: '#dfe3e8', fontSize: '0.72rem', cursor: 'pointer',
             }}
           >
-            <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.82rem', color: '#f0c040', textAlign: 'center', lineHeight: 1.1 }}>Manage Ship</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.85 }}>
+              <line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2"/>
+              <line x1="4" y1="13" x2="20" y2="13"/><circle cx="15" cy="13" r="2"/>
+              <line x1="4" y1="19" x2="20" y2="19"/><circle cx="9" cy="19" r="2"/>
+            </svg>
+            Manage Ship
           </button>
           <Link
             href="/marketplace/shipyard"
+            className="font-karla font-700 uppercase tracking-[0.08em]"
             style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '0.75rem 0.5rem',
-              background: 'linear-gradient(180deg, rgba(160,210,160,0.10) 0%, rgba(160,210,160,0.02) 100%)',
-              border: '1px solid rgba(160,210,160,0.26)',
-              borderTop: '1px solid rgba(160,210,160,0.50)',
-              borderRadius: 10,
-              textDecoration: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              padding: '0.7rem 0.5rem', borderRadius: 10,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)',
+              color: '#dfe3e8', fontSize: '0.72rem', textDecoration: 'none',
             }}
           >
-            <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.82rem', color: '#a8e0a8', textAlign: 'center', lineHeight: 1.1 }}>Upgrade Ship</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.85 }}>
+              <path d="M12 19V5M5 12l7-7 7 7"/>
+            </svg>
+            Upgrade Ship
           </Link>
         </div>
       </div>
