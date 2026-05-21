@@ -20,6 +20,7 @@ import { BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avatarColors'
 import { getProfileBackground } from '@/lib/profileBackgrounds'
+import { RankHero, StatTile, ProfileCta, FishIcon, CompassIcon } from '@/components/ProfileStats'
 
 interface CardVariant {
   id: number
@@ -82,6 +83,7 @@ interface Props {
   avatarBorder?: string | null
   /** Saved page background (zone id) — matches /profile. */
   profileBg?: string | null
+  voyagesCompleted?: number
 }
 
 function fishImageUrl(name: string) {
@@ -205,12 +207,13 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   )
 }
 
-export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, avatarBg = null, avatarBorder = null, profileBg = null }: Props) {
+export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, avatarBg = null, avatarBorder = null, profileBg = null, voyagesCompleted = 0 }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
   const [expandedVoyage, setExpandedVoyage] = useState<number | null>(null)
   const [showAllVoyages, setShowAllVoyages] = useState(false)
+  const [profileTab, setProfileTab] = useState<'fishing' | 'navigation'>('fishing')
 
   const fishingLevel = getLevelFromXP(stats.fishingXP)
   const expLevel = getExpeditionLevel(stats.expeditionXP)
@@ -312,11 +315,48 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
         </div>
       </div>
 
-      {/* ── 2-col body on desktop ── */}
-      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-8 md:gap-10 items-start">
+      {/* ── Fishing / Navigation tabs ── */}
+      <div style={{ display: 'flex', gap: 4, padding: 4, margin: '0 auto 22px', maxWidth: 540, width: '100%', background: 'rgba(8,14,24,0.55)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14 }}>
+        {([['fishing', 'Fishing'], ['navigation', 'Navigation']] as const).map(([id, label]) => {
+          const on = profileTab === id
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setProfileTab(id)}
+              className="font-karla font-700 uppercase tracking-[0.12em]"
+              style={{
+                flex: 1, padding: '0.6rem 0', borderRadius: 10,
+                fontSize: '0.7rem', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none',
+                border: on ? '1px solid rgba(96,165,250,0.5)' : '1px solid transparent',
+                background: on ? 'rgba(96,165,250,0.16)' : 'transparent',
+                color: on ? '#cfe2ff' : 'rgba(240,237,232,0.5)',
+              }}
+            >
+              {label}
+            </button>
+          )
+        })}
+      </div>
 
-        {/* ── LEFT: Fishing — character + catches ── */}
-        <div className="flex flex-col" style={{ gap: 28 }}>
+      {/* ── Fishing tab ── */}
+      {profileTab === 'fishing' && (
+        <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
+
+          {/* Angler rank + headline stats */}
+          <RankHero
+            color="#60a5fa"
+            kicker="Angler"
+            title={`Level ${fishingLevel}`}
+            sub={`${stats.uniqueSpecies.toLocaleString()} species discovered`}
+            icon={FishIcon}
+          />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <StatTile label="Species" value={stats.uniqueSpecies.toLocaleString()} color="#4ade80" />
+            <StatTile label="Best Streak" value={stats.highestPerfectStreak > 0 ? `${stats.highestPerfectStreak}×` : '—'} color="#fde68a" />
+            <StatTile label="Rarest" value={rarestFish[0]?.name ?? '—'} color={rarestFish[0] ? (RARITY_COLOR[rarestFish[0].bite_rarity] ?? '#f0ede8') : '#6a6764'} />
+          </div>
+          {isOwnProfile && <ProfileCta href="/fishing" label="Cast a line" color="#60a5fa" />}
 
           {/* Character Loadout */}
           <div style={{
@@ -424,8 +464,8 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
               </div>
               <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
               <div style={{ textAlign: 'center', flex: 1 }}>
-                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(96,165,250,0.95)', marginBottom: 3 }}>Fishing Level</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#60a5fa', lineHeight: 1.2 }}>{fishingLevel}</p>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: reel.color + 'aa', marginBottom: 3 }}>Reel</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d8d5d0', lineHeight: 1.2 }}>{reel.name}</p>
               </div>
               <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
               <div style={{ textAlign: 'center', flex: 1 }}>
@@ -486,19 +526,30 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
                   )
                 })}
               </div>
-              {stats.uniqueSpecies > 0 && (
-                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#bbb5ad', marginTop: 10, textAlign: 'center' }}>
-                  {stats.uniqueSpecies.toLocaleString()} species caught
-                  {stats.highestPerfectStreak > 0 ? ` · ${stats.highestPerfectStreak}× best streak` : ''}
-                </p>
-              )}
             </div>
           )}
 
         </div>
+      )}
 
-        {/* ── RIGHT: Expedition — ship + crew + voyages ── */}
-        <div className="flex flex-col" style={{ gap: 28 }}>
+      {/* ── Navigation tab ── */}
+      {profileTab === 'navigation' && (
+        <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
+
+          {/* Navigator rank + headline stats */}
+          <RankHero
+            color="#c084fc"
+            kicker="Navigator"
+            title={expTitle}
+            sub={`Level ${expLevel}`}
+            icon={CompassIcon}
+          />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <StatTile label="Voyages" value={voyagesCompleted.toLocaleString()} color="#60a5fa" />
+            <StatTile label="Flagship" value={gear.shipName ?? ship.name} color={ship.color} />
+            <StatTile label="Packs" value={stats.packsOpened.toLocaleString()} color="#f0c040" />
+          </div>
+          {isOwnProfile && <ProfileCta href="/expeditions" label="Set sail on Expeditions" color="#c084fc" />}
 
           {/* Ship Hero */}
           <div style={{
@@ -659,7 +710,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
           )}
 
         </div>
-      </div>
+      )}
 
     </div>
     </>

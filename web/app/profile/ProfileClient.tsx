@@ -8,6 +8,7 @@ import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { updateUsername, updateShowcase, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial, updateProfileBg } from '@/app/u/actions'
 import { PROFILE_BACKGROUNDS, getProfileBackground } from '@/lib/profileBackgrounds'
+import { RankHero, StatTile, ProfileCta, FishIcon, CompassIcon } from '@/components/ProfileStats'
 import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, AVATAR_SPECIALS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE } from '@/lib/avatarColors'
 import { equipBadge, unequipBadge } from '@/app/achievements/badgeActions'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -43,6 +44,9 @@ interface Props {
   expeditionLevel: number
   navigatorTitle: string
   uniqueSpecies: number
+  highestPerfectStreak: number
+  voyagesCompleted: number
+  packsOpened: number
   shipTier: number
   shipName: string
   shipColor: string
@@ -209,6 +213,9 @@ export default function ProfileClient({
   expeditionLevel,
   navigatorTitle,
   uniqueSpecies,
+  highestPerfectStreak,
+  voyagesCompleted,
+  packsOpened,
   shipTier,
   shipName,
   shipColor,
@@ -586,20 +593,6 @@ export default function ProfileClient({
         </div>
       </div>
 
-      {/* ── Stat ribbon (shared, above the tabs) ── */}
-      <div style={{ display: 'flex', gap: 8, margin: '4px auto 16px', maxWidth: 540, width: '100%' }}>
-        {[
-          { label: 'Fishing', value: `Lv ${level}`, color: '#60a5fa' },
-          { label: 'Navigator', value: expeditionLevel > 0 ? `Lv ${expeditionLevel}` : '—', color: '#c084fc' },
-          { label: 'Species', value: uniqueSpecies.toLocaleString(), color: '#4ade80' },
-        ].map(s => (
-          <div key={s.label} style={{ flex: 1, textAlign: 'center', padding: '0.65rem 0.4rem', borderRadius: 14, background: 'rgba(8,14,24,0.55)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: s.color, lineHeight: 1 }}>{s.value}</p>
-            <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.54rem', color: '#9a948c', marginTop: 5 }}>{s.label}</p>
-          </div>
-        ))}
-      </div>
-
       {/* ── Fishing / Navigation tabs (shared) ── */}
       <div style={{ display: 'flex', gap: 4, padding: 4, margin: '0 auto 22px', maxWidth: 540, width: '100%', background: 'rgba(8,14,24,0.55)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14 }}>
         {([['fishing', 'Fishing'], ['navigation', 'Navigation']] as const).map(([id, label]) => {
@@ -627,6 +620,21 @@ export default function ProfileClient({
       {/* ── Fishing tab ── */}
       {profileTab === 'fishing' && (
         <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
+
+          {/* Angler rank + headline stats */}
+          <RankHero
+            color="#60a5fa"
+            kicker="Angler"
+            title={`Level ${level}`}
+            sub={`${uniqueSpecies.toLocaleString()} species discovered`}
+            icon={FishIcon}
+          />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <StatTile label="Species" value={uniqueSpecies.toLocaleString()} color="#4ade80" />
+            <StatTile label="Best Streak" value={highestPerfectStreak > 0 ? `${highestPerfectStreak}×` : '—'} color="#fde68a" />
+            <StatTile label="Rarest" value={rarestFish[0]?.name ?? '—'} color={rarestFish[0] ? (rarestFish[0].habitat === 'ancient_deep' ? '#a78bfa' : (RARITY_COLOR[rarestFish[0].bite_rarity] ?? '#f0ede8')) : '#6a6764'} />
+          </div>
+          <ProfileCta href="/fishing" label="Cast a line" color="#60a5fa" />
 
           {/* Character Loadout + color picker */}
           <div style={{
@@ -851,8 +859,8 @@ export default function ProfileClient({
               </div>
               <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
               <div style={{ textAlign: 'center', flex: 1 }}>
-                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(96,165,250,0.95)', marginBottom: 3 }}>Fishing Level</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#60a5fa', lineHeight: 1.2 }}>{level}</p>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: reel.color + 'aa', marginBottom: 3 }}>Reel</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d8d5d0', lineHeight: 1.2 }}>{reel.name}</p>
               </div>
               <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
               <div style={{ textAlign: 'center', flex: 1 }}>
@@ -1017,11 +1025,6 @@ export default function ProfileClient({
                   )
                 })}
               </div>
-              {uniqueSpecies > 0 && (
-                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#bbb5ad', marginTop: 10, textAlign: 'center' }}>
-                  {uniqueSpecies.toLocaleString()} species caught
-                </p>
-              )}
             </div>
           )}
 
@@ -1031,6 +1034,21 @@ export default function ProfileClient({
       {/* ── Navigation tab ── */}
       {profileTab === 'navigation' && (
         <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
+
+          {/* Navigator rank + headline stats */}
+          <RankHero
+            color="#c084fc"
+            kicker="Navigator"
+            title={navigatorTitle}
+            sub={`Level ${expeditionLevel}`}
+            icon={CompassIcon}
+          />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <StatTile label="Voyages" value={voyagesCompleted.toLocaleString()} color="#60a5fa" />
+            <StatTile label="Flagship" value={shipName} color={shipColor} />
+            <StatTile label="Packs" value={packsOpened.toLocaleString()} color="#f0c040" />
+          </div>
+          <ProfileCta href="/expeditions" label="Set sail on Expeditions" color="#c084fc" />
 
           {/* Ship Hero */}
           <div style={{
@@ -1074,37 +1092,6 @@ export default function ProfileClient({
               )}
             </div>
           </div>
-
-          {/* Navigator rank */}
-          <div style={{
-            borderRadius: 20,
-            border: '1px solid rgba(192,132,252,0.2)',
-            background: 'radial-gradient(ellipse at 50% 0%, rgba(120,60,180,0.18) 0%, transparent 70%)',
-            padding: '1rem',
-            display: 'flex', alignItems: 'center', gap: 14,
-          }}>
-            <div style={{ width: 46, height: 46, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(192,132,252,0.12)', border: '1px solid rgba(192,132,252,0.3)' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
-              </svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: '#9a948c' }}>Navigator Rank</p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#c084fc', lineHeight: 1.2, marginTop: 3 }}>{navigatorTitle}</p>
-            </div>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c084fc', flexShrink: 0 }}>Lv {expeditionLevel}</p>
-          </div>
-
-          {/* Expeditions CTA */}
-          <Link href="/expeditions" style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '0.85rem 1rem', borderRadius: 16,
-            background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.3)',
-            textDecoration: 'none',
-          }}>
-            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: '#cfe2ff' }}>Set sail on Expeditions</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#cfe2ff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </Link>
 
           {/* Showcase */}
           <div>

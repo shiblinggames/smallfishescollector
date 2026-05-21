@@ -40,6 +40,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     navProfileData,
     crewRowData,
     voyagesData,
+    { count: voyagesCompleted },
   ] = await Promise.all([
     showcaseIds.length > 0
       ? admin.from('card_variants')
@@ -73,6 +74,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       .eq('status', 'revealed')
       .order('created_at', { ascending: false })
       .limit(10),
+
+    admin.from('daily_voyages')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', profile.id)
+      .eq('status', 'revealed'),
   ])
 
   // Build showcase variants
@@ -144,6 +150,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           avatarBg={(profile?.avatar_bg_color as string | null) ?? null}
           avatarBorder={(profile?.avatar_border_color as string | null) ?? null}
           profileBg={(profile?.profile_bg as string | null) ?? null}
+          voyagesCompleted={voyagesCompleted ?? 0}
         />
       </main>
     </>

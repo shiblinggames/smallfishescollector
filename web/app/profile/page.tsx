@@ -23,9 +23,11 @@ export default async function ProfilePage() {
     { data: ownedRows },
     { data: rarestFishRows },
     { data: allFishSpecies },
+    { count: voyagesCompleted },
+    { count: packsOpened },
   ] = await Promise.all([
     supabase.from('profiles')
-      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, reel_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges, trophy_catches, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color, unlocked_avatar_specials, profile_bg')
+      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, reel_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges, trophy_catches, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color, unlocked_avatar_specials, profile_bg, highest_perfect_streak')
       .eq('id', user.id)
       .single(),
     admin.from('fish_collection')
@@ -43,6 +45,13 @@ export default async function ProfilePage() {
     // cheaper than a second round-trip after the profile query just to look
     // up trophy names by ID. Costs a couple KB; saves ~50–200ms of waterfall.
     admin.from('fish_species').select('id, name'),
+    admin.from('daily_voyages')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', 'revealed'),
+    admin.from('pack_history')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id),
   ])
 
   const seen = new Set<number>()
@@ -104,6 +113,9 @@ export default async function ProfilePage() {
           expeditionLevel={expeditionLevel}
           navigatorTitle={navigatorTitle}
           uniqueSpecies={uniqueSpecies ?? 0}
+          highestPerfectStreak={profile?.highest_perfect_streak ?? 0}
+          voyagesCompleted={voyagesCompleted ?? 0}
+          packsOpened={packsOpened ?? 0}
           shipTier={profile?.ship_tier ?? 0}
           shipName={ship.name}
           shipColor={ship.color}
