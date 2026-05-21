@@ -3689,7 +3689,8 @@ export default function FishingGame({
                   color: HABITAT_COLOR[selectedZone],
                   boxShadow: 'none',
                   fontSize: '0.5rem',
-                  padding: '0.28rem 0.6rem',
+                  height: 26,
+                  padding: '0 0.6rem',
                   borderRadius: 20,
                   letterSpacing: '0.1em',
                   gap: 4,
@@ -3704,11 +3705,11 @@ export default function FishingGame({
                   <button
                     onClick={() => setDailyOpen(o => !o)}
                     style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      height: 26, padding: '0 0.6rem', borderRadius: 20,
                       background: dailyOpen ? 'rgba(240,192,64,0.12)' : 'rgba(4,10,18,0.72)',
                       border: `1px solid ${claimable ? 'rgba(240,192,64,0.55)' : dailyOpen ? 'rgba(240,192,64,0.3)' : 'rgba(255,255,255,0.12)'}`,
-                      borderRadius: 20, padding: '0.28rem 0.55rem',
                       cursor: 'pointer', touchAction: 'manipulation',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
                       position: 'relative',
                     }}
                   >
@@ -3738,21 +3739,21 @@ export default function FishingGame({
               <button
                 onClick={() => { setCollectionOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
                 style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  height: 26, padding: '0 0.6rem', borderRadius: 20,
                   background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
-                  borderRadius: 20, padding: '0.28rem 0.7rem',
                   cursor: 'pointer', touchAction: 'manipulation',
                   position: 'relative',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
                 }}
               >
                 <span className="font-karla font-600 uppercase tracking-[0.1em]"
-                  style={{ fontSize: '0.48rem', color: HABITAT_COLOR[selectedZone] + 'dd', lineHeight: 1 }}>
-                  Collection
+                  style={{ fontSize: '0.5rem', color: HABITAT_COLOR[selectedZone] + 'dd', lineHeight: 1 }}>
+                  Dex
                 </span>
                 <span className="font-cinzel font-700"
-                  style={{ fontSize: '0.88rem', color: HABITAT_COLOR[selectedZone], lineHeight: 1 }}>
+                  style={{ fontSize: '0.8rem', color: HABITAT_COLOR[selectedZone], lineHeight: 1 }}>
                   {caughtFishIds.size}
-                  <span className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }}>
+                  <span className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)' }}>
                     /{allFishSpecies.length}
                   </span>
                 </span>
