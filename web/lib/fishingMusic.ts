@@ -30,13 +30,18 @@ let elA: HTMLAudioElement | null = null
 let elB: HTMLAudioElement | null = null
 let current: HTMLAudioElement | null = null
 let audioCtx: AudioContext | null = null
-let masterGain: GainNode | null = null
+let masterGain: GainNode | null = null   // music volume (the <audio> elements)
+let sfxGain: GainNode | null = null      // SFX volume (chime/cast/dial) — independent
 let gainA: GainNode | null = null
 let gainB: GainNode | null = null
 let webAudioReady = false
 let trackDuration = 0
 let lastGainValue = 1
 let pendingPauseTimeout: ReturnType<typeof setTimeout> | null = null
+let sfxMuted: boolean = (() => {
+  if (typeof window === 'undefined') return false
+  return window.localStorage.getItem('fishingSfxMuted') === 'true'
+})()
 
 // Loop handoff scheduling.
 let handoffCoarseTimer: ReturnType<typeof setTimeout> | null = null
@@ -130,22 +135,26 @@ function setupWebAudio(): boolean {
     const ga = ctx.createGain()
     const gb = ctx.createGain()
     const master = ctx.createGain()
+    const sfx = ctx.createGain()
     ga.gain.value = 1  // A starts as current
     gb.gain.value = 0
     master.gain.value = 1
+    sfx.gain.value = sfxMuted ? 0 : 1
     lastGainValue = 1
     srcA.connect(ga).connect(master)
     srcB.connect(gb).connect(master)
     master.connect(ctx.destination)
+    sfx.connect(ctx.destination)
     audioCtx = ctx
     gainA = ga
     gainB = gb
     masterGain = master
+    sfxGain = sfx
     webAudioReady = true
     return true
   } catch {
     audioCtx = null
-    gainA = gainB = masterGain = null
+    gainA = gainB = masterGain = sfxGain = null
     webAudioReady = false
     return false
   }
@@ -434,29 +443,38 @@ export function fadeOutFishingMusic(ms: number = EXIT_FADE_MS): void {
 
 // ─── SFX ────────────────────────────────────────────────────────────────
 
+// All SFX route through sfxGain (independent of the music's masterGain)
+// so they can be muted separately. Falls back to destination if the
+// graph somehow isn't wired yet.
+function sfxOut(): AudioNode | null {
+  return sfxGain ?? audioCtx?.destination ?? null
+}
+
 const PERFECT_SFX_GAIN = 1.8
 export function playPerfectSfx(): void {
   if (!audioCtx || !perfectSfxBuffer) return
+  const out = sfxOut(); if (!out) return
   try {
     if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
     const source = audioCtx.createBufferSource()
     source.buffer = perfectSfxBuffer
     const boost = audioCtx.createGain()
     boost.gain.value = PERFECT_SFX_GAIN
-    source.connect(boost).connect(audioCtx.destination)
+    source.connect(boost).connect(out)
     source.start(0)
   } catch {}
 }
 
-/** Cast / Cast Again tap SFX. Direct unity-gain routing through the
- *  ctx.destination — same path as the perfect SFX (without boost). */
+/** Cast / Cast Again tap SFX. Routed through sfxGain (mutable separately
+ *  from music). */
 export function playCastSfx(): void {
   if (!audioCtx || !castSfxBuffer) return
+  const out = sfxOut(); if (!out) return
   try {
     if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
     const source = audioCtx.createBufferSource()
     source.buffer = castSfxBuffer
-    source.connect(audioCtx.destination)
+    source.connect(out)
     source.start(0)
   } catch {}
 }
@@ -465,13 +483,24 @@ export function playCastSfx(): void {
  *  fishing/waiting phase begins (line in water). */
 export function playCast2Sfx(): void {
   if (!audioCtx || !cast2SfxBuffer) return
+  const out = sfxOut(); if (!out) return
   try {
     if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
     const source = audioCtx.createBufferSource()
     source.buffer = cast2SfxBuffer
-    source.connect(audioCtx.destination)
+    source.connect(out)
     source.start(0)
   } catch {}
+}
+
+/** Mute/unmute SFX independently of the music. Persisted to localStorage. */
+export function getFishingSfxMuted(): boolean { return sfxMuted }
+export function setFishingSfxMuted(muted: boolean): void {
+  sfxMuted = muted
+  if (sfxGain && audioCtx) {
+    sfxGain.gain.setValueAtTime(muted ? 0 : 1, audioCtx.currentTime)
+  }
+  try { window.localStorage.setItem('fishingSfxMuted', String(muted)) } catch {}
 }
 
 // Track the most-recently-requested playback rate so the queued-start
@@ -487,12 +516,13 @@ export function startDialLoop(rate: number = 1): void {
   }
   if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
   if (!dialBuffer) { dialPendingStart = true; return }
+  const out = sfxOut(); if (!out) return
   try {
     const source = audioCtx.createBufferSource()
     source.buffer = dialBuffer
     source.loop = true
     source.playbackRate.value = rate
-    source.connect(audioCtx.destination)
+    source.connect(out)
     source.start(0)
     dialSource = source
   } catch {}

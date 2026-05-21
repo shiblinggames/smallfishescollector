@@ -21,7 +21,7 @@ import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
-import { startFishingMusic, setFishingMusicMuted, fadeOutFishingMusic, playPerfectSfx, playCastSfx, playCast2Sfx, startDialLoop, stopDialLoop } from '@/lib/fishingMusic'
+import { startFishingMusic, setFishingMusicMuted, fadeOutFishingMusic, playPerfectSfx, playCastSfx, playCast2Sfx, startDialLoop, stopDialLoop, getFishingSfxMuted, setFishingSfxMuted } from '@/lib/fishingMusic'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
 import { updateCharacterColor } from '@/app/u/actions'
@@ -1954,6 +1954,9 @@ export default function FishingGame({
     const saved = window.localStorage.getItem('fishingAudioMuted')
     return saved === null ? true : saved === 'true'
   })
+  // SFX mute is independent of the music mute (separate localStorage key,
+  // separate sfxGain node in lib/fishingMusic). Default ON (not muted).
+  const [sfxMuted, setSfxMutedState] = useState<boolean>(() => getFishingSfxMuted())
 
   useEffect(() => {
     startFishingMusic(audioMuted)
@@ -3329,47 +3332,69 @@ export default function FishingGame({
         {/* Background soundtrack lives in lib/fishingMusic singleton —
             kept outside React's tree so unmount fade-out actually runs. */}
 
-        {/* Mute / unmute toggle — left edge, below the back-button row so
-            it doesn't fight the header. Floats over the gameplay scene. */}
-        <button
-          type="button"
-          onClick={() => {
-            // Set muted synchronously inside the gesture — the singleton
-            // calls play() in this same call stack so iOS PWA permits
-            // unmuted playback.
-            const nextMuted = !audioMuted
-            setFishingMusicMuted(nextMuted)
-            setAudioMuted(nextMuted)
-          }}
-          aria-label={audioMuted ? 'Unmute soundtrack' : 'Mute soundtrack'}
-          style={{
-            position: 'absolute', bottom: 110, left: 10, zIndex: 60,
-            width: 34, height: 34,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(8,18,28,0.6)',
-            border: '1px solid rgba(255,255,255,0.18)',
-            borderRadius: '50%',
-            color: 'rgba(240,237,232,0.85)',
-            cursor: 'pointer',
-            padding: 0,
-            backdropFilter: 'blur(4px)',
-            WebkitBackdropFilter: 'blur(4px)',
-          }}
-        >
-          {audioMuted ? (
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-              <line x1="23" y1="9" x2="17" y2="15"/>
-              <line x1="17" y1="9" x2="23" y2="15"/>
-            </svg>
-          ) : (
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-            </svg>
-          )}
-        </button>
+        {/* Audio toggles — two independent mutes: music (note icon) and
+            SFX (speaker icon). Left edge, below the back-button row.
+            Both set state synchronously inside the gesture so iOS PWA
+            permits playback in the same call stack. */}
+        <div style={{ position: 'absolute', bottom: 110, left: 10, zIndex: 60, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {([
+            {
+              key: 'music',
+              muted: audioMuted,
+              label: audioMuted ? 'Unmute music' : 'Mute music',
+              toggle: () => { const n = !audioMuted; setFishingMusicMuted(n); setAudioMuted(n) },
+              // music note
+              icon: (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18V5l12-2v13" />
+                  <circle cx="6" cy="18" r="3" />
+                  <circle cx="18" cy="16" r="3" />
+                </svg>
+              ),
+            },
+            {
+              key: 'sfx',
+              muted: sfxMuted,
+              label: sfxMuted ? 'Unmute sound effects' : 'Mute sound effects',
+              toggle: () => { const n = !sfxMuted; setFishingSfxMuted(n); setSfxMutedState(n) },
+              // speaker
+              icon: sfxMuted ? (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                  <line x1="23" y1="9" x2="17" y2="15"/>
+                  <line x1="17" y1="9" x2="23" y2="15"/>
+                </svg>
+              ) : (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                </svg>
+              ),
+            },
+          ] as const).map(t => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={t.toggle}
+              aria-label={t.label}
+              style={{
+                width: 34, height: 34,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(8,18,28,0.6)',
+                border: '1px solid rgba(255,255,255,0.18)',
+                borderRadius: '50%',
+                color: t.muted ? 'rgba(240,237,232,0.45)' : 'rgba(240,237,232,0.85)',
+                cursor: 'pointer',
+                padding: 0,
+                backdropFilter: 'blur(4px)',
+                WebkitBackdropFilter: 'blur(4px)',
+              }}
+            >
+              {t.icon}
+            </button>
+          ))}
+        </div>
 
         {/* Background — gated to worldBobAnimate so the painted scene
             stays still during calm casting (only the boat/character
