@@ -103,9 +103,12 @@ function cardTransform(off: number): { tx: number; tz: number; ry: number; scale
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.78rem', color: '#ccc7c0', marginBottom: 14 }}>
-      {children}
-    </p>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+      <span aria-hidden style={{ width: 3, height: 13, borderRadius: 2, flexShrink: 0, background: 'linear-gradient(180deg, #f0c040 0%, rgba(240,192,64,0.15) 100%)' }} />
+      <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.72rem', color: '#d8d4cd' }}>
+        {children}
+      </p>
+    </div>
   )
 }
 
@@ -273,6 +276,9 @@ export default function ProfileClient({
   // Which group the "Profile Look" modal is showing — splits the old long
   // scroll into tabs: character / avatar (bg+border) / page background.
   const [lookTab, setLookTab] = useState<'character' | 'avatar' | 'page'>('character')
+  // Main profile page tab — Fishing (angler + catches) vs Navigation (ship +
+  // expedition). Shared identity header sits above both.
+  const [profileTab, setProfileTab] = useState<'fishing' | 'navigation'>('fishing')
   // LOCAL-ONLY page-background preview (test). Not persisted, not gated, not
   // shown to other users — just lets us eyeball the fishing zone paintings as
   // a profile page backdrop before committing to a saved `profile_bg` column.
@@ -580,11 +586,47 @@ export default function ProfileClient({
         </div>
       </div>
 
-      {/* ── Two-column body ── */}
-      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-8 md:gap-10 items-start">
+      {/* ── Stat ribbon (shared, above the tabs) ── */}
+      <div style={{ display: 'flex', gap: 8, margin: '4px auto 16px', maxWidth: 540, width: '100%' }}>
+        {[
+          { label: 'Fishing', value: `Lv ${level}`, color: '#60a5fa' },
+          { label: 'Navigator', value: expeditionLevel > 0 ? `Lv ${expeditionLevel}` : '—', color: '#c084fc' },
+          { label: 'Species', value: uniqueSpecies.toLocaleString(), color: '#4ade80' },
+        ].map(s => (
+          <div key={s.label} style={{ flex: 1, textAlign: 'center', padding: '0.65rem 0.4rem', borderRadius: 14, background: 'rgba(8,14,24,0.55)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: s.color, lineHeight: 1 }}>{s.value}</p>
+            <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.54rem', color: '#9a948c', marginTop: 5 }}>{s.label}</p>
+          </div>
+        ))}
+      </div>
 
-        {/* ── LEFT: Fishing — character + catches ── */}
-        <div className="flex flex-col" style={{ gap: 28 }}>
+      {/* ── Fishing / Navigation tabs (shared) ── */}
+      <div style={{ display: 'flex', gap: 4, padding: 4, margin: '0 auto 22px', maxWidth: 540, width: '100%', background: 'rgba(8,14,24,0.55)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14 }}>
+        {([['fishing', 'Fishing'], ['navigation', 'Navigation']] as const).map(([id, label]) => {
+          const on = profileTab === id
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setProfileTab(id)}
+              className="font-karla font-700 uppercase tracking-[0.12em]"
+              style={{
+                flex: 1, padding: '0.6rem 0', borderRadius: 10,
+                fontSize: '0.7rem', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none',
+                border: on ? '1px solid rgba(96,165,250,0.5)' : '1px solid transparent',
+                background: on ? 'rgba(96,165,250,0.16)' : 'transparent',
+                color: on ? '#cfe2ff' : 'rgba(240,237,232,0.5)',
+              }}
+            >
+              {label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* ── Fishing tab ── */}
+      {profileTab === 'fishing' && (
+        <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
 
           {/* Character Loadout + color picker */}
           <div style={{
@@ -984,9 +1026,11 @@ export default function ProfileClient({
           )}
 
         </div>
+      )}
 
-        {/* ── RIGHT: Expedition — ship + showcase + customise ── */}
-        <div className="flex flex-col" style={{ gap: 28 }}>
+      {/* ── Navigation tab ── */}
+      {profileTab === 'navigation' && (
+        <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
 
           {/* Ship Hero */}
           <div style={{
@@ -1031,6 +1075,37 @@ export default function ProfileClient({
             </div>
           </div>
 
+          {/* Navigator rank */}
+          <div style={{
+            borderRadius: 20,
+            border: '1px solid rgba(192,132,252,0.2)',
+            background: 'radial-gradient(ellipse at 50% 0%, rgba(120,60,180,0.18) 0%, transparent 70%)',
+            padding: '1rem',
+            display: 'flex', alignItems: 'center', gap: 14,
+          }}>
+            <div style={{ width: 46, height: 46, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(192,132,252,0.12)', border: '1px solid rgba(192,132,252,0.3)' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+              </svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: '#9a948c' }}>Navigator Rank</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#c084fc', lineHeight: 1.2, marginTop: 3 }}>{navigatorTitle}</p>
+            </div>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c084fc', flexShrink: 0 }}>Lv {expeditionLevel}</p>
+          </div>
+
+          {/* Expeditions CTA */}
+          <Link href="/expeditions" style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '0.85rem 1rem', borderRadius: 16,
+            background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.3)',
+            textDecoration: 'none',
+          }}>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.72rem', color: '#cfe2ff' }}>Set sail on Expeditions</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#cfe2ff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </Link>
+
           {/* Showcase */}
           <div>
             <SectionLabel>Showcase</SectionLabel>
@@ -1056,7 +1131,7 @@ export default function ProfileClient({
           </div>
 
         </div>
-      </div>
+      )}
 
       {/* ── Sign out ── */}
       <button
