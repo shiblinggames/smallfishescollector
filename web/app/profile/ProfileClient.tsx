@@ -525,7 +525,17 @@ export default function ProfileClient({
           </form>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>{username}</p>
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>{username}</p>
+              {isPremium && (
+                <span title="Member" className="flex items-center gap-1 rounded-full" style={{ padding: '0.2rem 0.55rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.35)' }}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                  <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#f0c040' }}>Member</span>
+                </span>
+              )}
+            </div>
             {!usernameChanged ? (
               <button
                 onClick={() => setShowUsernameForm(true)}
@@ -552,18 +562,10 @@ export default function ProfileClient({
           </div>
         )}
 
-        {/* Badge pills */}
+        {/* Action pills */}
         <div className="flex items-center gap-2 flex-wrap justify-center">
-          {isPremium && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.28)' }}>
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>
-              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#f0c040' }}>Member</span>
-            </div>
-          )}
           <Link
-            href={`/u/${username}`}
+            href="/social"
             style={{
               display: 'flex', alignItems: 'center', gap: 4,
               padding: '0.35rem 0.75rem', borderRadius: '2rem',
@@ -571,7 +573,7 @@ export default function ProfileClient({
               textDecoration: 'none',
             }}
           >
-            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#bbb5ad' }}>Public Profile ↗</span>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#bbb5ad' }}>Friends ↗</span>
           </Link>
           <Link
             href="/leaderboard"
