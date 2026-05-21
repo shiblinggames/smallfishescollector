@@ -261,6 +261,9 @@ export default function ProfileClient({
   const [avatarBorder, setAvatarBorder] = useState<string | null>(initialAvatarBorder)
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false)
   const [avatarSaving, setAvatarSaving] = useState(false)
+  // Which group the "Profile Look" modal is showing — splits the old long
+  // scroll into tabs: character / avatar (bg+border) / page background.
+  const [lookTab, setLookTab] = useState<'character' | 'avatar' | 'page'>('character')
   // LOCAL-ONLY page-background preview (test). Not persisted, not gated, not
   // shown to other users — just lets us eyeball the fishing zone paintings as
   // a profile page backdrop before committing to a saved `profile_bg` column.
@@ -1221,13 +1224,37 @@ export default function ProfileClient({
               />
             </div>
 
-            <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.05rem', color: '#f0ede8', marginBottom: 4 }}>
+            <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.05rem', color: '#f0ede8', marginBottom: 12 }}>
               Profile Look
             </p>
-            <p className="font-karla text-center" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.55)', marginBottom: 16 }}>
-              Your avatar shows up everywhere; the page background is just here.
-            </p>
 
+            {/* Tab bar — splits the three groups so the modal isn't one long
+                scroll: Character / Avatar (bg + border) / Page background. */}
+            <div style={{ display: 'flex', gap: 4, padding: 4, marginBottom: 16, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }}>
+              {([['character', 'Character'], ['avatar', 'Avatar'], ['page', 'Page']] as const).map(([id, label]) => {
+                const on = lookTab === id
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setLookTab(id)}
+                    className="font-karla font-700 uppercase tracking-[0.08em]"
+                    style={{
+                      flex: 1, padding: '0.5rem 0', borderRadius: 9,
+                      fontSize: '0.62rem',
+                      cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none',
+                      border: on ? '1px solid rgba(96,165,250,0.55)' : '1px solid transparent',
+                      background: on ? 'rgba(96,165,250,0.16)' : 'transparent',
+                      color: on ? '#cfe2ff' : 'rgba(240,237,232,0.55)',
+                    }}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {lookTab === 'character' && (<>
             {/* Character swatches — saves immediately on click (same as the
                 old standalone picker), so the live preview above updates as
                 soon as the player taps. Background/border still batch into
@@ -1290,7 +1317,9 @@ export default function ProfileClient({
                 )
               })}
             </div>
+            </>)}
 
+            {lookTab === 'avatar' && (<>
             {/* Background swatches */}
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 6 }}>
               Background
@@ -1471,7 +1500,9 @@ export default function ProfileClient({
                 )
               })}
             </div>
+            </>)}
 
+            {lookTab === 'page' && (<>
             {/* Page Background — full-page zone painting, unlocks by fishing
                 level. Saves immediately on tap (like the character swatches). */}
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: '#7a9bc4', letterSpacing: '0.14em', marginBottom: 6 }}>
@@ -1547,6 +1578,7 @@ export default function ProfileClient({
                 )
               })}
             </div>
+            </>)}
 
             {/* Lock-tap toast + premium link */}
             <div style={{ minHeight: 24, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
