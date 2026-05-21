@@ -102,16 +102,15 @@ function SpecialIcon({ color }: { color: string }) {
 
 function SpecialItemRow({
   item, owned, isEquipped, tideTurnerSkipsLeft,
-  onEquip, onBuy,
+  onEquip, onRequestBuy,
 }: {
   item: import('@/lib/specialItems').SpecialItemDef
   owned: boolean
   isEquipped: boolean
   tideTurnerSkipsLeft: number
   onEquip: () => void
-  onBuy: () => Promise<void>
+  onRequestBuy: () => void
 }) {
-  const [buying, setBuying] = React.useState(false)
   return (
     <div style={{
       background: isEquipped ? `${item.color}10` : 'rgba(255,255,255,0.03)',
@@ -165,20 +164,14 @@ function SpecialItemRow({
         )}
         {!owned && item.shopCost && (
           <button
-            disabled={buying}
-            onClick={async () => {
-              setBuying(true)
-              await onBuy()
-              setBuying(false)
-            }}
+            onClick={onRequestBuy}
             style={{
               flexShrink: 0,
               background: `${item.color}18`,
               border: `1px solid ${item.color}50`,
               borderRadius: 8,
               padding: '0.3rem 0.65rem',
-              cursor: buying ? 'default' : 'pointer',
-              opacity: buying ? 0.6 : 1,
+              cursor: 'pointer',
               marginTop: 2,
             }}
             className="font-karla font-700 uppercase tracking-[0.08em]"
@@ -351,6 +344,15 @@ export default function GearScreen({
   function flashPurchase(name: string, color: string, cost: number) {
     setCosmeticToast({ id: Date.now(), name, color, cost })
   }
+
+  // Confirmation gate for every doubloon purchase in this menu (rod / reel /
+  // hook / boat / hat / special). Without it a single fat-fingered tap spent
+  // doubloons instantly. Tapping a buy tile now stages the purchase here; the
+  // overlay's Buy button runs the real `onConfirm`.
+  const [pendingPurchase, setPendingPurchase] = useState<{
+    name: string; color: string; cost: number; onConfirm: () => void | Promise<void>
+  } | null>(null)
+  const [confirming, setConfirming] = useState(false)
 
   const rod  = getRod(equippedRodTier)
   const reel = getReel(reelTier)
@@ -702,8 +704,10 @@ export default function GearScreen({
                             const tagline = rodTagline(r)
                             const onTap = () => {
                               if (!canAfford) return
-                              flashPurchase(r.name, r.color, r.cost)
-                              onBuyRod(r.tier)
+                              setPendingPurchase({
+                                name: r.name, color: r.color, cost: r.cost,
+                                onConfirm: async () => { flashPurchase(r.name, r.color, r.cost); await onBuyRod(r.tier) },
+                              })
                             }
                             return (
                               <button
@@ -798,8 +802,10 @@ export default function GearScreen({
                       <button
                         onClick={() => {
                           if (!canAffordReel) return
-                          flashPurchase(nextReel.name, nextReel.color, nextReel.cost)
-                          onBuyReel()
+                          setPendingPurchase({
+                            name: nextReel.name, color: nextReel.color, cost: nextReel.cost,
+                            onConfirm: async () => { flashPurchase(nextReel.name, nextReel.color, nextReel.cost); await onBuyReel() },
+                          })
                         }}
                         disabled={!canAffordReel}
                         style={{
@@ -915,8 +921,10 @@ export default function GearScreen({
                       <button
                         onClick={() => {
                           if (!canAffordHook) return
-                          flashPurchase(nextHook.name, nextHook.color, nextHook.cost)
-                          onBuyHook()
+                          setPendingPurchase({
+                            name: nextHook.name, color: nextHook.color, cost: nextHook.cost,
+                            onConfirm: async () => { flashPurchase(nextHook.name, nextHook.color, nextHook.cost); await onBuyHook() },
+                          })
                         }}
                         disabled={!canAffordHook}
                         style={{
@@ -1004,7 +1012,13 @@ export default function GearScreen({
                           isEquipped={isEquipped}
                           tideTurnerSkipsLeft={tideTurnerSkipsLeft}
                           onEquip={() => onEquipSpecial(isEquipped ? null : item.id)}
-                          onBuy={() => onBuySpecialItem(item.id)}
+                          onRequestBuy={() => {
+                            if (!item.shopCost) return
+                            setPendingPurchase({
+                              name: item.name, color: item.color, cost: item.shopCost,
+                              onConfirm: async () => { await onBuySpecialItem(item.id) },
+                            })
+                          }}
                         />
                       )
                     })}
@@ -1090,7 +1104,10 @@ export default function GearScreen({
                       const onTap = () => {
                         if (isEquipped) return
                         if (owned) onEquipBoat(b.id)
-                        else if (canAfford) { onBuyBoat(b.id); flashPurchase(b.name, b.color, b.cost) }
+                        else if (canAfford) setPendingPurchase({
+                          name: b.name, color: b.color, cost: b.cost,
+                          onConfirm: () => { onBuyBoat(b.id); flashPurchase(b.name, b.color, b.cost) },
+                        })
                       }
                       return (
                         <button
@@ -1231,7 +1248,10 @@ export default function GearScreen({
                       const onTap = () => {
                         if (isEquipped) return
                         if (owned) onEquipHat(h.id)
-                        else if (canAfford) { onBuyHat(h.id); flashPurchase(`${h.name} Bandana`, h.color, h.cost) }
+                        else if (canAfford) setPendingPurchase({
+                          name: `${h.name} Bandana`, color: h.color, cost: h.cost,
+                          onConfirm: () => { onBuyHat(h.id); flashPurchase(`${h.name} Bandana`, h.color, h.cost) },
+                        })
                       }
                       return (
                         <button
@@ -1410,6 +1430,91 @@ export default function GearScreen({
 
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Purchase confirmation ── */}
+      <AnimatePresence>
+        {pendingPurchase && (
+          <motion.div
+            key="confirm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.16 }}
+            onClick={() => { if (!confirming) setPendingPurchase(null) }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 100,
+              background: 'rgba(0,0,0,0.72)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '1.25rem',
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 16, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 460, damping: 34 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                width: '100%', maxWidth: 320,
+                background: 'linear-gradient(180deg, #0e1626 0%, #070b14 100%)',
+                border: `1px solid ${pendingPurchase.color}55`,
+                borderRadius: 18, padding: '1.25rem 1.1rem 1rem',
+                boxShadow: '0 18px 60px rgba(0,0,0,0.6)',
+              }}
+            >
+              <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.05rem', color: pendingPurchase.color, marginBottom: 6 }}>
+                Buy {pendingPurchase.name}?
+              </p>
+              <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.75)', lineHeight: 1.5, marginBottom: 10 }}>
+                {pendingPurchase.cost.toLocaleString()} ⟡, yours for good once bought.
+              </p>
+              <p className="font-karla text-center" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.55)', marginBottom: 14 }}>
+                Your purse: {doubloons.toLocaleString()} ⟡
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  disabled={confirming}
+                  onClick={() => setPendingPurchase(null)}
+                  className="font-karla font-700 uppercase tracking-[0.08em]"
+                  style={{
+                    flex: 1, padding: '0.7rem 0',
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    color: 'rgba(240,237,232,0.65)',
+                    borderRadius: 12, fontSize: '0.72rem',
+                    cursor: confirming ? 'default' : 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={confirming}
+                  onClick={async () => {
+                    setConfirming(true)
+                    await pendingPurchase.onConfirm()
+                    setConfirming(false)
+                    setPendingPurchase(null)
+                  }}
+                  className="font-karla font-700 uppercase tracking-[0.08em]"
+                  style={{
+                    flex: 2, padding: '0.7rem 0',
+                    background: 'rgba(96,165,250,0.16)',
+                    border: '1px solid rgba(96,165,250,0.55)',
+                    color: '#cfe2ff',
+                    borderRadius: 12, fontSize: '0.72rem',
+                    cursor: confirming ? 'default' : 'pointer',
+                    opacity: confirming ? 0.65 : 1,
+                  }}
+                >
+                  {confirming ? 'Buying…' : `Buy for ${pendingPurchase.cost.toLocaleString()} ⟡`}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
