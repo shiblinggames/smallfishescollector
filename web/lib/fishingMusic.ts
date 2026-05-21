@@ -63,7 +63,11 @@ let dialFetching = false
 let dialSource: AudioBufferSourceNode | null = null
 let dialPendingStart = false
 
-const ENTRY_FADE_MS  = 3000
+// Entry uses an exponential ramp from near-silence to full so the build
+// feels perceptually gradual (linear ramps sound "fast at start, slow at
+// end" because loudness perception is logarithmic). Exit can stay linear
+// — fades out feel natural either way and linear is more predictable.
+const ENTRY_FADE_MS  = 6000
 const EXIT_FADE_MS   = 3000
 const TOGGLE_FADE_MS = 400
 
@@ -241,17 +245,31 @@ function clearPendingPause() {
   }
 }
 
-function rampMaster(fromValue: number, target: number, ms: number, pauseAtEnd = false) {
+function rampMaster(fromValue: number, target: number, ms: number, pauseAtEnd = false, exponential = false) {
   clearPendingPause()
   if (!audioCtx || !masterGain) return
   const now = audioCtx.currentTime
   masterGain.gain.cancelScheduledValues(now)
-  masterGain.gain.value = fromValue
-  masterGain.gain.setValueAtTime(fromValue, now)
-  if (ms <= 0) {
-    masterGain.gain.setValueAtTime(target, now)
+  if (exponential) {
+    // exponentialRamp requires a strictly positive start (and end) value.
+    // Use 0.0001 (~ -80 dB) as the floor — inaudible but legal.
+    const safeFrom = Math.max(fromValue, 0.0001)
+    const safeTo   = Math.max(target,   0.0001)
+    masterGain.gain.value = safeFrom
+    masterGain.gain.setValueAtTime(safeFrom, now)
+    if (ms <= 0) {
+      masterGain.gain.setValueAtTime(safeTo, now)
+    } else {
+      masterGain.gain.exponentialRampToValueAtTime(safeTo, now + ms / 1000)
+    }
   } else {
-    masterGain.gain.linearRampToValueAtTime(target, now + ms / 1000)
+    masterGain.gain.value = fromValue
+    masterGain.gain.setValueAtTime(fromValue, now)
+    if (ms <= 0) {
+      masterGain.gain.setValueAtTime(target, now)
+    } else {
+      masterGain.gain.linearRampToValueAtTime(target, now + ms / 1000)
+    }
   }
   lastGainValue = target
   if (pauseAtEnd && target === 0) {
@@ -385,7 +403,9 @@ export function startFishingMusic(muted: boolean): void {
   if (muted) {
     rampMaster(0, 0, 0)
   } else {
-    rampMaster(0, 1, ENTRY_FADE_MS)
+    // Exponential ramp + 6 s — feels like a true slow build because
+    // loudness perception is log scale (linear ramps sound front-loaded).
+    rampMaster(0, 1, ENTRY_FADE_MS, /* pauseAtEnd */ false, /* exponential */ true)
   }
 }
 

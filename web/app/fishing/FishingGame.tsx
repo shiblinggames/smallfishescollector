@@ -2394,8 +2394,18 @@ export default function FishingGame({
       }
       animRef.current = requestAnimationFrame(tick)
     }
-    animRef.current = requestAnimationFrame(tick)
+    // Defer the first rAF tick by ~100 ms after phase becomes 'catching'
+    // so the DialSVG initial mount paint + audio setup work on the
+    // catching transition finish before the needle starts spinning. That
+    // first-cycle frame-skip was rAF callbacks getting pre-empted by the
+    // mount-time main-thread burst. The needle visually starts from
+    // angle 270 in this window, which is the same value setHookedFish
+    // set just before this effect ran, so there's no visible jump.
+    const startDelay = setTimeout(() => {
+      animRef.current = requestAnimationFrame(tick)
+    }, 100)
     return () => {
+      clearTimeout(startDelay)
       if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
       if (blackoutTimerRef.current) { clearTimeout(blackoutTimerRef.current); blackoutTimerRef.current = null }
       setBlackoutOpacity(0)
