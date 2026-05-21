@@ -9,6 +9,7 @@ import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/e
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { CHARACTER_COLORS } from '@/lib/characters'
 import { isPremiumActive } from '@/lib/premium'
+import { computeHomeWaters, sumPrestige, voyageTotals, type CareerStats } from '@/lib/careerStats'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -19,20 +20,16 @@ export default async function ProfilePage() {
 
   const [
     { data: profile },
-    { count: uniqueSpecies },
     { data: ownedRows },
     { data: rarestFishRows },
     { data: allFishSpecies },
-    { count: voyagesCompleted },
-    { count: packsOpened },
+    { data: fishCatchRows },
+    { data: voyageAggRows },
   ] = await Promise.all([
     supabase.from('profiles')
-      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, reel_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges, trophy_catches, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color, unlocked_avatar_specials, profile_bg, highest_perfect_streak')
+      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, reel_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges, trophy_catches, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color, unlocked_avatar_specials, profile_bg, fishing_casts, prestige_levels, finn_wins')
       .eq('id', user.id)
       .single(),
-    admin.from('fish_collection')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id),
     admin.from('user_collection')
       .select('card_variant_id, card_variants(id, variant_name, border_style, art_effect, drop_weight, cards(name, filename))')
       .eq('user_id', user.id),
@@ -41,17 +38,14 @@ export default async function ProfilePage() {
       .eq('user_id', user.id)
       .order('fish_species(bite_rarity)', { ascending: false })
       .limit(3),
-    // fish_species has ~140 rows — pulling id+name for the whole table is
-    // cheaper than a second round-trip after the profile query just to look
-    // up trophy names by ID. Costs a couple KB; saves ~50–200ms of waterfall.
-    admin.from('fish_species').select('id, name'),
-    admin.from('daily_voyages')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('status', 'revealed'),
-    admin.from('pack_history')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id),
+    // fish_species has ~140 rows — pulling id+name+habitat for the whole table
+    // is cheaper than a second round-trip just to map trophy names + the home-
+    // waters zone by fish id. Costs a couple KB; saves a waterfall.
+    admin.from('fish_species').select('id, name, habitat'),
+    // Per-fish catch counts → "home waters" (most-fished zone).
+    admin.from('fish_collection').select('fish_id, catch_count').eq('user_id', user.id),
+    // All completed voyages → lifetime plunder + crew lost.
+    admin.from('daily_voyages').select('total_doubloons, crew_lost').eq('user_id', user.id).eq('status', 'revealed'),
   ])
 
   const seen = new Set<number>()
@@ -81,8 +75,19 @@ export default async function ProfilePage() {
 
   const trophyIds = ((profile?.trophy_catches as number[] | null) ?? [])
   const trophyIdSet = new Set(trophyIds)
-  const ancientTrophies = ((allFishSpecies ?? []) as { id: number; name: string }[])
-    .filter(f => trophyIdSet.has(f.id))
+  const speciesRows = (allFishSpecies ?? []) as { id: number; name: string; habitat?: string }[]
+  const ancientTrophies = speciesRows.filter(f => trophyIdSet.has(f.id))
+
+  const habitatById = new Map(speciesRows.filter(f => f.habitat).map(f => [f.id, f.habitat as string]))
+  const { plunder, crewLost } = voyageTotals((voyageAggRows ?? []) as { total_doubloons: number | null; crew_lost: unknown[] | null }[])
+  const career: CareerStats = {
+    fishingCasts: profile?.fishing_casts ?? 0,
+    homeWaters: computeHomeWaters((fishCatchRows ?? []) as { fish_id: number; catch_count: number | null }[], habitatById),
+    prestige: sumPrestige(profile?.prestige_levels),
+    plunder,
+    crewLost,
+    finnWins: profile?.finn_wins ?? 0,
+  }
 
   const ship = getShip(profile?.ship_tier ?? 0)
   const level = getLevelFromXP(profile?.fishing_xp ?? 0)
@@ -112,10 +117,7 @@ export default async function ProfilePage() {
           level={level}
           expeditionLevel={expeditionLevel}
           navigatorTitle={navigatorTitle}
-          uniqueSpecies={uniqueSpecies ?? 0}
-          highestPerfectStreak={profile?.highest_perfect_streak ?? 0}
-          voyagesCompleted={voyagesCompleted ?? 0}
-          packsOpened={packsOpened ?? 0}
+          career={career}
           shipTier={profile?.ship_tier ?? 0}
           shipName={ship.name}
           shipColor={ship.color}

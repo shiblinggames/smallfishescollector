@@ -8,7 +8,8 @@ import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { updateUsername, updateShowcase, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial, updateProfileBg } from '@/app/u/actions'
 import { PROFILE_BACKGROUNDS, getProfileBackground } from '@/lib/profileBackgrounds'
-import { RankHero, StatTile, ProfileCta, FishIcon, CompassIcon } from '@/components/ProfileStats'
+import { RankHero, StatTile, FishIcon, CompassIcon } from '@/components/ProfileStats'
+import type { CareerStats } from '@/lib/careerStats'
 import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, AVATAR_SPECIALS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE } from '@/lib/avatarColors'
 import { equipBadge, unequipBadge } from '@/app/achievements/badgeActions'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -43,10 +44,7 @@ interface Props {
   level: number
   expeditionLevel: number
   navigatorTitle: string
-  uniqueSpecies: number
-  highestPerfectStreak: number
-  voyagesCompleted: number
-  packsOpened: number
+  career: CareerStats
   shipTier: number
   shipName: string
   shipColor: string
@@ -212,13 +210,9 @@ export default function ProfileClient({
   level,
   expeditionLevel,
   navigatorTitle,
-  uniqueSpecies,
-  highestPerfectStreak,
-  voyagesCompleted,
-  packsOpened,
+  career,
   shipTier,
   shipName,
-  shipColor,
   customShipName,
   equippedShipSkin,
   rodTier,
@@ -626,15 +620,13 @@ export default function ProfileClient({
             color="#60a5fa"
             kicker="Angler"
             title={`Level ${level}`}
-            sub={`${uniqueSpecies.toLocaleString()} species discovered`}
             icon={FishIcon}
           />
           <div style={{ display: 'flex', gap: 8 }}>
-            <StatTile label="Species" value={uniqueSpecies.toLocaleString()} color="#4ade80" />
-            <StatTile label="Best Streak" value={highestPerfectStreak > 0 ? `${highestPerfectStreak}×` : '—'} color="#fde68a" />
-            <StatTile label="Rarest" value={rarestFish[0]?.name ?? '—'} color={rarestFish[0] ? (rarestFish[0].habitat === 'ancient_deep' ? '#a78bfa' : (RARITY_COLOR[rarestFish[0].bite_rarity] ?? '#f0ede8')) : '#6a6764'} />
+            <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
+            <StatTile label="Home Waters" value={career.homeWaters} color="#4ade80" />
+            <StatTile label="Prestige" value={career.prestige} color="#fde68a" />
           </div>
-          <ProfileCta href="/fishing" label="Cast a line" color="#60a5fa" />
 
           {/* Character Loadout + color picker */}
           <div style={{
@@ -1044,11 +1036,10 @@ export default function ProfileClient({
             icon={CompassIcon}
           />
           <div style={{ display: 'flex', gap: 8 }}>
-            <StatTile label="Voyages" value={voyagesCompleted.toLocaleString()} color="#60a5fa" />
-            <StatTile label="Flagship" value={shipName} color={shipColor} />
-            <StatTile label="Packs" value={packsOpened.toLocaleString()} color="#f0c040" />
+            <StatTile label="Plunder" value={`${career.plunder.toLocaleString()} ⟡`} color="#f0c040" />
+            <StatTile label="Crew Lost" value={career.crewLost.toLocaleString()} color="#f87171" />
+            <StatTile label="Finn Bested" value={career.finnWins.toLocaleString()} color="#60a5fa" />
           </div>
-          <ProfileCta href="/expeditions" label="Set sail on Expeditions" color="#c084fc" />
 
           {/* Ship Hero */}
           <div style={{

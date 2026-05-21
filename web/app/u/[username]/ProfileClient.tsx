@@ -20,7 +20,8 @@ import { BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avatarColors'
 import { getProfileBackground } from '@/lib/profileBackgrounds'
-import { RankHero, StatTile, ProfileCta, FishIcon, CompassIcon } from '@/components/ProfileStats'
+import { RankHero, StatTile, FishIcon, CompassIcon } from '@/components/ProfileStats'
+import type { CareerStats } from '@/lib/careerStats'
 
 interface CardVariant {
   id: number
@@ -83,7 +84,7 @@ interface Props {
   avatarBorder?: string | null
   /** Saved page background (zone id) — matches /profile. */
   profileBg?: string | null
-  voyagesCompleted?: number
+  career: CareerStats
 }
 
 function fishImageUrl(name: string) {
@@ -207,7 +208,7 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   )
 }
 
-export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, avatarBg = null, avatarBorder = null, profileBg = null, voyagesCompleted = 0 }: Props) {
+export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
@@ -348,15 +349,13 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
             color="#60a5fa"
             kicker="Angler"
             title={`Level ${fishingLevel}`}
-            sub={`${stats.uniqueSpecies.toLocaleString()} species discovered`}
             icon={FishIcon}
           />
           <div style={{ display: 'flex', gap: 8 }}>
-            <StatTile label="Species" value={stats.uniqueSpecies.toLocaleString()} color="#4ade80" />
-            <StatTile label="Best Streak" value={stats.highestPerfectStreak > 0 ? `${stats.highestPerfectStreak}×` : '—'} color="#fde68a" />
-            <StatTile label="Rarest" value={rarestFish[0]?.name ?? '—'} color={rarestFish[0] ? (RARITY_COLOR[rarestFish[0].bite_rarity] ?? '#f0ede8') : '#6a6764'} />
+            <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
+            <StatTile label="Home Waters" value={career.homeWaters} color="#4ade80" />
+            <StatTile label="Prestige" value={career.prestige} color="#fde68a" />
           </div>
-          {isOwnProfile && <ProfileCta href="/fishing" label="Cast a line" color="#60a5fa" />}
 
           {/* Character Loadout */}
           <div style={{
@@ -545,11 +544,10 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
             icon={CompassIcon}
           />
           <div style={{ display: 'flex', gap: 8 }}>
-            <StatTile label="Voyages" value={voyagesCompleted.toLocaleString()} color="#60a5fa" />
-            <StatTile label="Flagship" value={gear.shipName ?? ship.name} color={ship.color} />
-            <StatTile label="Packs" value={stats.packsOpened.toLocaleString()} color="#f0c040" />
+            <StatTile label="Plunder" value={`${career.plunder.toLocaleString()} ⟡`} color="#f0c040" />
+            <StatTile label="Crew Lost" value={career.crewLost.toLocaleString()} color="#f87171" />
+            <StatTile label="Finn Bested" value={career.finnWins.toLocaleString()} color="#60a5fa" />
           </div>
-          {isOwnProfile && <ProfileCta href="/expeditions" label="Set sail on Expeditions" color="#c084fc" />}
 
           {/* Ship Hero */}
           <div style={{

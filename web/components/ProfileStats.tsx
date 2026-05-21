@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import React from 'react'
 
 // Shared presentational pieces for the Fishing / Navigation profile tabs.
@@ -49,21 +48,6 @@ export function StatTile({ label, value, color = '#f0ede8' }: {
       <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</p>
       <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#9a948c', marginTop: 6 }}>{label}</p>
     </div>
-  )
-}
-
-/** Full-width call-to-action linking out to the relevant game loop. */
-export function ProfileCta({ href, label, color }: { href: string; label: string; color: string }) {
-  return (
-    <Link href={href} style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '0.85rem 1.1rem', borderRadius: 16,
-      background: `${color}14`, border: `1px solid ${color}45`,
-      textDecoration: 'none',
-    }}>
-      <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem', color }}>{label}</span>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-    </Link>
   )
 }
 
