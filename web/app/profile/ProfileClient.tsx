@@ -1098,23 +1098,27 @@ export default function ProfileClient({
         </div>
       )}
 
-      {/* ── Sign out ── */}
-      <button
-        onClick={signOut}
-        style={{
-          width: '100%', padding: '0.8rem', marginTop: 40,
-          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-          borderRadius: 12, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        }}
-      >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6a6764" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-          <polyline points="16 17 21 12 16 7"/>
-          <line x1="21" y1="12" x2="9" y2="12"/>
-        </svg>
-        <span className="font-karla font-600 uppercase" style={{ fontSize: '0.72rem', color: '#bbb5ad', letterSpacing: '0.14em' }}>Sign Out</span>
-      </button>
+      {/* ── Sign out — compact, centered pill (was a full-width bar) ── */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 36 }}>
+        <button
+          onClick={signOut}
+          className="font-karla font-600 uppercase tracking-[0.14em]"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 7,
+            padding: '0.55rem 1.3rem',
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 999, cursor: 'pointer',
+            fontSize: '0.7rem', color: '#bbb5ad',
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Sign Out
+        </button>
+      </div>
 
       {/* ── Showcase picker modal ── */}
       {modalOpen && (
