@@ -6,7 +6,7 @@ import ProfileClient from './ProfileClient'
 import { notFound } from 'next/navigation'
 import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
 import { isPremiumActive } from '@/lib/premium'
-import { computeHomeWaters, sumPrestige, voyageTotals, type CareerStats } from '@/lib/careerStats'
+import type { CareerStats, CareerAggregates } from '@/lib/careerStats'
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
   const { username } = await params
@@ -24,7 +24,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
     admin.from('profiles')
-      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color, profile_bg, fishing_casts, prestige_levels, finn_wins')
+      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color, profile_bg, fishing_casts, total_perfects')
       .ilike('username', username)
       .single(),
   ])
@@ -41,9 +41,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     navProfileData,
     crewRowData,
     voyagesData,
-    voyageAggData,
-    fishCatchData,
-    speciesData,
+    { data: careerAgg },
   ] = await Promise.all([
     showcaseIds.length > 0
       ? admin.from('card_variants')
@@ -78,14 +76,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       .order('created_at', { ascending: false })
       .limit(10),
 
-    admin.from('daily_voyages')
-      .select('total_doubloons, crew_lost')
-      .eq('user_id', profile.id)
-      .eq('status', 'revealed'),
-
-    admin.from('fish_collection').select('fish_id, catch_count').eq('user_id', profile.id),
-
-    admin.from('fish_species').select('id, habitat'),
+    admin.rpc('career_stats', { uid: profile.id }),
   ])
 
   // Build showcase variants
@@ -110,15 +101,14 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     .filter(Boolean)
     .slice(0, 3) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
 
-  const { plunder, crewLost } = voyageTotals((voyageAggData.data ?? []) as { total_doubloons: number | null; crew_lost: unknown[] | null }[])
-  const habitatById = new Map(((speciesData.data ?? []) as { id: number; habitat?: string }[]).filter(f => f.habitat).map(f => [f.id, f.habitat as string]))
+  const agg = (careerAgg ?? {}) as Partial<CareerAggregates>
   const career: CareerStats = {
     fishingCasts: (profile.fishing_casts as number | null) ?? 0,
-    homeWaters: computeHomeWaters((fishCatchData.data ?? []) as { fish_id: number; catch_count: number | null }[], habitatById),
-    prestige: sumPrestige(profile.prestige_levels),
-    plunder,
-    crewLost,
-    finnWins: (profile.finn_wins as number | null) ?? 0,
+    perfects: (profile.total_perfects as number | null) ?? 0,
+    fishSold: agg.fishSold ?? 0,
+    raidsCompleted: agg.raidsCompleted ?? 0,
+    voyageLoot: agg.voyageLoot ?? 0,
+    fastestRaidMs: agg.fastestRaidMs ?? null,
   }
 
   const navProfile = navProfileData.data

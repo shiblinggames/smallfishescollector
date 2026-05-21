@@ -20,8 +20,8 @@ import { BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avatarColors'
 import { getProfileBackground } from '@/lib/profileBackgrounds'
-import { RankHero, StatTile, FishIcon, CompassIcon } from '@/components/ProfileStats'
-import type { CareerStats } from '@/lib/careerStats'
+import { StatTile } from '@/components/ProfileStats'
+import { type CareerStats, formatRaidTime } from '@/lib/careerStats'
 
 interface CardVariant {
   id: number
@@ -344,17 +344,11 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
       {profileTab === 'fishing' && (
         <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
 
-          {/* Angler rank + headline stats */}
-          <RankHero
-            color="#60a5fa"
-            kicker="Angler"
-            title={`Level ${fishingLevel}`}
-            icon={FishIcon}
-          />
+          {/* Headline career stats */}
           <div style={{ display: 'flex', gap: 8 }}>
             <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
-            <StatTile label="Home Waters" value={career.homeWaters} color="#4ade80" />
-            <StatTile label="Prestige" value={career.prestige} color="#fde68a" />
+            <StatTile label="Perfects" value={career.perfects.toLocaleString()} color="#fde68a" />
+            <StatTile label="Fish Sold" value={`${career.fishSold.toLocaleString()} ⟡`} color="#4ade80" />
           </div>
 
           {/* Character Loadout */}
@@ -463,8 +457,8 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
               </div>
               <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
               <div style={{ textAlign: 'center', flex: 1 }}>
-                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: reel.color + 'aa', marginBottom: 3 }}>Reel</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d8d5d0', lineHeight: 1.2 }}>{reel.name}</p>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(96,165,250,0.95)', marginBottom: 3 }}>Fishing Level</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#60a5fa', lineHeight: 1.2 }}>{fishingLevel}</p>
               </div>
               <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
               <div style={{ textAlign: 'center', flex: 1 }}>
@@ -535,18 +529,11 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
       {profileTab === 'navigation' && (
         <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
 
-          {/* Navigator rank + headline stats */}
-          <RankHero
-            color="#c084fc"
-            kicker="Navigator"
-            title={expTitle}
-            sub={`Level ${expLevel}`}
-            icon={CompassIcon}
-          />
+          {/* Headline career stats */}
           <div style={{ display: 'flex', gap: 8 }}>
-            <StatTile label="Plunder" value={`${career.plunder.toLocaleString()} ⟡`} color="#f0c040" />
-            <StatTile label="Crew Lost" value={career.crewLost.toLocaleString()} color="#f87171" />
-            <StatTile label="Finn Bested" value={career.finnWins.toLocaleString()} color="#60a5fa" />
+            <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
+            <StatTile label="Voyage Loot" value={`${career.voyageLoot.toLocaleString()} ⟡`} color="#f0c040" />
+            <StatTile label="Fastest Raid" value={formatRaidTime(career.fastestRaidMs)} color="#60a5fa" />
           </div>
 
           {/* Ship Hero */}

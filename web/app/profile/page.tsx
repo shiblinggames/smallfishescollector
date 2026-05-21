@@ -9,7 +9,7 @@ import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/e
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { CHARACTER_COLORS } from '@/lib/characters'
 import { isPremiumActive } from '@/lib/premium'
-import { computeHomeWaters, sumPrestige, voyageTotals, type CareerStats } from '@/lib/careerStats'
+import type { CareerStats, CareerAggregates } from '@/lib/careerStats'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -23,11 +23,10 @@ export default async function ProfilePage() {
     { data: ownedRows },
     { data: rarestFishRows },
     { data: allFishSpecies },
-    { data: fishCatchRows },
-    { data: voyageAggRows },
+    { data: careerAgg },
   ] = await Promise.all([
     supabase.from('profiles')
-      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, reel_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges, trophy_catches, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color, unlocked_avatar_specials, profile_bg, fishing_casts, prestige_levels, finn_wins')
+      .select('packs_available, doubloons, gems, username, username_changed, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, reel_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges, trophy_catches, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color, unlocked_avatar_specials, profile_bg, fishing_casts, total_perfects')
       .eq('id', user.id)
       .single(),
     admin.from('user_collection')
@@ -38,14 +37,12 @@ export default async function ProfilePage() {
       .eq('user_id', user.id)
       .order('fish_species(bite_rarity)', { ascending: false })
       .limit(3),
-    // fish_species has ~140 rows — pulling id+name+habitat for the whole table
-    // is cheaper than a second round-trip just to map trophy names + the home-
-    // waters zone by fish id. Costs a couple KB; saves a waterfall.
-    admin.from('fish_species').select('id, name, habitat'),
-    // Per-fish catch counts → "home waters" (most-fished zone).
-    admin.from('fish_collection').select('fish_id, catch_count').eq('user_id', user.id),
-    // All completed voyages → lifetime plunder + crew lost.
-    admin.from('daily_voyages').select('total_doubloons, crew_lost').eq('user_id', user.id).eq('status', 'revealed'),
+    // fish_species has ~140 rows — pulling id+name for the whole table is
+    // cheaper than a second round-trip just to map trophy names by id.
+    admin.from('fish_species').select('id, name'),
+    // Career aggregates (fish sold, voyage loot, raids, fastest raid) in one
+    // SQL round-trip via the career_stats() function.
+    admin.rpc('career_stats', { uid: user.id }),
   ])
 
   const seen = new Set<number>()
@@ -75,18 +72,17 @@ export default async function ProfilePage() {
 
   const trophyIds = ((profile?.trophy_catches as number[] | null) ?? [])
   const trophyIdSet = new Set(trophyIds)
-  const speciesRows = (allFishSpecies ?? []) as { id: number; name: string; habitat?: string }[]
-  const ancientTrophies = speciesRows.filter(f => trophyIdSet.has(f.id))
+  const ancientTrophies = ((allFishSpecies ?? []) as { id: number; name: string }[])
+    .filter(f => trophyIdSet.has(f.id))
 
-  const habitatById = new Map(speciesRows.filter(f => f.habitat).map(f => [f.id, f.habitat as string]))
-  const { plunder, crewLost } = voyageTotals((voyageAggRows ?? []) as { total_doubloons: number | null; crew_lost: unknown[] | null }[])
+  const agg = (careerAgg ?? {}) as Partial<CareerAggregates>
   const career: CareerStats = {
     fishingCasts: profile?.fishing_casts ?? 0,
-    homeWaters: computeHomeWaters((fishCatchRows ?? []) as { fish_id: number; catch_count: number | null }[], habitatById),
-    prestige: sumPrestige(profile?.prestige_levels),
-    plunder,
-    crewLost,
-    finnWins: profile?.finn_wins ?? 0,
+    perfects: profile?.total_perfects ?? 0,
+    fishSold: agg.fishSold ?? 0,
+    raidsCompleted: agg.raidsCompleted ?? 0,
+    voyageLoot: agg.voyageLoot ?? 0,
+    fastestRaidMs: agg.fastestRaidMs ?? null,
   }
 
   const ship = getShip(profile?.ship_tier ?? 0)

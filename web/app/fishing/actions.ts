@@ -287,7 +287,7 @@ export async function reelIn(
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, fish_hold_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches, unlocked_character_colors').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, fish_hold_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches, unlocked_character_colors, total_perfects').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -300,6 +300,7 @@ export async function reelIn(
     const xpGained = Math.round(catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') * 3)
     const newXP = (profile.fishing_xp ?? 0) + xpGained
     const updates: Record<string, unknown> = { fishing_xp: newXP }
+    if (result === 'perfect') updates.total_perfects = (profile.total_perfects ?? 0) + 1
     if (isNewTrophy) updates.trophy_catches = [...existing, fishId]
     const newTrophies = isNewTrophy ? [...existing, fishId] : existing
     if (newTrophies.length >= 6) await unlockBadge('ancient_ones')
@@ -382,6 +383,7 @@ export async function reelIn(
 
   // Fishing-level skin unlocks: Forest @ 50, Ice @ 75
   const profileUpdates: Record<string, unknown> = { fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP }
+  if (result === 'perfect') profileUpdates.total_perfects = (profile.total_perfects ?? 0) + 1
   let reelInUnlockedSkin: string | undefined
   const oldFishingLevel = getLevelFromXP(profile.fishing_xp ?? 0)
   const newFishingLevel = getLevelFromXP(newXP)
