@@ -2209,6 +2209,11 @@ export default function FishingGame({
   // state path — eliminates the "creep after click" caused by queued
   // setState commits firing post-handler.
   const needleGroupRef  = useRef<SVGGElement | null>(null)
+  // Latest catching zones + rotation, mirrored into refs so the needle
+  // rAF tick can detect zone-boundary crossings without React state on
+  // the hot path. (Synced from render via the effects further down.)
+  const catchingZonesRef = useRef<ZoneDef[]>([])
+  const zoneRotationRef  = useRef(0)
   const speedRef        = useRef(0)
   const dirRef          = useRef(1)
   const phaseRef        = useRef<Phase>('idle')
@@ -2359,14 +2364,19 @@ export default function FishingGame({
     elapsedMsRef.current = 0
     nextChgMsRef.current = (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
 
-    // Throttle setState ticks for `angle` so React only renders the zone
-    // highlight ~20 Hz instead of 60 Hz. The needle position is
-    // ref-driven via setAttribute below, so visual smoothness is
-    // unaffected by this throttle — but cutting the React render rate
-    // by 3× eliminates main-thread frame-drops that show up as needle
-    // stutter on slower devices.
-    let lastSetAngleAt = 0
-    const ANGLE_STATE_THROTTLE_MS = 50
+    // The only thing `angle` state drives is the zone highlight + label
+    // (currentZone). That only changes when the needle crosses a zone
+    // boundary — NOT every frame. So we re-render React (via setAngle)
+    // only on zone change instead of on a timer. This eliminates the
+    // periodic full-DialSVG reconciliations that were blocking the rAF
+    // and causing needle stutter on mobile. The needle's own position is
+    // ref-driven (setAttribute) so its visual is unaffected either way.
+    //
+    // Compare by a stable string key, not object identity — catchingZones
+    // is a fresh array on every render, so the zone objects' identities
+    // change even when the logical zone hasn't.
+    const zoneKey = (z: ZoneDef | null) => (z ? `${z.type}:${z.from}:${z.to}` : '')
+    let lastZoneKey = ''
 
     const tick = (timestamp: number) => {
       if (phaseRef.current !== 'catching') return
@@ -2404,13 +2414,15 @@ export default function FishingGame({
       // queued setState commit.
       const ng = needleGroupRef.current
       if (ng) ng.setAttribute('transform', `rotate(${angleRef.current}, ${CX}, ${CY})`)
-      // Keep React state in sync too — `angle` drives currentZone (zone
-      // label + zone highlight opacity). Throttled so we render that UI
-      // at ~20 Hz instead of every frame; needle position itself is
-      // ref-driven so visual smoothness isn't affected.
-      if (timestamp - lastSetAngleAt >= ANGLE_STATE_THROTTLE_MS) {
-        lastSetAngleAt = timestamp
-        setAngle(angleRef.current)
+      // Re-render React only when the needle crosses into a new zone, so
+      // the highlight/label update but we don't reconcile every frame.
+      const zones = catchingZonesRef.current
+      if (zones.length) {
+        const keyNow = zoneKey(getZone(zones, angleRef.current, zoneRotationRef.current))
+        if (keyNow !== lastZoneKey) {
+          lastZoneKey = keyNow
+          setAngle(angleRef.current)
+        }
       }
       animRef.current = requestAnimationFrame(tick)
     }
@@ -3300,6 +3312,13 @@ export default function FishingGame({
     return selectedZone === 'ancient_deep' ? applyBossMods(base, activeBossMechanic, bossZoneShrink) : base
   })() : []
   const currentZone   = (phase === 'catching' || phase === 'reeling') ? getZone(catchingZones, angle, zoneRotation) : null
+  // Mirror the latest zones + rotation into refs so the needle rAF tick
+  // can detect zone-boundary crossings (it fires setAngle only on a
+  // boundary, not every frame). Assigning during render is the standard
+  // "latest value" ref idiom — safe here since these are only read inside
+  // the imperative rAF callback, never during React's render/commit.
+  catchingZonesRef.current = catchingZones
+  zoneRotationRef.current = zoneRotation
 
   function needleColor(): string {
     if ((phase === 'catching' || phase === 'reeling') && currentZone) return currentZone.color
