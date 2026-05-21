@@ -261,23 +261,18 @@ export default function ProfileClient({
   // LOCAL-ONLY page-background preview (test). Not persisted, not gated, not
   // shown to other users — just lets us eyeball the fishing zone paintings as
   // a profile page backdrop before committing to a saved `profile_bg` column.
-  type PreviewBg = { label: string; src?: string; tint?: string }
+  type PreviewBg = { label: string; src?: string; scrim?: string }
+  // Default darkening scrim for legibility. Abyss overrides it with a much
+  // lighter one — the painting is already dark, so a heavy scrim crushed its
+  // texture/colour into the black page bg.
+  const DEFAULT_SCRIM = 'linear-gradient(to bottom, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.74) 100%)'
   const [previewBg, setPreviewBg] = useState<PreviewBg | null>(null)
-  // All image-based: the three blue zone paintings, plus several blue/teal
-  // *tints* of the open-waters scene so each pick is a visibly different shade
-  // of the same ocean while keeping the painted texture (not a flat colour).
-  // Abyss + Ancient were dropped (abyss read as the black page bg, ancient
-  // wasn't wanted).
   const PREVIEW_BGS: PreviewBg[] = [
     { label: 'None' },
     { label: 'Shallows',    src: '/shallows.jpg' },
     { label: 'Open Waters', src: '/openwaters.jpg' },
     { label: 'Deep',        src: '/deep.jpg' },
-    { label: 'Lagoon',   src: '/openwaters.jpg', tint: 'rgba(45,212,200,0.45)' },
-    { label: 'Sky',      src: '/openwaters.jpg', tint: 'rgba(56,160,235,0.42)' },
-    { label: 'Cobalt',   src: '/openwaters.jpg', tint: 'rgba(37,99,235,0.50)' },
-    { label: 'Teal',     src: '/openwaters.jpg', tint: 'rgba(13,148,160,0.48)' },
-    { label: 'Deep Sea', src: '/openwaters.jpg', tint: 'rgba(20,46,104,0.55)' },
+    { label: 'Abyss',       src: '/abyss.jpg', scrim: 'linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.24) 50%, rgba(0,0,0,0.46) 100%)' },
   ]
   // The hero avatar is fixed-px, so on a big desktop page it reads small
   // (and its proportional ring looks like a hairline). Bigger on >=md
@@ -398,8 +393,7 @@ export default function ProfileClient({
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={previewBg.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
-          {previewBg.tint && <div style={{ position: 'absolute', inset: 0, background: previewBg.tint }} />}
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.74) 100%)' }} />
+          <div style={{ position: 'absolute', inset: 0, background: previewBg.scrim ?? DEFAULT_SCRIM }} />
         </div>
       )}
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 1.25rem 3rem', position: 'relative', zIndex: 1 }}>
@@ -441,11 +435,8 @@ export default function ProfileClient({
               }}
             >
               {opt.src && (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={opt.src} alt={opt.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                  {opt.tint && <span style={{ position: 'absolute', inset: 0, background: opt.tint }} />}
-                </>
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={opt.src} alt={opt.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
               )}
             </button>
           )
