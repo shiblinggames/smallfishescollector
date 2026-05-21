@@ -585,22 +585,6 @@ function DialSVG({
             transition={{ duration: 0.7, ease: 'easeOut' }}
           />
         )}
-        {/* No transform prop in JSX — the parent's rAF tick writes the
-            rotation to this element via needleGroupRef.setAttribute, so
-            React re-renders elsewhere can't overwrite it. The initial
-            value is set by a useLayoutEffect on `angle` below. */}
-        <g ref={needleGroupRef} style={{ filter: perfectFlash ? 'drop-shadow(0 0 6px #fde68a)' : undefined, transition: 'filter 0.15s ease-out' }}>
-          <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 12 : 10} strokeOpacity={perfectFlash ? 0.28 : 0.12} strokeLinecap="round" />
-          <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={liveNeedleStroke} strokeLinecap="round" />
-          <circle cx={CX} cy={needleTipY} r={liveTipRadius} fill={liveNeedleColor} />
-        </g>
-        <motion.circle cx={CX} cy={CY} r="8"
-          fill="rgba(10,10,10,0.9)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"
-          animate={snapAnim ? { scale: [1, 1.8, 0.7, 1.15, 1] } : { scale: 1 }}
-          transition={{ duration: 0.32, ease: 'easeOut' }}
-          style={{ transformOrigin: `${CX}px ${CY}px` }}
-        />
-
         {/* Perfect zone burst — arc flash + expanding ring on tap */}
         {perfectBurstKey > 0 && perfectZone && (
           <g key={perfectBurstKey} transform={`rotate(${rotation}, ${CX}, ${CY})`}>
@@ -637,6 +621,33 @@ function DialSVG({
             transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
           />
         )}
+      </svg>
+
+      {/* Needle on a SEPARATE overlay SVG. The needle's bounding box sweeps
+          across most of the dial; if it lived in the main SVG above, every
+          rotation would re-rasterize the overlapped zone paths + radial
+          gradients — heavy on mobile, and the worst on the first cycle
+          before raster caches warm up. Isolating it here means the main
+          dial stays a static raster and only these three cheap shapes
+          re-paint per frame. The center cap rides along (drawn after the
+          needle so it covers the line convergence). */}
+      <svg viewBox="0 0 220 220" width="100%"
+        style={{ display: 'block', overflow: 'visible', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
+        {/* No transform prop in JSX — the parent's rAF tick writes the
+            rotation via needleGroupRef.setAttribute, so React re-renders
+            can't overwrite it. Initial value set by the useLayoutEffect
+            on `angle`. */}
+        <g ref={needleGroupRef} style={{ filter: perfectFlash ? 'drop-shadow(0 0 6px #fde68a)' : undefined, transition: 'filter 0.15s ease-out' }}>
+          <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 12 : 10} strokeOpacity={perfectFlash ? 0.28 : 0.12} strokeLinecap="round" />
+          <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={liveNeedleStroke} strokeLinecap="round" />
+          <circle cx={CX} cy={needleTipY} r={liveTipRadius} fill={liveNeedleColor} />
+        </g>
+        <motion.circle cx={CX} cy={CY} r="8"
+          fill="rgba(10,10,10,0.9)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"
+          animate={snapAnim ? { scale: [1, 1.8, 0.7, 1.15, 1] } : { scale: 1 }}
+          transition={{ duration: 0.32, ease: 'easeOut' }}
+          style={{ transformOrigin: `${CX}px ${CY}px` }}
+        />
       </svg>
     </div>
   )
