@@ -91,28 +91,32 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   const [equippedHat, setEquippedHat]       = useState<string | null>(() => readNavCache('equipped_hat'))
   const [avatarBg, setAvatarBg]             = useState<string | null>(() => readNavCache('avatar_bg'))
   const [avatarBorder, setAvatarBorder]     = useState<string | null>(() => readNavCache('avatar_border'))
+  const [isAdmin, setIsAdmin]               = useState<boolean>(() => readNavCache('is_admin') === 'true')
 
   const fetchBadge = useCallback(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       Promise.all([
-        supabase.from('profiles').select('character_color, equipped_hat, avatar_bg_color, avatar_border_color').eq('id', user.id).single(),
+        supabase.from('profiles').select('character_color, equipped_hat, avatar_bg_color, avatar_border_color, is_admin').eq('id', user.id).single(),
         supabase.from('daily_voyages').select('created_at, duration_ms').eq('user_id', user.id).eq('status', 'pending'),
       ]).then(([{ data: profile }, { data: voyages }]) => {
         const cc = (profile?.character_color as string | null) ?? null
         const hat = (profile?.equipped_hat as string | null) ?? null
         const bg = (profile?.avatar_bg_color as string | null) ?? null
         const border = (profile?.avatar_border_color as string | null) ?? null
+        const admin = (profile?.is_admin as boolean | null) ?? false
         setCharacterColor(cc)
         setEquippedHat(hat)
         setAvatarBg(bg)
         setAvatarBorder(border)
+        setIsAdmin(admin)
         // Cache so next tab-switch hydrates immediately (no flash).
         writeNavCache('character_color', cc)
         writeNavCache('equipped_hat', hat)
         writeNavCache('avatar_bg', bg)
         writeNavCache('avatar_border', border)
+        writeNavCache('is_admin', admin ? 'true' : null)
         const now = Date.now()
         const hasReadyVoyage = (voyages ?? []).some(
           (r: { created_at: string; duration_ms: number | null }) =>
@@ -287,6 +291,15 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </svg>
       )
     },
+    // Admin-only — gated on profiles.is_admin (kingkong, mikel).
+    ...(isAdmin ? [{ href: '/dev/stats', label: 'Admin Stats', badge: false,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+      )
+    }] : []),
   ]
 
   const desktopOnlyLinks = [
@@ -361,7 +374,7 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </Link>
 
         <div className="hidden sm:flex flex-1 ml-8 gap-2 text-xs font-karla font-600 uppercase tracking-[0.12em]">
-          {[...links, ...desktopOnlyLinks].map(({ href, label, badge }) => (
+          {[...links, ...desktopOnlyLinks, ...(isAdmin ? [{ href: '/dev/stats', label: 'Admin', badge: null }] : [])].map(({ href, label, badge }) => (
             <Link key={href} href={href} className={`py-2 px-2 transition-colors duration-200 ${pathname === href || pathname.startsWith(href + '/') ? 'text-[#f0ede8]' : 'text-[#a0a09a] hover:text-[#f0ede8]'}`}>
               {label}
               {typeof badge === 'number' && badge > 0 && <span className="ml-1.5 text-[#f0c040]">· {badge}</span>}
