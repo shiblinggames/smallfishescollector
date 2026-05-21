@@ -281,6 +281,8 @@ export async function reelIn(
         .eq('user_id', user.id)
         .eq('bait_type', baitType)
     }
+    // Lifetime snag counter (line lost) — admin stat.
+    await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_snags', n: 1 })
   }
 
   if (!isCatch) return { caught: false }
@@ -413,6 +415,10 @@ export async function reelIn(
       .eq('bait_type', baitType)
   }
 
+  // Lifetime event counters (admin stats) — only fire on the event.
+  if (doubleCatch)          await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_double_catches', n: 1 })
+  if (jackpotMultiplier > 1) await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_jackpots', n: 1 })
+
   // Record challenge score (fire and forget)
   recordChallengeScore(user.id, fish.sell_value * catchQty, result === 'perfect').catch(() => {})
 
@@ -520,6 +526,9 @@ export async function reelCrate(_zone: string, tier: CrateTier = 'wooden'): Prom
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()
+
+  // Lifetime crates-opened counter (admin stat).
+  await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_crates_opened', n: 1 })
 
   const { data: profile } = await admin.from('profiles')
     .select('doubloons, unlocked_character_colors, unlocked_boats, unlocked_hats')

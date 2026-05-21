@@ -41,6 +41,10 @@ export default async function DevStatsPage() {
         { label: 'Perfects landed',    value: s.fishing?.perfects ?? 0 },
         { label: 'Fish caught',        value: s.fishing?.caught ?? 0 },
         { label: 'Species discovered', value: s.fishing?.species ?? 0 },
+        { label: 'Jackpots hit',       value: s.fishing?.jackpots ?? 0 },
+        { label: 'Double catches',     value: s.fishing?.doubles ?? 0 },
+        { label: 'Snags (lines lost)', value: s.fishing?.snags ?? 0 },
+        { label: 'Crates opened',      value: s.fishing?.crates ?? 0 },
       ],
     },
     {
@@ -77,16 +81,23 @@ export default async function DevStatsPage() {
     {
       title: 'Tavern', accent: '#fb923c',
       stats: [
-        { label: 'Slot spins',          value: s.tavern?.slotSpins ?? 0 },
-        { label: 'Crown & Anchor rolls', value: s.tavern?.diceRolls ?? 0 },
+        { label: 'Slot spins',       value: s.tavern?.slotSpins ?? 0 },
+        { label: 'Slot wins',        value: s.tavern?.slotWins ?? 0 },
+        { label: 'Biggest slot win', value: `${fmt(s.tavern?.slotBiggest ?? 0)} ⟡` },
+        { label: 'C&A rolls',        value: s.tavern?.caRolls ?? 0 },
+        { label: 'C&A wins',         value: s.tavern?.caWins ?? 0 },
+        { label: 'Biggest C&A win',  value: `${fmt(s.tavern?.caBiggest ?? 0)} ⟡` },
       ],
     },
     {
       title: 'Economy', accent: '#f0c040',
       stats: [
-        { label: 'Fish sold',      value: `${fmt(s.economy?.fishSold ?? 0)} ⟡` },
-        { label: 'Doubloons held', value: `${fmt(s.economy?.doubloonsHeld ?? 0)} ⟡` },
-        { label: 'Gems held',      value: `${fmt(s.economy?.gemsHeld ?? 0)} ◆` },
+        { label: 'Doubloons earned', value: `${fmt(s.economy?.doubloonsEarned ?? 0)} ⟡` },
+        { label: 'Doubloons spent',  value: `${fmt(s.economy?.doubloonsSpent ?? 0)} ⟡` },
+        { label: 'Fish sold',        value: `${fmt(s.economy?.fishSold ?? 0)} ⟡` },
+        { label: 'Gems earned',      value: `${fmt(s.economy?.gemsEarned ?? 0)} ◆` },
+        { label: 'Doubloons held',   value: `${fmt(s.economy?.doubloonsHeld ?? 0)} ⟡` },
+        { label: 'Gems held',        value: `${fmt(s.economy?.gemsHeld ?? 0)} ◆` },
       ],
     },
   ]
