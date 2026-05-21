@@ -1171,9 +1171,11 @@ export default function ProfileClient({
               border: '1px solid rgba(96,165,250,0.18)',
               borderRadius: 18,
               width: '100%', maxWidth: 360,
-              // Flex column with scrollable body + sticky footer: the body
-              // takes the overflow, so the Reset/Save row is always pinned
-              // at the bottom no matter how tall the content gets.
+              // Fixed height (capped to the available space) so the modal does
+              // NOT resize when switching tabs — only the scrollable body's
+              // content changes. Flex column: body takes the overflow + scrolls,
+              // the Reset/Save footer stays pinned at the bottom.
+              height: 'min(600px, 100%)',
               maxHeight: '100%',
               display: 'flex', flexDirection: 'column',
               cursor: 'default',
