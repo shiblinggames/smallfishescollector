@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import { useState, useEffect, useTransition, useRef } from 'react'
 import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { addCrewMember, removeCrewMember } from '@/app/social/actions'
@@ -19,6 +19,7 @@ import { SPECIAL_ITEMS } from '@/lib/specialItems'
 import { BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avatarColors'
+import { getProfileBackground } from '@/lib/profileBackgrounds'
 
 interface CardVariant {
   id: number
@@ -79,6 +80,8 @@ interface Props {
   /** Saved portrait colors — match the avatar on /profile. */
   avatarBg?: string | null
   avatarBorder?: string | null
+  /** Saved page background (zone id) — matches /profile. */
+  profileBg?: string | null
 }
 
 function fishImageUrl(name: string) {
@@ -202,7 +205,7 @@ function CrewCarousel({ variants }: { variants: CardVariant[] }) {
   )
 }
 
-export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, avatarBg = null, avatarBorder = null }: Props) {
+export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, avatarBg = null, avatarBorder = null, profileBg = null }: Props) {
   const variants = showcaseVariants as CardVariant[]
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
@@ -221,6 +224,30 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
   const charSprites = getCharacterSprites(characterColor)
   const equippedSpecial = equippedSpecialId ? SPECIAL_ITEMS.find(s => s.id === equippedSpecialId) ?? null : null
 
+  // Page background — the profile owner's saved zone painting (read-only here).
+  // Same render as /profile: fixed image + scrim, focal point pans with scroll
+  // via a rAF-throttled ref write (no per-scroll React re-render).
+  const activeBg = getProfileBackground(profileBg)
+  const bgImgRef = useRef<HTMLImageElement | null>(null)
+  useEffect(() => {
+    if (!activeBg) return
+    let raf = 0
+    const onScroll = () => {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        const el = bgImgRef.current
+        if (!el) return
+        const max = document.documentElement.scrollHeight - window.innerHeight
+        const p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0
+        el.style.objectPosition = `center ${p * 100}%`
+      })
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => { window.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf) }
+  }, [activeBg])
+
   function toggleCrew() {
     startCrewTransition(async () => {
       if (inCrew) { await removeCrewMember(username); setInCrew(false) }
@@ -232,7 +259,17 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
   const hiddenCount = (voyages?.length ?? 0) - 1
 
   return (
-    <div className="flex flex-col max-w-4xl mx-auto px-5" style={{ gap: 0, paddingBottom: 48 }}>
+    <>
+      {/* Page background — owner's saved zone painting, shown to visitors too.
+          Mirrors ClientBackground: fixed full-screen image + scrim. */}
+      {activeBg && (
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img ref={bgImgRef} src={activeBg.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
+          <div style={{ position: 'absolute', inset: 0, background: activeBg.scrim }} />
+        </div>
+      )}
+    <div className="flex flex-col max-w-4xl mx-auto px-5" style={{ gap: 0, paddingBottom: 48, position: 'relative', zIndex: 1 }}>
 
       {/* ── Header ── */}
       <div className="flex flex-col items-center gap-3 pt-2 pb-8">
@@ -625,5 +662,6 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
       </div>
 
     </div>
+    </>
   )
 }
