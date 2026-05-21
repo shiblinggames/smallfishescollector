@@ -53,14 +53,9 @@ export const AVATAR_PALETTE: AvatarColorOption[] = [
 export const AURORA_VALUE = 'aurora' as const
 
 /** Gem-purchasable animated specials. Each renders via a dedicated CSS class
- *  in CharacterAvatar; pickers special-case the preview swatch.
- *  Borders are 300 ◆, backgrounds are 500 ◆. */
-export const EMBER_VALUE     = 'ember'     as const  // border — rotating fire ring
-export const TIDE_VALUE      = 'tide'      as const  // border — flowing blue/cyan
+ *  in CharacterAvatar; pickers special-case the preview swatch. */
 export const SOVEREIGN_VALUE = 'sovereign' as const  // border — regal gold conic with shimmer
-export const SUNSET_VALUE    = 'sunset'    as const  // bg — panning orange→pink→purple
-export const NEBULA_VALUE    = 'nebula'    as const  // bg — slow purple/blue swirl
-export const BIOLUM_VALUE    = 'biolum'    as const  // bg — deep blue + floating shimmer
+export const AURORA_BG_VALUE = 'aurora_bg' as const  // bg — prismatic aurora swirl (pairs with the Aurora border)
 export const TREASURE_VALUE  = 'treasure'  as const  // bg — rotating gold sunburst over amber
 
 export interface AvatarSpecial {
@@ -75,14 +70,10 @@ export interface AvatarSpecial {
 }
 
 export const AVATAR_SPECIALS: AvatarSpecial[] = [
-  { id: 'aurora',    label: 'Aurora',         hex: AURORA_VALUE,    kind: 'border', gemPrice: 300,  cssClass: 'avatar-aurora' },
-  { id: 'ember',     label: 'Ember',          hex: EMBER_VALUE,     kind: 'border', gemPrice: 300,  cssClass: 'avatar-ember' },
-  { id: 'tide',      label: 'Tide',           hex: TIDE_VALUE,      kind: 'border', gemPrice: 300,  cssClass: 'avatar-tide' },
-  { id: 'sovereign', label: 'Sovereign',      hex: SOVEREIGN_VALUE, kind: 'border', gemPrice: 1000, cssClass: 'avatar-sovereign' },
-  { id: 'sunset',    label: 'Sunset',         hex: SUNSET_VALUE,    kind: 'bg',     gemPrice: 500,  cssClass: 'avatar-bg-sunset' },
-  { id: 'nebula',    label: 'Nebula',         hex: NEBULA_VALUE,    kind: 'bg',     gemPrice: 500,  cssClass: 'avatar-bg-nebula' },
-  { id: 'biolum',    label: 'Bioluminescent', hex: BIOLUM_VALUE,    kind: 'bg',     gemPrice: 500,  cssClass: 'avatar-bg-biolum' },
-  { id: 'treasure',  label: 'Treasure',       hex: TREASURE_VALUE,  kind: 'bg',     gemPrice: 1500, cssClass: 'avatar-bg-treasure' },
+  { id: 'aurora',    label: 'Aurora',    hex: AURORA_VALUE,    kind: 'border', gemPrice: 300,  cssClass: 'avatar-aurora' },
+  { id: 'sovereign', label: 'Sovereign', hex: SOVEREIGN_VALUE, kind: 'border', gemPrice: 1000, cssClass: 'avatar-sovereign' },
+  { id: 'aurora_bg', label: 'Aurora',    hex: AURORA_BG_VALUE, kind: 'bg',     gemPrice: 500,  cssClass: 'avatar-bg-aurora' },
+  { id: 'treasure',  label: 'Treasure',  hex: TREASURE_VALUE,  kind: 'bg',     gemPrice: 1500, cssClass: 'avatar-bg-treasure' },
 ]
 
 export function getAvatarSpecial(hex: string | null | undefined): AvatarSpecial | undefined {
