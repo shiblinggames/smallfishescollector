@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Cinzel, Karla, Pirata_One } from 'next/font/google'
 import './globals.css'
 import PageTransition from '@/components/PageTransition'
@@ -31,6 +31,18 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://seasthebooty.com'),
   title: 'Small Fishes: Seas the Booty — Online Game',
   description: 'Redeem your pack code and collect all 36 digital fish cards.',
+}
+
+// Lock the scale so iOS doesn't auto-zoom when focusing an input whose
+// font-size is < 16px (the qty field, friend search, etc.). With no zoom
+// headroom there's nothing to zoom into on focus. This is a game played
+// at a fixed layout, so disabling pinch-zoom is the intended UX anyway —
+// it's fully respected in iOS PWA standalone (the primary platform).
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
