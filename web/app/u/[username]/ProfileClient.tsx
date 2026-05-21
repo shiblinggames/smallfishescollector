@@ -20,6 +20,7 @@ import { BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avatarColors'
 import { getProfileBackground } from '@/lib/profileBackgrounds'
+import AncientBgEffect from '@/components/AncientBgEffect'
 import { StatTile } from '@/components/ProfileStats'
 import type { CareerStats } from '@/lib/careerStats'
 
@@ -271,6 +272,7 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img ref={bgImgRef} src={activeBg.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
           <div style={{ position: 'absolute', inset: 0, background: activeBg.scrim }} />
+          {activeBg.id === 'ancient_deep' && <AncientBgEffect />}
         </div>
       )}
     <div className="flex flex-col max-w-4xl mx-auto px-5" style={{ gap: 0, paddingBottom: 48, position: 'relative', zIndex: 1 }}>

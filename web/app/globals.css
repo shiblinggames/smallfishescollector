@@ -1437,3 +1437,48 @@ html, body {
 .ambient-paused .fishing-water-shimmer {
   animation-play-state: paused;
 }
+
+/* ════════════════════════════════════════
+   ANCIENT DEEP — profile page background effect
+   (luminous lavender motes rising from the deep + a slow pulsing
+   horizon glow). Gated to the ancient_deep profile_bg in the two
+   ProfileClient bg layers. Transform/opacity-only so it stays cheap on
+   iOS PWA — deliberately no `filter` on the per-frame mote transform.
+   ════════════════════════════════════════ */
+@keyframes ancientGlowPulse {
+  0%, 100% { opacity: 0.30; }
+  50%      { opacity: 0.62; }
+}
+.profile-ancient-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 120% 55% at 50% 28%,
+    rgba(168,85,247,0.30) 0%, rgba(124,58,237,0.14) 40%, transparent 72%);
+  mix-blend-mode: screen;
+  animation: ancientGlowPulse 7s ease-in-out infinite;
+}
+
+@keyframes ancientMoteRise {
+  0%   { transform: translate3d(0, 0, 0); opacity: 0; }
+  8%   { opacity: var(--mote-opacity, 0.7); }
+  92%  { opacity: var(--mote-opacity, 0.7); }
+  100% { transform: translate3d(var(--mote-drift, 0px), -106vh, 0); opacity: 0; }
+}
+.profile-ancient-mote {
+  position: absolute;
+  bottom: -30px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(221,196,255,0.95) 0%, rgba(168,85,247,0.55) 45%, transparent 72%);
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation-name: ancientMoteRise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-ancient-mote { display: none; }
+  .profile-ancient-glow { animation: none; opacity: 0.4; }
+}

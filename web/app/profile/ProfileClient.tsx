@@ -8,6 +8,7 @@ import FishCard from '@/components/FishCard'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { updateUsername, updateShowcase, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial, updateProfileBg } from '@/app/u/actions'
 import { PROFILE_BACKGROUNDS, getProfileBackground } from '@/lib/profileBackgrounds'
+import AncientBgEffect from '@/components/AncientBgEffect'
 import { StatTile } from '@/components/ProfileStats'
 import type { CareerStats } from '@/lib/careerStats'
 import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, AVATAR_SPECIALS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE } from '@/lib/avatarColors'
@@ -449,6 +450,7 @@ export default function ProfileClient({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img ref={bgImgRef} src={activeBg.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
           <div style={{ position: 'absolute', inset: 0, background: activeBg.scrim }} />
+          {activeBg.id === 'ancient_deep' && <AncientBgEffect />}
         </div>
       )}
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 1.25rem 3rem', position: 'relative', zIndex: 1 }}>

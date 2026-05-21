@@ -26,6 +26,7 @@ export const PROFILE_BACKGROUNDS: ProfileBackground[] = [
   { id: 'open_waters', label: 'Open Waters', src: '/openwaters.jpg', scrim: DEFAULT_PROFILE_SCRIM, minLevel: ZONE_MIN_LEVEL.open_waters },
   { id: 'deep',        label: 'Deep',        src: '/deep.jpg',      scrim: 'linear-gradient(to bottom, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.48) 50%, rgba(0,0,0,0.72) 100%)', minLevel: ZONE_MIN_LEVEL.deep },
   { id: 'abyss',       label: 'Abyss',       src: '/abyss.jpg',     scrim: 'linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.24) 50%, rgba(0,0,0,0.46) 100%)', minLevel: ZONE_MIN_LEVEL.abyss },
+  { id: 'ancient_deep', label: 'Ancient Deep', src: '/ancient.jpg', scrim: 'linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.30) 50%, rgba(0,0,0,0.52) 100%)', minLevel: ZONE_MIN_LEVEL.ancient_deep },
 ]
 
 export function getProfileBackground(id: string | null | undefined): ProfileBackground | undefined {
