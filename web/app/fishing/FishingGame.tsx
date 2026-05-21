@@ -3749,7 +3749,7 @@ export default function FishingGame({
               >
                 <span className="font-karla font-600 uppercase tracking-[0.1em]"
                   style={{ fontSize: '0.5rem', color: HABITAT_COLOR[selectedZone] + 'dd', lineHeight: 1 }}>
-                  Dex
+                  Fish
                 </span>
                 <span className="font-cinzel font-700"
                   style={{ fontSize: '0.8rem', color: HABITAT_COLOR[selectedZone], lineHeight: 1 }}>
