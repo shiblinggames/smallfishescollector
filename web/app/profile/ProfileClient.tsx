@@ -276,12 +276,13 @@ export default function ProfileClient({
     { label: 'Deep',        src: '/deep.jpg', scrim: 'linear-gradient(to bottom, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.48) 50%, rgba(0,0,0,0.72) 100%)' },
     { label: 'Abyss',       src: '/abyss.jpg', scrim: 'linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.24) 50%, rgba(0,0,0,0.46) 100%)' },
   ]
-  // Scroll-linked darkening: a full-screen black layer over the fixed image
-  // whose opacity ramps with scroll progress, so the deeper you scroll the
-  // darker the backdrop (a "sinking" feel). Driven by a direct ref write in a
-  // rAF-throttled scroll handler — NOT React state — so this big component
-  // doesn't re-render on every scroll tick.
-  const scrollDarkenRef = useRef<HTMLDivElement | null>(null)
+  // Scroll-linked pan: these zone paintings are very tall (~1:4), so instead
+  // of a fixed crop we pan the cover image's vertical focal point from the top
+  // (sky) to the bottom (deep water) as you scroll the page — revealing the
+  // whole painting, and getting naturally darker since the art darkens with
+  // depth. Driven by a direct ref write in a rAF-throttled scroll handler —
+  // NOT React state — so this big component doesn't re-render every scroll tick.
+  const bgImgRef = useRef<HTMLImageElement | null>(null)
   useEffect(() => {
     if (!previewBg?.src) return
     let raf = 0
@@ -289,11 +290,11 @@ export default function ProfileClient({
       if (raf) return
       raf = requestAnimationFrame(() => {
         raf = 0
-        const el = scrollDarkenRef.current
+        const el = bgImgRef.current
         if (!el) return
         const max = document.documentElement.scrollHeight - window.innerHeight
         const p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0
-        el.style.opacity = String(p * 0.55)
+        el.style.objectPosition = `center ${p * 100}%`
       })
     }
     onScroll()
@@ -418,9 +419,8 @@ export default function ProfileClient({
       {previewBg?.src && (
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={previewBg.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
+          <img ref={bgImgRef} src={previewBg.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
           <div style={{ position: 'absolute', inset: 0, background: previewBg.scrim ?? DEFAULT_SCRIM }} />
-          <div ref={scrollDarkenRef} style={{ position: 'absolute', inset: 0, background: '#000', opacity: 0 }} />
         </div>
       )}
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 1.25rem 3rem', position: 'relative', zIndex: 1 }}>
