@@ -1971,7 +1971,16 @@ export default function FishingGame({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Skip the FIRST run of this effect so we don't immediately overwrite
+  // the entry fade scheduled by startFishingMusic above with the much
+  // shorter TOGGLE_FADE_MS ramp. Only react to actual user toggles after.
+  const audioMutedInitialRunRef = useRef(true)
   useEffect(() => {
+    if (audioMutedInitialRunRef.current) {
+      audioMutedInitialRunRef.current = false
+      try { window.localStorage.setItem('fishingAudioMuted', String(audioMuted)) } catch {}
+      return
+    }
     setFishingMusicMuted(audioMuted)
     try { window.localStorage.setItem('fishingAudioMuted', String(audioMuted)) } catch {}
   }, [audioMuted])
