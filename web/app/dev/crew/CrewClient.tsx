@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition, type ReactNode } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew,
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult,
@@ -97,7 +98,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // laid out beside it on aged wood.
 function CrewPanel({
   name, filename, rarity, base, effects, dimmed, frameAccent = '#b08d4f',
-  bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, children,
+  bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
 }: {
   name: string
   filename: string
@@ -108,11 +109,11 @@ function CrewPanel({
   frameAccent?: string
   bg?: string
   border?: string
+  onClick?: () => void
   children?: ReactNode
 }) {
   const color = RARITY_COLORS[(rarity as CrewRarity)] ?? '#8a857c'
   const eff = applyCrewEffects(base, effects)
-  const resolved = resolveEffects(effects)
 
   const corner = (pos: React.CSSProperties): React.CSSProperties => ({
     position: 'absolute', width: 9, height: 9, opacity: 0.6, pointerEvents: 'none', ...pos,
@@ -120,13 +121,14 @@ function CrewPanel({
   const b = `1.5px solid ${frameAccent}`
 
   return (
-    <div style={{
+    <div onClick={onClick} style={{
       position: 'relative', display: 'flex', gap: '0.7rem', padding: '0.7rem',
       borderRadius: 7,
       background: bg,
       border: `1px solid ${border}`,
       boxShadow: `inset 0 0 0 1px ${frameAccent}22, inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.55)`,
       opacity: dimmed ? 0.5 : 1,
+      cursor: onClick ? 'pointer' : 'default',
       transition: 'opacity 0.2s',
     }}>
       {/* Carved corner brackets */}
@@ -174,43 +176,26 @@ function CrewPanel({
 
         {/* Engraved stats */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.15rem 0' }}>
-          {(['power', 'dodge', 'fortune'] as const).map(k => {
-            const changed = eff[k] - base[k]
-            return (
-              <div key={k} title={STAT_LABEL[k]} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <StatIcon k={k} color={STAT_COLOR[k]} />
-                <span className="font-cinzel font-700" style={{
-                  fontSize: '0.92rem', lineHeight: 1,
-                  color: changed > 0 ? '#7fdfa3' : changed < 0 ? '#f08a8a' : '#ecdcbd',
-                }}>
-                  {eff[k]}
-                </span>
-              </div>
-            )
-          })}
+          {(['power', 'dodge', 'fortune'] as const).map(k => (
+            <div key={k} title={STAT_LABEL[k]} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <StatIcon k={k} color={STAT_COLOR[k]} />
+              <span className="font-cinzel font-700" style={{ fontSize: '0.98rem', lineHeight: 1, color: '#ecdcbd' }}>
+                {eff[k]}
+              </span>
+            </div>
+          ))}
         </div>
 
-        {/* Quirks */}
-        {resolved.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {resolved.map(e => {
-              const buff = e.kind === 'buff'
-              return (
-                <div key={e.id} title={e.desc} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                  <span style={{ flexShrink: 0, width: 5, height: 5, borderRadius: '50%', background: buff ? '#5fd38a' : '#e07a7a', transform: 'translateY(-1px)' }} />
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: buff ? '#bfe8cf' : '#f0bcbc', fontStyle: 'italic' }}>
-                    {e.name}
-                  </span>
-                  <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: buff ? '#7fdfa3' : '#f08a8a', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
-                    {modSummary(e)}
-                  </span>
-                </div>
-              )
-            })}
+        {/* Footer: trait count hint + action */}
+        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem', paddingTop: '0.3rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+            <span className="font-karla font-600" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.42)' }}>
+              {effects.length > 0 ? `${effects.length} trait${effects.length === 1 ? '' : 's'}` : 'No traits'}
+            </span>
+            <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: frameAccent }}>Details ›</span>
           </div>
-        )}
-
-        <div style={{ marginTop: 'auto', paddingTop: '0.2rem' }}>{children}</div>
+          {children}
+        </div>
       </div>
     </div>
   )
@@ -223,10 +208,11 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const [busyId, setBusyId] = useState<number | 'reroll' | null>(null)
   const [confirmDismiss, setConfirmDismiss] = useState<number | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  const [detail, setDetail] = useState<{ kind: 'board' | 'roster'; item: BoardCandidate | CrewMember } | null>(null)
 
   const rosterFull = state.roster.length >= state.capacity
 
-  function run(action: () => Promise<CrewActionResult>, id: number | 'reroll') {
+  function run(action: () => Promise<CrewActionResult>, id: number | 'reroll', onDone?: () => void) {
     setErr(null)
     setBusyId(id)
     startTransition(async () => {
@@ -235,7 +221,40 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
       else setState(res.state)
       setBusyId(null)
       setConfirmDismiss(null)
+      onDone?.()
     })
+  }
+
+  // Recruit / Dismiss action, shared by the card footer and the detail modal.
+  function renderAction(kind: 'board' | 'roster', item: BoardCandidate | CrewMember, onDone?: () => void) {
+    if (kind === 'board') {
+      const c = item as BoardCandidate
+      if (c.recruited) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)' }}>Recruited ✓</div>
+      if (rosterFull) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.35)', color: '#f2b0b0' }}>Roster Full</div>
+      return (
+        <button onClick={(e) => { e.stopPropagation(); run(() => recruitCrew(c.id), c.id, onDone) }} disabled={pending}
+          className="font-karla font-700" style={{ ...BTN_RECRUIT, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1 }}>
+          <AnchorIcon /><span>{busyId === c.id ? 'Recruiting…' : 'Recruit'}</span>
+        </button>
+      )
+    }
+    const m = item as CrewMember
+    if (confirmDismiss === m.id) {
+      return (
+        <div className="flex gap-1.5">
+          <button onClick={(e) => { e.stopPropagation(); run(() => dismissCrew(m.id), m.id, onDone) }} disabled={pending}
+            className="font-karla font-700" style={{ ...BTN_DISMISS, flex: 1, padding: '0.55rem' }}>{busyId === m.id ? '…' : 'Confirm'}</button>
+          <button onClick={(e) => { e.stopPropagation(); setConfirmDismiss(null) }} disabled={pending}
+            className="font-karla font-700" style={{ ...BTN_NEUTRAL, flex: 1, padding: '0.55rem' }}>Cancel</button>
+        </div>
+      )
+    }
+    return (
+      <button onClick={(e) => { e.stopPropagation(); setConfirmDismiss(m.id) }} disabled={pending}
+        className="font-karla font-700" style={BTN_DISMISS}>
+        <XIcon /><span>Dismiss</span>
+      </button>
+    )
   }
 
   return (
@@ -301,22 +320,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
             {state.board.map((c: BoardCandidate) => (
               <CrewPanel key={c.id} name={c.name} filename={c.filename} rarity={c.rarity} frameAccent={SECTION_RECRUIT}
-                base={{ power: c.power, dodge: c.dodge, fortune: c.fortune }} effects={c.effects} dimmed={c.recruited}>
-                {c.recruited ? (
-                  <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)' }}>
-                    Recruited ✓
-                  </div>
-                ) : rosterFull ? (
-                  <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.35)', color: '#f2b0b0' }}>
-                    Roster Full
-                  </div>
-                ) : (
-                  <button onClick={() => run(() => recruitCrew(c.id), c.id)} disabled={pending}
-                    className="font-karla font-700"
-                    style={{ ...BTN_RECRUIT, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1 }}>
-                    <AnchorIcon /><span>{busyId === c.id ? 'Recruiting…' : 'Recruit'}</span>
-                  </button>
-                )}
+                base={{ power: c.power, dodge: c.dodge, fortune: c.fortune }} effects={c.effects} dimmed={c.recruited}
+                onClick={() => setDetail({ kind: 'board', item: c })}>
+                {renderAction('board', c)}
               </CrewPanel>
             ))}
             {state.board.length === 0 && (
@@ -349,30 +355,90 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               {state.roster.map((m: CrewMember) => (
                 <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity} frameAccent={SECTION_ROSTER}
                   bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
-                  base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects}>
-                  {confirmDismiss === m.id ? (
-                    <div className="flex gap-1.5">
-                      <button onClick={() => run(() => dismissCrew(m.id), m.id)} disabled={pending}
-                        className="font-karla font-700" style={{ ...BTN_DISMISS, flex: 1, padding: '0.55rem' }}>
-                        {busyId === m.id ? '…' : 'Confirm'}
-                      </button>
-                      <button onClick={() => setConfirmDismiss(null)} disabled={pending}
-                        className="font-karla font-700" style={{ ...BTN_NEUTRAL, flex: 1, padding: '0.55rem' }}>
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setConfirmDismiss(m.id)} disabled={pending}
-                      className="font-karla font-700" style={BTN_DISMISS}>
-                      <XIcon /><span>Dismiss</span>
-                    </button>
-                  )}
+                  base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects}
+                  onClick={() => setDetail({ kind: 'roster', item: m })}>
+                  {renderAction('roster', m)}
                 </CrewPanel>
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {/* Detail modal — full stat breakdown + traits, opened by tapping a card */}
+      <AnimatePresence>
+        {detail && (() => {
+          const it = detail.item
+          const dColor = RARITY_COLORS[(it.rarity as CrewRarity)] ?? '#8a857c'
+          const dBase = { power: it.power, dodge: it.dodge, fortune: it.fortune }
+          const dEff = applyCrewEffects(dBase, it.effects)
+          const dResolved = resolveEffects(it.effects)
+          const close = () => { setConfirmDismiss(null); setDetail(null) }
+          return (
+            <motion.div key="crew-detail-bg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+              onClick={close}
+              style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(3,2,5,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
+              <motion.div key="crew-detail" initial={{ opacity: 0, scale: 0.96, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 8 }} transition={{ duration: 0.18, ease: 'easeOut' }}
+                onClick={e => e.stopPropagation()}
+                style={{
+                  width: '100%', maxWidth: 360, maxHeight: '85vh', overflowY: 'auto', borderRadius: 14,
+                  background: detail.kind === 'board' ? RECRUIT_PANEL_BG : ROSTER_PANEL_BG,
+                  border: `1.5px solid ${dColor}`, boxShadow: `0 20px 50px rgba(0,0,0,0.6), 0 0 24px ${dColor}33`,
+                  padding: '1rem 1.1rem 1.1rem',
+                }}>
+                <div className="flex justify-end" style={{ marginBottom: '-0.4rem' }}>
+                  <button onClick={close} aria-label="Close" style={{ color: 'rgba(255,255,255,0.45)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.1rem 0.3rem' }}>✕</button>
+                </div>
+
+                {/* Portrait */}
+                <div style={{ position: 'relative', width: 150, height: 158, margin: '0 auto', borderRadius: '70px 70px 6px 6px', overflow: 'hidden', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 14px ${dColor}33`, background: `radial-gradient(ellipse at 50% 30%, ${dColor}26 0%, #070504 74%)` }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={artSrc(it.filename)} alt={it.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 4 }} />
+                </div>
+                <p className="font-pirata" style={{ textAlign: 'center', fontSize: '1.7rem', color: '#ecdcbd', lineHeight: 1.05, marginTop: '0.6rem' }}>{it.name}</p>
+                <p className="font-cinzel font-700" style={{ textAlign: 'center', fontSize: '0.7rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: dColor }}>{RARITY_NAMES[(it.rarity as CrewRarity)] ?? 'Common'} Crew</p>
+
+                {/* Stats */}
+                <div style={{ display: 'flex', gap: 8, margin: '0.9rem 0' }}>
+                  {(['power', 'dodge', 'fortune'] as const).map(k => {
+                    const ch = dEff[k] - dBase[k]
+                    return (
+                      <div key={k} style={{ flex: 1, textAlign: 'center', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 9, padding: '0.5rem 0.2rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}><StatIcon k={k} color={STAT_COLOR[k]} /></div>
+                        <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', lineHeight: 1, color: ch > 0 ? '#7fdfa3' : ch < 0 ? '#f08a8a' : '#ecdcbd' }}>{dEff[k]}</p>
+                        <p className="font-karla font-700" style={{ fontSize: '0.52rem', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.45)', marginTop: 3 }}>{STAT_LABEL[k]}{ch !== 0 ? ` · base ${dBase[k]}` : ''}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Traits */}
+                <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', marginBottom: '0.45rem' }}>Traits</p>
+                {dResolved.length === 0 ? (
+                  <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.42)', marginBottom: '0.9rem' }}>No traits.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: '0.95rem' }}>
+                    {dResolved.map(e => {
+                      const buff = e.kind === 'buff'
+                      return (
+                        <div key={e.id} style={{ background: buff ? 'rgba(60,180,110,0.1)' : 'rgba(200,70,70,0.1)', border: `1px solid ${buff ? 'rgba(80,200,130,0.3)' : 'rgba(220,90,90,0.3)'}`, borderRadius: 8, padding: '0.5rem 0.6rem' }}>
+                          <div className="flex items-center justify-between">
+                            <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: buff ? '#bfe8cf' : '#f0bcbc', fontStyle: 'italic' }}>{e.name}</span>
+                            <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: buff ? '#7fdfa3' : '#f08a8a' }}>{modSummary(e)}</span>
+                          </div>
+                          <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>{e.desc}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {renderAction(detail.kind, it, close)}
+              </motion.div>
+            </motion.div>
+          )
+        })()}
+      </AnimatePresence>
     </div>
   )
 }
