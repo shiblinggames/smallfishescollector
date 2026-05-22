@@ -8,8 +8,10 @@ import { crewDisplayName } from './crewGen'
 
 type Admin = ReturnType<typeof createAdminClient>
 
-/** A deployed crew row: resolver input fields + display name/portrait. */
-export type DeployedCrewRow = DeployedCrew & { name: string; filename: string }
+/** A deployed crew row: resolver input fields + display name/portrait. `name`
+ *  is the nickname (shown to players); `catalogName` is the raw species name
+ *  (for trait-flavor lookups). */
+export type DeployedCrewRow = DeployedCrew & { name: string; catalogName: string; filename: string }
 
 /** The deployed party: crew assigned to a ship slot, ordered by slot, capped to
  *  the ship's crew-slot count. Carries name/portrait for the UI and feeds
@@ -33,6 +35,7 @@ export async function loadDeployedParty(admin: Admin, userId: string, crewSlots:
       fortune: r.fortune as number,
       effects: (r.effects ?? []) as string[],
       name: crewDisplayName(r.cards?.slug ?? '', r.cards?.name ?? 'Crew'),
+      catalogName: (r.cards?.name ?? 'Crew') as string,
       filename: (r.cards?.filename ?? '') as string,
     }))
 }

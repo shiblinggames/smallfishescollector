@@ -223,7 +223,7 @@ export default function DailyVoyagePanel({
     if (savedCrew.length === 0 || !selectedRoute) return
     setError(null)
     startTransition(async () => {
-      const res = await sendDailyVoyage(savedCrew.map(c => c.variantId), selectedRoute)
+      const res = await sendDailyVoyage(selectedRoute)
       if ('error' in res) { setError(res.error); return }
       setActiveVoyage(res.voyage)
       setPanelState('away')

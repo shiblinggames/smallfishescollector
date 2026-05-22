@@ -3,14 +3,16 @@
 import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { EXPEDITION_SHIP_STATS, applyVariantBoosts } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 import { unlockBadge } from '@/app/achievements/badgeActions'
-import { RARITY_TIERS } from '@/lib/variants'
 import { generateVoyageEvents, type VoyageEvent, type VoyageRoute } from '@/lib/voyageEvents'
 import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
 import { generateAndSaveVoyageLog, type VoyageCrewMember } from '@/lib/captains-log'
 import type { CrewCard } from '@/lib/expeditions'
 import { voyageXP, getLevelFromXP } from '@/lib/expeditionLevel'
+import { loadDeployedParty } from '@/lib/crewData'
+import { resolveDeployedCrew } from '@/lib/crewResolve'
+import { RARITY_NAMES, crewDisplayName, type CrewRarity } from '@/lib/crewGen'
 
 function today(): string {
   return new Date().toISOString().split('T')[0]
@@ -69,31 +71,17 @@ export async function getDailyVoyageState(): Promise<{
   return { todayVoyage: activeVoyage, readyVoyage }
 }
 
-type CollectionRow = {
-  id: number
-  card_variant_id: number
-  card_variants: {
-    id: number
-    variant_name: string
-    border_style: string
-    art_effect: string
-    drop_weight: number
-    cards: {
-      id: number; name: string; slug: string; filename: string; tier: number
-      power: number; dodge: number; fortune: number
-      mythic_power: number; mythic_dodge: number; mythic_fortune: number
-    }
-  }
+// CREW_TRAITS (flavor) only has common/rare/legendary tiers; map crew group to one.
+function traitTier(group: number): string {
+  return group <= 1 ? 'Common' : group === 2 ? 'Rare' : 'Legendary'
 }
 
-export async function sendDailyVoyage(crewVariantIds: number[], route: VoyageRoute = 'open'): Promise<
+export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   { ok: true; voyage: DailyVoyage } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
-
-  if (crewVariantIds.length < 2) return { error: 'A voyage requires at least two crew members' }
 
   const admin = createAdminClient()
 
@@ -136,69 +124,50 @@ export async function sendDailyVoyage(crewVariantIds: number[], route: VoyageRou
   }
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
 
-  if (crewVariantIds.length > shipStats.crewSlots) {
-    return { error: `Your ship can hold at most ${shipStats.crewSlots} crew` }
-  }
+  // Deployed party from the new crew roster, resolved with effects.
+  const party = await loadDeployedParty(admin, user.id, shipStats.crewSlots)
+  if (party.length < 2) return { error: 'A voyage requires at least two crew members' }
+  const resolved = resolveDeployedCrew(party)
 
-  // Resolve variantIds to CrewCards
-  const { data: collectionRows } = await admin
-    .from('user_collection')
-    .select('id, card_variant_id, card_variants(id, variant_name, border_style, art_effect, drop_weight, cards(id, name, slug, filename, tier, power, dodge, fortune, mythic_power, mythic_dodge, mythic_fortune))')
-    .eq('user_id', user.id)
-    .in('card_variant_id', crewVariantIds)
-
-  const seen = new Set<number>()
-  const crewByVariantId = new Map<number, CrewCard>()
-
-  for (const row of ((collectionRows ?? []) as unknown as CollectionRow[])) {
-    if (seen.has(row.card_variant_id)) continue
-    seen.add(row.card_variant_id)
-    const v = row.card_variants
-    const card = v.cards
-    const rarity = RARITY_TIERS.find(t => t.variants.includes(v.variant_name))?.name ?? 'Common'
-    const base = { power: card.power, dodge: card.dodge, fortune: card.fortune }
-    const mythic = { power: card.mythic_power, dodge: card.mythic_dodge, fortune: card.mythic_fortune }
-    const stats = applyVariantBoosts(base, v.variant_name, mythic)
-    crewByVariantId.set(v.id, {
-      collectionId: row.id,
-      cardId: card.id,
-      variantId: v.id,
-      name: card.name,
-      slug: card.slug,
-      filename: card.filename,
-      rarity,
-      power: stats.power,
-      dodge: stats.dodge,
-      fortune: stats.fortune,
-    })
-  }
-
-  // Build crew array in the order provided (captain = first)
-  const crew: CrewCard[] = crewVariantIds
-    .map(id => crewByVariantId.get(id))
-    .filter(Boolean) as CrewCard[]
-
-  if (crew.length === 0) return { error: 'Could not find crew in your collection' }
+  // Build the engine's crew array (captain first), with effect-adjusted stats.
+  // variantId carries the user_crew id so crew loss tracks the right instance.
+  const crew: CrewCard[] = resolved.perCrew.map(pc => {
+    const row = party.find(p => p.id === pc.id)!
+    return {
+      collectionId: pc.id,
+      cardId: pc.id,
+      variantId: pc.id,
+      name: row.name,            // nickname (drives narratives)
+      slug: '',
+      filename: row.filename,
+      rarity: traitTier(row.rarity),
+      traitName: row.catalogName, // species name (drives CREW_TRAITS flavor)
+      power: pc.power,
+      dodge: pc.dodge,
+      fortune: pc.fortune,
+    }
+  })
 
   const result = generateVoyageEvents(crew, shipTier, route)
 
   const expeditionLevel = getLevelFromXP(profile.expedition_xp ?? 0)
   const totalNav = crew.reduce((s, c, i) => s + Math.round(c.dodge * (i === 0 ? 1 : 0.8)), 0)
   const duration_ms = computeVoyageDuration(expeditionLevel, totalNav)
+  const crewIds = party.map(p => p.id)
 
   const { data: voyage, error } = await admin
     .from('daily_voyages')
     .insert({
       user_id: user.id,
       voyage_date: today(),
-      crew_variant_ids: crewVariantIds,
+      crew_variant_ids: crewIds, // now holds user_crew ids
       ship_tier: shipTier,
       route,
       status: 'pending',
       events: result.events,
       total_doubloons: result.totalDoubloons,
       total_gems: result.totalGems,
-      crew_lost: result.crewLost,
+      crew_lost: result.crewLost, // user_crew ids of any losses
       duration_ms,
       tide_turner_drop: result.tideTurnerDrop,
       phantom_hook_drop: result.phantomHookDrop,
@@ -236,7 +205,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, gems, saved_crew, expedition_xp, has_tide_turner, has_phantom_hook, unlocked_character_colors')
+    .select('doubloons, gems, expedition_xp, has_tide_turner, has_phantom_hook, unlocked_character_colors')
     .eq('id', user.id)
     .single()
 
@@ -250,8 +219,23 @@ export async function revealVoyageResults(voyageId: number): Promise<
   const newExpeditionXP = oldExpeditionXP + xpEarned
   const oldExpeditionLevel = getLevelFromXP(oldExpeditionXP)
   const newExpeditionLevel = getLevelFromXP(newExpeditionXP)
-  const currentSavedCrew = (profile.saved_crew as number[] | null) ?? []
-  const newSavedCrew = currentSavedCrew.filter(id => !voyage.crew_lost.includes(id))
+
+  // Resolve crew names/rarities BEFORE any lost crew get deleted, for the log.
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const { data: crewRows } = await admin
+    .from('user_crew')
+    .select('id, rarity, cards(name, slug)')
+    .eq('user_id', user.id)
+    .in('id', voyage.crew_variant_ids)
+  const crewMeta: VoyageCrewMember[] = (voyage.crew_variant_ids).map(id => {
+    const row = ((crewRows ?? []) as any[]).find(r => r.id === id)
+    if (!row) return null
+    return {
+      variantId: id,
+      name: crewDisplayName(row.cards?.slug ?? '', row.cards?.name ?? 'Crew'),
+      rarity: RARITY_NAMES[(row.rarity as CrewRarity)] ?? 'Common',
+    }
+  }).filter((c): c is VoyageCrewMember => c !== null)
 
   // Collect bait drops
   const baitDropMap = new Map<string, number>()
@@ -262,7 +246,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
 
   const newTideTurner = !!(voyage.tide_turner_drop && !profile.has_tide_turner)
   const newPhantomHook = !!(voyage.phantom_hook_drop && !profile.has_phantom_hook)
-  const profileUpdate: Record<string, unknown> = { doubloons: newDoubloons, gems: newGems, saved_crew: newSavedCrew, expedition_xp: newExpeditionXP }
+  const profileUpdate: Record<string, unknown> = { doubloons: newDoubloons, gems: newGems, expedition_xp: newExpeditionXP }
   if (newTideTurner) profileUpdate.has_tide_turner = true
   if (newPhantomHook) profileUpdate.has_phantom_hook = true
 
@@ -288,7 +272,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
     admin.from('profiles').update(profileUpdate).eq('id', user.id),
     admin.from('daily_voyages').update({ status: 'revealed' }).eq('id', voyageId),
     ...(voyage.crew_lost.length > 0
-      ? [admin.from('user_collection').delete().eq('user_id', user.id).in('card_variant_id', voyage.crew_lost)]
+      ? [admin.from('user_crew').delete().eq('user_id', user.id).in('id', voyage.crew_lost)]
       : []),
     ...(voyage.total_doubloons > 0
       ? [admin.from('doubloon_transactions').insert({ user_id: user.id, amount: voyage.total_doubloons, reason: 'Daily crew voyage' })]
@@ -298,32 +282,19 @@ export async function revealVoyageResults(voyageId: number): Promise<
     ),
   ])
 
-  // Schedule captain's log generation after response is sent
+  // Schedule captain's log generation after response is sent. Crew names were
+  // resolved above (before any losses were deleted).
   const voyageForLog = voyage
+  const crewForLog = crewMeta
   after(async () => {
-    const logAdmin = createAdminClient()
-    // Resolve crew names + rarities from variant IDs
-    const { data: variantRows } = await logAdmin
-      .from('card_variants')
-      .select('id, variant_name, drop_weight, cards(name)')
-      .in('id', voyageForLog.crew_variant_ids)
-
-    const crewMembers: VoyageCrewMember[] = (voyageForLog.crew_variant_ids).map(vid => {
-      const row = (variantRows ?? []).find((r: { id: number }) => r.id === vid) as
-        { id: number; variant_name: string; drop_weight: number; cards: { name: string } } | undefined
-      if (!row) return null
-      const rarity = RARITY_TIERS.find(t => t.variants.includes(row.variant_name))?.name ?? 'Common'
-      return { variantId: vid, name: row.cards.name, rarity }
-    }).filter((c): c is VoyageCrewMember => c !== null)
-
-    const crewLostNames = crewMembers
+    const crewLostNames = crewForLog
       .filter(c => voyageForLog.crew_lost.includes(c.variantId))
       .map(c => c.name)
 
     await generateAndSaveVoyageLog({
       voyageId: voyageForLog.id,
       route: voyageForLog.route,
-      crew: crewMembers,
+      crew: crewForLog,
       events: voyageForLog.events,
       totalDoubloons: voyageForLog.total_doubloons,
       totalGems: voyageForLog.total_gems,

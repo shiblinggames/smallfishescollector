@@ -22,6 +22,8 @@ export interface CrewCard {
   power: number
   dodge: number
   fortune: number
+  /** Optional species name for trait-flavor lookup when `name` is a nickname. */
+  traitName?: string
 }
 
 export interface TotalCrewStats {

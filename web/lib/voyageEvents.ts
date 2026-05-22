@@ -177,7 +177,7 @@ export const CREW_TRAITS: Record<string, CrewTrait> = {
 }
 
 function getCrewTrait(card: CrewCard): string | null {
-  const traits = CREW_TRAITS[card.name]
+  const traits = CREW_TRAITS[card.traitName ?? card.name]
   if (!traits) return null
   const r = card.rarity.toLowerCase()
   if (r === 'common' || r === 'rare' || r === 'legendary') return traits[r]
