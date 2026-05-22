@@ -18,6 +18,13 @@ const STAT_LABEL = { power: 'PWR', dodge: 'DGE', fortune: 'FTN' }
 const SECTION_RECRUIT = '#c9a24a' // warm gold "new arrivals"
 const SECTION_ROSTER = '#6fa8c9'  // cool steel "your manifest"
 
+// Panel tones: warm brown wood for the board, cool slate for your own crew, so
+// the two are obviously different at a glance.
+const RECRUIT_PANEL_BG = 'linear-gradient(157deg, #271d12 0%, #150e08 100%)'
+const RECRUIT_PANEL_BORDER = '#46341f'
+const ROSTER_PANEL_BG = 'linear-gradient(157deg, #1a2331 0%, #0a0f16 100%)'
+const ROSTER_PANEL_BORDER = '#324453'
+
 function modSummary(e: CrewEffect): string {
   return (['power', 'dodge', 'fortune'] as const)
     .filter(k => e.mods[k])
@@ -57,7 +64,8 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
 function CrewPanel({
-  name, filename, rarity, base, effects, dimmed, frameAccent = '#b08d4f', children,
+  name, filename, rarity, base, effects, dimmed, frameAccent = '#b08d4f',
+  bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, children,
 }: {
   name: string
   filename: string
@@ -66,6 +74,8 @@ function CrewPanel({
   effects: string[]
   dimmed?: boolean
   frameAccent?: string
+  bg?: string
+  border?: string
   children?: ReactNode
 }) {
   const color = RARITY_COLORS[(rarity as CrewRarity)] ?? '#8a857c'
@@ -81,9 +91,9 @@ function CrewPanel({
     <div style={{
       position: 'relative', display: 'flex', gap: '0.7rem', padding: '0.7rem',
       borderRadius: 7,
-      background: 'linear-gradient(157deg, #271d12 0%, #150e08 100%)',
-      border: '1px solid #46341f',
-      boxShadow: 'inset 0 0 0 1px rgba(184,142,82,0.12), inset 0 1px 0 rgba(255,225,170,0.05), 0 6px 16px rgba(0,0,0,0.55)',
+      background: bg,
+      border: `1px solid ${border}`,
+      boxShadow: `inset 0 0 0 1px ${frameAccent}22, inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.55)`,
       opacity: dimmed ? 0.5 : 1,
       transition: 'opacity 0.2s',
     }}>
@@ -95,8 +105,8 @@ function CrewPanel({
 
       {/* Arched portrait niche */}
       <div style={{
-        position: 'relative', width: 86, flexShrink: 0, alignSelf: 'stretch', minHeight: 124,
-        borderRadius: '43px 43px 5px 5px', overflow: 'hidden',
+        position: 'relative', width: 102, flexShrink: 0, alignSelf: 'stretch', minHeight: 108,
+        borderRadius: '46px 46px 5px 5px', overflow: 'hidden',
         border: `2px solid ${color}`,
         boxShadow: `inset 0 -12px 20px rgba(0,0,0,0.65), 0 0 10px ${color}33`,
         background: `radial-gradient(ellipse at 50% 30%, ${color}26 0%, #070504 74%)`,
@@ -104,10 +114,10 @@ function CrewPanel({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={artSrc(filename)} alt={name} style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%',
-          objectFit: 'contain', objectPosition: 'center', padding: 5,
+          objectFit: 'contain', objectPosition: 'center 20%', padding: 2,
         }} />
         {/* inner frame line */}
-        <div style={{ position: 'absolute', inset: 3, borderRadius: '40px 40px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 3, borderRadius: '44px 44px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
         {/* rarity nameplate */}
         <div className="font-karla font-700" style={{
           position: 'absolute', bottom: 5, left: '50%', transform: 'translateX(-50%)',
@@ -307,6 +317,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
               {state.roster.map((m: CrewMember) => (
                 <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity} frameAccent={SECTION_ROSTER}
+                  bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
                   base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects}>
                   {confirmDismiss === m.id ? (
                     <div className="flex gap-1.5">
