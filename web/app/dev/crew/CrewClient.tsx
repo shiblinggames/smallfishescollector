@@ -14,6 +14,10 @@ const artSrc = (filename: string) => `${SUPA}/storage/v1/object/public/card-arts
 const STAT_COLOR = { power: '#f87171', dodge: '#60a5fa', fortune: '#f0c040' }
 const STAT_LABEL = { power: 'PWR', dodge: 'DGE', fortune: 'FTN' }
 
+// Section accents so the two boards read as visually distinct regions.
+const SECTION_RECRUIT = '#c9a24a' // warm gold "new arrivals"
+const SECTION_ROSTER = '#6fa8c9'  // cool steel "your manifest"
+
 function modSummary(e: CrewEffect): string {
   return (['power', 'dodge', 'fortune'] as const)
     .filter(k => e.mods[k])
@@ -53,7 +57,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
 function CrewPanel({
-  name, filename, rarity, base, effects, dimmed, children,
+  name, filename, rarity, base, effects, dimmed, frameAccent = '#b08d4f', children,
 }: {
   name: string
   filename: string
@@ -61,6 +65,7 @@ function CrewPanel({
   base: { power: number; dodge: number; fortune: number }
   effects: string[]
   dimmed?: boolean
+  frameAccent?: string
   children?: ReactNode
 }) {
   const color = RARITY_COLORS[(rarity as CrewRarity)] ?? '#8a857c'
@@ -68,8 +73,9 @@ function CrewPanel({
   const resolved = resolveEffects(effects)
 
   const corner = (pos: React.CSSProperties): React.CSSProperties => ({
-    position: 'absolute', width: 9, height: 9, opacity: 0.55, pointerEvents: 'none', ...pos,
+    position: 'absolute', width: 9, height: 9, opacity: 0.6, pointerEvents: 'none', ...pos,
   })
+  const b = `1.5px solid ${frameAccent}`
 
   return (
     <div style={{
@@ -82,10 +88,10 @@ function CrewPanel({
       transition: 'opacity 0.2s',
     }}>
       {/* Carved corner brackets */}
-      <span style={corner({ top: 4, left: 4, borderTop: '1.5px solid #b08d4f', borderLeft: '1.5px solid #b08d4f' })} />
-      <span style={corner({ top: 4, right: 4, borderTop: '1.5px solid #b08d4f', borderRight: '1.5px solid #b08d4f' })} />
-      <span style={corner({ bottom: 4, left: 4, borderBottom: '1.5px solid #b08d4f', borderLeft: '1.5px solid #b08d4f' })} />
-      <span style={corner({ bottom: 4, right: 4, borderBottom: '1.5px solid #b08d4f', borderRight: '1.5px solid #b08d4f' })} />
+      <span style={corner({ top: 4, left: 4, borderTop: b, borderLeft: b })} />
+      <span style={corner({ top: 4, right: 4, borderTop: b, borderRight: b })} />
+      <span style={corner({ bottom: 4, left: 4, borderBottom: b, borderLeft: b })} />
+      <span style={corner({ bottom: 4, right: 4, borderBottom: b, borderRight: b })} />
 
       {/* Arched portrait niche */}
       <div style={{
@@ -218,100 +224,113 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           </div>
         )}
 
-        {/* Recruit board */}
-        <div className="flex items-center justify-between flex-wrap gap-2" style={{ marginBottom: '0.7rem' }}>
-          <div>
-            <h2 className="font-cinzel font-700 uppercase" style={{ fontSize: '0.9rem', letterSpacing: '0.08em' }}>Recruit Board</h2>
-            <p className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>
-              Free board refreshes in <FreeRollCountdown /> · {state.isPremium ? '3 daily (member)' : '2 daily'}
-            </p>
+        {/* Recruit board — warm gold "new arrivals" region */}
+        <div style={{ borderRadius: 12, border: `1px solid ${SECTION_RECRUIT}33`, background: `linear-gradient(180deg, ${SECTION_RECRUIT}12 0%, rgba(0,0,0,0) 55%)`, padding: '0.85rem 0.85rem 1rem', marginBottom: '1.4rem' }}>
+          <div className="flex items-center justify-between flex-wrap gap-2" style={{ marginBottom: '0.85rem' }}>
+            <div className="flex items-center gap-2.5">
+              <span style={{ width: 4, alignSelf: 'stretch', minHeight: 30, borderRadius: 2, background: SECTION_RECRUIT }} />
+              <div>
+                <h2 className="font-cinzel font-700 uppercase" style={{ fontSize: '1rem', letterSpacing: '0.08em', color: SECTION_RECRUIT }}>Recruit Board</h2>
+                <p className="font-karla" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.45)' }}>
+                  Free board refreshes in <FreeRollCountdown /> · {state.isPremium ? '3 daily (member)' : '2 daily'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => run(() => rerollBoard(), 'reroll')}
+              disabled={pending || state.gems < state.rerollCost}
+              className="font-karla font-700"
+              style={{
+                fontSize: '0.72rem', padding: '0.55rem 0.9rem', borderRadius: 9,
+                background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.5)', color: '#cfe2ff',
+                cursor: pending || state.gems < state.rerollCost ? 'not-allowed' : 'pointer',
+                opacity: pending || state.gems < state.rerollCost ? 0.5 : 1,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2,
+              }}
+            >
+              <span>{busyId === 'reroll' ? 'Rerolling…' : `Reroll · 💎 ${state.rerollCost}`}</span>
+              <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Always 3 new crew</span>
+            </button>
           </div>
-          <button
-            onClick={() => run(() => rerollBoard(), 'reroll')}
-            disabled={pending || state.gems < state.rerollCost}
-            className="font-karla font-700"
-            style={{
-              fontSize: '0.72rem', padding: '0.55rem 0.9rem', borderRadius: 9,
-              background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.5)', color: '#cfe2ff',
-              cursor: pending || state.gems < state.rerollCost ? 'not-allowed' : 'pointer',
-              opacity: pending || state.gems < state.rerollCost ? 0.5 : 1,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2,
-            }}
-          >
-            <span>{busyId === 'reroll' ? 'Rerolling…' : `Reroll · 💎 ${state.rerollCost}`}</span>
-            <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Always 3 new crew</span>
-          </button>
-        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem', marginBottom: '2rem' }}>
-          {state.board.map((c: BoardCandidate) => (
-            <CrewPanel key={c.id} name={c.name} filename={c.filename} rarity={c.rarity}
-              base={{ power: c.power, dodge: c.dodge, fortune: c.fortune }} effects={c.effects} dimmed={c.recruited}>
-              {c.recruited ? (
-                <div className="font-karla font-700" style={{ textAlign: 'center', fontSize: '0.66rem', color: 'rgba(255,255,255,0.45)', padding: '0.45rem', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8 }}>
-                  Recruited ✓
-                </div>
-              ) : rosterFull ? (
-                <div className="font-karla font-700" style={{ textAlign: 'center', fontSize: '0.66rem', color: '#f2b0b0', padding: '0.45rem', border: '1px solid rgba(220,90,90,0.3)', borderRadius: 8 }}>
-                  Roster Full
-                </div>
-              ) : (
-                <button onClick={() => run(() => recruitCrew(c.id), c.id)} disabled={pending}
-                  className="font-karla font-700"
-                  style={{
-                    fontSize: '0.72rem', padding: '0.5rem', borderRadius: 8,
-                    background: 'rgba(80,200,130,0.16)', border: '1px solid rgba(80,200,130,0.5)', color: '#9fe6bd',
-                    cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1,
-                  }}>
-                  {busyId === c.id ? 'Recruiting…' : 'Recruit'}
-                </button>
-              )}
-            </CrewPanel>
-          ))}
-          {state.board.length === 0 && (
-            <p className="font-karla" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>No recruits on the board.</p>
-          )}
-        </div>
-
-        {/* Roster */}
-        <div className="flex items-center justify-between" style={{ marginBottom: '0.7rem' }}>
-          <h2 className="font-cinzel font-700 uppercase" style={{ fontSize: '0.9rem', letterSpacing: '0.08em' }}>Your Crew</h2>
-          <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: rosterFull ? '#f08a8a' : 'rgba(255,255,255,0.5)' }}>
-            {state.roster.length} / {state.capacity} · +1 every 10 Nav levels
-          </span>
-        </div>
-
-        {state.roster.length === 0 ? (
-          <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', padding: '1.5rem 0' }}>
-            No crew yet. Recruit from the board above.
-          </p>
-        ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
-            {state.roster.map((m: CrewMember) => (
-              <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity}
-                base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects}>
-                {confirmDismiss === m.id ? (
-                  <div className="flex gap-1.5">
-                    <button onClick={() => run(() => dismissCrew(m.id), m.id)} disabled={pending}
-                      className="font-karla font-700" style={{ flex: 1, fontSize: '0.66rem', padding: '0.45rem', borderRadius: 8, background: 'rgba(220,90,90,0.2)', border: '1px solid rgba(220,90,90,0.55)', color: '#f2b0b0', cursor: 'pointer' }}>
-                      {busyId === m.id ? '…' : 'Confirm'}
-                    </button>
-                    <button onClick={() => setConfirmDismiss(null)} disabled={pending}
-                      className="font-karla font-700" style={{ flex: 1, fontSize: '0.66rem', padding: '0.45rem', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.65)', cursor: 'pointer' }}>
-                      Cancel
-                    </button>
+            {state.board.map((c: BoardCandidate) => (
+              <CrewPanel key={c.id} name={c.name} filename={c.filename} rarity={c.rarity} frameAccent={SECTION_RECRUIT}
+                base={{ power: c.power, dodge: c.dodge, fortune: c.fortune }} effects={c.effects} dimmed={c.recruited}>
+                {c.recruited ? (
+                  <div className="font-karla font-700" style={{ textAlign: 'center', fontSize: '0.66rem', color: 'rgba(255,255,255,0.45)', padding: '0.45rem', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8 }}>
+                    Recruited ✓
+                  </div>
+                ) : rosterFull ? (
+                  <div className="font-karla font-700" style={{ textAlign: 'center', fontSize: '0.66rem', color: '#f2b0b0', padding: '0.45rem', border: '1px solid rgba(220,90,90,0.3)', borderRadius: 8 }}>
+                    Roster Full
                   </div>
                 ) : (
-                  <button onClick={() => setConfirmDismiss(m.id)} disabled={pending}
+                  <button onClick={() => run(() => recruitCrew(c.id), c.id)} disabled={pending}
                     className="font-karla font-700"
-                    style={{ fontSize: '0.68rem', padding: '0.45rem', borderRadius: 8, background: 'rgba(200,70,70,0.1)', border: '1px solid rgba(220,90,90,0.3)', color: '#f2b0b0', cursor: 'pointer' }}>
-                    Dismiss
+                    style={{
+                      fontSize: '0.72rem', padding: '0.5rem', borderRadius: 8,
+                      background: 'rgba(80,200,130,0.16)', border: '1px solid rgba(80,200,130,0.5)', color: '#9fe6bd',
+                      cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1,
+                    }}>
+                    {busyId === c.id ? 'Recruiting…' : 'Recruit'}
                   </button>
                 )}
               </CrewPanel>
             ))}
+            {state.board.length === 0 && (
+              <p className="font-karla" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>No recruits on the board.</p>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Roster — cool steel "your manifest" region */}
+        <div style={{ borderRadius: 12, border: `1px solid ${SECTION_ROSTER}33`, background: `linear-gradient(180deg, ${SECTION_ROSTER}12 0%, rgba(0,0,0,0) 55%)`, padding: '0.85rem 0.85rem 1rem' }}>
+          <div className="flex items-center justify-between" style={{ marginBottom: '0.85rem' }}>
+            <div className="flex items-center gap-2.5">
+              <span style={{ width: 4, alignSelf: 'stretch', minHeight: 30, borderRadius: 2, background: SECTION_ROSTER }} />
+              <div>
+                <h2 className="font-cinzel font-700 uppercase" style={{ fontSize: '1rem', letterSpacing: '0.08em', color: SECTION_ROSTER }}>Your Crew</h2>
+                <p className="font-karla" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.45)' }}>Hands enlisted to your ship</p>
+              </div>
+            </div>
+            <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: rosterFull ? '#f08a8a' : 'rgba(255,255,255,0.5)' }}>
+              {state.roster.length} / {state.capacity} · +1 every 10 Nav levels
+            </span>
+          </div>
+
+          {state.roster.length === 0 ? (
+            <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', padding: '1rem 0' }}>
+              No crew yet. Recruit from the board above.
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
+              {state.roster.map((m: CrewMember) => (
+                <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity} frameAccent={SECTION_ROSTER}
+                  base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects}>
+                  {confirmDismiss === m.id ? (
+                    <div className="flex gap-1.5">
+                      <button onClick={() => run(() => dismissCrew(m.id), m.id)} disabled={pending}
+                        className="font-karla font-700" style={{ flex: 1, fontSize: '0.66rem', padding: '0.45rem', borderRadius: 8, background: 'rgba(220,90,90,0.2)', border: '1px solid rgba(220,90,90,0.55)', color: '#f2b0b0', cursor: 'pointer' }}>
+                        {busyId === m.id ? '…' : 'Confirm'}
+                      </button>
+                      <button onClick={() => setConfirmDismiss(null)} disabled={pending}
+                        className="font-karla font-700" style={{ flex: 1, fontSize: '0.66rem', padding: '0.45rem', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.65)', cursor: 'pointer' }}>
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmDismiss(m.id)} disabled={pending}
+                      className="font-karla font-700"
+                      style={{ fontSize: '0.68rem', padding: '0.45rem', borderRadius: 8, background: 'rgba(200,70,70,0.1)', border: '1px solid rgba(220,90,90,0.3)', color: '#f2b0b0', cursor: 'pointer' }}>
+                      Dismiss
+                    </button>
+                  )}
+                </CrewPanel>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
