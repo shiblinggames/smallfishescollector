@@ -989,18 +989,18 @@ export default function ShipHero({
           crew card is tapped, to pick the exact variant to assign. */}
       <AnimatePresence>
         {variantPicker && (
-          <>
-            <motion.div
-              key="vp-backdrop"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setVariantPicker(null)}
-              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 200 }}
-            />
+          <motion.div
+            key="vp-backdrop"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setVariantPicker(null)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}
+          >
             <motion.div
               key="vp-modal"
               initial={{ opacity: 0, scale: 0.94, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.94, y: 10 }}
               transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-              style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 201, width: 'calc(100% - 2.5rem)', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', overscrollBehavior: 'contain', background: 'linear-gradient(180deg, #14110d 0%, #0a0807 100%)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, padding: '1.1rem 1.15rem 1.3rem' }}
+              onClick={e => e.stopPropagation()}
+              style={{ width: '100%', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', overscrollBehavior: 'contain', background: 'linear-gradient(180deg, #14110d 0%, #0a0807 100%)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, padding: '1.1rem 1.15rem 1.3rem' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>Choose your {variantPicker.name}</p>
@@ -1031,7 +1031,7 @@ export default function ShipHero({
                 })}
               </div>
             </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
 
