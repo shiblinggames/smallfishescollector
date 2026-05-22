@@ -950,16 +950,10 @@ export default function ShipHero({
                         {pickerCards.map(card => {
                           const rc  = CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764'
                           const eff = effStats(card)
-                          const fxCount = card.effects.length
                           return (
                             <div key={card.id} onClick={() => assignCard(card)} style={{ position: 'relative', width: '100%', borderRadius: 10, overflow: 'hidden', background: '#080a0e', border: `1.5px solid ${rc}55`, cursor: 'pointer' }}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
-                              {fxCount > 0 && (
-                                <span className="font-karla font-700" title={`${fxCount} trait${fxCount === 1 ? '' : 's'}`} style={{ position: 'absolute', top: 4, right: 4, fontSize: '0.5rem', color: '#0a0a0a', background: rc, borderRadius: 999, padding: '0.06rem 0.34rem', lineHeight: 1.3, boxShadow: '0 1px 3px rgba(0,0,0,0.55)' }}>
-                                  {fxCount}★
-                                </span>
-                              )}
                               <div style={{ padding: '0.3rem 0.4rem 0.35rem', background: 'rgba(4,5,8,0.92)' }}>
                                 <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.52rem', color: '#f0ede8', lineHeight: 1.2, marginBottom: 5 }}>{card.name}</p>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
