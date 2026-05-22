@@ -48,7 +48,21 @@ let handoffCoarseTimer: ReturnType<typeof setTimeout> | null = null
 let handoffPreRollDone = false
 let handoffResetTimer: ReturnType<typeof setTimeout> | null = null
 const PRE_ROLL_LEAD_MS = 200
-const TRACK_URL = '/fishingsoundtrack.ogg'
+const DEFAULT_TRACK = '/fishingsoundtrack.ogg'
+
+// Per-zone soundtracks. A zone not listed here falls back to DEFAULT_TRACK.
+const ZONE_TRACKS: Record<string, string> = {
+  open_waters: '/fishingsoundtrackopen.ogg',
+}
+
+/** Resolve the soundtrack URL for a fishing zone (null / unknown = default). */
+export function fishingTrackForZone(zone: string | null | undefined): string {
+  return (zone && ZONE_TRACKS[zone]) || DEFAULT_TRACK
+}
+
+// Which track the <audio> elements are currently bound to. makeAudio() reads
+// this so the elements are created on the right track; setFishingTrack swaps it.
+let currentTrackUrl = DEFAULT_TRACK
 
 // SFX cache.
 let perfectSfxBytes: ArrayBuffer | null = null
@@ -81,7 +95,7 @@ const MUSIC_VOLUME = 0.5
 
 function makeAudio(): HTMLAudioElement {
   const audio = document.createElement('audio')
-  audio.src = TRACK_URL
+  audio.src = currentTrackUrl
   audio.preload = 'auto'
   audio.muted = false
   audio.volume = 1
@@ -418,6 +432,37 @@ export function startFishingMusic(muted: boolean): void {
     // Linear ramp, matching the linear fade-out exactly.
     rampMaster(0, MUSIC_VOLUME, ENTRY_FADE_MS)
   }
+}
+
+/** Swap the soundtrack to a new file (e.g. a per-zone track): quick fade out,
+ *  swap both elements' source, restart the gapless loop, fade back in if we
+ *  were audible. No-op if already on this track. Before the audio elements
+ *  exist (first mount) it just records the target so they're created on the
+ *  right track. */
+export function setFishingTrack(url: string): void {
+  if (url === currentTrackUrl) return
+  currentTrackUrl = url
+  if (!elA || !elB || !audioCtx || !masterGain) return
+  const wasAudible = lastGainValue > 0
+  clearHandoff()
+  handoffPreRollDone = false
+  trackDuration = 0
+  rampMaster(lastGainValue, 0, TOGGLE_FADE_MS)
+  setTimeout(() => {
+    if (!elA || !elB) return
+    try { elA.pause(); elB.pause() } catch {}
+    elA.src = url
+    elB.src = url
+    try { elA.load() } catch {}
+    try { elB.load() } catch {}
+    current = elA
+    try { elA.currentTime = 0 } catch {}
+    if (wasAudible) {
+      current.play().catch(() => {})
+      scheduleHandoffChain()
+      rampMaster(0, MUSIC_VOLUME, TOGGLE_FADE_MS)
+    }
+  }, TOGGLE_FADE_MS + 40)
 }
 
 export function setFishingMusicMuted(muted: boolean): void {

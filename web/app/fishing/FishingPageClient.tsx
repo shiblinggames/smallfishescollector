@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { startFishingMusic, fadeOutFishingMusic } from '@/lib/fishingMusic'
+import { startFishingMusic, fadeOutFishingMusic, setFishingTrack, fishingTrackForZone } from '@/lib/fishingMusic'
 import ZoneLanding, { type ZoneKey, type ZoneStat } from './ZoneLanding'
 import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
@@ -153,6 +153,12 @@ export default function FishingPageClient({
     localStorage.removeItem(LAST_ZONE_KEY)
     setSelectedZone(null)
   }
+
+  // Swap the soundtrack to match the current zone — Open Waters has its own
+  // track; everything else uses the default. No-op when already correct.
+  useEffect(() => {
+    setFishingTrack(fishingTrackForZone(selectedZone))
+  }, [selectedZone])
 
   if (!selectedZone) {
     return (
