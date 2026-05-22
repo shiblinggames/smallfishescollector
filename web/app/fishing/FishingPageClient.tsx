@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { startFishingMusic, fadeOutFishingMusic, setFishingTrack, fishingTrackForZone } from '@/lib/fishingMusic'
+import { startFishingMusic, fadeOutFishingMusic, setFishingTrack, primeFishingTrack, fishingTrackForZone } from '@/lib/fishingMusic'
 import ZoneLanding, { type ZoneKey, type ZoneStat } from './ZoneLanding'
 import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
@@ -103,8 +103,14 @@ export default function FishingPageClient({
   // saved mute pref; the in-game toggles still drive setFishingMusicMuted.
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? window.localStorage.getItem('fishingAudioMuted') : null
+    // Bind the correct per-zone track BEFORE the music starts, so the entry
+    // fade-in plays on the right song. Without this, arriving straight into a
+    // zone with its own track (e.g. Open Waters) fades in the default track
+    // and then toggles, blipping the wrong song for a moment.
+    if (selectedZone) primeFishingTrack(fishingTrackForZone(selectedZone))
     startFishingMusic(saved === null ? true : saved === 'true')
     return () => { fadeOutFishingMusic() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Boat/hat state lives at this level so it persists across the

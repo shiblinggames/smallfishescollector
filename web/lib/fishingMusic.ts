@@ -465,6 +465,31 @@ export function setFishingTrack(url: string): void {
   }, TOGGLE_FADE_MS + 40)
 }
 
+/** Bind the soundtrack to `url` WITHOUT a crossfade. Call this at mount,
+ *  BEFORE startFishingMusic, so the 3s entry fade-in plays on the correct
+ *  per-zone track instead of starting on the default and then doing a quick
+ *  toggle (which blips the wrong song for ~400ms). On a true cold load the
+ *  elements don't exist yet, so this just records the target and makeAudio()
+ *  builds them on the right track. On a warm remount the elements already
+ *  exist, so we rebind their src silently and let startFishingMusic fade the
+ *  new track in. No-op if already on this track. */
+export function primeFishingTrack(url: string): void {
+  if (url === currentTrackUrl) return
+  currentTrackUrl = url
+  if (!elA || !elB) return // not built yet — makeAudio() will use the new url
+  clearHandoff()
+  handoffPreRollDone = false
+  trackDuration = 0
+  rampMaster(0, 0, 0) // silence now; startFishingMusic fades up from 0
+  try { elA.pause(); elB.pause() } catch {}
+  elA.src = url
+  elB.src = url
+  try { elA.load() } catch {}
+  try { elB.load() } catch {}
+  current = elA
+  try { elA.currentTime = 0 } catch {}
+}
+
 export function setFishingMusicMuted(muted: boolean): void {
   unlockFishingAudio()
   if (!elA || !elB || !audioCtx || !masterGain) return
