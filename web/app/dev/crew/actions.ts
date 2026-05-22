@@ -56,7 +56,7 @@ export type CrewActionResult = { state: CrewState } | { error: string }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-type CardMeta = { name: string; filename: string; slug: string }
+type CardMeta = { name: string; filename: string; slug: string; power: number; dodge: number; fortune: number }
 
 function utcDate(): string {
   return new Date().toISOString().slice(0, 10) // YYYY-MM-DD in UTC
@@ -64,11 +64,11 @@ function utcDate(): string {
 
 /** Catalog → portrait pool by group + a lookup for name/filename. */
 async function loadCards(admin: ReturnType<typeof createAdminClient>) {
-  const { data } = await admin.from('cards').select('id, name, filename, slug')
+  const { data } = await admin.from('cards').select('id, name, filename, slug, power, dodge, fortune')
   const byGroup: Record<CrewRarity, number[]> = { 1: [], 2: [], 3: [], 4: [] }
   const meta = new Map<number, CardMeta>()
-  for (const c of ((data ?? []) as { id: number; name: string; filename: string; slug: string }[])) {
-    meta.set(c.id, { name: c.name, filename: c.filename, slug: c.slug })
+  for (const c of ((data ?? []) as { id: number; name: string; filename: string; slug: string; power: number; dodge: number; fortune: number }[])) {
+    meta.set(c.id, { name: c.name, filename: c.filename, slug: c.slug, power: c.power, dodge: c.dodge, fortune: c.fortune })
     const g = groupForSlug(c.slug)
     if (g) byGroup[g].push(c.id)
   }
@@ -82,6 +82,7 @@ function generateBoardRows(
   source: 'free' | 'gem',
   weights: readonly [number, number, number, number],
   byGroup: Record<CrewRarity, number[]>,
+  meta: Map<number, CardMeta>,
 ) {
   const rows: any[] = []
   for (let slot = 0; slot < size; slot++) {
@@ -91,7 +92,9 @@ function generateBoardRows(
     const pool = byGroup[rarity]
     if (pool.length === 0) continue
     const cardId = pool[Math.floor(Math.random() * pool.length)]
-    const c = rollCrew(cardId, rarity)
+    const m = meta.get(cardId)
+    const profile = { power: m?.power ?? 1, dodge: m?.dodge ?? 1, fortune: m?.fortune ?? 1 }
+    const c = rollCrew(cardId, rarity, profile)
     rows.push({
       user_id: userId, slot, source,
       card_id: c.cardId, rarity: c.rarity,
@@ -148,7 +151,7 @@ export async function getCrewState(): Promise<CrewState | null> {
   // won't be clobbered by this.
   if ((prof as any).last_free_recruit_date !== today) {
     await admin.from('daily_recruits').delete().eq('user_id', user.id)
-    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup)
+    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta)
     if (rows.length) await admin.from('daily_recruits').insert(rows)
     await admin.from('profiles').update({ last_free_recruit_date: today }).eq('id', user.id)
   }
@@ -195,9 +198,9 @@ export async function rerollBoard(): Promise<CrewActionResult> {
     .single()
   if (!updated) return { error: 'Not enough gems' }
 
-  const { byGroup } = await loadCards(admin)
+  const { byGroup, meta } = await loadCards(admin)
   await admin.from('daily_recruits').delete().eq('user_id', user.id)
-  const rows = generateBoardRows(user.id, 3, 'gem', GEM_WEIGHTS, byGroup)
+  const rows = generateBoardRows(user.id, 3, 'gem', GEM_WEIGHTS, byGroup, meta)
   if (rows.length) await admin.from('daily_recruits').insert(rows)
 
   const state = await getCrewState()

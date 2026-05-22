@@ -86,17 +86,23 @@ export function rollRarity(weights: readonly [number, number, number, number]): 
   return 1
 }
 
-/** Roll a power/dodge/fortune line that sums to a rarity-banded budget, with a
- *  random primary-stat lean so crew feel distinct. */
-export function rollStats(rarity: CrewRarity): { power: number; dodge: number; fortune: number } {
+/** Roll a power/dodge/fortune line summing to a rarity-banded budget, strongly
+ *  biased toward the fish's catalog stat profile so each species keeps its
+ *  identity (sharks skew power, goldfish skew fortune, eels skew dodge, etc.).
+ *  Light jitter keeps two of the same species from being identical. */
+export function rollStats(
+  rarity: CrewRarity,
+  profile: { power: number; dodge: number; fortune: number },
+): { power: number; dodge: number; fortune: number } {
   const [lo, hi] = STAT_BUDGET[rarity]
   const budget = randInt(lo, hi)
   const stats = [1, 1, 1] // floor: every stat at least 1
-  let remaining = Math.max(0, budget - 3)
+  const remaining = Math.max(0, budget - 3)
 
-  const w = [Math.random(), Math.random(), Math.random()]
-  const primary = randInt(0, 2)
-  w[primary] += 1.2 // lean toward a primary stat
+  // Distribute by the fish's profile (strong affinity) with ±15% jitter. A small
+  // floor stops a near-zero base stat from being mathematically impossible.
+  const prof = [profile.power, profile.dodge, profile.fortune].map(v => Math.max(0.5, v))
+  const w = prof.map(v => v * (0.85 + Math.random() * 0.3))
   const sumW = w[0] + w[1] + w[2]
 
   let assigned = 0
@@ -105,7 +111,8 @@ export function rollStats(rarity: CrewRarity): { power: number; dodge: number; f
     stats[i] += a
     assigned += a
   }
-  // Reconcile rounding drift onto the primary stat.
+  // Reconcile rounding drift onto the highest-weighted (primary) stat.
+  const primary = w[0] >= w[1] && w[0] >= w[2] ? 0 : w[1] >= w[2] ? 1 : 2
   stats[primary] += remaining - assigned
   if (stats[primary] < 1) stats[primary] = 1
 
@@ -137,7 +144,11 @@ export interface RolledCrew {
 }
 
 /** Fully roll one crew member for a known portrait + rarity. */
-export function rollCrew(cardId: number, rarity: CrewRarity): RolledCrew {
-  const stats = rollStats(rarity)
+export function rollCrew(
+  cardId: number,
+  rarity: CrewRarity,
+  profile: { power: number; dodge: number; fortune: number },
+): RolledCrew {
+  const stats = rollStats(rarity, profile)
   return { cardId, rarity, ...stats, effects: rollEffectIds() }
 }
