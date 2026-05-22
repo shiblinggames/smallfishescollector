@@ -1,14 +1,17 @@
-// Finn — the fishing rival.
+// Finn — the fishing rival (and the game's hidden hand).
 //
 // All dialogue, line pools, tier definitions, and progression milestones
 // live in this file. Edit text here freely — the encounter component and
 // state machine read from these constants and don't care about the words.
 //
-// Backstory in short: Finn appears as a cocky young rival. He's actually
-// an old man in disguise whose son Marl died chasing a fish in the
-// Ancient Deep forty years ago. He's been wandering the docks since,
-// looking for someone worthy of being trained. The reveal lands when the
-// player catches their first Ancient Deep trophy.
+// Backstory (canon, see memory finn-finndicate-twist): Finn presents as a
+// cocky fishing rival and nothing more, and that is the surface the player
+// must believe almost the whole way. In truth he is the head of the
+// Finndicate (the Expeditions villain org), quietly steering the player
+// toward the Ancient Deep to land the six trophies he has never been able
+// to reach himself. Early beats are PURE rivalry, zero tells. Only the late
+// beats and the first-trophy beat let the mask slip a little. The full
+// reveal (he IS the Finndicate) is deferred to the end-game cross-game merge.
 
 export const FINN_NAME = 'Finn'
 
@@ -101,245 +104,241 @@ export interface FinnBeat {
 }
 
 /** Encounter-track beats — fire when finn_encounters crosses milestone.
- *  These reveal WHO Finn is (lore, backstory). */
+ *  Early beats are PURE rival. Later ones quietly circle the Ancient Deep
+ *  and let the smallest cracks show. He never explains himself. */
 export const FINN_ENCOUNTER_BEATS: FinnBeat[] = [
   {
     id: 'e1', milestone: 1, track: 'encounter',
     lines: [
-      "Easy there. Been watching you reel them in for a while now.",
-      "Name's Finn. Been fishing these waters longer than you'd think.",
-      "You're decent. But decent's not the same as good. Want to find out which one you are?",
+      "Easy there. I've been watching you work that line a while now.",
+      "Name's Finn. Nobody reads this water like I do, and I've seen a lot of anglers come and go.",
+      "You've got a little promise. Promise is cheap. Let's see what yours is worth.",
     ],
   },
   {
     id: 'e3', milestone: 3, track: 'encounter',
     lines: [
-      "Back already? Good. Don't take that as a compliment.",
-      "...fast reflexes. Haven't seen anyone move like that in a long time.",
+      "Back already. Didn't take you for the stubborn sort.",
+      "Quick hands. I'll give you that much and not a word more.",
     ],
   },
   {
     id: 'e5', milestone: 5, track: 'encounter',
     lines: [
-      "There are fish out here that aren't in your collection. Ancient ones.",
-      "Most fishermen pretend they don't exist. Easier than admitting some things are out of reach.",
-      "Pick a side — take the challenge or move along.",
+      "There's water past the edge of your charts. Old water. The fish in it would swallow your best trophy whole.",
+      "Most anglers swear it isn't real. Easier than admitting it's out of their reach.",
+      "Take the bet. Let's see whether it's out of yours.",
     ],
   },
   {
     id: 'e8', milestone: 8, track: 'encounter',
     lines: [
-      "Ever heard of the Ancient Deep? Course not. Most fishermen pretend it doesn't exist.",
-      "Below your trench. Below your abyss. Where the water turns the color of ink, and the bottom drops past where light bothers to follow.",
+      "The Ancient Deep. Past your trench, past your abyss, where the water turns to ink and the floor forgets to stop.",
+      "Six things worth pulling up live down there. Six. Not five, not seven.",
+      "Funny, the things a man ends up counting.",
     ],
   },
   {
     id: 'e12', milestone: 12, track: 'encounter',
     lines: [
-      "The creatures down there move slow. Patient. They've been swimming those depths longer than anything you'd recognize.",
-      "I saw one once. Forty years ago.",
-      "It hooked me more than I hooked it.",
+      "I've stood at the lip of that deep more nights than I'd ever admit to you.",
+      "Dropped a line straight down into the black. Every time, nothing. Like the water just hands it back.",
+      "Some doors only open for the right grip. Mine's never been it.",
     ],
   },
   {
     id: 'e15', milestone: 15, track: 'encounter',
     lines: [
-      "I had a fishing partner who used to chase the depths. Better than I'll ever be.",
-      "Knew the water like it was a language he was raised to speak.",
+      "I've watched a hundred anglers strut down this dock. You're the hundred and first.",
+      "Most of them are noise. You're quieter. Steadier. The water doesn't seem to mind you.",
     ],
   },
   {
     id: 'e20', milestone: 20, track: 'encounter',
     lines: [
-      "Hooked it for thirty seconds. Line snapped like it was nothing.",
-      "I can still feel the weight.",
-      "...the weight wasn't the fish.",
+      "Hooked something down there once. Held it thirty seconds.",
+      "Then the line went slack, slow and gentle, like the deep was handing it back on purpose.",
+      "Like it knew whose hands were on the rod and decided no.",
     ],
   },
   {
     id: 'e25', milestone: 25, track: 'encounter',
     lines: [
-      "After the line broke, he went after it. Said it couldn't have gotten far.",
-      "Cold morning. The kind where the water doesn't move.",
-      "I haven't fished the Ancient Deep since.",
+      "All six trophies, landed by one angler. You have any notion what that's worth? What it would open?",
+      "...course you don't. Keep fishing. You will.",
     ],
   },
   {
     id: 'e30', milestone: 30, track: 'encounter',
     lines: [
-      "Tell yourself the deep's no different from anywhere else if you want. The deep knows otherwise.",
-      "Some waters take more than they give. You learn which ones.",
+      "Some waters take more than they give. The deep takes everything except the worthy.",
+      "So be worthy, and be quick about it. I've done enough waiting for one lifetime.",
     ],
   },
   {
     id: 'e32', milestone: 32, track: 'encounter',
     lines: [
-      "When you've been at this as long as I have, you stop hooking. You start listening.",
-      "Water tells you when a fish is coming. Tells you what it is.",
-      "Don't waste your years on a slow lesson.",
+      "Long enough at this and you quit hooking. You start listening.",
+      "The water tells you what's coming up the line. Tells you what it is, if you shut up and let it.",
     ],
   },
   {
     id: 'e35', milestone: 35, track: 'encounter',
     lines: [
-      "Have you fished the Ancient Deep? I mean really, not the edges.",
-      "...forget it. Take the bet or leave it.",
+      "Have you touched the Ancient Deep yet? Truly. Not the shallows of it.",
+      "...no. You haven't. I'd know. Take the bet, then. Off you go.",
     ],
   },
   {
     id: 'e37', milestone: 37, track: 'encounter',
     lines: [
-      "There's a steadiness in you. You're sloppy as hell, but there's a steadiness underneath.",
-      "Reminds me of someone. Don't ask.",
+      "There's a steadiness in you under all that mess. That's the rare part. That's the part I've been looking f—",
+      "...the part worth beating. Forget it. Cast.",
     ],
   },
   {
     id: 'e39', milestone: 39, track: 'encounter',
     lines: [
-      "He had a cast like yours. Patient on the entry. Mean on the pull.",
-      "Last thing I remember — line going slack the wrong way. Wind picking up.",
-      "I knew before I saw.",
+      "You're the closest anyone's come. Closer than you'd believe.",
+      "Pull up all six and we'll both see what they're good for.",
+      "...we. Listen to me. Slip of an old tongue. Cast your line.",
     ],
   },
 ]
 
 /** Win-track beats — fire when finn_wins crosses milestone.
- *  These reveal HOW Finn feels about the player (relationship arc). */
+ *  His grudging respect grows, but his real interest stays fixed on whether
+ *  you can reach the Deep he can't. */
 export const FINN_WIN_BEATS: FinnBeat[] = [
   {
     id: 'w1', milestone: 1, track: 'win',
-    lines: ["Hmph. Beginner's luck. Don't get used to it."],
+    lines: ["Hmph. Beginner's luck. Don't go framing it."],
   },
   {
     id: 'w3', milestone: 3, track: 'win',
     lines: [
       "Twice now. Twice.",
-      "...alright. You've got something. Don't blow it.",
+      "...fine. You've got something. Try not to waste it.",
     ],
   },
   {
     id: 'w5', milestone: 5, track: 'win',
     lines: [
-      "Five times. Fine — maybe you're not completely useless.",
-      "Don't let it go to your head. Plenty of water still in this ocean.",
+      "Five times. Maybe you're not completely useless after all.",
+      "Don't let it swell your head. Plenty of water left in this ocean.",
     ],
   },
   {
     id: 'w8', milestone: 8, track: 'win',
     lines: [
-      "You're getting faster. I've noticed.",
-      "Most folks can't beat me twice. You've done it eight.",
+      "You're getting faster. I've noticed. I notice everything.",
+      "Most folk can't take me twice. You've done it eight.",
     ],
   },
   {
     id: 'w10', milestone: 10, track: 'win',
     lines: [
-      "Someone taught me to fish when I was small. He'd say 'the fish don't owe you a thing, Finn. Patience and a steady hand.'",
-      "Took me half a lifetime to understand what he meant.",
-      "...you're already halfway there.",
+      "Patience and a steady hand. That's the whole trade, start to finish.",
+      "Took me half a lifetime to learn it. You're picking it up fast. Almost unfairly fast.",
     ],
   },
   {
     id: 'w12', milestone: 12, track: 'win',
     lines: [
-      "Where'd you learn to read the water like that? You don't move like an inland kid.",
-      "...don't answer. I like the mystery.",
+      "Where'd you learn to read water like that? You don't move like an inland kid.",
+      "...don't answer. I'd rather wonder.",
     ],
   },
   {
     id: 'w15', milestone: 15, track: 'win',
     lines: [
-      "My father was a clerk. Boring as a flat sea.",
-      "I took to the water to get away from his desk. Never looked back.",
+      "Where do I come from? Ha. Nowhere you'll find on any chart you own.",
+      "And we'll be keeping it that way.",
     ],
   },
   {
     id: 'w18', milestone: 18, track: 'win',
     lines: [
       "Two anglers walk into a tavern. One catches a fish. The other's me.",
-      "...you laughed. I was worried about you.",
+      "...you laughed. Good. I was starting to worry about you.",
     ],
   },
   {
     id: 'w20', milestone: 20, track: 'win',
     lines: [
-      "Had a fishing partner once. Better than me. Way better.",
-      "Patient on the entry. Mean on the pull. Just like you, oddly enough.",
+      "Patient on the entry, mean on the pull. That's how a body fishes the deep, if the deep allows it.",
+      "And I'm starting to think it just might allow you.",
     ],
   },
   {
     id: 'w22', milestone: 22, track: 'win',
     lines: [
-      "We fished together for ten years. The same routes. The same silences.",
-      "When you spend ten years in silence with someone, words stop being the point.",
+      "I gave that deep ten years. Ten years of cold mornings and a slack line and silence.",
+      "You might wring more out of it in one season than I got from all of them.",
     ],
   },
   {
     id: 'w25', milestone: 25, track: 'win',
     lines: [
-      "He's gone. Went down in the Ancient Deep forty years back.",
-      "...this one's harder to talk about. Take the bet or don't.",
+      "The deep's taken things off me I don't put into words. Leave it where it lies.",
+      "Take the bet or don't.",
     ],
   },
   {
     id: 'w28', milestone: 28, track: 'win',
     lines: [
-      "You remind me of him. Same look when you lock in on a perfect — like the water just slowed down for you.",
-      "Used to drive me crazy. Now I find I miss it.",
+      "That look you get locking onto a perfect, like the water slows down just for you.",
+      "I've only ever seen it on the kind of angler who can go where I can't.",
     ],
   },
   {
     id: 'w30', milestone: 30, track: 'win',
     lines: [
       "Thirty wins. Most people don't last thirty casts.",
-      "...I'm not gonna call you my equal. But I'll stop calling you 'kid.'",
-      "Use it sparingly.",
+      "...I won't call you my equal. But I'll quit calling you 'kid.'",
+      "Spend that sparingly.",
     ],
   },
   {
     id: 'w33', milestone: 33, track: 'win',
     lines: [
-      "Trick about the deep zones: don't pull at the bite. Pull at the breath right after.",
-      "Fish have to recover. Hit them in the recovery and they can't run.",
-      "...not that I'm telling you.",
+      "Trick to the deep zones: don't pull at the bite. Pull at the breath right after.",
+      "A fish has to recover. Hit it in the recovery and it can't run.",
+      "...not that I told you anything.",
     ],
   },
   {
     id: 'w36', milestone: 36, track: 'win',
     lines: [
-      "All this time on the water. Alone.",
-      "I always told myself the quiet was the best part.",
-      "Lately I'm not so sure.",
+      "All these years working this dock. Waiting for the right line to come walking up it.",
+      "Didn't quite believe it ever would.",
     ],
   },
   {
     id: 'w40', milestone: 40, track: 'win',
     lines: [
-      "Forty wins. You actually managed to learn something from me without me admitting I was teaching.",
-      "Don't get cocky. I might've been letting some slide.",
+      "Forty. You've taken everything I can teach from up here on the dock.",
+      "The rest, only the deep can teach you. So go and get it. ...for the both of us.",
     ],
   },
 ]
 
 /** The reveal — fires on the next Finn encounter after the player catches
- *  their first Ancient Deep trophy. Supersedes any pending normal beats. */
+ *  their FIRST Ancient Deep trophy. The mask slips: not the full truth (that
+ *  he is the Finndicate — that waits for the end-game merge), but his hunger
+ *  and his need for all six show through for the first time. */
 export const FINN_REVEAL_BEAT: FinnBeat = {
   id: 'reveal', milestone: 0, track: 'reveal',
   lines: [
     "...you did it.",
-    "First trophy out of the Ancient Deep. You actually did it.",
-    "I should tell you something. Sit down.",
-    "The face you've been arguing with — it's a costume. Has been since the first day I saw you on the dock.",
-    "Easier to taunt a stranger than to train one for what lives down there.",
-    "My fishing partner. The one I told you about.",
-    "He wasn't my partner. He was my son. His name was Marl.",
-    "He was twenty-three when the deep took him. Forty years ago this winter.",
-    "I've spent every year since looking for someone who fishes the way he did. Who reads the water the way he did.",
-    "It's not you. You're not him.",
-    "But you're the closest I've ever found.",
-    "Keep fishing the deep. Bring something back from it. For both of us.",
-    "And if you ever feel the line snap wrong — you walk away. Promise me that.",
-    "...I'll be around. Just not in the costume.",
+    "First trophy up out of the Ancient Deep. In one piece. You actually did it.",
+    "Listen to me. Whatever you think you're holding, you're holding less than half of it.",
+    "There are five more down there. Five. And I need every one of them landed.",
+    "...need. Strong word, for a man who's meant to be your rival. Let's call it want.",
+    "I have spent more of my life on that black water than I will ever tell you, and not once did it open for me. Not once.",
+    "It's opening for you.",
+    "So here's the new bet, the only one that ever mattered. You and me. All six.",
+    "Don't ask me why. Just fish.",
   ],
 }
 
@@ -370,36 +369,37 @@ export const FINN_LOSS_LINES: string[] = [
   "Try the bait next time.",
   "Better luck next decade.",
   "Stick to the shallows, kid.",
-  "That'll teach you to listen to old men.",
+  "That'll teach you to bet against me.",
 ]
 
 // ─── Epilogue pools (post-reveal) ────────────────────────────────────────────
 
-/** Replaces FINN_OFFER_LINES once player has seen the reveal. */
+/** Replaces FINN_OFFER_LINES once player has seen the reveal. He's openly
+ *  fixed on the remaining trophies now, and only just keeping the lid on it. */
 export const FINN_EPILOGUE_OFFER_LINES: string[] = [
-  "Back at it. Good.",
-  "Got another bet for you. Same rules. Pick it up or leave it.",
-  "...you've been to the deep again, haven't you? I can see it on you.",
-  "Sit. Take the bet. Or don't. Old men have time.",
-  "How's the deep treating you?",
-  "Bait's on me today. Metaphorically.",
+  "Back at it. How many of the six now?",
+  "Another bet, same rules. Though we both know what I really want out of you.",
+  "...you've been down to the deep again. I can see it on you.",
+  "Sit a minute. The deep's waited this long. It can wait for a round of dice.",
+  "How's the black water treating you?",
+  "Don't let the rest of this ocean distract you. Six. That's the only number that counts.",
 ]
 
 /** Replaces FINN_WIN_LINES post-reveal. */
 export const FINN_EPILOGUE_WIN_LINES: string[] = [
-  "Well done. You're getting good at this.",
-  "Marl would've liked you.",
-  "...don't let it go to your head. There's still water you haven't fished.",
-  "Forty years I've waited for someone to say 'I got one' and mean it. You said it.",
-  "Easy as breathing for you now, isn't it?",
+  "Good. Now go pull up the next one.",
+  "You make it look like nothing. It was never nothing. Not for me.",
+  "Closer. Every win, you're a step closer to all six.",
+  "I waited a long time to watch someone do this. Don't you dare stop now.",
+  "Easy as breathing for you. I used to resent that. Now I'm grateful for it.",
 ]
 
 /** Replaces FINN_LOSS_LINES post-reveal. */
 export const FINN_EPILOGUE_LOSS_LINES: string[] = [
-  "Hmph. Not your day.",
-  "Tomorrow's tomorrow.",
-  "Even Marl missed his share. Don't take it personal.",
-  "The deep's patient. So am I.",
+  "Hmph. The deep won't care about your bad day. Neither will I.",
+  "Shake it off. There's trophies down there with your name not yet on them.",
+  "Even off your game you're better on that water than I ever was.",
+  "The deep is patient. I am running short of it. Get back out there.",
 ]
 
 // ─── Return-acknowledgement pools ────────────────────────────────────────────
@@ -432,13 +432,14 @@ export const FINN_RETURN_AFTER_WIN: string[] = [
   "Hope you didn't spend it all already.",
 ]
 
-/** Rare lore drops — fires occasionally instead of a normal offer line. */
+/** Rare lore drops — fires occasionally instead of a normal offer line.
+ *  Post-reveal only. The boldest tells live here: his agenda, never the
+ *  whole truth. */
 export const FINN_EPILOGUE_LORE_LINES: string[] = [
-  "Marl used to chase a sturgeon for three summers running. Never landed it. Grinned like an idiot every time it broke the line.",
-  "I burned his nets when he didn't come back. Stupid thing to do.",
-  "Sometimes I think the deep knows my name. Hopes I'll stop showing up. Sorry, deep — not yet.",
-  "You ever wonder if the fish remember? I do.",
-  "Forty winters. Forty. And here I am still trying to talk a stranger into another bet.",
+  "I've burned more rigs on that deep than you've owned in your life. Never kept a single bite.",
+  "The deep knows who it'll allow down. I'm not on its list. You might be.",
+  "Six trophies in one hand. You've no notion what that unlocks. You will.",
+  "I didn't come to this dock to fish, if you must know. I came to find someone who could. Took longer than I'd have liked.",
 ]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
