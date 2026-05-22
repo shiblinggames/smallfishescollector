@@ -98,7 +98,7 @@ function CrewPanel({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={artSrc(filename)} alt={name} style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%',
-          objectFit: 'cover', objectPosition: 'center 30%',
+          objectFit: 'contain', objectPosition: 'center', padding: 5,
         }} />
         {/* inner frame line */}
         <div style={{ position: 'absolute', inset: 3, borderRadius: '40px 40px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
