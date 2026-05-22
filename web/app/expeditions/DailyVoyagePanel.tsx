@@ -885,44 +885,30 @@ export default function DailyVoyagePanel({
           background: 'linear-gradient(135deg, rgba(28,20,10,0.72) 0%, rgba(18,14,6,0.80) 100%)',
           border: '1px solid rgba(240,192,64,0.18)',
           borderRadius: 16, padding: '1.05rem 1.1rem',
+          display: 'flex', flexDirection: 'column', gap: '0.7rem',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: lostCards.length > 0 ? '0.85rem' : 0 }}>
-            <div>
-              <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#9a8868', marginBottom: 4 }}>
-                Voyage complete
-              </p>
-              {earned > 0 || activeVoyage.total_gems > 0 ? (
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem' }}>
-                  {earned > 0 && (
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1 }}>
-                      +{earned} ⟡
-                    </p>
-                  )}
-                  {activeVoyage.total_gems > 0 && (
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#a78bfa', lineHeight: 1 }}>
-                      +{activeVoyage.total_gems} gems
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#9a8868' }}>
-                  The crew returned empty-handed.
-                </p>
-              )}
-            </div>
-            <button
-              onClick={() => setPanelState('idle')}
-              style={{
-                flexShrink: 0,
-                background: 'rgba(240,192,64,0.07)',
-                border: '1px solid rgba(240,192,64,0.16)',
-                borderRadius: 8, padding: '0.38rem 0.85rem',
-                color: '#a08860', cursor: 'pointer',
-              }}
-              className="font-karla font-700 uppercase tracking-[0.1em]"
-            >
-              <span style={{ fontSize: '0.58rem' }}>Done</span>
-            </button>
+          {/* Loot-hero header */}
+          <div style={{ textAlign: 'center' }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.2em', color: '#c8aa6a' }}>
+              Voyage complete
+            </p>
+            <div style={{ height: 1, margin: '0.9rem 0', background: 'linear-gradient(90deg, transparent, rgba(240,192,64,0.28), transparent)' }} />
+            {earned > 0 || activeVoyage.total_gems > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                {earned > 0 && (
+                  <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 26px rgba(240,192,64,0.35)' }}>
+                    +{earned.toLocaleString()} ⟡
+                  </p>
+                )}
+                {activeVoyage.total_gems > 0 && (
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#a78bfa', lineHeight: 1 }}>
+                    +{activeVoyage.total_gems} gem{activeVoyage.total_gems !== 1 ? 's' : ''}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a8868' }}>The crew returned empty-handed.</p>
+            )}
           </div>
 
           {claimedBait.length > 0 && (
@@ -1154,7 +1140,6 @@ export default function DailyVoyagePanel({
               <div style={{
                 background: 'rgba(70,90,140,0.10)', border: '1px solid rgba(112,144,192,0.22)',
                 borderRadius: 8, padding: '0.6rem 0.8rem',
-                marginTop: '0.55rem',
                 display: 'flex', alignItems: 'center', gap: '0.6rem',
               }}>
                 <div style={{ flexShrink: 0, textAlign: 'center' }}>
@@ -1179,7 +1164,6 @@ export default function DailyVoyagePanel({
               border: '1px solid rgba(180,40,40,0.22)',
               borderRadius: 8, padding: '0.55rem 0.8rem',
               display: 'flex', alignItems: 'center', gap: '0.6rem',
-              marginTop: '0.55rem',
             }}>
               <div>
                 <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: '#9a4848', marginBottom: '0.2rem' }}>
@@ -1193,6 +1177,21 @@ export default function DailyVoyagePanel({
               </div>
             </div>
           )}
+
+          {/* Done — full-width footer action */}
+          <button
+            onClick={() => setPanelState('idle')}
+            className="font-karla font-700 uppercase tracking-[0.12em]"
+            style={{
+              width: '100%',
+              background: 'rgba(240,192,64,0.10)',
+              border: '1px solid rgba(240,192,64,0.30)',
+              borderRadius: 10, padding: '0.75rem 1rem',
+              color: '#d8b870', cursor: 'pointer', fontSize: '0.72rem',
+            }}
+          >
+            Done
+          </button>
         </div>
       </div>
       </>
