@@ -53,8 +53,8 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
               src={art}
               alt=""
               style={{
-                maxWidth: '100%',
-                maxHeight: artMaxHeight,
+                width: '100%',
+                height: artMaxHeight,
                 objectFit: 'contain',
                 opacity: done ? 0.4 : 0.92,
                 filter: `drop-shadow(0 4px 14px ${accent}55)`,
@@ -143,8 +143,8 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
             src={art}
             alt=""
             style={{
-              maxWidth: '100%',
-              maxHeight: 110,
+              width: '100%',
+              height: 110,
               objectFit: 'contain',
               opacity: done ? 0.4 : 0.88,
               filter: `drop-shadow(0 4px 16px ${accent}50)`,

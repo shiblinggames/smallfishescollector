@@ -134,7 +134,7 @@ export default async function TavernPage() {
             completed={fotdDone}
             streak={profile?.fotd_streak ?? 0}
             variant="compact"
-            art={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/Hammerhead_Shark.png`}
+            art="/fishoftheday.png"
             accent="#60a5fa"
           />
           <GameCard
