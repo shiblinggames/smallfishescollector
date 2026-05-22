@@ -229,6 +229,9 @@ function RaidMap({
 
             {/* Title beside the token (open side), vertically centred
                 so it adds no height to the node. */}
+            {/* Backing sits on the text itself (box-decoration-break: clone)
+                so each line's plate hugs its words exactly — no loose empty
+                space when a long label wraps. */}
             <div
               style={{
                 position: 'absolute',
@@ -237,19 +240,20 @@ function RaidMap({
                 width: 'max-content',
                 maxWidth: 124,
                 pointerEvents: 'none',
-                background: 'rgba(6,5,4,0.4)',
-                borderRadius: 7,
-                padding: '0.16rem 0.42rem',
                 ...(labelRight
                   ? { left: '100%', marginLeft: 12, textAlign: 'left' as const }
                   : { right: '100%', marginRight: 12, textAlign: 'right' as const }),
               }}
             >
-              <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', lineHeight: 1.15, color: locked ? 'rgba(240,237,232,0.45)' : '#f5f2ec', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
-                {node.label}
+              <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', lineHeight: 1.5, color: locked ? 'rgba(240,237,232,0.45)' : '#f5f2ec', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
+                <span style={{ background: 'rgba(6,5,4,0.5)', borderRadius: 6, padding: '1px 6px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
+                  {node.label}
+                </span>
               </p>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', marginTop: 2, color: cleared ? '#4ade80' : locked ? '#6a6764' : raidBlocked ? '#f0734a' : accent, textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
-                {statusWord}
+              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', marginTop: 3, color: cleared ? '#4ade80' : locked ? '#6a6764' : raidBlocked ? '#f0734a' : accent, textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
+                <span style={{ background: 'rgba(6,5,4,0.5)', borderRadius: 5, padding: '1px 5px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
+                  {statusWord}
+                </span>
               </p>
             </div>
           </div>
