@@ -57,8 +57,8 @@ export default function RecruitCard({ packsAvailable }: Props) {
           src="/recruitcrew.png"
           alt=""
           style={{
-            maxWidth: '100%',
-            maxHeight: 120,
+            width: '100%',
+            height: 120,
             objectFit: 'contain',
             opacity: 0.92,
             filter: 'drop-shadow(0 4px 18px rgba(200,168,112,0.55))',
