@@ -686,10 +686,10 @@ export default function RaidsSection({ views, doubloons, repairOwed, ownedRaidIt
 
       {open && (
         <div style={{
-          background: 'linear-gradient(180deg, rgba(12,10,8,0.6) 0%, rgba(8,7,6,0.6) 100%)',
-          border: '1px solid rgba(196,169,106,0.14)',
+          background: 'linear-gradient(135deg, rgba(28,20,10,0.72) 0%, rgba(18,14,6,0.82) 100%)',
+          border: '1px solid rgba(240,192,64,0.18)',
           borderRadius: 16,
-          padding: '0.5rem 0.6rem',
+          padding: '0.9rem 0.75rem',
         }}>
           {/* Next-up objective — surfaces the first non-cleared node at the
               top of the card so the player sees what to do without hunting the
