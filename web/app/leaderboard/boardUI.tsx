@@ -18,7 +18,7 @@ export interface LeaderboardEntry {
 
 export type BoardKey =
   | 'fishingLevel' | 'perfectStreak' | 'tideRun'
-  | 'fishSlots' | 'expedition' | 'raidScore'
+  | 'fishSlots' | 'expedition' | 'raidScore' | 'crewStrength'
 
 export type AvatarMap = Record<string, {
   characterColor: string | null
@@ -42,6 +42,7 @@ export const BOARD_META: Record<BoardKey, {
   fishSlots:     { label: 'Fish Slots',     accent: '#34d399', unit: n => `${n.toLocaleString()} ⟡`,    subUnit: () => 'single spin' },
   expedition:    { label: 'Navigator Level',accent: '#7090c0', unit: n => `Lv ${getExpeditionLevel(n)}`, subUnit: n => `${n.toLocaleString()} XP` },
   raidScore:     { label: 'Raid Score',     accent: '#c8704a', unit: n => n.toLocaleString(),            subUnit: () => 'combat rating' },
+  crewStrength:  { label: 'Crew Strength',  accent: '#7fd0a0', unit: n => n.toLocaleString(),            subUnit: () => 'best party' },
 }
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']

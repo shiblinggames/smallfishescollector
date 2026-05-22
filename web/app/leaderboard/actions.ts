@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { EXPEDITION_SHIP_STATS, computeCombatRating } from '@/lib/expeditions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
+import { applyCrewEffects } from '@/lib/crewEffects'
 import { getLevelFromXP as getExpeditionLevel, navLevelBonuses } from '@/lib/expeditionLevel'
 import type { LeaderboardEntry, BoardKey, AvatarMap } from './boardUI'
 
@@ -102,6 +103,29 @@ async function fetchRaidScore(admin: Admin, userId: string) {
   return { top, myScore: myIdx >= 0 ? rows[myIdx].score : 0, myRank: myIdx >= 0 ? myIdx + 1 : null }
 }
 
+async function fetchCrewStrength(admin: Admin, userId: string) {
+  const { data: profiles } = await admin.from('profiles').select('id, username').eq('is_admin', false)
+  if (!profiles || profiles.length === 0) return { top: [] as LeaderboardEntry[], myScore: 0, myRank: null as number | null }
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const { data: crewRows } = await admin.from('user_crew').select('user_id, power, dodge, fortune, effects')
+  const totalsByUser = new Map<string, number[]>()
+  for (const r of ((crewRows ?? []) as any[])) {
+    const eff = applyCrewEffects({ power: r.power, dodge: r.dodge, fortune: r.fortune }, r.effects ?? [])
+    const arr = totalsByUser.get(r.user_id) ?? []
+    arr.push(eff.power + eff.dodge + eff.fortune)
+    totalsByUser.set(r.user_id, arr)
+  }
+  const rows: LeaderboardEntry[] = []
+  for (const p of profiles as Array<{ id: string; username: string | null }>) {
+    const score = (totalsByUser.get(p.id) ?? []).sort((a, b) => b - a).slice(0, 5).reduce((s, t) => s + t, 0)
+    if (score > 0) rows.push({ user_id: p.id, username: p.username ?? '', score })
+  }
+  rows.sort((a, b) => b.score - a.score)
+  const top = rows.slice(0, 50)
+  const myIdx = rows.findIndex(r => r.user_id === userId)
+  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : 0, myRank: myIdx >= 0 ? myIdx + 1 : null }
+}
+
 export interface LeaderboardBoardsResult {
   currentUserId: string
   boards: Partial<Record<BoardKey, LeaderboardEntry[]>>
@@ -126,6 +150,7 @@ export async function getLeaderboardBoards(
     let res: { top: LeaderboardEntry[]; myScore: number; myRank: number | null }
     if (key === 'perfectStreak')      res = await fetchPerfectStreak(admin, user.id)
     else if (key === 'raidScore')     res = await fetchRaidScore(admin, user.id)
+    else if (key === 'crewStrength')  res = await fetchCrewStrength(admin, user.id)
     else {
       const view = VIEW_BY_KEY[key]
       if (!view) return

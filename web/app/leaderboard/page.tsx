@@ -8,6 +8,7 @@ import {
   EXPEDITION_SHIP_STATS, computeCombatRating,
 } from '@/lib/expeditions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
+import { applyCrewEffects } from '@/lib/crewEffects'
 import { getLevelFromXP as getExpeditionLevel, navLevelBonuses } from '@/lib/expeditionLevel'
 
 /** Resolve the player's rank on a board. If they're in the top-50 array we
@@ -103,6 +104,33 @@ async function fetchRaidScoreBoard(admin: ReturnType<typeof createAdminClient>, 
   return { top, myScore, myRank }
 }
 
+// Crew Strength: sum of each player's top-5 crew effective stat totals (best
+// party), regardless of ship assignment. Pure crew metric.
+async function fetchCrewStrengthBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
+  const { data: profiles } = await admin.from('profiles').select('id, username').eq('is_admin', false)
+  if (!profiles || profiles.length === 0) return { top: [] as LeaderboardEntry[], myScore: 0, myRank: null as number | null }
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const { data: crewRows } = await admin.from('user_crew').select('user_id, power, dodge, fortune, effects')
+  const totalsByUser = new Map<string, number[]>()
+  for (const r of ((crewRows ?? []) as any[])) {
+    const eff = applyCrewEffects({ power: r.power, dodge: r.dodge, fortune: r.fortune }, r.effects ?? [])
+    const arr = totalsByUser.get(r.user_id) ?? []
+    arr.push(eff.power + eff.dodge + eff.fortune)
+    totalsByUser.set(r.user_id, arr)
+  }
+
+  const rows: LeaderboardEntry[] = []
+  for (const p of profiles as Array<{ id: string; username: string | null }>) {
+    const score = (totalsByUser.get(p.id) ?? []).sort((a, b) => b - a).slice(0, 5).reduce((s, t) => s + t, 0)
+    if (score > 0) rows.push({ user_id: p.id, username: p.username ?? '', score })
+  }
+  rows.sort((a, b) => b.score - a.score)
+  const top = rows.slice(0, 50)
+  const myIdx = rows.findIndex(r => r.user_id === userId)
+  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : 0, myRank: myIdx >= 0 ? myIdx + 1 : null }
+}
+
 async function fetchPerfectStreakBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
   const [{ data: top }, { data: me }] = await Promise.all([
     admin.from('leaderboard_perfect_streak')
@@ -126,7 +154,7 @@ export default async function LeaderboardPage() {
 
   const admin = createAdminClient()
 
-  const [profile, fishingData, perfectStreakData, tideRunData, fishSlotsData, expeditionData, raidScoreData] = await Promise.all([
+  const [profile, fishingData, perfectStreakData, tideRunData, fishSlotsData, expeditionData, raidScoreData, crewStrengthData] = await Promise.all([
     admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     fetchBoard(admin, 'leaderboard_fishing', user.id),
     fetchPerfectStreakBoard(admin, user.id),
@@ -134,6 +162,7 @@ export default async function LeaderboardPage() {
     fetchBoard(admin, 'leaderboard_fish_slots', user.id),
     fetchBoard(admin, 'leaderboard_expedition', user.id),
     fetchRaidScoreBoard(admin, user.id),
+    fetchCrewStrengthBoard(admin, user.id),
   ])
 
   // Fetch avatar data (character_color + equipped_hat) for every user that
@@ -147,6 +176,7 @@ export default async function LeaderboardPage() {
     ...fishSlotsData.top.map(e => e.user_id),
     ...expeditionData.top.map(e => e.user_id),
     ...raidScoreData.top.map(e => e.user_id),
+    ...crewStrengthData.top.map(e => e.user_id),
   ])
   const avatarsMap: Record<string, {
     characterColor: string | null
@@ -187,6 +217,7 @@ export default async function LeaderboardPage() {
             fishSlots={fishSlotsData.top}
             expedition={expeditionData.top}
             raidScore={raidScoreData.top}
+            crewStrength={crewStrengthData.top}
             myScores={{
               fishing: fishingData.myScore,
               perfectStreak: perfectStreakData.myScore,
@@ -194,6 +225,7 @@ export default async function LeaderboardPage() {
               fishSlots: fishSlotsData.myScore,
               expedition: expeditionData.myScore,
               raidScore: raidScoreData.myScore,
+              crewStrength: crewStrengthData.myScore,
             }}
             myRanks={{
               fishing: fishingData.myRank,
@@ -202,6 +234,7 @@ export default async function LeaderboardPage() {
               fishSlots: fishSlotsData.myRank,
               expedition: expeditionData.myRank,
               raidScore: raidScoreData.myRank,
+              crewStrength: crewStrengthData.myRank,
             }}
             currentUserId={user.id}
             avatars={avatarsMap}
