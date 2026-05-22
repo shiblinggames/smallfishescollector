@@ -8,7 +8,7 @@ import { awardRaidKill } from './raidXPActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
-import type { RaidMods } from '@/lib/expeditions'
+import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import {
   BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR,
 } from '@/lib/bossRaids'
@@ -62,11 +62,11 @@ const ENEMY_DODGE_MS      = 1400
 
 function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: number): number {
   if (!res || res === 'miss') return 0
-  const powerMax = shipMinDamage + 2 + Math.floor(totalPower / 4)
-  // Crew-aware floor on hit — see RaidCombat.tsx for the rationale.
-  const hitMin = Math.max(shipMinDamage, Math.floor(powerMax * 0.4))
+  // Single source of truth (lib/expeditions.raidDamageProfile) so combat, the
+  // rating and the ledger never drift.
+  const { hitMin, powerMax, critMax } = raidDamageProfile(totalPower, shipMinDamage)
   const ranges: Record<string, [number, number]> = {
-    critical: [shipMinDamage * 2, Math.round(powerMax * 1.5)],
+    critical: [shipMinDamage * 2, critMax],
     hit:      [hitMin, powerMax],
     graze:    [1, Math.max(1, Math.ceil(powerMax * 0.4))],
   }
