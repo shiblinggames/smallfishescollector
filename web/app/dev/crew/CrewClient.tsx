@@ -119,7 +119,7 @@ function CrewPanel({
           <p className="font-pirata" style={{ fontSize: '1.18rem', color: '#ecdcbd', lineHeight: 1, letterSpacing: '0.02em' }}>
             {name}
           </p>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.52rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: `${color}cc`, marginTop: 2 }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase', color, marginTop: 3, textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
             {RARITY_NAMES[(rarity as CrewRarity)] ?? 'Common'} Crew
           </p>
         </div>
@@ -150,10 +150,10 @@ function CrewPanel({
               return (
                 <div key={e.id} title={e.desc} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                   <span style={{ flexShrink: 0, width: 5, height: 5, borderRadius: '50%', background: buff ? '#5fd38a' : '#e07a7a', transform: 'translateY(-1px)' }} />
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: buff ? '#bfe8cf' : '#f0bcbc', fontStyle: 'italic' }}>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: buff ? '#bfe8cf' : '#f0bcbc', fontStyle: 'italic' }}>
                     {e.name}
                   </span>
-                  <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: 'rgba(232,220,192,0.45)', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
+                  <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: buff ? '#7fdfa3' : '#f08a8a', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
                     {modSummary(e)}
                   </span>
                 </div>
