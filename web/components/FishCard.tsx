@@ -1,7 +1,6 @@
 import Image from 'next/image'
 import type { BorderStyle, ArtEffect, CardStats } from '@/lib/types'
 import { rarityFromVariant, RARITY_COLOR } from '@/lib/variants'
-import { fishZone } from '@/lib/fishGroups'
 
 interface Props {
   name: string
@@ -65,11 +64,6 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
   const H: number | string = fill ? '100%' : Math.round(cardW * DEFAULT_H / DEFAULT_W)
   const src = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/${filename}`
 
-  // Habitat backdrop behind the character — matched to the fish's crew group
-  // (group 1 Shallows … 4 Abyss). Skipped for art effects that already supply
-  // their own background (kraken, ghost, storm, etc.).
-  const zone = artBg[artEffect] ? null : fishZone(filename.replace(/\.[^.]+$/, '').toLowerCase())
-
   const rarity = (variantName && dropWeight != null) ? rarityFromVariant(variantName, dropWeight) : null
   const rarityColor = rarity ? (RARITY_COLOR[rarity] ?? '#a0a09a') : null
   const nameFontSize = name.length > 16 ? '7cqw' : name.length > 13 ? '8cqw' : '10cqw'
@@ -94,10 +88,6 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
 
         {/* Fish art — top 60% only */}
         <div className="absolute overflow-hidden" style={{ inset: '4% 5% 40% 5%', zIndex: 2 }}>
-          {zone && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={`/cardbg_${zone}.webp`} alt="" aria-hidden className="absolute inset-0 w-full h-full" style={{ objectFit: 'cover', objectPosition: 'center' }} />
-          )}
           <Image
             src={src}
             alt={name}
