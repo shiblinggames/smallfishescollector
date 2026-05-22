@@ -3,7 +3,6 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const PROTECTED = [
   '/fishing',
-  '/collection',
   '/expeditions',
   '/marketplace',
   '/packs',

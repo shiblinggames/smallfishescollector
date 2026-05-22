@@ -1,7 +1,6 @@
 export const TAB_ORDER: Record<string, number> = {
   '/tavern':      0,
   '/packs':       1,
-  '/collection':  2,
   '/marketplace': 3,
 }
 

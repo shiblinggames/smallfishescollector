@@ -108,7 +108,7 @@ export default async function AchievementsPage() {
       title: 'The Collection',
       accent: '#60a5fa',
       goals: [
-        badgeGoal('full_collection', 'Full Collection', `Catch every fish species (${collected}/${speciesTotal})`, collected, speciesTotal, '/collection'),
+        badgeGoal('full_collection', 'Full Collection', `Catch every fish species (${collected}/${speciesTotal})`, collected, speciesTotal, '/fishing'),
         badgeGoal('ancient_ones', 'Ancient Ones', 'Catch all 6 Ancient Deep trophies', trophies, 6, '/fishing'),
       ],
     },

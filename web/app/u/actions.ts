@@ -28,7 +28,6 @@ export async function updateUsername(username: string): Promise<{ error?: string
   }
 
   revalidatePath('/u/' + clean)
-  revalidatePath('/collection')
   return {}
 }
 
@@ -65,7 +64,6 @@ export async function updateShowcase(variantIds: number[]): Promise<{ error?: st
     if (error) return { error: 'Something went wrong.' }
   }
 
-  revalidatePath('/collection')
   return {}
 }
 
