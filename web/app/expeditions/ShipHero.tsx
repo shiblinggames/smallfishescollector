@@ -131,6 +131,9 @@ export default function ShipHero({
 
   // Loadout inner state
   const [pickerSlot, setPickerSlot] = useState<number | null>(null)
+  // When a stacked (multi-variant) crew card is tapped, this holds that
+  // character's variants so the player can pick the exact one to assign.
+  const [variantPicker, setVariantPicker] = useState<{ name: string; variants: CollectionCard[] } | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sortBy, setSortBy] = useState<'power' | 'dodge' | 'fortune' | null>(null)
   const [editingName, setEditingName] = useState(false)
@@ -164,7 +167,7 @@ export default function ShipHero({
   const assignedNames = new Set(slots.filter(Boolean).map(c => c!.name))
 
   function openPickerForSlot(i: number) { setPickerSlot(i); setSheetOpen(true); setSortBy(null) }
-  function closeSheet() { setSheetOpen(false); setPickerSlot(null) }
+  function closeSheet() { setSheetOpen(false); setPickerSlot(null); setVariantPicker(null) }
 
   function assignCard(card: CollectionCard) {
     if (pickerSlot === null) return
@@ -227,9 +230,24 @@ export default function ShipHero({
   const pickerCards = pickerSlot !== null
     ? collection.filter(c => !assignedNames.has(c.name) || slots[pickerSlot]?.name === c.name)
     : collection
-  const sortedPickerCards = sortBy
-    ? [...pickerCards].sort((a, b) => b[sortBy] - a[sortBy])
-    : pickerCards
+  // Stack variants: one entry per character, headlined by its strongest
+  // variant (by the active sort stat, else total stats). The full variant
+  // list lives behind the per-character chooser (setVariantPicker).
+  const pickerGroups = (() => {
+    const score = (c: CollectionCard) => (sortBy ? c[sortBy] : c.power + c.dodge + c.fortune)
+    const byName = new Map<string, CollectionCard[]>()
+    for (const c of pickerCards) {
+      const arr = byName.get(c.name)
+      if (arr) arr.push(c); else byName.set(c.name, [c])
+    }
+    const groups = Array.from(byName.values()).map(variants => {
+      const best = variants.reduce((a, b) => (score(b) > score(a) ? b : a))
+      const sorted = [...variants].sort((a, b) => (b.power + b.dodge + b.fortune) - (a.power + a.dodge + a.fortune))
+      return { best, variants: sorted, count: variants.length }
+    })
+    if (sortBy) groups.sort((a, b) => b.best[sortBy] - a.best[sortBy])
+    return groups
+  })()
 
   return (
     <>
@@ -925,14 +943,24 @@ export default function ShipHero({
                       <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#4a4845', padding: '3rem 1rem' }}>No cards yet. Open some packs first!</p>
                     ) : (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
-                        {sortedPickerCards.map(card => {
-                          const inCrew  = assignedNames.has(card.name) && slots[pickerSlot ?? -1]?.name !== card.name
-                          const canPick = pickerSlot !== null && !inCrew
-                          const rc      = RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764'
+                        {pickerGroups.map(group => {
+                          const card  = group.best
+                          const rc    = RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764'
+                          const multi = group.count > 1
+                          const onPick = () => {
+                            if (pickerSlot === null) return
+                            if (multi) setVariantPicker({ name: card.name, variants: group.variants })
+                            else assignCard(card)
+                          }
                           return (
-                            <div key={card.variantId} onClick={canPick ? () => assignCard(card) : undefined} style={{ width: 90, borderRadius: 10, overflow: 'hidden', background: '#080a0e', border: `1.5px solid ${rc}55`, cursor: canPick ? 'pointer' : 'default', opacity: inCrew ? 0.28 : 1, flexShrink: 0 }}>
+                            <div key={card.name} onClick={onPick} style={{ position: 'relative', width: 90, borderRadius: 10, overflow: 'hidden', background: '#080a0e', border: `1.5px solid ${rc}55`, cursor: 'pointer', flexShrink: 0 }}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
+                              {multi && (
+                                <span className="font-karla font-700" style={{ position: 'absolute', top: 4, right: 4, fontSize: '0.5rem', color: '#0a0a0a', background: rc, borderRadius: 999, padding: '0.06rem 0.34rem', lineHeight: 1.3, boxShadow: '0 1px 3px rgba(0,0,0,0.55)' }}>
+                                  ×{group.count}
+                                </span>
+                              )}
                               <div style={{ padding: '0.3rem 0.4rem 0.35rem', background: 'rgba(4,5,8,0.92)' }}>
                                 <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.52rem', color: '#f0ede8', lineHeight: 1.2, marginBottom: 5 }}>{card.name}</p>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -953,6 +981,56 @@ export default function ShipHero({
                 </div>
               </>
             )}
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Per-character variant chooser — opens when a stacked (multi-variant)
+          crew card is tapped, to pick the exact variant to assign. */}
+      <AnimatePresence>
+        {variantPicker && (
+          <>
+            <motion.div
+              key="vp-backdrop"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setVariantPicker(null)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 200 }}
+            />
+            <motion.div
+              key="vp-modal"
+              initial={{ opacity: 0, scale: 0.94, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.94, y: 10 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 201, width: 'calc(100% - 2.5rem)', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', overscrollBehavior: 'contain', background: 'linear-gradient(180deg, #14110d 0%, #0a0807 100%)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, padding: '1.1rem 1.15rem 1.3rem' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>Choose your {variantPicker.name}</p>
+                <button onClick={() => setVariantPicker(null)} aria-label="Close" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, padding: 0 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9a9690" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
+                {variantPicker.variants.map(card => {
+                  const rc = RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764'
+                  return (
+                    <div key={card.variantId} onClick={() => assignCard(card)} style={{ width: 90, borderRadius: 10, overflow: 'hidden', background: '#080a0e', border: `1.5px solid ${rc}55`, cursor: 'pointer', flexShrink: 0 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={IMG_BASE + card.filename} alt={card.variantName} style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
+                      <div style={{ padding: '0.3rem 0.4rem 0.35rem', background: 'rgba(4,5,8,0.92)' }}>
+                        <p className="font-karla font-700 truncate" style={{ fontSize: '0.5rem', color: rc, lineHeight: 1.2, marginBottom: 5 }}>{card.variantName}</p>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          {STAT_COLS.map(s => (
+                            <div key={s.key} style={{ textAlign: 'center' }}>
+                              <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.color, lineHeight: 1 }}>{card[s.key]}</p>
+                              <p style={{ fontSize: '0.38rem', color: '#5a5858', lineHeight: 1, marginTop: 2 }}>{s.short}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </motion.div>
           </>
         )}
       </AnimatePresence>
