@@ -218,7 +218,7 @@ export const RAID_MAP: RaidNode[] = [
     image: '/raidlog.png',
     detail: {
       description:
-        "Pete's strongbox was not empty. It was full of someone else's bookkeeping: cut sheets, courier routes, a tally of years, and one word stamped on every page. The Finndicate. Pete was no kingpin. He was a cash cow, milked dry and bled like everyone he ever robbed.\n\nUnder the ledgers sits a sealed shipment letter. No name on it, just two initials pressed into the wax: C.K. The manifest is heavy and the route is half burned away, but the heading survives. It runs out past the Bilge Strait, into the cold water beyond. Whoever C.K. is, the Finndicate trusts them with a great deal of cargo, and now you know which way it sails.",
+        "Pete's strongbox was not empty. It was full of someone else's bookkeeping: cut sheets, courier routes, a tally of years, and one word stamped on every page. The Finndicate. Pete was no kingpin. He was a cash cow, milked dry and bled like everyone he ever robbed. Stranger still, none of the coin stays put. Every haul on every page buys the same thing again and again, and not one ledger ever says what.\n\nUnder the ledgers sits a sealed shipment letter. No name on it, just two initials pressed into the wax: C.K. The manifest is heavy and the route is half burned away, but the heading survives. It runs out past the Bilge Strait, into the cold water beyond. Whoever C.K. is, the Finndicate trusts them with a great deal of cargo, and now you know which way it sails.",
       drops: [
         {
           emoji: '📜',
@@ -328,7 +328,7 @@ export const RAID_MAP: RaidNode[] = [
         {
           emoji: '📜',
           label: "Captain's Logbook, Fragment IV",
-          sublabel: '"Danger-zone consignment. Priority freight. Do not log the contents." Stamped with a mark no clerk would explain.',
+          sublabel: '"Danger-zone consignment. Priority freight. It will not open for him. Find the hands that it will." Stamped with a mark no clerk would explain.',
           rarity: 'common',
         },
       ],
