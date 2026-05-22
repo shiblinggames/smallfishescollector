@@ -233,11 +233,11 @@ function RaidMap({
                 top: '50%',
                 transform: 'translateY(-50%)',
                 width: 'max-content',
-                maxWidth: 142,
+                maxWidth: 112,
                 pointerEvents: 'none',
-                background: 'rgba(6,5,4,0.6)',
-                borderRadius: 8,
-                padding: '0.24rem 0.5rem',
+                background: 'rgba(6,5,4,0.4)',
+                borderRadius: 7,
+                padding: '0.16rem 0.42rem',
                 ...(labelRight
                   ? { left: '100%', marginLeft: 12, textAlign: 'left' as const }
                   : { right: '100%', marginRight: 12, textAlign: 'right' as const }),
@@ -683,7 +683,7 @@ export default function RaidsSection({ views, doubloons, repairOwed, ownedRaidIt
           background: 'linear-gradient(180deg, rgba(12,10,8,0.6) 0%, rgba(8,7,6,0.6) 100%)',
           border: '1px solid rgba(196,169,106,0.14)',
           borderRadius: 16,
-          padding: '0.5rem 0.25rem',
+          padding: '0.5rem 0.6rem',
         }}>
           <RaidMap views={views} doubloons={doubloons} onSelect={setSelected} repairOwed={repairOwed} />
         </div>
