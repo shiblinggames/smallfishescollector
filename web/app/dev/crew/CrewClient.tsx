@@ -25,6 +25,38 @@ const RECRUIT_PANEL_BORDER = '#46341f'
 const ROSTER_PANEL_BG = 'linear-gradient(157deg, #1a2331 0%, #0a0f16 100%)'
 const ROSTER_PANEL_BORDER = '#324453'
 
+// Shared action-button look: gradient fill, soft shadow, uppercase label.
+const BTN_BASE: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: '100%',
+  padding: '0.6rem 0.7rem', borderRadius: 9, fontSize: '0.84rem',
+  letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer',
+  boxShadow: '0 2px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12)',
+  transition: 'filter 0.15s',
+}
+const BTN_RECRUIT: React.CSSProperties = {
+  ...BTN_BASE,
+  background: 'linear-gradient(180deg, rgba(74,200,130,0.36) 0%, rgba(46,140,92,0.2) 100%)',
+  border: '1px solid rgba(122,226,162,0.6)', color: '#dcf8e7', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+}
+const BTN_DISMISS: React.CSSProperties = {
+  ...BTN_BASE,
+  background: 'linear-gradient(180deg, rgba(212,84,84,0.3) 0%, rgba(150,46,46,0.16) 100%)',
+  border: '1px solid rgba(228,114,114,0.55)', color: '#f8d2d2', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+}
+const BTN_NEUTRAL: React.CSSProperties = {
+  ...BTN_BASE,
+  background: 'linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.035) 100%)',
+  border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.78)',
+}
+const BTN_STATIC: React.CSSProperties = { ...BTN_BASE, cursor: 'default', boxShadow: 'none' }
+
+function AnchorIcon() {
+  return (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="2.5" /><line x1="12" y1="22" x2="12" y2="7.5" /><path d="M5 12H2a10 10 0 0 0 20 0h-3" /></svg>)
+}
+function XIcon() {
+  return (<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>)
+}
+
 function modSummary(e: CrewEffect): string {
   return (['power', 'dodge', 'fortune'] as const)
     .filter(k => e.mods[k])
@@ -217,7 +249,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               <h1 className="font-pirata" style={{ fontSize: '1.7rem', letterSpacing: '0.03em' }}>Crew Hall</h1>
               <span className="font-karla font-700" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: '#0b0a0e', background: '#c084fc', padding: '0.15rem 0.4rem', borderRadius: 4 }}>TEST</span>
             </div>
-            <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)' }}>
+            <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>
               Recruit crew daily, reroll the board with gems, build your roster.
             </p>
           </div>
@@ -241,7 +273,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               <span style={{ width: 4, alignSelf: 'stretch', minHeight: 30, borderRadius: 2, background: SECTION_RECRUIT }} />
               <div>
                 <h2 className="font-cinzel font-700 uppercase" style={{ fontSize: '1rem', letterSpacing: '0.08em', color: SECTION_RECRUIT }}>Recruit Board</h2>
-                <p className="font-karla" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.45)' }}>
+                <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.58)', marginTop: 1 }}>
                   Free board refreshes in <FreeRollCountdown /> · {state.isPremium ? '3 daily (member)' : '2 daily'}
                 </p>
               </div>
@@ -251,15 +283,18 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               disabled={pending || state.gems < state.rerollCost}
               className="font-karla font-700"
               style={{
-                fontSize: '0.72rem', padding: '0.55rem 0.9rem', borderRadius: 9,
-                background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.5)', color: '#cfe2ff',
+                padding: '0.5rem 1.1rem', borderRadius: 10,
+                background: 'linear-gradient(180deg, rgba(96,165,250,0.32) 0%, rgba(58,118,206,0.18) 100%)',
+                border: '1px solid rgba(124,182,255,0.6)', color: '#e6f0ff',
+                textShadow: '0 1px 2px rgba(0,0,0,0.45)',
+                boxShadow: '0 2px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.14)',
                 cursor: pending || state.gems < state.rerollCost ? 'not-allowed' : 'pointer',
                 opacity: pending || state.gems < state.rerollCost ? 0.5 : 1,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3,
               }}
             >
-              <span>{busyId === 'reroll' ? 'Rerolling…' : `Reroll · 💎 ${state.rerollCost}`}</span>
-              <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Always 3 new crew</span>
+              <span style={{ fontSize: '0.84rem', letterSpacing: '0.04em' }}>{busyId === 'reroll' ? 'Rerolling…' : `Reroll · 💎 ${state.rerollCost}`}</span>
+              <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Always 3 new crew</span>
             </button>
           </div>
 
@@ -268,22 +303,18 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               <CrewPanel key={c.id} name={c.name} filename={c.filename} rarity={c.rarity} frameAccent={SECTION_RECRUIT}
                 base={{ power: c.power, dodge: c.dodge, fortune: c.fortune }} effects={c.effects} dimmed={c.recruited}>
                 {c.recruited ? (
-                  <div className="font-karla font-700" style={{ textAlign: 'center', fontSize: '0.66rem', color: 'rgba(255,255,255,0.45)', padding: '0.45rem', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8 }}>
+                  <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)' }}>
                     Recruited ✓
                   </div>
                 ) : rosterFull ? (
-                  <div className="font-karla font-700" style={{ textAlign: 'center', fontSize: '0.66rem', color: '#f2b0b0', padding: '0.45rem', border: '1px solid rgba(220,90,90,0.3)', borderRadius: 8 }}>
+                  <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.35)', color: '#f2b0b0' }}>
                     Roster Full
                   </div>
                 ) : (
                   <button onClick={() => run(() => recruitCrew(c.id), c.id)} disabled={pending}
                     className="font-karla font-700"
-                    style={{
-                      fontSize: '0.72rem', padding: '0.5rem', borderRadius: 8,
-                      background: 'rgba(80,200,130,0.16)', border: '1px solid rgba(80,200,130,0.5)', color: '#9fe6bd',
-                      cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1,
-                    }}>
-                    {busyId === c.id ? 'Recruiting…' : 'Recruit'}
+                    style={{ ...BTN_RECRUIT, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1 }}>
+                    <AnchorIcon /><span>{busyId === c.id ? 'Recruiting…' : 'Recruit'}</span>
                   </button>
                 )}
               </CrewPanel>
@@ -301,10 +332,10 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               <span style={{ width: 4, alignSelf: 'stretch', minHeight: 30, borderRadius: 2, background: SECTION_ROSTER }} />
               <div>
                 <h2 className="font-cinzel font-700 uppercase" style={{ fontSize: '1rem', letterSpacing: '0.08em', color: SECTION_ROSTER }}>Your Crew</h2>
-                <p className="font-karla" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.45)' }}>Hands enlisted to your ship</p>
+                <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.58)', marginTop: 1 }}>Hands enlisted to your ship</p>
               </div>
             </div>
-            <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: rosterFull ? '#f08a8a' : 'rgba(255,255,255,0.5)' }}>
+            <span className="font-karla font-600" style={{ fontSize: '0.76rem', color: rosterFull ? '#f08a8a' : 'rgba(255,255,255,0.6)' }}>
               {state.roster.length} / {state.capacity} · +1 every 10 Nav levels
             </span>
           </div>
@@ -322,19 +353,18 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   {confirmDismiss === m.id ? (
                     <div className="flex gap-1.5">
                       <button onClick={() => run(() => dismissCrew(m.id), m.id)} disabled={pending}
-                        className="font-karla font-700" style={{ flex: 1, fontSize: '0.66rem', padding: '0.45rem', borderRadius: 8, background: 'rgba(220,90,90,0.2)', border: '1px solid rgba(220,90,90,0.55)', color: '#f2b0b0', cursor: 'pointer' }}>
+                        className="font-karla font-700" style={{ ...BTN_DISMISS, flex: 1, padding: '0.55rem' }}>
                         {busyId === m.id ? '…' : 'Confirm'}
                       </button>
                       <button onClick={() => setConfirmDismiss(null)} disabled={pending}
-                        className="font-karla font-700" style={{ flex: 1, fontSize: '0.66rem', padding: '0.45rem', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.65)', cursor: 'pointer' }}>
+                        className="font-karla font-700" style={{ ...BTN_NEUTRAL, flex: 1, padding: '0.55rem' }}>
                         Cancel
                       </button>
                     </div>
                   ) : (
                     <button onClick={() => setConfirmDismiss(m.id)} disabled={pending}
-                      className="font-karla font-700"
-                      style={{ fontSize: '0.68rem', padding: '0.45rem', borderRadius: 8, background: 'rgba(200,70,70,0.1)', border: '1px solid rgba(220,90,90,0.3)', color: '#f2b0b0', cursor: 'pointer' }}>
-                      Dismiss
+                      className="font-karla font-700" style={BTN_DISMISS}>
+                      <XIcon /><span>Dismiss</span>
                     </button>
                   )}
                 </CrewPanel>
@@ -349,9 +379,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 9, padding: '0.4rem 0.7rem', textAlign: 'center' }}>
-      <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', lineHeight: 1.1, color: accent ?? '#f0ede8' }}>{value}</p>
-      <p className="font-karla font-600 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{label}</p>
+    <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 9, padding: '0.45rem 0.8rem', textAlign: 'center' }}>
+      <p className="font-cinzel font-700" style={{ fontSize: '1rem', lineHeight: 1.1, color: accent ?? '#f0ede8' }}>{value}</p>
+      <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.55)', marginTop: 2 }}>{label}</p>
     </div>
   )
 }
