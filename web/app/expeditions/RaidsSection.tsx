@@ -30,7 +30,9 @@ const TYPE_IMAGE: Record<string, string | undefined> = {
 // pure icon-nodes (label + story live in the tap modal), so they pack
 // very tight. ROW floor is set by the cleared/lock badge overhang so
 // it doesn't collide with the next token. Repeats as map grows.
-const COLS = [50, 73, 27, 62, 38, 70, 30]
+// No dead-centre (50) column: a centred node has no room for its label on
+// either side, so a long single word (e.g. "Consignment") overflows the card.
+const COLS = [66, 73, 27, 62, 38, 70, 30]
 const ROW = 84           // vertical pitch between node centres
 const TOKEN = 72         // layout/max token diameter (drives spacing + viewBox)
 const PAD_TOP = 18
@@ -233,7 +235,7 @@ function RaidMap({
                 top: '50%',
                 transform: 'translateY(-50%)',
                 width: 'max-content',
-                maxWidth: 112,
+                maxWidth: 124,
                 pointerEvents: 'none',
                 background: 'rgba(6,5,4,0.4)',
                 borderRadius: 7,
