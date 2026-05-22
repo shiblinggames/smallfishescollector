@@ -67,7 +67,9 @@ function writeNavCache(key: string, value: string | null) {
   } catch { /* private mode etc. — ignore */ }
 }
 
-export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailable?: number; doubloons?: number; gems?: number }) {
+// packsAvailable is accepted (callers still pass it) but no longer shown —
+// packs were replaced by the Crew Hall.
+export default function Nav({ doubloons, gems }: { packsAvailable?: number; doubloons?: number; gems?: number }) {
   const router = useRouter()
   const pathname = usePathname()
   const tint = PAGE_TINTS.find(([p]) => pathname === p || pathname.startsWith(p + '/'))?.[1]
@@ -81,7 +83,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [displayDoubloons, setDisplayDoubloons] = useState(doubloons)
   const [displayGems, setDisplayGems] = useState(gems)
-  const [displayPacks, setDisplayPacks] = useState(packsAvailable)
   // Profile-button avatar (desktop nav). Pulled on mount and cached in
   // localStorage so the avatar doesn't flash to "default" between tab
   // switches — Nav lives inside PageTransition which remounts on every
@@ -173,15 +174,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
     }
     window.addEventListener('gems-changed', handleGemsChanged)
     return () => window.removeEventListener('gems-changed', handleGemsChanged)
-  }, [])
-
-  useEffect(() => {
-    function handlePacksChanged(e: Event) {
-      const d = (e as CustomEvent<unknown>).detail
-      if (typeof d === 'number') setDisplayPacks(d)
-    }
-    window.addEventListener('packs-changed', handlePacksChanged)
-    return () => window.removeEventListener('packs-changed', handlePacksChanged)
   }, [])
 
   // Close on outside tap
@@ -398,15 +390,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </div>
 
         <div className="flex items-center gap-4">
-          {displayPacks !== undefined && (
-            <Link href="/packs" className="flex items-center gap-1 font-cinzel font-700" style={{ fontSize: '0.875rem', color: '#c8a870', textDecoration: 'none' }}>
-              {displayPacks.toLocaleString()}
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 4h16v2a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/><path d="M4 8h16v12a2 2 0 01-2 2H6a2 2 0 01-2-2V8z"/>
-                <line x1="9" y1="13" x2="15" y2="13"/>
-              </svg>
-            </Link>
-          )}
           {displayGems !== undefined && (
             <span className="font-cinzel font-700" style={{ fontSize: '0.875rem', color: '#a78bfa' }}>
               {displayGems.toLocaleString()} ◆
@@ -452,15 +435,6 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
         </Link>
 
         <div className="flex items-center gap-3">
-          {displayPacks !== undefined && (
-            <Link href="/packs" className="flex items-center gap-0.5 font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#c8a870', textDecoration: 'none' }}>
-              {displayPacks.toLocaleString()}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 4h16v2a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/><path d="M4 8h16v12a2 2 0 01-2 2H6a2 2 0 01-2-2V8z"/>
-                <line x1="9" y1="13" x2="15" y2="13"/>
-              </svg>
-            </Link>
-          )}
           {displayGems !== undefined && (
             <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#a78bfa' }}>
               {displayGems.toLocaleString()} ◆
