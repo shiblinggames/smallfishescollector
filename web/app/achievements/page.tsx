@@ -155,17 +155,10 @@ export default async function AchievementsPage() {
       const n = v.node
       const kind: 'story' | 'combat' | 'milestone' | 'shop' =
         n.type === 'story' ? 'story' : isCombatNode(n.type) ? 'combat' : n.type === 'milestone' ? 'milestone' : 'shop'
-      const lines: string[] = []
-      if (n.type === 'story') {
-        lines.push(n.detail.description)
-        const frag = n.detail.drops?.[0]
-        if (frag) lines.push(`${frag.emoji ?? '📜'} ${frag.label}${frag.sublabel ? ` — ${frag.sublabel}` : ''}`)
-      } else if (n.bridge) {
-        lines.push(n.bridge)
-      } else {
-        lines.push(n.flavor)
-      }
-      return { label: n.label, kind, lines }
+      // Tight one-line recap per stop: the node's bridge (what beating it
+      // set in motion), falling back to its flavor. The full descriptions and
+      // fragment quotes stay in the node detail sheets, not this summary.
+      return { label: n.label, kind, lines: [n.bridge ?? n.flavor] }
     })
   const raidNextView = raidViews.find(v => v.status === 'available')
   const raidNext = raidNextView
