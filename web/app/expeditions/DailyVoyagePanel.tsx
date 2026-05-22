@@ -673,38 +673,82 @@ export default function DailyVoyagePanel({
           transition: 'border-color 0.4s',
         }}>
 
-          {/* ── Always-visible summary row ── */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-
-              {/* Title + route */}
-              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: isComplete ? '#f0e8cc' : '#b0bee0', lineHeight: 1.2, transition: 'color 0.4s' }}>
-                {isComplete ? 'Crew has returned' : 'Voyage underway'}
+          {/* ── Summary ── */}
+          {isComplete ? (
+            /* Loot-hero: crew returned, claim the reward. */
+            <div style={{ textAlign: 'center' }}>
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.2em', color: '#c8aa6a' }}>
+                Crew has returned
               </p>
               {routeCfg && (
-                <p className="font-karla" style={{ fontSize: '0.68rem', color: routeCfg.color, marginTop: 2, marginBottom: 10 }}>
+                <p className="font-karla" style={{ fontSize: '0.66rem', color: routeCfg.color, marginTop: 3 }}>
                   {routeCfg.name}
                 </p>
               )}
 
-              {/* Key metrics */}
-              {isComplete ? (
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem', marginBottom: visibleEvents.length > 0 ? 10 : 0 }}>
+              <div style={{ height: 1, margin: '0.9rem 0', background: 'linear-gradient(90deg, transparent, rgba(240,192,64,0.28), transparent)' }} />
+
+              {activeVoyage.total_doubloons > 0 || activeVoyage.total_gems > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                   {activeVoyage.total_doubloons > 0 && (
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f0c040', lineHeight: 1 }}>
-                      +{activeVoyage.total_doubloons} ⟡
+                    <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 26px rgba(240,192,64,0.35)' }}>
+                      +{activeVoyage.total_doubloons.toLocaleString()} ⟡
                     </p>
                   )}
                   {activeVoyage.total_gems > 0 && (
                     <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#a78bfa', lineHeight: 1 }}>
-                      +{activeVoyage.total_gems} gems
+                      +{activeVoyage.total_gems} gem{activeVoyage.total_gems !== 1 ? 's' : ''}
                     </p>
-                  )}
-                  {activeVoyage.total_doubloons === 0 && activeVoyage.total_gems === 0 && (
-                    <p className="font-karla" style={{ fontSize: '0.65rem', color: '#9a8868' }}>Returned empty-handed</p>
                   )}
                 </div>
               ) : (
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a8868' }}>Returned empty-handed</p>
+              )}
+
+              <div style={{ height: 1, margin: '0.9rem 0', background: 'linear-gradient(90deg, transparent, rgba(240,192,64,0.28), transparent)' }} />
+
+              <button
+                onClick={handleClaim}
+                disabled={isPending}
+                className="font-karla font-700 uppercase tracking-[0.12em]"
+                style={{
+                  width: '100%',
+                  background: isPending ? 'rgba(240,192,64,0.06)' : 'rgba(240,192,64,0.16)',
+                  border: '1px solid rgba(240,192,64,0.45)',
+                  borderRadius: 10, padding: '0.8rem 1rem',
+                  color: '#f0c040', cursor: isPending ? 'default' : 'pointer',
+                  opacity: isPending ? 0.5 : 1, fontSize: '0.74rem',
+                }}
+              >
+                {isPending ? 'Claiming…' : 'Claim Loot →'}
+              </button>
+              {error && <p className="font-karla" style={{ fontSize: '0.62rem', color: '#f87171', marginTop: 6 }}>{error}</p>}
+
+              {visibleEvents.length > 0 && (
+                <button
+                  onClick={() => setLogExpanded(v => !v)}
+                  style={{ background: 'none', border: 'none', padding: 0, marginTop: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                >
+                  <span className="font-karla" style={{ fontSize: '0.66rem', color: '#6a7890' }}>
+                    {logExpanded ? 'Hide log' : `View log · ${visibleEvents.length} event${visibleEvents.length !== 1 ? 's' : ''}`}
+                  </span>
+                  <span style={{ fontSize: '0.55rem', color: '#5a6880', transform: logExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▼</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            /* In-progress summary row. */
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#b0bee0', lineHeight: 1.2 }}>
+                  Voyage underway
+                </p>
+                {routeCfg && (
+                  <p className="font-karla" style={{ fontSize: '0.68rem', color: routeCfg.color, marginTop: 2, marginBottom: 10 }}>
+                    {routeCfg.name}
+                  </p>
+                )}
+
                 <div style={{ display: 'flex', gap: '1.25rem', marginBottom: 10, flexWrap: 'wrap' }}>
                   <div>
                     <p className="font-karla font-600 uppercase tracking-[0.07em]" style={{ fontSize: '0.44rem', color: '#4a5a7a', marginBottom: 2 }}>Returns in</p>
@@ -729,43 +773,21 @@ export default function DailyVoyagePanel({
                     </div>
                   )}
                 </div>
-              )}
 
-              {/* Log toggle */}
-              {visibleEvents.length > 0 && (
-                <button
-                  onClick={() => setLogExpanded(v => !v)}
-                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-                >
-                  <span className="font-karla" style={{ fontSize: '0.68rem', color: '#4a5a70' }}>
-                    {logExpanded ? 'Hide log' : `View log · ${visibleEvents.length} event${visibleEvents.length !== 1 ? 's' : ''}`}
-                  </span>
-                  <span style={{ fontSize: '0.55rem', color: '#3a4a60', transform: logExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▼</span>
-                </button>
-              )}
-            </div>
-
-            {/* Claim button — right side, always visible when complete */}
-            {isComplete && (
-              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                <button
-                  onClick={handleClaim}
-                  disabled={isPending}
-                  style={{
-                    background: isPending ? 'rgba(240,192,64,0.06)' : 'rgba(240,192,64,0.16)',
-                    border: '1px solid rgba(240,192,64,0.40)',
-                    borderRadius: 8, padding: '0.5rem 1.1rem',
-                    color: '#f0c040', cursor: isPending ? 'default' : 'pointer',
-                    opacity: isPending ? 0.5 : 1,
-                  }}
-                  className="font-karla font-700 uppercase tracking-[0.1em]"
-                >
-                  <span style={{ fontSize: '0.62rem' }}>{isPending ? 'Claiming…' : 'Claim Loot →'}</span>
-                </button>
-                {error && <p className="font-karla" style={{ fontSize: '0.6rem', color: '#f87171' }}>{error}</p>}
+                {visibleEvents.length > 0 && (
+                  <button
+                    onClick={() => setLogExpanded(v => !v)}
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                  >
+                    <span className="font-karla" style={{ fontSize: '0.68rem', color: '#4a5a70' }}>
+                      {logExpanded ? 'Hide log' : `View log · ${visibleEvents.length} event${visibleEvents.length !== 1 ? 's' : ''}`}
+                    </span>
+                    <span style={{ fontSize: '0.55rem', color: '#3a4a60', transform: logExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▼</span>
+                  </button>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* ── Expandable log ── */}
           {logExpanded && (
