@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useTransition, useCallback, useEffect } from 'react'
+import { useState, useTransition, useCallback, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
-import { EXPEDITION_SHIP_STATS, RARITY_COLORS, computeTotalCrewStats, type CrewCard } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
+import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
+import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
+import type { CrewMember } from '@/app/dev/crew/actions'
 import type { VoyageEvent } from '@/lib/voyageRoutes'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
 import { getBait } from '@/lib/bait'
@@ -46,8 +49,8 @@ const OUTCOME_STYLES: Record<string, { label: string; bg: string; color: string;
   neutral: { label: 'Uneventful', bg: 'rgba(161,155,135,0.06)', color: '#857460', border: '#85746033' },
 }
 
-function rarityColor(rarity: string): string {
-  return RARITY_COLORS[(rarity ?? 'common').toLowerCase()] ?? '#8a8880'
+function rarityColor(rarity: number): string {
+  return CREW_RARITY_COLORS[rarity as 1 | 2 | 3 | 4] ?? '#8a8880'
 }
 
 function formatCountdown(ms: number): string {
@@ -132,8 +135,7 @@ function computeRouteEstimate(
 }
 
 interface Props {
-  savedCrewVariantIds: number[]
-  collection: CrewCard[]
+  roster: CrewMember[]
   shipTier: number
   todayVoyage: DailyVoyage | null
   readyVoyage: DailyVoyage | null
@@ -143,8 +145,7 @@ interface Props {
 }
 
 export default function DailyVoyagePanel({
-  savedCrewVariantIds,
-  collection,
+  roster,
   shipTier,
   todayVoyage,
   readyVoyage,
@@ -168,7 +169,16 @@ export default function DailyVoyagePanel({
   const [claimedTideTurner, setClaimedTideTurner] = useState(false)
   const [claimedPhantomHook, setClaimedPhantomHook] = useState(false)
   const [claimedSkinId, setClaimedSkinId] = useState<string | null>(null)
-  const [liveCrewIds, setLiveCrewIds] = useState<number[]>(savedCrewVariantIds)
+  const [liveCrewIds, setLiveCrewIds] = useState<number[]>(() =>
+    roster
+      .filter(c => c.assignedSlot != null)
+      .sort((a, b) => (a.assignedSlot ?? 0) - (b.assignedSlot ?? 0))
+      .map(c => c.id)
+  )
+  // Remember every crew we've seen so lost (deleted) crew can still be named
+  // in the voyage results.
+  const knownCrew = useRef(new Map<number, CrewMember>())
+  for (const c of roster) knownCrew.current.set(c.id, c)
   const [expandedDropKey, setExpandedDropKey] = useState<string | null>(null)
   const [infoOpen, setInfoOpen] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
@@ -211,13 +221,15 @@ export default function DailyVoyagePanel({
   // so they cap at solo captain — the 2-crew floor applies once you've
   // upgraded to a Sloop with room for a real party.
   const minCrew = Math.min(2, shipStats.crewSlots)
-  const byVariantId = new Map(collection.map(c => [c.variantId, c]))
-  const savedCrew: CrewCard[] = liveCrewIds
+  const byId = knownCrew.current
+  const savedCrew: CrewMember[] = liveCrewIds
     .slice(0, shipStats.crewSlots)
-    .map(id => byVariantId.get(id))
-    .filter(Boolean) as CrewCard[]
+    .map(id => byId.get(id))
+    .filter(Boolean) as CrewMember[]
 
-  const stats = savedCrew.length > 0 ? computeTotalCrewStats(savedCrew) : null
+  const stats = savedCrew.length > 0
+    ? resolveDeployedCrew(savedCrew.map((c, i): DeployedCrew => ({ id: c.id, slot: i, rarity: c.rarity, power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects }))).totals
+    : null
 
   const handleSend = useCallback(() => {
     if (savedCrew.length === 0 || !selectedRoute) return
@@ -658,7 +670,7 @@ export default function DailyVoyagePanel({
       : null
 
     const awayCrew = activeVoyage.crew_variant_ids
-      .map(id => byVariantId.get(id)).filter(Boolean) as CrewCard[]
+      .map(id => byId.get(id)).filter(Boolean) as CrewMember[]
 
     const lootSoFar = visibleEvents.reduce((sum, e) => sum + (e.doubloonDelta ?? 0), 0)
 
@@ -798,7 +810,7 @@ export default function DailyVoyagePanel({
                 {awayCrew.map((c, i) => {
                   const rc = rarityColor(c.rarity)
                   return (
-                    <div key={c.variantId} style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                    <div key={c.id} style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
                       <span className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.52rem', color: '#6a7890', width: 46, flexShrink: 0 }}>
                         {i === 0 ? 'Captain' : 'Crew'}
                       </span>
@@ -812,7 +824,7 @@ export default function DailyVoyagePanel({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                 {visibleEvents.map((e, i) => {
                   const isCrewLoss = e.crewVariantLost != null
-                  const lostCard = isCrewLoss ? collection.find(c => c.variantId === e.crewVariantLost) : null
+                  const lostCard = isCrewLoss ? byId.get(e.crewVariantLost as number) : null
                   const s = isCrewLoss
                     ? OUTCOME_STYLES.failure
                     : (OUTCOME_STYLES[e.outcome] ?? OUTCOME_STYLES.neutral)
@@ -874,8 +886,8 @@ export default function DailyVoyagePanel({
   if (panelState === 'done' && activeVoyage) {
     const earned = activeVoyage.total_doubloons
     const lostCards = activeVoyage.crew_lost
-      .map(id => collection.find(c => c.variantId === id))
-      .filter(Boolean) as CrewCard[]
+      .map(id => byId.get(id))
+      .filter(Boolean) as CrewMember[]
 
     return (
       <>
@@ -1170,7 +1182,7 @@ export default function DailyVoyagePanel({
                   Lost at sea
                 </p>
                 {lostCards.map(c => (
-                  <p key={c.variantId} className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#c06060', lineHeight: 1.3 }}>
+                  <p key={c.id} className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#c06060', lineHeight: 1.3 }}>
                     {c.name}
                   </p>
                 ))}

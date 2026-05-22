@@ -7,7 +7,6 @@ import RaidsSection from './RaidsSection'
 import ShipHero from './ShipHero'
 import DailyVoyagePanel from './DailyVoyagePanel'
 import ExpeditionsTour from './ExpeditionsTour'
-import { getCollectionForCrew } from './actions'
 import { getCrewRoster } from '@/app/dev/crew/actions'
 import { getDailyVoyageState } from './voyageActions'
 import { getRaidMapView } from './raidMapActions'
@@ -19,12 +18,11 @@ export default async function ExpeditionsPage() {
 
   const admin = createAdminClient()
 
-  const [{ data: profile }, collection, crewRoster, dailyVoyageState, { data: voyageHistoryRows }, raidMap] = await Promise.all([
+  const [{ data: profile }, crewRoster, dailyVoyageState, { data: voyageHistoryRows }, raidMap] = await Promise.all([
     admin.from('profiles')
       .select('packs_available, doubloons, ship_tier, gems, saved_crew, ship_name, expedition_xp, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, owned_repair_kits, has_completed_practice_raid, has_seen_expeditions_tour, raid_repair_owed')
       .eq('id', user.id)
       .single(),
-    getCollectionForCrew(),
     getCrewRoster(),
     getDailyVoyageState(),
     admin.from('daily_voyages')
@@ -38,7 +36,6 @@ export default async function ExpeditionsPage() {
 
   const shipTier = profile?.ship_tier ?? 0
   const doubloons = profile?.doubloons ?? 0
-  const savedCrewVariantIds: number[] = (profile?.saved_crew as number[] | null) ?? []
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
 
   return (
@@ -85,8 +82,7 @@ export default async function ExpeditionsPage() {
           <div style={{ marginBottom: '1rem' }}>
             <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Voyages</p>
             <DailyVoyagePanel
-              savedCrewVariantIds={savedCrewVariantIds}
-              collection={collection}
+              roster={crewRoster}
               shipTier={shipTier}
               todayVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.todayVoyage}
               readyVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.readyVoyage}
