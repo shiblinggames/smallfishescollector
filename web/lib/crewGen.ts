@@ -22,6 +22,24 @@ export const RARITY_COLORS: Record<CrewRarity, string> = {
   1: '#8a857c', 2: '#3b8ef0', 3: '#a78bfa', 4: '#f0c040',
 }
 
+// Crew nicknames, keyed by lowercased card slug. Species without an entry fall
+// back to their catalog name.
+const CREW_NAMES: Record<string, string> = {
+  angelfish: 'Ang', anglerfish: 'Anglerr', bass: 'Bob', beluga_whale: 'Bellie',
+  blobfish: 'Bloo', blue_marlin: 'Marl', blue_whale: 'Big Blue', catfish: 'Cat',
+  clownfish: 'Chloe', doby_mick: 'Doby', eel: 'Ell', flounder: 'Floop',
+  giant_squid: 'Skwid', goblin_shark: 'Gob', goldfish: 'Goldie',
+  great_white_shark: 'Great White', hammerhead_shark: 'Hammer', humpback_whale: 'Humps',
+  koi: 'Koy', krill: 'Kreel', lionfish: 'Linus', manta_ray: 'Manta', minnow: 'Min',
+  nurse_shark: 'Nursa', oarfish: "O'her", orca: 'Orc', piranha: 'Perry',
+  pufferfish: 'Puff', red_snapper: 'Snappy', salmon: 'Sam', sardine: 'Sard',
+}
+
+/** Crew display nickname for a card slug, falling back to the catalog name. */
+export function crewDisplayName(slug: string, fallbackName: string): string {
+  return CREW_NAMES[slug.toLowerCase()] ?? fallbackName
+}
+
 // Board rarity weights [Common, Rare, Epic, Legendary]. The free daily board
 // is a slow trickle (never Legendary, very rare Epic); the 100-gem reroll is
 // the real pull (boosted Epic, the only path to a Legendary).
@@ -36,13 +54,10 @@ const STAT_BUDGET: Record<CrewRarity, [number, number]> = {
   4: [28, 34],
 }
 
-// How many effects roll per rarity, and the chance each one is a buff.
-const EFFECT_PLAN: Record<CrewRarity, { count: [number, number]; buffChance: number }> = {
-  1: { count: [0, 1], buffChance: 0.45 },
-  2: { count: [1, 1], buffChance: 0.6 },
-  3: { count: [1, 2], buffChance: 0.7 },
-  4: { count: [2, 2], buffChance: 1.0 }, // legendaries are all upside
-}
+// Effects are rolled the SAME for every rarity: any trait, good or bad, can
+// land on any crew member regardless of rarity. (Group 3/4 get hand-authored
+// special effects separately.) Count leans toward 1 but ranges 0-2.
+const ALL_EFFECT_IDS: string[] = [...BUFF_IDS, ...FLAW_IDS]
 
 function randInt(min: number, max: number): number {
   return min + Math.floor(Math.random() * (max - min + 1))
@@ -93,16 +108,15 @@ export function rollStats(rarity: CrewRarity): { power: number; dodge: number; f
   return { power: stats[0], dodge: stats[1], fortune: stats[2] }
 }
 
-/** Roll the carried effect ids for a crew member of the given rarity. */
-export function rollEffectIds(rarity: CrewRarity): string[] {
-  const plan = EFFECT_PLAN[rarity]
-  const count = randInt(plan.count[0], plan.count[1])
-  const buffs = [...BUFF_IDS]
-  const flaws = [...FLAW_IDS]
+/** Roll carried effect ids, drawn uniformly from the full pool. Rarity-agnostic
+ *  on purpose: a Legendary is just as likely to roll a flaw as a Common. */
+export function rollEffectIds(): string[] {
+  const r = Math.random()
+  const count = r < 0.25 ? 0 : r < 0.70 ? 1 : 2
+  const pool = [...ALL_EFFECT_IDS]
   const out: string[] = []
   for (let i = 0; i < count; i++) {
-    const pool = Math.random() < plan.buffChance ? buffs : flaws
-    if (pool.length === 0) continue
+    if (pool.length === 0) break
     const idx = randInt(0, pool.length - 1)
     out.push(pool.splice(idx, 1)[0]) // no duplicate effect on one crew member
   }
@@ -121,5 +135,5 @@ export interface RolledCrew {
 /** Fully roll one crew member for a known portrait + rarity. */
 export function rollCrew(cardId: number, rarity: CrewRarity): RolledCrew {
   const stats = rollStats(rarity)
-  return { cardId, rarity, ...stats, effects: rollEffectIds(rarity) }
+  return { cardId, rarity, ...stats, effects: rollEffectIds() }
 }

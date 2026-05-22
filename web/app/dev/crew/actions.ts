@@ -6,7 +6,7 @@ import { isPremiumActive } from '@/lib/premium'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { crewCapacity } from '@/lib/crewCapacity'
 import {
-  groupForSlug, rollRarity, rollCrew,
+  groupForSlug, rollRarity, rollCrew, crewDisplayName,
   FREE_WEIGHTS, GEM_WEIGHTS, type CrewRarity,
 } from '@/lib/crewGen'
 
@@ -56,7 +56,7 @@ export type CrewActionResult = { state: CrewState } | { error: string }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-type CardMeta = { name: string; filename: string }
+type CardMeta = { name: string; filename: string; slug: string }
 
 function utcDate(): string {
   return new Date().toISOString().slice(0, 10) // YYYY-MM-DD in UTC
@@ -68,7 +68,7 @@ async function loadCards(admin: ReturnType<typeof createAdminClient>) {
   const byGroup: Record<CrewRarity, number[]> = { 1: [], 2: [], 3: [], 4: [] }
   const meta = new Map<number, CardMeta>()
   for (const c of ((data ?? []) as { id: number; name: string; filename: string; slug: string }[])) {
-    meta.set(c.id, { name: c.name, filename: c.filename })
+    meta.set(c.id, { name: c.name, filename: c.filename, slug: c.slug })
     const g = groupForSlug(c.slug)
     if (g) byGroup[g].push(c.id)
   }
@@ -105,7 +105,7 @@ function toCandidate(r: any, meta: Map<number, CardMeta>): BoardCandidate {
   const m = meta.get(r.card_id)
   return {
     id: r.id, slot: r.slot, source: r.source, cardId: r.card_id,
-    name: m?.name ?? 'Unknown', filename: m?.filename ?? '',
+    name: m ? crewDisplayName(m.slug, m.name) : 'Unknown', filename: m?.filename ?? '',
     rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
     effects: (r.effects ?? []) as string[], recruited: r.recruited,
   }
@@ -115,7 +115,7 @@ function toMember(r: any, meta: Map<number, CardMeta>): CrewMember {
   const m = meta.get(r.card_id)
   return {
     id: r.id, cardId: r.card_id,
-    name: m?.name ?? 'Unknown', filename: m?.filename ?? '',
+    name: m ? crewDisplayName(m.slug, m.name) : 'Unknown', filename: m?.filename ?? '',
     rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
     effects: (r.effects ?? []) as string[], assignedSlot: r.assigned_slot,
   }
