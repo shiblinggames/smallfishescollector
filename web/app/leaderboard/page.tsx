@@ -5,8 +5,9 @@ import Nav from '@/components/Nav'
 import LeaderboardClient from './LeaderboardClient'
 import type { LeaderboardEntry } from './LeaderboardClient'
 import {
-  EXPEDITION_SHIP_STATS, applyVariantBoosts, computeCombatRating,
+  EXPEDITION_SHIP_STATS, computeCombatRating,
 } from '@/lib/expeditions'
+import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { getLevelFromXP as getExpeditionLevel, navLevelBonuses } from '@/lib/expeditionLevel'
 
 /** Resolve the player's rank on a board. If they're in the top-50 array we
@@ -45,93 +46,51 @@ async function fetchBoard(admin: ReturnType<typeof createAdminClient>, view: str
  *  player edits their loadout. */
 async function fetchRaidScoreBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
   // 1. All non-admin profiles with the fields that feed into combat rating.
-  //    Matches the leaderboard_* views which already filter `NOT is_admin`.
   const { data: profiles } = await admin
     .from('profiles')
-    .select('id, username, ship_tier, saved_crew, expedition_xp')
+    .select('id, username, ship_tier, expedition_xp')
     .eq('is_admin', false)
 
   if (!profiles || profiles.length === 0) {
     return { top: [] as LeaderboardEntry[], myScore: 0, myRank: null as number | null }
   }
 
-  // 2. Collect every variant ID referenced by any saved_crew so we can
-  //    look up the underlying card stats in a single query.
-  const variantIds = new Set<number>()
-  for (const p of profiles as Array<{ saved_crew: number[] | null }>) {
-    for (const id of (p.saved_crew ?? [])) variantIds.add(id)
+  // 2. Everyone's deployed crew (assigned to a ship slot), one query, grouped.
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const { data: crewRows } = await admin
+    .from('user_crew')
+    .select('id, user_id, assigned_slot, rarity, power, dodge, fortune, effects')
+    .not('assigned_slot', 'is', null)
+  const crewByUser = new Map<string, any[]>()
+  for (const r of ((crewRows ?? []) as any[])) {
+    const arr = crewByUser.get(r.user_id) ?? []
+    arr.push(r)
+    crewByUser.set(r.user_id, arr)
   }
 
-  type CardRow = {
-    power: number; dodge: number; fortune: number
-    mythic_power: number; mythic_dodge: number; mythic_fortune: number
-  }
-  type VariantRow = { id: number; variant_name: string; cards: CardRow | null }
-
-  const variantMap = new Map<number, { variantName: string; power: number; dodge: number; fortune: number; mythic: { power: number; dodge: number; fortune: number } }>()
-  if (variantIds.size > 0) {
-    const { data: variants } = await admin
-      .from('card_variants')
-      .select('id, variant_name, cards(power, dodge, fortune, mythic_power, mythic_dodge, mythic_fortune)')
-      .in('id', Array.from(variantIds))
-    for (const v of (variants ?? []) as unknown as VariantRow[]) {
-      const c = v.cards
-      if (!c) continue
-      variantMap.set(v.id, {
-        variantName: v.variant_name,
-        power: c.power ?? 0,
-        dodge: c.dodge ?? 0,
-        fortune: c.fortune ?? 0,
-        mythic: {
-          power: c.mythic_power ?? 0,
-          dodge: c.mythic_dodge ?? 0,
-          fortune: c.mythic_fortune ?? 0,
-        },
-      })
-    }
-  }
-
-  // 3. Compute combat rating per profile.
+  // 3. Resolve each player's deployed party (effects applied) → combat rating.
   const rows: LeaderboardEntry[] = []
-  for (const p of profiles as Array<{
-    id: string; username: string | null; ship_tier: number | null
-    saved_crew: number[] | null; expedition_xp: number | null
-  }>) {
+  for (const p of profiles as Array<{ id: string; username: string | null; ship_tier: number | null; expedition_xp: number | null }>) {
     const shipStats = EXPEDITION_SHIP_STATS[p.ship_tier ?? 0] ?? EXPEDITION_SHIP_STATS[0]
     const navLevel  = getExpeditionLevel(p.expedition_xp ?? 0)
     const navBonus  = navLevelBonuses(navLevel)
 
-    let crewPower = 0, crewDodge = 0, crewFortune = 0
-    const crew = p.saved_crew ?? []
-    crew.forEach((variantId, i) => {
-      const v = variantMap.get(variantId)
-      if (!v) return
-      const boosted = applyVariantBoosts(
-        { power: v.power, dodge: v.dodge, fortune: v.fortune },
-        v.variantName,
-        v.mythic,
-      )
-      // First slot (captain) full stats; rest at 0.8× — matches voyage/raid math.
-      const mult = i === 0 ? 1.0 : 0.8
-      crewPower   += Math.round(boosted.power   * mult)
-      crewDodge   += Math.round(boosted.dodge   * mult)
-      crewFortune += Math.round(boosted.fortune * mult)
-    })
+    const party: DeployedCrew[] = (crewByUser.get(p.id) ?? [])
+      .sort((a, b) => a.assigned_slot - b.assigned_slot)
+      .slice(0, shipStats.crewSlots)
+      .map(r => ({ id: r.id, slot: r.assigned_slot, rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune, effects: r.effects ?? [] }))
+    const resolved = resolveDeployedCrew(party)
 
-    const totalPower   = crewPower   + navBonus.power
-    const totalDodge   = crewDodge   + navBonus.navigation
-    const totalFortune = crewFortune + navBonus.fortune
     const rating = computeCombatRating(
-      totalPower, totalDodge, totalFortune,
+      resolved.totals.power + navBonus.power,
+      resolved.totals.dodge + navBonus.navigation,
+      resolved.totals.fortune + navBonus.fortune,
       shipStats.durability + navBonus.hp,
       shipStats.minDamage,
+      resolved.raid,
     )
 
-    // Filter out players who haven't built any loadout at all — there's
-    // no meaningful "score" to rank, and they'd flood the bottom of the
-    // board. Anyone with at least one crew member or a non-default ship
-    // qualifies.
-    if (rating.total > 0 && (crew.length > 0 || (p.ship_tier ?? 0) > 0)) {
+    if (rating.total > 0 && (party.length > 0 || (p.ship_tier ?? 0) > 0)) {
       rows.push({ user_id: p.id, username: p.username ?? '', score: rating.total })
     }
   }

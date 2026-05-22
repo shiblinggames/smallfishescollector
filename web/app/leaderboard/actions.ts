@@ -8,7 +8,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { EXPEDITION_SHIP_STATS, applyVariantBoosts, computeCombatRating } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS, computeCombatRating } from '@/lib/expeditions'
+import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { getLevelFromXP as getExpeditionLevel, navLevelBonuses } from '@/lib/expeditionLevel'
 import type { LeaderboardEntry, BoardKey, AvatarMap } from './boardUI'
 
@@ -59,49 +60,39 @@ async function fetchPerfectStreak(admin: Admin, userId: string) {
 async function fetchRaidScore(admin: Admin, userId: string) {
   const { data: profiles } = await admin
     .from('profiles')
-    .select('id, username, ship_tier, saved_crew, expedition_xp')
+    .select('id, username, ship_tier, expedition_xp')
     .eq('is_admin', false)
   if (!profiles || profiles.length === 0) return { top: [] as LeaderboardEntry[], myScore: 0, myRank: null as number | null }
 
-  const variantIds = new Set<number>()
-  for (const p of profiles as Array<{ saved_crew: number[] | null }>) {
-    for (const id of (p.saved_crew ?? [])) variantIds.add(id)
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const { data: crewRows } = await admin
+    .from('user_crew')
+    .select('id, user_id, assigned_slot, rarity, power, dodge, fortune, effects')
+    .not('assigned_slot', 'is', null)
+  const crewByUser = new Map<string, any[]>()
+  for (const r of ((crewRows ?? []) as any[])) {
+    const arr = crewByUser.get(r.user_id) ?? []
+    arr.push(r)
+    crewByUser.set(r.user_id, arr)
   }
-  const variantMap = new Map<number, { variantName: string; power: number; dodge: number; fortune: number; mythic: { power: number; dodge: number; fortune: number } }>()
-  if (variantIds.size > 0) {
-    const { data: variants } = await admin
-      .from('card_variants')
-      .select('id, variant_name, cards(power, dodge, fortune, mythic_power, mythic_dodge, mythic_fortune)')
-      .in('id', Array.from(variantIds))
-    for (const v of (variants ?? []) as unknown as Array<{ id: number; variant_name: string; cards: { power: number; dodge: number; fortune: number; mythic_power: number; mythic_dodge: number; mythic_fortune: number } | null }>) {
-      const c = v.cards
-      if (!c) continue
-      variantMap.set(v.id, {
-        variantName: v.variant_name,
-        power: c.power ?? 0, dodge: c.dodge ?? 0, fortune: c.fortune ?? 0,
-        mythic: { power: c.mythic_power ?? 0, dodge: c.mythic_dodge ?? 0, fortune: c.mythic_fortune ?? 0 },
-      })
-    }
-  }
+
   const rows: LeaderboardEntry[] = []
-  for (const p of profiles as Array<{ id: string; username: string | null; ship_tier: number | null; saved_crew: number[] | null; expedition_xp: number | null }>) {
+  for (const p of profiles as Array<{ id: string; username: string | null; ship_tier: number | null; expedition_xp: number | null }>) {
     const shipStats = EXPEDITION_SHIP_STATS[p.ship_tier ?? 0] ?? EXPEDITION_SHIP_STATS[0]
     const navBonus = navLevelBonuses(getExpeditionLevel(p.expedition_xp ?? 0))
-    let crewPower = 0, crewDodge = 0, crewFortune = 0
-    ;(p.saved_crew ?? []).forEach((variantId, i) => {
-      const v = variantMap.get(variantId)
-      if (!v) return
-      const boosted = applyVariantBoosts({ power: v.power, dodge: v.dodge, fortune: v.fortune }, v.variantName, v.mythic)
-      const mult = i === 0 ? 1.0 : 0.8
-      crewPower += Math.round(boosted.power * mult)
-      crewDodge += Math.round(boosted.dodge * mult)
-      crewFortune += Math.round(boosted.fortune * mult)
-    })
+    const party: DeployedCrew[] = (crewByUser.get(p.id) ?? [])
+      .sort((a, b) => a.assigned_slot - b.assigned_slot)
+      .slice(0, shipStats.crewSlots)
+      .map(r => ({ id: r.id, slot: r.assigned_slot, rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune, effects: r.effects ?? [] }))
+    const resolved = resolveDeployedCrew(party)
     const rating = computeCombatRating(
-      crewPower + navBonus.power, crewDodge + navBonus.navigation, crewFortune + navBonus.fortune,
+      resolved.totals.power + navBonus.power,
+      resolved.totals.dodge + navBonus.navigation,
+      resolved.totals.fortune + navBonus.fortune,
       shipStats.durability + navBonus.hp, shipStats.minDamage,
+      resolved.raid,
     )
-    if (rating.total > 0 && ((p.saved_crew ?? []).length > 0 || (p.ship_tier ?? 0) > 0)) {
+    if (rating.total > 0 && (party.length > 0 || (p.ship_tier ?? 0) > 0)) {
       rows.push({ user_id: p.id, username: p.username ?? '', score: rating.total })
     }
   }
