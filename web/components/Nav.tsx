@@ -261,6 +261,13 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
   // Captain's Log is intentionally NOT here — it has its own slot on the
   // bottom tab bar as "Log", so duplicating it would just be noise.
   const mobileMenuLinks = [
+    { href: '/packs', label: 'Crew', badge: false,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="5" r="2.5"/><line x1="12" y1="22" x2="12" y2="7.5"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/>
+        </svg>
+      )
+    },
     { href: '/leaderboard', label: 'Leaderboard', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -338,6 +345,13 @@ export default function Nav({ packsAvailable, doubloons, gems }: { packsAvailabl
           <path d="M3 17c2 4 16 4 18 0"/><path d="M4 17L6 12l13 0 2 5"/>
           <line x1="10" y1="12" x2="10" y2="4"/>
           <path d="M10 4L17 9 10 12"/>
+        </svg>
+      )
+    },
+    { href: '/packs', label: 'Crew', badge: null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="5" r="2.5"/><line x1="12" y1="22" x2="12" y2="7.5"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/>
         </svg>
       )
     },
