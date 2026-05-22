@@ -942,7 +942,7 @@ export default function ShipHero({
                     {collection.length === 0 ? (
                       <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#4a4845', padding: '3rem 1rem' }}>No cards yet. Open some packs first!</p>
                     ) : (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.75rem' }}>
                         {pickerGroups.map(group => {
                           const card  = group.best
                           const rc    = RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764'
@@ -953,7 +953,7 @@ export default function ShipHero({
                             else assignCard(card)
                           }
                           return (
-                            <div key={card.name} onClick={onPick} style={{ position: 'relative', width: 90, borderRadius: 10, overflow: 'hidden', background: '#080a0e', border: `1.5px solid ${rc}55`, cursor: 'pointer', flexShrink: 0 }}>
+                            <div key={card.name} onClick={onPick} style={{ position: 'relative', width: '100%', borderRadius: 10, overflow: 'hidden', background: '#080a0e', border: `1.5px solid ${rc}55`, cursor: 'pointer' }}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
                               {multi && (
