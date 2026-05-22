@@ -33,6 +33,7 @@ const CREW_NAMES: Record<string, string> = {
   koi: 'Koy', krill: 'Kreel', lionfish: 'Linus', manta_ray: 'Manta', minnow: 'Min',
   nurse_shark: 'Nursa', oarfish: "O'her", orca: 'Orc', piranha: 'Perry',
   pufferfish: 'Puff', red_snapper: 'Snappy', salmon: 'Sam', sardine: 'Sard',
+  sailfish: 'Selly', swordfish: 'Sawyer', tiger_shark: 'Ty', tuna: 'Toon', whale_shark: 'Welly',
 }
 
 /** Crew display nickname for a card slug, falling back to the catalog name. */
