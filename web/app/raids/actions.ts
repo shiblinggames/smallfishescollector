@@ -2,8 +2,10 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { applyVariantBoosts, EXPEDITION_SHIP_STATS, raidRepairCost } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS, raidRepairCost } from '@/lib/expeditions'
 import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
+import { loadDeployedParty } from '@/lib/crewData'
+import { resolveDeployedCrew } from '@/lib/crewResolve'
 import { unlockBadge } from '@/app/achievements/badgeActions'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
@@ -51,39 +53,24 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const shipTier = profile?.ship_tier ?? 0
   const ship = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
-  const savedCrew = (profile?.saved_crew as number[] | null) ?? []
 
-  let totalPower = 0, totalDodge = 0, totalFortune = 0
-  const crewMembers: RaidCrewMember[] = []
-
-  if (savedCrew.length > 0) {
-    const { data: crewData } = await admin
-      .from('card_variants')
-      .select('id, variant_name, cards(power, dodge, fortune, mythic_power, mythic_dodge, mythic_fortune, name, filename)')
-      .in('id', savedCrew)
-
-    if (crewData) {
-      savedCrew.forEach((vid, i) => {
-        const v = (crewData as any[]).find(c => c.id === vid)
-        if (!v?.cards) return
-        const card = v.cards as { power: number; dodge: number; fortune: number; mythic_power: number; mythic_dodge: number; mythic_fortune: number; name: string; filename: string }
-        const base   = { power: card.power,        dodge: card.dodge,        fortune: card.fortune }
-        const mythic = { power: card.mythic_power,  dodge: card.mythic_dodge, fortune: card.mythic_fortune }
-        const stats  = applyVariantBoosts(base, v.variant_name, mythic)
-        const mult   = i === 0 ? 1 : 0.8
-        totalPower   += Math.floor(stats.power   * mult)
-        totalDodge   += Math.floor(stats.dodge   * mult)
-        totalFortune += Math.floor(stats.fortune * mult)
-        crewMembers.push({
-          name:     card.name,
-          imageUrl: CARD_IMG_BASE + card.filename,
-          power:    Math.floor(stats.power   * mult),
-          dodge:    Math.floor(stats.dodge   * mult),
-          fortune:  Math.floor(stats.fortune * mult),
-        })
-      })
+  // New crew system: deployed party from user_crew, resolved with effects.
+  const party = await loadDeployedParty(admin, userId, ship.crewSlots)
+  const resolved = resolveDeployedCrew(party)
+  const totalPower = resolved.totals.power
+  const totalDodge = resolved.totals.dodge
+  const totalFortune = resolved.totals.fortune
+  const crewMembers: RaidCrewMember[] = resolved.perCrew.map(pc => {
+    const row = party.find(p => p.id === pc.id)
+    const mult = pc.slot === 0 ? 1 : 0.8
+    return {
+      name:     row?.name ?? 'Crew',
+      imageUrl: CARD_IMG_BASE + (row?.filename ?? ''),
+      power:    Math.floor(pc.power   * mult),
+      dodge:    Math.floor(pc.dodge   * mult),
+      fortune:  Math.floor(pc.fortune * mult),
     }
-  }
+  })
 
   // Apply Nav-level captain bonuses on top of crew + ship totals.
   const navLevel = getLevelFromXP((profile?.expedition_xp as number | null) ?? 0)
@@ -103,7 +90,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     equippedHat:      (profile?.equipped_hat as string | null) ?? null,
     avatarBgColor:    (profile?.avatar_bg_color as string | null) ?? null,
     avatarBorderColor:(profile?.avatar_border_color as string | null) ?? null,
-    crewCount:        savedCrew.length,
+    crewCount:        party.length,
     crewMembers,
     equippedShipSkin:     (profile?.equipped_ship_skin as string | null) ?? null,
     shipSkins:            (profile?.ship_skins as string[] | null) ?? [],
