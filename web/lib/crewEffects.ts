@@ -1,23 +1,27 @@
 // Crew effects (Darkest-Dungeon-style quirks) for the recruit system.
 //
-// Each effect has a SCOPE that says where it matters and what payload it carries:
+// Each effect has a SCOPE that says where it matters + what payload it carries:
 //   - 'always'      : passive stat modifiers (flat and/or percent). Applied to
 //                     the crew's displayed/effective stats right now.
 //   - 'raid'        : only matters in raid combat (damage, crit, survivability,
 //                     first strike). Defined + displayed now; applied once crew
 //                     are wired into raids (Phase 2).
 //   - 'voyage'      : only matters on voyages (score / doubloons / XP). Phase 2.
-//   - 'conditional' : depends on the loadout/context (small crew, captain slot,
-//                     same-zone allies, team aura). The payload it grants lives
-//                     in the normal fields; a `cond` key tells the Phase 2
-//                     resolver when to apply it. Not applied to base stats here.
+//   - 'conditional' : bearer-only, depends on the loadout/context (small crew,
+//                     captain slot, same-zone allies). `cond` key drives it.
+//   - 'aura'        : TEAM-WIDE. Its payload applies to every crew member aboard
+//                     (incl. the bearer). Resolved in Phase 2.
+//
+// And a minRarity gate: basic passive-flat traits can land on any rarity, while
+// the stronger effects (percent / raid / voyage / conditional / aura) only roll
+// on Epic+ crew (rarity >= 3). Rare and below get the generic flat traits only.
 //
 // Effects are stored on a crew member as an array of ids, so retuning a value
 // here updates every crew that carries it.
 
 export type StatKey = 'power' | 'dodge' | 'fortune'
 export type CrewEffectKind = 'buff' | 'flaw'
-export type CrewEffectScope = 'always' | 'raid' | 'voyage' | 'conditional'
+export type CrewEffectScope = 'always' | 'raid' | 'voyage' | 'conditional' | 'aura'
 
 export interface CrewEffect {
   id: string
@@ -26,63 +30,75 @@ export interface CrewEffect {
   desc: string
   kind: CrewEffectKind
   scope: CrewEffectScope
-  /** Passive flat stat mod (applied to displayed stats when scope === 'always';
-   *  for conditional effects this is the payload granted when the cond holds). */
+  /** Minimum crew rarity (1-4) that can roll this. Basic flat = 1, stronger = 3. */
+  minRarity: 1 | 2 | 3 | 4
+  /** Flat stat mod. For 'always' it's applied to displayed stats; for aura/
+   *  conditional it's the payload granted (to all / when the cond holds). */
   flat?: Partial<Record<StatKey, number>>
-  /** Passive percent stat mod, e.g. { power: 25 } = +25% power. */
+  /** Percent stat mod, e.g. { power: 25 } = +25% power. */
   pct?: Partial<Record<StatKey, number>>
   /** Raid combat modifiers (Phase 2). */
   raid?: { damagePct?: number; damageTakenPct?: number; critPct?: number; firstStrike?: boolean }
   /** Voyage modifiers (Phase 2). */
   voyage?: { scorePct?: number; doubloonPct?: number; xpPct?: number }
-  /** Condition key for conditional effects, interpreted by the Phase 2 resolver. */
-  cond?: 'small_crew' | 'captain' | 'not_captain' | 'same_zone_ally' | 'aura'
+  /** Condition key for 'conditional' effects, interpreted by the Phase 2 resolver. */
+  cond?: 'small_crew' | 'captain' | 'not_captain' | 'same_zone_ally'
 }
 
 export const CREW_EFFECTS: Record<string, CrewEffect> = {
-  // ── Passive · flat (buffs) ───────────────────────────────────────────────
-  dead_eye:     { id: 'dead_eye',     name: 'Dead Eye',     kind: 'buff', scope: 'always', flat: { power: 3 },                 desc: 'A gunner whose aim never wavers.' },
-  cold_blood:   { id: 'cold_blood',   name: 'Cold Blood',   kind: 'buff', scope: 'always', flat: { dodge: 3 },                 desc: 'Nothing on the water can rattle them.' },
-  born_lucky:   { id: 'born_lucky',   name: 'Born Lucky',   kind: 'buff', scope: 'always', flat: { fortune: 3 },               desc: 'The tide always seems to break their way.' },
-  iron_gut:     { id: 'iron_gut',     name: 'Iron Gut',     kind: 'buff', scope: 'always', flat: { dodge: 2 },                 desc: 'Takes a beating and asks for seconds.' },
-  salt_veteran: { id: 'salt_veteran', name: 'Salt Veteran', kind: 'buff', scope: 'always', flat: { power: 1, dodge: 1, fortune: 1 }, desc: 'Years of brine worked into the bones.' },
+  // ── Passive · flat — the generic pool, any rarity (minRarity 1) ───────────
+  dead_eye:     { id: 'dead_eye',     name: 'Dead Eye',     kind: 'buff', scope: 'always', minRarity: 1, flat: { power: 3 },                       desc: 'A gunner whose aim never wavers.' },
+  cold_blood:   { id: 'cold_blood',   name: 'Cold Blood',   kind: 'buff', scope: 'always', minRarity: 1, flat: { dodge: 3 },                       desc: 'Nothing on the water can rattle them.' },
+  born_lucky:   { id: 'born_lucky',   name: 'Born Lucky',   kind: 'buff', scope: 'always', minRarity: 1, flat: { fortune: 3 },                     desc: 'The tide always seems to break their way.' },
+  iron_gut:     { id: 'iron_gut',     name: 'Iron Gut',     kind: 'buff', scope: 'always', minRarity: 1, flat: { dodge: 2 },                       desc: 'Takes a beating and asks for seconds.' },
+  salt_veteran: { id: 'salt_veteran', name: 'Salt Veteran', kind: 'buff', scope: 'always', minRarity: 1, flat: { power: 1, dodge: 1, fortune: 1 }, desc: 'Years of brine worked into the bones.' },
+  greenhorn:     { id: 'greenhorn',     name: 'Greenhorn',     kind: 'flaw', scope: 'always', minRarity: 1, flat: { power: -2 },              desc: 'Still finding their sea legs.' },
+  yellow_streak: { id: 'yellow_streak', name: 'Yellow Streak', kind: 'flaw', scope: 'always', minRarity: 1, flat: { dodge: -2 },              desc: 'Flinches when the cannons roar.' },
+  jonah:         { id: 'jonah',         name: 'Jonah',         kind: 'flaw', scope: 'always', minRarity: 1, flat: { fortune: -2 },            desc: 'Bad luck trails them like a gull.' },
+  butterfingers: { id: 'butterfingers', name: 'Butterfingers', kind: 'flaw', scope: 'always', minRarity: 1, flat: { power: -1, fortune: -1 }, desc: 'Drops more than they ever hold.' },
 
-  // ── Passive · flat (flaws) ───────────────────────────────────────────────
-  greenhorn:     { id: 'greenhorn',     name: 'Greenhorn',     kind: 'flaw', scope: 'always', flat: { power: -2 },             desc: 'Still finding their sea legs.' },
-  yellow_streak: { id: 'yellow_streak', name: 'Yellow Streak', kind: 'flaw', scope: 'always', flat: { dodge: -2 },             desc: 'Flinches when the cannons roar.' },
-  jonah:         { id: 'jonah',         name: 'Jonah',         kind: 'flaw', scope: 'always', flat: { fortune: -2 },           desc: 'Bad luck trails them like a gull.' },
-  butterfingers: { id: 'butterfingers', name: 'Butterfingers', kind: 'flaw', scope: 'always', flat: { power: -1, fortune: -1 }, desc: 'Drops more than they ever hold.' },
+  // ── Passive · percent — Epic+ ────────────────────────────────────────────
+  sharpshooter: { id: 'sharpshooter', name: 'Sharpshooter', kind: 'buff', scope: 'always', minRarity: 3, pct: { power: 25 },   desc: 'A natural shot; their power runs a quarter hotter.' },
+  quick_fins:   { id: 'quick_fins',   name: 'Quick Fins',   kind: 'buff', scope: 'always', minRarity: 3, pct: { dodge: 25 },   desc: 'Slips every net; dodge up by a quarter.' },
+  charmed:      { id: 'charmed',      name: 'Charmed',      kind: 'buff', scope: 'always', minRarity: 3, pct: { fortune: 25 }, desc: 'Fortune clings to them; luck up by a quarter.' },
+  brittle:      { id: 'brittle',      name: 'Brittle',      kind: 'flaw', scope: 'always', minRarity: 3, pct: { dodge: -20 },  desc: 'Soft in a scrap; dodge cut by a fifth.' },
 
-  // ── Passive · percent ────────────────────────────────────────────────────
-  sharpshooter: { id: 'sharpshooter', name: 'Sharpshooter', kind: 'buff', scope: 'always', pct: { power: 25 },   desc: 'A natural shot; their power runs a quarter hotter.' },
-  quick_fins:   { id: 'quick_fins',   name: 'Quick Fins',   kind: 'buff', scope: 'always', pct: { dodge: 25 },   desc: 'Slips every net; dodge up by a quarter.' },
-  charmed:      { id: 'charmed',      name: 'Charmed',      kind: 'buff', scope: 'always', pct: { fortune: 25 }, desc: 'Fortune clings to them; luck up by a quarter.' },
-  brittle:      { id: 'brittle',      name: 'Brittle',      kind: 'flaw', scope: 'always', pct: { dodge: -20 },  desc: 'Soft in a scrap; dodge cut by a fifth.' },
+  // ── Raid — Epic+ (Phase 2) ───────────────────────────────────────────────
+  berserker:    { id: 'berserker',    name: 'Berserker',    kind: 'buff', scope: 'raid', minRarity: 3, raid: { damagePct: 20 },       desc: 'Fights like a cornered shark: 20% more raid damage.' },
+  bulwark:      { id: 'bulwark',      name: 'Bulwark',      kind: 'buff', scope: 'raid', minRarity: 3, raid: { damageTakenPct: -20 }, desc: 'A wall of muscle; takes 20% less damage in raids.' },
+  keen_cutlass: { id: 'keen_cutlass', name: 'Keen Cutlass', kind: 'buff', scope: 'raid', minRarity: 3, raid: { critPct: 15 },        desc: 'Finds the soft spots; +15% crit in raids.' },
+  first_strike: { id: 'first_strike', name: 'First Strike', kind: 'buff', scope: 'raid', minRarity: 3, raid: { firstStrike: true },  desc: 'Always swings first when the boarding begins.' },
+  landlocked:   { id: 'landlocked',   name: 'Landlocked',   kind: 'flaw', scope: 'raid', minRarity: 3, raid: { damagePct: -15 },      desc: 'No stomach for a brawl; 15% less raid damage.' },
+  soft_shell:   { id: 'soft_shell',   name: 'Soft Shell',   kind: 'flaw', scope: 'raid', minRarity: 3, raid: { damageTakenPct: 15 },  desc: 'Bruises easy; takes 15% more damage in raids.' },
 
-  // ── Raid (Phase 2) ───────────────────────────────────────────────────────
-  berserker:    { id: 'berserker',    name: 'Berserker',    kind: 'buff', scope: 'raid', raid: { damagePct: 20 },       desc: 'Fights like a cornered shark: 20% more raid damage.' },
-  bulwark:      { id: 'bulwark',      name: 'Bulwark',      kind: 'buff', scope: 'raid', raid: { damageTakenPct: -20 }, desc: 'A wall of muscle; takes 20% less damage in raids.' },
-  keen_cutlass: { id: 'keen_cutlass', name: 'Keen Cutlass', kind: 'buff', scope: 'raid', raid: { critPct: 15 },        desc: 'Finds the soft spots; +15% crit in raids.' },
-  first_strike: { id: 'first_strike', name: 'First Strike', kind: 'buff', scope: 'raid', raid: { firstStrike: true },  desc: 'Always swings first when the boarding begins.' },
-  landlocked:   { id: 'landlocked',   name: 'Landlocked',   kind: 'flaw', scope: 'raid', raid: { damagePct: -15 },      desc: 'No stomach for a brawl; 15% less raid damage.' },
-  soft_shell:   { id: 'soft_shell',   name: 'Soft Shell',   kind: 'flaw', scope: 'raid', raid: { damageTakenPct: 15 },  desc: 'Bruises easy; takes 15% more damage in raids.' },
+  // ── Voyage — Epic+ (Phase 2) ─────────────────────────────────────────────
+  pathfinder: { id: 'pathfinder', name: 'Pathfinder', kind: 'buff', scope: 'voyage', minRarity: 3, voyage: { scorePct: 10 },    desc: 'Reads the currents like a map; +10% Voyage Score.' },
+  pillager:   { id: 'pillager',   name: 'Pillager',   kind: 'buff', scope: 'voyage', minRarity: 3, voyage: { doubloonPct: 15 }, desc: 'Never leaves coin behind; +15% doubloons from voyages.' },
+  scholar:    { id: 'scholar',    name: 'Scholar',    kind: 'buff', scope: 'voyage', minRarity: 3, voyage: { xpPct: 15 },       desc: 'Logs every lesson; +15% voyage XP.' },
+  seasick:    { id: 'seasick',    name: 'Seasick',    kind: 'flaw', scope: 'voyage', minRarity: 3, voyage: { scorePct: -10 },   desc: 'Green at the rail; −10% Voyage Score.' },
 
-  // ── Voyage (Phase 2) ─────────────────────────────────────────────────────
-  pathfinder: { id: 'pathfinder', name: 'Pathfinder', kind: 'buff', scope: 'voyage', voyage: { scorePct: 10 },    desc: 'Reads the currents like a map; +10% Voyage Score.' },
-  pillager:   { id: 'pillager',   name: 'Pillager',   kind: 'buff', scope: 'voyage', voyage: { doubloonPct: 15 }, desc: 'Never leaves coin behind; +15% doubloons from voyages.' },
-  scholar:    { id: 'scholar',    name: 'Scholar',    kind: 'buff', scope: 'voyage', voyage: { xpPct: 15 },       desc: 'Logs every lesson; +15% voyage XP.' },
-  seasick:    { id: 'seasick',    name: 'Seasick',    kind: 'flaw', scope: 'voyage', voyage: { scorePct: -10 },   desc: 'Green at the rail; −10% Voyage Score.' },
+  // ── Conditional / synergy — Epic+ (Phase 2) ──────────────────────────────
+  lone_wolf:   { id: 'lone_wolf',   name: 'Lone Wolf',   kind: 'buff', scope: 'conditional', minRarity: 3, cond: 'small_crew',     flat: { power: 3, dodge: 3, fortune: 3 }, desc: 'Works best alone: +3 to all stats with a crew of two or fewer.' },
+  pack_hunter: { id: 'pack_hunter', name: 'Pack Hunter', kind: 'buff', scope: 'conditional', minRarity: 3, cond: 'same_zone_ally', flat: { power: 2 },                      desc: 'Hunts in numbers: +2 Power for each crewmate from the same waters.' },
+  flagship:    { id: 'flagship',    name: 'Flagship',    kind: 'buff', scope: 'conditional', minRarity: 3, cond: 'captain',        voyage: { scorePct: 10 },                desc: 'Born to lead: +10% Voyage Score while serving as captain.' },
+  prima_donna: { id: 'prima_donna', name: 'Prima Donna', kind: 'flaw', scope: 'conditional', minRarity: 3, cond: 'not_captain',    flat: { power: -2, dodge: -2, fortune: -2 }, desc: 'Sulks below the top job: −2 to all stats unless captain.' },
 
-  // ── Conditional / synergy (Phase 2) ──────────────────────────────────────
-  lone_wolf:   { id: 'lone_wolf',   name: 'Lone Wolf',   kind: 'buff', scope: 'conditional', cond: 'small_crew',     flat: { power: 3, dodge: 3, fortune: 3 }, desc: 'Works best alone: +3 to all stats with a crew of two or fewer.' },
-  pack_hunter: { id: 'pack_hunter', name: 'Pack Hunter', kind: 'buff', scope: 'conditional', cond: 'same_zone_ally', flat: { power: 2 },                      desc: 'Hunts in numbers: +2 Power for each crewmate from the same waters.' },
-  flagship:    { id: 'flagship',    name: 'Flagship',    kind: 'buff', scope: 'conditional', cond: 'captain',        voyage: { scorePct: 10 },                desc: 'Born to lead: +10% Voyage Score while serving as captain.' },
-  mascot:      { id: 'mascot',      name: 'Mascot',      kind: 'buff', scope: 'conditional', cond: 'aura',           flat: { fortune: 1 },                    desc: 'Lifts the whole deck: +1 Fortune to every hand aboard.' },
-  prima_donna: { id: 'prima_donna', name: 'Prima Donna', kind: 'flaw', scope: 'conditional', cond: 'not_captain',    flat: { power: -2, dodge: -2, fortune: -2 }, desc: 'Sulks below the top job: −2 to all stats unless captain.' },
+  // ── Aura — TEAM-WIDE, Epic+ (Phase 2) ────────────────────────────────────
+  quartermaster: { id: 'quartermaster', name: 'Quartermaster', kind: 'buff', scope: 'aura', minRarity: 3, flat: { power: 1 },         desc: 'Drills the deck daily: +1 Power to every hand aboard.' },
+  helmsman:      { id: 'helmsman',      name: 'Helmsman',      kind: 'buff', scope: 'aura', minRarity: 3, flat: { dodge: 1 },         desc: 'Steers true through any swell: +1 Dodge to every hand aboard.' },
+  mascot:        { id: 'mascot',        name: 'Mascot',        kind: 'buff', scope: 'aura', minRarity: 3, flat: { fortune: 1 },       desc: 'Lifts the whole deck: +1 Fortune to every hand aboard.' },
+  war_drummer:   { id: 'war_drummer',   name: 'War Drummer',   kind: 'buff', scope: 'aura', minRarity: 3, raid: { damagePct: 10 },    desc: 'Beats the charge: the whole crew deals 10% more raid damage.' },
+  shanty_singer: { id: 'shanty_singer', name: 'Shanty Singer', kind: 'buff', scope: 'aura', minRarity: 3, voyage: { scorePct: 5 },    desc: 'Keeps spirits high: +5% Voyage Score for the whole crew.' },
+  albatross:     { id: 'albatross',     name: 'Albatross',     kind: 'flaw', scope: 'aura', minRarity: 3, flat: { fortune: -1 },      desc: 'A bad omen at the rail: −1 Fortune to every hand aboard.' },
 }
 
 export const BUFF_IDS: string[] = Object.values(CREW_EFFECTS).filter(e => e.kind === 'buff').map(e => e.id)
 export const FLAW_IDS: string[] = Object.values(CREW_EFFECTS).filter(e => e.kind === 'flaw').map(e => e.id)
+
+/** Effect ids a crew of the given rarity is allowed to roll (minRarity gate). */
+export function effectPoolForRarity(rarity: number): string[] {
+  return Object.values(CREW_EFFECTS).filter(e => e.minRarity <= rarity).map(e => e.id)
+}
 
 // Display metadata per scope (tag label + accent colour).
 export const SCOPE_META: Record<CrewEffectScope, { label: string; color: string }> = {
@@ -90,6 +106,7 @@ export const SCOPE_META: Record<CrewEffectScope, { label: string; color: string 
   raid:        { label: 'Raid',        color: '#f0a36a' },
   voyage:      { label: 'Voyage',      color: '#6fb6c9' },
   conditional: { label: 'Situational', color: '#c0a0e6' },
+  aura:        { label: 'Crew Aura',   color: '#7fd0a0' },
 }
 
 const LBL: Record<StatKey, string> = { power: 'PWR', dodge: 'DGE', fortune: 'FTN' }
@@ -125,8 +142,8 @@ export function effectSummary(e: CrewEffect): string {
 }
 
 /** Base stats plus the net of all PASSIVE (always-on) effects: flat first, then
- *  percent, each stat clamped to >= 1. Raid/voyage/conditional effects do NOT
- *  touch the base stat line (they apply in their own context). */
+ *  percent, each stat clamped to >= 1. Raid/voyage/conditional/aura effects do
+ *  NOT touch this base line (they apply in their own context, in Phase 2). */
 export function applyCrewEffects(
   base: { power: number; dodge: number; fortune: number },
   ids: string[] | null | undefined,

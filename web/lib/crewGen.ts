@@ -10,7 +10,7 @@
 // (Common ~8-13, Rare ~13-18, Epic ~19-25, Legendary ~28-34 total).
 
 import { FISH_GROUPS } from './fishGroups'
-import { BUFF_IDS, FLAW_IDS } from './crewEffects'
+import { effectPoolForRarity } from './crewEffects'
 
 export type CrewRarity = 1 | 2 | 3 | 4
 
@@ -57,11 +57,6 @@ const STAT_BUDGET: Record<CrewRarity, [number, number]> = {
   3: [19, 25],
   4: [28, 34],
 }
-
-// Effects are rolled the SAME for every rarity: any trait, good or bad, can
-// land on any crew member regardless of rarity. (Group 3/4 get hand-authored
-// special effects separately.) Count leans toward 1 but ranges 0-2.
-const ALL_EFFECT_IDS: string[] = [...BUFF_IDS, ...FLAW_IDS]
 
 function randInt(min: number, max: number): number {
   return min + Math.floor(Math.random() * (max - min + 1))
@@ -119,12 +114,14 @@ export function rollStats(
   return { power: stats[0], dodge: stats[1], fortune: stats[2] }
 }
 
-/** Roll carried effect ids, drawn uniformly from the full pool. Rarity-agnostic
- *  on purpose: a Legendary is just as likely to roll a flaw as a Common. */
-export function rollEffectIds(): string[] {
+/** Roll carried effect ids (0-2) from the pool the crew's rarity is allowed:
+ *  Common/Rare get only the basic passive-flat traits; Epic+ also unlock the
+ *  stronger percent/raid/voyage/conditional/aura effects. Buff vs flaw is
+ *  unbiased within the allowed pool. */
+export function rollEffectIds(rarity: CrewRarity): string[] {
   const r = Math.random()
   const count = r < 0.25 ? 0 : r < 0.70 ? 1 : 2
-  const pool = [...ALL_EFFECT_IDS]
+  const pool = effectPoolForRarity(rarity)
   const out: string[] = []
   for (let i = 0; i < count; i++) {
     if (pool.length === 0) break
@@ -150,5 +147,5 @@ export function rollCrew(
   profile: { power: number; dodge: number; fortune: number },
 ): RolledCrew {
   const stats = rollStats(rarity, profile)
-  return { cardId, rarity, ...stats, effects: rollEffectIds() }
+  return { cardId, rarity, ...stats, effects: rollEffectIds(rarity) }
 }
