@@ -334,16 +334,17 @@ function NodeDetailSheet({
       <button
         onClick={enter}
         disabled={locked}
-        className="font-cinzel font-800 uppercase tracking-[0.04em]"
+        className="font-cinzel font-700 uppercase tracking-[0.06em]"
         style={{
-          width: '100%', padding: '0.85rem', borderRadius: 12, border: 'none',
-          fontSize: '1.02rem',
-          background: locked ? 'rgba(255,255,255,0.06)' : accent,
-          color: locked ? '#5a5856' : '#1a0f02',
+          width: '100%', padding: '0.85rem', borderRadius: 12,
+          fontSize: '1rem',
+          background: locked ? 'rgba(255,255,255,0.06)' : `${accent}26`,
+          border: `1px solid ${locked ? 'rgba(255,255,255,0.1)' : `${accent}66`}`,
+          color: locked ? '#5a5856' : accent,
           cursor: locked ? 'not-allowed' : 'pointer',
         }}
       >
-        {locked ? 'Locked' : cleared ? 'Sail Again →' : node.type === 'skirmish' ? 'Pick One Off →' : 'Enter Raid →'}
+        {locked ? 'Locked' : node.type === 'skirmish' ? 'Pick One Off →' : cleared ? 'Raid Again →' : 'Enter Raid →'}
       </button>
     )
   } else if (node.type === 'milestone') {
@@ -356,8 +357,8 @@ function NodeDetailSheet({
         <button
           onClick={claim}
           disabled={pending}
-          className="font-cinzel font-800 uppercase tracking-[0.04em]"
-          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, border: 'none', fontSize: '1.02rem', background: accent, color: '#1a0f02', cursor: pending ? 'wait' : 'pointer' }}
+          className="font-cinzel font-700 uppercase tracking-[0.06em]"
+          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '1rem', background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, cursor: pending ? 'wait' : 'pointer' }}
         >
           {pending ? '…' : node.milestone?.spend ? `Pay · ${node.milestone.amount.toLocaleString()} ⟡` : `Claim${node.milestone?.rewardDoubloons ? ` · +${node.milestone.rewardDoubloons} ⟡` : ''}`}
         </button>
@@ -395,8 +396,8 @@ function NodeDetailSheet({
         <button
           onClick={readStory}
           disabled={pending}
-          className="font-cinzel font-800 uppercase tracking-[0.04em]"
-          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, border: 'none', fontSize: '1.02rem', background: accent, color: '#1a0f02', cursor: pending ? 'wait' : 'pointer' }}
+          className="font-cinzel font-700 uppercase tracking-[0.06em]"
+          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '1rem', background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, cursor: pending ? 'wait' : 'pointer' }}
         >
           {pending ? '…' : (detail.ctaLabel ?? 'Continue the Story →')}
         </button>
@@ -574,10 +575,11 @@ function NodeDetailSheet({
                         disabled={pending || locked}
                         className="font-cinzel font-700 uppercase tracking-[0.06em]"
                         style={{
-                          marginTop: 2, padding: '0.6rem', borderRadius: 9, border: 'none',
+                          marginTop: 2, padding: '0.6rem', borderRadius: 9,
                           fontSize: '0.82rem',
-                          background: locked ? 'rgba(255,255,255,0.06)' : rc,
-                          color: locked ? '#5a5856' : '#1a0f02',
+                          background: locked ? 'rgba(255,255,255,0.06)' : `${rc}26`,
+                          border: `1px solid ${locked ? 'rgba(255,255,255,0.1)' : `${rc}66`}`,
+                          color: locked ? '#5a5856' : rc,
                           cursor: pending ? 'wait' : locked ? 'not-allowed' : 'pointer',
                         }}
                       >
