@@ -40,7 +40,18 @@ function FreeRollCountdown() {
   return <>{label}</>
 }
 
-// ── A single crew portrait panel (recruit candidate or roster member) ────────
+// Small engraved stat glyphs (sword / shield / sparkle) so the line reads as a
+// recruitment manifest, not a stat-block card.
+function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: string }) {
+  const common = { width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  if (k === 'power') return (<svg {...common}><path d="M14.5 17.5 3 6V3h3l11.5 11.5" /><path d="m13 19 6-6" /><path d="m16 16 4 4" /><path d="m19 21 2-2" /></svg>)
+  if (k === 'dodge') return (<svg {...common}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>)
+  return (<svg {...common}><path d="m12 3-1.9 5.8-5.8 1.9 5.8 1.9L12 18l1.9-5.8 5.8-1.9-5.8-1.9z" /></svg>)
+}
+
+// A single recruit/roster entry, styled like a Darkest Dungeon stagecoach
+// manifest line: arched portrait in a carved frame, name + class + quirks
+// laid out beside it on aged wood.
 function CrewPanel({
   name, filename, rarity, base, effects, dimmed, children,
 }: {
@@ -56,87 +67,93 @@ function CrewPanel({
   const eff = applyCrewEffects(base, effects)
   const resolved = resolveEffects(effects)
 
+  const corner = (pos: React.CSSProperties): React.CSSProperties => ({
+    position: 'absolute', width: 9, height: 9, opacity: 0.55, pointerEvents: 'none', ...pos,
+  })
+
   return (
     <div style={{
-      position: 'relative', borderRadius: 14, overflow: 'hidden',
-      background: 'linear-gradient(160deg, #1b1622 0%, #0d0b12 100%)',
-      border: `1.5px solid ${color}`,
-      boxShadow: `0 6px 18px rgba(0,0,0,0.5), 0 0 16px ${color}33`,
-      display: 'flex', flexDirection: 'column',
-      opacity: dimmed ? 0.55 : 1,
+      position: 'relative', display: 'flex', gap: '0.7rem', padding: '0.7rem',
+      borderRadius: 7,
+      background: 'linear-gradient(157deg, #271d12 0%, #150e08 100%)',
+      border: '1px solid #46341f',
+      boxShadow: 'inset 0 0 0 1px rgba(184,142,82,0.12), inset 0 1px 0 rgba(255,225,170,0.05), 0 6px 16px rgba(0,0,0,0.55)',
+      opacity: dimmed ? 0.5 : 1,
       transition: 'opacity 0.2s',
     }}>
-      {/* Rarity tag */}
-      <div style={{
-        position: 'absolute', top: 8, left: 8, zIndex: 3,
-        fontSize: '0.5rem', letterSpacing: '0.12em', textTransform: 'uppercase',
-        fontWeight: 700, color: '#0b0a0e', background: color,
-        padding: '0.15rem 0.45rem', borderRadius: 5,
-      }} className="font-karla">
-        {RARITY_NAMES[(rarity as CrewRarity)] ?? 'Common'}
-      </div>
+      {/* Carved corner brackets */}
+      <span style={corner({ top: 4, left: 4, borderTop: '1.5px solid #b08d4f', borderLeft: '1.5px solid #b08d4f' })} />
+      <span style={corner({ top: 4, right: 4, borderTop: '1.5px solid #b08d4f', borderRight: '1.5px solid #b08d4f' })} />
+      <span style={corner({ bottom: 4, left: 4, borderBottom: '1.5px solid #b08d4f', borderLeft: '1.5px solid #b08d4f' })} />
+      <span style={corner({ bottom: 4, right: 4, borderBottom: '1.5px solid #b08d4f', borderRight: '1.5px solid #b08d4f' })} />
 
-      {/* Portrait in a reserved box */}
+      {/* Arched portrait niche */}
       <div style={{
-        position: 'relative', width: '100%', height: 150,
-        background: `radial-gradient(ellipse at 50% 35%, ${color}22 0%, #07060a 72%)`,
+        position: 'relative', width: 86, flexShrink: 0, alignSelf: 'stretch', minHeight: 124,
+        borderRadius: '43px 43px 5px 5px', overflow: 'hidden',
+        border: `2px solid ${color}`,
+        boxShadow: `inset 0 -12px 20px rgba(0,0,0,0.65), 0 0 10px ${color}33`,
+        background: `radial-gradient(ellipse at 50% 30%, ${color}26 0%, #070504 74%)`,
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={artSrc(filename)} alt={name} style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%',
-          objectFit: 'contain', objectPosition: 'center',
+          objectFit: 'cover', objectPosition: 'center 30%',
         }} />
-        <div style={{
-          position: 'absolute', left: 0, right: 0, bottom: 0, height: '45%',
-          background: 'linear-gradient(to top, #0d0b12 0%, transparent 100%)',
-        }} />
+        {/* inner frame line */}
+        <div style={{ position: 'absolute', inset: 3, borderRadius: '40px 40px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
+        {/* rarity nameplate */}
+        <div className="font-karla font-700" style={{
+          position: 'absolute', bottom: 5, left: '50%', transform: 'translateX(-50%)',
+          fontSize: '0.46rem', letterSpacing: '0.1em', textTransform: 'uppercase',
+          color, background: 'rgba(7,5,3,0.82)', border: `1px solid ${color}aa`,
+          padding: '0.1rem 0.4rem', borderRadius: 3, whiteSpace: 'nowrap',
+        }}>
+          {RARITY_NAMES[(rarity as CrewRarity)] ?? 'Common'}
+        </div>
       </div>
 
-      {/* Body */}
-      <div style={{ padding: '0.45rem 0.7rem 0.7rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <p className="font-pirata" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.05, letterSpacing: '0.02em' }}>
-          {name}
-        </p>
+      {/* Manifest detail */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+        <div>
+          <p className="font-pirata" style={{ fontSize: '1.18rem', color: '#ecdcbd', lineHeight: 1, letterSpacing: '0.02em' }}>
+            {name}
+          </p>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.52rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: `${color}cc`, marginTop: 2 }}>
+            {RARITY_NAMES[(rarity as CrewRarity)] ?? 'Common'} Crew
+          </p>
+        </div>
 
-        {/* Effective stats (base + effects) */}
-        <div style={{ display: 'flex', gap: 4 }}>
+        {/* Engraved stats */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.15rem 0' }}>
           {(['power', 'dodge', 'fortune'] as const).map(k => {
             const changed = eff[k] - base[k]
             return (
-              <div key={k} style={{
-                flex: 1, textAlign: 'center', background: 'rgba(0,0,0,0.35)',
-                border: '1px solid rgba(255,255,255,0.07)', borderRadius: 7, padding: '0.3rem 0.1rem',
-              }}>
-                <p className="font-karla font-700" style={{ fontSize: '0.46rem', letterSpacing: '0.08em', color: STAT_COLOR[k] }}>
-                  {STAT_LABEL[k]}
-                </p>
-                <p className="font-cinzel font-700" style={{
-                  fontSize: '0.95rem', lineHeight: 1.1,
-                  color: changed > 0 ? '#5fd38a' : changed < 0 ? '#f08a8a' : '#f0ede8',
+              <div key={k} title={STAT_LABEL[k]} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <StatIcon k={k} color={STAT_COLOR[k]} />
+                <span className="font-cinzel font-700" style={{
+                  fontSize: '0.92rem', lineHeight: 1,
+                  color: changed > 0 ? '#7fdfa3' : changed < 0 ? '#f08a8a' : '#ecdcbd',
                 }}>
                   {eff[k]}
-                </p>
+                </span>
               </div>
             )
           })}
         </div>
 
-        {/* Effects / traits */}
+        {/* Quirks */}
         {resolved.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {resolved.map(e => {
               const buff = e.kind === 'buff'
               return (
-                <div key={e.id} title={e.desc} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6,
-                  background: buff ? 'rgba(60,180,110,0.12)' : 'rgba(200,70,70,0.12)',
-                  border: `1px solid ${buff ? 'rgba(80,200,130,0.35)' : 'rgba(220,90,90,0.35)'}`,
-                  borderRadius: 6, padding: '0.18rem 0.4rem',
-                }}>
-                  <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: buff ? '#9fe6bd' : '#f2b0b0' }}>
+                <div key={e.id} title={e.desc} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                  <span style={{ flexShrink: 0, width: 5, height: 5, borderRadius: '50%', background: buff ? '#5fd38a' : '#e07a7a', transform: 'translateY(-1px)' }} />
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: buff ? '#bfe8cf' : '#f0bcbc', fontStyle: 'italic' }}>
                     {e.name}
                   </span>
-                  <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.55)', whiteSpace: 'nowrap' }}>
+                  <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: 'rgba(232,220,192,0.45)', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
                     {modSummary(e)}
                   </span>
                 </div>
@@ -145,7 +162,7 @@ function CrewPanel({
           </div>
         )}
 
-        {children}
+        <div style={{ marginTop: 'auto', paddingTop: '0.2rem' }}>{children}</div>
       </div>
     </div>
   )
@@ -226,7 +243,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.8rem', marginBottom: '2rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem', marginBottom: '2rem' }}>
           {state.board.map((c: BoardCandidate) => (
             <CrewPanel key={c.id} name={c.name} filename={c.filename} rarity={c.rarity}
               base={{ power: c.power, dodge: c.dodge, fortune: c.fortune }} effects={c.effects} dimmed={c.recruited}>
@@ -269,7 +286,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
             No crew yet. Recruit from the board above.
           </p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.8rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
             {state.roster.map((m: CrewMember) => (
               <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity}
                 base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects}>
