@@ -16,7 +16,7 @@ export const SLOT_SYMBOLS_LIST: {
   weight: number
   label: string
 }[] = [
-  { id: 'common',    filename: 'Sardine.png',     color: '#8a8880', weight: 50, label: 'Sardine' },
+  { id: 'common',    filename: 'Sardine_v2.png',  color: '#8a8880', weight: 50, label: 'Sardine' },
   { id: 'rare',      filename: 'Blue_Marlin.png', color: '#60a5fa', weight: 25, label: 'Blue Marlin' },
   { id: 'legendary', filename: 'Blue_Whale.png',  color: '#a78bfa', weight: 10, label: 'Blue Whale' },
   { id: 'catfish',   filename: 'Catfish.png',      color: '#f0c040', weight: 3,  label: 'Catfish' },
