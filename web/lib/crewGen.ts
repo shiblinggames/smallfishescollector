@@ -45,9 +45,10 @@ export function crewDisplayName(slug: string, fallbackName: string): string {
 // is a slow trickle (never Legendary, very rare Epic); the 100-gem reroll is
 // the real pull (boosted Epic, the only path to a Legendary).
 export const FREE_WEIGHTS: [number, number, number, number] = [76, 22, 2, 0]
-// Legendary is exceptionally rare (only 2 legendary fish exist): a ~0.65 weight
-// gives roughly a 1-in-50 chance of a legendary appearing per 3-candidate reroll.
-export const GEM_WEIGHTS:  [number, number, number, number] = [50, 33, 14, 0.65]
+// Gem rerolls are the real pull. Tuned so that per 3-candidate reroll an Epic
+// shows up ~1 in 10 and a Legendary ~1 in 50 (only 2 legendary fish exist);
+// the rest are commons/rares.
+export const GEM_WEIGHTS:  [number, number, number, number] = [62, 34, 3.5, 0.65]
 
 // Total stat budget band per rarity (inclusive).
 const STAT_BUDGET: Record<CrewRarity, [number, number]> = {
