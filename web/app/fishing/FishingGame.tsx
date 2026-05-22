@@ -33,6 +33,7 @@ import { claimDailyReward } from './dailyChallengeActions'
 import { getDailyChallenges, type DailyChallengeState, type DailyChallenge } from '@/lib/dailyChallenges'
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import LeaderboardModal from '@/components/LeaderboardModal'
+import AncientBgEffect from '@/components/AncientBgEffect'
 import { finishSession, type ActiveSession } from '@/app/social/challengeActions'
 import { equipRod, purchaseRod, buyReel } from '@/app/marketplace/tackle-shop/actions'
 import { buyHook } from '@/app/hooks/actions'
@@ -3450,6 +3451,12 @@ export default function FishingGame({
             </>
           )
         })()}
+
+        {/* Ancient Deep ambiance — the same drifting lavender motes + pulsing
+            glow as the Ancient Deep profile background. Sibling of the scene
+            layers (above the painted bg, below the character) so the motes
+            rise behind the boat. Only the climax zone gets it. */}
+        {selectedZone === 'ancient_deep' && <AncientBgEffect />}
 
         {/* Character + rod + hook overlay — all 3 frames always in DOM so
             sprites are pre-decoded. willChange + transform: translateZ(0)
