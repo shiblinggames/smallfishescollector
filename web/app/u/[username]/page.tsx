@@ -6,6 +6,8 @@ import ProfileClient from './ProfileClient'
 import { notFound } from 'next/navigation'
 import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
 import { isPremiumActive } from '@/lib/premium'
+import { crewDisplayName } from '@/lib/crewGen'
+import type { ShowcaseCrew } from '@/components/CrewShowcase'
 import type { CareerStats, CareerAggregates } from '@/lib/careerStats'
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
@@ -24,18 +26,17 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
     admin.from('profiles')
-      .select('id, username, showcase_variant_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color, profile_bg, fishing_casts, total_perfects, highest_raid_damage')
+      .select('id, username, showcase_crew_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color, profile_bg, fishing_casts, total_perfects, highest_raid_damage')
       .ilike('username', username)
       .single(),
   ])
 
   if (!profile) notFound()
 
-  const showcaseIds: number[] = (profile.showcase_variant_ids as number[] | null) ?? []
+  const showcaseCrewIds: number[] = (profile.showcase_crew_ids as number[] | null) ?? []
 
   const [
     showcaseData,
-    { count: packCount },
     { count: uniqueSpecies },
     rarestFishData,
     navProfileData,
@@ -43,17 +44,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     voyagesData,
     { data: careerAgg },
   ] = await Promise.all([
-    showcaseIds.length > 0
-      ? admin.from('card_variants')
-          .select('id, variant_name, border_style, art_effect, drop_weight, cards(name, filename)')
-          .in('id', showcaseIds)
-      : admin.from('user_collection')
-          .select('card_variants(id, variant_name, border_style, art_effect, drop_weight, cards(name, filename))')
+    showcaseCrewIds.length > 0
+      ? admin.from('user_crew')
+          .select('id, rarity, power, dodge, fortune, effects, cards(name, filename, slug)')
           .eq('user_id', profile.id)
-          .order('card_variants(drop_weight)', { ascending: true })
-          .limit(20),
-
-    admin.from('pack_history').select('id', { count: 'exact', head: true }).eq('user_id', profile.id),
+          .in('id', showcaseCrewIds)
+      : Promise.resolve({ data: [] as any[] }),
 
     admin.from('fish_collection').select('fish_id', { count: 'exact', head: true }).eq('user_id', profile.id),
 
@@ -79,22 +75,21 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     admin.rpc('career_stats', { uid: profile.id }),
   ])
 
-  // Build showcase variants
-  let showcaseVariants: unknown[] = []
-  if (showcaseIds.length > 0) {
-    const byId = Object.fromEntries(((showcaseData.data ?? []) as any[]).map((v: any) => [v.id, v]))
-    showcaseVariants = showcaseIds.map(id => byId[id]).filter(Boolean)
-  } else {
-    const seen = new Set()
-    for (const row of (showcaseData.data ?? []) as any[]) {
-      const cv = row.card_variants
-      if (cv && !seen.has(cv.id)) {
-        seen.add(cv.id)
-        showcaseVariants.push(cv)
-        if (showcaseVariants.length >= 5) break
-      }
-    }
-  }
+  // Build the player-picked crew showcase, preserving the saved order.
+  const crewById = new Map(((showcaseData.data ?? []) as any[]).map(r => [r.id, r]))
+  const showcaseCrew: ShowcaseCrew[] = showcaseCrewIds
+    .map(id => crewById.get(id))
+    .filter(Boolean)
+    .map((r: any) => ({
+      id: r.id,
+      name: crewDisplayName(r.cards?.slug ?? '', r.cards?.name ?? 'Crew'),
+      filename: r.cards?.filename ?? '',
+      rarity: r.rarity,
+      power: r.power,
+      dodge: r.dodge,
+      fortune: r.fortune,
+      effects: (r.effects ?? []) as string[],
+    }))
 
   const rarestFish = ((rarestFishData.data ?? []) as any[])
     .map(r => r.fish_species)
@@ -123,11 +118,10 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       <main className="min-h-screen pb-24 sm:pb-0 pt-10">
         <ProfileClient
           username={profile.username}
-          showcaseVariants={showcaseVariants}
+          showcaseCrew={showcaseCrew}
           voyages={(voyagesData.data ?? []) as import('./ProfileClient').VoyageEntry[]}
           isPremium={isPremiumActive(profile)}
           stats={{
-            packsOpened: packCount ?? 0,
             uniqueSpecies: uniqueSpecies ?? 0,
             fishingXP: profile.fishing_xp ?? 0,
             expeditionXP: profile.expedition_xp ?? 0,

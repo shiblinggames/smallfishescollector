@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition, useRef } from 'react'
-import FishCard from '@/components/FishCard'
-import type { BorderStyle, ArtEffect } from '@/lib/types'
+import { CrewPortrait, type ShowcaseCrew } from '@/components/CrewShowcase'
 import { addCrewMember, removeCrewMember } from '@/app/social/actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
@@ -24,15 +23,6 @@ import AncientBgEffect from '@/components/AncientBgEffect'
 import { StatTile } from '@/components/ProfileStats'
 import type { CareerStats } from '@/lib/careerStats'
 
-interface CardVariant {
-  id: number
-  variant_name: string
-  border_style: BorderStyle
-  art_effect: ArtEffect
-  drop_weight: number
-  cards: { name: string; filename: string }
-}
-
 export interface VoyageEntry {
   id: number
   route: string
@@ -45,7 +35,6 @@ export interface VoyageEntry {
 }
 
 interface Stats {
-  packsOpened: number
   uniqueSpecies: number
   fishingXP: number
   expeditionXP: number
@@ -64,7 +53,7 @@ interface Gear {
 
 interface Props {
   username: string
-  showcaseVariants: unknown[]
+  showcaseCrew: ShowcaseCrew[]
   stats: Stats
   gear: Gear
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
@@ -99,23 +88,6 @@ const RARITY_LABEL: Record<number, string> = {
   1: 'Common', 2: 'Uncommon', 3: 'Rare', 4: 'Epic', 5: 'Legendary',
 }
 
-const CARD_W = 140
-
-function getOff(idx: number, active: number, total: number) {
-  let d = idx - active
-  if (d > total / 2) d -= total
-  if (d < -total / 2) d += total
-  return d
-}
-
-function cardTransform(off: number): { tx: number; tz: number; ry: number; scale: number; brightness: number; zIdx: number } {
-  const abs = Math.abs(off)
-  const sign = Math.sign(off)
-  if (off === 0)  return { tx: 0,          tz: 50,  ry: 0,           scale: 1.00, brightness: 1.0,  zIdx: 10 }
-  if (abs === 1)  return { tx: sign * 90,  tz: -15, ry: -sign * 22,  scale: 0.80, brightness: 0.55, zIdx: 5  }
-  return            { tx: sign * 148, tz: -45, ry: -sign * 36,  scale: 0.60, brightness: 0.35, zIdx: 2  }
-}
-
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.78rem', color: '#ccc7c0', marginBottom: 14 }}>
@@ -124,93 +96,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-function CrewCarousel({ variants }: { variants: CardVariant[] }) {
-  const [active, setActive] = useState(0)
-  const total = variants.length
-  const touchStartX = useRef<number | null>(null)
-
-  function prev() { setActive(i => (i - 1 + total) % total) }
-  function next() { setActive(i => (i + 1) % total) }
-
-  const activeCard = variants[active]
-
-  return (
-    <div>
-      <div
-        style={{ position: 'relative', height: 210, perspective: '800px', overflow: 'visible' }}
-        onTouchStart={e => { touchStartX.current = e.touches[0].clientX }}
-        onTouchEnd={e => {
-          if (touchStartX.current === null || total <= 1) return
-          const dx = e.changedTouches[0].clientX - touchStartX.current
-          if (dx > 40) prev()
-          else if (dx < -40) next()
-          touchStartX.current = null
-        }}
-      >
-        {variants.map((cv, idx) => {
-          const off = getOff(idx, active, total)
-          if (Math.abs(off) > 2) return null
-          const { tx, tz, ry, scale, brightness, zIdx } = cardTransform(off)
-          return (
-            <div
-              key={cv.id}
-              onClick={() => off !== 0 && setActive(idx)}
-              style={{
-                position: 'absolute',
-                left: '50%',
-                top: 0,
-                marginLeft: -CARD_W / 2,
-                transform: `translateX(${tx}px) translateZ(${tz}px) rotateY(${ry}deg) scale(${scale})`,
-                transition: 'transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94), filter 0.38s',
-                filter: `brightness(${brightness})`,
-                zIndex: zIdx,
-                cursor: off !== 0 ? 'pointer' : 'default',
-              }}
-            >
-              <FishCard
-                name={cv.cards.name}
-                filename={cv.cards.filename}
-                borderStyle={cv.border_style}
-                artEffect={cv.art_effect}
-                variantName={cv.variant_name}
-                dropWeight={cv.drop_weight}
-              />
-            </div>
-          )
-        })}
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginTop: 10 }}>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0ede8', minHeight: '1.2em' }}>
-          {activeCard?.cards.name}
-        </p>
-        {total > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button onClick={prev} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c4bfb7', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>‹</button>
-            <div style={{ display: 'flex', gap: 5 }}>
-              {variants.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setActive(i)}
-                  style={{
-                    width: i === active ? 18 : 6, height: 6, borderRadius: 3,
-                    background: i === active ? '#f0c040' : 'rgba(255,255,255,0.2)',
-                    border: 'none', cursor: 'pointer', padding: 0,
-                    transition: 'width 0.22s, background 0.22s',
-                  }}
-                />
-              ))}
-            </div>
-            <button onClick={next} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c4bfb7', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>›</button>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-export default function ProfileClient({ username, showcaseVariants, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
-  const variants = showcaseVariants as CardVariant[]
+export default function ProfileClient({ username, showcaseCrew, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
   const [expandedVoyage, setExpandedVoyage] = useState<number | null>(null)
@@ -582,18 +468,13 @@ export default function ProfileClient({ username, showcaseVariants, voyages, sta
             </div>
           </div>
 
-          {/* Crew */}
-          {(variants.length > 0 || stats.packsOpened > 0) && (
+          {/* Crew — the player-picked showcase */}
+          {showcaseCrew.length > 0 && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <SectionLabel>Crew</SectionLabel>
-                {stats.packsOpened > 0 && (
-                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#bbb5ad', marginBottom: 14 }}>
-                    {stats.packsOpened.toLocaleString()} packs opened
-                  </p>
-                )}
+              <SectionLabel>Crew</SectionLabel>
+              <div style={{ display: 'flex', gap: '0.6rem', overflowX: 'auto', paddingBottom: '0.4rem' }}>
+                {showcaseCrew.map(c => <CrewPortrait key={c.id} crew={c} />)}
               </div>
-              {variants.length > 0 && <CrewCarousel variants={variants} />}
             </div>
           )}
 

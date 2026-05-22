@@ -4,9 +4,10 @@ import { useEffect, useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import FishCard from '@/components/FishCard'
+import { CrewShowcase, CrewPortrait } from '@/components/CrewShowcase'
+import type { CrewMember } from '@/app/dev/crew/actions'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
-import { updateUsername, updateShowcase, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial, updateProfileBg } from '@/app/u/actions'
+import { updateUsername, updateShowcaseCrew, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial, updateProfileBg } from '@/app/u/actions'
 import { PROFILE_BACKGROUNDS, getProfileBackground } from '@/lib/profileBackgrounds'
 import AncientBgEffect from '@/components/AncientBgEffect'
 import { StatTile } from '@/components/ProfileStats'
@@ -25,22 +26,12 @@ import { getShip } from '@/lib/ships'
 import { getShipSkin } from '@/lib/shipSkins'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 
-type PickerCard = {
-  variantId: number
-  variantName: string
-  borderStyle: BorderStyle
-  artEffect: ArtEffect
-  dropWeight: number
-  name: string
-  filename: string
-}
-
 interface Props {
   email: string
   username: string
   usernameChanged: boolean
-  showcaseVariantIds: number[]
-  pickerCards: PickerCard[]
+  showcaseCrewIds: number[]
+  crewRoster: CrewMember[]
   isPremium: boolean
   level: number
   expeditionLevel: number
@@ -115,98 +106,12 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-function ShowcaseCarousel({ cards, onEdit }: { cards: PickerCard[]; onEdit: () => void }) {
-  const [active, setActive] = useState(0)
-  const total = cards.length
-  const touchStartX = useRef<number | null>(null)
-  function prev() { setActive(i => (i - 1 + total) % total) }
-  function next() { setActive(i => (i + 1) % total) }
-
-  return (
-    <div>
-      <div
-        style={{ position: 'relative', height: 210, perspective: '800px', overflow: 'visible' }}
-        onTouchStart={e => { touchStartX.current = e.touches[0].clientX }}
-        onTouchEnd={e => {
-          if (touchStartX.current === null || total <= 1) return
-          const dx = e.changedTouches[0].clientX - touchStartX.current
-          if (dx > 40) prev(); else if (dx < -40) next()
-          touchStartX.current = null
-        }}
-      >
-        {cards.map((card, idx) => {
-          const off = getOff(idx, active, total)
-          if (Math.abs(off) > 2) return null
-          const { tx, tz, ry, scale, brightness, zIdx } = cardTransform(off)
-          return (
-            <div
-              key={card.variantId}
-              onClick={() => off !== 0 && setActive(idx)}
-              style={{
-                position: 'absolute', left: '50%', top: 0, marginLeft: -CARD_W / 2,
-                transform: `translateX(${tx}px) translateZ(${tz}px) rotateY(${ry}deg) scale(${scale})`,
-                transition: 'transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94), filter 0.38s',
-                filter: `brightness(${brightness})`,
-                zIndex: zIdx,
-                cursor: off !== 0 ? 'pointer' : 'default',
-              }}
-            >
-              <FishCard
-                name={card.name}
-                filename={card.filename}
-                borderStyle={card.borderStyle}
-                artEffect={card.artEffect}
-                variantName={card.variantName}
-                dropWeight={card.dropWeight}
-              />
-            </div>
-          )
-        })}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginTop: 10 }}>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0ede8', minHeight: '1.2em' }}>
-          {cards[active]?.name}
-        </p>
-        {total > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button onClick={prev} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c4bfb7', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>‹</button>
-            <div style={{ display: 'flex', gap: 5 }}>
-              {cards.map((_, i) => (
-                <button key={i} onClick={() => setActive(i)} style={{
-                  width: i === active ? 18 : 6, height: 6, borderRadius: 3,
-                  background: i === active ? '#f0c040' : 'rgba(255,255,255,0.2)',
-                  border: 'none', cursor: 'pointer', padding: 0,
-                  transition: 'width 0.22s, background 0.22s',
-                }} />
-              ))}
-            </div>
-            <button onClick={next} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c4bfb7', fontSize: '1.2rem', lineHeight: 1, padding: '0 2px' }}>›</button>
-          </div>
-        )}
-        <button
-          onClick={onEdit}
-          style={{
-            marginTop: 4,
-            padding: '0.32rem 0.9rem', borderRadius: '2rem',
-            background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.28)',
-            cursor: 'pointer',
-          }}
-        >
-          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#f0c040', letterSpacing: '0.12em' }}>
-            Edit Showcase
-          </span>
-        </button>
-      </div>
-    </div>
-  )
-}
-
 export default function ProfileClient({
   email,
   username: initialUsername,
   usernameChanged: initialChanged,
-  showcaseVariantIds: initialShowcase,
-  pickerCards,
+  showcaseCrewIds: initialShowcase,
+  crewRoster,
   isPremium,
   level,
   expeditionLevel,
@@ -362,9 +267,9 @@ export default function ProfileClient({
   const charSprites = getCharacterSprites(characterColor)
   const equippedSpecial = equippedSpecialId ? SPECIAL_ITEMS.find(s => s.id === equippedSpecialId) ?? null : null
 
-  const showcaseCards = selectedShowcase
-    .map(id => pickerCards.find(c => c.variantId === id))
-    .filter((c): c is PickerCard => !!c)
+  const showcaseCrew = selectedShowcase
+    .map(id => crewRoster.find(c => c.id === id))
+    .filter((c): c is CrewMember => !!c)
 
   function handleSaveUsername(e: React.FormEvent) {
     e.preventDefault()
@@ -384,7 +289,7 @@ export default function ProfileClient({
 
   function handleSaveShowcase() {
     startTransition(async () => {
-      await updateShowcase(selectedShowcase)
+      await updateShowcaseCrew(selectedShowcase)
       setModalOpen(false)
     })
   }
@@ -1074,25 +979,7 @@ export default function ProfileClient({
           {/* Showcase */}
           <div>
             <SectionLabel>Showcase</SectionLabel>
-            {showcaseCards.length > 0 ? (
-              <ShowcaseCarousel cards={showcaseCards} onEdit={() => setModalOpen(true)} />
-            ) : (
-              <div style={{ textAlign: 'center', paddingTop: 8 }}>
-                <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#a8a29a', marginBottom: 12 }}>
-                  Pin your best catches to your profile
-                </p>
-                <button
-                  onClick={() => setModalOpen(true)}
-                  style={{
-                    padding: '0.4rem 1rem', borderRadius: '2rem',
-                    background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.3)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', color: '#f0c040', letterSpacing: '0.12em' }}>+ Add Cards</span>
-                </button>
-              </div>
-            )}
+            <CrewShowcase crew={showcaseCrew} onEdit={() => setModalOpen(true)} emptyHint="Feature your best crew on your profile" />
           </div>
 
         </div>
@@ -1139,7 +1026,7 @@ export default function ProfileClient({
           >
             <div style={{ padding: '1.25rem 1.25rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
               <div>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>Pick Showcase</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>Feature Crew</p>
                 <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#aaa49c', marginTop: 2 }}>
                   {selectedShowcase.length} / 5 selected
                   {selectedShowcase.length > 0 && (
@@ -1153,33 +1040,26 @@ export default function ProfileClient({
             </div>
 
             <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
-              {pickerCards.length === 0 ? (
+              {crewRoster.length === 0 ? (
                 <p className="font-karla font-300 text-center" style={{ fontSize: '0.72rem', color: '#aaa49c', padding: '2rem 0' }}>
-                  Open some packs first!
+                  Recruit some crew first!
                 </p>
               ) : (
-                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 16 }}>
-                  {pickerCards.map(card => {
-                    const idx = selectedShowcase.indexOf(card.variantId)
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
+                  {crewRoster.map(crew => {
+                    const idx = selectedShowcase.indexOf(crew.id)
                     const isSelected = idx !== -1
                     const disabled = !isSelected && selectedShowcase.length >= 5
                     return (
-                      <div key={card.variantId} style={{ position: 'relative', opacity: disabled ? 0.25 : 1 }}>
+                      <div key={crew.id} style={{ position: 'relative', opacity: disabled ? 0.3 : 1 }}>
                         <div
-                          style={isSelected ? { outline: '2px solid #f0c040', outlineOffset: 5, borderRadius: 4, cursor: 'pointer' } : { cursor: disabled ? 'default' : 'pointer' }}
-                          onClick={() => !disabled && toggleCard(card.variantId)}
+                          style={isSelected ? { outline: '2px solid #f0c040', outlineOffset: 4, borderRadius: 12, cursor: 'pointer' } : { cursor: disabled ? 'default' : 'pointer' }}
+                          onClick={() => !disabled && toggleCard(crew.id)}
                         >
-                          <FishCard
-                            name={card.name}
-                            filename={card.filename}
-                            borderStyle={card.borderStyle}
-                            artEffect={card.artEffect}
-                            variantName={card.variantName}
-                            dropWeight={card.dropWeight}
-                          />
+                          <CrewPortrait crew={crew} w={92} />
                         </div>
                         {isSelected && (
-                          <div style={{ position: 'absolute', top: 0, right: 0, width: 20, height: 20, borderRadius: '50%', background: '#f0c040', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                          <div style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: '#f0c040', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
                             <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#000' }}>{idx + 1}</span>
                           </div>
                         )}
@@ -1191,7 +1071,7 @@ export default function ProfileClient({
             </div>
 
             <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid rgba(255,255,255,0.09)', flexShrink: 0 }}>
-              <button onClick={handleSaveShowcase} disabled={pending} className="btn-gold w-full" style={{ opacity: pending ? 0.5 : 1 }}>
+              <button onClick={handleSaveShowcase} disabled={pending} className="font-karla font-700 w-full" style={{ padding: '0.7rem', borderRadius: 10, fontSize: '0.78rem', background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.5)', color: '#cfe2ff', cursor: 'pointer', opacity: pending ? 0.5 : 1 }}>
                 {pending ? 'Saving…' : 'Save Showcase'}
               </button>
             </div>

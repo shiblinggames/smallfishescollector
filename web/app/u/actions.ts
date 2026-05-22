@@ -39,31 +39,30 @@ export async function checkUsername(username: string): Promise<{ available: bool
   return { available: !data }
 }
 
-export async function updateShowcase(variantIds: number[]): Promise<{ error?: string }> {
+export async function updateShowcaseCrew(crewIds: number[]): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const ids = variantIds.slice(0, 5)
+  const admin = createAdminClient()
+  const ids = Array.from(new Set(crewIds)).slice(0, 5)
 
   if (ids.length > 0) {
-    const admin = createAdminClient()
     const { data: owned } = await admin
-      .from('user_collection')
-      .select('card_variant_id')
+      .from('user_crew')
+      .select('id')
       .eq('user_id', user.id)
-      .in('card_variant_id', ids)
-    const ownedIds = new Set((owned ?? []).map((r: any) => r.card_variant_id))
-    if (!ids.every(id => ownedIds.has(id))) return { error: 'You don\'t own one of those cards.' }
-
-    const { error } = await admin.from('profiles').update({ showcase_variant_ids: ids }).eq('id', user.id)
+      .in('id', ids)
+    const ownedIds = new Set((owned ?? []).map((r: any) => r.id))
+    const clean = ids.filter(id => ownedIds.has(id))
+    const { error } = await admin.from('profiles').update({ showcase_crew_ids: clean }).eq('id', user.id)
     if (error) return { error: 'Something went wrong.' }
   } else {
-    const admin = createAdminClient()
-    const { error } = await admin.from('profiles').update({ showcase_variant_ids: null }).eq('id', user.id)
+    const { error } = await admin.from('profiles').update({ showcase_crew_ids: [] }).eq('id', user.id)
     if (error) return { error: 'Something went wrong.' }
   }
 
+  revalidatePath('/profile')
   return {}
 }
 
@@ -259,30 +258,14 @@ export async function purchaseAvatarSpecial(specialId: string): Promise<
   return { gems: newGems, unlockedSpecials: newOwned }
 }
 
-export async function searchUsers(query: string): Promise<{ username: string; showcaseVariant: unknown }[]> {
+export async function searchUsers(query: string): Promise<{ username: string }[]> {
   if (!query || query.length < 2) return []
   const admin = createAdminClient()
   const { data } = await admin
     .from('profiles')
-    .select('username, showcase_variant_ids')
+    .select('username')
     .ilike('username', `${query.toLowerCase()}%`)
     .limit(6)
 
-  if (!data?.length) return []
-
-  const results = await Promise.all(data.map(async (p) => {
-    let variant = null
-    const ids: number[] = p.showcase_variant_ids ?? []
-    if (ids.length > 0) {
-      const { data: cv } = await admin
-        .from('card_variants')
-        .select('variant_name, border_style, art_effect, drop_weight, cards(name, filename)')
-        .eq('id', ids[0])
-        .single()
-      variant = cv
-    }
-    return { username: p.username, showcaseVariant: variant }
-  }))
-
-  return results
+  return (data ?? []).map(p => ({ username: p.username }))
 }
