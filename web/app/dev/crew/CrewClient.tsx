@@ -198,12 +198,16 @@ function CrewPanel({
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>{children}</div>
         </div>
 
-        {/* Footer: trait count + tap-for-details hint */}
-        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, paddingTop: '0.3rem' }}>
-          <span className="font-karla font-600" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.42)' }}>
-            {effects.length > 0 ? `${effects.length} trait${effects.length === 1 ? '' : 's'}` : 'No traits'}
+        {/* Footer: one tappable link into the detail modal (whole card is also clickable) */}
+        <div style={{ marginTop: 'auto', paddingTop: '0.4rem' }}>
+          <span className="font-karla font-700" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            fontSize: '0.8rem', color: frameAccent,
+            textDecoration: 'underline', textDecorationColor: `${frameAccent}77`, textUnderlineOffset: 3,
+          }}>
+            {effects.length > 0 ? `View ${effects.length} trait${effects.length === 1 ? '' : 's'}` : 'View details'}
+            <span aria-hidden style={{ fontSize: '0.95rem' }}>›</span>
           </span>
-          <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: frameAccent }}>Details ›</span>
         </div>
       </div>
     </div>
