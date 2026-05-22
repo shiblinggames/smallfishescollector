@@ -587,35 +587,55 @@ function NodeDetailSheet({
         {/* Drops / rewards. Raids/skirmishes show compact chips (icon + name)
             to stay scannable — no descriptions, odds, or notes. Story/milestone
             nodes keep the detailed rows so their fragment quotes / notes read. */}
-        {detail.drops && detail.drops.length > 0 && (
+        {((detail.drops && detail.drops.length > 0) || detail.clearReward) && (
           <div style={{ marginTop: '1.1rem' }}>
             <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>{dropsTitle}</p>
-            {isCombatNode(node.type) ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {detail.drops.map(d => {
-                  const rc = d.rarity ? RARITY_COLOR[d.rarity] : '#9ca3af'
-                  return (
-                    <span key={d.label} style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                      background: `${rc}14`, border: `1px solid ${rc}33`,
-                      borderRadius: 8, padding: '0.28rem 0.5rem 0.28rem 0.35rem',
-                    }}>
-                      <span style={{ width: 18, height: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', overflow: 'hidden' }}>
-                        {d.swatch
-                          ? <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 3, background: d.swatch, filter: d.swatchFilter }} />
-                          : d.image
-                            // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={d.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                            : <span>{d.emoji}</span>}
+            {isCombatNode(node.type) ? (() => {
+              // Raids show the guaranteed clear payout (doubloons + Nav XP)
+              // plus only the rare/special crate items — the plain doubloon
+              // tiers are noise, so they're rolled into the payout figure.
+              const special = (detail.drops ?? []).filter(d => d.rarity === 'rare' || d.rarity === 'epic' || d.rarity === 'legendary')
+              return (
+                <>
+                  {detail.clearReward && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: special.length ? 8 : 0 }}>
+                      <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#f0c040', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.32)', borderRadius: 8, padding: '0.3rem 0.6rem' }}>
+                        {detail.clearReward.doubloons.toLocaleString()} ⟡
                       </span>
-                      <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#e8e2d8', whiteSpace: 'nowrap' }}>{d.label}</span>
-                    </span>
-                  )
-                })}
-              </div>
-            ) : (
+                      <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#8ab0e0', background: 'rgba(112,144,192,0.12)', border: '1px solid rgba(112,144,192,0.32)', borderRadius: 8, padding: '0.3rem 0.6rem' }}>
+                        {detail.clearReward.xp.toLocaleString()} Nav XP
+                      </span>
+                    </div>
+                  )}
+                  {special.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {special.map(d => {
+                        const rc = d.rarity ? RARITY_COLOR[d.rarity] : '#9ca3af'
+                        return (
+                          <span key={d.label} style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                            background: `${rc}14`, border: `1px solid ${rc}33`,
+                            borderRadius: 8, padding: '0.28rem 0.5rem 0.28rem 0.35rem',
+                          }}>
+                            <span style={{ width: 18, height: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', overflow: 'hidden' }}>
+                              {d.swatch
+                                ? <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 3, background: d.swatch, filter: d.swatchFilter }} />
+                                : d.image
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  ? <img src={d.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                  : <span>{d.emoji}</span>}
+                            </span>
+                            <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#e8e2d8', whiteSpace: 'nowrap' }}>{d.label}</span>
+                          </span>
+                        )
+                      })}
+                    </div>
+                  )}
+                </>
+              )
+            })() : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
-                {detail.drops.map(d => {
+                {(detail.drops ?? []).map(d => {
                   const rc = d.rarity ? RARITY_COLOR[d.rarity] : '#9ca3af'
                   // Plain loot packs two-up; anything with a description
                   // (or a lone reward) spans the row so its text stays

@@ -10,7 +10,7 @@
 // gated by `requiresNode` (+ optional Nav level); a cleared combat node
 // stays farmable.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, type RaidLootItem } from '@/lib/bossRaids'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
@@ -55,6 +55,8 @@ export interface RaidNodeDetail {
   dropsNote?: string
   /** Override the primary button verb (story nodes). */
   ctaLabel?: string
+  /** combat: total guaranteed doubloons + Nav XP for clearing every kill. */
+  clearReward?: { doubloons: number; xp: number }
 }
 
 export interface RaidNode {
@@ -126,6 +128,17 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
   })
 }
 
+/** Total guaranteed doubloons + Nav XP for clearing every kill in a raid
+ *  (the sequence enemies + the boss). Surfaced as the expected payout. */
+function clearPayout(config: BossRaidConfig): { doubloons: number; xp: number } {
+  let doubloons = 0, xp = 0
+  for (const id of [...config.sequence, config.bossId]) {
+    const r = config.killRewards[id]
+    if (r) { doubloons += r.gold; xp += r.xp }
+  }
+  return { doubloons, xp }
+}
+
 export const RAID_MAP: RaidNode[] = [
   {
     id: 'intro',
@@ -172,6 +185,7 @@ export const RAID_MAP: RaidNode[] = [
           rarity: 'common',
         },
       ],
+      clearReward: { doubloons: CORSAIRS_RECKONING.killRewards.brute.gold, xp: CORSAIRS_RECKONING.killRewards.brute.xp },
       dropsNote: "Pete never runs short of Raiders. Drop by and thin the numbers whenever it suits you.",
     },
   },
@@ -190,6 +204,7 @@ export const RAID_MAP: RaidNode[] = [
         "Pete's full campaign: six escalating ship battles with no breather, ending in the old corsair himself. Win the gauntlet to crack open his loot crate, the only place his contraband drops.",
       enemies: ['Reef Raider ×2', "Crow's Nest Marksman ×2", 'Saltwater Corsair ×2', 'Barnacle Pete'],
       drops: lootDrops(CORSAIRS_RECKONING.loot),
+      clearReward: clearPayout(CORSAIRS_RECKONING),
       dropsNote: 'One crate per Pete clear, rolled once and scaled by your Fortune. Every kill along the way also pays gold + Nav XP.',
     },
   },
@@ -294,6 +309,7 @@ export const RAID_MAP: RaidNode[] = [
         "Krust's full run: eight escalating ship battles through his consignment crew with no breather, ending in the old captain and his iron-sided carrack. Sink the gauntlet to crack his loot crate, the only place his contraband drops. Stiffer than anything Pete's reef ever threw at you.",
       enemies: ['Bilge Runner ×2', 'Brine Deckhand ×2', 'Hull Breaker ×2', 'Krust Overseer ×2', 'Captain Krust'],
       drops: lootDrops(CAPTAIN_KRUST.loot),
+      clearReward: clearPayout(CAPTAIN_KRUST),
       dropsNote: 'One crate per Krust clear, rolled once and scaled by your Fortune. Every kill along the way also pays gold + Nav XP.',
     },
   },
