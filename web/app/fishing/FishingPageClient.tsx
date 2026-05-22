@@ -154,10 +154,12 @@ export default function FishingPageClient({
     setSelectedZone(null)
   }
 
-  // Swap the soundtrack to match the current zone — Open Waters has its own
-  // track; everything else uses the default. No-op when already correct.
+  // Swap the soundtrack to match the zone you ENTER (Open Waters has its own
+  // track; others use the default). Returning to the selector (selectedZone
+  // null) intentionally leaves the track alone, so the song from the zone you
+  // just left keeps playing. No-op when already on the right track.
   useEffect(() => {
-    setFishingTrack(fishingTrackForZone(selectedZone))
+    if (selectedZone) setFishingTrack(fishingTrackForZone(selectedZone))
   }, [selectedZone])
 
   if (!selectedZone) {
