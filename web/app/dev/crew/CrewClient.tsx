@@ -57,6 +57,24 @@ function AnchorIcon() {
 function XIcon() {
   return (<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>)
 }
+function CheckIcon() {
+  return (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>)
+}
+function RefreshIcon() {
+  return (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /><path d="M3 21v-5h5" /></svg>)
+}
+
+// Compact round action buttons (inline with the stats, no dedicated row).
+const ROUND_BTN: React.CSSProperties = {
+  width: 34, height: 34, borderRadius: '50%', flexShrink: 0, padding: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+  boxShadow: '0 2px 5px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.14)', transition: 'filter 0.15s',
+}
+const ROUND_RECRUIT: React.CSSProperties = { ...ROUND_BTN, background: 'linear-gradient(180deg, rgba(74,200,130,0.4), rgba(46,140,92,0.24))', border: '1px solid rgba(122,226,162,0.65)', color: '#dcf8e7' }
+const ROUND_DISMISS: React.CSSProperties = { ...ROUND_BTN, background: 'linear-gradient(180deg, rgba(212,84,84,0.34), rgba(150,46,46,0.2))', border: '1px solid rgba(228,114,114,0.6)', color: '#f8d2d2' }
+const ROUND_CONFIRM: React.CSSProperties = { ...ROUND_BTN, width: 30, height: 30, background: 'linear-gradient(180deg, rgba(74,200,130,0.46), rgba(46,140,92,0.28))', border: '1px solid rgba(122,226,162,0.72)', color: '#dcf8e7' }
+const ROUND_CANCEL: React.CSSProperties = { ...ROUND_BTN, width: 30, height: 30, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.22)', color: 'rgba(255,255,255,0.7)' }
+const ROUND_STATIC: React.CSSProperties = { ...ROUND_BTN, cursor: 'default', boxShadow: 'none' }
 
 function modSummary(e: CrewEffect): string {
   return (['power', 'dodge', 'fortune'] as const)
@@ -174,7 +192,7 @@ function CrewPanel({
           </p>
         </div>
 
-        {/* Engraved stats */}
+        {/* Engraved stats + inline round action */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.15rem 0' }}>
           {(['power', 'dodge', 'fortune'] as const).map(k => (
             <div key={k} title={STAT_LABEL[k]} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -184,17 +202,15 @@ function CrewPanel({
               </span>
             </div>
           ))}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>{children}</div>
         </div>
 
-        {/* Footer: trait count hint + action */}
-        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem', paddingTop: '0.3rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-            <span className="font-karla font-600" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.42)' }}>
-              {effects.length > 0 ? `${effects.length} trait${effects.length === 1 ? '' : 's'}` : 'No traits'}
-            </span>
-            <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: frameAccent }}>Details ›</span>
-          </div>
-          {children}
+        {/* Footer: trait count + tap-for-details hint */}
+        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, paddingTop: '0.3rem' }}>
+          <span className="font-karla font-600" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.42)' }}>
+            {effects.length > 0 ? `${effects.length} trait${effects.length === 1 ? '' : 's'}` : 'No traits'}
+          </span>
+          <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: frameAccent }}>Details ›</span>
         </div>
       </div>
     </div>
@@ -225,33 +241,57 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
     })
   }
 
-  // Recruit / Dismiss action, shared by the card footer and the detail modal.
-  function renderAction(kind: 'board' | 'roster', item: BoardCandidate | CrewMember, onDone?: () => void) {
+  // Recruit / Dismiss action. `round` = compact icon button for the card stats
+  // row; otherwise a full labelled button for the detail modal.
+  function renderAction(kind: 'board' | 'roster', item: BoardCandidate | CrewMember, opts?: { onDone?: () => void; round?: boolean }) {
+    const onDone = opts?.onDone
+    const round = opts?.round
+
     if (kind === 'board') {
       const c = item as BoardCandidate
+      const recruit = (e: React.MouseEvent) => { e.stopPropagation(); run(() => recruitCrew(c.id), c.id, onDone) }
+      if (round) {
+        if (c.recruited) return <div title="Recruited" style={{ ...ROUND_STATIC, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: 'rgba(255,255,255,0.5)' }}><CheckIcon /></div>
+        if (rosterFull) return <div title="Roster full" style={{ ...ROUND_STATIC, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.3)' }}><AnchorIcon /></div>
+        return <button title="Recruit" onClick={recruit} disabled={pending} style={{ ...ROUND_RECRUIT, opacity: pending && busyId === c.id ? 0.6 : 1, cursor: pending ? 'not-allowed' : 'pointer' }}><AnchorIcon /></button>
+      }
       if (c.recruited) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)' }}>Recruited ✓</div>
       if (rosterFull) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.35)', color: '#f2b0b0' }}>Roster Full</div>
       return (
-        <button onClick={(e) => { e.stopPropagation(); run(() => recruitCrew(c.id), c.id, onDone) }} disabled={pending}
-          className="font-karla font-700" style={{ ...BTN_RECRUIT, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1 }}>
+        <button onClick={recruit} disabled={pending} className="font-karla font-700" style={{ ...BTN_RECRUIT, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1 }}>
           <AnchorIcon /><span>{busyId === c.id ? 'Recruiting…' : 'Recruit'}</span>
         </button>
       )
     }
+
     const m = item as CrewMember
-    if (confirmDismiss === m.id) {
+    const arm = (e: React.MouseEvent) => { e.stopPropagation(); setConfirmDismiss(m.id) }
+    const confirm = (e: React.MouseEvent) => { e.stopPropagation(); run(() => dismissCrew(m.id), m.id, onDone) }
+    const cancel = (e: React.MouseEvent) => { e.stopPropagation(); setConfirmDismiss(null) }
+    const armed = confirmDismiss === m.id
+
+    if (round) {
+      if (armed) {
+        return (
+          <div className="flex" style={{ gap: 5 }}>
+            <button title="Confirm dismiss" onClick={confirm} disabled={pending} style={ROUND_CONFIRM}><CheckIcon /></button>
+            <button title="Cancel" onClick={cancel} disabled={pending} style={ROUND_CANCEL}><XIcon /></button>
+          </div>
+        )
+      }
+      return <button title="Dismiss" onClick={arm} disabled={pending} style={ROUND_DISMISS}><XIcon /></button>
+    }
+
+    if (armed) {
       return (
         <div className="flex gap-1.5">
-          <button onClick={(e) => { e.stopPropagation(); run(() => dismissCrew(m.id), m.id, onDone) }} disabled={pending}
-            className="font-karla font-700" style={{ ...BTN_DISMISS, flex: 1, padding: '0.55rem' }}>{busyId === m.id ? '…' : 'Confirm'}</button>
-          <button onClick={(e) => { e.stopPropagation(); setConfirmDismiss(null) }} disabled={pending}
-            className="font-karla font-700" style={{ ...BTN_NEUTRAL, flex: 1, padding: '0.55rem' }}>Cancel</button>
+          <button onClick={confirm} disabled={pending} className="font-karla font-700" style={{ ...BTN_DISMISS, flex: 1, padding: '0.55rem' }}>{busyId === m.id ? '…' : 'Confirm'}</button>
+          <button onClick={cancel} disabled={pending} className="font-karla font-700" style={{ ...BTN_NEUTRAL, flex: 1, padding: '0.55rem' }}>Cancel</button>
         </div>
       )
     }
     return (
-      <button onClick={(e) => { e.stopPropagation(); setConfirmDismiss(m.id) }} disabled={pending}
-        className="font-karla font-700" style={BTN_DISMISS}>
+      <button onClick={arm} disabled={pending} className="font-karla font-700" style={BTN_DISMISS}>
         <XIcon /><span>Dismiss</span>
       </button>
     )
@@ -300,20 +340,22 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
             <button
               onClick={() => run(() => rerollBoard(), 'reroll')}
               disabled={pending || state.gems < state.rerollCost}
+              title="Spend gems for 3 brand-new recruits"
               className="font-karla font-700"
               style={{
-                padding: '0.5rem 1.1rem', borderRadius: 10,
-                background: 'linear-gradient(180deg, rgba(96,165,250,0.32) 0%, rgba(58,118,206,0.18) 100%)',
-                border: '1px solid rgba(124,182,255,0.6)', color: '#e6f0ff',
-                textShadow: '0 1px 2px rgba(0,0,0,0.45)',
-                boxShadow: '0 2px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.14)',
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '0.5rem 0.9rem', borderRadius: 999,
+                fontSize: '0.8rem', letterSpacing: '0.02em',
+                background: 'linear-gradient(180deg, #2c3a58 0%, #1a2336 100%)',
+                border: '1px solid rgba(126,164,232,0.5)', color: '#dbe7ff',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)',
                 cursor: pending || state.gems < state.rerollCost ? 'not-allowed' : 'pointer',
                 opacity: pending || state.gems < state.rerollCost ? 0.5 : 1,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3,
               }}
             >
-              <span style={{ fontSize: '0.84rem', letterSpacing: '0.04em' }}>{busyId === 'reroll' ? 'Rerolling…' : `Reroll · 💎 ${state.rerollCost}`}</span>
-              <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Always 3 new crew</span>
+              <RefreshIcon />
+              <span>{busyId === 'reroll' ? 'Rerolling…' : 'Reroll'}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(0,0,0,0.32)', borderRadius: 999, padding: '0.12rem 0.5rem', fontSize: '0.72rem', color: '#cfe0ff' }}>💎 {state.rerollCost}</span>
             </button>
           </div>
 
@@ -322,7 +364,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               <CrewPanel key={c.id} name={c.name} filename={c.filename} rarity={c.rarity} frameAccent={SECTION_RECRUIT}
                 base={{ power: c.power, dodge: c.dodge, fortune: c.fortune }} effects={c.effects} dimmed={c.recruited}
                 onClick={() => setDetail({ kind: 'board', item: c })}>
-                {renderAction('board', c)}
+                {renderAction('board', c, { round: true })}
               </CrewPanel>
             ))}
             {state.board.length === 0 && (
@@ -357,7 +399,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
                   base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects}
                   onClick={() => setDetail({ kind: 'roster', item: m })}>
-                  {renderAction('roster', m)}
+                  {renderAction('roster', m, { round: true })}
                 </CrewPanel>
               ))}
             </div>
@@ -433,7 +475,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   </div>
                 )}
 
-                {renderAction(detail.kind, it, close)}
+                {renderAction(detail.kind, it, { onDone: close })}
               </motion.div>
             </motion.div>
           )
