@@ -20,7 +20,7 @@ export default async function RedeemPage() {
       <main className="min-h-screen pb-24 sm:pb-0 pt-6">
         <div className="px-6 max-w-sm mx-auto">
           <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] mb-3" style={{ fontSize: '0.65rem' }}>
-            Redeem a Pack Code
+            Redeem a Code
           </p>
           <RedeemClient />
         </div>

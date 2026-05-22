@@ -13,7 +13,7 @@ export default function ClaimContent() {
   const token = searchParams.get('token')
   const emailParam = searchParams.get('email')
   const [status, setStatus] = useState<Status>('loading')
-  const [packs, setPacks] = useState(0)
+  const [gems, setGems] = useState(0)
   const [errorMsg, setErrorMsg] = useState('')
 
   useEffect(() => {
@@ -40,10 +40,10 @@ export default function ClaimContent() {
         return
       }
 
-      const result = data as { status: string; packs?: number }
+      const result = data as { status: string; gems?: number }
 
       if (result.status === 'ok') {
-        setPacks(result.packs ?? 0)
+        setGems(result.gems ?? 0)
         setStatus('success')
       } else if (result.status === 'already_claimed') {
         setStatus('error')
@@ -76,16 +76,16 @@ export default function ClaimContent() {
     return (
       <div className="sg-card p-8 space-y-6 text-center">
         <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.1rem' }}>
-          Packs waiting for you
+          Gems waiting for you
         </p>
         <p className="font-karla font-400 text-[#a0a09a] text-sm leading-relaxed">
-          Sign in to claim your Crew Notices.
+          Sign in to claim your gems.
           {emailParam && (
             <><br /><span className="text-[#6a6764]">Use the account for </span>
             <span className="text-[#f0ede8]">{emailParam}</span></>
           )}
         </p>
-        <Link href={loginUrl} className="btn-gold block w-full text-center">
+        <Link href={loginUrl} className="btn-ghost block w-full text-center">
           Sign In
         </Link>
       </div>
@@ -96,10 +96,10 @@ export default function ClaimContent() {
     return (
       <div className="sg-card p-8 space-y-6 text-center">
         <div className="border border-[rgba(240,192,64,0.38)] bg-[rgba(240,192,64,0.06)] px-4 py-5 space-y-1">
-          <p className="font-cinzel font-700 text-[#f0c040] text-lg">✦ {packs} Crew Notice{packs !== 1 ? 's' : ''} Added</p>
+          <p className="font-cinzel font-700 text-[#f0c040] text-lg">✦ {gems.toLocaleString()} Gems Added</p>
           <p className="font-karla font-300 text-[#a0a09a] text-xs tracking-wide">Ready to recruit from your account</p>
         </div>
-        <button onClick={() => router.push('/packs')} className="btn-gold w-full">
+        <button onClick={() => router.push('/packs')} className="btn-ghost w-full">
           Recruit Crew
         </button>
       </div>

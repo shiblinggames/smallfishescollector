@@ -159,14 +159,15 @@ export async function repairShip(): Promise<
 }
 
 // Item IDs and what they grant
-const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; packs?: number; shipSkin?: string; raidItem?: string }> = {
+const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; shipSkin?: string; raidItem?: string }> = {
   doubloons_300:   { doubloons: 300 },
   doubloons_600:   { doubloons: 600 },
   doubloons_1200:  { doubloons: 1200 },
   gems_25:         { gems: 25 },
   gems_50:         { gems: 50 },
-  pack:            { packs: 1 },
-  pack_2:          { packs: 2 },
+  // Legacy "pack" loot ids now pay gems (packs are retired): 100 gems per pack.
+  pack:            { gems: 100 },
+  pack_2:          { gems: 200 },
   corsair_black:   { shipSkin: 'corsair_black' },
   corsair_cannon:  { raidItem: 'corsair_cannon' },
   verdigris_hull:  { shipSkin: 'verdigris_hull' },
@@ -206,13 +207,12 @@ export async function claimRaidLoot(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, gems, packs_available, ship_skins, equipped_ship_skin, raid_items')
+    .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items')
     .eq('id', user.id)
     .single()
 
   let doubloons       = (profile?.doubloons ?? 0) + baseDoubloons
   let gems            = profile?.gems ?? 0
-  let packs           = profile?.packs_available ?? 0
   const ownedSkins    = (profile?.ship_skins as string[] | null) ?? []
   let equippedSkin    = (profile?.equipped_ship_skin as string | null) ?? null
   const newSkins      = [...ownedSkins]
@@ -224,7 +224,6 @@ export async function claimRaidLoot(
     if (!grant) continue
     if (grant.doubloons) doubloons += grant.doubloons
     if (grant.gems)      gems      += grant.gems
-    if (grant.packs)     packs     += grant.packs
     if (grant.shipSkin && !newSkins.includes(grant.shipSkin)) {
       newSkins.push(grant.shipSkin)
       if (!equippedSkin) equippedSkin = grant.shipSkin
@@ -237,7 +236,7 @@ export async function claimRaidLoot(
   await Promise.all([
     admin
       .from('profiles')
-      .update({ doubloons, gems, packs_available: packs, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems })
+      .update({ doubloons, gems, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems })
       .eq('id', user.id),
     admin
       .from('raid_completions')

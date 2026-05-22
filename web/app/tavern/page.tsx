@@ -106,7 +106,7 @@ export default async function TavernPage() {
 
         {/* Recruit Crew — top feature card */}
         <div>
-          <RecruitCard packsAvailable={profile?.packs_available ?? 0} />
+          <RecruitCard />
         </div>
 
         <div>

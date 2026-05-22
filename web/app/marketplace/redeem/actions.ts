@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkRateLimit } from '@/lib/rateLimit'
 
-export async function redeemCode(code: string): Promise<{ success: boolean; message: string; packsGranted?: number }> {
+export async function redeemCode(code: string): Promise<{ success: boolean; message: string; gemsGranted?: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, message: 'Not logged in.' }
@@ -35,8 +35,11 @@ export async function redeemCode(code: string): Promise<{ success: boolean; mess
 
   if (claimErr || !claimed || claimed.length === 0) return { success: false, message: 'This code has already been redeemed.' }
 
-  // Atomic increment — no read-modify-write race
-  await admin.rpc('increment_packs', { user_id: user.id, amount: row.packs_granted })
+  // Packs are retired: a code's pack count pays out as gems (100 each).
+  const gemsGranted = row.packs_granted * 100
 
-  return { success: true, message: `✦ ${row.packs_granted} pack${row.packs_granted > 1 ? 's' : ''} added to your account.`, packsGranted: row.packs_granted }
+  // Atomic increment — no read-modify-write race
+  await admin.rpc('increment_gems', { user_id: user.id, amount: gemsGranted })
+
+  return { success: true, message: `✦ ${gemsGranted.toLocaleString()} gems added to your account.`, gemsGranted }
 }

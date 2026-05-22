@@ -4,7 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isPremiumActive } from '@/lib/premium'
 
-export async function claimDailyPack(): Promise<{ claimed: boolean; packsAvailable?: number }> {
+const DAILY_MEMBER_GEMS = 100
+
+export async function claimDailyPack(): Promise<{ claimed: boolean; gems?: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { claimed: false }
@@ -14,7 +16,7 @@ export async function claimDailyPack(): Promise<{ claimed: boolean; packsAvailab
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('packs_available, last_pack_claim, is_premium, premium_expires_at')
+    .select('gems, last_pack_claim, is_premium, premium_expires_at')
     .eq('id', user.id)
     .single()
 
@@ -23,9 +25,9 @@ export async function claimDailyPack(): Promise<{ claimed: boolean; packsAvailab
   if (!isPremiumActive(profile)) return { claimed: false }
   if (profile.last_pack_claim === today) return { claimed: false }
 
-  const newPacks = (profile.packs_available ?? 0) + 1
+  const newGems = (profile.gems ?? 0) + DAILY_MEMBER_GEMS
 
-  await admin.from('profiles').update({ packs_available: newPacks, last_pack_claim: today }).eq('id', user.id)
+  await admin.from('profiles').update({ gems: newGems, last_pack_claim: today }).eq('id', user.id)
 
-  return { claimed: true, packsAvailable: newPacks }
+  return { claimed: true, gems: newGems }
 }

@@ -139,15 +139,15 @@ export async function getWeeklyBounties(): Promise<WeeklyBountiesResult | null> 
 }
 
 const TIER_INFO = {
-  shallows:    { completedKey: 'shallows_completed',    claimedKey: 'shallows_claimed_at',    reward: 50,  packAwarded: false, label: 'Shallows'    },
-  open_waters: { completedKey: 'open_waters_completed', claimedKey: 'open_waters_claimed_at', reward: 150, packAwarded: false, label: 'Open Waters' },
-  deep:        { completedKey: 'deep_completed',        claimedKey: 'deep_claimed_at',         reward: 300, packAwarded: false, label: 'Deep'        },
-  abyss:       { completedKey: 'abyss_completed',       claimedKey: 'abyss_claimed_at',        reward: 500, packAwarded: true,  label: 'Abyss'       },
+  shallows:    { completedKey: 'shallows_completed',    claimedKey: 'shallows_claimed_at',    reward: 50,  gemReward: 0,   label: 'Shallows'    },
+  open_waters: { completedKey: 'open_waters_completed', claimedKey: 'open_waters_claimed_at', reward: 150, gemReward: 0,   label: 'Open Waters' },
+  deep:        { completedKey: 'deep_completed',        claimedKey: 'deep_claimed_at',         reward: 300, gemReward: 0,   label: 'Deep'        },
+  abyss:       { completedKey: 'abyss_completed',       claimedKey: 'abyss_claimed_at',        reward: 500, gemReward: 100, label: 'Abyss'       },
 } as const
 
 export async function claimBountyReward(
   tier: 'shallows' | 'open_waters' | 'deep' | 'abyss'
-): Promise<{ claimed: boolean; doubloons: number; packAwarded: boolean } | { error: string }> {
+): Promise<{ claimed: boolean; doubloons: number; gemReward: number; gems: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -170,15 +170,16 @@ export async function claimBountyReward(
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, packs_available')
+    .select('doubloons, gems')
     .eq('id', user.id)
     .single()
 
   if (!profile) return { error: 'Profile not found' }
 
   const newDoubloons = (profile.doubloons ?? 0) + info.reward
+  const newGems = (profile.gems ?? 0) + info.gemReward
   const profileUpdate: Record<string, unknown> = { doubloons: newDoubloons }
-  if (info.packAwarded) profileUpdate.packs_available = profile.packs_available + 1
+  if (info.gemReward > 0) profileUpdate.gems = newGems
 
   await Promise.all([
     admin.from('weekly_bounty_progress')
@@ -194,6 +195,5 @@ export async function claimBountyReward(
   ])
 
   revalidatePath('/tavern/bounties')
-  if (info.packAwarded) revalidatePath('/packs')
-  return { claimed: true, doubloons: newDoubloons, packAwarded: info.packAwarded }
+  return { claimed: true, doubloons: newDoubloons, gemReward: info.gemReward, gems: newGems }
 }

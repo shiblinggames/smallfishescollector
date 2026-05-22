@@ -2,13 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 
-interface Props {
-  packsAvailable: number
-}
-
-export default function RecruitCard({ packsAvailable }: Props) {
+export default function RecruitCard() {
   const router = useRouter()
-  const hasNotices = packsAvailable > 0
 
   return (
     <div
@@ -40,10 +35,8 @@ export default function RecruitCard({ packsAvailable }: Props) {
           Recruit Crew
         </p>
         <p className="font-karla font-400"
-          style={{ fontSize: '0.74rem', lineHeight: 1.5, color: hasNotices ? 'rgba(200,168,112,0.85)' : '#5a5450' }}>
-          {hasNotices
-            ? `${packsAvailable} notice${packsAvailable !== 1 ? 's' : ''} waiting`
-            : 'No notices — visit the shop'}
+          style={{ fontSize: '0.74rem', lineHeight: 1.5, color: 'rgba(200,168,112,0.85)' }}>
+          New recruits wait at the Crew Hall
         </p>
       </div>
 

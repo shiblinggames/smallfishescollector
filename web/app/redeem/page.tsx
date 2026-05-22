@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
-import { createClient } from '@/lib/supabase/client'
+import { redeemCode } from '@/app/marketplace/redeem/actions'
 
 export default function RedeemPage() {
   const router = useRouter()
@@ -16,54 +16,18 @@ export default function RedeemPage() {
     setStatus('loading')
     setMessage('')
 
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/login'); return }
+    // The server action validates the code, claims it atomically, and deposits
+    // gems via service role (client-side profile writes are blocked by RLS).
+    const result = await redeemCode(code)
 
-    const normalized = code.trim().toUpperCase()
-
-    const { data: row, error } = await supabase
-      .from('redemption_codes')
-      .select('id, redeemed_by, packs_granted')
-      .eq('code', normalized)
-      .single()
-
-    if (error || !row) {
+    if (result.success) {
+      setStatus('success')
+      setMessage(result.message)
+      setCode('')
+    } else {
       setStatus('error')
-      setMessage('Code not found. Double-check and try again.')
-      return
+      setMessage(result.message)
     }
-    if (row.redeemed_by) {
-      setStatus('error')
-      setMessage('This code has already been redeemed.')
-      return
-    }
-
-    const { error: updateCodeErr } = await supabase
-      .from('redemption_codes')
-      .update({ redeemed_by: user.id, redeemed_at: new Date().toISOString() })
-      .eq('id', row.id)
-
-    if (updateCodeErr) {
-      setStatus('error')
-      setMessage('Something went wrong. Please try again.')
-      return
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('packs_available')
-      .eq('id', user.id)
-      .single()
-
-    await supabase
-      .from('profiles')
-      .update({ packs_available: (profile?.packs_available ?? 0) + row.packs_granted })
-      .eq('id', user.id)
-
-    setStatus('success')
-    setMessage(`✦ ${row.packs_granted} pack${row.packs_granted > 1 ? 's' : ''} added to your account.`)
-    setCode('')
   }
 
   return (
@@ -102,13 +66,13 @@ export default function RedeemPage() {
               />
             </div>
 
-            <button type="submit" disabled={status === 'loading'} className="btn-gold w-full">
+            <button type="submit" disabled={status === 'loading'} className="btn-ghost w-full">
               {status === 'loading' ? 'Checking…' : 'Redeem Code'}
             </button>
 
             {status === 'success' && (
-              <button type="button" onClick={() => router.push('/packs')} className="btn-gold w-full">
-                Open Your Pack
+              <button type="button" onClick={() => router.push('/packs')} className="btn-ghost w-full">
+                Recruit Crew
               </button>
             )}
           </form>

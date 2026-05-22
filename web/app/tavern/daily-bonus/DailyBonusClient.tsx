@@ -41,7 +41,10 @@ export default function DailyBonusClient({
     if (packClaimed || loadingPack || !isPremium) return
     setLoadingPack(true)
     const result = await claimDailyPack()
-    if (result.claimed) setPackClaimed(true)
+    if (result.claimed) {
+      setPackClaimed(true)
+      if (result.gems !== undefined) window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.gems }))
+    }
     setLoadingPack(false)
   }
 
@@ -82,16 +85,16 @@ export default function DailyBonusClient({
         accent="#4ade80"
       />
 
-      {/* Daily pack — gold/tan accent matching the pack identity in
-          the Nav currency strip. Cardback image, not an SVG box. */}
+      {/* Daily Member gems — gold accent to set the Member perk apart from
+          the violet base bonus. */}
       <ClaimCard
-        eyebrow="Daily Pack"
-        title="+1 Pack"
-        description={isPremium ? 'Your daily free pack as a Member.' : 'Upgrade to a Membership to claim a free pack every day.'}
+        eyebrow="Member Bonus"
+        title="+100 ◆"
+        description={isPremium ? 'Your daily Member gem bonus, on top of the base.' : 'Upgrade to a Membership for bonus gems every day.'}
         claimed={packClaimed}
         loading={loadingPack}
         onClaim={handleClaimPack}
-        image="/cardbacknew.png"
+        image="/diamondcrateopen.png"
         accent="#c8a870"
         locked={!isPremium}
         badge={isPremium ? 'Member' : undefined}

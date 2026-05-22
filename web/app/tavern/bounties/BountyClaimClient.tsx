@@ -10,7 +10,7 @@ const TIER_META: Record<Tier, { label: string; color: string; rewardLabel: strin
   shallows:    { label: 'Shallows',    color: '#60a5fa', rewardLabel: '50 ⟡'           },
   open_waters: { label: 'Open Waters', color: '#34d399', rewardLabel: '150 ⟡'          },
   deep:        { label: 'Deep',        color: '#a78bfa', rewardLabel: '300 ⟡'          },
-  abyss:       { label: 'Abyss',       color: '#f87171', rewardLabel: '500 ⟡ + 1 Pack' },
+  abyss:       { label: 'Abyss',       color: '#f87171', rewardLabel: '500 ⟡ + 100 ◆' },
 }
 
 const TIER_ORDER: Tier[] = ['shallows', 'open_waters', 'deep', 'abyss']
@@ -65,6 +65,7 @@ export default function BountyClaimClient({
     setStates(prev => ({ ...prev, [tier]: { ...prev[tier], claimed: true } }))
     setDoubloons(result.doubloons)
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.doubloons }))
+    if (result.gemReward > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: result.gems }))
   }
 
   const readyToClaim = TIER_ORDER.filter(t => states[t].completed && !states[t].claimed)
