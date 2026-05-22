@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { isPremiumActive } from '@/lib/premium'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { crewCapacity } from '@/lib/crewCapacity'
+import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 import {
   groupForSlug, rollRarity, rollCrew, crewDisplayName,
   FREE_WEIGHTS, GEM_WEIGHTS, type CrewRarity,
@@ -257,6 +258,35 @@ export async function dismissCrew(crewId: number): Promise<CrewActionResult> {
   const admin = createAdminClient()
 
   await admin.from('user_crew').delete().eq('id', crewId).eq('user_id', user.id)
+
+  const state = await getCrewState()
+  return state ? { state } : { error: 'Failed to load crew' }
+}
+
+// ── Assign a crew member to a ship slot (0 = captain), or null to bench ───────
+
+export async function assignCrew(crewId: number, slot: number | null): Promise<CrewActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+  const admin = createAdminClient()
+
+  // Ownership check.
+  const { data: crew } = await admin.from('user_crew').select('id').eq('id', crewId).eq('user_id', user.id).single()
+  if (!crew) return { error: 'Crew not found' }
+
+  if (slot === null) {
+    await admin.from('user_crew').update({ assigned_slot: null }).eq('id', crewId).eq('user_id', user.id)
+  } else {
+    // Validate the slot against the ship's crew-slot count.
+    const { data: prof } = await admin.from('profiles').select('ship_tier').eq('id', user.id).single()
+    const tier = (prof as any)?.ship_tier ?? 0
+    const crewSlots = EXPEDITION_SHIP_STATS[tier]?.crewSlots ?? 1
+    if (slot < 0 || slot >= crewSlots) return { error: 'Invalid slot' }
+    // One crew per slot: bench whoever currently holds it, then assign.
+    await admin.from('user_crew').update({ assigned_slot: null }).eq('user_id', user.id).eq('assigned_slot', slot)
+    await admin.from('user_crew').update({ assigned_slot: slot }).eq('id', crewId).eq('user_id', user.id)
+  }
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
