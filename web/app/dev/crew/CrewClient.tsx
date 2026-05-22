@@ -137,7 +137,7 @@ function CrewPanel({
 
       {/* Arched portrait niche */}
       <div style={{
-        position: 'relative', width: 102, flexShrink: 0, alignSelf: 'stretch', minHeight: 108,
+        position: 'relative', width: 102, flexShrink: 0, alignSelf: 'flex-start', height: 112,
         borderRadius: '46px 46px 5px 5px', overflow: 'hidden',
         border: `2px solid ${color}`,
         boxShadow: `inset 0 -12px 20px rgba(0,0,0,0.65), 0 0 10px ${color}33`,
