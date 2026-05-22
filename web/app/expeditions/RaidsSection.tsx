@@ -691,48 +691,75 @@ export default function RaidsSection({ views, doubloons, repairOwed, ownedRaidIt
           borderRadius: 16,
           padding: '0.5rem 0.6rem',
         }}>
-          {/* Next-up objective — surfaces the current node at the top of the
-              card so the player sees what to do without hunting the map.
-              Taps through to the node's detail sheet; respects the same
-              repair block so it can't bypass a sunk ship. */}
+          {/* Next-up objective — surfaces the first non-cleared node at the
+              top of the card so the player sees what to do without hunting the
+              map. Three states: available (tap → detail sheet), locked (dimmed
+              + unlock reason), or all-cleared (a short note). Respects the same
+              repair block as the map so it can't bypass a sunk ship. */}
           {(() => {
-            const cv = views.find(v => v.status === 'available')
-            if (!cv) return null
-            const accent = TYPE_ACCENT[cv.node.type] ?? '#c4a96a'
-            const img = cv.node.image ?? TYPE_IMAGE[cv.node.type]
-            const blocked = repairOwed > 0 && isCombatNode(cv.node.type)
+            const next = views.find(v => v.status !== 'cleared')
+
+            // Everything cleared — celebratory note so the card isn't empty.
+            if (!next) {
+              return (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '0.6rem',
+                  background: 'linear-gradient(135deg, rgba(74,222,128,0.12) 0%, rgba(8,7,6,0.35) 72%)',
+                  border: '1px solid rgba(74,222,128,0.3)',
+                  borderRadius: 13, padding: '0.75rem 0.85rem', margin: '0.2rem 0 0.7rem',
+                }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(74,222,128,0.14)', border: '1px solid rgba(74,222,128,0.3)' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#d6f5e0', lineHeight: 1.15 }}>All raids cleared</p>
+                    <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(240,237,232,0.55)', marginTop: 2 }}>New waters are coming. Keep your hold heavy.</p>
+                  </div>
+                </div>
+              )
+            }
+
+            const accent = TYPE_ACCENT[next.node.type] ?? '#c4a96a'
+            const img = next.node.image ?? TYPE_IMAGE[next.node.type]
+            const isLocked = next.status === 'locked'
+            const blocked = !isLocked && repairOwed > 0 && isCombatNode(next.node.type)
+            const interactive = !isLocked && !blocked
             return (
               <button
-                onClick={() => { if (!blocked) setSelected(cv) }}
-                disabled={blocked}
+                onClick={() => { if (interactive) setSelected(next) }}
+                disabled={!interactive}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '0.75rem',
                   textAlign: 'left', width: '100%',
-                  cursor: blocked ? 'default' : 'pointer',
-                  background: `linear-gradient(135deg, ${accent}24 0%, rgba(8,7,6,0.35) 72%)`,
-                  border: `1px solid ${accent}45`,
+                  cursor: interactive ? 'pointer' : 'default',
+                  background: isLocked
+                    ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(8,7,6,0.35) 72%)'
+                    : `linear-gradient(135deg, ${accent}24 0%, rgba(8,7,6,0.35) 72%)`,
+                  border: `1px solid ${isLocked ? 'rgba(255,255,255,0.12)' : `${accent}45`}`,
                   borderRadius: 13,
                   padding: '0.7rem 0.8rem',
                   margin: '0.2rem 0 0.7rem',
-                  opacity: blocked ? 0.7 : 1,
+                  opacity: isLocked ? 0.85 : blocked ? 0.7 : 1,
                 }}
               >
-                <div style={{ width: 50, height: 50, borderRadius: 11, flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${accent}1a`, border: `1px solid ${accent}4a` }}>
+                <div style={{ width: 50, height: 50, borderRadius: 11, flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isLocked ? 'rgba(255,255,255,0.05)' : `${accent}1a`, border: `1px solid ${isLocked ? 'rgba(255,255,255,0.12)' : `${accent}4a`}` }}>
                   {img
                     // eslint-disable-next-line @next/next/no-img-element
-                    ? <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <NodeGlyph type={cv.node.type} color={accent} size={24} />}
+                    ? <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: isLocked ? 'grayscale(1) brightness(0.55)' : undefined }} />
+                    : isLocked ? <LockGlyph size={22} /> : <NodeGlyph type={next.node.type} color={accent} size={24} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: accent }}>Next up</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f5f2ec', lineHeight: 1.15, margin: '2px 0 3px' }}>{cv.node.label}</p>
-                  <p className="font-karla" style={{ fontSize: '0.66rem', lineHeight: 1.35, color: blocked ? '#f0a36a' : 'rgba(240,237,232,0.6)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                    {blocked ? 'Repair your ship before you can set sail.' : cv.node.flavor}
+                  <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: isLocked ? '#8a8680' : accent }}>{isLocked ? 'Up next' : 'Next up'}</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: isLocked ? 'rgba(245,242,236,0.7)' : '#f5f2ec', lineHeight: 1.15, margin: '2px 0 3px' }}>{next.node.label}</p>
+                  <p className="font-karla" style={{ fontSize: '0.66rem', lineHeight: 1.35, color: blocked ? '#f0a36a' : isLocked ? '#9a9690' : 'rgba(240,237,232,0.6)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    {isLocked ? (next.lockReason ?? 'Locked') : blocked ? 'Repair your ship before you can set sail.' : next.node.flavor}
                   </p>
                 </div>
-                {!blocked && (
+                {isLocked ? (
+                  <div style={{ flexShrink: 0 }}><LockGlyph size={16} /></div>
+                ) : !blocked ? (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M9 18l6-6-6-6" /></svg>
-                )}
+                ) : null}
               </button>
             )
           })()}
