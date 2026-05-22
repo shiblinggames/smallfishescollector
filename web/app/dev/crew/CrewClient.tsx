@@ -377,12 +377,13 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               <span style={{ width: 4, alignSelf: 'stretch', minHeight: 30, borderRadius: 2, background: SECTION_ROSTER }} />
               <div>
                 <h2 className="font-cinzel font-700 uppercase" style={{ fontSize: '1rem', letterSpacing: '0.08em', color: SECTION_ROSTER }}>Your Crew</h2>
-                <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.58)', marginTop: 1 }}>Hands enlisted to your ship</p>
+                <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.58)', marginTop: 1 }}>You unlock a new slot every 10 Nav levels</p>
               </div>
             </div>
-            <span className="font-karla font-600" style={{ fontSize: '0.76rem', color: rosterFull ? '#f08a8a' : 'rgba(255,255,255,0.6)' }}>
-              {state.roster.length} / {state.capacity} · +1 every 10 Nav levels
-            </span>
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', lineHeight: 1.05, color: rosterFull ? '#f08a8a' : '#dfe9e3' }}>{state.roster.length} / {state.capacity}</p>
+              <p className="font-karla font-600 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.08em', color: rosterFull ? '#f08a8a' : 'rgba(255,255,255,0.5)', marginTop: 1 }}>{rosterFull ? 'Crew full' : 'Crew slots'}</p>
+            </div>
           </div>
 
           {state.roster.length === 0 ? (
