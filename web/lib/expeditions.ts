@@ -156,23 +156,49 @@ export interface CombatRating {
   total: number
 }
 
+// Net raid combat modifiers from crew effects (Stage 2b). Aggregated by
+// resolveDeployedCrew; passed into the damage profile + rating + live combat.
+export interface RaidMods {
+  damagePct: number
+  damageTakenPct: number
+  critPct: number
+  firstStrike: boolean
+}
+
+export interface RaidDamageProfile { hitMin: number; powerMax: number; critMax: number }
+
+/** Single source of truth for raid shot damage from crew power + ship min
+ *  damage. `damagePct` is the net crew raid-damage modifier (Berserker /
+ *  War Drummer minus Landlocked). Combat rolls, the rating and the ledger all
+ *  call this so they never drift. */
+export function raidDamageProfile(totalPower: number, shipMinDamage: number, damagePct = 0): RaidDamageProfile {
+  const base     = shipMinDamage + 2 + Math.floor(totalPower / 4)
+  const powerMax = Math.max(shipMinDamage, Math.round(base * (1 + damagePct / 100)))
+  const hitMin   = Math.max(shipMinDamage, Math.floor(powerMax * 0.4))
+  const critMax  = Math.round(powerMax * 1.5)
+  return { hitMin, powerMax, critMax }
+}
+
 export function computeCombatRating(
   totalPower: number,
   totalDodge: number,
   totalFortune: number,
   shipDurability: number,
   shipMinDamage: number,
+  raidMods?: Partial<RaidMods>,
 ): CombatRating {
-  const powerMax = shipMinDamage + 2 + Math.floor(totalPower / 4)
-  const hitMin   = Math.max(shipMinDamage, Math.floor(powerMax * 0.4))
+  const { hitMin, powerMax } = raidDamageProfile(totalPower, shipMinDamage, raidMods?.damagePct ?? 0)
   const avgHit   = (hitMin + powerMax) / 2
   // Fortune doesn't affect raid crit (skill-based aim bar handles that), but
   // keeping it in the rating gives players a reason to balance the stat.
-  const critRate = Math.min(totalFortune / 2, 50) / 100
+  // Crew "crit" effects (Keen Cutlass) add a flat chance on top.
+  const critRate = Math.min(totalFortune / 2, 50) / 100 + (raidMods?.critPct ?? 0) / 100
   const offense  = Math.round(avgHit * (1 + critRate))
 
   const dodgeBoost = Math.min(totalDodge / 200, 0.5)
-  const defense    = Math.round(shipDurability * (1 + dodgeBoost))
+  // damageTakenPct > 0 means the crew takes more damage (less effective HP).
+  const takenMult  = Math.max(0.1, 1 - (raidMods?.damageTakenPct ?? 0) / 100)
+  const defense    = Math.round(shipDurability * (1 + dodgeBoost) * takenMult)
 
   return {
     offense,

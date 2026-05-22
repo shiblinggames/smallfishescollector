@@ -49,6 +49,7 @@ export default async function KrustRaidPage() {
             equippedItems={stats.equippedRaidItems}
             equippedRepairKit={stats.equippedRepairKit}
             initialExpeditionXP={profile?.expedition_xp ?? 0}
+            raidMods={stats.raidMods}
           />
         </div>
       </main>

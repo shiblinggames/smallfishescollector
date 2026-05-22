@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { EXPEDITION_SHIP_STATS, raidRepairCost } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS, raidRepairCost, type RaidMods } from '@/lib/expeditions'
 import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
@@ -40,6 +40,7 @@ export interface RaidPlayerStats {
   equippedRaidItems: string[]
   equippedRepairKit: string
   hasSeenRaidTutorial: boolean
+  raidMods: RaidMods
 }
 
 export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStats> {
@@ -97,6 +98,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     equippedRaidItems:    (profile?.equipped_raid_items as string[] | null) ?? [],
     equippedRepairKit:    (profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit',
     hasSeenRaidTutorial:  (profile?.has_seen_raid_tutorial as boolean | null) ?? false,
+    raidMods:             resolved.raid,
   }
 }
 

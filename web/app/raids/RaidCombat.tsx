@@ -23,6 +23,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
+import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { getActiveEffects, getRaidItem } from '@/lib/raidItems'
 import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKits'
 import CharacterAvatar from '@/components/CharacterAvatar'
@@ -39,22 +40,16 @@ const ENEMY_COLOR  = '#ef4444'
 
 const d20 = () => Math.floor(Math.random() * 20) + 1
 
-function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: number): number {
+function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: number, damagePct = 0): number {
   if (res === 'miss') return 0
-  // Base bump of +2 so low-tier loadouts (rowboat + small crew) still roll
-  // a meaningful range instead of 1–2. Power scaling is unchanged.
-  const powerMax = shipMinDamage + 2 + Math.floor(totalPower / 4)
+  // Single source of truth (lib/expeditions.raidDamageProfile) so combat, the
+  // rating and the ledger never drift. damagePct = crew raid-damage effects.
+  const { hitMin, powerMax, critMax } = raidDamageProfile(totalPower, shipMinDamage, damagePct)
   if (res === 'critical') {
     const min = shipMinDamage * 2
-    const max = Math.round(powerMax * 1.5)
-    return Math.floor(Math.random() * (max - min + 1)) + min
+    return Math.floor(Math.random() * (critMax - min + 1)) + min
   }
   if (res === 'hit') {
-    // Crew-aware floor: hit damage min lifts with crew investment, pinning
-    // variance at ~2.5× regardless of ship tier or nav level. shipMin
-    // remains the absolute floor for under-built captains. Floor relaxed
-    // from 0.5 → 0.4 so rowboat hits start at the ship min, not above it.
-    const hitMin = Math.max(shipMinDamage, Math.floor(powerMax * 0.4))
     return Math.floor(Math.random() * (powerMax - hitMin + 1)) + hitMin
   }
   // graze
@@ -169,6 +164,9 @@ export interface RaidCombatProps {
    *  the parent can spend the per-run charge. */
   anchorSaveAvailable?: boolean
   onAnchorSave?: () => void
+  /** Net crew raid effects (Berserker, Bulwark, Keen Cutlass, First Strike, …).
+   *  Omitted in the practice skirmish, which uses no real crew. */
+  raidMods?: RaidMods
   /** When provided, renders a small ← icon in the top-right of the battle
    *  stage so the player can back out without a dedicated row above the
    *  game screen. Parent wires the destination (e.g. /expeditions). */
@@ -189,7 +187,10 @@ export default function RaidCombat({
   killReward,
   onEnemyDefeated, onPlayerDefeated, onLeave, onPlayerHit,
   anchorSaveAvailable = false, onAnchorSave,
+  raidMods,
 }: RaidCombatProps) {
+  // Net crew raid effects; no-op default so the practice skirmish is unaffected.
+  const mods: RaidMods = raidMods ?? { damagePct: 0, damageTakenPct: 0, critPct: 0, firstStrike: false }
   // Anchor save can fire at most once per RaidCombat mount (the parent
   // tracks the per-run charge across encounter remounts via onAnchorSave).
   const anchorUsedRef = useRef(false)
@@ -422,7 +423,9 @@ export default function RaidCombat({
 
   function lockShot() {
     if (subPhase !== 'aiming' || critFreeze) return
-    const res = getShotResult(firePosRef.current, zonePosRef.current)
+    let res = getShotResult(firePosRef.current, zonePosRef.current)
+    // Keen Cutlass etc.: a clean hit has a flat chance to upgrade to a crit.
+    if (res === 'hit' && mods.critPct > 0 && Math.random() < mods.critPct / 100) res = 'critical'
     setAimResult(res)
     setCritFreeze(true)  // freezes the aim bar at the lock position regardless of result
 
@@ -487,7 +490,8 @@ export default function RaidCombat({
       .reduce((a, e) => a + e.value, 0)
     const pSpeedRoll = rollSpeed(shipSpeed, totalNavigation) + Math.floor(totalNavigation * compassNavPct)
     const eSpeedRoll = rollSpeed(enemy.shipSpeed, 0)
-    const first: Actor = pSpeedRoll >= eSpeedRoll ? 'player' : 'enemy'
+    // First Strike crew effect: the player always acts first.
+    const first: Actor = mods.firstStrike ? 'player' : (pSpeedRoll >= eSpeedRoll ? 'player' : 'enemy')
     setFirstActor(first)
     setSubPhase('revealing')
 
@@ -585,7 +589,7 @@ export default function RaidCombat({
             ? getActiveEffects(equippedRaidItems).filter(e => e.type === 'boss_damage_mult').reduce((a, e) => a * e.value, 1)
             : 1
           const mult = (action === 'volley' ? 2 : 1) * bossMult
-          dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower) * mult)
+          dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
         } else {
           const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
           dmg = base * (action === 'volley' ? 2 : 1)
@@ -643,7 +647,10 @@ export default function RaidCombat({
             splatColor = '#ef4444'
           }
         } else {
-          if (incomingDmgMult < 1 && dmg > 0) dmg = Math.max(1, Math.floor(dmg * incomingDmgMult))
+          // Hull plating (raid items) + crew survivability effects (Bulwark
+          // cuts, Soft Shell adds) both scale incoming damage here.
+          const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100)
+          if (takenMult !== 1 && dmg > 0) dmg = Math.max(1, Math.floor(dmg * takenMult))
           pHp = Math.max(0, pHp - dmg)
           if (partialDodge) {
             stepLines.push(action === 'volley'
@@ -1306,6 +1313,7 @@ export default function RaidCombat({
             totalFortune={totalFortune}
             isBoss={isBoss}
             equippedRaidItems={equippedRaidItems}
+            damagePct={mods.damagePct}
             onClose={() => setShowStats(false)}
           />
         )}
@@ -1337,7 +1345,7 @@ export default function RaidCombat({
 function PlayerStatsPopup({
   shipName, shipImageUrl, shipFilter, playerHp, playerHpMax,
   shipMinDamage, shipSpeed, totalPower, totalNavigation, totalFortune,
-  isBoss, equippedRaidItems,
+  isBoss, equippedRaidItems, damagePct = 0,
   onClose,
 }: {
   shipName: string
@@ -1352,15 +1360,12 @@ function PlayerStatsPopup({
   totalFortune: number
   isBoss: boolean
   equippedRaidItems: string[]
+  damagePct?: number
   onClose: () => void
 }) {
-  const powerMax  = shipMinDamage + 2 + Math.floor(totalPower / 4)
-  // Crew-aware hit floor — mirrors rollShotDamage. shipMin stays the absolute
-  // floor for under-built captains; for everyone else, hitMin is 0.4× of
-  // powerMax so investment in crew shows up in every shot.
-  const hitMin    = Math.max(shipMinDamage, Math.floor(powerMax * 0.4))
+  // Single source of truth — mirrors rollShotDamage, incl. crew damage effects.
+  const { hitMin, powerMax, critMax } = raidDamageProfile(totalPower, shipMinDamage, damagePct)
   const critMin   = shipMinDamage * 2
-  const critMax   = Math.round(powerMax * 1.5)
   // Combined "maneuver" stat — Ship Speed and Navigation both feed into how
   // nimble the ship is in fights, so they're summed into one Speed score.
   const speed   = shipSpeed + totalNavigation

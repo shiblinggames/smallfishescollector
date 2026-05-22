@@ -8,6 +8,7 @@ import { awardRaidKill } from './raidXPActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
+import type { RaidMods } from '@/lib/expeditions'
 import {
   BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR,
 } from '@/lib/bossRaids'
@@ -297,6 +298,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   totalPower, totalDodge, totalFortune, crewCount, crewMembers, initialExpeditionXP,
   playerCharacterColor, playerEquippedHat,
   playerAvatarBg, playerAvatarBorder,
+  raidMods,
 }: {
   config: BossRaidConfig
   shipImageUrl: string
@@ -319,6 +321,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   playerEquippedHat: string | null
   playerAvatarBg: string | null
   playerAvatarBorder: string | null
+  raidMods: RaidMods
 }) {
   const router            = useRouter()
   const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
@@ -1130,6 +1133,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 anchorSaveAvailable={anchorSavesLeftRef.current > 0}
                 onAnchorSave={() => { anchorSavesLeftRef.current = Math.max(0, anchorSavesLeftRef.current - 1) }}
                 onLeave={() => router.push('/expeditions')}
+                raidMods={raidMods}
               />
             )
           })()}
