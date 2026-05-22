@@ -313,6 +313,29 @@ export const RAID_MAP: RaidNode[] = [
       dropsNote: 'One crate per Krust clear, rolled once and scaled by your Fortune. Every kill along the way also pays gold + Nav XP.',
     },
   },
+  {
+    id: 'finndicate_notice',
+    type: 'story',
+    label: 'The Finndicate Takes Notice',
+    flavor: "Krust is on the seabed, and for the first time the Finndicate feels the hole you have torn in it.",
+    bridge: "They run a special class of freight through waters they only call the danger zones. Whatever it is, it is worth the ships it costs them.",
+    requiresNode: 'krust',
+    image: '/raidlog.png',
+    detail: {
+      description:
+        "Krust was no small cog. With him gone the Finndicate's ledgers have come up short, and for the first time someone well above the freight has looked up from the books and noticed the captain sinking their cargo.\n\nYou have their attention now, and a little of theirs has rubbed off on you. One scrap survived the wreck of Krust's run. The Finndicate moves a special class of cargo, priority freight routed through what their manifests only call the danger zones. Waters most captains sail into exactly once. Whatever they are hauling through there is worth every hull it costs them, and they would very much like you to stop pulling the thread.",
+      drops: [
+        {
+          emoji: '📜',
+          label: "Captain's Logbook, Fragment IV",
+          sublabel: '"Danger-zone consignment. Priority freight. Do not log the contents." Stamped with a mark no clerk would explain.',
+          rarity: 'common',
+        },
+      ],
+      dropsNote: 'A class of cargo worth losing ships over, and a heading into water that kills. The trail runs colder and deeper from here.',
+      ctaLabel: 'Follow the Freight →',
+    },
+  },
 ]
 
 export type RaidNodeStatus = 'locked' | 'available' | 'cleared'
