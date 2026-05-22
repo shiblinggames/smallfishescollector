@@ -26,6 +26,19 @@ export default async function DevStatsPage() {
   const s = (data ?? {}) as any
   const byIf = (v: number, name: unknown) => (v > 0 ? (name as string) : null)
 
+  // Raid id → boss display name (see lib/bossRaids.ts). Falls back to the raw
+  // id so a newly-added raid still appears.
+  const RAID_BOSS_NAMES: Record<string, string> = {
+    corsairs_reckoning: 'Barnacle Pete',
+    captain_krust: 'Captain Krust',
+  }
+  const raidBossStats: Stat[] = ((s.raids?.byBoss ?? []) as { raidId: string; players: number; completions: number }[])
+    .map(b => ({
+      label: RAID_BOSS_NAMES[b.raidId] ?? b.raidId,
+      value: b.players,
+      by: b.completions !== b.players ? `${b.completions} total clears` : null,
+    }))
+
   const sections: { title: string; accent: string; stats: Stat[] }[] = [
     {
       title: 'Players', accent: '#60a5fa',
@@ -52,6 +65,7 @@ export default async function DevStatsPage() {
       stats: [
         { label: 'Raids cleared', value: s.raids?.cleared ?? 0 },
         { label: 'Biggest hit',   value: s.raids?.biggestHit ?? 0, by: byIf(s.raids?.biggestHit ?? 0, s.raids?.biggestHitBy) },
+        ...raidBossStats,
       ],
     },
     {
