@@ -8,6 +8,7 @@ import {
 } from './actions'
 import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
 import { resolveEffects, applyCrewEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
+import RerollReveal from './RerollReveal'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (filename: string) => `${SUPA}/storage/v1/object/public/card-arts/${filename}`
@@ -222,6 +223,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const [confirmDismiss, setConfirmDismiss] = useState<number | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [detail, setDetail] = useState<{ kind: 'board' | 'roster'; item: BoardCandidate | CrewMember } | null>(null)
+  const [revealCards, setRevealCards] = useState<BoardCandidate[] | null>(null)
 
   const rosterFull = state.roster.length >= state.capacity
 
@@ -235,6 +237,19 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
       setBusyId(null)
       setConfirmDismiss(null)
       onDone?.()
+    })
+  }
+
+  // Reroll runs the action, swaps the board underneath, then plays the reveal
+  // over the top so the new recruits flip in with pack-opening flair.
+  function handleReroll() {
+    setErr(null)
+    setBusyId('reroll')
+    startTransition(async () => {
+      const res = await rerollBoard()
+      if ('error' in res) setErr(res.error)
+      else { setState(res.state); setRevealCards(res.state.board) }
+      setBusyId(null)
     })
   }
 
@@ -335,7 +350,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               </div>
             </div>
             <button
-              onClick={() => run(() => rerollBoard(), 'reroll')}
+              onClick={handleReroll}
               disabled={pending || state.gems < state.rerollCost}
               title="Spend gems for 3 brand-new recruits"
               className="font-karla font-700"
@@ -404,6 +419,11 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           )}
         </div>
       </div>
+
+      {/* Reroll reveal — new recruits flip in over the board */}
+      <AnimatePresence>
+        {revealCards && <RerollReveal cards={revealCards} onClose={() => setRevealCards(null)} />}
+      </AnimatePresence>
 
       {/* Detail modal — full stat breakdown + traits, opened by tapping a card */}
       <AnimatePresence>
