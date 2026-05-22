@@ -119,25 +119,25 @@ export default async function DevStatsPage() {
   return (
     <main className="min-h-screen" style={{ background: '#06101c', padding: '2rem 1rem 4rem' }}>
       <div style={{ maxWidth: 760, margin: '0 auto' }}>
-        <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8', marginBottom: 4 }}>Admin Stats</p>
-        <p className="font-karla" style={{ fontSize: '0.75rem', color: '#9a948c', marginBottom: 22 }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.9rem', color: '#f5f2ec', marginBottom: 6 }}>Admin Stats</p>
+        <p className="font-karla" style={{ fontSize: '0.92rem', color: '#b2aca3', marginBottom: 26 }}>
           Live cross-player aggregates across {fmt(s.players ?? 0)} players.
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
           {sections.map(sec => (
-            <div key={sec.title} style={{ background: 'rgba(8,14,24,0.55)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '0.95rem 1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <span aria-hidden style={{ width: 3, height: 13, borderRadius: 2, background: sec.accent, flexShrink: 0 }} />
-                <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.66rem', color: '#d8d4cd' }}>{sec.title}</p>
+            <div key={sec.title} style={{ background: 'rgba(8,14,24,0.55)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '1.2rem 1.3rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 15 }}>
+                <span aria-hidden style={{ width: 4, height: 18, borderRadius: 2, background: sec.accent, flexShrink: 0 }} />
+                <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.82rem', color: '#e4e0d9' }}>{sec.title}</p>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
                 {sec.stats.map(st => (
-                  <div key={st.label} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-                    <span className="font-karla" style={{ fontSize: '0.72rem', color: '#a8a29a' }}>{st.label}</span>
+                  <div key={st.label} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+                    <span className="font-karla" style={{ fontSize: '0.95rem', color: '#c6c0b7' }}>{st.label}</span>
                     <span style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: sec.accent }}>{fmt(st.value)}</span>
-                      {st.by && <span className="font-karla" style={{ display: 'block', fontSize: '0.54rem', color: '#6a6764', marginTop: 1 }}>{st.by}</span>}
+                      <span className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: sec.accent }}>{fmt(st.value)}</span>
+                      {st.by && <span className="font-karla" style={{ display: 'block', fontSize: '0.7rem', color: '#928d84', marginTop: 2 }}>{st.by}</span>}
                     </span>
                   </div>
                 ))}
