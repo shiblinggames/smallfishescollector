@@ -1,11 +1,6 @@
 import type { CardVariant, DrawnCard, BorderStyle, ArtEffect } from './types'
+import { FISH_GROUPS as GROUPS } from './fishGroups'
 
-const GROUP1 = new Set(['bass','eel','flounder','goldfish','krill','minnow','piranha','pufferfish','red_snapper','salmon','sardine','tuna','angelfish','clownfish','koi'])
-const GROUP2 = new Set(['anglerfish','beluga_whale','blobfish','blue_marlin','lionfish','nurse_shark','oarfish','sailfish','swordfish','hammerhead_shark','manta_ray','whale_shark'])
-const GROUP3 = new Set(['goblin_shark','tiger_shark','blue_whale','giant_squid','great_white_shark','humpback_whale','orca'])
-const GROUP4 = new Set(['catfish','doby_mick'])
-
-const GROUPS: Set<string>[] = [GROUP1, GROUP2, GROUP3, GROUP4]
 const MYTHIC_NAMED = ['Kraken', 'Davy Jones', 'Golden Age', 'Wanted', 'Maelstrom']
 
 function rand() { return Math.random() }
