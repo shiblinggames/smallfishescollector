@@ -691,6 +691,52 @@ export default function RaidsSection({ views, doubloons, repairOwed, ownedRaidIt
           borderRadius: 16,
           padding: '0.5rem 0.6rem',
         }}>
+          {/* Next-up objective — surfaces the current node at the top of the
+              card so the player sees what to do without hunting the map.
+              Taps through to the node's detail sheet; respects the same
+              repair block so it can't bypass a sunk ship. */}
+          {(() => {
+            const cv = views.find(v => v.status === 'available')
+            if (!cv) return null
+            const accent = TYPE_ACCENT[cv.node.type] ?? '#c4a96a'
+            const img = cv.node.image ?? TYPE_IMAGE[cv.node.type]
+            const blocked = repairOwed > 0 && isCombatNode(cv.node.type)
+            return (
+              <button
+                onClick={() => { if (!blocked) setSelected(cv) }}
+                disabled={blocked}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  textAlign: 'left', width: '100%',
+                  cursor: blocked ? 'default' : 'pointer',
+                  background: `linear-gradient(135deg, ${accent}24 0%, rgba(8,7,6,0.35) 72%)`,
+                  border: `1px solid ${accent}45`,
+                  borderRadius: 13,
+                  padding: '0.7rem 0.8rem',
+                  margin: '0.2rem 0 0.7rem',
+                  opacity: blocked ? 0.7 : 1,
+                }}
+              >
+                <div style={{ width: 50, height: 50, borderRadius: 11, flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${accent}1a`, border: `1px solid ${accent}4a` }}>
+                  {img
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <NodeGlyph type={cv.node.type} color={accent} size={24} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: accent }}>Next up</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f5f2ec', lineHeight: 1.15, margin: '2px 0 3px' }}>{cv.node.label}</p>
+                  <p className="font-karla" style={{ fontSize: '0.66rem', lineHeight: 1.35, color: blocked ? '#f0a36a' : 'rgba(240,237,232,0.6)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    {blocked ? 'Repair your ship before you can set sail.' : cv.node.flavor}
+                  </p>
+                </div>
+                {!blocked && (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M9 18l6-6-6-6" /></svg>
+                )}
+              </button>
+            )
+          })()}
+
           <RaidMap views={views} doubloons={doubloons} onSelect={setSelected} repairOwed={repairOwed} />
         </div>
       )}
