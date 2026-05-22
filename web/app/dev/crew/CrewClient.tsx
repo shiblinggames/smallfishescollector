@@ -7,7 +7,7 @@ import {
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult,
 } from './actions'
 import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
-import { resolveEffects, applyCrewEffects, type CrewEffect } from '@/lib/crewEffects'
+import { resolveEffects, applyCrewEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (filename: string) => `${SUPA}/storage/v1/object/public/card-arts/${filename}`
@@ -75,13 +75,6 @@ const ROUND_DISMISS: React.CSSProperties = { ...ROUND_BTN, background: 'linear-g
 const ROUND_CONFIRM: React.CSSProperties = { ...ROUND_BTN, width: 30, height: 30, background: 'linear-gradient(180deg, rgba(74,200,130,0.46), rgba(46,140,92,0.28))', border: '1px solid rgba(122,226,162,0.72)', color: '#dcf8e7' }
 const ROUND_CANCEL: React.CSSProperties = { ...ROUND_BTN, width: 30, height: 30, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.22)', color: 'rgba(255,255,255,0.7)' }
 const ROUND_STATIC: React.CSSProperties = { ...ROUND_BTN, cursor: 'default', boxShadow: 'none' }
-
-function modSummary(e: CrewEffect): string {
-  return (['power', 'dodge', 'fortune'] as const)
-    .filter(k => e.mods[k])
-    .map(k => `${e.mods[k]! > 0 ? '+' : ''}${e.mods[k]} ${STAT_LABEL[k]}`)
-    .join(' · ')
-}
 
 // ── Countdown to the next UTC midnight (free board refresh) ──────────────────
 function FreeRollCountdown() {
@@ -462,11 +455,16 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: '0.95rem' }}>
                     {dResolved.map(e => {
                       const buff = e.kind === 'buff'
+                      const scope = SCOPE_META[e.scope]
+                      const summary = effectSummary(e)
                       return (
                         <div key={e.id} style={{ background: buff ? 'rgba(60,180,110,0.1)' : 'rgba(200,70,70,0.1)', border: `1px solid ${buff ? 'rgba(80,200,130,0.3)' : 'rgba(220,90,90,0.3)'}`, borderRadius: 8, padding: '0.5rem 0.6rem' }}>
-                          <div className="flex items-center justify-between">
-                            <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: buff ? '#bfe8cf' : '#f0bcbc', fontStyle: 'italic' }}>{e.name}</span>
-                            <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: buff ? '#7fdfa3' : '#f08a8a' }}>{modSummary(e)}</span>
+                          <div className="flex items-center justify-between" style={{ gap: 6 }}>
+                            <div className="flex items-center" style={{ gap: 6, minWidth: 0 }}>
+                              <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: buff ? '#bfe8cf' : '#f0bcbc', fontStyle: 'italic', whiteSpace: 'nowrap' }}>{e.name}</span>
+                              <span className="font-karla font-700" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: scope.color, border: `1px solid ${scope.color}66`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>{scope.label}</span>
+                            </div>
+                            {summary && <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: buff ? '#7fdfa3' : '#f08a8a', whiteSpace: 'nowrap', textAlign: 'right' }}>{summary}</span>}
                           </div>
                           <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>{e.desc}</p>
                         </div>
