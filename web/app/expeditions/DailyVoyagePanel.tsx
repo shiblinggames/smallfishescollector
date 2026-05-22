@@ -227,8 +227,18 @@ export default function DailyVoyagePanel({
     .map(id => byId.get(id))
     .filter(Boolean) as CrewMember[]
 
-  const stats = savedCrew.length > 0
-    ? resolveDeployedCrew(savedCrew.map((c, i): DeployedCrew => ({ id: c.id, slot: i, rarity: c.rarity, power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects }))).totals
+  const resolvedDeployed = savedCrew.length > 0
+    ? resolveDeployedCrew(savedCrew.map((c, i): DeployedCrew => ({ id: c.id, slot: i, rarity: c.rarity, power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects })))
+    : null
+  // scorePct (Pathfinder / Shanty Singer / Flagship) lifts the displayed estimate,
+  // matching how the voyage is rolled at send time.
+  const voyageScoreMult = resolvedDeployed ? 1 + resolvedDeployed.voyage.scorePct / 100 : 1
+  const stats = resolvedDeployed
+    ? {
+        power: Math.round(resolvedDeployed.totals.power * voyageScoreMult),
+        dodge: Math.round(resolvedDeployed.totals.dodge * voyageScoreMult),
+        fortune: Math.round(resolvedDeployed.totals.fortune * voyageScoreMult),
+      }
     : null
 
   const handleSend = useCallback(() => {

@@ -229,7 +229,7 @@ export default function ShipHero({
   const ratedDodge   = totalDodge   + navBonus.navigation
   const ratedFortune = totalFortune + navBonus.fortune
   const ratedHP      = shipStats.durability + navBonus.hp
-  const voyageScore  = computeVoyageScore(totalPower, totalDodge, totalFortune)
+  const voyageScore  = Math.min(100, Math.round(computeVoyageScore(totalPower, totalDodge, totalFortune) * (1 + resolvedParty.voyage.scorePct / 100)))
   const raidRating   = computeCombatRating(ratedPower, ratedDodge, ratedFortune, ratedHP, shipStats.minDamage)
   const hasCrew      = slots.some(Boolean)
 

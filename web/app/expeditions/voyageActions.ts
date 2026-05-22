@@ -41,6 +41,7 @@ export interface DailyVoyage {
   captains_log: string | null
   log_generated_at: string | null
   duration_ms?: number | null
+  xp_bonus_pct?: number | null
   tide_turner_drop?: boolean
   phantom_hook_drop?: boolean
 }
@@ -129,6 +130,10 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   if (party.length < 2) return { error: 'A voyage requires at least two crew members' }
   const resolved = resolveDeployedCrew(party)
 
+  // Voyage crew effects: scorePct lifts the whole crew's effective stats (so
+  // rolls + payouts improve), doubloonPct/xpPct scale the rewards.
+  const scoreMult = 1 + resolved.voyage.scorePct / 100
+
   // Build the engine's crew array (captain first), with effect-adjusted stats.
   // variantId carries the user_crew id so crew loss tracks the right instance.
   const crew: CrewCard[] = resolved.perCrew.map(pc => {
@@ -142,13 +147,14 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
       filename: row.filename,
       rarity: traitTier(row.rarity),
       traitName: row.catalogName, // species name (drives CREW_TRAITS flavor)
-      power: pc.power,
-      dodge: pc.dodge,
-      fortune: pc.fortune,
+      power: Math.round(pc.power * scoreMult),
+      dodge: Math.round(pc.dodge * scoreMult),
+      fortune: Math.round(pc.fortune * scoreMult),
     }
   })
 
   const result = generateVoyageEvents(crew, shipTier, route)
+  const totalDoubloons = Math.round(result.totalDoubloons * (1 + resolved.voyage.doubloonPct / 100))
 
   const expeditionLevel = getLevelFromXP(profile.expedition_xp ?? 0)
   const totalNav = crew.reduce((s, c, i) => s + Math.round(c.dodge * (i === 0 ? 1 : 0.8)), 0)
@@ -165,10 +171,11 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
       route,
       status: 'pending',
       events: result.events,
-      total_doubloons: result.totalDoubloons,
+      total_doubloons: totalDoubloons,
       total_gems: result.totalGems,
       crew_lost: result.crewLost, // user_crew ids of any losses
       duration_ms,
+      xp_bonus_pct: resolved.voyage.xpPct,
       tide_turner_drop: result.tideTurnerDrop,
       phantom_hook_drop: result.phantomHookDrop,
     })
@@ -214,7 +221,8 @@ export async function revealVoyageResults(voyageId: number): Promise<
   const newDoubloons = (profile.doubloons ?? 0) + voyage.total_doubloons
   const newGems = (profile.gems ?? 0) + voyage.total_gems
 
-  const xpEarned = voyageXP(voyage.route, voyage.crew_variant_ids.length, voyage.events as { type: string; outcome: string; crewVariantLost?: number | null }[])
+  const baseXp = voyageXP(voyage.route, voyage.crew_variant_ids.length, voyage.events as { type: string; outcome: string; crewVariantLost?: number | null }[])
+  const xpEarned = Math.round(baseXp * (1 + ((voyage.xp_bonus_pct as number | null) ?? 0) / 100))
   const oldExpeditionXP = profile.expedition_xp ?? 0
   const newExpeditionXP = oldExpeditionXP + xpEarned
   const oldExpeditionLevel = getLevelFromXP(oldExpeditionXP)
