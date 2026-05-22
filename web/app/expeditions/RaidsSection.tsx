@@ -31,19 +31,19 @@ const TYPE_IMAGE: Record<string, string | undefined> = {
 // very tight. ROW floor is set by the cleared/lock badge overhang so
 // it doesn't collide with the next token. Repeats as map grows.
 const COLS = [50, 73, 27, 62, 38, 70, 30]
-const ROW = 60           // vertical pitch between node centres
-const TOKEN = 48         // layout/max token diameter (drives spacing + viewBox)
-const PAD_TOP = 16
-const PAD_BOTTOM = 12
+const ROW = 84           // vertical pitch between node centres
+const TOKEN = 72         // layout/max token diameter (drives spacing + viewBox)
+const PAD_TOP = 18
+const PAD_BOTTOM = 14
 
 // Visual token size by type: bigger node = bigger fight. A story beat
 // is the smallest, a skirmish small, a full raid the biggest.
 const TYPE_SIZE: Record<string, number> = {
-  story:     28,
-  skirmish:  34,
-  milestone: 40,
-  shop:      40,
-  raid:      46,
+  story:     40,
+  skirmish:  48,
+  milestone: 56,
+  shop:      56,
+  raid:      66,
 }
 
 function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; size?: number }) {
@@ -116,7 +116,7 @@ function RaidMap({
               d={`M ${x1} ${y1} C ${x1} ${ym}, ${x2} ${ym}, ${x2} ${y2}`}
               fill="none"
               stroke={lit ? 'rgba(196,169,106,0.85)' : 'rgba(255,255,255,0.12)'}
-              strokeWidth={lit ? 3 : 2}
+              strokeWidth={lit ? 3.5 : 2.5}
               strokeDasharray={lit ? undefined : '2 5'}
               strokeLinecap="round"
               vectorEffect="non-scaling-stroke"
@@ -233,17 +233,20 @@ function RaidMap({
                 top: '50%',
                 transform: 'translateY(-50%)',
                 width: 'max-content',
-                maxWidth: 116,
+                maxWidth: 142,
                 pointerEvents: 'none',
+                background: 'rgba(6,5,4,0.6)',
+                borderRadius: 8,
+                padding: '0.24rem 0.5rem',
                 ...(labelRight
-                  ? { left: '100%', marginLeft: 11, textAlign: 'left' as const }
-                  : { right: '100%', marginRight: 11, textAlign: 'right' as const }),
+                  ? { left: '100%', marginLeft: 12, textAlign: 'left' as const }
+                  : { right: '100%', marginRight: 12, textAlign: 'right' as const }),
               }}
             >
-              <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', lineHeight: 1.12, color: locked ? 'rgba(240,237,232,0.4)' : '#f0ede8', textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', lineHeight: 1.15, color: locked ? 'rgba(240,237,232,0.45)' : '#f5f2ec', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
                 {node.label}
               </p>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.46rem', marginTop: 1, color: cleared ? '#4ade80' : locked ? '#5a5856' : raidBlocked ? '#f0734a' : accent, textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', marginTop: 2, color: cleared ? '#4ade80' : locked ? '#6a6764' : raidBlocked ? '#f0734a' : accent, textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
                 {statusWord}
               </p>
             </div>
