@@ -6,26 +6,30 @@ import { useRouter } from 'next/navigation'
 import { repairShip } from '@/app/raids/actions'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ShipStats } from '@/lib/expeditions'
-import { RARITY_COLORS, computeCombatRating, computeVoyageScore } from '@/lib/expeditions'
+import { computeCombatRating, computeVoyageScore } from '@/lib/expeditions'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange } from '@/lib/repairKits'
-import { saveCrew, equipShipSkin, saveEquippedRaidItems } from './actions'
+import { equipShipSkin, saveEquippedRaidItems } from './actions'
+import { assignCrew } from '@/app/dev/crew/actions'
+import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
+import { applyCrewEffects } from '@/lib/crewEffects'
+import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
 import { RAID_ITEMS, getRaidItem } from '@/lib/raidItems'
 import { renameShip } from '@/app/shipyard/actions'
 import { getXPProgress, getNavigatorTitle, navLevelBonuses } from '@/lib/expeditionLevel'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 
-type CollectionCard = {
-  collectionId: number
-  variantId: number
+type RosterCrew = {
+  id: number
   name: string
   filename: string
-  variantName: string
-  rarity: string
-  power: number
+  rarity: number      // 1-4 (fish group)
+  power: number       // rolled base stats
   dodge: number
   fortune: number
+  effects: string[]
+  assignedSlot: number | null
 }
 
 const STAT_COLS = [
@@ -48,8 +52,7 @@ interface Props {
   expeditionXP: number
   equippedShipSkin: string | null
   shipSkins: string[]
-  collection: CollectionCard[]
-  savedCrewVariantIds: number[]
+  roster: RosterCrew[]
   ownedRaidItems: string[]
   equippedRaidItems: string[]
   equippedRepairKit: string
@@ -79,7 +82,7 @@ function drawerDragProps(onClose: () => void) {
 export default function ShipHero({
   shipStats, shipName: initialShipName, expeditionXP,
   equippedShipSkin: initialEquippedSkin, shipSkins: ownedSkins,
-  collection, savedCrewVariantIds,
+  roster,
   ownedRaidItems, equippedRaidItems: initialEquippedRaidItems,
   equippedRepairKit,
   raidRepairOwed, doubloons,
@@ -100,15 +103,15 @@ export default function ShipHero({
     })
   }
 
-  // Crew state — managed here so scores update live when loadout changes
-  const [slots, setSlots] = useState<(CollectionCard | null)[]>(() => {
-    const arr: (CollectionCard | null)[] = Array(shipStats.crewSlots).fill(null)
-    savedCrewVariantIds.forEach((vid, i) => {
-      if (i < shipStats.crewSlots) {
-        const card = collection.find(c => c.variantId === vid)
-        if (card) arr[i] = card
+  // Crew state — managed here so scores update live when loadout changes.
+  // Initialised from each crew member's assigned ship slot.
+  const [slots, setSlots] = useState<(RosterCrew | null)[]>(() => {
+    const arr: (RosterCrew | null)[] = Array(shipStats.crewSlots).fill(null)
+    for (const c of roster) {
+      if (c.assignedSlot != null && c.assignedSlot >= 0 && c.assignedSlot < shipStats.crewSlots) {
+        arr[c.assignedSlot] = c
       }
-    })
+    }
     return arr
   })
 
@@ -131,9 +134,6 @@ export default function ShipHero({
 
   // Loadout inner state
   const [pickerSlot, setPickerSlot] = useState<number | null>(null)
-  // When a stacked (multi-variant) crew card is tapped, this holds that
-  // character's variants so the player can pick the exact one to assign.
-  const [variantPicker, setVariantPicker] = useState<{ name: string; variants: CollectionCard[] } | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sortBy, setSortBy] = useState<'power' | 'dodge' | 'fortune' | null>(null)
   const [editingName, setEditingName] = useState(false)
@@ -162,29 +162,35 @@ export default function ShipHero({
     startTransition(async () => { await renameShip(trimmed) })
   }
 
-  // Crew management — dedup by name so two variants of the same character
-  // (e.g. standard + foil) can't both occupy the loadout
-  const assignedNames = new Set(slots.filter(Boolean).map(c => c!.name))
+  // A crew instance can only sit in one slot; ids already deployed elsewhere
+  // are hidden from the picker.
+  const assignedIds = new Set(slots.filter(Boolean).map(c => c!.id))
 
   function openPickerForSlot(i: number) { setPickerSlot(i); setSheetOpen(true); setSortBy(null) }
-  function closeSheet() { setSheetOpen(false); setPickerSlot(null); setVariantPicker(null) }
+  function closeSheet() { setSheetOpen(false); setPickerSlot(null) }
 
-  function assignCard(card: CollectionCard) {
+  function notifyCrewChanged(next: (RosterCrew | null)[]) {
+    window.dispatchEvent(new CustomEvent('crew-changed', { detail: next.filter(Boolean).map(c => c!.id) }))
+  }
+
+  function assignCard(card: RosterCrew) {
     if (pickerSlot === null) return
-    const next = [...slots]; next[pickerSlot] = card
-    setSlots(next); closeSheet(); persistCrew(next)
+    const next = [...slots]
+    // If this crew was already in another slot, vacate it (one instance, one slot).
+    const prev = next.findIndex(c => c?.id === card.id)
+    if (prev >= 0) next[prev] = null
+    next[pickerSlot] = card
+    setSlots(next); closeSheet(); notifyCrewChanged(next)
+    const slot = pickerSlot
+    startTransition(async () => { await assignCrew(card.id, slot) })
   }
 
   function removeFromSlot(i: number, e: React.MouseEvent) {
     e.stopPropagation()
+    const crew = slots[i]
     const next = [...slots]; next[i] = null
-    setSlots(next); persistCrew(next)
-  }
-
-  function persistCrew(next: (CollectionCard | null)[]) {
-    const ids = next.filter(Boolean).map(c => c!.variantId)
-    window.dispatchEvent(new CustomEvent('crew-changed', { detail: ids }))
-    startTransition(async () => { await saveCrew(ids) })
+    setSlots(next); notifyCrewChanged(next)
+    if (crew) startTransition(async () => { await assignCrew(crew.id, null) })
   }
 
   // Skin equip
@@ -208,12 +214,17 @@ export default function ShipHero({
     startTransition(async () => { await saveEquippedRaidItems(next) })
   }
 
-  // Voyage uses raw crew totals (unchanged). Raid uses crew totals plus the
-  // Nav-level captain bonus — see lib/expeditionLevel.navLevelBonuses.
+  // Live scores via the same resolver the server uses (passive/aura/conditional
+  // effects + captain/crew weighting). Voyage uses raw crew totals; Raid adds
+  // the Nav-level captain bonus — see lib/expeditionLevel.navLevelBonuses.
   const navBonus     = navLevelBonuses(xpProgress.level)
-  const totalPower   = slots.reduce((s, c, i) => s + (c ? Math.round(c.power   * (i === 0 ? 1 : 0.8)) : 0), 0)
-  const totalDodge   = slots.reduce((s, c, i) => s + (c ? Math.round(c.dodge   * (i === 0 ? 1 : 0.8)) : 0), 0)
-  const totalFortune = slots.reduce((s, c, i) => s + (c ? Math.round(c.fortune * (i === 0 ? 1 : 0.8)) : 0), 0)
+  const deployedParty: DeployedCrew[] = slots
+    .map((c, i) => c ? { id: c.id, slot: i, rarity: c.rarity, power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects } : null)
+    .filter((c): c is DeployedCrew => c !== null)
+  const resolvedParty = resolveDeployedCrew(deployedParty)
+  const totalPower   = resolvedParty.totals.power
+  const totalDodge   = resolvedParty.totals.dodge
+  const totalFortune = resolvedParty.totals.fortune
   const ratedPower   = totalPower   + navBonus.power
   const ratedDodge   = totalDodge   + navBonus.navigation
   const ratedFortune = totalFortune + navBonus.fortune
@@ -226,27 +237,18 @@ export default function ShipHero({
   const skinDef     = equippedSkin ? SHIP_SKINS.find(s => s.id === equippedSkin) : undefined
   const skinFilter  = skinDef?.filter ?? 'none'
 
-  // Picker cards
-  const pickerCards = pickerSlot !== null
-    ? collection.filter(c => !assignedNames.has(c.name) || slots[pickerSlot]?.name === c.name)
-    : collection
-  // Stack variants: one entry per character, headlined by its strongest
-  // variant (by the active sort stat, else total stats). The full variant
-  // list lives behind the per-character chooser (setVariantPicker).
-  const pickerGroups = (() => {
-    const score = (c: CollectionCard) => (sortBy ? c[sortBy] : c.power + c.dodge + c.fortune)
-    const byName = new Map<string, CollectionCard[]>()
-    for (const c of pickerCards) {
-      const arr = byName.get(c.name)
-      if (arr) arr.push(c); else byName.set(c.name, [c])
+  // Crew available to assign: any roster member not already in another slot
+  // (the one already in this slot stays selectable). Sorted by effective stats.
+  const effStats = (c: RosterCrew) => applyCrewEffects({ power: c.power, dodge: c.dodge, fortune: c.fortune }, c.effects)
+  const pickerCards: RosterCrew[] = (() => {
+    if (pickerSlot === null) return []
+    const inThisSlot = slots[pickerSlot]?.id
+    const list = roster.filter(c => !assignedIds.has(c.id) || c.id === inThisSlot)
+    const score = (c: RosterCrew) => {
+      const e = effStats(c)
+      return sortBy ? e[sortBy] : e.power + e.dodge + e.fortune
     }
-    const groups = Array.from(byName.values()).map(variants => {
-      const best = variants.reduce((a, b) => (score(b) > score(a) ? b : a))
-      const sorted = [...variants].sort((a, b) => (b.power + b.dodge + b.fortune) - (a.power + a.dodge + a.fortune))
-      return { best, variants: sorted, count: variants.length }
-    })
-    if (sortBy) groups.sort((a, b) => b.best[sortBy] - a.best[sortBy])
-    return groups
+    return [...list].sort((a, b) => score(b) - score(a))
   })()
 
   return (
@@ -605,7 +607,7 @@ export default function ShipHero({
                   <div style={{ display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
                     {slots.map((card, i) => {
                       const isCaptain = i === 0
-                      const rc = card ? (RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764') : null
+                      const rc = card ? (CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764') : null
                       return (
                         <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
                           {card ? (
@@ -939,26 +941,23 @@ export default function ShipHero({
                   </div>
 
                   <div style={{ overflowY: 'auto', flex: 1, padding: '1rem 1.25rem 2rem', overscrollBehavior: 'contain' }}>
-                    {collection.length === 0 ? (
-                      <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#4a4845', padding: '3rem 1rem' }}>No cards yet. Open some packs first!</p>
+                    {roster.length === 0 ? (
+                      <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#4a4845', padding: '3rem 1rem' }}>No crew yet. Recruit some at the Crew Hall first!</p>
+                    ) : pickerCards.length === 0 ? (
+                      <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#4a4845', padding: '3rem 1rem' }}>All your crew are already aboard.</p>
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.75rem' }}>
-                        {pickerGroups.map(group => {
-                          const card  = group.best
-                          const rc    = RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764'
-                          const multi = group.count > 1
-                          const onPick = () => {
-                            if (pickerSlot === null) return
-                            if (multi) setVariantPicker({ name: card.name, variants: group.variants })
-                            else assignCard(card)
-                          }
+                        {pickerCards.map(card => {
+                          const rc  = CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764'
+                          const eff = effStats(card)
+                          const fxCount = card.effects.length
                           return (
-                            <div key={card.name} onClick={onPick} style={{ position: 'relative', width: '100%', borderRadius: 10, overflow: 'hidden', background: '#080a0e', border: `1.5px solid ${rc}55`, cursor: 'pointer' }}>
+                            <div key={card.id} onClick={() => assignCard(card)} style={{ position: 'relative', width: '100%', borderRadius: 10, overflow: 'hidden', background: '#080a0e', border: `1.5px solid ${rc}55`, cursor: 'pointer' }}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
-                              {multi && (
-                                <span className="font-karla font-700" style={{ position: 'absolute', top: 4, right: 4, fontSize: '0.5rem', color: '#0a0a0a', background: rc, borderRadius: 999, padding: '0.06rem 0.34rem', lineHeight: 1.3, boxShadow: '0 1px 3px rgba(0,0,0,0.55)' }}>
-                                  ×{group.count}
+                              {fxCount > 0 && (
+                                <span className="font-karla font-700" title={`${fxCount} trait${fxCount === 1 ? '' : 's'}`} style={{ position: 'absolute', top: 4, right: 4, fontSize: '0.5rem', color: '#0a0a0a', background: rc, borderRadius: 999, padding: '0.06rem 0.34rem', lineHeight: 1.3, boxShadow: '0 1px 3px rgba(0,0,0,0.55)' }}>
+                                  {fxCount}★
                                 </span>
                               )}
                               <div style={{ padding: '0.3rem 0.4rem 0.35rem', background: 'rgba(4,5,8,0.92)' }}>
@@ -966,7 +965,7 @@ export default function ShipHero({
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                   {STAT_COLS.map(s => (
                                     <div key={s.key} style={{ textAlign: 'center' }}>
-                                      <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.color, lineHeight: 1 }}>{card[s.key]}</p>
+                                      <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.color, lineHeight: 1 }}>{eff[s.key]}</p>
                                       <p style={{ fontSize: '0.38rem', color: '#5a5858', lineHeight: 1, marginTop: 2 }}>{s.short}</p>
                                     </div>
                                   ))}
@@ -982,56 +981,6 @@ export default function ShipHero({
               </>
             )}
           </>
-        )}
-      </AnimatePresence>
-
-      {/* Per-character variant chooser — opens when a stacked (multi-variant)
-          crew card is tapped, to pick the exact variant to assign. */}
-      <AnimatePresence>
-        {variantPicker && (
-          <motion.div
-            key="vp-backdrop"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={() => setVariantPicker(null)}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}
-          >
-            <motion.div
-              key="vp-modal"
-              initial={{ opacity: 0, scale: 0.94, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.94, y: 10 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-              onClick={e => e.stopPropagation()}
-              style={{ width: '100%', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', overscrollBehavior: 'contain', background: 'linear-gradient(180deg, #14110d 0%, #0a0807 100%)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, padding: '1.1rem 1.15rem 1.3rem' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>Choose your {variantPicker.name}</p>
-                <button onClick={() => setVariantPicker(null)} aria-label="Close" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, padding: 0 }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9a9690" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                </button>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
-                {variantPicker.variants.map(card => {
-                  const rc = RARITY_COLORS[card.rarity.toLowerCase()] ?? '#6a6764'
-                  return (
-                    <div key={card.variantId} onClick={() => assignCard(card)} style={{ width: 90, borderRadius: 10, overflow: 'hidden', background: '#080a0e', border: `1.5px solid ${rc}55`, cursor: 'pointer', flexShrink: 0 }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={IMG_BASE + card.filename} alt={card.variantName} style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
-                      <div style={{ padding: '0.3rem 0.4rem 0.35rem', background: 'rgba(4,5,8,0.92)' }}>
-                        <p className="font-karla font-700 truncate" style={{ fontSize: '0.5rem', color: rc, lineHeight: 1.2, marginBottom: 5 }}>{card.variantName}</p>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          {STAT_COLS.map(s => (
-                            <div key={s.key} style={{ textAlign: 'center' }}>
-                              <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.color, lineHeight: 1 }}>{card[s.key]}</p>
-                              <p style={{ fontSize: '0.38rem', color: '#5a5858', lineHeight: 1, marginTop: 2 }}>{s.short}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </motion.div>
-          </motion.div>
         )}
       </AnimatePresence>
 

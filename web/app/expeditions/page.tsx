@@ -8,6 +8,7 @@ import ShipHero from './ShipHero'
 import DailyVoyagePanel from './DailyVoyagePanel'
 import ExpeditionsTour from './ExpeditionsTour'
 import { getCollectionForCrew } from './actions'
+import { getCrewRoster } from '@/app/dev/crew/actions'
 import { getDailyVoyageState } from './voyageActions'
 import { getRaidMapView } from './raidMapActions'
 
@@ -18,12 +19,13 @@ export default async function ExpeditionsPage() {
 
   const admin = createAdminClient()
 
-  const [{ data: profile }, collection, dailyVoyageState, { data: voyageHistoryRows }, raidMap] = await Promise.all([
+  const [{ data: profile }, collection, crewRoster, dailyVoyageState, { data: voyageHistoryRows }, raidMap] = await Promise.all([
     admin.from('profiles')
       .select('packs_available, doubloons, ship_tier, gems, saved_crew, ship_name, expedition_xp, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, owned_repair_kits, has_completed_practice_raid, has_seen_expeditions_tour, raid_repair_owed')
       .eq('id', user.id)
       .single(),
     getCollectionForCrew(),
+    getCrewRoster(),
     getDailyVoyageState(),
     admin.from('daily_voyages')
       .select('id, route, total_doubloons, total_gems, crew_lost, created_at, captains_log')
@@ -71,8 +73,7 @@ export default async function ExpeditionsPage() {
             expeditionXP={profile?.expedition_xp ?? 0}
             equippedShipSkin={profile?.equipped_ship_skin as string | null ?? null}
             shipSkins={(profile?.ship_skins as string[] | null) ?? []}
-            collection={collection}
-            savedCrewVariantIds={savedCrewVariantIds}
+            roster={crewRoster}
             ownedRaidItems={(profile?.raid_items as string[] | null) ?? []}
             equippedRaidItems={(profile?.equipped_raid_items as string[] | null) ?? []}
             equippedRepairKit={(profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit'}

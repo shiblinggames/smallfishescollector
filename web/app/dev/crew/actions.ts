@@ -175,6 +175,21 @@ export async function getCrewState(): Promise<CrewState | null> {
   }
 }
 
+/** Just the owned roster (no recruit board), for the expeditions crew screen. */
+export async function getCrewRoster(): Promise<CrewMember[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const admin = createAdminClient()
+  const { meta } = await loadCards(admin)
+  const { data: rosterRows } = await admin
+    .from('user_crew')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, assigned_slot')
+    .eq('user_id', user.id)
+    .order('recruited_at', { ascending: false })
+  return ((rosterRows ?? []) as any[]).map(r => toMember(r, meta))
+}
+
 // ── Reroll the board for 100 gems (always 3 new, boosted odds) ──────────────
 
 export async function rerollBoard(): Promise<CrewActionResult> {
