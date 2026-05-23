@@ -438,7 +438,7 @@ export default function ShipHero({
               {shipName ?? shipStats.name}
             </p>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 5 }}>
-              <span className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#7da0d8', whiteSpace: 'nowrap' }}>
+              <span className="font-karla font-600" style={{ fontSize: '0.95rem', color: '#7da0d8', whiteSpace: 'nowrap' }}>
                 <span className="font-cinzel font-700">Lv {xpProgress.level}</span>
                 <span style={{ color: '#4a5e7a' }}> · </span>
                 <span style={{ fontStyle: 'italic', color: '#6a8ab8' }}>{getNavigatorTitle(xpProgress.level)}</span>
@@ -450,7 +450,7 @@ export default function ShipHero({
           </div>
 
           {/* Ship + crew-on-deck overlay */}
-          <div style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '0.4rem auto 0' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '1.1rem auto 0' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={shipStats.image}
