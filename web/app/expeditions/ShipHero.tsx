@@ -46,9 +46,10 @@ const RARITY_ITEM_COLOR: Record<string, string> = {
   legendary: '#f0c040',
 }
 
-// Crew picker card — mirrors the Crew Hall roster manifest (arched portrait,
-// name, rarity, engraved stats) and lists the crew's traits/abilities so the
-// player can compare loadouts before assigning. Whole card taps to assign.
+// Crew picker row — a compact, scannable list entry: small portrait + name +
+// rarity + the three effective stats on one line, with trait/ability chips on a
+// second line. Dense so the player sees the whole roster at a glance. Whole row
+// taps to assign.
 function PickerCrewCard({ card, onAssign }: { card: RosterCrew; onAssign: () => void }) {
   const color = CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764'
   const eff = applyCrewEffects({ power: card.power, dodge: card.dodge, fortune: card.fortune }, card.effects)
@@ -57,62 +58,48 @@ function PickerCrewCard({ card, onAssign }: { card: RosterCrew; onAssign: () => 
 
   return (
     <div onClick={onAssign} style={{
-      position: 'relative', display: 'flex', gap: '0.7rem', padding: '0.7rem', borderRadius: 7,
-      minWidth: 0,
-      background: 'linear-gradient(157deg, #1a2331 0%, #0a0f16 100%)',
-      border: '1px solid #324453',
-      boxShadow: 'inset 0 0 0 1px rgba(111,168,201,0.13), inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.5)',
-      cursor: 'pointer',
+      display: 'flex', gap: 10, alignItems: 'center', minWidth: 0, cursor: 'pointer',
+      padding: '0.55rem 0.6rem', borderRadius: 8,
+      background: 'rgba(255,255,255,0.035)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderLeft: `3px solid ${color}`,
     }}>
-      {/* Arched portrait niche */}
+      {/* Portrait thumbnail */}
       <div style={{
-        position: 'relative', width: 92, flexShrink: 0, alignSelf: 'flex-start', height: 104,
-        borderRadius: '42px 42px 5px 5px', overflow: 'hidden', border: `2px solid ${color}`,
-        boxShadow: `inset 0 -12px 20px rgba(0,0,0,0.65), 0 0 10px ${color}33`,
-        background: `radial-gradient(ellipse at 50% 30%, ${color}26 0%, #070504 74%)`,
+        width: 46, height: 46, flexShrink: 0, borderRadius: 8, overflow: 'hidden',
+        border: `1.5px solid ${color}`, background: `radial-gradient(ellipse at 50% 32%, ${color}26 0%, #070504 78%)`,
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={IMG_BASE + card.filename} alt={card.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 2 }} />
-        <div style={{ position: 'absolute', inset: 3, borderRadius: '40px 40px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
-        <div className="font-karla font-700" style={{
-          position: 'absolute', bottom: 5, left: '50%', transform: 'translateX(-50%)',
-          fontSize: '0.46rem', letterSpacing: '0.1em', textTransform: 'uppercase',
-          color, background: 'rgba(7,5,3,0.82)', border: `1px solid ${color}aa`,
-          padding: '0.1rem 0.4rem', borderRadius: 3, whiteSpace: 'nowrap',
-        }}>
-          {rarityName}
-        </div>
+        <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} />
       </div>
 
-      {/* Manifest detail */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-        <div>
-          <p className="font-pirata" style={{ fontSize: '1.12rem', color: '#ecdcbd', lineHeight: 1, letterSpacing: '0.02em' }}>{card.name}</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', textTransform: 'uppercase', color, marginTop: 3 }}>{rarityName} Crew</p>
+      {/* Name + stats + traits */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {/* Top line: name / rarity (left) · stats (right) */}
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+          <div style={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 6 }}>
+            <span className="font-pirata truncate" style={{ fontSize: '1.02rem', color: '#ecdcbd', lineHeight: 1.1, letterSpacing: '0.02em' }}>{card.name}</span>
+            <span className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '0.5rem', letterSpacing: '0.1em', textTransform: 'uppercase', color }}>{rarityName}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 9, flexShrink: 0 }}>
+            {STAT_COLS.map(s => (
+              <span key={s.key} title={s.short} className="font-cinzel font-700" style={{ fontSize: '0.92rem', lineHeight: 1, color: s.color }}>{eff[s.key]}</span>
+            ))}
+          </div>
         </div>
 
-        {/* Engraved stats (effective) */}
-        <div style={{ display: 'flex', gap: 14, padding: '0.1rem 0' }}>
-          {STAT_COLS.map(s => (
-            <div key={s.key} style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', lineHeight: 1, color: s.color }}>{eff[s.key]}</span>
-              <span style={{ fontSize: '0.46rem', letterSpacing: '0.06em', color: '#6a7686' }}>{s.short}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Traits / abilities */}
+        {/* Trait / ability chips */}
         {traits.length > 0 ? (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
             {traits.map(e => {
               const buff = e.kind === 'buff'
               const summary = effectSummary(e)
               return (
                 <span key={e.id} className="font-karla font-700" title={e.desc} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.6rem',
-                  padding: '0.12rem 0.42rem', borderRadius: 5,
+                  display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.56rem',
+                  padding: '0.08rem 0.35rem', borderRadius: 4,
                   background: buff ? 'rgba(60,180,110,0.12)' : 'rgba(200,70,70,0.12)',
-                  border: `1px solid ${buff ? 'rgba(80,200,130,0.32)' : 'rgba(220,90,90,0.32)'}`,
+                  border: `1px solid ${buff ? 'rgba(80,200,130,0.3)' : 'rgba(220,90,90,0.3)'}`,
                   color: buff ? '#bfe8cf' : '#f0bcbc',
                 }}>
                   <span style={{ fontStyle: 'italic' }}>{e.name}</span>
@@ -122,7 +109,7 @@ function PickerCrewCard({ card, onAssign }: { card: RosterCrew; onAssign: () => 
             })}
           </div>
         ) : (
-          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#5a6472' }}>No traits</p>
+          <p className="font-karla" style={{ fontSize: '0.56rem', color: '#5a6472' }}>No traits</p>
         )}
       </div>
     </div>
