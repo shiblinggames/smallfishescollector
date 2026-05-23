@@ -164,11 +164,11 @@ export function RevealBanner({ banner }: { banner: Banner }) {
       {banner && (
         <motion.div
           key={banner.key}
-          initial={{ opacity: 0, scale: legendary ? 0.6 : 0.8, y: 8 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
+          initial={{ opacity: 0, scale: legendary ? 0.6 : 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
           transition={{ duration: legendary ? 0.45 : 0.3, ease: legendary ? [0.16, 1.25, 0.3, 1] : 'easeOut' }}
-          style={{ position: 'fixed', top: legendary ? '15%' : '20%', left: 0, right: 0, textAlign: 'center', zIndex: 120, pointerEvents: 'none' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 120, pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}
         >
           {legendary ? (
             <>
