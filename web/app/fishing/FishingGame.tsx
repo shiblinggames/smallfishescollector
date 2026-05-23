@@ -2119,6 +2119,7 @@ export default function FishingGame({
   const [castRippleKey, setCastRippleKey] = useState(0)
   const [reelRippleKey, setReelRippleKey] = useState(0)
   const [newStreakRecord, setNewStreakRecord] = useState<number | null>(null)
+  const [castNotice, setCastNotice] = useState<string | null>(null)
   const [tideTurnerSkipsLeft, setTideTurnerSkipsLeft] = useState(initialTideTurnerSkipsLeft)
   const [equippedSpecial, setEquippedSpecial] = useState<string | null>(initialEquippedSpecial)
   const [ownedAutoCaster, setOwnedAutoCaster] = useState(hasAutoCaster)
@@ -2277,6 +2278,12 @@ export default function FishingGame({
     const id = setTimeout(() => setNewStreakRecord(null), 4000)
     return () => clearTimeout(id)
   }, [newStreakRecord])
+
+  useEffect(() => {
+    if (castNotice === null) return
+    const id = setTimeout(() => setCastNotice(null), 3500)
+    return () => clearTimeout(id)
+  }, [castNotice])
 
 
   useEffect(() => {
@@ -2441,15 +2448,30 @@ export default function FishingGame({
     await new Promise(r => setTimeout(r, 200))
     setPhase('casting')
 
+    let committed = false
     try {
       const res = await castLine(selectedBait, selectedZone)
+      committed = true
 
       if ('error' in res) {
+        // Server didn't spend — restore the optimistic deduct and tell the
+        // player WHY (e.g. "Fish hold full") instead of failing silently.
         if (!isBloom) setBaitInventory(prev => prev.map(b =>
           b.bait_type === selectedBait ? { ...b, quantity: b.quantity + 1 } : b
         ))
+        setCastNotice(res.error)
         setPhase('idle')
         return
+      }
+
+      // Server committed the spend — reconcile bait to its authoritative count
+      // so the client can never drift above the server (the "worms go back up
+      // on screen but are down on reload" desync).
+      if (!isBloom && typeof res.baitRemaining === 'number') {
+        const remaining = res.baitRemaining
+        setBaitInventory(prev => prev.map(b =>
+          b.bait_type === selectedBait ? { ...b, quantity: remaining } : b
+        ))
       }
 
       await new Promise(r => setTimeout(r, res.waitMs))
@@ -2474,7 +2496,10 @@ export default function FishingGame({
 
       setPhase('hooked')
     } catch {
-      if (!isBloom) setBaitInventory(prev => prev.map(b =>
+      // Only restore bait if castLine never resolved (it threw before the
+      // server could commit the spend). If it resolved, the spend is committed
+      // and already reconciled above — re-adding here would over-credit.
+      if (!committed && !isBloom) setBaitInventory(prev => prev.map(b =>
         b.bait_type === selectedBait ? { ...b, quantity: b.quantity + 1 } : b
       ))
       setPhase('idle')
@@ -6085,6 +6110,31 @@ export default function FishingGame({
                 {newStreakRecord} perfect streak
               </p>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Cast notice — surfaces why a cast didn't go (e.g. fish hold full),
+            so casting never fails silently. Non-blocking (no pointer events). ── */}
+      <AnimatePresence>
+        {castNotice !== null && (
+          <motion.div
+            key={`cast-notice-${castNotice}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            style={{
+              position: 'absolute', bottom: 96, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 45, pointerEvents: 'none', maxWidth: '88%', textAlign: 'center',
+              background: 'rgba(40,12,8,0.94)',
+              border: '1px solid rgba(240,120,90,0.4)',
+              borderRadius: 10, padding: '8px 16px',
+            }}
+          >
+            <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#f0b8a8', lineHeight: 1.35 }}>
+              {castNotice}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>

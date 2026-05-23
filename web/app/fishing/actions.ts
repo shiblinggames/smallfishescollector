@@ -154,7 +154,7 @@ function rollCrateTier(habitat: string): CrateTier {
 }
 
 export async function castLine(baitType: string, habitat: string): Promise<
-  | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number; crateTier?: CrateTier }
+  | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number; crateTier?: CrateTier; baitRemaining?: number }
   | { error: string }
 > {
   const supabase = await createClient()
@@ -228,7 +228,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
     }
     const crateWait = { shallows: 4000, open_waters: 7000, deep: 11000, abyss: 16000 }[habitat] ?? 6000
     const crateTier = rollCrateTier(habitat)
-    return { fishId: CRATE_FISH_ID, catchDifficulty: 1, biteRarity: 1, waitMs: crateWait, crateTier }
+    return { fishId: CRATE_FISH_ID, catchDifficulty: 1, biteRarity: 1, waitMs: crateWait, crateTier, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined }
   }
 
   if (!noBait && baitRow) {
@@ -242,7 +242,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
   const fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus)
   const waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel)
 
-  return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs }
+  return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined }
 }
 
 const CRATE_FISH_ID = -1
