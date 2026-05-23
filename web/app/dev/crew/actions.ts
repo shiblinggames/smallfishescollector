@@ -289,7 +289,7 @@ export async function assignCrew(crewId: number, slot: number | null): Promise<C
   const admin = createAdminClient()
 
   // Ownership check.
-  const { data: crew } = await admin.from('user_crew').select('id').eq('id', crewId).eq('user_id', user.id).single()
+  const { data: crew } = await admin.from('user_crew').select('id, card_id').eq('id', crewId).eq('user_id', user.id).single()
   if (!crew) return { error: 'Crew not found' }
 
   if (slot === null) {
@@ -300,8 +300,11 @@ export async function assignCrew(crewId: number, slot: number | null): Promise<C
     const tier = (prof as any)?.ship_tier ?? 0
     const crewSlots = EXPEDITION_SHIP_STATS[tier]?.crewSlots ?? 1
     if (slot < 0 || slot >= crewSlots) return { error: 'Invalid slot' }
-    // One crew per slot: bench whoever currently holds it, then assign.
+    // One crew per slot: bench whoever currently holds it.
     await admin.from('user_crew').update({ assigned_slot: null }).eq('user_id', user.id).eq('assigned_slot', slot)
+    // Only one of a given card may sail at once: bench any other copy already aboard.
+    await admin.from('user_crew').update({ assigned_slot: null })
+      .eq('user_id', user.id).eq('card_id', (crew as any).card_id).neq('id', crewId)
     await admin.from('user_crew').update({ assigned_slot: slot }).eq('id', crewId).eq('user_id', user.id)
   }
 

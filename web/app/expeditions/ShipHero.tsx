@@ -22,6 +22,7 @@ const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/publ
 
 type RosterCrew = {
   id: number
+  cardId: number      // catalog card; only one of a given card may be aboard
   name: string
   filename: string
   rarity: number      // 1-4 (fish group)
@@ -271,9 +272,11 @@ export default function ShipHero({
   function assignCard(card: RosterCrew) {
     if (pickerSlot === null) return
     const next = [...slots]
-    // If this crew was already in another slot, vacate it (one instance, one slot).
-    const prev = next.findIndex(c => c?.id === card.id)
-    if (prev >= 0) next[prev] = null
+    // One instance per slot, and only one of a given card aboard at a time:
+    // vacate any slot holding this instance OR another copy of the same card.
+    for (let j = 0; j < next.length; j++) {
+      if (next[j] && (next[j]!.id === card.id || next[j]!.cardId === card.cardId)) next[j] = null
+    }
     next[pickerSlot] = card
     setSlots(next); closeSheet(); notifyCrewChanged(next)
     const slot = pickerSlot
@@ -338,7 +341,9 @@ export default function ShipHero({
   const pickerCards: RosterCrew[] = (() => {
     if (pickerSlot === null) return []
     const inThisSlot = slots[pickerSlot]?.id
-    const list = roster.filter(c => !assignedIds.has(c.id) || c.id === inThisSlot)
+    // Cards already aboard in OTHER slots — block picking a second of the same.
+    const otherCardIds = new Set(slots.filter((c, idx) => c && idx !== pickerSlot).map(c => c!.cardId))
+    const list = roster.filter(c => (!assignedIds.has(c.id) || c.id === inThisSlot) && !otherCardIds.has(c.cardId))
     const score = (c: RosterCrew) => {
       const e = effStats(c)
       return sortBy ? e[sortBy] : e.power + e.dodge + e.fortune
