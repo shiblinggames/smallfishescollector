@@ -146,7 +146,10 @@ export function computeVoyageScore(power: number, dodge: number, fortune: number
   const powerRate   = Math.min(power   / 55, 0.80)
   const fortuneRate = Math.min(fortune / 45, 1)
   const dodgeRate   = Math.min(dodge   / 28, 1)
-  return Math.round(((powerRate + fortuneRate + dodgeRate) / 3) * 100)
+  // Normalise by the max achievable sum (0.80 + 1 + 1 = 2.8), not 3, so a crew
+  // that maxes every event type reads exactly 100. (Power's 0.80 cap otherwise
+  // pins the ceiling at 93 — the "/100" framing would never be reachable.)
+  return Math.min(100, Math.round(((powerRate + fortuneRate + dodgeRate) / 2.8) * 100))
 }
 
 // ── Combat Rating ─────────────────────────────────────────────────────────────

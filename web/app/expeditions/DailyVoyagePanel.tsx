@@ -388,7 +388,7 @@ export default function DailyVoyagePanel({
                 {(() => {
                   const expeditionLevel = getLevelFromXP(expeditionXP)
                   const ROUTE_MIN_LEVELS: Record<VoyageRoute, number> = { coastal: 1, open: 5, deep: 15, triangle: 25 }
-                  const REC_SCORES: Record<VoyageRoute, number> = { coastal: 25, open: 40, deep: 55, triangle: 75 }
+                  const REC_SCORES: Record<VoyageRoute, number> = { coastal: 25, open: 45, deep: 60, triangle: 80 }
                   return (Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map(routeKey => {
                     const rco = ROUTE_CONFIGS[routeKey]
                     const node = ROUTE_NODES[routeKey]
@@ -500,7 +500,7 @@ export default function DailyVoyagePanel({
 
                       {/* Stats row */}
                       {stats && (() => {
-                        const REC: Record<string, number> = { coastal: 25, open: 40, deep: 55, triangle: 75 }
+                        const REC: Record<string, number> = { coastal: 25, open: 45, deep: 60, triangle: 80 }
                         const rec = REC[selectedRoute] ?? 0
                         const crewScore = computeVoyageScore(stats.power, stats.dodge, stats.fortune)
                         const met = crewScore >= rec
