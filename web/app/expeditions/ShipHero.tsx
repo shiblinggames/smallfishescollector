@@ -437,13 +437,15 @@ export default function ShipHero({
             <p className="font-cinzel font-700 truncate" style={{ fontSize: '1.5rem', color: '#f0ede8', lineHeight: 1.1 }}>
               {shipName ?? shipStats.name}
             </p>
-            <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#7da0d8', marginTop: 4 }}>
-              <span className="font-cinzel font-700">Lv {xpProgress.level}</span>
-              <span style={{ color: '#4a5e7a' }}> · </span>
-              <span style={{ fontStyle: 'italic', color: '#6a8ab8' }}>{getNavigatorTitle(xpProgress.level)}</span>
-            </p>
-            <div style={{ maxWidth: 200, margin: '0.5rem auto 0', height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${xpProgress.progress * 100}%`, background: 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)', borderRadius: 3 }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 5 }}>
+              <span className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#7da0d8', whiteSpace: 'nowrap' }}>
+                <span className="font-cinzel font-700">Lv {xpProgress.level}</span>
+                <span style={{ color: '#4a5e7a' }}> · </span>
+                <span style={{ fontStyle: 'italic', color: '#6a8ab8' }}>{getNavigatorTitle(xpProgress.level)}</span>
+              </span>
+              <div style={{ width: 84, flexShrink: 0, height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${xpProgress.progress * 100}%`, background: 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)', borderRadius: 3 }} />
+              </div>
             </div>
           </div>
 
