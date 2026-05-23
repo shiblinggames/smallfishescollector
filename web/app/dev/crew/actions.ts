@@ -259,6 +259,8 @@ export async function recruitCrew(recruitId: number): Promise<CrewActionResult> 
     assigned_slot: null,
   })
   await admin.from('daily_recruits').update({ recruited: true }).eq('id', recruitId).eq('user_id', user.id)
+  // Lifetime recruit counter (cumulative; user_crew only holds the live roster).
+  await admin.rpc('bump_profile_stat', { uid: user.id, col: 'lifetime_recruits', n: 1 })
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }

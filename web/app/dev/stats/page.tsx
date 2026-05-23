@@ -88,7 +88,8 @@ export default async function DevStatsPage() {
     {
       title: 'Recruits', accent: '#7fd0a0',
       stats: [
-        { label: 'Crew recruited', value: s.recruits?.total ?? 0 },
+        { label: 'Lifetime recruited', value: s.recruits?.lifetime ?? 0 },
+        { label: 'Crew on rosters',    value: s.recruits?.total ?? 0 },
         { label: 'Legendary crew', value: s.recruits?.legendary ?? 0 },
         { label: 'Epic crew',      value: s.recruits?.epic ?? 0 },
         { label: 'Rare crew',      value: s.recruits?.rare ?? 0 },
