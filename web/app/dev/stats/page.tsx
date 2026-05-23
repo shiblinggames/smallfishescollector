@@ -86,10 +86,14 @@ export default async function DevStatsPage() {
       ],
     },
     {
-      title: 'Packs', accent: '#f0c040',
+      title: 'Recruits', accent: '#7fd0a0',
       stats: [
-        { label: 'Packs opened', value: s.packs?.opened ?? 0 },
-        { label: 'God packs',    value: s.packs?.godPacks ?? 0 },
+        { label: 'Crew recruited', value: s.recruits?.total ?? 0 },
+        { label: 'Legendary crew', value: s.recruits?.legendary ?? 0 },
+        { label: 'Epic crew',      value: s.recruits?.epic ?? 0 },
+        { label: 'Rare crew',      value: s.recruits?.rare ?? 0 },
+        { label: 'Common crew',    value: s.recruits?.common ?? 0 },
+        { label: 'Crew deployed',  value: s.recruits?.deployed ?? 0 },
       ],
     },
     {
