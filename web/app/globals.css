@@ -1185,6 +1185,14 @@ html, body {
 }
 .crew-seal-charging { animation: crew-seal-pulse 0.46s ease-in-out infinite; }
 
+/* "Has traits — tap to view" hint: a slow, subtle glow that pulses the overlay
+   opacity (colour comes from an inline box-shadow). Cleared once viewed. */
+@keyframes crew-trait-hint {
+  0%, 100% { opacity: 0.16; }
+  50%      { opacity: 0.55; }
+}
+.crew-trait-hint { animation: crew-trait-hint 2.2s ease-in-out infinite; }
+
 /* ── Crew reveal: Epic / Legendary payoff ── */
 /* Shockwave rings emanating from a revealed card */
 @keyframes crew-shock {

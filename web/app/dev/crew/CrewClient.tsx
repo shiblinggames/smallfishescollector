@@ -109,7 +109,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
 function CrewPanel({
-  name, filename, rarity, base, effects, dimmed, frameAccent = '#b08d4f',
+  name, filename, rarity, base, effects, dimmed, hint, frameAccent = '#b08d4f',
   bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
 }: {
   name: string
@@ -118,6 +118,7 @@ function CrewPanel({
   base: { power: number; dodge: number; fortune: number }
   effects: string[]
   dimmed?: boolean
+  hint?: boolean
   frameAccent?: string
   bg?: string
   border?: string
@@ -133,16 +134,27 @@ function CrewPanel({
   const b = `1.5px solid ${frameAccent}`
 
   return (
-    <div onClick={onClick} style={{
-      position: 'relative', display: 'flex', gap: '0.7rem', padding: '0.7rem',
-      borderRadius: 7,
-      background: bg,
-      border: `1px solid ${border}`,
-      boxShadow: `inset 0 0 0 1px ${frameAccent}22, inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.55)`,
-      opacity: dimmed ? 0.5 : 1,
-      cursor: onClick ? 'pointer' : 'default',
-      transition: 'opacity 0.2s',
-    }}>
+    <motion.div
+      onClick={onClick}
+      whileTap={onClick ? { scale: 0.965 } : undefined}
+      whileHover={onClick ? { y: -2 } : undefined}
+      transition={{ type: 'spring', stiffness: 460, damping: 26 }}
+      style={{
+        position: 'relative', display: 'flex', gap: '0.7rem', padding: '0.7rem',
+        borderRadius: 7,
+        background: bg,
+        border: `1px solid ${border}`,
+        boxShadow: `inset 0 0 0 1px ${frameAccent}22, inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.55)`,
+        opacity: dimmed ? 0.5 : 1,
+        cursor: onClick ? 'pointer' : 'default',
+      }}>
+      {/* "Has traits — tap to view" glow; cleared once the card's been opened */}
+      {hint && (
+        <div className="crew-trait-hint" aria-hidden style={{
+          position: 'absolute', inset: -1, borderRadius: 8, pointerEvents: 'none',
+          boxShadow: `0 0 10px 1px ${color}`,
+        }} />
+      )}
       {/* Carved corner brackets */}
       <span style={corner({ top: 4, left: 4, borderTop: b, borderLeft: b })} />
       <span style={corner({ top: 4, right: 4, borderTop: b, borderRight: b })} />
@@ -211,7 +223,7 @@ function CrewPanel({
           </span>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -223,12 +235,22 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const [confirmDismiss, setConfirmDismiss] = useState<number | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [detail, setDetail] = useState<{ kind: 'board' | 'roster'; item: BoardCandidate | CrewMember } | null>(null)
+  // Cards with traits glow until the player opens them once (a "look here" nudge).
+  const [viewed, setViewed] = useState<Set<string>>(new Set())
   const reveal = useReveal()
   const crewSectionRef = useRef<HTMLDivElement>(null)
 
   const rosterFull = state.roster.length >= state.capacity
 
   const scrollToCrew = () => crewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+  // Open the detail modal: clear the card's hint glow + a light tactile tick.
+  function openDetail(kind: 'board' | 'roster', item: BoardCandidate | CrewMember) {
+    const key = `${kind}:${item.id}`
+    setViewed(prev => (prev.has(key) ? prev : new Set(prev).add(key)))
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(8)
+    setDetail({ kind, item })
+  }
 
   function run(action: () => Promise<CrewActionResult>, id: number | 'reroll', onDone?: () => void) {
     setErr(null)
@@ -378,7 +400,8 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               const panel = (
                 <CrewPanel name={c.name} filename={c.filename} rarity={c.rarity} frameAccent={SECTION_RECRUIT}
                   base={{ power: c.power, dodge: c.dodge, fortune: c.fortune }} effects={c.effects} dimmed={c.recruited}
-                  onClick={() => setDetail({ kind: 'board', item: c })}>
+                  hint={c.effects.length > 0 && !c.recruited && !viewed.has(`board:${c.id}`)}
+                  onClick={() => openDetail('board', c)}>
                   {renderAction('board', c, { round: true })}
                 </CrewPanel>
               )
@@ -419,7 +442,8 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity} frameAccent={SECTION_ROSTER}
                   bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
                   base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects}
-                  onClick={() => setDetail({ kind: 'roster', item: m })}>
+                  hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
+                  onClick={() => openDetail('roster', m)}>
                   {renderAction('roster', m, { round: true })}
                 </CrewPanel>
               ))}
