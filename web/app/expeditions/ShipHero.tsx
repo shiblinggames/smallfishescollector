@@ -291,6 +291,30 @@ export default function ShipHero({
     if (crew) startTransition(async () => { await assignCrew(crew.id, null) })
   }
 
+  // One round "on-deck" slot (filled portrait or empty dashed circle).
+  function deckSlot(i: number, size: number) {
+    const card = slots[i]
+    const isCaptain = i === 0
+    const rc = card ? (CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764') : '#6a6764'
+    const ring = card ? (isCaptain ? '#f0c040' : rc) : (isCaptain ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.34)')
+    if (card) {
+      return (
+        <div onClick={() => openPickerForSlot(i)} style={{ position: 'relative', width: size, height: size, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: `2px solid ${ring}`, boxShadow: `0 4px 7px rgba(0,0,0,0.6), 0 0 0 2px rgba(4,6,10,0.5)` }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
+          <button onClick={e => removeFromSlot(i, e)} aria-label="Remove crew" style={{ position: 'absolute', top: -2, right: -2, width: 16, height: 16, borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+            <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      )
+    }
+    return (
+      <button onClick={() => openPickerForSlot(i)} aria-label={isCaptain ? 'Assign captain' : 'Assign crew'} style={{ width: size, height: size, borderRadius: '50%', border: `1.5px dashed ${ring}`, background: 'rgba(6,10,16,0.5)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, boxShadow: '0 3px 6px rgba(0,0,0,0.4)' }}>
+        <svg width={size * 0.3} height={size * 0.3} viewBox="0 0 24 24" fill="none" stroke={isCaptain ? 'rgba(240,192,64,0.65)' : 'rgba(255,255,255,0.45)'} strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    )
+  }
+
   // Skin equip
   function handleEquipSkin(skinId: string | null) {
     setEquippedSkin(skinId)
@@ -429,46 +453,31 @@ export default function ShipHero({
               style={{ width: '100%', display: 'block', objectFit: 'contain', filter: skinFilter, transition: 'filter 0.3s ease' }}
             />
 
-            {/* Crew on the deck. `bottom` positions the row over the deck — tune
+            {/* Crew on the deck: captain at the helm (own row) with the rest of
+                the crew below. `bottom` positions the block over the deck — tune
                 this one value if it sits high/low on a given ship hull. */}
-            <div style={{ position: 'absolute', left: 0, right: 0, bottom: '21%', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 6, padding: '0 4px' }}>
-              {slots.map((card, i) => {
-                const isCaptain = i === 0
-                const rc = card ? (CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764') : '#6a6764'
-                const size = isCaptain ? 50 : 44
-                const ring = card ? (isCaptain ? '#f0c040' : rc) : (isCaptain ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.32)')
-                return (
-                  <div key={i} style={{ position: 'relative', transform: isCaptain ? 'translateY(-7px)' : 'none' }}>
-                    {isCaptain && (
-                      <div aria-hidden style={{ position: 'absolute', top: -9, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="#f0c040" stroke="#1a1206" strokeWidth="1.2" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))' }}>
-                          <path d="M5 17h14l1-9-5 3.5L12 5 9 11.5 4 8z" />
-                        </svg>
-                      </div>
-                    )}
-                    {card ? (
-                      <div
-                        onClick={() => openPickerForSlot(i)}
-                        style={{ position: 'relative', width: size, height: size, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: `2px solid ${ring}`, boxShadow: `0 4px 7px rgba(0,0,0,0.6), 0 0 0 2px rgba(4,6,10,0.5)` }}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
-                        <button onClick={e => removeFromSlot(i, e)} aria-label="Remove crew" style={{ position: 'absolute', top: -2, right: -2, width: 16, height: 16, borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
-                          <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => openPickerForSlot(i)}
-                        aria-label={isCaptain ? 'Assign captain' : 'Assign crew'}
-                        style={{ width: size, height: size, borderRadius: '50%', border: `1.5px dashed ${ring}`, background: 'rgba(6,10,16,0.5)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, boxShadow: '0 3px 6px rgba(0,0,0,0.4)' }}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isCaptain ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.45)'} strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                      </button>
-                    )}
+            <div style={{ position: 'absolute', left: 0, right: 0, bottom: '13%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 }}>
+              {/* Captain — own row, crowned + labelled */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <div style={{ position: 'relative' }}>
+                  <div aria-hidden style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="#f0c040" stroke="#1a1206" strokeWidth="1.2" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))' }}>
+                      <path d="M5 17h14l1-9-5 3.5L12 5 9 11.5 4 8z" />
+                    </svg>
                   </div>
-                )
-              })}
+                  {deckSlot(0, 54)}
+                </div>
+                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#f0c040', textShadow: '0 1px 3px rgba(0,0,0,0.95)' }}>Captain</span>
+              </div>
+
+              {/* Crew — row(s) below the captain */}
+              {slots.length > 1 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, maxWidth: '94%' }}>
+                  {slots.slice(1).map((_, idx) => (
+                    <div key={idx + 1}>{deckSlot(idx + 1, 44)}</div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -952,16 +961,15 @@ export default function ShipHero({
               </>)}
               </div>{/* end scrollable */}
             </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
-            {/* Crew picker — outside the motion.div to avoid CSS transform
-                stacking context. z-index 110 so it paints above the loadout
-                drawer (z:101); otherwise it opens behind the drawer and the
-                player can't reach it.
-                Positioning: explicit top + bottom hard-anchors the picker
-                so its header can never drift above the page Nav. Earlier
-                pattern (inset:0 + paddingTop) let the close button slip
-                off-screen on certain mobile viewport heights. */}
-            {sheetOpen && (
+      {/* Crew picker — opens from the deck slots OR the loadout drawer, so it
+          must live at the top level (not inside the loadout block) to render
+          whether or not the drawer is open. Fixed-positioned; z-index 110+
+          clears the page Nav and the drawer. */}
+      {sheetOpen && (
               <>
                 <div
                   onClick={closeSheet}
@@ -1032,9 +1040,6 @@ export default function ShipHero({
                 </div>
               </>
             )}
-          </>
-        )}
-      </AnimatePresence>
 
       {/* Score breakdown modal — opens when the player taps a score on the
           hero strip. Shows the actual formula with the player's numbers
