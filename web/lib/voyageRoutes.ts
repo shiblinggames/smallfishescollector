@@ -37,7 +37,9 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     color: '#f0c040',
     // payoutScale tuned 2026-05-20: 1.0 → 0.55 (target avg ~500 ⟡/voyage).
     payoutScale: 0.55,
-    crewLossScale: 0.25,
+    // crew-loss softened 2026-05-23 (0.25 → 0.10): these 4 routes are the
+    // early/mid band; real permadeath risk lives on future high-nav routes.
+    crewLossScale: 0.10,
     gemScale: 1.0,
     baseDoubloons: 120,
     minShipTier: 2,
@@ -49,7 +51,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     color: '#c084fc',
     // payoutScale tuned 2026-05-20: 1.5 → 0.65 (target avg ~800 ⟡/voyage).
     payoutScale: 0.65,
-    crewLossScale: 0.5,
+    crewLossScale: 0.20, // softened 2026-05-23 (0.5 → 0.20)
     gemScale: 1.5,
     baseDoubloons: 200,
     minShipTier: 2,
@@ -62,7 +64,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     // payoutScale tuned 2026-05-20: 2.2 → 1.0 (target avg ~1500 ⟡/voyage).
     // Real-data anchor showed ~2985 avg at the old 2.2× scale.
     payoutScale: 1.0,
-    crewLossScale: 1.0,
+    crewLossScale: 0.40, // softened 2026-05-23 (1.0 → 0.40)
     gemScale: 2.2,
     baseDoubloons: 380,
     minShipTier: 2,
