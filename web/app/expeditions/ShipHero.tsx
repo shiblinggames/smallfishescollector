@@ -484,29 +484,22 @@ export default function ShipHero({
             </div>
           </div>
 
-          {/* Actions — recruit crew, manage ship, upgrade ship (matched pills) */}
-          <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: '0.85rem' }}>
+          {/* Actions — recruit crew + manage ship (matched pills, no wrap) */}
+          <div style={{ position: 'relative', display: 'flex', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: '0.85rem' }}>
             <Link href="/packs" className="font-karla font-700 uppercase tracking-[0.06em]" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.85rem', fontSize: '0.66rem',
-              color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, textDecoration: 'none', cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.9rem', fontSize: '0.66rem',
+              color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
             }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
               Recruit
             </Link>
             <button onClick={() => setLoadoutOpen(true)} className="font-karla font-700 uppercase tracking-[0.06em]" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.85rem', fontSize: '0.66rem',
-              color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.9rem', fontSize: '0.66rem',
+              color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
             }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2"/><line x1="4" y1="13" x2="20" y2="13"/><circle cx="15" cy="13" r="2"/><line x1="4" y1="19" x2="20" y2="19"/><circle cx="9" cy="19" r="2"/></svg>
               Manage Ship
             </button>
-            <Link href="/marketplace/shipyard" className="font-karla font-700 uppercase tracking-[0.06em]" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.85rem', fontSize: '0.66rem',
-              color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, textDecoration: 'none', cursor: 'pointer',
-            }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-              Upgrade Ship
-            </Link>
           </div>
           {!hasCrew && (
             <p className="font-karla" style={{ position: 'relative', textAlign: 'center', fontSize: '0.68rem', color: '#5a5248', marginTop: '0.5rem' }}>Tap a slot on deck to add your crew.</p>
@@ -669,6 +662,24 @@ export default function ShipHero({
                   </button>
                 )}
               </div>
+
+              {/* Upgrade ship — moved off the hero; lives with the other
+                  ship-level actions here. */}
+              <Link
+                href="/marketplace/shipyard"
+                className="font-karla font-700 uppercase tracking-[0.08em]"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  padding: '0.7rem', borderRadius: 10, marginBottom: '1.4rem',
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)',
+                  color: '#dfe3e8', fontSize: '0.74rem', textDecoration: 'none',
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}>
+                  <path d="M12 19V5M5 12l7-7 7 7"/>
+                </svg>
+                Upgrade Ship
+              </Link>
 
               {/* ── Section tabs ── Items first (the key loadout call),
                   cosmetics (Skins) last. Subtle styling, no loud fill. */}
