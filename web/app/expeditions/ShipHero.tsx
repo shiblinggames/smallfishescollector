@@ -12,8 +12,8 @@ import { getRepairKit, repairKitRange } from '@/lib/repairKits'
 import { equipShipSkin, saveEquippedRaidItems } from './actions'
 import { assignCrew } from '@/app/dev/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
-import { applyCrewEffects } from '@/lib/crewEffects'
-import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
+import { applyCrewEffects, resolveEffects, effectSummary } from '@/lib/crewEffects'
+import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
 import { RAID_ITEMS, getRaidItem } from '@/lib/raidItems'
 import { renameShip } from '@/app/shipyard/actions'
 import { getXPProgress, getNavigatorTitle, navLevelBonuses } from '@/lib/expeditionLevel'
@@ -44,6 +44,88 @@ const RARITY_ITEM_COLOR: Record<string, string> = {
   rare:      '#60a5fa',
   epic:      '#a78bfa',
   legendary: '#f0c040',
+}
+
+// Crew picker card — mirrors the Crew Hall roster manifest (arched portrait,
+// name, rarity, engraved stats) and lists the crew's traits/abilities so the
+// player can compare loadouts before assigning. Whole card taps to assign.
+function PickerCrewCard({ card, onAssign }: { card: RosterCrew; onAssign: () => void }) {
+  const color = CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764'
+  const eff = applyCrewEffects({ power: card.power, dodge: card.dodge, fortune: card.fortune }, card.effects)
+  const traits = resolveEffects(card.effects)
+  const rarityName = RARITY_NAMES[card.rarity as 1 | 2 | 3 | 4] ?? 'Common'
+
+  return (
+    <div onClick={onAssign} style={{
+      position: 'relative', display: 'flex', gap: '0.7rem', padding: '0.7rem', borderRadius: 7,
+      background: 'linear-gradient(157deg, #1a2331 0%, #0a0f16 100%)',
+      border: '1px solid #324453',
+      boxShadow: 'inset 0 0 0 1px rgba(111,168,201,0.13), inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.5)',
+      cursor: 'pointer',
+    }}>
+      {/* Arched portrait niche */}
+      <div style={{
+        position: 'relative', width: 92, flexShrink: 0, alignSelf: 'flex-start', height: 104,
+        borderRadius: '42px 42px 5px 5px', overflow: 'hidden', border: `2px solid ${color}`,
+        boxShadow: `inset 0 -12px 20px rgba(0,0,0,0.65), 0 0 10px ${color}33`,
+        background: `radial-gradient(ellipse at 50% 30%, ${color}26 0%, #070504 74%)`,
+      }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={IMG_BASE + card.filename} alt={card.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 2 }} />
+        <div style={{ position: 'absolute', inset: 3, borderRadius: '40px 40px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
+        <div className="font-karla font-700" style={{
+          position: 'absolute', bottom: 5, left: '50%', transform: 'translateX(-50%)',
+          fontSize: '0.46rem', letterSpacing: '0.1em', textTransform: 'uppercase',
+          color, background: 'rgba(7,5,3,0.82)', border: `1px solid ${color}aa`,
+          padding: '0.1rem 0.4rem', borderRadius: 3, whiteSpace: 'nowrap',
+        }}>
+          {rarityName}
+        </div>
+      </div>
+
+      {/* Manifest detail */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <div>
+          <p className="font-pirata" style={{ fontSize: '1.12rem', color: '#ecdcbd', lineHeight: 1, letterSpacing: '0.02em' }}>{card.name}</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', textTransform: 'uppercase', color, marginTop: 3 }}>{rarityName} Crew</p>
+        </div>
+
+        {/* Engraved stats (effective) */}
+        <div style={{ display: 'flex', gap: 14, padding: '0.1rem 0' }}>
+          {STAT_COLS.map(s => (
+            <div key={s.key} style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', lineHeight: 1, color: s.color }}>{eff[s.key]}</span>
+              <span style={{ fontSize: '0.46rem', letterSpacing: '0.06em', color: '#6a7686' }}>{s.short}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Traits / abilities */}
+        {traits.length > 0 ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {traits.map(e => {
+              const buff = e.kind === 'buff'
+              const summary = effectSummary(e)
+              return (
+                <span key={e.id} className="font-karla font-700" title={e.desc} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.6rem',
+                  padding: '0.12rem 0.42rem', borderRadius: 5,
+                  background: buff ? 'rgba(60,180,110,0.12)' : 'rgba(200,70,70,0.12)',
+                  border: `1px solid ${buff ? 'rgba(80,200,130,0.32)' : 'rgba(220,90,90,0.32)'}`,
+                  color: buff ? '#bfe8cf' : '#f0bcbc',
+                }}>
+                  <span style={{ fontStyle: 'italic' }}>{e.name}</span>
+                  {summary && <span style={{ color: buff ? '#7fdfa3' : '#f08a8a' }}>{summary}</span>}
+                </span>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#5a6472' }}>No traits</p>
+        )}
+      </div>
+    </div>
+  )
 }
 
 interface Props {
@@ -946,28 +1028,10 @@ export default function ShipHero({
                     ) : pickerCards.length === 0 ? (
                       <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#4a4845', padding: '3rem 1rem' }}>All your crew are already aboard.</p>
                     ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.75rem' }}>
-                        {pickerCards.map(card => {
-                          const rc  = CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764'
-                          const eff = effStats(card)
-                          return (
-                            <div key={card.id} onClick={() => assignCard(card)} style={{ position: 'relative', width: '100%', borderRadius: 10, overflow: 'hidden', background: '#080a0e', border: `1.5px solid ${rc}55`, cursor: 'pointer' }}>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
-                              <div style={{ padding: '0.3rem 0.4rem 0.35rem', background: 'rgba(4,5,8,0.92)' }}>
-                                <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.52rem', color: '#f0ede8', lineHeight: 1.2, marginBottom: 5 }}>{card.name}</p>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  {STAT_COLS.map(s => (
-                                    <div key={s.key} style={{ textAlign: 'center' }}>
-                                      <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: s.color, lineHeight: 1 }}>{eff[s.key]}</p>
-                                      <p style={{ fontSize: '0.38rem', color: '#5a5858', lineHeight: 1, marginTop: 2 }}>{s.short}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
+                        {pickerCards.map(card => (
+                          <PickerCrewCard key={card.id} card={card} onAssign={() => assignCard(card)} />
+                        ))}
                       </div>
                     )}
                   </div>
