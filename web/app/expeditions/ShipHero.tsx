@@ -218,7 +218,7 @@ export default function ShipHero({
 
   // Loadout drawer section tab. Items first/default — it's the most
   // important loadout decision; cosmetics (skins) live last.
-  const [loadoutTab, setLoadoutTab] = useState<'items' | 'crew' | 'skins'>('items')
+  const [loadoutTab, setLoadoutTab] = useState<'items' | 'skins'>('items')
 
   // Ship name state
   const [shipName, setShipName] = useState(initialShipName)
@@ -398,66 +398,109 @@ export default function ShipHero({
           </div>
         )}
 
-        {/* Main content — ship left, info right */}
-        <div style={{ display: 'flex', alignItems: 'stretch' }}>
-          {/* Ship image — left column, fills height */}
-          <div style={{ width: '44%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.75rem 0.5rem 0.75rem 0.875rem' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={shipStats.image}
-              alt={shipName ?? shipStats.name}
-              style={{ width: '100%', maxWidth: 170, aspectRatio: '1/1', objectFit: 'contain', filter: skinFilter }}
-            />
-          </div>
-
-          {/* Info — right column */}
-          <div style={{ flex: 1, padding: '1rem 0.875rem 1rem 0.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.55rem', minWidth: 0 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#e0ddd8', lineHeight: 1.2 }}>
+        {/* Ship header — image + name + level / XP */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', padding: '1rem 1rem 0.85rem' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={shipStats.image}
+            alt={shipName ?? shipStats.name}
+            style={{ width: 92, height: 92, flexShrink: 0, objectFit: 'contain', filter: skinFilter }}
+          />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p className="font-cinzel font-700 truncate" style={{ fontSize: '1.35rem', color: '#f0ede8', lineHeight: 1.15 }}>
               {shipName ?? shipStats.name}
             </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: '#7090c0' }}>Lv {xpProgress.level}</p>
-                <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: '#5a7aaa', fontStyle: 'italic' }}>{getNavigatorTitle(xpProgress.level)}</p>
-              </div>
-              <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{ height: '100%', borderRadius: 3, width: `${xpProgress.progress * 100}%`, background: 'linear-gradient(90deg, #4a6090 0%, #7090c0 100%)' }} />
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: 5 }}>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#7da0d8' }}>Lv {xpProgress.level}</span>
+              <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#5a7aaa', fontStyle: 'italic' }}>{getNavigatorTitle(xpProgress.level)}</span>
             </div>
-
-            {hasCrew ? (
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.8rem' }}>
-                {/* Voyage Score — tap for breakdown */}
-                <button
-                  onClick={() => setBreakdownScore('voyage')}
-                  aria-label="Voyage Score breakdown"
-                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  <p className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#7090c0', marginBottom: 2 }}>Voyage Score</p>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0ede8', lineHeight: 1 }}>{voyageScore}</p>
-                    <span style={{ fontSize: '0.5rem', color: '#4a4845', lineHeight: 1 }}>ⓘ</span>
-                  </div>
-                </button>
-                <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', alignSelf: 'stretch', marginBottom: 3 }} />
-                {/* Raid Score — tap for breakdown */}
-                <button
-                  onClick={() => setBreakdownScore('raid')}
-                  aria-label="Raid Score breakdown"
-                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  <p className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#c8704a', marginBottom: 2 }}>Raid Score</p>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0ede8', lineHeight: 1 }}>{raidRating.total}</p>
-                    <span style={{ fontSize: '0.5rem', color: '#4a4845', lineHeight: 1 }}>ⓘ</span>
-                  </div>
-                </button>
-              </div>
-            ) : (
-              <p className="font-karla" style={{ fontSize: '0.65rem', color: '#5a5248' }}>No crew assigned</p>
-            )}
+            <div style={{ height: 5, background: 'rgba(255,255,255,0.07)', borderRadius: 3, overflow: 'hidden', marginTop: 8 }}>
+              <div style={{ height: '100%', borderRadius: 3, width: `${xpProgress.progress * 100}%`, background: 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)' }} />
+            </div>
           </div>
+        </div>
+
+        {/* Crew — assign right here, no drawer needed */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '0.85rem 1rem 0.95rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.74rem', color: '#9aa6b8' }}>
+              Your Crew <span style={{ color: '#e4e0d9' }}>{slots.filter(Boolean).length}/{slots.length}</span>
+            </p>
+            <Link href="/packs" className="font-karla font-700 uppercase tracking-[0.06em]" style={{
+              display: 'flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.85rem', fontSize: '0.68rem',
+              color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, textDecoration: 'none',
+            }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+              Recruit
+            </Link>
+          </div>
+          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            {slots.map((card, i) => {
+              const isCaptain = i === 0
+              const rc = card ? (CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764') : null
+              return (
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+                  {card ? (
+                    <>
+                      <div
+                        onClick={() => openPickerForSlot(i)}
+                        style={{ position: 'relative', width: 64, height: 64, borderRadius: 12, overflow: 'hidden', border: isCaptain ? '2px solid rgba(240,192,64,0.55)' : `1.5px solid ${rc}40`, cursor: 'pointer' }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
+                        {isCaptain && (
+                          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(10,8,4,0.85)', borderTop: '1px solid rgba(240,192,64,0.3)', textAlign: 'center', padding: '0.12rem 0' }}>
+                            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.46rem', color: '#f0c040' }}>Captain</span>
+                          </div>
+                        )}
+                        <button onClick={e => removeFromSlot(i, e)} style={{ position: 'absolute', top: 3, right: 3, width: 16, height: 16, borderRadius: '50%', background: 'rgba(0,0,0,0.72)', border: '1px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+                          <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </button>
+                      </div>
+                      <p className="font-karla font-600 truncate text-center" style={{ fontSize: '0.66rem', color: isCaptain ? '#e4c890' : '#b8b3ac', maxWidth: 64, lineHeight: 1.2 }}>{card.name}</p>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => openPickerForSlot(i)}
+                      style={{ width: 64, height: 64, borderRadius: 12, background: isCaptain ? 'rgba(240,192,64,0.03)' : 'rgba(255,255,255,0.02)', border: isCaptain ? '1.5px dashed rgba(240,192,64,0.18)' : '1.5px dashed rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', gap: 4, padding: 0 }}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={isCaptain ? 'rgba(240,192,64,0.22)' : 'rgba(255,255,255,0.12)'} strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                      <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: isCaptain ? '#b89040' : '#8a8580' }}>{isCaptain ? 'Captain' : 'Crew'}</p>
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          {!hasCrew && (
+            <p className="font-karla" style={{ fontSize: '0.68rem', color: '#5a5248', marginTop: '0.7rem' }}>Tap a slot to add your crew.</p>
+          )}
+        </div>
+
+        {/* Scores — big, tap a tile for the breakdown */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <button
+            onClick={() => setBreakdownScore('voyage')}
+            aria-label="Voyage Score breakdown"
+            style={{ background: 'none', border: 'none', borderRight: '1px solid rgba(255,255,255,0.06)', padding: '0.9rem 1rem', cursor: 'pointer', textAlign: 'left' }}
+          >
+            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: '#7da0d8', marginBottom: 4 }}>Voyage Score</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+              <span className="font-cinzel font-700" style={{ fontSize: '2.25rem', color: '#f0ede8', lineHeight: 1 }}>{voyageScore}</span>
+              <span style={{ fontSize: '0.62rem', color: '#5a5856' }}>ⓘ</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setBreakdownScore('raid')}
+            aria-label="Raid Score breakdown"
+            style={{ background: 'none', border: 'none', padding: '0.9rem 1rem', cursor: 'pointer', textAlign: 'left' }}
+          >
+            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: '#d88a6a', marginBottom: 4 }}>Raid Score</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+              <span className="font-cinzel font-700" style={{ fontSize: '2.25rem', color: '#f0ede8', lineHeight: 1 }}>{raidRating.total}</span>
+              <span style={{ fontSize: '0.62rem', color: '#5a5856' }}>ⓘ</span>
+            </div>
+          </button>
         </div>
 
         {/* Two clear CTAs: manage your crew (opens the loadout drawer,
@@ -649,7 +692,6 @@ export default function ShipHero({
               >
                 {([
                   ['items', 'Items'],
-                  ['crew', 'Crew'],
                   ['skins', 'Skins'],
                 ] as const).map(([id, label]) => {
                   const active = loadoutTab === id
@@ -674,85 +716,6 @@ export default function ShipHero({
                   )
                 })}
               </div>
-
-              {loadoutTab === 'crew' && (<>
-              {/* ── Crew ── */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', marginBottom: '0.7rem' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', letterSpacing: '0.04em' }}>Crew</p>
-                <Link
-                  href="/packs"
-                  className="font-cinzel font-700 uppercase tracking-[0.06em]"
-                  style={{
-                    flexShrink: 0,
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    padding: '0.5rem 0.9rem',
-                    fontSize: '0.72rem', color: '#9ec6ff',
-                    background: 'linear-gradient(180deg, rgba(96,165,250,0.16) 0%, rgba(96,165,250,0.04) 100%)',
-                    border: '1px solid rgba(96,165,250,0.4)',
-                    borderRadius: 999,
-                    textDecoration: 'none',
-                  }}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-                  Recruit Crew
-                </Link>
-              </div>
-              <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, overflow: 'hidden', marginBottom: '1.5rem' }}>
-                <div style={{ padding: '1rem', borderBottom: hasCrew ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
-                  <div style={{ display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
-                    {slots.map((card, i) => {
-                      const isCaptain = i === 0
-                      const rc = card ? (CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764') : null
-                      return (
-                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
-                          {card ? (
-                            <>
-                              <div
-                                onClick={() => openPickerForSlot(i)}
-                                style={{ position: 'relative', width: 64, height: 64, borderRadius: 12, overflow: 'hidden', border: isCaptain ? '2px solid rgba(240,192,64,0.55)' : `1.5px solid ${rc}40`, cursor: 'pointer' }}
-                              >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
-                                {isCaptain && (
-                                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(10,8,4,0.85)', borderTop: '1px solid rgba(240,192,64,0.3)', textAlign: 'center', padding: '0.12rem 0' }}>
-                                    <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.46rem', color: '#f0c040' }}>Captain</span>
-                                  </div>
-                                )}
-                                <button onClick={e => removeFromSlot(i, e)} style={{ position: 'absolute', top: 3, right: 3, width: 16, height: 16, borderRadius: '50%', background: 'rgba(0,0,0,0.72)', border: '1px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
-                                  <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                                </button>
-                              </div>
-                              <p className="font-karla font-600 truncate text-center" style={{ fontSize: '0.66rem', color: isCaptain ? '#e4c890' : '#b8b3ac', maxWidth: 64, lineHeight: 1.2 }}>{card.name}</p>
-                            </>
-                          ) : (
-                            <button
-                              onClick={() => openPickerForSlot(i)}
-                              style={{ width: 64, height: 64, borderRadius: 12, background: isCaptain ? 'rgba(240,192,64,0.03)' : 'rgba(255,255,255,0.02)', border: isCaptain ? '1.5px dashed rgba(240,192,64,0.18)' : '1.5px dashed rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', gap: 4, padding: 0 }}
-                            >
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={isCaptain ? 'rgba(240,192,64,0.22)' : 'rgba(255,255,255,0.12)'} strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                              <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: isCaptain ? '#b89040' : '#8a8580' }}>{isCaptain ? 'Captain' : 'Crew'}</p>
-                            </button>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-                {hasCrew && (
-                  <div style={{ padding: '0.85rem 1rem', display: 'flex', gap: '1.75rem' }}>
-                    {STAT_COLS.map(s => (
-                      <div key={s.key}>
-                        <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.66rem', color: '#9a9488', marginBottom: 2 }}>{s.short}</p>
-                        <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: s.color }}>
-                          {s.key === 'power' ? totalPower : s.key === 'dodge' ? totalDodge : totalFortune}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              </>)}
 
               {loadoutTab === 'skins' && (<>
               {/* ── Ship Skins ── grid layout (mirrors fishing GearScreen boat picker) */}
