@@ -133,16 +133,17 @@ export function computeTotalCrewStats(crew: CrewCard[]): TotalCrewStats {
 }
 
 // ── Voyage Score ──────────────────────────────────────────────────────────────
-// Predicts daily-voyage success rate. Anchored in the actual thresholds used
-// by voyageEvents.ts (rollPower: power/55 capped 0.80; rollFortune: 45;
-// rollDodge: 28). Returns a 0–100 number that reads as "% safe on hard
-// events" — a 100 crew passes every roll reliably.
+// A 0–100 readiness rating for the daily voyage. Total-investment model: it
+// scores the crew's overall (effect-adjusted) stat weight rather than averaging
+// three separate caps, so a concentrated affinity build counts as much as a
+// balanced one. Voyages favour navigation (dodge) + luck (fortune), so raw
+// power is weighted lighter — power-affinity crews pay off in raids instead.
+// Tuned to the current stat budgets so a strong end-game crew nears 100 and the
+// curve climbs across progression instead of saturating at mid-game.
 
 export function computeVoyageScore(power: number, dodge: number, fortune: number): number {
-  const powerRate   = Math.min(power   / 55, 0.80)
-  const fortuneRate = Math.min(fortune / 45, 1)
-  const dodgeRate   = Math.min(dodge   / 28, 1)
-  return Math.round(((powerRate + fortuneRate + dodgeRate) / 3) * 100)
+  const weighted = power * 0.6 + dodge + fortune
+  return Math.min(100, Math.round(weighted / 1.2))
 }
 
 // ── Combat Rating ─────────────────────────────────────────────────────────────
@@ -192,10 +193,13 @@ export function computeCombatRating(
   // Fortune doesn't affect raid crit (skill-based aim bar handles that), but
   // keeping it in the rating gives players a reason to balance the stat.
   // Crew "crit" effects (Keen Cutlass) add a flat chance on top.
-  const critRate = Math.min(totalFortune / 2, 50) / 100 + (raidMods?.critPct ?? 0) / 100
+  // Scaled to reachable crew totals (~80 focused / ~46 balanced) so fortune
+  // (crit) and dodge (effective HP) actually move the rating in mid-game, not
+  // just at unreachable highs.
+  const critRate = Math.min(totalFortune / 1.5, 50) / 100 + (raidMods?.critPct ?? 0) / 100
   const offense  = Math.round(avgHit * (1 + critRate))
 
-  const dodgeBoost = Math.min(totalDodge / 200, 0.5)
+  const dodgeBoost = Math.min(totalDodge / 120, 0.5)
   // damageTakenPct > 0 means the crew takes more damage (less effective HP).
   const takenMult  = Math.max(0.1, 1 - (raidMods?.damageTakenPct ?? 0) / 100)
   const defense    = Math.round(shipDurability * (1 + dodgeBoost) * takenMult)

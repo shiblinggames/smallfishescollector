@@ -3,7 +3,7 @@
 import { useState, useTransition, useCallback, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
-import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS, computeVoyageScore } from '@/lib/expeditions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
 import type { CrewMember } from '@/app/dev/crew/actions'
@@ -388,7 +388,7 @@ export default function DailyVoyagePanel({
                 {(() => {
                   const expeditionLevel = getLevelFromXP(expeditionXP)
                   const ROUTE_MIN_LEVELS: Record<VoyageRoute, number> = { coastal: 1, open: 5, deep: 15, triangle: 25 }
-                  const REC_SCORES: Record<VoyageRoute, number> = { coastal: 20, open: 20, deep: 40, triangle: 50 }
+                  const REC_SCORES: Record<VoyageRoute, number> = { coastal: 20, open: 40, deep: 60, triangle: 80 }
                   return (Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map(routeKey => {
                     const rco = ROUTE_CONFIGS[routeKey]
                     const node = ROUTE_NODES[routeKey]
@@ -500,9 +500,9 @@ export default function DailyVoyagePanel({
 
                       {/* Stats row */}
                       {stats && (() => {
-                        const REC: Record<string, number> = { coastal: 20, open: 20, deep: 40, triangle: 50 }
+                        const REC: Record<string, number> = { coastal: 20, open: 40, deep: 60, triangle: 80 }
                         const rec = REC[selectedRoute] ?? 0
-                        const crewScore = stats.power + stats.dodge + Math.round(stats.fortune * 0.5)
+                        const crewScore = computeVoyageScore(stats.power, stats.dodge, stats.fortune)
                         const met = crewScore >= rec
                         const close = !met && crewScore >= rec * 0.75
                         const scoreColor = met ? '#4ade80' : close ? '#f0c040' : '#f87171'
