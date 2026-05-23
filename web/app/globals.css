@@ -1185,6 +1185,33 @@ html, body {
 }
 .crew-seal-charging { animation: crew-seal-pulse 0.46s ease-in-out infinite; }
 
+/* ── Crew reveal: Epic / Legendary payoff ── */
+/* Shockwave rings emanating from a revealed card */
+@keyframes crew-shock {
+  0%   { transform: scale(0.35); opacity: 0.85; }
+  100% { transform: scale(3.4);  opacity: 0; }
+}
+/* Card "pop" — Legendary lunges forward harder than Epic */
+@keyframes crew-hero-pop {
+  0%   { transform: scale(0.86); }
+  42%  { transform: scale(1.16); }
+  70%  { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+.crew-hero-pop { animation: crew-hero-pop 0.72s cubic-bezier(0.18,1.1,0.4,1) both; }
+@keyframes crew-epic-pop {
+  0%   { transform: scale(0.94); }
+  50%  { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+.crew-epic-pop { animation: crew-epic-pop 0.5s ease-out both; }
+/* A bigger, longer gold flash for Legendary */
+@keyframes reveal-flash-grand { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
+.reveal-flash-legendary-grand {
+  background: radial-gradient(ellipse at center, rgba(255,238,180,0.9) 0%, rgba(255,205,70,0.55) 30%, rgba(255,130,0,0.2) 55%, transparent 78%);
+  animation: reveal-flash-grand 1.9s ease-out forwards;
+}
+
 /* ════════════════════════════════════════
    DIVINE EDITION  (GOD variant — Catfish / Doby Mick only)
    ════════════════════════════════════════ */

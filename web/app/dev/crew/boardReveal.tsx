@@ -3,8 +3,10 @@
 // In-place reveal for a gem reroll: the recruit board's own cards flip open
 // rather than a separate screen. Each new card's cell is covered by a sealed
 // dossier that rattles (wax seal glowing a rarity-tinted hint) then cracks into
-// a 3D flip, revealing the real CrewPanel with glow + flash + banner + particle
-// burst. Reveals are sequenced worst -> best so the rarest pull is the climax.
+// a 3D flip, revealing the real CrewPanel. Epic and Legendary land with a real
+// payoff: card pop, shockwave rings, particle burst, screen flash, and a banner
+// (Legendary much bigger than Epic). Reveals are sequenced worst -> best so the
+// rarest pull is the climax.
 
 import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode, type CSSProperties } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -15,14 +17,15 @@ export type Phase = 'sealed' | 'charging' | 'flipped'
 
 // Crew rarity (1 Common · 2 Rare · 3 Epic · 4 Legendary) → reveal effects.
 const GLOW: Record<number, string> = { 2: 'reveal-glow-rare', 3: 'reveal-glow-epic', 4: 'reveal-glow-legendary' }
-const FLASH: Record<number, string> = { 3: 'reveal-flash-epic', 4: 'reveal-flash-legendary' }
+const FLASH: Record<number, string> = { 3: 'reveal-flash-epic', 4: 'reveal-flash-legendary-grand' }
+const POP: Record<number, string> = { 3: 'crew-epic-pop', 4: 'crew-hero-pop' }
 const SEAL_GLOW: Record<number, string> = { 1: 'rgba(200,160,90,0.7)', 2: 'rgba(96,165,250,0.95)', 3: 'rgba(168,85,247,1)', 4: 'rgba(255,210,60,1)' }
-const CHARGE: Record<number, number> = { 1: 430, 2: 540, 3: 760, 4: 1080 }
+const CHARGE: Record<number, number> = { 1: 430, 2: 540, 3: 760, 4: 1180 }
 const FIRST_DELAY = 340
 const GAP = 240
 
 type Flash = { cls: string; key: number } | null
-type Banner = { label: string; color: string; key: number } | null
+type Banner = { name: string; rarity: number; color: string; key: number } | null
 
 // ── Reveal controller: phases per board-card id + flash/banner + sequence ────
 export function useReveal() {
@@ -35,7 +38,7 @@ export function useReveal() {
   useEffect(() => () => timers.current.forEach(clearTimeout), [])
   useEffect(() => {
     if (!banner) return
-    const t = setTimeout(() => setBanner(null), 1500)
+    const t = setTimeout(() => setBanner(null), banner.rarity >= 4 ? 2400 : 1600)
     return () => clearTimeout(t)
   }, [banner])
 
@@ -45,7 +48,7 @@ export function useReveal() {
     setPhases(p => ({ ...p, [c.id]: 'flipped' }))
     const fl = FLASH[c.rarity]
     if (fl) setFlash({ cls: fl, key: Date.now() + c.id })
-    if (c.rarity >= 3) setBanner({ label: `${RARITY_NAMES[c.rarity as CrewRarity]} Recruit!`, color: RARITY_COLORS[c.rarity as CrewRarity], key: Date.now() + c.id })
+    if (c.rarity >= 3) setBanner({ name: c.name, rarity: c.rarity, color: RARITY_COLORS[c.rarity as CrewRarity], key: Date.now() + c.id })
   }, [])
 
   const tapCard = useCallback((c: BoardCandidate) => { if (!done.current.has(c.id)) flip(c) }, [flip])
@@ -68,7 +71,7 @@ export function useReveal() {
       t += charge + GAP
     })
     // Return the board to plain panels once every effect has finished.
-    timers.current.push(setTimeout(() => setPhases({}), t + 3200))
+    timers.current.push(setTimeout(() => setPhases({}), t + 3400))
   }, [flip])
 
   return { phases, flash, banner, startReveal, tapCard }
@@ -81,6 +84,7 @@ export function BoardReveal({ card, phase, onTap, children }: {
   const flipped = phase === 'flipped'
   const charging = phase === 'charging'
   const glow = flipped ? (GLOW[card.rarity] ?? '') : ''
+  const pop = flipped ? (POP[card.rarity] ?? '') : ''
 
   return (
     <div style={{ position: 'relative', perspective: 1100 }}>
@@ -92,9 +96,12 @@ export function BoardReveal({ card, phase, onTap, children }: {
         transition={{ duration: 0.34, ease: 'easeOut' }}
         style={{ transformOrigin: 'center', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
       >
-        {children}
-        {flipped && card.rarity >= 3 && <ParticleBurst rarity={card.rarity} />}
+        <div className={pop}>{children}</div>
       </motion.div>
+
+      {/* Payoff effects (Epic/Legendary), emanating from the card centre */}
+      {flipped && card.rarity >= 3 && <ShockRings rarity={card.rarity} />}
+      {flipped && card.rarity >= 3 && <ParticleBurst rarity={card.rarity} />}
 
       {/* Sealed dossier cover — rattles, then flips away */}
       <AnimatePresence>
@@ -105,7 +112,7 @@ export function BoardReveal({ card, phase, onTap, children }: {
             exit={{ rotateY: 90, opacity: 0 }}
             transition={{ duration: 0.34, ease: 'easeIn' }}
             onClick={onTap}
-            style={{ position: 'absolute', inset: 0, zIndex: 2, transformOrigin: 'center', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', cursor: 'pointer' }}
+            style={{ position: 'absolute', inset: 0, zIndex: 6, transformOrigin: 'center', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', cursor: 'pointer' }}
           >
             <motion.div
               animate={charging
@@ -149,44 +156,74 @@ export function RevealFlash({ flash }: { flash: Flash }) {
   )
 }
 
-// ── Centered rarity banner ───────────────────────────────────────────────────
+// ── Rarity banner — Legendary gets a far grander treatment than Epic ─────────
 export function RevealBanner({ banner }: { banner: Banner }) {
+  const legendary = (banner?.rarity ?? 0) >= 4
   return (
     <AnimatePresence>
       {banner && (
         <motion.div
           key={banner.key}
-          initial={{ opacity: 0, scale: 0.8, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-          style={{ position: 'fixed', top: '20%', left: 0, right: 0, textAlign: 'center', zIndex: 120, pointerEvents: 'none' }}
+          initial={{ opacity: 0, scale: legendary ? 0.6 : 0.8, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ duration: legendary ? 0.45 : 0.3, ease: legendary ? [0.16, 1.25, 0.3, 1] : 'easeOut' }}
+          style={{ position: 'fixed', top: legendary ? '15%' : '20%', left: 0, right: 0, textAlign: 'center', zIndex: 120, pointerEvents: 'none' }}
         >
-          <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: banner.color, textShadow: `0 0 18px ${banner.color}aa` }}>
-            {banner.label}
-          </p>
+          {legendary ? (
+            <>
+              <p className="font-pirata" style={{ fontSize: '2.5rem', letterSpacing: '0.06em', lineHeight: 1, color: banner.color, textShadow: `0 0 28px ${banner.color}, 0 0 64px ${banner.color}99` }}>Legendary!</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#ecdcbd', marginTop: 8, textShadow: '0 2px 12px rgba(0,0,0,0.85)' }}>{banner.name}</p>
+            </>
+          ) : (
+            <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: banner.color, textShadow: `0 0 18px ${banner.color}aa` }}>
+              {banner.name} · Epic Recruit!
+            </p>
+          )}
         </motion.div>
       )}
     </AnimatePresence>
   )
 }
 
-// ── Embers/sparks for Epic (violet) / Legendary (gold) ───────────────────────
+// ── Shockwave rings — one violet ring for Epic, three gold for Legendary ─────
+function ShockRings({ rarity }: { rarity: number }) {
+  const big = rarity >= 4
+  const color = big ? '#ffd23c' : '#c084fc'
+  const base = big ? 92 : 60
+  const delays = big ? [0.36, 0.5, 0.64] : [0.4]
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 4, overflow: 'visible' }}>
+      {delays.map((d, i) => (
+        <span key={i} style={{
+          position: 'absolute', left: '50%', top: '50%', width: base, height: base, marginLeft: -base / 2, marginTop: -base / 2,
+          borderRadius: '50%', border: `2px solid ${color}`, boxShadow: `0 0 12px ${color}88`,
+          animation: `crew-shock 1.1s ${d}s ease-out both`,
+        }} />
+      ))}
+    </div>
+  )
+}
+
+// ── Embers/sparks — a modest violet pop for Epic, a gold storm for Legendary ─
 function ParticleBurst({ rarity }: { rarity: number }) {
   const particles = useMemo(() => {
-    const colors = rarity >= 4
+    const big = rarity >= 4
+    const colors = big
       ? ['#ffe48a', '#ffd23c', '#ffb800', '#fff3c0']
       : ['#e9d5ff', '#c084fc', '#a855f7', '#d8b4fe']
-    const count = rarity >= 4 ? 26 : 16
+    const count = big ? 50 : 24
     return Array.from({ length: count }, (_, i) => {
       const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.55
-      const dist = 44 + Math.random() * (rarity >= 4 ? 92 : 60)
+      const dist = 44 + Math.random() * (big ? 150 : 72)
       return {
         id: i,
         x: Math.cos(angle) * dist,
-        y: Math.sin(angle) * dist - 10,
-        size: 3 + Math.random() * (rarity >= 4 ? 5 : 3.5),
+        y: Math.sin(angle) * dist - (big ? 16 : 10),
+        size: 3 + Math.random() * (big ? 6 : 4),
         color: colors[i % colors.length],
-        delay: Math.random() * 0.1,
-        dur: 0.7 + Math.random() * 0.5,
+        delay: Math.random() * (big ? 0.16 : 0.1),
+        dur: 0.7 + Math.random() * (big ? 0.7 : 0.5),
       }
     })
   }, [rarity])
