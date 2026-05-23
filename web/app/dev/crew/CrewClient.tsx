@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition, type ReactNode } from 'react'
+import { useState, useEffect, useRef, useTransition, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew,
@@ -224,8 +224,11 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const [err, setErr] = useState<string | null>(null)
   const [detail, setDetail] = useState<{ kind: 'board' | 'roster'; item: BoardCandidate | CrewMember } | null>(null)
   const reveal = useReveal()
+  const crewSectionRef = useRef<HTMLDivElement>(null)
 
   const rosterFull = state.roster.length >= state.capacity
+
+  const scrollToCrew = () => crewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
   function run(action: () => Promise<CrewActionResult>, id: number | 'reroll', onDone?: () => void) {
     setErr(null)
@@ -327,7 +330,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           <div className="flex items-center gap-2 flex-wrap">
             <Stat label="Gems" value={`💎 ${state.gems.toLocaleString()}`} />
             <Stat label="Nav Level" value={String(state.navLevel)} />
-            <Stat label="Roster" value={`${state.roster.length} / ${state.capacity}`} accent={rosterFull ? '#f08a8a' : '#5fd38a'} />
+            <Stat label="Roster ↓" value={`${state.roster.length} / ${state.capacity}`} accent={rosterFull ? '#f08a8a' : '#5fd38a'} onClick={scrollToCrew} />
           </div>
         </div>
 
@@ -392,7 +395,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
         </div>
 
         {/* Roster — cool steel "your manifest" region */}
-        <div style={{ borderRadius: 12, border: `1px solid ${SECTION_ROSTER}33`, background: `linear-gradient(180deg, ${SECTION_ROSTER}12 0%, rgba(0,0,0,0) 55%)`, padding: '0.85rem 0.85rem 1rem' }}>
+        <div ref={crewSectionRef} style={{ borderRadius: 12, border: `1px solid ${SECTION_ROSTER}33`, background: `linear-gradient(180deg, ${SECTION_ROSTER}12 0%, rgba(0,0,0,0) 55%)`, padding: '0.85rem 0.85rem 1rem', scrollMarginTop: 70 }}>
           <div className="flex items-center justify-between" style={{ marginBottom: '0.85rem' }}>
             <div className="flex items-center gap-2.5">
               <span style={{ width: 4, alignSelf: 'stretch', minHeight: 30, borderRadius: 2, background: SECTION_ROSTER }} />
@@ -513,9 +516,19 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   )
 }
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: string }) {
+function Stat({ label, value, accent, onClick }: { label: string; value: string; accent?: string; onClick?: () => void }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 9, padding: '0.45rem 0.8rem', textAlign: 'center' }}>
+    <div
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } } : undefined}
+      style={{
+        background: 'rgba(255,255,255,0.05)', borderRadius: 9, padding: '0.45rem 0.8rem', textAlign: 'center',
+        border: `1px solid ${onClick ? 'rgba(95,211,138,0.3)' : 'rgba(255,255,255,0.1)'}`,
+        cursor: onClick ? 'pointer' : 'default',
+      }}
+    >
       <p className="font-cinzel font-700" style={{ fontSize: '1rem', lineHeight: 1.1, color: accent ?? '#f0ede8' }}>{value}</p>
       <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.55)', marginTop: 2 }}>{label}</p>
     </div>
