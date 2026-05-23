@@ -403,82 +403,95 @@ export default function ShipHero({
           </div>
         )}
 
-        {/* Ship header — image + name + level / XP */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', padding: '1rem 1rem 0.85rem' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={shipStats.image}
-            alt={shipName ?? shipStats.name}
-            style={{ width: 92, height: 92, flexShrink: 0, objectFit: 'contain', filter: skinFilter }}
-          />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="font-cinzel font-700 truncate" style={{ fontSize: '1.35rem', color: '#f0ede8', lineHeight: 1.15 }}>
+        {/* Ship hero — big centered ship with the crew standing on deck */}
+        <div style={{ position: 'relative', padding: '1.1rem 1rem 1rem' }}>
+          {/* Soft sea-glow backdrop for cohesion */}
+          <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 75% 60% at 50% 42%, rgba(60,110,180,0.16) 0%, rgba(10,16,28,0) 70%)' }} />
+
+          {/* Name + level */}
+          <div style={{ position: 'relative', textAlign: 'center' }}>
+            <p className="font-cinzel font-700 truncate" style={{ fontSize: '1.5rem', color: '#f0ede8', lineHeight: 1.1 }}>
               {shipName ?? shipStats.name}
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: 5 }}>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#7da0d8' }}>Lv {xpProgress.level}</span>
-              <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#5a7aaa', fontStyle: 'italic' }}>{getNavigatorTitle(xpProgress.level)}</span>
-            </div>
-            <div style={{ height: 5, background: 'rgba(255,255,255,0.07)', borderRadius: 3, overflow: 'hidden', marginTop: 8 }}>
-              <div style={{ height: '100%', borderRadius: 3, width: `${xpProgress.progress * 100}%`, background: 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)' }} />
-            </div>
-          </div>
-        </div>
-
-        {/* Crew — assign right here, no drawer needed */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '0.85rem 1rem 0.95rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.74rem', color: '#9aa6b8' }}>
-              Your Crew <span style={{ color: '#e4e0d9' }}>{slots.filter(Boolean).length}/{slots.length}</span>
+            <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#7da0d8', marginTop: 4 }}>
+              <span className="font-cinzel font-700">Lv {xpProgress.level}</span>
+              <span style={{ color: '#4a5e7a' }}> · </span>
+              <span style={{ fontStyle: 'italic', color: '#6a8ab8' }}>{getNavigatorTitle(xpProgress.level)}</span>
             </p>
-            <Link href="/packs" className="font-karla font-700 uppercase tracking-[0.06em]" style={{
-              display: 'flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.85rem', fontSize: '0.68rem',
-              color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, textDecoration: 'none',
-            }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-              Recruit
-            </Link>
           </div>
-          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-            {slots.map((card, i) => {
-              const isCaptain = i === 0
-              const rc = card ? (CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764') : null
-              return (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
-                  {card ? (
-                    <>
+
+          {/* Ship + crew-on-deck overlay */}
+          <div style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '0.4rem auto 0' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={shipStats.image}
+              alt={shipName ?? shipStats.name}
+              style={{ width: '100%', display: 'block', objectFit: 'contain', filter: skinFilter, transition: 'filter 0.3s ease' }}
+            />
+
+            {/* Crew on the deck. `bottom` positions the row over the deck — tune
+                this one value if it sits high/low on a given ship hull. */}
+            <div style={{ position: 'absolute', left: 0, right: 0, bottom: '21%', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 6, padding: '0 4px' }}>
+              {slots.map((card, i) => {
+                const isCaptain = i === 0
+                const rc = card ? (CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764') : '#6a6764'
+                const size = isCaptain ? 50 : 44
+                const ring = card ? (isCaptain ? '#f0c040' : rc) : (isCaptain ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.32)')
+                return (
+                  <div key={i} style={{ position: 'relative', transform: isCaptain ? 'translateY(-7px)' : 'none' }}>
+                    {isCaptain && (
+                      <div aria-hidden style={{ position: 'absolute', top: -9, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="#f0c040" stroke="#1a1206" strokeWidth="1.2" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))' }}>
+                          <path d="M5 17h14l1-9-5 3.5L12 5 9 11.5 4 8z" />
+                        </svg>
+                      </div>
+                    )}
+                    {card ? (
                       <div
                         onClick={() => openPickerForSlot(i)}
-                        style={{ position: 'relative', width: 64, height: 64, borderRadius: 12, overflow: 'hidden', border: isCaptain ? '2px solid rgba(240,192,64,0.55)' : `1.5px solid ${rc}40`, cursor: 'pointer' }}
+                        style={{ position: 'relative', width: size, height: size, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: `2px solid ${ring}`, boxShadow: `0 4px 7px rgba(0,0,0,0.6), 0 0 0 2px rgba(4,6,10,0.5)` }}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
-                        {isCaptain && (
-                          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(10,8,4,0.85)', borderTop: '1px solid rgba(240,192,64,0.3)', textAlign: 'center', padding: '0.12rem 0' }}>
-                            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.46rem', color: '#f0c040' }}>Captain</span>
-                          </div>
-                        )}
-                        <button onClick={e => removeFromSlot(i, e)} style={{ position: 'absolute', top: 3, right: 3, width: 16, height: 16, borderRadius: '50%', background: 'rgba(0,0,0,0.72)', border: '1px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
-                          <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        <button onClick={e => removeFromSlot(i, e)} aria-label="Remove crew" style={{ position: 'absolute', top: -2, right: -2, width: 16, height: 16, borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+                          <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                         </button>
                       </div>
-                      <p className="font-karla font-600 truncate text-center" style={{ fontSize: '0.66rem', color: isCaptain ? '#e4c890' : '#b8b3ac', maxWidth: 64, lineHeight: 1.2 }}>{card.name}</p>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => openPickerForSlot(i)}
-                      style={{ width: 64, height: 64, borderRadius: 12, background: isCaptain ? 'rgba(240,192,64,0.03)' : 'rgba(255,255,255,0.02)', border: isCaptain ? '1.5px dashed rgba(240,192,64,0.18)' : '1.5px dashed rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', gap: 4, padding: 0 }}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={isCaptain ? 'rgba(240,192,64,0.22)' : 'rgba(255,255,255,0.12)'} strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                      <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: isCaptain ? '#b89040' : '#8a8580' }}>{isCaptain ? 'Captain' : 'Crew'}</p>
-                    </button>
-                  )}
-                </div>
-              )
-            })}
+                    ) : (
+                      <button
+                        onClick={() => openPickerForSlot(i)}
+                        aria-label={isCaptain ? 'Assign captain' : 'Assign crew'}
+                        style={{ width: size, height: size, borderRadius: '50%', border: `1.5px dashed ${ring}`, background: 'rgba(6,10,16,0.5)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, boxShadow: '0 3px 6px rgba(0,0,0,0.4)' }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isCaptain ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.45)'} strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* XP bar */}
+          <div style={{ position: 'relative', maxWidth: 220, margin: '0.7rem auto 0', height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${xpProgress.progress * 100}%`, background: 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)', borderRadius: 3 }} />
+          </div>
+
+          {/* Crew count + recruit */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: '0.7rem' }}>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.66rem', color: '#9aa6b8' }}>
+              {slots.filter(Boolean).length}/{slots.length} crew aboard
+            </span>
+            <Link href="/packs" className="font-karla font-700 uppercase tracking-[0.06em]" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.34rem 0.75rem', fontSize: '0.64rem',
+              color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, textDecoration: 'none',
+            }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+              Recruit
+            </Link>
           </div>
           {!hasCrew && (
-            <p className="font-karla" style={{ fontSize: '0.68rem', color: '#5a5248', marginTop: '0.7rem' }}>Tap a slot to add your crew.</p>
+            <p className="font-karla" style={{ position: 'relative', textAlign: 'center', fontSize: '0.68rem', color: '#5a5248', marginTop: '0.5rem' }}>Tap a slot on deck to add your crew.</p>
           )}
         </div>
 
