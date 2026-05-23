@@ -321,7 +321,6 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-pirata" style={{ fontSize: '1.7rem', letterSpacing: '0.03em' }}>Crew Hall</h1>
-              <span className="font-karla font-700" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: '#0b0a0e', background: '#c084fc', padding: '0.15rem 0.4rem', borderRadius: 4 }}>TEST</span>
             </div>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>
               Recruit crew daily, reroll the board with gems, build your roster.
