@@ -158,6 +158,49 @@ export default function RerollReveal({ cards, onClose }: { cards: BoardCandidate
   )
 }
 
+// Embers/sparks that erupt from a card on an Epic/Legendary reveal. Gold for
+// Legendary, violet for Epic. Pointer-events off so it never eats a tap.
+function ParticleBurst({ rarity }: { rarity: number }) {
+  const particles = useMemo(() => {
+    const colors = rarity >= 4
+      ? ['#ffe48a', '#ffd23c', '#ffb800', '#fff3c0']
+      : ['#e9d5ff', '#c084fc', '#a855f7', '#d8b4fe']
+    const count = rarity >= 4 ? 26 : 16
+    return Array.from({ length: count }, (_, i) => {
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.55
+      const dist = 44 + Math.random() * (rarity >= 4 ? 92 : 60)
+      return {
+        id: i,
+        x: Math.cos(angle) * dist,
+        y: Math.sin(angle) * dist - 10, // slight upward bias, like embers
+        size: 3 + Math.random() * (rarity >= 4 ? 5 : 3.5),
+        color: colors[i % colors.length],
+        delay: 0.36 + Math.random() * 0.12, // fire as the face turns past 90deg
+        dur: 0.7 + Math.random() * 0.5,
+      }
+    })
+  }, [rarity])
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5, overflow: 'visible' }}>
+      {particles.map(p => (
+        <motion.span
+          key={p.id}
+          initial={{ x: 0, y: 0, scale: 0.3, opacity: 0 }}
+          animate={{ x: p.x, y: p.y, scale: [0.3, 1, 0.55], opacity: [0, 1, 0] }}
+          transition={{ duration: p.dur, delay: p.delay, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', left: '50%', top: '50%',
+            width: p.size, height: p.size, marginLeft: -p.size / 2, marginTop: -p.size / 2,
+            borderRadius: '50%', background: p.color,
+            boxShadow: `0 0 6px ${p.color}, 0 0 12px ${p.color}88`,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
 function RevealCard({ card, phase, onTap }: { card: BoardCandidate; phase: Phase; onTap: () => void }) {
   const color = RARITY_COLORS[(card.rarity as CrewRarity)] ?? '#8a857c'
   const eff = applyCrewEffects({ power: card.power, dodge: card.dodge, fortune: card.fortune }, card.effects)
@@ -173,6 +216,9 @@ function RevealCard({ card, phase, onTap }: { card: BoardCandidate; phase: Phase
       onClick={() => { if (!flipped) onTap() }}
       style={{ width: 132, height: 196, cursor: flipped ? 'default' : 'pointer' }}
     >
+      {/* Particle burst on Epic/Legendary reveal — bursts as the face turns up */}
+      {flipped && card.rarity >= 3 && <ParticleBurst rarity={card.rarity} />}
+
       <div className="flip-card-inner">
         {/* Sealed front (recruit dossier back) */}
         <div className="flip-card-front" style={{
