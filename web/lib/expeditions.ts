@@ -133,17 +133,20 @@ export function computeTotalCrewStats(crew: CrewCard[]): TotalCrewStats {
 }
 
 // ── Voyage Score ──────────────────────────────────────────────────────────────
-// A 0–100 readiness rating for the daily voyage. Total-investment model: it
-// scores the crew's overall (effect-adjusted) stat weight rather than averaging
-// three separate caps, so a concentrated affinity build counts as much as a
-// balanced one. Voyages favour navigation (dodge) + luck (fortune), so raw
-// power is weighted lighter — power-affinity crews pay off in raids instead.
-// Tuned to the current stat budgets so a strong end-game crew nears 100 and the
-// curve climbs across progression instead of saturating at mid-game.
+// A 0–100 readiness rating that mirrors how the voyage engine actually resolves
+// events: each event type is decided by a SINGLE stat roll — encounter = power/55
+// (capped 0.80), discovery = fortune/45, danger = dodge/28. Averaging the three
+// rates gives the expected success rate across event types. Because each rate
+// caps at its own threshold, only a strong, well-rounded crew nears 100; a crew
+// that dumps one stat fails that event type, exactly as the engine plays out.
+// (Routes weight these event types differently — coastal leans fortune, triangle
+// leans power+dodge — so this is a generic readiness gauge, not per-route.)
 
 export function computeVoyageScore(power: number, dodge: number, fortune: number): number {
-  const weighted = power * 0.6 + dodge + fortune
-  return Math.min(100, Math.round(weighted / 1.2))
+  const powerRate   = Math.min(power   / 55, 0.80)
+  const fortuneRate = Math.min(fortune / 45, 1)
+  const dodgeRate   = Math.min(dodge   / 28, 1)
+  return Math.round(((powerRate + fortuneRate + dodgeRate) / 3) * 100)
 }
 
 // ── Combat Rating ─────────────────────────────────────────────────────────────
@@ -190,19 +193,18 @@ export function computeCombatRating(
 ): CombatRating {
   const { hitMin, powerMax } = raidDamageProfile(totalPower, shipMinDamage, raidMods?.damagePct ?? 0)
   const avgHit   = (hitMin + powerMax) / 2
-  // Fortune doesn't affect raid crit (skill-based aim bar handles that), but
-  // keeping it in the rating gives players a reason to balance the stat.
-  // Crew "crit" effects (Keen Cutlass) add a flat chance on top.
-  // Scaled to reachable crew totals (~80 focused / ~46 balanced) so fortune
-  // (crit) and dodge (effective HP) actually move the rating in mid-game, not
-  // just at unreachable highs.
-  const critRate = Math.min(totalFortune / 1.5, 50) / 100 + (raidMods?.critPct ?? 0) / 100
+  // Offense = Power (shot damage) + crew crit effects (Keen Cutlass). Raid crit
+  // itself is the skill aim-bar, not a stat, so Fortune is NOT credited as crit.
+  const critRate = (raidMods?.critPct ?? 0) / 100
   const offense  = Math.round(avgHit * (1 + critRate))
 
+  // Dodge is the real secondary: in live combat it buys turn order, action speed
+  // and dodge success — modelled as effective HP (scaled to reachable totals so
+  // it matters mid-game). Fortune is utility in raids (repair-kit heals + loot),
+  // so it folds in as a small sustain nudge, not raw combat power.
   const dodgeBoost = Math.min(totalDodge / 120, 0.5)
-  // damageTakenPct > 0 means the crew takes more damage (less effective HP).
   const takenMult  = Math.max(0.1, 1 - (raidMods?.damageTakenPct ?? 0) / 100)
-  const defense    = Math.round(shipDurability * (1 + dodgeBoost) * takenMult)
+  const defense    = Math.round(shipDurability * (1 + dodgeBoost) * takenMult) + Math.round(totalFortune * 0.25)
 
   return {
     offense,

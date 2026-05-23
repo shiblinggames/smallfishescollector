@@ -1214,8 +1214,8 @@ function RaidScoreBreakdown({
         </div>
         <p className="font-karla" style={{ fontSize: '0.84rem', color: '#cbb4ad', lineHeight: 1.5 }}>
           The damage you deal. Grows with your crew&apos;s{' '}
-          <span style={{ color: '#f0ede8', fontWeight: 600 }}>Power</span>, with extra
-          punch from <span style={{ color: '#f0ede8', fontWeight: 600 }}>Fortune</span> (critical hits).
+          <span style={{ color: '#f0ede8', fontWeight: 600 }}>Power</span>, plus crit
+          from raid traits like Keen Cutlass.
         </p>
       </div>
 
@@ -1227,8 +1227,9 @@ function RaidScoreBreakdown({
         </div>
         <p className="font-karla" style={{ fontSize: '0.84rem', color: '#aebfd4', lineHeight: 1.5 }}>
           How much of a beating you can take. Grows with your ship&apos;s{' '}
-          <span style={{ color: '#f0ede8', fontWeight: 600 }}>HP</span>, plus{' '}
-          <span style={{ color: '#f0ede8', fontWeight: 600 }}>Nav</span> to dodge incoming hits.
+          <span style={{ color: '#f0ede8', fontWeight: 600 }}>HP</span> and{' '}
+          <span style={{ color: '#f0ede8', fontWeight: 600 }}>Nav</span> (dodge incoming hits),
+          with a little sustain from <span style={{ color: '#f0ede8', fontWeight: 600 }}>Fortune</span> (repair kits).
         </p>
       </div>
 
