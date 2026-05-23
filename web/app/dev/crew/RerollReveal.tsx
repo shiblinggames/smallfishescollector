@@ -1,10 +1,11 @@
 'use client'
 
 // Full-screen reveal for a gem reroll: the three new recruits arrive sealed,
-// then flip one by one with rarity glow + a screen flash for the good ones, so
-// rerolling carries the same anticipation pack-opening used to.
+// then each builds anticipation (the notice rattles, the wax seal glows brighter
+// with a rarity hint) before it cracks open. The rarest pull is sequenced LAST
+// so the tension climbs to a climax — the same payoff pack-opening had.
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { BoardCandidate } from './actions'
 import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
@@ -22,41 +23,64 @@ const STAT = [
 // Crew rarity (1 Common · 2 Rare · 3 Epic · 4 Legendary) → reveal effects.
 const GLOW: Record<number, string> = { 2: 'reveal-glow-rare', 3: 'reveal-glow-epic', 4: 'reveal-glow-legendary' }
 const FLASH: Record<number, string> = { 3: 'reveal-flash-epic', 4: 'reveal-flash-legendary' }
+// Wax-seal glow during the charge — colour is the rarity "tell".
+const SEAL_GLOW: Record<number, string> = {
+  1: 'rgba(200,160,90,0.7)', 2: 'rgba(96,165,250,0.95)', 3: 'rgba(168,85,247,1)', 4: 'rgba(255,210,60,1)',
+}
+// Longer charge for rarer cards so the build-up itself hints at the payoff.
+const CHARGE: Record<number, number> = { 1: 430, 2: 540, 3: 760, 4: 1080 }
 
-const FIRST_DELAY = 550
-const STAGGER = 850
+const FIRST_DELAY = 500
+const GAP = 240
+
+type Phase = 'sealed' | 'charging' | 'flipped'
 
 export default function RerollReveal({ cards, onClose }: { cards: BoardCandidate[]; onClose: () => void }) {
-  const [flipped, setFlipped] = useState<boolean[]>(() => cards.map(() => false))
+  const [phases, setPhases] = useState<Phase[]>(() => cards.map(() => 'sealed'))
   const [flash, setFlash] = useState<{ cls: string; key: number } | null>(null)
   const [banner, setBanner] = useState<{ label: string; color: string; key: number } | null>(null)
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
+  const done = useRef<Set<number>>(new Set())
 
-  const allFlipped = flipped.every(Boolean)
+  // Reveal worst → best, so the rarest crew is the climactic final flip. Ties
+  // keep board order.
+  const order = useMemo(
+    () => cards.map((_, i) => i).sort((a, b) => cards[a].rarity - cards[b].rarity),
+    [cards],
+  )
 
-  const reveal = useCallback((i: number) => {
-    setFlipped(prev => {
-      if (prev[i]) return prev
-      const n = [...prev]; n[i] = true; return n
-    })
+  const allFlipped = phases.every(p => p === 'flipped')
+
+  const startCharge = useCallback((i: number) => {
+    setPhases(prev => (prev[i] === 'sealed' ? prev.map((p, j) => (j === i ? 'charging' : p)) : prev))
+  }, [])
+
+  const flip = useCallback((i: number) => {
+    if (done.current.has(i)) return
+    done.current.add(i)
+    setPhases(prev => prev.map((p, j) => (j === i ? 'flipped' : p)))
     const c = cards[i]
     if (!c) return
     const fl = FLASH[c.rarity]
     if (fl) setFlash({ cls: fl, key: Date.now() + i })
     if (c.rarity >= 3) {
-      const color = RARITY_COLORS[c.rarity as CrewRarity]
-      setBanner({ label: `${RARITY_NAMES[c.rarity as CrewRarity]} Recruit!`, color, key: Date.now() + i })
+      setBanner({ label: `${RARITY_NAMES[c.rarity as CrewRarity]} Recruit!`, color: RARITY_COLORS[c.rarity as CrewRarity], key: Date.now() + i })
     }
   }, [cards])
 
-  // Auto-reveal in sequence; tapping a sealed card flips it early.
+  // Schedule the charge → flip sequence in rarest-last order.
   useEffect(() => {
-    cards.forEach((_, i) => {
-      timers.current.push(setTimeout(() => reveal(i), FIRST_DELAY + i * STAGGER))
+    let t = FIRST_DELAY
+    order.forEach((idx, pos) => {
+      const isLast = pos === order.length - 1
+      const charge = CHARGE[cards[idx].rarity] + (isLast ? 320 : 0)
+      timers.current.push(setTimeout(() => startCharge(idx), t))
+      timers.current.push(setTimeout(() => flip(idx), t + charge))
+      t += charge + GAP
     })
-    const t = timers.current
-    return () => t.forEach(clearTimeout)
-  }, [cards, reveal])
+    const list = timers.current
+    return () => list.forEach(clearTimeout)
+  }, [order, cards, startCharge, flip])
 
   // Fade the rarity banner out after it lands.
   useEffect(() => {
@@ -64,6 +88,9 @@ export default function RerollReveal({ cards, onClose }: { cards: BoardCandidate
     const t = setTimeout(() => setBanner(null), 1500)
     return () => clearTimeout(t)
   }, [banner])
+
+  // Tap a sealed/charging notice to crack it early.
+  const tap = useCallback((i: number) => { if (!done.current.has(i)) flip(i) }, [flip])
 
   return (
     <motion.div
@@ -105,7 +132,7 @@ export default function RerollReveal({ cards, onClose }: { cards: BoardCandidate
       {/* The three sealed → revealed notices */}
       <div style={{ position: 'relative', zIndex: 2, display: 'flex', gap: '0.7rem', flexWrap: 'wrap', justifyContent: 'center' }}>
         {cards.map((c, i) => (
-          <RevealCard key={c.id} card={c} flipped={flipped[i]} onTap={() => reveal(i)} />
+          <RevealCard key={c.id} card={c} phase={phases[i]} onTap={() => tap(i)} />
         ))}
       </div>
 
@@ -131,14 +158,18 @@ export default function RerollReveal({ cards, onClose }: { cards: BoardCandidate
   )
 }
 
-function RevealCard({ card, flipped, onTap }: { card: BoardCandidate; flipped: boolean; onTap: () => void }) {
+function RevealCard({ card, phase, onTap }: { card: BoardCandidate; phase: Phase; onTap: () => void }) {
   const color = RARITY_COLORS[(card.rarity as CrewRarity)] ?? '#8a857c'
   const eff = applyCrewEffects({ power: card.power, dodge: card.dodge, fortune: card.fortune }, card.effects)
+  const flipped = phase === 'flipped'
+  const charging = phase === 'charging'
   const glow = flipped ? (GLOW[card.rarity] ?? '') : ''
+  // Legendary rattles harder during its (longer) charge.
+  const shake = charging ? (card.rarity >= 4 ? 'crew-charge-strong' : 'crew-charge') : ''
 
   return (
     <div
-      className={`flip-card ${flipped ? 'flipped' : ''} ${glow}`}
+      className={`flip-card ${flipped ? 'flipped' : ''} ${shake} ${glow}`}
       onClick={() => { if (!flipped) onTap() }}
       style={{ width: 132, height: 196, cursor: flipped ? 'default' : 'pointer' }}
     >
@@ -150,13 +181,18 @@ function RevealCard({ card, flipped, onTap }: { card: BoardCandidate; flipped: b
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: 'inset 0 0 0 1px rgba(176,141,79,0.18), 0 6px 16px rgba(0,0,0,0.55)',
         }}>
-          {/* wax seal */}
-          <div style={{
-            width: 56, height: 56, borderRadius: '50%',
-            background: 'radial-gradient(circle at 38% 32%, #9a3b34 0%, #5e211c 70%)',
-            border: '2px solid rgba(0,0,0,0.35)', boxShadow: '0 2px 6px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.25)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
+          {/* wax seal — pulses brighter while charging, tinted by rarity */}
+          <div
+            className={charging ? 'crew-seal-charging' : ''}
+            style={{
+              width: 56, height: 56, borderRadius: '50%',
+              background: 'radial-gradient(circle at 38% 32%, #9a3b34 0%, #5e211c 70%)',
+              border: '2px solid rgba(0,0,0,0.35)',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              ['--seal-glow' as string]: SEAL_GLOW[card.rarity] ?? SEAL_GLOW[1],
+            } as React.CSSProperties}
+          >
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(255,225,190,0.85)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="5" r="2.5" /><line x1="12" y1="22" x2="12" y2="7.5" /><path d="M5 12H2a10 10 0 0 0 20 0h-3" />
             </svg>
