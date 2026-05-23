@@ -8,7 +8,7 @@ import {
 } from './actions'
 import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
 import { resolveEffects, applyCrewEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
-import RerollReveal from './RerollReveal'
+import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (filename: string) => `${SUPA}/storage/v1/object/public/card-arts/${filename}`
@@ -223,7 +223,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const [confirmDismiss, setConfirmDismiss] = useState<number | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [detail, setDetail] = useState<{ kind: 'board' | 'roster'; item: BoardCandidate | CrewMember } | null>(null)
-  const [revealCards, setRevealCards] = useState<BoardCandidate[] | null>(null)
+  const reveal = useReveal()
 
   const rosterFull = state.roster.length >= state.capacity
 
@@ -248,7 +248,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
     startTransition(async () => {
       const res = await rerollBoard()
       if ('error' in res) setErr(res.error)
-      else { setState(res.state); setRevealCards(res.state.board) }
+      else { setState(res.state); reveal.startReveal(res.state.board) }
       setBusyId(null)
     })
   }
@@ -372,13 +372,19 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
-            {state.board.map((c: BoardCandidate) => (
-              <CrewPanel key={c.id} name={c.name} filename={c.filename} rarity={c.rarity} frameAccent={SECTION_RECRUIT}
-                base={{ power: c.power, dodge: c.dodge, fortune: c.fortune }} effects={c.effects} dimmed={c.recruited}
-                onClick={() => setDetail({ kind: 'board', item: c })}>
-                {renderAction('board', c, { round: true })}
-              </CrewPanel>
-            ))}
+            {state.board.map((c: BoardCandidate) => {
+              const panel = (
+                <CrewPanel name={c.name} filename={c.filename} rarity={c.rarity} frameAccent={SECTION_RECRUIT}
+                  base={{ power: c.power, dodge: c.dodge, fortune: c.fortune }} effects={c.effects} dimmed={c.recruited}
+                  onClick={() => setDetail({ kind: 'board', item: c })}>
+                  {renderAction('board', c, { round: true })}
+                </CrewPanel>
+              )
+              const phase = reveal.phases[c.id]
+              return phase
+                ? <BoardReveal key={c.id} card={c} phase={phase} onTap={() => reveal.tapCard(c)}>{panel}</BoardReveal>
+                : <div key={c.id}>{panel}</div>
+            })}
             {state.board.length === 0 && (
               <p className="font-karla" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>No recruits on the board.</p>
             )}
@@ -420,10 +426,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
         </div>
       </div>
 
-      {/* Reroll reveal — new recruits flip in over the board */}
-      <AnimatePresence>
-        {revealCards && <RerollReveal cards={revealCards} onClose={() => setRevealCards(null)} />}
-      </AnimatePresence>
+      {/* Reroll reveal — the board's own cards flip open in place */}
+      <RevealFlash flash={reveal.flash} />
+      <RevealBanner banner={reveal.banner} />
 
       {/* Detail modal — full stat breakdown + traits, opened by tapping a card */}
       <AnimatePresence>
