@@ -12,7 +12,7 @@ import { getRepairKit, repairKitRange } from '@/lib/repairKits'
 import { equipShipSkin, saveEquippedRaidItems } from './actions'
 import { assignCrew } from '@/app/dev/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
-import { applyCrewEffects, resolveEffects, effectSummary } from '@/lib/crewEffects'
+import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
 import { RAID_ITEMS, getRaidItem } from '@/lib/raidItems'
 import { renameShip } from '@/app/shipyard/actions'
@@ -55,6 +55,10 @@ function PickerCrewCard({ card, onAssign }: { card: RosterCrew; onAssign: () => 
   const eff = applyCrewEffects({ power: card.power, dodge: card.dodge, fortune: card.fortune }, card.effects)
   const traits = resolveEffects(card.effects)
   const rarityName = RARITY_NAMES[card.rarity as 1 | 2 | 3 | 4] ?? 'Common'
+  // Tap a chip to expand its full description (mobile has no hover). Tapping the
+  // rest of the row still assigns.
+  const [openTrait, setOpenTrait] = useState<string | null>(null)
+  const expanded = openTrait ? traits.find(t => t.id === openTrait) : null
 
   return (
     <div onClick={onAssign} style={{
@@ -88,20 +92,27 @@ function PickerCrewCard({ card, onAssign }: { card: RosterCrew; onAssign: () => 
           </div>
         </div>
 
-        {/* Trait / ability chips */}
+        {/* Trait / ability chips — tap to expand the full description */}
         {traits.length > 0 ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
             {traits.map(e => {
               const buff = e.kind === 'buff'
               const summary = effectSummary(e)
+              const isOpen = openTrait === e.id
               return (
-                <span key={e.id} className="font-karla font-700" title={e.desc} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.56rem',
-                  padding: '0.08rem 0.35rem', borderRadius: 4,
-                  background: buff ? 'rgba(60,180,110,0.12)' : 'rgba(200,70,70,0.12)',
-                  border: `1px solid ${buff ? 'rgba(80,200,130,0.3)' : 'rgba(220,90,90,0.3)'}`,
-                  color: buff ? '#bfe8cf' : '#f0bcbc',
-                }}>
+                <span
+                  key={e.id}
+                  role="button"
+                  onClick={ev => { ev.stopPropagation(); setOpenTrait(isOpen ? null : e.id) }}
+                  className="font-karla font-700"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.56rem', cursor: 'pointer',
+                    padding: '0.08rem 0.35rem', borderRadius: 4,
+                    background: buff ? 'rgba(60,180,110,0.12)' : 'rgba(200,70,70,0.12)',
+                    border: `1px solid ${isOpen ? (buff ? 'rgba(80,200,130,0.7)' : 'rgba(220,90,90,0.7)') : (buff ? 'rgba(80,200,130,0.3)' : 'rgba(220,90,90,0.3)')}`,
+                    color: buff ? '#bfe8cf' : '#f0bcbc',
+                  }}
+                >
                   <span style={{ fontStyle: 'italic' }}>{e.name}</span>
                   {summary && <span style={{ color: buff ? '#7fdfa3' : '#f08a8a' }}>{summary}</span>}
                 </span>
@@ -110,6 +121,20 @@ function PickerCrewCard({ card, onAssign }: { card: RosterCrew; onAssign: () => 
           </div>
         ) : (
           <p className="font-karla" style={{ fontSize: '0.56rem', color: '#5a6472' }}>No traits</p>
+        )}
+
+        {/* Expanded trait detail (scope + full description) */}
+        {expanded && (
+          <div onClick={ev => ev.stopPropagation()} style={{
+            marginTop: 1, padding: '0.4rem 0.5rem', borderRadius: 6,
+            background: 'rgba(0,0,0,0.32)', border: '1px solid rgba(255,255,255,0.08)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.62rem', fontStyle: 'italic', color: expanded.kind === 'buff' ? '#bfe8cf' : '#f0bcbc' }}>{expanded.name}</span>
+              <span className="font-karla font-700" style={{ fontSize: '0.42rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: SCOPE_META[expanded.scope].color, border: `1px solid ${SCOPE_META[expanded.scope].color}66`, borderRadius: 4, padding: '0.05rem 0.28rem' }}>{SCOPE_META[expanded.scope].label}</span>
+            </div>
+            <p className="font-karla" style={{ fontSize: '0.62rem', lineHeight: 1.45, color: 'rgba(255,255,255,0.62)' }}>{expanded.desc}</p>
+          </div>
         )}
       </div>
     </div>
