@@ -442,6 +442,9 @@ export default function ShipHero({
               <span style={{ color: '#4a5e7a' }}> · </span>
               <span style={{ fontStyle: 'italic', color: '#6a8ab8' }}>{getNavigatorTitle(xpProgress.level)}</span>
             </p>
+            <div style={{ maxWidth: 200, margin: '0.5rem auto 0', height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${xpProgress.progress * 100}%`, background: 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)', borderRadius: 3 }} />
+            </div>
           </div>
 
           {/* Ship + crew-on-deck overlay */}
@@ -479,11 +482,6 @@ export default function ShipHero({
                 </div>
               )}
             </div>
-          </div>
-
-          {/* XP bar */}
-          <div style={{ position: 'relative', maxWidth: 220, margin: '0.7rem auto 0', height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${xpProgress.progress * 100}%`, background: 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)', borderRadius: 3 }} />
           </div>
 
           {/* Crew count + recruit */}
