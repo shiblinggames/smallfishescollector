@@ -47,7 +47,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
   deep: {
     name: 'The Howling Deep',
     tagline: 'Hostile open water. Real risk, real reward.',
-    riskLabel: 'Dangerous',
+    riskLabel: 'Risky',
     color: '#c084fc',
     // payoutScale tuned 2026-05-20: 1.5 → 0.65 (target avg ~800 ⟡/voyage).
     payoutScale: 0.65,
@@ -59,7 +59,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
   triangle: {
     name: 'The Bertuna Triangle',
     tagline: 'Ships go missing here. Few come back the same.',
-    riskLabel: 'Extreme',
+    riskLabel: 'Dangerous',
     color: '#f43f5e',
     // payoutScale tuned 2026-05-20: 2.2 → 1.0 (target avg ~1500 ⟡/voyage).
     // Real-data anchor showed ~2985 avg at the old 2.2× scale.
