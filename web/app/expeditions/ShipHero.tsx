@@ -58,6 +58,7 @@ function PickerCrewCard({ card, onAssign }: { card: RosterCrew; onAssign: () => 
   return (
     <div onClick={onAssign} style={{
       position: 'relative', display: 'flex', gap: '0.7rem', padding: '0.7rem', borderRadius: 7,
+      minWidth: 0,
       background: 'linear-gradient(157deg, #1a2331 0%, #0a0f16 100%)',
       border: '1px solid #324453',
       boxShadow: 'inset 0 0 0 1px rgba(111,168,201,0.13), inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.5)',
@@ -1022,13 +1023,13 @@ export default function ShipHero({
                     })}
                   </div>
 
-                  <div style={{ overflowY: 'auto', flex: 1, padding: '1rem 1.25rem 2rem', overscrollBehavior: 'contain' }}>
+                  <div style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1, padding: '1rem 1.25rem 2rem', overscrollBehavior: 'contain' }}>
                     {roster.length === 0 ? (
                       <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#4a4845', padding: '3rem 1rem' }}>No crew yet. Recruit some at the Crew Hall first!</p>
                     ) : pickerCards.length === 0 ? (
                       <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#4a4845', padding: '3rem 1rem' }}>All your crew are already aboard.</p>
                     ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                         {pickerCards.map(card => (
                           <PickerCrewCard key={card.id} card={card} onAssign={() => assignCard(card)} />
                         ))}
