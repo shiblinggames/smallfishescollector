@@ -74,7 +74,11 @@ export function useReveal() {
     timers.current.push(setTimeout(() => setPhases({}), t + 3400))
   }, [flip])
 
-  return { phases, flash, banner, startReveal, tapCard }
+  // True from the moment a reroll reveal begins until every card has finished
+  // its flip/payoff and the board resets to plain panels — gate re-rolls on it.
+  const revealing = Object.keys(phases).length > 0
+
+  return { phases, flash, banner, startReveal, tapCard, revealing }
 }
 
 // ── Per-card wrapper: sealed cover (front) + the real panel (back) ───────────

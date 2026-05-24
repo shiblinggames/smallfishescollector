@@ -279,6 +279,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   // Reroll runs the action, swaps the board underneath, then plays the reveal
   // over the top so the new recruits flip in with pack-opening flair.
   function handleReroll() {
+    if (pending || reveal.revealing) return // no re-roll mid-action or mid-reveal
     setErr(null)
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(14)
     setBusyId('reroll')
@@ -421,7 +422,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
 
           {/* Centered reroll CTA */}
           {(() => {
-            const cannot = pending || state.gems < state.rerollCost
+            const cannot = pending || reveal.revealing || state.gems < state.rerollCost
             return (
               <div className="flex justify-center" style={{ marginBottom: '1.1rem' }}>
                 <motion.button
@@ -444,7 +445,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   }}
                 >
                   <RefreshIcon />
-                  <span>{busyId === 'reroll' ? 'Rerolling…' : 'Reroll'}</span>
+                  <span>{busyId === 'reroll' || reveal.revealing ? 'Rerolling…' : 'Reroll'}</span>
                   <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, fontSize: '0.82rem', letterSpacing: 0 }}>{state.rerollCost}<span style={{ color: cannot ? 'rgba(90,63,184,0.45)' : '#4f2fb0' }}>◆</span></span>
                 </motion.button>
               </div>
