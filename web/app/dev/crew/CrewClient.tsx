@@ -391,7 +391,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Stat label="Gems" value={`💎 ${state.gems.toLocaleString()}`} />
+            <Stat label="Gems" value={`${state.gems.toLocaleString()} ◆`} accent="#a78bfa" />
             <Stat label="Nav Level" value={String(state.navLevel)} />
             <Stat label="Roster ↓" value={`${state.roster.length} / ${state.capacity}`} accent={rosterFull ? '#f08a8a' : '#5fd38a'} onClick={scrollToCrew} />
           </div>
