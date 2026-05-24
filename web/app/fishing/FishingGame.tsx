@@ -467,7 +467,7 @@ function getZone(zones: ZoneDef[], deg: number, rotation = 0): ZoneDef {
 // ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 function DialSVG({
-  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0,
+  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0, needleRef,
 }: {
   zones: ZoneDef[]
   angle: number
@@ -477,6 +477,7 @@ function DialSVG({
   fireLevel?: 0 | 1 | 2
   snapKey?: number
   perfectBurstKey?: number
+  needleRef?: React.Ref<SVGGElement>
 }) {
   const needleTipY  = CY - (INNER_R - 8)
   const perfectZone = zones.find(z => z.type === 'perfect')
@@ -572,15 +573,16 @@ function DialSVG({
             transition={{ duration: 0.7, ease: 'easeOut' }}
           />
         )}
-        {/* Needle — rotated straight from `angle` state (React-driven).
-            Simple and smooth; the parent updates angle every frame.
+        {/* Needle — the parent drives `transform` imperatively via needleRef
+            every frame (no per-frame React re-render); the `angle` prop is a
+            live angleRef read so any real re-render lands jump-free.
             IMPORTANT: no `style` (filter/transition) in the normal case.
             The transform attribute changes every frame; a standing CSS
             transition/filter declaration on the same element forces it
             off the raster-cache fast path and causes per-frame stutter
             (worst on mobile). The perfect-flash filter is applied only
             during the brief flash window, where the extra cost is fine. */}
-        <g transform={`rotate(${angle}, ${CX}, ${CY})`}
+        <g ref={needleRef} transform={`rotate(${angle}, ${CX}, ${CY})`}
            style={perfectFlash ? { filter: 'drop-shadow(0 0 6px #fde68a)' } : undefined}>
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 12 : 10} strokeOpacity={perfectFlash ? 0.28 : 0.12} strokeLinecap="round" />
           <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={liveNeedleStroke} strokeLinecap="round" />
@@ -2191,6 +2193,14 @@ export default function FishingGame({
   const lastTimeRef     = useRef(0)
   const elapsedMsRef    = useRef(0)
   const nextChgMsRef    = useRef(0)
+  // Perf: the needle is driven imperatively (DOM transform) each frame so the
+  // huge parent doesn't re-render 60×/sec during the dial. These mirror the
+  // latest zones/rotation for in-loop zone-crossing detection (the only thing
+  // that needs a real re-render — to refresh the colour/label tells).
+  const needleGroupRef   = useRef<SVGGElement | null>(null)
+  const catchingZonesRef = useRef<ZoneDef[]>([])
+  const zoneRotationRef  = useRef(0)
+  const lastZoneFromRef  = useRef<number>(NaN)
   const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond' } | null>(null)
   const selectedBaitRef = useRef(selectedBait)
   useEffect(() => { phaseRef.current = phase }, [phase])
@@ -2348,6 +2358,7 @@ export default function FishingGame({
     lastTimeRef.current  = 0
     elapsedMsRef.current = 0
     nextChgMsRef.current = (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
+    lastZoneFromRef.current = NaN // force a zone sync on the first frame
 
     const tick = (timestamp: number) => {
       if (phaseRef.current !== 'catching') return
@@ -2378,7 +2389,16 @@ export default function FishingGame({
         }
         nextChgMsRef.current = elapsedMsRef.current + (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
       }
-      setAngle(angleRef.current)
+      // Move the needle imperatively (no React re-render) for a smooth 60fps.
+      const ng = needleGroupRef.current
+      if (ng) ng.setAttribute('transform', `rotate(${angleRef.current}, ${CX}, ${CY})`)
+      // Re-render the parent ONLY when the needle crosses into a new zone, so
+      // the needle colour / zone highlight / label tells stay accurate.
+      const zNow = getZone(catchingZonesRef.current, angleRef.current, zoneRotationRef.current)
+      if (zNow.from !== lastZoneFromRef.current) {
+        lastZoneFromRef.current = zNow.from
+        setAngle(angleRef.current)
+      }
       animRef.current = requestAnimationFrame(tick)
     }
     animRef.current = requestAnimationFrame(tick)
@@ -3277,6 +3297,10 @@ export default function FishingGame({
     const base = buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus + (activeEvent?.type === 'glassy' ? 12 : 0), rod.perfectZoneBonus + 1)
     return selectedZone === 'ancient_deep' ? applyBossMods(base, activeBossMechanic, bossZoneShrink) : base
   })() : []
+  // Mirror the latest zones + rotation so the needle rAF loop can detect
+  // zone crossings without depending on per-frame React state.
+  catchingZonesRef.current = catchingZones
+  zoneRotationRef.current = zoneRotation
   const currentZone   = (phase === 'catching' || phase === 'reeling') ? getZone(catchingZones, angle, zoneRotation) : null
 
   function needleColor(): string {
@@ -4089,7 +4113,8 @@ export default function FishingGame({
                         </motion.span>
                       </motion.div>
                     )}
-                    <DialSVG zones={catchingZones} angle={angle} rotation={zoneRotation}
+                    <DialSVG zones={catchingZones} angle={angleRef.current} rotation={zoneRotation}
+                      needleRef={needleGroupRef}
                       needleColor={needleColor()} zoneOpacityFn={zoneOpacity}
                       fireLevel={perfectStreak >= 3 ? 2 : perfectStreak === 2 ? 1 : 0}
                       snapKey={snapKey} perfectBurstKey={perfectBurstKey} />
