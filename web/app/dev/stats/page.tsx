@@ -43,8 +43,9 @@ export default async function DevStatsPage() {
     {
       title: 'Players', accent: '#60a5fa',
       stats: [
-        { label: 'Total players',  value: s.players ?? 0 },
-        { label: 'Active members', value: s.members ?? 0 },
+        { label: 'Registered players', value: s.players ?? 0 },
+        { label: 'Active (7 days)',    value: s.activePlayers ?? 0 },
+        { label: 'Premium members',    value: s.members ?? 0 },
       ],
     },
     {
