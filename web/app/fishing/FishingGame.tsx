@@ -2272,6 +2272,16 @@ export default function FishingGame({
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { selectedBaitRef.current = selectedBait }, [selectedBait])
+  // If the selected bait runs dry but the player still owns another type, switch
+  // to it. Otherwise selectedBaitQty hits 0 while hasBait stays true, which
+  // hides the Cast button behind the "get bait" prompt and stalls the Auto
+  // Caster — even though the player clearly has bait to fish with.
+  useEffect(() => {
+    const cur = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
+    if (cur > 0) return
+    const fallback = baitInventory.find(b => b.quantity > 0)
+    if (fallback) setSelectedBait(fallback.bait_type)
+  }, [baitInventory, selectedBait])
   useEffect(() => { hookedFishRef.current = hookedFish }, [hookedFish])
   useEffect(() => {
     if (newStreakRecord === null) return
