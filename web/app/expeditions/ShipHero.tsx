@@ -1057,11 +1057,13 @@ export default function ShipHero({
                         const showDelta = !!pendingCard && delta !== 0
                         return (
                           <div key={s.key} style={{ flex: 1, textAlign: 'center', background: 'rgba(0,0,0,0.32)', border: `1px solid ${showDelta ? s.color + '66' : 'rgba(255,255,255,0.09)'}`, borderRadius: 10, padding: '0.5rem 0.2rem', transition: 'border-color 0.15s' }}>
-                            <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: s.color, lineHeight: 1 }}>{prev}</p>
-                            {showDelta && (
-                              <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', lineHeight: 1, marginTop: 3, color: delta > 0 ? '#6ee7a0' : '#f08a8a' }}>{delta > 0 ? '+' : ''}{delta}</p>
-                            )}
-                            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.08em', color: '#857f77', marginTop: showDelta ? 3 : 4 }}>{s.short}</p>
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4 }}>
+                              <span className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: s.color, lineHeight: 1 }}>{prev}</span>
+                              {showDelta && (
+                                <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', lineHeight: 1, color: delta > 0 ? '#6ee7a0' : '#f08a8a' }}>{delta > 0 ? '+' : ''}{delta}</span>
+                              )}
+                            </div>
+                            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.08em', color: '#857f77', marginTop: 4 }}>{s.short}</p>
                           </div>
                         )
                       })}
