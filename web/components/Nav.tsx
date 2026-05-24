@@ -7,6 +7,7 @@ import CharacterAvatar from './CharacterAvatar'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { motion, AnimatePresence } from 'framer-motion'
+import TickingNumber from './TickingNumber'
 
 const PAGE_TINTS: [string, string][] = [
   ['/tavern',      'rgba(180,120,30,0.10)'],
@@ -17,34 +18,6 @@ const PAGE_TINTS: [string, string][] = [
 
 function navBg(tint: string | undefined) {
   return tint ? `linear-gradient(${tint}, ${tint}), black` : 'black'
-}
-
-// Counts the displayed number from its current value to a new one (easeOut) so
-// currency changes tick rather than snap. Self-contained so only this node
-// re-renders per frame, not the whole Nav. Re-tweens smoothly mid-flight.
-function TickingNumber({ value }: { value: number }) {
-  const [shown, setShown] = useState(value)
-  const shownRef = useRef(value)
-  shownRef.current = shown
-  const rafRef = useRef<number | null>(null)
-
-  useEffect(() => {
-    const from = shownRef.current
-    const to = value
-    if (from === to) return
-    const start = performance.now()
-    const dur = 500
-    const step = (now: number) => {
-      const t = Math.min(1, (now - start) / dur)
-      const eased = 1 - Math.pow(1 - t, 3) // easeOutCubic
-      setShown(Math.round(from + (to - from) * eased))
-      if (t < 1) rafRef.current = requestAnimationFrame(step)
-    }
-    rafRef.current = requestAnimationFrame(step)
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
-  }, [value])
-
-  return <>{shown.toLocaleString()}</>
 }
 
 interface BeforeInstallPromptEvent extends Event {

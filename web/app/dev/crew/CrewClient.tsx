@@ -9,6 +9,7 @@ import {
 import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
 import { resolveEffects, applyCrewEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
+import TickingNumber from '@/components/TickingNumber'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (filename: string) => `${SUPA}/storage/v1/object/public/card-arts/${filename}`
@@ -392,7 +393,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Stat label="Gems" value={`${state.gems.toLocaleString()} ◆`} accent="#a78bfa" />
+            <Stat label="Gems" value={<><TickingNumber value={state.gems} /> ◆</>} accent="#a78bfa" />
             <Stat label="Nav Level" value={String(state.navLevel)} />
             <Stat label="Roster ↓" value={`${state.roster.length} / ${state.capacity}`} accent={rosterFull ? '#f08a8a' : '#5fd38a'} onClick={scrollToCrew} />
           </div>
@@ -612,7 +613,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   )
 }
 
-function Stat({ label, value, accent, onClick }: { label: string; value: string; accent?: string; onClick?: () => void }) {
+function Stat({ label, value, accent, onClick }: { label: string; value: ReactNode; accent?: string; onClick?: () => void }) {
   return (
     <div
       onClick={onClick}
