@@ -71,11 +71,9 @@ const ROUND_BTN: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
   boxShadow: '0 2px 5px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.14)', transition: 'filter 0.15s',
 }
-const ROUND_RECRUIT: React.CSSProperties = { ...ROUND_BTN, background: 'linear-gradient(180deg, rgba(74,200,130,0.4), rgba(46,140,92,0.24))', border: '1px solid rgba(122,226,162,0.65)', color: '#dcf8e7' }
 const ROUND_DISMISS: React.CSSProperties = { ...ROUND_BTN, background: 'linear-gradient(180deg, rgba(212,84,84,0.34), rgba(150,46,46,0.2))', border: '1px solid rgba(228,114,114,0.6)', color: '#f8d2d2' }
 const ROUND_CONFIRM: React.CSSProperties = { ...ROUND_BTN, width: 30, height: 30, background: 'linear-gradient(180deg, rgba(74,200,130,0.46), rgba(46,140,92,0.28))', border: '1px solid rgba(122,226,162,0.72)', color: '#dcf8e7' }
 const ROUND_CANCEL: React.CSSProperties = { ...ROUND_BTN, width: 30, height: 30, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.22)', color: 'rgba(255,255,255,0.7)' }
-const ROUND_STATIC: React.CSSProperties = { ...ROUND_BTN, cursor: 'default', boxShadow: 'none' }
 
 // ── Countdown to the next UTC midnight (free board refresh) ──────────────────
 function FreeRollCountdown() {
@@ -296,11 +294,36 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
 
     if (kind === 'board') {
       const c = item as BoardCandidate
-      const recruit = (e: React.MouseEvent) => { e.stopPropagation(); run(() => recruitCrew(c.id), c.id, onDone) }
+      const recruit = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(14)
+        run(() => recruitCrew(c.id), c.id, onDone)
+      }
       if (round) {
-        if (c.recruited) return <div title="Recruited" style={{ ...ROUND_STATIC, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: 'rgba(255,255,255,0.5)' }}><CheckIcon /></div>
-        if (rosterFull) return <div title="Roster full" style={{ ...ROUND_STATIC, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.3)' }}><AnchorIcon /></div>
-        return <button title="Recruit" onClick={recruit} disabled={pending} style={{ ...ROUND_RECRUIT, opacity: pending && busyId === c.id ? 0.6 : 1, cursor: pending ? 'not-allowed' : 'pointer' }}><AnchorIcon /></button>
+        const STATIC_PILL: React.CSSProperties = {
+          display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.36rem 0.72rem',
+          borderRadius: 999, fontSize: '0.66rem', letterSpacing: '0.07em', textTransform: 'uppercase', whiteSpace: 'nowrap',
+        }
+        if (c.recruited) return <span className="font-karla font-700" style={{ ...STATIC_PILL, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: 'rgba(220,248,231,0.72)' }}><CheckIcon /> Aboard</span>
+        if (rosterFull) return <span className="font-karla font-700" style={{ ...STATIC_PILL, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.32)', color: '#f2b0b0' }}>Roster Full</span>
+        return (
+          <motion.button
+            title="Recruit" onClick={recruit} disabled={pending}
+            whileTap={{ scale: 0.88 }}
+            transition={{ type: 'spring', stiffness: 520, damping: 18 }}
+            className="font-karla font-700"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '0.45rem 1rem', borderRadius: 999, fontSize: '0.78rem', letterSpacing: '0.07em', textTransform: 'uppercase', whiteSpace: 'nowrap',
+              background: 'linear-gradient(180deg, #4cc483 0%, #2e9a5c 100%)',
+              border: '1px solid rgba(150,235,185,0.85)', color: '#04160d',
+              boxShadow: '0 2px 10px rgba(46,170,100,0.5), inset 0 1px 0 rgba(255,255,255,0.35)',
+              cursor: pending ? 'not-allowed' : 'pointer', opacity: pending && busyId === c.id ? 0.6 : 1,
+            }}
+          >
+            <AnchorIcon /><span>{busyId === c.id ? '…' : 'Recruit'}</span>
+          </motion.button>
+        )
       }
       if (c.recruited) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)' }}>Recruited ✓</div>
       if (rosterFull) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.35)', color: '#f2b0b0' }}>Roster Full</div>
