@@ -435,17 +435,17 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     display: 'inline-flex', alignItems: 'center', gap: 9,
                     padding: '0.66rem 1.6rem', borderRadius: 999,
                     fontSize: '0.86rem', letterSpacing: '0.07em',
-                    background: cannot ? 'linear-gradient(180deg, #2a2f3e 0%, #1b2030 100%)' : 'linear-gradient(180deg, #5e7bc8 0%, #3a52a4 100%)',
-                    border: `1px solid ${cannot ? 'rgba(126,164,232,0.22)' : 'rgba(160,190,255,0.78)'}`,
-                    color: cannot ? 'rgba(219,231,255,0.5)' : '#eef3ff',
-                    boxShadow: cannot ? 'none' : '0 4px 16px rgba(70,110,220,0.5), inset 0 1px 0 rgba(255,255,255,0.32)',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.45)',
+                    background: cannot ? 'linear-gradient(180deg, #2a2114 0%, #19120a 100%)' : 'linear-gradient(180deg, #d9b563 0%, #a8842f 100%)',
+                    border: `1px solid ${cannot ? 'rgba(201,162,74,0.28)' : 'rgba(240,214,150,0.85)'}`,
+                    color: cannot ? 'rgba(240,220,168,0.45)' : '#2a1c08',
+                    boxShadow: cannot ? 'none' : '0 4px 16px rgba(201,162,74,0.42), inset 0 1px 0 rgba(255,240,200,0.5)',
+                    textShadow: cannot ? 'none' : '0 1px 1px rgba(255,238,200,0.4)',
                     cursor: cannot ? 'not-allowed' : 'pointer',
                   }}
                 >
                   <RefreshIcon />
                   <span>{busyId === 'reroll' ? 'Rerolling…' : 'Reroll'}</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(0,0,0,0.34)', borderRadius: 999, padding: '0.14rem 0.55rem', fontSize: '0.74rem', letterSpacing: 0, color: '#cfe0ff' }}>💎 {state.rerollCost}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(40,26,8,0.5)', borderRadius: 999, padding: '0.14rem 0.55rem', fontSize: '0.74rem', letterSpacing: 0, color: '#ffe7b8' }}>💎 {state.rerollCost}</span>
                 </motion.button>
               </div>
             )
