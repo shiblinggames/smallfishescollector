@@ -4,12 +4,7 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import LeaderboardClient from './LeaderboardClient'
 import type { LeaderboardEntry } from './LeaderboardClient'
-import {
-  EXPEDITION_SHIP_STATS, computeCombatRating,
-} from '@/lib/expeditions'
-import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects } from '@/lib/crewEffects'
-import { getLevelFromXP as getExpeditionLevel, navLevelBonuses } from '@/lib/expeditionLevel'
 
 /** Resolve the player's rank on a board. If they're in the top-50 array we
  *  already fetched, use that index (free). Otherwise run a count query for
@@ -38,70 +33,6 @@ async function fetchBoard(admin: ReturnType<typeof createAdminClient>, view: str
   const myScore = (me as any)?.score ?? 0
   const myRank = await resolveMyRank(admin, view, userId, myScore, topRows)
   return { top: topRows, myScore, myRank }
-}
-
-/** Raid Score isn't stored — it's a live combat rating computed from each
- *  player's CURRENT loadout (ship + assigned crew + nav-level bonuses). We
- *  pull every profile, sum stats, run computeCombatRating, sort. There's
- *  no leaderboard view to lean on since the inputs change every time the
- *  player edits their loadout. */
-async function fetchRaidScoreBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
-  // 1. All non-admin profiles with the fields that feed into combat rating.
-  const { data: profiles } = await admin
-    .from('profiles')
-    .select('id, username, ship_tier, expedition_xp')
-    .eq('is_admin', false)
-
-  if (!profiles || profiles.length === 0) {
-    return { top: [] as LeaderboardEntry[], myScore: 0, myRank: null as number | null }
-  }
-
-  // 2. Everyone's deployed crew (assigned to a ship slot), one query, grouped.
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  const { data: crewRows } = await admin
-    .from('user_crew')
-    .select('id, user_id, assigned_slot, rarity, power, dodge, fortune, effects')
-    .not('assigned_slot', 'is', null)
-  const crewByUser = new Map<string, any[]>()
-  for (const r of ((crewRows ?? []) as any[])) {
-    const arr = crewByUser.get(r.user_id) ?? []
-    arr.push(r)
-    crewByUser.set(r.user_id, arr)
-  }
-
-  // 3. Resolve each player's deployed party (effects applied) → combat rating.
-  const rows: LeaderboardEntry[] = []
-  for (const p of profiles as Array<{ id: string; username: string | null; ship_tier: number | null; expedition_xp: number | null }>) {
-    const shipStats = EXPEDITION_SHIP_STATS[p.ship_tier ?? 0] ?? EXPEDITION_SHIP_STATS[0]
-    const navLevel  = getExpeditionLevel(p.expedition_xp ?? 0)
-    const navBonus  = navLevelBonuses(navLevel)
-
-    const party: DeployedCrew[] = (crewByUser.get(p.id) ?? [])
-      .sort((a, b) => a.assigned_slot - b.assigned_slot)
-      .slice(0, shipStats.crewSlots)
-      .map(r => ({ id: r.id, slot: r.assigned_slot, rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune, effects: r.effects ?? [] }))
-    const resolved = resolveDeployedCrew(party)
-
-    const rating = computeCombatRating(
-      resolved.totals.power + navBonus.power,
-      resolved.totals.dodge + navBonus.navigation,
-      resolved.totals.fortune + navBonus.fortune,
-      shipStats.durability + navBonus.hp,
-      shipStats.minDamage,
-      resolved.raid,
-    )
-
-    if (rating.total > 0 && (party.length > 0 || (p.ship_tier ?? 0) > 0)) {
-      rows.push({ user_id: p.id, username: p.username ?? '', score: rating.total })
-    }
-  }
-
-  rows.sort((a, b) => b.score - a.score)
-  const top = rows.slice(0, 50)
-  const myIdx = rows.findIndex(r => r.user_id === userId)
-  const myScore = myIdx >= 0 ? rows[myIdx].score : 0
-  const myRank  = myIdx >= 0 ? myIdx + 1 : null
-  return { top, myScore, myRank }
 }
 
 // Crew Strength: sum of each player's top-5 crew effective stat totals (best
@@ -154,14 +85,13 @@ export default async function LeaderboardPage() {
 
   const admin = createAdminClient()
 
-  const [profile, fishingData, perfectStreakData, tideRunData, fishSlotsData, expeditionData, raidScoreData, crewStrengthData] = await Promise.all([
+  const [profile, fishingData, perfectStreakData, tideRunData, fishSlotsData, expeditionData, crewStrengthData] = await Promise.all([
     admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     fetchBoard(admin, 'leaderboard_fishing', user.id),
     fetchPerfectStreakBoard(admin, user.id),
     fetchBoard(admin, 'leaderboard_tide_run', user.id),
     fetchBoard(admin, 'leaderboard_fish_slots', user.id),
     fetchBoard(admin, 'leaderboard_expedition', user.id),
-    fetchRaidScoreBoard(admin, user.id),
     fetchCrewStrengthBoard(admin, user.id),
   ])
 
@@ -175,7 +105,6 @@ export default async function LeaderboardPage() {
     ...tideRunData.top.map(e => e.user_id),
     ...fishSlotsData.top.map(e => e.user_id),
     ...expeditionData.top.map(e => e.user_id),
-    ...raidScoreData.top.map(e => e.user_id),
     ...crewStrengthData.top.map(e => e.user_id),
   ])
   const avatarsMap: Record<string, {
@@ -216,7 +145,6 @@ export default async function LeaderboardPage() {
             tideRun={tideRunData.top}
             fishSlots={fishSlotsData.top}
             expedition={expeditionData.top}
-            raidScore={raidScoreData.top}
             crewStrength={crewStrengthData.top}
             myScores={{
               fishing: fishingData.myScore,
@@ -224,7 +152,6 @@ export default async function LeaderboardPage() {
               tideRun: tideRunData.myScore,
               fishSlots: fishSlotsData.myScore,
               expedition: expeditionData.myScore,
-              raidScore: raidScoreData.myScore,
               crewStrength: crewStrengthData.myScore,
             }}
             myRanks={{
@@ -233,7 +160,6 @@ export default async function LeaderboardPage() {
               tideRun: tideRunData.myRank,
               fishSlots: fishSlotsData.myRank,
               expedition: expeditionData.myRank,
-              raidScore: raidScoreData.myRank,
               crewStrength: crewStrengthData.myRank,
             }}
             currentUserId={user.id}

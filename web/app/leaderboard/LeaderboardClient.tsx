@@ -14,7 +14,6 @@ interface MyScores {
   tideRun: number
   fishSlots: number
   expedition: number
-  raidScore: number
   crewStrength: number
 }
 
@@ -24,7 +23,6 @@ interface MyRanks {
   tideRun: number | null
   fishSlots: number | null
   expedition: number | null
-  raidScore: number | null
   crewStrength: number | null
 }
 
@@ -34,7 +32,6 @@ interface Props {
   tideRun: LeaderboardEntry[]
   fishSlots: LeaderboardEntry[]
   expedition: LeaderboardEntry[]
-  raidScore: LeaderboardEntry[]
   crewStrength: LeaderboardEntry[]
   myScores: MyScores
   myRanks: MyRanks
@@ -47,7 +44,7 @@ type SectionKey = 'fishing' | 'expeditions' | 'tavern'
 /** Master sections — each owns 2 boards. Section order = display order. */
 const SECTIONS: Record<SectionKey, { label: string; boards: BoardKey[] }> = {
   fishing:     { label: 'Fishing',     boards: ['perfectStreak', 'fishingLevel'] },
-  expeditions: { label: 'Expeditions', boards: ['expedition', 'raidScore', 'crewStrength'] },
+  expeditions: { label: 'Expeditions', boards: ['expedition', 'crewStrength'] },
   tavern:      { label: 'Tavern',      boards: ['tideRun', 'fishSlots'] },
 }
 
@@ -56,7 +53,7 @@ const NEUTRAL_TEXT = '#d8d4cf'
 const NEUTRAL_BORDER = 'rgba(255,255,255,0.10)'
 const NEUTRAL_BORDER_TOP = 'rgba(255,255,255,0.18)'
 
-export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fishSlots, expedition, raidScore, crewStrength, myScores, myRanks, currentUserId, avatars }: Props) {
+export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fishSlots, expedition, crewStrength, myScores, myRanks, currentUserId, avatars }: Props) {
   const [section, setSection] = useState<SectionKey>('fishing')
   const [activeTab, setActiveTab] = useState<BoardKey>(SECTIONS.fishing.boards[0])
 
@@ -67,7 +64,6 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
     : k === 'tideRun' ? tideRun
     : k === 'fishSlots' ? fishSlots
     : k === 'expedition' ? expedition
-    : k === 'raidScore' ? raidScore
     : crewStrength
   const scoreOf = (k: BoardKey): number =>
     k === 'fishingLevel' ? myScores.fishing
@@ -75,7 +71,6 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
     : k === 'tideRun' ? myScores.tideRun
     : k === 'fishSlots' ? myScores.fishSlots
     : k === 'expedition' ? myScores.expedition
-    : k === 'raidScore' ? myScores.raidScore
     : myScores.crewStrength
   const rankOf = (k: BoardKey): number | null =>
     k === 'fishingLevel' ? myRanks.fishing
@@ -83,7 +78,6 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
     : k === 'tideRun' ? myRanks.tideRun
     : k === 'fishSlots' ? myRanks.fishSlots
     : k === 'expedition' ? myRanks.expedition
-    : k === 'raidScore' ? myRanks.raidScore
     : myRanks.crewStrength
 
   function selectSection(s: SectionKey) {

@@ -18,7 +18,7 @@ export interface LeaderboardEntry {
 
 export type BoardKey =
   | 'fishingLevel' | 'perfectStreak' | 'tideRun'
-  | 'fishSlots' | 'expedition' | 'raidScore' | 'crewStrength'
+  | 'fishSlots' | 'expedition' | 'crewStrength'
 
 export type AvatarMap = Record<string, {
   characterColor: string | null
@@ -41,7 +41,6 @@ export const BOARD_META: Record<BoardKey, {
   tideRun:       { label: 'Tide Run',       accent: '#5da7d4', unit: n => `${n.toLocaleString()} m`,     subUnit: () => 'best run' },
   fishSlots:     { label: 'Fish Slots',     accent: '#34d399', unit: n => `${n.toLocaleString()} ⟡`,    subUnit: () => 'single spin' },
   expedition:    { label: 'Navigator Level',accent: '#7090c0', unit: n => `Lv ${getExpeditionLevel(n)}`, subUnit: n => `${n.toLocaleString()} XP` },
-  raidScore:     { label: 'Raid Score',     accent: '#c8704a', unit: n => n.toLocaleString(),            subUnit: () => 'combat rating' },
   crewStrength:  { label: 'Crew Strength',  accent: '#7fd0a0', unit: n => n.toLocaleString(),            subUnit: () => 'best party' },
 }
 

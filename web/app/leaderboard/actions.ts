@@ -8,10 +8,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { EXPEDITION_SHIP_STATS, computeCombatRating } from '@/lib/expeditions'
-import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects } from '@/lib/crewEffects'
-import { getLevelFromXP as getExpeditionLevel, navLevelBonuses } from '@/lib/expeditionLevel'
 import type { LeaderboardEntry, BoardKey, AvatarMap } from './boardUI'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -56,51 +53,6 @@ async function fetchPerfectStreak(admin: Admin, userId: string) {
   const myScore = (me as { score?: number } | null)?.score ?? 0
   const myRank = await resolveMyRank(admin, 'leaderboard_perfect_streak', userId, myScore, topRows)
   return { top: topRows, myScore, myRank }
-}
-
-async function fetchRaidScore(admin: Admin, userId: string) {
-  const { data: profiles } = await admin
-    .from('profiles')
-    .select('id, username, ship_tier, expedition_xp')
-    .eq('is_admin', false)
-  if (!profiles || profiles.length === 0) return { top: [] as LeaderboardEntry[], myScore: 0, myRank: null as number | null }
-
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  const { data: crewRows } = await admin
-    .from('user_crew')
-    .select('id, user_id, assigned_slot, rarity, power, dodge, fortune, effects')
-    .not('assigned_slot', 'is', null)
-  const crewByUser = new Map<string, any[]>()
-  for (const r of ((crewRows ?? []) as any[])) {
-    const arr = crewByUser.get(r.user_id) ?? []
-    arr.push(r)
-    crewByUser.set(r.user_id, arr)
-  }
-
-  const rows: LeaderboardEntry[] = []
-  for (const p of profiles as Array<{ id: string; username: string | null; ship_tier: number | null; expedition_xp: number | null }>) {
-    const shipStats = EXPEDITION_SHIP_STATS[p.ship_tier ?? 0] ?? EXPEDITION_SHIP_STATS[0]
-    const navBonus = navLevelBonuses(getExpeditionLevel(p.expedition_xp ?? 0))
-    const party: DeployedCrew[] = (crewByUser.get(p.id) ?? [])
-      .sort((a, b) => a.assigned_slot - b.assigned_slot)
-      .slice(0, shipStats.crewSlots)
-      .map(r => ({ id: r.id, slot: r.assigned_slot, rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune, effects: r.effects ?? [] }))
-    const resolved = resolveDeployedCrew(party)
-    const rating = computeCombatRating(
-      resolved.totals.power + navBonus.power,
-      resolved.totals.dodge + navBonus.navigation,
-      resolved.totals.fortune + navBonus.fortune,
-      shipStats.durability + navBonus.hp, shipStats.minDamage,
-      resolved.raid,
-    )
-    if (rating.total > 0 && (party.length > 0 || (p.ship_tier ?? 0) > 0)) {
-      rows.push({ user_id: p.id, username: p.username ?? '', score: rating.total })
-    }
-  }
-  rows.sort((a, b) => b.score - a.score)
-  const top = rows.slice(0, 50)
-  const myIdx = rows.findIndex(r => r.user_id === userId)
-  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : 0, myRank: myIdx >= 0 ? myIdx + 1 : null }
 }
 
 async function fetchCrewStrength(admin: Admin, userId: string) {
@@ -149,7 +101,6 @@ export async function getLeaderboardBoards(
   await Promise.all(keys.map(async key => {
     let res: { top: LeaderboardEntry[]; myScore: number; myRank: number | null }
     if (key === 'perfectStreak')      res = await fetchPerfectStreak(admin, user.id)
-    else if (key === 'raidScore')     res = await fetchRaidScore(admin, user.id)
     else if (key === 'crewStrength')  res = await fetchCrewStrength(admin, user.id)
     else {
       const view = VIEW_BY_KEY[key]
