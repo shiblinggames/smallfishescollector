@@ -64,6 +64,9 @@ function CheckIcon() {
 function RefreshIcon() {
   return (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /><path d="M3 21v-5h5" /></svg>)
 }
+function ClockIcon() {
+  return (<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7.5V12l3 2" /></svg>)
+}
 
 // Compact round action buttons (inline with the stats, no dedicated row).
 const ROUND_BTN: React.CSSProperties = {
@@ -277,6 +280,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   // over the top so the new recruits flip in with pack-opening flair.
   function handleReroll() {
     setErr(null)
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(14)
     setBusyId('reroll')
     startTransition(async () => {
       const res = await rerollBoard()
@@ -401,37 +405,51 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
 
         {/* Recruit board — warm gold "new arrivals" region */}
         <div style={{ borderRadius: 12, border: `1px solid ${SECTION_RECRUIT}33`, background: `linear-gradient(180deg, ${SECTION_RECRUIT}12 0%, rgba(0,0,0,0) 55%)`, padding: '0.85rem 0.85rem 1rem', marginBottom: '1.4rem' }}>
-          <div className="flex items-center justify-between flex-wrap gap-2" style={{ marginBottom: '0.85rem' }}>
-            <div className="flex items-center gap-2.5">
-              <span style={{ width: 4, alignSelf: 'stretch', minHeight: 30, borderRadius: 2, background: SECTION_RECRUIT }} />
-              <div>
-                <h2 className="font-cinzel font-700 uppercase" style={{ fontSize: '1rem', letterSpacing: '0.08em', color: SECTION_RECRUIT }}>Recruit Board</h2>
-                <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.58)', marginTop: 1 }}>
-                  Free board refreshes in <FreeRollCountdown /> · {state.isPremium ? '3 daily (member)' : '2 daily'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleReroll}
-              disabled={pending || state.gems < state.rerollCost}
-              title="Spend gems for 3 brand-new recruits"
-              className="font-karla font-700"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '0.5rem 0.9rem', borderRadius: 999,
-                fontSize: '0.8rem', letterSpacing: '0.02em',
-                background: 'linear-gradient(180deg, #2c3a58 0%, #1a2336 100%)',
-                border: '1px solid rgba(126,164,232,0.5)', color: '#dbe7ff',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)',
-                cursor: pending || state.gems < state.rerollCost ? 'not-allowed' : 'pointer',
-                opacity: pending || state.gems < state.rerollCost ? 0.5 : 1,
-              }}
-            >
-              <RefreshIcon />
-              <span>{busyId === 'reroll' ? 'Rerolling…' : 'Reroll'}</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(0,0,0,0.32)', borderRadius: 999, padding: '0.12rem 0.5rem', fontSize: '0.72rem', color: '#cfe0ff' }}>💎 {state.rerollCost}</span>
-            </button>
+          {/* Title with the free-refresh countdown riding inline beside it */}
+          <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5" style={{ marginBottom: '0.9rem' }}>
+            <span style={{ width: 4, height: 22, borderRadius: 2, background: SECTION_RECRUIT, flexShrink: 0 }} />
+            <h2 className="font-cinzel font-700 uppercase" style={{ fontSize: '1rem', letterSpacing: '0.08em', color: SECTION_RECRUIT }}>Recruit Board</h2>
+            <span className="font-karla font-600" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
+              fontSize: '0.7rem', color: 'rgba(255,255,255,0.62)',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 999, padding: '0.2rem 0.62rem',
+            }}>
+              <ClockIcon /> Free reroll in <FreeRollCountdown />
+            </span>
           </div>
+
+          {/* Centered reroll CTA */}
+          {(() => {
+            const cannot = pending || state.gems < state.rerollCost
+            return (
+              <div className="flex justify-center" style={{ marginBottom: '1.1rem' }}>
+                <motion.button
+                  onClick={handleReroll}
+                  disabled={cannot}
+                  title="Spend gems for 3 brand-new recruits"
+                  whileTap={cannot ? undefined : { scale: 0.94 }}
+                  transition={{ type: 'spring', stiffness: 520, damping: 18 }}
+                  className="font-cinzel font-700 uppercase"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 9,
+                    padding: '0.66rem 1.6rem', borderRadius: 999,
+                    fontSize: '0.86rem', letterSpacing: '0.07em',
+                    background: cannot ? 'linear-gradient(180deg, #2a2f3e 0%, #1b2030 100%)' : 'linear-gradient(180deg, #5e7bc8 0%, #3a52a4 100%)',
+                    border: `1px solid ${cannot ? 'rgba(126,164,232,0.22)' : 'rgba(160,190,255,0.78)'}`,
+                    color: cannot ? 'rgba(219,231,255,0.5)' : '#eef3ff',
+                    boxShadow: cannot ? 'none' : '0 4px 16px rgba(70,110,220,0.5), inset 0 1px 0 rgba(255,255,255,0.32)',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.45)',
+                    cursor: cannot ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <RefreshIcon />
+                  <span>{busyId === 'reroll' ? 'Rerolling…' : 'Reroll Board'}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(0,0,0,0.34)', borderRadius: 999, padding: '0.14rem 0.55rem', fontSize: '0.74rem', letterSpacing: 0, color: '#cfe0ff' }}>💎 {state.rerollCost}</span>
+                </motion.button>
+              </div>
+            )
+          })()}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
             {state.board.map((c: BoardCandidate) => {
