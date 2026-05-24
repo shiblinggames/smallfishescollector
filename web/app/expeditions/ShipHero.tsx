@@ -51,31 +51,39 @@ const RARITY_ITEM_COLOR: Record<string, string> = {
 // rarity + the three effective stats on one line, with trait/ability chips on a
 // second line. Dense so the player sees the whole roster at a glance. Whole row
 // taps to assign.
-function PickerCrewCard({ card, onAssign }: { card: RosterCrew; onAssign: () => void }) {
+function PickerCrewCard({ card, selected, onSelect }: { card: RosterCrew; selected: boolean; onSelect: () => void }) {
   const color = CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764'
   const eff = applyCrewEffects({ power: card.power, dodge: card.dodge, fortune: card.fortune }, card.effects)
   const traits = resolveEffects(card.effects)
   const rarityName = RARITY_NAMES[card.rarity as 1 | 2 | 3 | 4] ?? 'Common'
   // Tap a chip to expand its full description (mobile has no hover). Tapping the
-  // rest of the row still assigns.
+  // rest of the row selects this crew (previews it above; commit needs confirm).
   const [openTrait, setOpenTrait] = useState<string | null>(null)
   const expanded = openTrait ? traits.find(t => t.id === openTrait) : null
 
   return (
-    <div onClick={onAssign} style={{
+    <div onClick={onSelect} style={{
       display: 'flex', gap: 10, alignItems: 'center', minWidth: 0, cursor: 'pointer',
       padding: '0.55rem 0.6rem', borderRadius: 8,
-      background: 'rgba(255,255,255,0.035)',
-      border: '1px solid rgba(255,255,255,0.08)',
+      background: selected ? `${color}1f` : 'rgba(255,255,255,0.035)',
+      border: `1px solid ${selected ? color + '99' : 'rgba(255,255,255,0.08)'}`,
       borderLeft: `3px solid ${color}`,
+      boxShadow: selected ? `0 0 0 1px ${color}44, 0 0 16px ${color}33` : 'none',
+      transition: 'background 0.12s, border-color 0.12s, box-shadow 0.12s',
     }}>
       {/* Portrait thumbnail */}
       <div style={{
+        position: 'relative',
         width: 46, height: 46, flexShrink: 0, borderRadius: 8, overflow: 'hidden',
         border: `1.5px solid ${color}`, background: `radial-gradient(ellipse at 50% 32%, ${color}26 0%, #070504 78%)`,
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} />
+        {selected && (
+          <div aria-hidden style={{ position: 'absolute', bottom: 2, right: 2, width: 16, height: 16, borderRadius: '50%', background: color, border: '1.5px solid #0a0c11', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0a0c11" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+          </div>
+        )}
       </div>
 
       {/* Name + stats + traits */}
@@ -231,6 +239,9 @@ export default function ShipHero({
   // Loadout inner state
   const [pickerSlot, setPickerSlot] = useState<number | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  // Crew tapped in the picker, awaiting an explicit Assign confirm. While set,
+  // the "Crew aboard" panel previews the totals as if it were placed.
+  const [pendingCard, setPendingCard] = useState<RosterCrew | null>(null)
   const [sortBy, setSortBy] = useState<'power' | 'dodge' | 'fortune' | null>(null)
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState(initialShipName ?? '')
@@ -246,6 +257,7 @@ export default function ShipHero({
     setLoadoutOpen(false)
     setSheetOpen(false)
     setPickerSlot(null)
+    setPendingCard(null)
     setEditingName(false)
   }
 
@@ -262,24 +274,35 @@ export default function ShipHero({
   // are hidden from the picker.
   const assignedIds = new Set(slots.filter(Boolean).map(c => c!.id))
 
-  function openPickerForSlot(i: number) { setPickerSlot(i); setSheetOpen(true); setSortBy(null) }
-  function closeSheet() { setSheetOpen(false); setPickerSlot(null) }
+  function openPickerForSlot(i: number) { setPickerSlot(i); setSheetOpen(true); setSortBy(null); setPendingCard(null) }
+  function closeSheet() { setSheetOpen(false); setPickerSlot(null); setPendingCard(null) }
 
   function notifyCrewChanged(next: (RosterCrew | null)[]) {
     window.dispatchEvent(new CustomEvent('crew-changed', { detail: next.filter(Boolean).map(c => c!.id) }))
   }
 
-  function assignCard(card: RosterCrew) {
-    if (pickerSlot === null) return
+  // The slots array that would result from placing `card` in the active picker
+  // slot — vacating any slot holding this instance OR another copy of the same
+  // card (only one of a given card aboard at a time). Drives both the live
+  // preview and the actual commit.
+  function buildSlotsWith(card: RosterCrew): (RosterCrew | null)[] {
+    if (pickerSlot === null) return slots
     const next = [...slots]
-    // One instance per slot, and only one of a given card aboard at a time:
-    // vacate any slot holding this instance OR another copy of the same card.
     for (let j = 0; j < next.length; j++) {
       if (next[j] && (next[j]!.id === card.id || next[j]!.cardId === card.cardId)) next[j] = null
     }
     next[pickerSlot] = card
-    setSlots(next); closeSheet(); notifyCrewChanged(next)
+    return next
+  }
+
+  // Commit the pending pick once the player confirms (no accidental assign on a
+  // single tap). Persists, updates live scores, and closes the picker.
+  function confirmAssign() {
+    if (pendingCard === null || pickerSlot === null) return
+    const card = pendingCard
     const slot = pickerSlot
+    const next = buildSlotsWith(card)
+    setSlots(next); notifyCrewChanged(next); closeSheet()
     startTransition(async () => { await assignCrew(card.id, slot) })
   }
 
@@ -354,6 +377,19 @@ export default function ShipHero({
   const voyageScore  = Math.min(100, Math.round(computeVoyageScore(totalPower, totalDodge, totalFortune) * (1 + resolvedParty.voyage.scorePct / 100)))
   const raidRating   = computeCombatRating(ratedPower, ratedDodge, ratedFortune, ratedHP, shipStats.minDamage, resolvedParty.raid)
   const hasCrew      = slots.some(Boolean)
+
+  // Live preview for the picker: when a crew is pending confirmation, the "Crew
+  // aboard" panel reflects the totals AS IF that pick were placed, so the player
+  // sees the effect (and the per-stat delta) before committing.
+  const slotsToTotals = (arr: (RosterCrew | null)[]) => {
+    const party: DeployedCrew[] = arr
+      .map((c, i) => c ? { id: c.id, slot: i, rarity: c.rarity, power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects } : null)
+      .filter((c): c is DeployedCrew => c !== null)
+    return resolveDeployedCrew(party).totals
+  }
+  const previewSlotsArr = pendingCard ? buildSlotsWith(pendingCard) : slots
+  const previewTotals   = pendingCard ? slotsToTotals(previewSlotsArr) : { power: totalPower, dodge: totalDodge, fortune: totalFortune }
+  const previewCount    = previewSlotsArr.filter(Boolean).length
 
   // Skin filter
   const skinDef     = equippedSkin ? SHIP_SKINS.find(s => s.id === equippedSkin) : undefined
@@ -988,19 +1024,25 @@ export default function ShipHero({
                     </button>
                   </div>
 
-                  {/* Current-crew totals summary */}
-                  <div style={{ padding: '0.85rem 1.25rem 0.95rem', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.025)', flexShrink: 0 }}>
+                  {/* Current-crew totals summary — previews the pending pick */}
+                  <div style={{ padding: '0.85rem 1.25rem 0.95rem', borderBottom: '1px solid rgba(255,255,255,0.08)', background: pendingCard ? `${slotAccent}12` : 'rgba(255,255,255,0.025)', flexShrink: 0, transition: 'background 0.15s' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: '#9aa0a6' }}>Crew aboard</p>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: hasCrew ? '#dfe9e3' : '#6a6764' }}>{slots.filter(Boolean).length} / {slots.length}</p>
+                      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: pendingCard ? slotAccent : '#9aa0a6' }}>{pendingCard ? 'Crew aboard · preview' : 'Crew aboard'}</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: previewCount > 0 ? '#dfe9e3' : '#6a6764' }}>{previewCount} / {slots.length}</p>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       {STAT_COLS.map(s => {
-                        const v = s.key === 'power' ? totalPower : s.key === 'dodge' ? totalDodge : totalFortune
+                        const cur = s.key === 'power' ? totalPower : s.key === 'dodge' ? totalDodge : totalFortune
+                        const prev = previewTotals[s.key]
+                        const delta = prev - cur
+                        const showDelta = !!pendingCard && delta !== 0
                         return (
-                          <div key={s.key} style={{ flex: 1, textAlign: 'center', background: 'rgba(0,0,0,0.32)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.5rem 0.2rem' }}>
-                            <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: s.color, lineHeight: 1 }}>{v}</p>
-                            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.08em', color: '#857f77', marginTop: 4 }}>{s.short}</p>
+                          <div key={s.key} style={{ flex: 1, textAlign: 'center', background: 'rgba(0,0,0,0.32)', border: `1px solid ${showDelta ? s.color + '66' : 'rgba(255,255,255,0.09)'}`, borderRadius: 10, padding: '0.5rem 0.2rem', transition: 'border-color 0.15s' }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: s.color, lineHeight: 1 }}>{prev}</p>
+                            {showDelta && (
+                              <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', lineHeight: 1, marginTop: 3, color: delta > 0 ? '#6ee7a0' : '#f08a8a' }}>{delta > 0 ? '+' : ''}{delta}</p>
+                            )}
+                            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.08em', color: '#857f77', marginTop: showDelta ? 3 : 4 }}>{s.short}</p>
                           </div>
                         )
                       })}
@@ -1033,11 +1075,48 @@ export default function ShipHero({
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                         {pickerCards.map(card => (
-                          <PickerCrewCard key={card.id} card={card} onAssign={() => assignCard(card)} />
+                          <PickerCrewCard
+                            key={card.id}
+                            card={card}
+                            selected={pendingCard?.id === card.id}
+                            onSelect={() => setPendingCard(prev => (prev?.id === card.id ? null : card))}
+                          />
                         ))}
                       </div>
                     )}
                   </div>
+
+                  {/* Confirm bar — a tap above only selects + previews; the crew
+                      is assigned only on this explicit confirm. */}
+                  {pendingCard && (() => {
+                    const pendColor = CREW_RARITY_COLORS[pendingCard.rarity as 1 | 2 | 3 | 4] ?? '#6a6764'
+                    return (
+                      <div style={{
+                        flexShrink: 0,
+                        borderTop: `1px solid ${slotAccent}44`,
+                        background: 'rgba(8,12,20,0.96)',
+                        padding: '0.8rem 1.25rem calc(0.8rem + env(safe-area-inset-bottom, 0px))',
+                        display: 'flex', alignItems: 'center', gap: 10,
+                      }}>
+                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 8, overflow: 'hidden', border: `1.5px solid ${pendColor}`, background: `radial-gradient(ellipse at 50% 32%, ${pendColor}26 0%, #070504 78%)` }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={IMG_BASE + pendingCard.filename} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#857f77', marginBottom: 2 }}>
+                            {pickerSlot === 0 ? 'Set as Captain' : `Assign to Slot ${(pickerSlot ?? 0) + 1}`}
+                          </p>
+                          <p className="font-pirata truncate" style={{ fontSize: '1.05rem', color: '#ecdcbd', lineHeight: 1.1 }}>{pendingCard.name}</p>
+                        </div>
+                        <button onClick={() => setPendingCard(null)} className="font-karla font-700" style={{ flexShrink: 0, padding: '0.6rem 0.85rem', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cfcabf', fontSize: '0.74rem', cursor: 'pointer' }}>
+                          Cancel
+                        </button>
+                        <button onClick={confirmAssign} className="font-karla font-700" style={{ flexShrink: 0, padding: '0.6rem 1.1rem', borderRadius: 10, background: 'rgba(96,165,250,0.2)', border: '1px solid rgba(96,165,250,0.6)', color: '#cfe2ff', fontSize: '0.78rem', cursor: 'pointer' }}>
+                          Assign
+                        </button>
+                      </div>
+                    )
+                  })()}
                 </div>
               </>
         )
