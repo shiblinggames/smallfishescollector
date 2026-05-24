@@ -1067,7 +1067,7 @@ export default function ShipHero({
                     })}
                   </div>
 
-                  <div style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1, padding: '1rem 1.25rem 2rem', overscrollBehavior: 'contain' }}>
+                  <div className={pendingCard ? 'pb-6 sm:pb-8' : 'pb-24 sm:pb-8'} style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1, paddingTop: '1rem', paddingLeft: '1.25rem', paddingRight: '1.25rem', overscrollBehavior: 'contain' }}>
                     {roster.length === 0 ? (
                       <p className="font-karla text-center" style={{ fontSize: '0.85rem', color: '#8a857c', padding: '3rem 1rem', lineHeight: 1.6 }}>No crew yet.<br />Recruit some at the Crew Hall first.</p>
                     ) : pickerCards.length === 0 ? (
@@ -1091,11 +1091,11 @@ export default function ShipHero({
                   {pendingCard && (() => {
                     const pendColor = CREW_RARITY_COLORS[pendingCard.rarity as 1 | 2 | 3 | 4] ?? '#6a6764'
                     return (
-                      <div style={{
+                      <div className="pb-20 sm:pb-4" style={{
                         flexShrink: 0,
                         borderTop: `1px solid ${slotAccent}44`,
                         background: 'rgba(8,12,20,0.96)',
-                        padding: '0.8rem 1.25rem calc(0.8rem + env(safe-area-inset-bottom, 0px))',
+                        paddingTop: '0.8rem', paddingLeft: '1.25rem', paddingRight: '1.25rem',
                         display: 'flex', alignItems: 'center', gap: 10,
                       }}>
                         <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 8, overflow: 'hidden', border: `1.5px solid ${pendColor}`, background: `radial-gradient(ellipse at 50% 32%, ${pendColor}26 0%, #070504 78%)` }}>
