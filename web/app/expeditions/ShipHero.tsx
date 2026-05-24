@@ -947,55 +947,78 @@ export default function ShipHero({
           must live at the top level (not inside the loadout block) to render
           whether or not the drawer is open. Fixed-positioned; z-index 110+
           clears the page Nav and the drawer. */}
-      {sheetOpen && (
+      {sheetOpen && (() => {
+        const slotAccent = pickerSlot === 0 ? '#f0c040' : '#60a5fa'
+        return (
               <>
                 <div
                   onClick={closeSheet}
-                  style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 110 }}
+                  style={{ position: 'fixed', inset: 0, background: 'rgba(2,4,8,0.78)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', zIndex: 110 }}
                 />
                 <div
                   onClick={e => e.stopPropagation()}
                   style={{
                     position: 'fixed', zIndex: 111,
-                    top: 'max(80px, env(safe-area-inset-top, 0px) + 20px)',
+                    top: 'max(72px, env(safe-area-inset-top, 0px) + 16px)',
                     bottom: 0,
-                    left: 'max(0px, calc(50% - 260px))',
-                    right: 'max(0px, calc(50% - 260px))',
-                    background: '#0d0d0c',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    left: 'max(0px, calc(50% - 270px))',
+                    right: 'max(0px, calc(50% - 270px))',
+                    background: 'linear-gradient(180deg, #141823 0%, #0a0c11 100%)',
+                    borderTop: `2px solid ${slotAccent}`,
+                    borderLeft: '1px solid rgba(255,255,255,0.12)',
+                    borderRight: '1px solid rgba(255,255,255,0.12)',
                     borderRadius: '20px 20px 0 0',
+                    boxShadow: '0 -10px 44px rgba(0,0,0,0.6)',
                     display: 'flex', flexDirection: 'column',
                     overflow: 'hidden',
                   }}
                 >
-                  <div style={{ padding: '1rem 1.25rem 0.875rem', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
+                  {/* Header */}
+                  <div style={{ padding: '1.1rem 1.25rem 0.95rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
                     <div>
-                      <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.48rem', color: pickerSlot === 0 ? '#f0c040' : '#4a6a8a', marginBottom: 3 }}>
-                        {pickerSlot === 0 ? 'Captain' : pickerSlot !== null ? `Slot ${pickerSlot + 1}` : ''}
+                      <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: slotAccent, marginBottom: 4 }}>
+                        {pickerSlot === 0 ? 'Captain' : pickerSlot !== null ? `Crew · Slot ${pickerSlot + 1}` : ''}
                       </p>
-                      <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f5f2ec', lineHeight: 1.1 }}>
                         {pickerSlot === 0 ? 'Assign Captain' : 'Assign Crew'}
                       </p>
-                      {pickerSlot === 0 ? (
-                        <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8a8480', lineHeight: 1.5, marginTop: 6 }}>
-                          Your captain uses full stats and <span style={{ color: '#c8aa6a' }}>always returns</span>. Crew use 80% stats and <span style={{ color: '#f87171' }}>can be lost permanently</span>.
-                        </p>
-                      ) : (
-                        <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6460', lineHeight: 1.5, marginTop: 6 }}>Crew contribute 80% of their stats and can be lost on risky voyages.</p>
-                      )}
                     </div>
-                    <button onClick={closeSheet} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, padding: 0, marginLeft: '0.75rem' }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6a6764" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    <button onClick={closeSheet} aria-label="Close" style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, padding: 0, marginLeft: '0.75rem' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b2aca3" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
                   </div>
 
+                  {/* Current-crew totals summary */}
+                  <div style={{ padding: '0.85rem 1.25rem 0.95rem', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.025)', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: '#9aa0a6' }}>Crew aboard</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: hasCrew ? '#dfe9e3' : '#6a6764' }}>{slots.filter(Boolean).length} / {slots.length}</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {STAT_COLS.map(s => {
+                        const v = s.key === 'power' ? totalPower : s.key === 'dodge' ? totalDodge : totalFortune
+                        return (
+                          <div key={s.key} style={{ flex: 1, textAlign: 'center', background: 'rgba(0,0,0,0.32)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.5rem 0.2rem' }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: s.color, lineHeight: 1 }}>{v}</p>
+                            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.08em', color: '#857f77', marginTop: 4 }}>{s.short}</p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <p className="font-karla" style={{ fontSize: '0.7rem', color: '#9a948c', lineHeight: 1.5, marginTop: 10 }}>
+                      {pickerSlot === 0
+                        ? <>Your captain uses <span style={{ color: '#e4c890', fontWeight: 600 }}>full stats</span> and always returns. Crew add <span style={{ color: '#9ec6ff', fontWeight: 600 }}>80%</span> and can be lost on risky voyages.</>
+                        : <>Crew add <span style={{ color: '#9ec6ff', fontWeight: 600 }}>80%</span> of their stats and can be lost on risky voyages.</>}
+                    </p>
+                  </div>
+
                   {/* Sort bar */}
-                  <div style={{ padding: '0.5rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                    <span className="font-karla" style={{ fontSize: '0.58rem', color: '#4a4845' }}>Sort:</span>
+                  <div style={{ padding: '0.6rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: '#7a766f' }}>Sort</span>
                     {STAT_COLS.map(s => {
                       const active = sortBy === s.key
                       return (
-                        <button key={s.key} onClick={() => setSortBy(active ? null : s.key)} className="font-karla font-700" style={{ fontSize: '0.6rem', padding: '0.22rem 0.6rem', borderRadius: 999, background: active ? `${s.color}22` : 'rgba(255,255,255,0.04)', border: `1px solid ${active ? s.color + '66' : 'rgba(255,255,255,0.1)'}`, color: active ? s.color : '#5a5858', cursor: 'pointer' }}>
+                        <button key={s.key} onClick={() => setSortBy(active ? null : s.key)} className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.66rem', padding: '0.3rem 0.72rem', borderRadius: 999, background: active ? `${s.color}26` : 'rgba(255,255,255,0.05)', border: `1px solid ${active ? s.color + '77' : 'rgba(255,255,255,0.12)'}`, color: active ? s.color : '#9a9488', cursor: 'pointer' }}>
                           {s.short}
                         </button>
                       )
@@ -1004,9 +1027,9 @@ export default function ShipHero({
 
                   <div style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1, padding: '1rem 1.25rem 2rem', overscrollBehavior: 'contain' }}>
                     {roster.length === 0 ? (
-                      <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#4a4845', padding: '3rem 1rem' }}>No crew yet. Recruit some at the Crew Hall first!</p>
+                      <p className="font-karla text-center" style={{ fontSize: '0.85rem', color: '#8a857c', padding: '3rem 1rem', lineHeight: 1.6 }}>No crew yet.<br />Recruit some at the Crew Hall first.</p>
                     ) : pickerCards.length === 0 ? (
-                      <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#4a4845', padding: '3rem 1rem' }}>All your crew are already aboard.</p>
+                      <p className="font-karla text-center" style={{ fontSize: '0.85rem', color: '#8a857c', padding: '3rem 1rem' }}>All your crew are already aboard.</p>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                         {pickerCards.map(card => (
@@ -1017,7 +1040,8 @@ export default function ShipHero({
                   </div>
                 </div>
               </>
-            )}
+        )
+      })()}
 
       {/* Score breakdown modal — opens when the player taps a score on the
           hero strip. Shows the actual formula with the player's numbers
