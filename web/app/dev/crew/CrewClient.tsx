@@ -14,7 +14,7 @@ const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (filename: string) => `${SUPA}/storage/v1/object/public/card-arts/${filename}`
 
 const STAT_COLOR = { power: '#f87171', dodge: '#60a5fa', fortune: '#f0c040' }
-const STAT_LABEL = { power: 'PWR', dodge: 'DGE', fortune: 'FTN' }
+const STAT_LABEL = { power: 'PWR', dodge: 'AGI', fortune: 'FTN' }
 
 // Section accents so the two boards read as visually distinct regions.
 const SECTION_RECRUIT = '#c9a24a' // warm gold "new arrivals"
@@ -99,7 +99,7 @@ function FreeRollCountdown() {
 function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: string }) {
   const common = { width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
   if (k === 'power') return (<svg {...common}><path d="M14.5 17.5 3 6V3h3l11.5 11.5" /><path d="m13 19 6-6" /><path d="m16 16 4 4" /><path d="m19 21 2-2" /></svg>)
-  if (k === 'dodge') return (<svg {...common}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>)
+  if (k === 'dodge') return (<svg {...common}><path d="M9.59 4.59A2 2 0 1 1 11 8H2" /><path d="M17.73 7.73A2.5 2.5 0 1 1 19.5 12H2" /><path d="M12.59 19.41A2 2 0 1 0 14 16H2" /></svg>)
   return (<svg {...common}><path d="m12 3-1.9 5.8-5.8 1.9 5.8 1.9L12 18l1.9-5.8 5.8-1.9-5.8-1.9z" /></svg>)
 }
 

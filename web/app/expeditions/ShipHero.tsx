@@ -35,7 +35,7 @@ type RosterCrew = {
 
 const STAT_COLS = [
   { key: 'power'   as const, short: 'PWR', color: '#f87171' },
-  { key: 'dodge'   as const, short: 'NAV', color: '#60a5fa' },
+  { key: 'dodge'   as const, short: 'AGI', color: '#60a5fa' },
   { key: 'fortune' as const, short: 'FTN', color: '#f0c040' },
 ]
 
@@ -1153,7 +1153,7 @@ function VoyageScoreBreakdown({ power, dodge, fortune, total, onClose }: {
   const dodgeRate   = Math.min(dodge   / 28, 1)
   const rows = [
     { label: 'Power',   value: power,   rate: powerRate,   cap: 55, color: '#f87171', max: 0.80 },
-    { label: 'Nav',     value: dodge,   rate: dodgeRate,   cap: 28, color: '#60a5fa', max: 1.00 },
+    { label: 'Agility', value: dodge,   rate: dodgeRate,   cap: 28, color: '#60a5fa', max: 1.00 },
     { label: 'Fortune', value: fortune, rate: fortuneRate, cap: 45, color: '#f0c040', max: 1.00 },
   ]
   return (
@@ -1252,7 +1252,7 @@ function RaidScoreBreakdown({
         <p className="font-karla" style={{ fontSize: '0.84rem', color: '#aebfd4', lineHeight: 1.5 }}>
           How much of a beating you can take. Grows with your ship&apos;s{' '}
           <span style={{ color: '#f0ede8', fontWeight: 600 }}>HP</span> and{' '}
-          <span style={{ color: '#f0ede8', fontWeight: 600 }}>Nav</span> (dodge incoming hits),
+          <span style={{ color: '#f0ede8', fontWeight: 600 }}>Agility</span> (dodge incoming hits),
           with a little sustain from <span style={{ color: '#f0ede8', fontWeight: 600 }}>Fortune</span> (repair kits).
         </p>
       </div>
@@ -1273,7 +1273,7 @@ function RaidScoreBreakdown({
         <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.74rem', color: '#c8704a', marginBottom: '0.6rem' }}>Raise it by</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
           {[
-            'Recruiting stronger crewmates — more Power, Fortune & Nav',
+            'Recruiting stronger crewmates — more Power, Fortune & Agility',
             'Leveling up your Nav rank — it boosts every stat',
             'Upgrading your ship — more HP to survive longer',
           ].map(t => (

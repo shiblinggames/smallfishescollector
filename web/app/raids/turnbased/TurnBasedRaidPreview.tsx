@@ -135,7 +135,7 @@ function StatGrid({ stats }: { stats: RaidPlayerStats }) {
     { label: 'Min Dmg',  value: stats.shipMinDamage },
     { label: 'Speed',    value: stats.shipSpeed },
     { label: 'Power',    value: stats.totalPower },
-    { label: 'Nav',      value: stats.totalDodge },
+    { label: 'Agility',  value: stats.totalDodge },
     { label: 'Fortune',  value: stats.totalFortune },
   ]
   return (
