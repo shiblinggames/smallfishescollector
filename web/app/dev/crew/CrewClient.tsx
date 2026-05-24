@@ -281,7 +281,12 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
     startTransition(async () => {
       const res = await rerollBoard()
       if ('error' in res) setErr(res.error)
-      else { setState(res.state); reveal.startReveal(res.state.board) }
+      else {
+        setState(res.state)
+        // Keep the Nav-bar gem total in sync (it has its own displayGems state).
+        window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.state.gems }))
+        reveal.startReveal(res.state.board)
+      }
       setBusyId(null)
     })
   }
