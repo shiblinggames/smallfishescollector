@@ -133,6 +133,16 @@ function CrewPanel({
   })
   const b = `1.5px solid ${frameAccent}`
 
+  // Rarity-escalating card treatment so Rare / Epic / Legendary read distinctly
+  // at a glance: a rarity-tinted wash + tinted border + outer glow that grows
+  // with tier. Common keeps the plain section styling.
+  const TINT: Record<number, string> = { 2: '12', 3: '1c', 4: '2b' }       // bg wash alpha
+  const GLOW: Record<number, string> = { 2: `0 0 13px ${color}26`, 3: `0 0 18px ${color}40`, 4: `0 0 24px ${color}5c` }
+  const rarityBg = TINT[rarity] ? `linear-gradient(157deg, ${color}${TINT[rarity]} 0%, transparent 60%), ${bg}` : bg
+  const rarityBorder = rarity >= 2 ? `${color}99` : border
+  const baseShadow = `inset 0 0 0 1px ${frameAccent}22, inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.55)`
+  const cardShadow = GLOW[rarity] ? `${baseShadow}, ${GLOW[rarity]}` : baseShadow
+
   return (
     <motion.div
       onClick={onClick}
@@ -142,9 +152,9 @@ function CrewPanel({
       style={{
         position: 'relative', display: 'flex', gap: '0.7rem', padding: '0.7rem',
         borderRadius: 7,
-        background: bg,
-        border: `1px solid ${border}`,
-        boxShadow: `inset 0 0 0 1px ${frameAccent}22, inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.55)`,
+        background: rarityBg,
+        border: `1px solid ${rarityBorder}`,
+        boxShadow: cardShadow,
         opacity: dimmed ? 0.5 : 1,
         cursor: onClick ? 'pointer' : 'default',
       }}>
