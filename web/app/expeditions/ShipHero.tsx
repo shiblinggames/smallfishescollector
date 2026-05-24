@@ -51,7 +51,7 @@ const RARITY_ITEM_COLOR: Record<string, string> = {
 // rarity + the three effective stats on one line, with trait/ability chips on a
 // second line. Dense so the player sees the whole roster at a glance. Whole row
 // taps to assign.
-function PickerCrewCard({ card, selected, onSelect }: { card: RosterCrew; selected: boolean; onSelect: () => void }) {
+function PickerCrewCard({ card, selected, current, onSelect }: { card: RosterCrew; selected: boolean; current: boolean; onSelect: () => void }) {
   const color = CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764'
   const eff = applyCrewEffects({ power: card.power, dodge: card.dodge, fortune: card.fortune }, card.effects)
   const traits = resolveEffects(card.effects)
@@ -65,8 +65,8 @@ function PickerCrewCard({ card, selected, onSelect }: { card: RosterCrew; select
     <div onClick={onSelect} style={{
       display: 'flex', gap: 10, alignItems: 'center', minWidth: 0, cursor: 'pointer',
       padding: '0.55rem 0.6rem', borderRadius: 8,
-      background: selected ? `${color}1f` : 'rgba(255,255,255,0.035)',
-      border: `1px solid ${selected ? color + '99' : 'rgba(255,255,255,0.08)'}`,
+      background: selected ? `${color}1f` : current ? 'rgba(127,208,160,0.08)' : 'rgba(255,255,255,0.035)',
+      border: `1px solid ${selected ? color + '99' : current ? 'rgba(127,208,160,0.42)' : 'rgba(255,255,255,0.08)'}`,
       borderLeft: `3px solid ${color}`,
       boxShadow: selected ? `0 0 0 1px ${color}44, 0 0 16px ${color}33` : 'none',
       transition: 'background 0.12s, border-color 0.12s, box-shadow 0.12s',
@@ -93,6 +93,9 @@ function PickerCrewCard({ card, selected, onSelect }: { card: RosterCrew; select
           <div style={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 6 }}>
             <span className="font-pirata truncate" style={{ fontSize: '1.02rem', color: '#ecdcbd', lineHeight: 1.1, letterSpacing: '0.02em' }}>{card.name}</span>
             <span className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '0.5rem', letterSpacing: '0.1em', textTransform: 'uppercase', color }}>{rarityName}</span>
+            {current && (
+              <span className="font-karla font-700 uppercase" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.08em', color: '#0a1410', background: '#7fd0a0', padding: '0.08rem 0.34rem', borderRadius: 4 }}>On deck</span>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 9, flexShrink: 0 }}>
             {STAT_COLS.map(s => (
@@ -985,6 +988,8 @@ export default function ShipHero({
           clears the page Nav and the drawer. */}
       {sheetOpen && (() => {
         const slotAccent = pickerSlot === 0 ? '#f0c040' : '#60a5fa'
+        const currentInSlot = pickerSlot !== null ? slots[pickerSlot] : null
+        const currentColor = currentInSlot ? (CREW_RARITY_COLORS[currentInSlot.rarity as 1 | 2 | 3 | 4] ?? '#6a6764') : '#6a6764'
         return (
               <>
                 <div
@@ -1011,13 +1016,27 @@ export default function ShipHero({
                 >
                   {/* Header */}
                   <div style={{ padding: '1.1rem 1.25rem 0.95rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: slotAccent, marginBottom: 4 }}>
                         {pickerSlot === 0 ? 'Captain' : pickerSlot !== null ? `Crew · Slot ${pickerSlot + 1}` : ''}
                       </p>
                       <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f5f2ec', lineHeight: 1.1 }}>
                         {pickerSlot === 0 ? 'Assign Captain' : 'Assign Crew'}
                       </p>
+                      {/* Who's in this slot right now */}
+                      {currentInSlot ? (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, maxWidth: '100%', padding: '0.22rem 0.55rem 0.22rem 0.28rem', borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                          <div style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: `1.5px solid ${currentColor}` }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={IMG_BASE + currentInSlot.filename} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
+                          </div>
+                          <span className="font-karla truncate" style={{ fontSize: '0.66rem', color: '#9aa0a6', minWidth: 0 }}>
+                            Currently <span className="font-700" style={{ color: '#dfe9e3' }}>{currentInSlot.name}</span>
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="font-karla" style={{ marginTop: 7, fontSize: '0.66rem', color: '#6a6764' }}>This slot is empty.</p>
+                      )}
                     </div>
                     <button onClick={closeSheet} aria-label="Close" style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, padding: 0, marginLeft: '0.75rem' }}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b2aca3" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -1079,6 +1098,7 @@ export default function ShipHero({
                             key={card.id}
                             card={card}
                             selected={pendingCard?.id === card.id}
+                            current={currentInSlot?.id === card.id}
                             onSelect={() => setPendingCard(prev => (prev?.id === card.id ? null : card))}
                           />
                         ))}
