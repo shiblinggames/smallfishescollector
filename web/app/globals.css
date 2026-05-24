@@ -1220,6 +1220,33 @@ html, body {
   animation: reveal-flash-grand 1.9s ease-out forwards;
 }
 
+/* ── Crew reveal: flip polish on EVERY card (commons included) ── */
+/* Gentle settle-bounce as a card lands (Epic/Legendary use their own pop) */
+@keyframes crew-settle {
+  0%   { transform: scale(0.94); }
+  55%  { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+.crew-settle { animation: crew-settle 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* Specular shine that sweeps across the portrait once on landing */
+@keyframes crew-shine {
+  from { transform: translateX(-130%) skewX(-18deg); }
+  to   { transform: translateX(360%)  skewX(-18deg); }
+}
+.crew-shine {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 48%;
+  background: linear-gradient(105deg, transparent 0%, rgba(255,246,222,0.42) 50%, transparent 100%);
+  animation: crew-shine 0.62s ease-out 0.12s both;
+}
+
+/* Soft impact ring for Common/Rare landings (Epic+ get the grander shock rings) */
+@keyframes crew-land-ring {
+  0%   { transform: scale(0.4); opacity: 0.5; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+.crew-land-ring { animation: crew-land-ring 0.6s ease-out 0.1s both; }
+
 /* ════════════════════════════════════════
    DIVINE EDITION  (GOD variant — Catfish / Doby Mick only)
    ════════════════════════════════════════ */

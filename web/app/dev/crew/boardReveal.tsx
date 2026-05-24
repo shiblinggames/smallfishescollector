@@ -23,6 +23,7 @@ const SEAL_GLOW: Record<number, string> = { 1: 'rgba(200,160,90,0.7)', 2: 'rgba(
 const CHARGE: Record<number, number> = { 1: 430, 2: 540, 3: 760, 4: 1180 }
 const FIRST_DELAY = 340
 const GAP = 240
+const CLIMAX_LEAD = 280  // a beat of calm before the finale (rarest) card charges
 
 type Flash = { cls: string; key: number } | null
 type Banner = { name: string; rarity: number; color: string; key: number } | null
@@ -32,6 +33,7 @@ export function useReveal() {
   const [phases, setPhases] = useState<Record<number, Phase>>({})
   const [flash, setFlash] = useState<Flash>(null)
   const [banner, setBanner] = useState<Banner>(null)
+  const [climaxId, setClimaxId] = useState<number | null>(null)  // the finale (rarest) card
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const done = useRef<Set<number>>(new Set())
 
@@ -62,23 +64,29 @@ export function useReveal() {
     setPhases(init)
 
     const order = [...board].sort((a, b) => a.rarity - b.rarity) // rarest last
+    setClimaxId(order.length ? order[order.length - 1].id : null)
     let t = FIRST_DELAY
     order.forEach((c, pos) => {
       const isLast = pos === order.length - 1
+      if (isLast) t += CLIMAX_LEAD          // hold a beat so the finale lands as an event
       const charge = CHARGE[c.rarity] + (isLast ? 320 : 0)
       timers.current.push(setTimeout(() => setPhases(p => (p[c.id] === 'sealed' ? { ...p, [c.id]: 'charging' } : p)), t))
       timers.current.push(setTimeout(() => flip(c), t + charge))
       t += charge + GAP
     })
     // Return the board to plain panels once every effect has finished.
-    timers.current.push(setTimeout(() => setPhases({}), t + 3400))
+    timers.current.push(setTimeout(() => { setPhases({}); setClimaxId(null) }, t + 3400))
   }, [flip])
 
   // True from the moment a reroll reveal begins until every card has finished
   // its flip/payoff and the board resets to plain panels — gate re-rolls on it.
   const revealing = Object.keys(phases).length > 0
 
-  return { phases, flash, banner, startReveal, tapCard, revealing }
+  // The finale spotlight: active once the rarest card leaves 'sealed' (it's
+  // charging or revealed). Other cards dim while this is true.
+  const climaxActive = climaxId != null && phases[climaxId] != null && phases[climaxId] !== 'sealed'
+
+  return { phases, flash, banner, startReveal, tapCard, revealing, climaxId, climaxActive }
 }
 
 // ── Per-card wrapper: sealed cover (front) + the real panel (back) ───────────
@@ -88,7 +96,8 @@ export function BoardReveal({ card, phase, onTap, children }: {
   const flipped = phase === 'flipped'
   const charging = phase === 'charging'
   const glow = flipped ? (GLOW[card.rarity] ?? '') : ''
-  const pop = flipped ? (POP[card.rarity] ?? '') : ''
+  // Epic/Legendary keep their grander pop; everything else gets a gentle settle.
+  const pop = flipped ? (POP[card.rarity] ?? 'crew-settle') : ''
 
   return (
     <div style={{ position: 'relative', perspective: 1100 }}>
@@ -98,14 +107,28 @@ export function BoardReveal({ card, phase, onTap, children }: {
         initial={false}
         animate={{ rotateY: flipped ? 0 : -90 }}
         transition={{ duration: 0.34, ease: 'easeOut' }}
-        style={{ transformOrigin: 'center', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+        style={{ position: 'relative', transformOrigin: 'center', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
       >
         <div className={pop}>{children}</div>
+        {/* Specular shine sweeping across the card as it lands (all rarities) */}
+        {flipped && (
+          <span aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 7, overflow: 'hidden', pointerEvents: 'none', zIndex: 7 }}>
+            <span className="crew-shine" />
+          </span>
+        )}
       </motion.div>
 
       {/* Payoff effects (Epic/Legendary), emanating from the card centre */}
       {flipped && card.rarity >= 3 && <ShockRings rarity={card.rarity} />}
       {flipped && card.rarity >= 3 && <ParticleBurst rarity={card.rarity} />}
+      {/* Soft landing ring for Common/Rare (Epic+ already get the shock rings) */}
+      {flipped && card.rarity < 3 && (
+        <span aria-hidden className="crew-land-ring" style={{
+          position: 'absolute', left: '50%', top: '50%', width: 46, height: 46, marginLeft: -23, marginTop: -23,
+          borderRadius: '50%', border: `2px solid ${RARITY_COLORS[card.rarity as CrewRarity]}`,
+          boxShadow: `0 0 8px ${RARITY_COLORS[card.rarity as CrewRarity]}66`, zIndex: 4, pointerEvents: 'none',
+        }} />
+      )}
 
       {/* Sealed dossier cover — rattles, then flips away */}
       <AnimatePresence>

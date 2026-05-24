@@ -463,9 +463,25 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 </CrewPanel>
               )
               const phase = reveal.phases[c.id]
-              return phase
-                ? <BoardReveal key={c.id} card={c} phase={phase} onTap={() => reveal.tapCard(c)}>{panel}</BoardReveal>
-                : <div key={c.id}>{panel}</div>
+              // Climax: dim/desaturate the rest of the board and spotlight the
+              // finale (rarest) card so the best pull lands as an event.
+              const dim = reveal.climaxActive && c.id !== reveal.climaxId
+              const spotlight = reveal.climaxActive && c.id === reveal.climaxId
+              return (
+                <div key={c.id} style={{
+                  position: 'relative', borderRadius: 8,
+                  transition: 'opacity 0.45s ease, filter 0.45s ease, transform 0.45s ease, box-shadow 0.45s ease',
+                  opacity: dim ? 0.34 : 1,
+                  filter: dim ? 'grayscale(0.7) brightness(0.62)' : undefined,
+                  transform: spotlight ? 'scale(1.045)' : undefined,
+                  zIndex: spotlight ? 3 : undefined,
+                  boxShadow: spotlight ? '0 0 30px rgba(255,221,130,0.22)' : undefined,
+                }}>
+                  {phase
+                    ? <BoardReveal card={c} phase={phase} onTap={() => reveal.tapCard(c)}>{panel}</BoardReveal>
+                    : panel}
+                </div>
+              )
             })}
             {state.board.length === 0 && (
               <p className="font-karla" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>No recruits on the board.</p>
