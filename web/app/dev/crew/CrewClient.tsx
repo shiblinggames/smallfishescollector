@@ -445,7 +445,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 >
                   <RefreshIcon />
                   <span>{busyId === 'reroll' ? 'Rerolling…' : 'Reroll'}</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(40,26,8,0.5)', borderRadius: 999, padding: '0.14rem 0.55rem', fontSize: '0.74rem', letterSpacing: 0, color: '#ffe7b8' }}>💎 {state.rerollCost}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(12,8,18,0.5)', borderRadius: 999, padding: '0.16rem 0.6rem', fontSize: '0.76rem', letterSpacing: 0, color: '#c4b5fd' }}>{state.rerollCost} ◆</span>
                 </motion.button>
               </div>
             )
