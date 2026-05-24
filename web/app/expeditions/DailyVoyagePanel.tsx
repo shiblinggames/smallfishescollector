@@ -217,10 +217,10 @@ export default function DailyVoyagePanel({
   }, [returnTime, panelState])
 
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
-  // Minimum crew needed to set sail. Rowboat / Dinghy only have 1 crew slot
-  // so they cap at solo captain — the 2-crew floor applies once you've
-  // upgraded to a Sloop with room for a real party.
-  const minCrew = Math.min(2, shipStats.crewSlots)
+  // Minimum crew needed to set sail. The Inner Sea (coastal) is the safe intro
+  // route — any boat can sail it with a single crew member aboard. Other routes
+  // need a real party of two.
+  const minCrew = selectedRoute === 'coastal' ? 1 : Math.min(2, shipStats.crewSlots)
   const byId = knownCrew.current
   const savedCrew: CrewMember[] = liveCrewIds
     .slice(0, shipStats.crewSlots)

@@ -127,7 +127,12 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
 
   // Deployed party from the new crew roster, resolved with effects.
   const party = await loadDeployedParty(admin, user.id, shipStats.crewSlots)
-  if (party.length < 2) return { error: 'A voyage requires at least two crew members' }
+  // The Inner Sea (coastal) is the safe intro route — any boat can sail it with
+  // a single crew member aboard. Deeper routes still need a party of two.
+  const minCrew = route === 'coastal' ? 1 : 2
+  if (party.length < minCrew) {
+    return { error: minCrew === 1 ? 'You need at least one crew member aboard' : 'A voyage requires at least two crew members' }
+  }
   const resolved = resolveDeployedCrew(party)
 
   // Voyage crew effects: scorePct lifts the whole crew's effective stats (so
