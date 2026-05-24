@@ -3356,7 +3356,9 @@ export default function FishingGame({
         {/* Audio toggles — two independent mutes: music (note icon) and
             SFX (speaker icon). Left edge, below the back-button row.
             Both set state synchronously inside the gesture so iOS PWA
-            permits playback in the same call stack. */}
+            permits playback in the same call stack. Hidden while any panel
+            (hold/sell/gear/bait/collection) is open so they don't float over it. */}
+        {!(holdOpen || sellOpen || gearOpen || baitOpen || collectionOpen) && (
         <div style={{ position: 'absolute', bottom: 110, left: 10, zIndex: 60, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {([
             {
@@ -3428,6 +3430,7 @@ export default function FishingGame({
             </button>
           ))}
         </div>
+        )}
 
         {/* Background — gated to worldBobAnimate so the painted scene
             stays still during calm casting (only the boat/character
