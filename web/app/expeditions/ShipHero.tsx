@@ -296,7 +296,7 @@ export default function ShipHero({
     const card = slots[i]
     const isCaptain = i === 0
     const rc = card ? (CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764') : '#6a6764'
-    const ring = card ? (isCaptain ? '#f0c040' : rc) : (isCaptain ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.34)')
+    const ring = card ? (isCaptain ? '#f0c040' : rc) : (isCaptain ? '#f0c040' : 'rgba(255,255,255,0.8)')
     if (card) {
       return (
         <div onClick={() => openPickerForSlot(i)} style={{ position: 'relative', width: size, height: size, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: `2px solid ${ring}`, boxShadow: `0 4px 7px rgba(0,0,0,0.6), 0 0 0 2px rgba(4,6,10,0.5)` }}>
@@ -309,8 +309,8 @@ export default function ShipHero({
       )
     }
     return (
-      <button onClick={() => openPickerForSlot(i)} aria-label={isCaptain ? 'Assign captain' : 'Assign crew'} style={{ width: size, height: size, borderRadius: '50%', border: `1.5px dashed ${ring}`, background: 'rgba(6,10,16,0.5)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, boxShadow: '0 3px 6px rgba(0,0,0,0.4)' }}>
-        <svg width={size * 0.3} height={size * 0.3} viewBox="0 0 24 24" fill="none" stroke={isCaptain ? 'rgba(240,192,64,0.65)' : 'rgba(255,255,255,0.45)'} strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      <button onClick={() => openPickerForSlot(i)} aria-label={isCaptain ? 'Assign captain' : 'Assign crew'} style={{ width: size, height: size, borderRadius: '50%', border: `2px dashed ${ring}`, background: 'rgba(6,9,16,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, boxShadow: '0 2px 9px rgba(0,0,0,0.75), 0 0 0 3px rgba(2,4,8,0.5)' }}>
+        <svg width={size * 0.36} height={size * 0.36} viewBox="0 0 24 24" fill="none" stroke={isCaptain ? '#f0c040' : 'rgba(255,255,255,0.92)'} strokeWidth="2.6" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
       </button>
     )
   }
@@ -472,7 +472,7 @@ export default function ShipHero({
                   </div>
                   {deckSlot(0, 54)}
                 </div>
-                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#f0c040', textShadow: '0 1px 3px rgba(0,0,0,0.95)' }}>Captain</span>
+                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.16em', color: '#f0c040', background: 'rgba(6,9,16,0.82)', padding: '0.1rem 0.45rem', borderRadius: 999, boxShadow: '0 1px 4px rgba(0,0,0,0.7)' }}>Captain</span>
               </div>
 
               {/* Crew — row(s) below the captain */}
