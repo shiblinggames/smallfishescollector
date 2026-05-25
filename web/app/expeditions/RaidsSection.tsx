@@ -284,6 +284,7 @@ function NodeDetailSheet({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [err, setErr] = useState<string | null>(null)
+  const [revealed, setRevealed] = useState(false) // puzzle solved → show the destination
   const { node, status, claimable, lockReason } = view
   const accent = TYPE_ACCENT[node.type] ?? '#c4a96a'
   const img = node.image ?? TYPE_IMAGE[node.type]
@@ -333,10 +334,14 @@ function NodeDetailSheet({
     startTransition(async () => {
       const res = await solvePuzzleNode(node.id)
       if ('error' in res) { setErr(res.error); return }
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
-      router.refresh()
-      onClose()
+      // Stay open and reveal the destination — the Nav XP is already granted.
+      setRevealed(true)
     })
+  }
+
+  function finishReveal() {
+    router.refresh()
+    onClose()
   }
 
   function enter() {
@@ -543,9 +548,45 @@ function NodeDetailSheet({
         )}
 
         {/* Puzzle: the beacon-chain (Lights Out), live when available */}
-        {node.type === 'puzzle' && node.puzzle && status === 'available' && (
+        {node.type === 'puzzle' && node.puzzle && status === 'available' && !revealed && (
           <div style={{ marginTop: '1.1rem' }}>
             <BeaconChainPuzzle puzzle={node.puzzle} onSolved={solvePuzzle} />
+          </div>
+        )}
+
+        {/* Puzzle solved → reveal the destination (where the freight all runs) */}
+        {node.type === 'puzzle' && node.puzzle && revealed && (
+          <div style={{
+            marginTop: '1.1rem', borderRadius: 14,
+            border: `1px solid ${accent}55`,
+            background: `linear-gradient(160deg, ${accent}14, rgba(12,18,28,0.4))`,
+            boxShadow: `0 0 20px ${accent}22`, padding: '1.1rem 1rem',
+          }}>
+            <p className="font-cinzel font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: accent, marginBottom: '0.6rem', textAlign: 'center' }}>
+              The Network Reads True
+            </p>
+            <p className="font-karla" style={{ fontSize: '0.84rem', lineHeight: 1.6, color: 'rgba(240,237,232,0.8)', whiteSpace: 'pre-line', textAlign: 'center' }}>
+              {node.puzzle.reveal}
+            </p>
+            {node.puzzle.rewardNavXp > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.85rem' }}>
+                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{
+                  fontSize: '0.66rem', color: accent,
+                  background: `${accent}1f`, border: `1px solid ${accent}44`,
+                  borderRadius: 999, padding: '0.32rem 0.72rem',
+                }}>
+                  +{node.puzzle.rewardNavXp} Nav XP
+                </span>
+              </div>
+            )}
+            <button
+              onClick={finishReveal}
+              disabled={pending}
+              className="font-cinzel font-700 uppercase tracking-[0.06em]"
+              style={{ width: '100%', marginTop: '1rem', padding: '0.8rem', borderRadius: 12, fontSize: '0.98rem', background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, cursor: pending ? 'wait' : 'pointer' }}
+            >
+              Set the Heading →
+            </button>
           </div>
         )}
 

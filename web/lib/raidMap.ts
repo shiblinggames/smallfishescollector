@@ -41,7 +41,11 @@ export interface RaidPuzzle {
   rows: number
   /** Random taps applied from the solved (all-lit) board to scramble it. */
   scrambleTaps: number
-  rewardDoubloons: number
+  /** Nav XP granted on solve (no doubloons — this is a navigation discovery). */
+  rewardNavXp: number
+  /** Story payoff shown the moment the chain is lit: where the freight runs,
+   *  i.e. the next place to head. Supports \n line breaks. */
+  reveal?: string
 }
 
 /** One row in a node's "possible drops" panel. */
@@ -106,7 +110,7 @@ export interface RaidNode {
    *  raid-item ids (lib/raidItems). Choosing one adds it to the
    *  player's raid_items permanently and clears the node. */
   choice?: { items: string[] }
-  /** puzzle: the rotate-to-connect route lock. Solving clears the node. */
+  /** puzzle: the beacon-chain (Lights Out). Solving clears the node. */
   puzzle?: RaidPuzzle
   /** Rich detail surfaced in the tap-to-open sheet. */
   detail: RaidNodeDetail
@@ -359,8 +363,8 @@ export const RAID_MAP: RaidNode[] = [
     id: 'smugglers_chart',
     type: 'puzzle',
     label: "The Smuggler's Chart",
-    flavor: "Krust's wreck gave up a chart, but the lane is marked in dark signal beacons. Light the whole chain at once and it points where the danger-zone freight runs.",
-    bridge: "The beacons blaze as one and the lane runs cold and deep, into the danger zones the Finndicate only whispers about. Whatever they haul through there, it is close now.",
+    flavor: "Krust ran freight for the Finndicate, and his cabin gave up the network map: a chain of signal beacons linking every drop to one another. Light the whole chain and it shows where the freight all ships to.",
+    bridge: "The beacons blaze as one and every lane bends to a single point, deep past the danger line. That is where the freight runs, and where you sail next.",
     requiresNode: 'finndicate_notice',
     // image: '/smugglers_chart.png',  // TODO: wire the custom node art once provided
     puzzle: {
@@ -372,26 +376,22 @@ export const RAID_MAP: RaidNode[] = [
       cols: 4,
       rows: 4,
       scrambleTaps: 12,
-      rewardDoubloons: 2500,
+      rewardNavXp: 500,
+      reveal:
+        "The beacons hold their light, and the chain reads true at last. Every freight lane on the map runs to the same point, far past the danger line where the charts stop.\n\nYou have the heading now. That is where the Finndicate ships it all, and that is where you sail next.",
     },
     detail: {
       description:
-        "Krust went down with a chart in his cabin, and it is the only thing aboard worth keeping. On it runs the Finndicate's priority lane, marked out in a chain of signal beacons that burn the night the freight sails.\n\nThe beacons are wired against prying eyes: light one and the lanterns beside it gutter or flare, so no single light ever gives the pattern away. Get the whole chain lit at once and the lane shows itself, the headings no one was ever meant to read.",
+        "Krust was no kingpin, just a captain who ran freight, and the Finndicate kept its captains tied together. His cabin gave up the network map: a chain of signal beacons, every drop wired to the next, that burns the nights the freight sails.\n\nThe beacons are rigged against prying eyes. Light one and the lanterns beside it gutter or flare, so no single light ever gives the pattern away. Get the whole chain lit at once and the network shows itself, and the headings no one was ever meant to read.",
       drops: [
         {
-          emoji: '📜',
-          label: "Captain's Logbook, Fragment V",
-          sublabel: 'The priority lane, charted at last. It runs straight into the danger zones.',
+          emoji: '🧭',
+          label: '500 Nav XP',
+          sublabel: 'Reading the network map sharpens your navigation. No coin, just the heading.',
           rarity: 'rare',
         },
-        {
-          emoji: '⟡',
-          label: '2,500 ⟡',
-          sublabel: 'Salvage from Krust\'s cabin, yours for reading the chart.',
-          rarity: 'uncommon',
-        },
       ],
-      dropsNote: 'Tap beacons to light the chain. Each tap flips the one you touch and its neighbours. Light them all at once. One-time, no cost, no fight.',
+      dropsNote: 'Tap beacons to light the chain. Each tap flips the one you touch and its neighbours. Light them all at once to read the network. One-time, no cost, no fight.',
     },
   },
 ]
