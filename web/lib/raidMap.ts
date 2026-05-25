@@ -365,20 +365,21 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "Krust's wreck gave up a chart, but the priority lane is broken across it. Piece the route together and it points where the danger-zone freight runs.",
     bridge: "The lane joins up and runs cold and deep, into the danger zones the Finndicate only whispers about. Whatever they haul through there, it is close now.",
     requiresNode: 'finndicate_notice',
-    requiresNavLevel: 30,
-    image: '/raidlog.png',
+    // image: '/smugglers_chart.png',  // TODO: wire the custom node art once provided
     puzzle: {
-      cols: 3,
-      rows: 3,
-      // A single winding lane from the harbour (W of top-left) to the mark
-      // (E of bottom-right). Straights + corners, scrambled on open.
+      cols: 4,
+      rows: 4,
+      // A single winding lane that fills the whole chart: harbour (W of the
+      // top-left) winding down to the mark (S of the bottom-left). Straights +
+      // corners, scrambled on open. 16 pieces = a step up from a 3×3.
       tiles: [
-        { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'S'] },
-        { edges: ['E', 'S'] }, { edges: ['W', 'E'] }, { edges: ['N', 'W'] },
-        { edges: ['N', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'E'] },
+        { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'S'] },
+        { edges: ['E', 'S'] }, { edges: ['E', 'W'] }, { edges: ['E', 'W'] }, { edges: ['N', 'W'] },
+        { edges: ['N', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'S'] },
+        { edges: ['E', 'S'] }, { edges: ['E', 'W'] }, { edges: ['E', 'W'] }, { edges: ['N', 'W'] },
       ],
       start: { col: 0, row: 0, edge: 'W' },
-      end: { col: 2, row: 2, edge: 'E' },
+      end: { col: 0, row: 3, edge: 'S' },
       rewardDoubloons: 2500,
     },
     detail: {
