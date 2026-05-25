@@ -12,6 +12,8 @@ interface Props {
    *  mount so the loot screen reads as a continuation of the fight. */
   killGold: number
   killXP: number
+  /** Full-clear bonus Nav XP (25% of the run's kill XP), granted on claim. */
+  completionBonusXp?: number
   /** Pre-rolled loot pick + display amount (computed in RaidGame). The slot
    *  spin lands on this entry's index. */
   loot: RaidLootItem[]
@@ -46,7 +48,7 @@ function fmtGold(n: number): string {
 
 export default function RaidLootStage(props: Props) {
   const {
-    boss, killGold, killXP,
+    boss, killGold, killXP, completionBonusXp = 0,
     loot, slotFinal, lootAmount, fortuneMult,
     shipImageUrl, shipFilter, shipName,
     onClaim, claiming = false,
@@ -68,12 +70,13 @@ export default function RaidLootStage(props: Props) {
       `You sank ${boss.name}!`,
       `Plunder: +${fmtGold(killGold)} ⟡`,
       `Nav XP: +${killXP}`,
+      ...(completionBonusXp > 0 ? [`Full clear bonus: +${completionBonusXp} Nav XP`] : []),
       `${boss.name} dropped a plunder crate.`,
     ]
     lines.forEach((line, i) => {
       setTimeout(() => setLogLines(prev => [...prev, line]), i * 320)
     })
-  }, [boss.name, killGold, killXP])
+  }, [boss.name, killGold, killXP, completionBonusXp])
 
   // ─── Slot machine tick ─────────────────────────────────────────────────────
   useEffect(() => {

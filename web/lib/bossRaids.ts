@@ -286,3 +286,27 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
     { speaker: 'boss', text: "Strike your colours or strike your guns. Either way this consignment sails on without you." },
   ],
 }
+
+// ── Raid completion bonus ────────────────────────────────────────────────────
+// Clearing a full raid (every mob + the boss) pays a bonus on top of the
+// per-kill Nav XP: 25% of the run's total kill XP. Granted once per clear in
+// claimRaidLoot, and folded into the node sheet's headline XP so the preview
+// matches what a full clear actually pays.
+export const RAID_COMPLETION_XP_BONUS = 0.25
+
+export const BOSS_RAIDS: Record<string, BossRaidConfig> = {
+  [CORSAIRS_RECKONING.raidId]: CORSAIRS_RECKONING,
+  [CAPTAIN_KRUST.raidId]: CAPTAIN_KRUST,
+}
+
+/** Sum of Nav XP from every kill in a full run (sequence mobs + boss). */
+export function raidKillXpTotal(config: BossRaidConfig): number {
+  let xp = 0
+  for (const id of [...config.sequence, config.bossId]) xp += config.killRewards[id]?.xp ?? 0
+  return xp
+}
+
+/** The full-clear bonus Nav XP (25% of the run's total kill XP). */
+export function raidCompletionBonusXp(config: BossRaidConfig): number {
+  return Math.round(raidKillXpTotal(config) * RAID_COMPLETION_XP_BONUS)
+}

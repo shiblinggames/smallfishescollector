@@ -10,7 +10,7 @@
 // gated by `requiresNode` (+ optional Nav level); a cleared combat node
 // stays farmable.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, GEM_GLYPH, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
@@ -177,15 +177,16 @@ function combineGemDrops(drops: RaidNodeDrop[]): RaidNodeDrop[] {
   return out
 }
 
-/** Total guaranteed doubloons + Nav XP for clearing every kill in a raid
- *  (the sequence enemies + the boss). Surfaced as the expected payout. */
+/** Total doubloons + Nav XP for a full clear: every kill (sequence + boss) plus
+ *  the 25% full-clear XP bonus granted on completion. Surfaced as the expected
+ *  payout, so the headline XP matches what finishing the raid actually pays. */
 function clearPayout(config: BossRaidConfig): { doubloons: number; xp: number } {
   let doubloons = 0, xp = 0
   for (const id of [...config.sequence, config.bossId]) {
     const r = config.killRewards[id]
     if (r) { doubloons += r.gold; xp += r.xp }
   }
-  return { doubloons, xp }
+  return { doubloons, xp: xp + raidCompletionBonusXp(config) }
 }
 
 export const RAID_MAP: RaidNode[] = [

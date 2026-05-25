@@ -10,7 +10,7 @@ import { getActiveEffects } from '@/lib/raidItems'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import {
-  BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR,
+  BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR, raidCompletionBonusXp,
 } from '@/lib/bossRaids'
 import RaidCombat from './RaidCombat'
 import RaidLootStage from './RaidLootStage'
@@ -1260,6 +1260,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
             boss={bossEnemy}
             killGold={winGold}
             killXP={winXP}
+            completionBonusXp={raidCompletionBonusXp(config)}
             loot={config.loot}
             slotFinal={slotFinal}
             lootAmount={lootAmount}

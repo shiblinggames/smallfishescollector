@@ -7,6 +7,7 @@ import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
 import { unlockBadge } from '@/app/achievements/badgeActions'
+import { BOSS_RAIDS, raidCompletionBonusXp } from '@/lib/bossRaids'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
@@ -193,10 +194,10 @@ export async function claimRaidLoot(
   elapsedMs: number,
   damageTaken: number,
   raidId: string = 'corsairs_reckoning',
-): Promise<{ newShipSkins: string[]; newDoubloonTotal: number; newRaidItems: string[] }> {
+): Promise<{ newShipSkins: string[]; newDoubloonTotal: number; newRaidItems: string[]; bonusXp: number; newExpeditionXp: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
+  if (!user) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [], bonusXp: 0, newExpeditionXp: 0 }
   // corsairs_bane / ghost_ship are Barnacle Pete feats — only the
   // Corsair's Reckoning clear can earn them, never other raids.
   if (raidId === 'corsairs_reckoning') {
@@ -207,12 +208,17 @@ export async function claimRaidLoot(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items')
+    .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items, expedition_xp')
     .eq('id', user.id)
     .single()
 
   let doubloons       = (profile?.doubloons ?? 0) + baseDoubloons
   let gems            = profile?.gems ?? 0
+  // Full-clear bonus: 25% of the run's total kill XP, on top of the per-kill XP
+  // already granted during the fight.
+  const config        = BOSS_RAIDS[raidId]
+  const bonusXp       = config ? raidCompletionBonusXp(config) : 0
+  const newExpeditionXp = (profile?.expedition_xp ?? 0) + bonusXp
   const ownedSkins    = (profile?.ship_skins as string[] | null) ?? []
   let equippedSkin    = (profile?.equipped_ship_skin as string | null) ?? null
   const newSkins      = [...ownedSkins]
@@ -236,7 +242,7 @@ export async function claimRaidLoot(
   await Promise.all([
     admin
       .from('profiles')
-      .update({ doubloons, gems, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems })
+      .update({ doubloons, gems, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems, expedition_xp: newExpeditionXp })
       .eq('id', user.id),
     admin
       .from('raid_completions')
@@ -247,5 +253,7 @@ export async function claimRaidLoot(
     newShipSkins: newSkins.filter(s => !ownedSkins.includes(s)),
     newDoubloonTotal: doubloons,
     newRaidItems: newRaidItems.filter(i => !ownedRaidItems.includes(i)),
+    bonusXp,
+    newExpeditionXp,
   }
 }
