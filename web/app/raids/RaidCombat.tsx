@@ -171,6 +171,10 @@ export interface RaidCombatProps {
    *  stage so the player can back out without a dedicated row above the
    *  game screen. Parent wires the destination (e.g. /expeditions). */
   onLeave?: () => void
+  /** When true (real raids), the ← button is a *flee attempt*: it confirms,
+   *  then rolls — a failed escape lets the enemy land a parting shot. When
+   *  false/omitted (practice + preview sandboxes), ← leaves instantly. */
+  riskyFlee?: boolean
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -187,7 +191,7 @@ export default function RaidCombat({
   killReward,
   onEnemyDefeated, onPlayerDefeated, onLeave, onPlayerHit,
   anchorSaveAvailable = false, onAnchorSave,
-  raidMods,
+  raidMods, riskyFlee = false,
 }: RaidCombatProps) {
   // Net crew raid effects; no-op default so the practice skirmish is unaffected.
   const mods: RaidMods = raidMods ?? { damagePct: 0, damageTakenPct: 0, critPct: 0, firstStrike: false }
@@ -204,6 +208,10 @@ export default function RaidCombat({
   const nameplate = playerLabel ?? shipName
   // Stats-breakdown popup, opened by tapping the player nameplate
   const [showStats, setShowStats]     = useState(false)
+  // Flee confirmation (real raids only). fleeResult holds the outcome of a
+  // failed escape so the modal can show "caught!" before the player dismisses.
+  const [fleeOpen, setFleeOpen]       = useState(false)
+  const [fleeResult, setFleeResult]   = useState<{ dmg: number; defeated: boolean } | null>(null)
   const [playerHp, setPlayerHp]       = useState(initialPlayerHp)
   const [enemyHp, setEnemyHp]         = useState(enemy.hpBase)
   const [playerCharges, setPlayerCharges] = useState(0)
@@ -288,6 +296,27 @@ export default function RaidCombat({
   const playerHpRef = useRef(initialPlayerHp)
   const enemyHpRef  = useRef(enemy.hpBase)
   useEffect(() => { playerHpRef.current = playerHp }, [playerHp])
+
+  // Flee — leaving a real raid is a gamble, not a free exit. A failed escape
+  // lets the enemy land a parting shot (Bulwark still mitigates); bosses are
+  // harder to slip. Only resolvable on the player's turn (gated at the button).
+  const FLEE_CHANCE = isBoss ? 0.45 : 0.65
+  function attemptFlee() {
+    if (Math.random() < FLEE_CHANCE) { onLeave?.(); return }
+    const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
+    const dmg = Math.max(1, Math.round(base * (1 - (mods.damageTakenPct ?? 0) / 100)))
+    const next = Math.max(0, playerHpRef.current - dmg)
+    setPlayerHp(next)
+    setPHitsplat({ key: Date.now(), text: `-${dmg}`, color: '#ef4444' })
+    setPlayerShakeKey(k => k + 1)
+    setFleeResult({ dmg, defeated: next <= 0 })
+  }
+  function dismissFleeResult() {
+    const defeated = fleeResult?.defeated
+    setFleeResult(null)
+    setFleeOpen(false)
+    if (defeated) { setSubPhase('done'); onPlayerDefeated() }
+  }
   useEffect(() => { enemyHpRef.current = enemyHp }, [enemyHp])
 
   // Reset when enemy changes (parent unmounts/remounts on encounter switch).
@@ -916,11 +945,11 @@ export default function RaidCombat({
             Replaces the dedicated Leave row above the XP bar so the game
             screen can use that vertical space and the XP bar sits right
             under the page header. */}
-        {onLeave && (
+        {onLeave && (!riskyFlee || subPhase === 'await_input') && (
           <button
             type="button"
-            onClick={onLeave}
-            aria-label="Leave raid"
+            onClick={riskyFlee ? () => { setFleeResult(null); setFleeOpen(true) } : onLeave}
+            aria-label={riskyFlee ? 'Flee raid' : 'Leave raid'}
             style={{
               position: 'absolute', top: 10, right: 10, zIndex: 5,
               width: 32, height: 32, borderRadius: '50%',
@@ -938,6 +967,45 @@ export default function RaidCombat({
               <path d="M12 19l-7-7 7-7"/>
             </svg>
           </button>
+        )}
+
+        {/* Flee confirmation — leaving a real raid is a gamble, not a free exit.
+            Fixed overlay so it blocks the action panel too while it's open. */}
+        {fleeOpen && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(3,7,12,0.82)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
+            <div style={{ width: '100%', maxWidth: 320, background: '#0a131f', border: '1px solid #2a3548', borderRadius: 16, padding: '1.1rem 1.1rem 1.2rem', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
+              {fleeResult ? (
+                <>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: fleeResult.defeated ? '#f0a890' : '#f0ede8', marginBottom: 6 }}>
+                    {fleeResult.defeated ? 'Run down as you fled' : 'They caught you!'}
+                  </p>
+                  <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a8b8d0', lineHeight: 1.55, marginBottom: 14 }}>
+                    {fleeResult.defeated
+                      ? `${enemy.name} ran you down for ${fleeResult.dmg} and your ship went under.`
+                      : `${enemy.name} landed a parting shot for ${fleeResult.dmg}. No escape this time.`}
+                  </p>
+                  <button type="button" onClick={dismissFleeResult} className="font-karla font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.7rem', borderRadius: 10, border: '1px solid rgba(122,138,160,0.5)', background: 'rgba(20,32,48,0.9)', color: '#cfe2ff', fontSize: '0.8rem', cursor: 'pointer' }}>
+                    {fleeResult.defeated ? 'Continue' : 'Fight On'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', marginBottom: 6 }}>Flee the raid?</p>
+                  <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a8b8d0', lineHeight: 1.55, marginBottom: 14 }}>
+                    You can try to break away, but you might not get clean. A failed escape lets {enemy.name} land a parting shot.
+                  </p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" onClick={() => setFleeOpen(false)} className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flex: 1, padding: '0.7rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.06)', color: '#cfcabf', fontSize: '0.78rem', cursor: 'pointer' }}>
+                      Hold Fast
+                    </button>
+                    <button type="button" onClick={attemptFlee} className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flex: 1, padding: '0.7rem', borderRadius: 10, border: '1px solid rgba(228,114,114,0.55)', background: 'rgba(212,84,84,0.22)', color: '#f8d2d2', fontSize: '0.78rem', cursor: 'pointer' }}>
+                      Try to Flee
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         )}
 
         {/* Enemy HP nameplate — top-left, with circular portrait badge */}

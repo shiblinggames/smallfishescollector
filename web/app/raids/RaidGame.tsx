@@ -1133,6 +1133,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 anchorSaveAvailable={anchorSavesLeftRef.current > 0}
                 onAnchorSave={() => { anchorSavesLeftRef.current = Math.max(0, anchorSavesLeftRef.current - 1) }}
                 onLeave={() => router.push('/expeditions')}
+                riskyFlee
                 raidMods={raidMods}
               />
             )
