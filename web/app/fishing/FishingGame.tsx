@@ -307,7 +307,7 @@ const SKIN_TIPS = [
   "Tip: reach Fishing Level 50 to unlock the Forest character color.",
   "Tip: prestige any zone 3 times to unlock the Sand character color.",
   "Tip: reach Navigation Level 50 on voyages to unlock the Sky character color.",
-  "Tip: the Golden character color can be bought for 1,000,000 doubloons at /profile.",
+  "Tip: the Golden character color can be bought for 1,000,000 doubloons from your profile.",
   "Tip: open fishing crates for a rare chance to find the Mint character color.",
 ]
 
@@ -331,9 +331,13 @@ const GENERAL_TIPS = [
   "Tip: badges are earned through milestones. Equip your favorites from your profile.",
   "Tip: keep an eye out for Finn — a rival angler who shows up to challenge you.",
   "Tip: upgrade your fish hold so a good run doesn't fill up and stall.",
-  "Tip: ancient_deep trophies never enter your hold — they go straight to your wall.",
+  "Tip: Ancient Deep trophies never enter your hold. They go straight to your wall.",
   "Tip: equip a boat and hat from the gear screen to customize your fisher.",
-  "Tip: a perfect catch keeps your streak alive — and the bonus XP compounds.",
+  "Tip: a perfect catch keeps your streak alive, and the bonus XP compounds.",
+  "Tip: your perfect streak carries over when you leave between casts. Bail on a hooked fish and it breaks.",
+  "Tip: recruit a crew at the Crew Hall, then send them on voyages and raids for loot and rare gear.",
+  "Tip: special fishing gear like the Tide Turner is won out on voyages and raids.",
+  "Tip: give your captain a background and border on your profile to stand out on the leaderboards.",
 ]
 
 type TipContext = { hasTideTurner: boolean; hasPhantomHook: boolean; hasAutoCaster: boolean }
