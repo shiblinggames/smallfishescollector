@@ -28,10 +28,10 @@ const HABITAT_LABEL: Record<string, string> = {
   ancient_deep: 'Ancient Deep',
 }
 const HABITAT_TAGLINE: Record<string, string> = {
-  shallows:    'Clear water, gentle currents',
-  open_waters: 'Wide open sea',
-  deep:        'Cold and dark below',
-  abyss:       'The unknown depths',
+  shallows:    'Bright water, gentle currents',
+  open_waters: 'Open blue, horizon to horizon',
+  deep:        'Dusk settles over deep water',
+  abyss:       'Cold and dark, far from any light',
   ancient_deep: 'Before time. Beyond depth.',
 }
 
