@@ -294,11 +294,6 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
 // matches what a full clear actually pays.
 export const RAID_COMPLETION_XP_BONUS = 0.25
 
-export const BOSS_RAIDS: Record<string, BossRaidConfig> = {
-  [CORSAIRS_RECKONING.raidId]: CORSAIRS_RECKONING,
-  [CAPTAIN_KRUST.raidId]: CAPTAIN_KRUST,
-}
-
 /** Sum of Nav XP from every kill in a full run (sequence mobs + boss). */
 export function raidKillXpTotal(config: BossRaidConfig): number {
   let xp = 0

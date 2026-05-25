@@ -978,20 +978,37 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         setLootBase(base)
         setLootAmount(total)
         setWinIsBoss(true)
-        // Award the kill XP + gold immediately — the stage's log shows
-        // "Plunder: +X ⟡ · Nav XP: +Y" lines as it mounts.
+        // Award the boss kill XP + the full-clear bonus (25% of the run's kill
+        // XP) in one persisted call, but animate the bar in two steps: the kill
+        // XP now, then the bonus a beat later, synced to the loot stage's "Full
+        // clear bonus" log line.
+        const bonus = raidCompletionBonusXp(config)
         try {
-          const res = await awardRaidKill(xp, gold)
-          const oldLevel = getLevelFromXP(navXPRef.current)
-          const newLevel = getLevelFromXP(res.newExpeditionXP)
-          navXPRef.current = res.newExpeditionXP
-          setNavXP(res.newExpeditionXP)
+          const before = navXPRef.current
+          const res = await awardRaidKill(xp + bonus, gold)
+          const killTotal = res.newExpeditionXP - bonus
+          const oldLevel = getLevelFromXP(before)
+          const killLevel = getLevelFromXP(killTotal)
+          navXPRef.current = killTotal
+          setNavXP(killTotal)
           window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
           if (xp > 0) setXpPopup({ value: xp, id: Date.now() })
-          if (newLevel > oldLevel) {
+          if (killLevel > oldLevel) {
             // Surface the level-up overlay before the loot stage so the
             // celebration doesn't fight the chest reveal for attention.
-            setTimeout(() => setLevelUp({ fromLevel: oldLevel, toLevel: newLevel }), 600)
+            setTimeout(() => setLevelUp({ fromLevel: oldLevel, toLevel: killLevel }), 600)
+          }
+          // Second beat: fill the bonus into the bar as its log line appears.
+          if (bonus > 0) {
+            setTimeout(() => {
+              navXPRef.current = res.newExpeditionXP
+              setNavXP(res.newExpeditionXP)
+              setXpPopup({ value: bonus, id: Date.now() })
+              const bonusLevel = getLevelFromXP(res.newExpeditionXP)
+              if (bonusLevel > killLevel) {
+                setTimeout(() => setLevelUp({ fromLevel: killLevel, toLevel: bonusLevel }), 700)
+              }
+            }, 1500)
           }
         } catch { /* save failed, still go to loot */ }
         phaseRef.current = 'loot'
