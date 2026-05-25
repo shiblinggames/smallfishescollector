@@ -326,6 +326,9 @@ export default function RaidCombat({
     setPlayerHp(next)
     setPHitsplat({ key: Date.now(), text: `-${dmg}`, color: '#ef4444' })
     setPlayerShakeKey(k => k + 1)
+    setResolveLog(prev => [...prev, next <= 0
+      ? `You break for it, but ${enemy.name} runs you down for ${dmg}!`
+      : `You try to flee, but ${enemy.name} lands a parting shot for ${dmg}.`])
     setFleeResult({ dmg, defeated: next <= 0 })
   }
   function dismissFleeResult() {
