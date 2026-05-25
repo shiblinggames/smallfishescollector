@@ -27,20 +27,20 @@ export function isCombatNode(t: RaidNodeType): boolean {
   return t === 'skirmish' || t === 'raid'
 }
 
-// ── Rotate-to-connect puzzle (a "pipes" route lock) ──────────────────────────
-// The component generates a random spanning-tree network of the given size and
-// scrambles the rotations; the player taps tiles to rotate them and must
-// reconnect the whole network (every drop + the mark back to the harbour).
-// There is no hidden answer to leak — the tile shapes are visible and the
-// challenge is the manipulation — so the solve is checked client-side and the
-// server just records completion + pays the reward (same trust level as the
-// "mark story read" nodes). Difficulty knob = grid size.
-export type PuzzleEdge = 'N' | 'E' | 'S' | 'W'
+// ── Beacon-chain puzzle (Lights Out) ─────────────────────────────────────────
+// The smuggler's lane is marked by signal beacons wired as a tamper failsafe:
+// lighting one flips the beacons beside it. Light the WHOLE chain at once to read
+// the heading. The component scrambles the all-lit board with random taps, so it
+// is always solvable but has no greedy/hill-climb solve (the parity makes
+// guessing useless) — that is what makes it genuinely hard. There is no hidden
+// answer to leak, so the solve is checked client-side and the server just records
+// completion + pays the reward (same trust level as the "mark story read" nodes).
+// Difficulty knobs = grid size + scrambleTaps.
 export interface RaidPuzzle {
   cols: number
   rows: number
-  start: { col: number; row: number; edge: PuzzleEdge }
-  end: { col: number; row: number; edge: PuzzleEdge }
+  /** Random taps applied from the solved (all-lit) board to scramble it. */
+  scrambleTaps: number
   rewardDoubloons: number
 }
 
@@ -359,25 +359,22 @@ export const RAID_MAP: RaidNode[] = [
     id: 'smugglers_chart',
     type: 'puzzle',
     label: "The Smuggler's Chart",
-    flavor: "Krust's wreck gave up a chart, but the priority lane is broken across it. Piece the route together and it points where the danger-zone freight runs.",
-    bridge: "The lane joins up and runs cold and deep, into the danger zones the Finndicate only whispers about. Whatever they haul through there, it is close now.",
+    flavor: "Krust's wreck gave up a chart, but the lane is marked in dark signal beacons. Light the whole chain at once and it points where the danger-zone freight runs.",
+    bridge: "The beacons blaze as one and the lane runs cold and deep, into the danger zones the Finndicate only whispers about. Whatever they haul through there, it is close now.",
     requiresNode: 'finndicate_notice',
     // image: '/smugglers_chart.png',  // TODO: wire the custom node art once provided
     puzzle: {
-      // 5×5 smuggling network. The component generates a random spanning tree of
-      // this size, so the harbour (W of top-left) feeds a branching web of lanes
-      // with junctions and dead-end drops that must ALL reconnect, and the mark
-      // (S of bottom-right) linked back too. Bigger grid = more junctions to
-      // orient = harder. Guaranteed solvable (it is a tree).
+      // 5×5 Lights Out. Light every beacon at once; each tap flips the beacon and
+      // its neighbours, so there is no greedy solve. Scrambled from the solved
+      // board, so always solvable. Difficulty = grid size + scrambleTaps.
       cols: 5,
       rows: 5,
-      start: { col: 0, row: 0, edge: 'W' },
-      end: { col: 4, row: 4, edge: 'S' },
+      scrambleTaps: 16,
       rewardDoubloons: 2500,
     },
     detail: {
       description:
-        "Krust went down with a chart in his cabin, and it is the only thing aboard worth keeping. On it runs the Finndicate's priority network, every lane their danger-zone freight sails and every quiet drop it answers to.\n\nThe trouble is the chart is in pieces, the lanes scattered across it in broken segments. Turn each piece until the whole web reconnects, every drop linked back to the harbour and the mark, and you will have the headings no one was ever meant to read.",
+        "Krust went down with a chart in his cabin, and it is the only thing aboard worth keeping. On it runs the Finndicate's priority lane, marked out in a chain of signal beacons that burn the night the freight sails.\n\nThe beacons are wired against prying eyes: light one and the lanterns beside it gutter or flare, so no single light ever gives the pattern away. Get the whole chain lit at once and the lane shows itself, the headings no one was ever meant to read.",
       drops: [
         {
           emoji: '📜',
@@ -392,7 +389,7 @@ export const RAID_MAP: RaidNode[] = [
           rarity: 'uncommon',
         },
       ],
-      dropsNote: 'Rotate the chart pieces to relink the network. Every drop and the mark must connect back to the harbour. One-time, no cost, no fight.',
+      dropsNote: 'Tap beacons to light the chain. Each tap flips the one you touch and its neighbours. Light them all at once. One-time, no cost, no fight.',
     },
   },
 ]

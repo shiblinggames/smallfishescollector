@@ -8,7 +8,7 @@ import { isCombatNode, type RaidNodeView } from '@/lib/raidMap'
 import { RARITY_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
 import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice, solvePuzzleNode } from './raidMapActions'
-import RouteLockPuzzle from './RouteLockPuzzle'
+import BeaconChainPuzzle from './BeaconChainPuzzle'
 
 // Distinct border / glow colour per node type so the route reads at a
 // glance: cyan = practice, ember = boss raid, gold = collect goal,
@@ -68,8 +68,8 @@ function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; si
   if (type === 'shop') return <svg {...common}><path d="M3 9l1.5-5h15L21 9M4 9v10a1 1 0 001 1h14a1 1 0 001-1V9M4 9h16M9 13h6" /></svg>
   // story: open book
   if (type === 'story') return <svg {...common}><path d="M12 6.5C10.5 5 8 4.5 4 5v13c4-.5 6.5 0 8 1.5 1.5-1.5 4-2 8-1.5V5c-4-.5-6.5 0-8 1.5zM12 6.5V19" /></svg>
-  // puzzle: compass rose (a chart / route lock)
-  if (type === 'puzzle') return <svg {...common}><path d="M12 2l2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6z" /><circle cx="12" cy="12" r="1.8" fill={color} stroke="none" /></svg>
+  // puzzle: a signal beacon flame (light the chain)
+  if (type === 'puzzle') return <svg {...common}><path d="M12 2c1.6 3 5 4.6 5 9a5 5 0 0 1-10 0c0-2 .8-3.2 2-4.2.2 1.2 1 1.9 1.9 2.1C11.8 6.6 11 4.1 12 2z" /></svg>
   // milestone (default): treasure star
   return <svg {...common}><path d="M12 2l2.4 6.9H22l-6 4.5 2.3 7L12 16.9 5.7 20.4 8 13.4 2 8.9h7.6z" /></svg>
 }
@@ -423,7 +423,7 @@ function NodeDetailSheet({
     // available → the puzzle itself is rendered in the body (auto-solves);
     // cleared/locked just show a status banner here.
     if (cleared) {
-      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Route Charted ✓</div>
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Beacons Lit ✓</div>
     } else if (locked) {
       cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
     }
@@ -542,10 +542,10 @@ function NodeDetailSheet({
           </div>
         )}
 
-        {/* Puzzle: the rotate-to-connect route lock, live when available */}
+        {/* Puzzle: the beacon-chain (Lights Out), live when available */}
         {node.type === 'puzzle' && node.puzzle && status === 'available' && (
           <div style={{ marginTop: '1.1rem' }}>
-            <RouteLockPuzzle puzzle={node.puzzle} onSolved={solvePuzzle} />
+            <BeaconChainPuzzle puzzle={node.puzzle} onSolved={solvePuzzle} />
           </div>
         )}
 
