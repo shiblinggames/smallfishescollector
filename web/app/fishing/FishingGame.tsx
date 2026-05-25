@@ -4544,7 +4544,13 @@ export default function FishingGame({
 
           {/* ── Action button — same position every phase ── */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', paddingTop: '0.5rem', paddingBottom: '0.75rem' }}>
-            <AnimatePresence mode="wait">
+            {/* No AnimatePresence wrapper here on purpose. mode="wait" could get
+                stuck during the catch → reeling → result transition and leave
+                this area EMPTY — hiding the Cast / Cast Again button even with
+                bait and hold space (the recurring "no cast button" report).
+                Plain conditionals always render the correct button; the motion
+                children still play their enter animation on mount. */}
+            <>
               {(phase === 'idle' || phase === 'result') && holdTotalCount >= holdCapacity && selectedZone !== 'ancient_deep' && (
                 <motion.div key="holdfull"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -4669,7 +4675,7 @@ export default function FishingGame({
                   <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#4a4845' }}>…</p>
                 </motion.div>
               )}
-              {phase === 'result' && holdTotalCount < holdCapacity && (!crateResult || cratePhase === 'revealed' || !!catchResult || !!missResult) && (
+              {phase === 'result' && !allAncientCaught && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && (!crateResult || cratePhase === 'revealed' || !!catchResult || !!missResult) && (
                 <motion.button key="again"
                   onPointerDown={(e) => { e.preventDefault(); handleCastAgain() }}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
@@ -4695,7 +4701,7 @@ export default function FishingGame({
                   Cast Again
                 </motion.button>
               )}
-            </AnimatePresence>
+            </>
           </div>
 
           {/* ── Bottom buttons — 4 action tiles ── */}
