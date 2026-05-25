@@ -165,7 +165,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, hook_tier, fishing_xp, fish_hold_tier, trophy_catches, active_event')
+    .select('rod_tier, hook_tier, fishing_xp, fish_hold_tier, trophy_catches, active_event, catch_pending')
     .eq('id', user.id)
     .single()
 
@@ -212,17 +212,27 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const rod = getRod(profile.rod_tier ?? 0)
 
+  // Crate encounter: 2% chance (× rod.crateChanceMult — Treasure Rod = 2×).
+  // Rolled up-front so the in-flight flag below can skip crates — they're
+  // streak-neutral, so bailing on a crate cast never breaks a streak.
+  const isCrate = habitat !== 'ancient_deep' && Math.random() < 0.02 * (rod.crateChanceMult ?? 1)
+
   // Remember this bait so the fishing UI auto-selects it on next open
-  // (FishingGame.tsx seeds selectedBait from profile.last_used_bait).
-  // Fire-and-forget — failure here mustn't block the cast result.
-  void admin.from('profiles').update({ last_used_bait: baitType }).eq('id', user.id).then(() => {}, () => {})
+  // (FishingGame.tsx seeds selectedBait from profile.last_used_bait). Also mark
+  // a REAL-fish catch as in-flight: if one was ALREADY pending, the previous
+  // cast was abandoned (player left mid-catch to dodge a hard fish), which
+  // breaks the perfect streak just like a miss — no cheesing it by bailing on
+  // fish you don't like. Fire-and-forget — the multi-second gap before reelIn
+  // means it always commits first; a failure mustn't block the cast result.
+  const castUpdate: Record<string, unknown> = { last_used_bait: baitType, catch_pending: !isCrate }
+  if (profile.catch_pending) castUpdate.current_perfect_streak = 0
+  void admin.from('profiles').update(castUpdate).eq('id', user.id).then(() => {}, () => {})
 
   // Lifetime "Lines Cast" career stat — bump once per committed cast (covers
   // both the crate and normal paths below). Fire-and-forget.
   void admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_casts', n: 1 }).then(() => {}, () => {})
 
-  // Crate encounter: 2% chance (× rod.crateChanceMult — Treasure Rod = 2×)
-  if (habitat !== 'ancient_deep' && Math.random() < 0.02 * (rod.crateChanceMult ?? 1)) {
+  if (isCrate) {
     if (!noBait && baitRow) {
       await admin.from('bait_inventory').update({ quantity: baitRow.quantity - 1 }).eq('user_id', user.id).eq('bait_type', baitType)
     }
@@ -291,8 +301,8 @@ export async function reelIn(
 
   if (!isCatch) {
     // A missed / snagged cast breaks the perfect streak — server-authoritative
-    // (the client value is never trusted).
-    await admin.from('profiles').update({ current_perfect_streak: 0 }).eq('id', user.id)
+    // (the client value is never trusted). Also clears the in-flight flag.
+    await admin.from('profiles').update({ current_perfect_streak: 0, catch_pending: false }).eq('id', user.id)
     return { caught: false }
   }
 
@@ -313,7 +323,7 @@ export async function reelIn(
     // Perfect streak counts in ancient too (it grants no streak XP bonus here,
     // by design), tracked server-side so it can't be spoofed.
     const aStreak = result === 'perfect' ? (profile.current_perfect_streak ?? 0) + 1 : 0
-    const updates: Record<string, unknown> = { fishing_xp: newXP, current_perfect_streak: aStreak }
+    const updates: Record<string, unknown> = { fishing_xp: newXP, current_perfect_streak: aStreak, catch_pending: false }
     if (result === 'perfect') updates.total_perfects = (profile.total_perfects ?? 0) + 1
     if (aStreak > (profile.highest_perfect_streak ?? 0)) {
       updates.highest_perfect_streak = aStreak
@@ -407,7 +417,7 @@ export async function reelIn(
   const newXP = (profile.fishing_xp ?? 0) + xpGained
 
   // Fishing-level skin unlocks: Forest @ 50, Ice @ 75
-  const profileUpdates: Record<string, unknown> = { fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP, current_perfect_streak: newPerfectStreak }
+  const profileUpdates: Record<string, unknown> = { fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP, current_perfect_streak: newPerfectStreak, catch_pending: false }
   if (result === 'perfect') profileUpdates.total_perfects = (profile.total_perfects ?? 0) + 1
   if (newPerfectStreak > (profile.highest_perfect_streak ?? 0)) {
     profileUpdates.highest_perfect_streak = newPerfectStreak
