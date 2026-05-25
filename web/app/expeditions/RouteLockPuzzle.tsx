@@ -50,9 +50,16 @@ function reachableSet(p: RaidPuzzle, rots: number[]): Set<number> {
   }
   return seen
 }
+// Solved = the WHOLE chart is reconnected: every piece is reachable from the
+// harbour (so no lane is left dangling) AND the mark is open. Far harder than
+// just linking start→end — you can't ignore any piece. The layout is a spanning
+// tree, so this is always achievable (and "all reachable" forces every tree
+// edge to match, i.e. no leaks).
 function solvedOf(p: RaidPuzzle, rots: number[]): boolean {
+  const reached = reachableSet(p, rots)
+  if (reached.size !== p.tiles.length) return false
   const eIdx = p.end.row * p.cols + p.end.col
-  return openEdgesOf(p, rots, eIdx).includes(p.end.edge) && reachableSet(p, rots).has(eIdx)
+  return openEdgesOf(p, rots, eIdx).includes(p.end.edge)
 }
 
 // SVG path for a tile's BASE edges. 2 opposite = a line, 2 adjacent = a curved
@@ -169,7 +176,9 @@ export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
         textAlign: 'center', marginTop: '0.85rem', fontSize: '0.62rem',
         color: solved ? GOLD : '#7a7875', transition: 'color 0.3s',
       }}>
-        {solved ? 'The lane runs unbroken' : 'Tap a piece to turn it · chart the route from harbour to mark'}
+        {solved
+          ? 'The chart is whole'
+          : `${reached.size} / ${tiles.length} charted · reconnect every lane to the harbour`}
       </p>
     </div>
   )
