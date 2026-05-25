@@ -364,12 +364,14 @@ export const RAID_MAP: RaidNode[] = [
     requiresNode: 'finndicate_notice',
     // image: '/smugglers_chart.png',  // TODO: wire the custom node art once provided
     puzzle: {
-      // 5×5 Lights Out. Light every beacon at once; each tap flips the beacon and
-      // its neighbours, so there is no greedy solve. Scrambled from the solved
-      // board, so always solvable. Difficulty = grid size + scrambleTaps.
-      cols: 5,
-      rows: 5,
-      scrambleTaps: 16,
+      // 4×4 Lights Out. Light every beacon at once; each tap flips the beacon and
+      // its neighbours, so there is no greedy solve. 4×4 is fully solvable with a
+      // unique solution (no quiet patterns) — a real puzzle that isn't a wall.
+      // Scrambled from the solved board, so always solvable. Difficulty = grid
+      // size + scrambleTaps.
+      cols: 4,
+      rows: 4,
+      scrambleTaps: 12,
       rewardDoubloons: 2500,
     },
     detail: {
