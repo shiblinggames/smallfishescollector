@@ -663,45 +663,67 @@ function NodeDetailSheet({
           <div style={{ marginTop: '1.1rem' }}>
             <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>{dropsTitle}</p>
             {isCombatNode(node.type) ? (() => {
-              // Raids show the guaranteed clear payout (doubloons + Nav XP)
-              // plus only the rare/special crate items — the plain doubloon
-              // tiers are noise, so they're rolled into the payout figure.
-              const special = (detail.drops ?? []).filter(d => d.rarity === 'rare' || d.rarity === 'epic' || d.rarity === 'legendary')
+              // Row 1 = the headline payout a clear pays out, always in the order
+              // Nav XP, doubloons, gems. Row 2 = the unique crate drops (ship
+              // skins, raid items) with their roll odds, rendered a touch bigger
+              // so they read as the chase. Plain doubloon tiers stay folded into
+              // the payout figure.
+              const drops = detail.drops ?? []
+              const gemDrop = drops.find(d => d.emoji === GEM_GLYPH)
+              const gemAmount = gemDrop?.label.replace(/\s*Gems$/i, '')
+              const uniques = drops.filter(d => d.emoji !== GEM_GLYPH && !d.label.includes('⟡'))
               return (
                 <>
-                  {detail.clearReward && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: special.length ? 8 : 0 }}>
-                      <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#f0c040', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.32)', borderRadius: 8, padding: '0.3rem 0.6rem' }}>
-                        {detail.clearReward.doubloons.toLocaleString()} ⟡
-                      </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: uniques.length ? 11 : 0 }}>
+                    {detail.clearReward && (
                       <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#8ab0e0', background: 'rgba(112,144,192,0.12)', border: '1px solid rgba(112,144,192,0.32)', borderRadius: 8, padding: '0.3rem 0.6rem' }}>
                         {detail.clearReward.xp.toLocaleString()} Nav XP
                       </span>
-                    </div>
-                  )}
-                  {special.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {special.map(d => {
-                        const rc = d.rarity ? RARITY_COLOR[d.rarity] : '#9ca3af'
-                        return (
-                          <span key={d.label} style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                            background: `${rc}14`, border: `1px solid ${rc}33`,
-                            borderRadius: 8, padding: '0.28rem 0.5rem 0.28rem 0.35rem',
-                          }}>
-                            <span style={{ width: 18, height: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', overflow: 'hidden' }}>
-                              {d.swatch
-                                ? <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 3, background: d.swatch, filter: d.swatchFilter }} />
-                                : d.image
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  ? <img src={d.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                                  : <span className={d.emoji === GEM_GLYPH ? 'font-cinzel' : undefined} style={d.emoji === GEM_GLYPH ? { color: GEM_COLOR } : undefined}>{d.emoji}</span>}
+                    )}
+                    {detail.clearReward && (
+                      <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#f0c040', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.32)', borderRadius: 8, padding: '0.3rem 0.6rem' }}>
+                        {detail.clearReward.doubloons.toLocaleString()} ⟡
+                      </span>
+                    )}
+                    {gemAmount && (
+                      <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: GEM_COLOR, background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.32)', borderRadius: 8, padding: '0.3rem 0.6rem' }}>
+                        {gemAmount} <span className="font-cinzel">◆</span>
+                      </span>
+                    )}
+                  </div>
+                  {uniques.length > 0 && (
+                    <>
+                      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#7a7875', margin: '0 0 0.5rem' }}>
+                        Unique Drops
+                      </p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                        {uniques.map(d => {
+                          const rc = d.rarity ? RARITY_COLOR[d.rarity] : '#9ca3af'
+                          return (
+                            <span key={d.label} style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
+                              background: `${rc}16`, border: `1px solid ${rc}40`,
+                              borderRadius: 9, padding: '0.4rem 0.55rem 0.4rem 0.45rem',
+                            }}>
+                              <span style={{ width: 26, height: 26, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.05rem', overflow: 'hidden' }}>
+                                {d.swatch
+                                  ? <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 4, background: d.swatch, filter: d.swatchFilter }} />
+                                  : d.image
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    ? <img src={d.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                    : <span>{d.emoji}</span>}
+                              </span>
+                              <span className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#e8e2d8', whiteSpace: 'nowrap' }}>{d.label}</span>
+                              {d.chance && (
+                                <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: rc, background: `${rc}1c`, border: `1px solid ${rc}40`, borderRadius: 5, padding: '0.18rem 0.4rem', flexShrink: 0 }}>
+                                  {d.chance}
+                                </span>
+                              )}
                             </span>
-                            <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#e8e2d8', whiteSpace: 'nowrap' }}>{d.label}</span>
-                          </span>
-                        )
-                      })}
-                    </div>
+                          )
+                        })}
+                      </div>
+                    </>
                   )}
                 </>
               )
