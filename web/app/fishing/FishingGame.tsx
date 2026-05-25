@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, saveHighestPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, saveHighestPerfectStreak, saveCurrentPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
 import {
@@ -1817,7 +1817,7 @@ export default function FishingGame({
   fishHoldTier: initialFishHoldTier,
   ownedRods: initialOwnedRods,
   allFishSpecies, initialCaughtFishIds,
-  initialHighestPerfectStreak,
+  initialHighestPerfectStreak, initialPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialDailyChallenge, onDailyChallengeChange,
@@ -1842,6 +1842,7 @@ export default function FishingGame({
   allFishSpecies: FishSpeciesBasic[]
   initialCaughtFishIds: number[]
   initialHighestPerfectStreak: number
+  initialPerfectStreak: number
   hasSeenFishingTour: boolean
   hasSeenFishingCatchTour: boolean
   selectedZone: ZoneKey
@@ -2115,8 +2116,16 @@ export default function FishingGame({
     resultKind?: 'won' | 'lost'
     rewardText?: string
   } | null>(null)
-  const [perfectStreak, setPerfectStreak] = useState(0)
+  const [perfectStreak, setPerfectStreak] = useState(initialPerfectStreak)
   const [highestPerfectStreak, setHighestPerfectStreak] = useState(initialHighestPerfectStreak)
+  // Persist the live streak so leaving the screen no longer silently breaks it
+  // (only a non-perfect catch resets it). Skip the first run so the seeded
+  // value isn't re-written on mount. Fire-and-forget.
+  const perfectStreakInitRef = useRef(true)
+  useEffect(() => {
+    if (perfectStreakInitRef.current) { perfectStreakInitRef.current = false; return }
+    saveCurrentPerfectStreak(perfectStreak).catch(() => {})
+  }, [perfectStreak])
   const [snapKey, setSnapKey] = useState(0)
   const [castRippleKey, setCastRippleKey] = useState(0)
   const [reelRippleKey, setReelRippleKey] = useState(0)

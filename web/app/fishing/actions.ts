@@ -684,6 +684,18 @@ export async function saveHighestPerfectStreak(streak: number, zone: string): Pr
   if (streak >= 10) await unlockBadge('unbroken')
 }
 
+// Persist the player's CURRENT (live) perfect streak so it survives leaving the
+// fishing screen. Only a non-perfect catch resets it — navigating away no longer
+// silently nukes earned momentum. Fire-and-forget from the client.
+export async function saveCurrentPerfectStreak(streak: number): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const safe = Number.isFinite(streak) ? Math.max(0, Math.floor(streak)) : 0
+  const admin = createAdminClient()
+  await admin.from('profiles').update({ current_perfect_streak: safe }).eq('id', user.id)
+}
+
 
 export async function markFishingTourSeen(): Promise<void> {
   const supabase = await createClient()
