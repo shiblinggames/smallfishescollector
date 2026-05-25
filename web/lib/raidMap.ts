@@ -329,7 +329,7 @@ export const RAID_MAP: RaidNode[] = [
     image: CAPTAIN_KRUST.enemies.krust.portrait,
     detail: {
       description:
-        "Krust's full run in one go: eight ship battles through his consignment crew, each heavier than the last, no breather to be found anywhere in it, and the old captain waiting at the end aboard his iron-sided carrack. Sink the lot and his loot crate splits open, the only place his contraband ever drops. Nothing Pete's reef ever threw at you sailed half this hard.",
+        "Krust's full run in one go: eight ship battles through his consignment crew, each heavier than the last, no breather to be found anywhere in it, and the old captain waiting at the end aboard his iron-sided carrack. Every hull in this crew is crustacean, all shell and spite, so a slice of your fire glances clean off them, and more of it the deeper you go. Sink the lot and his loot crate splits open, the only place his contraband ever drops. Nothing Pete's reef ever threw at you sailed half this hard.",
       enemies: ['Bilge Runner ×2', 'Brine Deckhand ×2', 'Hull Breaker ×2', 'Krust Overseer ×2', 'Captain Krust'],
       drops: lootDrops(CAPTAIN_KRUST.loot),
       clearReward: clearPayout(CAPTAIN_KRUST),

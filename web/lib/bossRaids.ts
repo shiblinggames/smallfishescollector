@@ -24,6 +24,12 @@ export interface BroadsideEnemy {
   critChance: number
   image: string
   portrait?: string
+  /** Themed raid ability (optional). Each raid gives its crew one signature
+   *  trait. `damageReduction` is flat mitigation (0–1) soaked off every
+   *  incoming player hit; `abilityName` labels it on the enemy nameplate.
+   *  Krust's crew = crustacean "Carapace" defense. */
+  damageReduction?: number
+  abilityName?: string
 }
 
 export interface RaidLootItem {
@@ -189,6 +195,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       critChance: 0.03,
       image: '/enemytier2scout.png',
       portrait: '/krust_worker.jpeg',
+      damageReduction: 0.10, abilityName: 'Carapace',
     },
     reg: {
       id: 'reg', name: 'Brine Deckhand', hpBase: 52, minDmg: 5, maxDmg: 11,
@@ -201,6 +208,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       critChance: 0.06,
       image: '/enemytier2reg.png',
       portrait: '/krust_soldier.jpeg',
+      damageReduction: 0.12, abilityName: 'Carapace',
     },
     brute: {
       id: 'brute', name: 'Hull Breaker', hpBase: 70, minDmg: 9, maxDmg: 14,
@@ -214,6 +222,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       critChance: 0.05,
       image: '/enemytier2brute.png',
       portrait: '/krust_brute.jpeg',
+      damageReduction: 0.15, abilityName: 'Carapace',
     },
     elite: {
       id: 'elite', name: 'Krust Overseer', hpBase: 64, minDmg: 6, maxDmg: 13,
@@ -227,6 +236,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       critChance: 0.10,
       image: '/enemytier2elite.png',
       portrait: '/krust_overseer.jpeg',
+      damageReduction: 0.18, abilityName: 'Carapace',
     },
     krust: {
       id: 'krust', name: 'Captain Krust', hpBase: 110, minDmg: 12, maxDmg: 22,
@@ -241,6 +251,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       critChance: 0.09,
       image: '/enemytier2boss.png',
       portrait: '/Captainkrust.jpeg',
+      damageReduction: 0.20, abilityName: 'Carapace',
     },
   },
   sequence: ['scout', 'scout', 'reg', 'reg', 'brute', 'brute', 'elite', 'elite'],

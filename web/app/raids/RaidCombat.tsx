@@ -362,11 +362,15 @@ export default function RaidCombat({
     const intro = isBoss
       ? `${enemy.name} heaves into view!`
       : `A ${enemy.name} draws alongside!`
-    setResolveLog([intro])
+    // Themed-ability tell: one-time note so the player knows why hits land soft.
+    const introLines = (enemy.damageReduction ?? 0) > 0
+      ? [intro, `Its ${(enemy.abilityName ?? 'armour').toLowerCase()} turns aside the worst of your shot.`]
+      : [intro]
+    setResolveLog(introLines)
     const promptTimer = setTimeout(() => {
       // Only append if the player hasn't acted yet — once a turn resolves,
       // resolveLog gets replaced wholesale and we don't want to clobber it.
-      setResolveLog(prev => (prev.length === 1 && prev[0] === intro ? [intro, 'What will you do?'] : prev))
+      setResolveLog(prev => (prev.length === introLines.length && prev[0] === intro ? [...introLines, 'What will you do?'] : prev))
     }, 600)
     setPHitsplat(null); setEHitsplat(null)
     enemyPatternIdxRef.current = 0
@@ -648,6 +652,11 @@ export default function RaidCombat({
             : 1
           const mult = (action === 'volley' ? 2 : 1) * bossMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
+          // Enemy themed defense: crustacean carapace soaks a flat % off every
+          // hit the player lands (Krust's crew). Applied to the rolled damage so
+          // the hitsplat + log show the real number that gets through.
+          const dr = enemy.damageReduction ?? 0
+          if (dr > 0 && dmg > 0) dmg = Math.max(1, Math.round(dmg * (1 - dr)))
         } else {
           const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
           dmg = base * (action === 'volley' ? 2 : 1)
@@ -1068,6 +1077,17 @@ export default function RaidCombat({
                 <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#fbbf24', letterSpacing: '0.1em' }}>BOSS</span>
               )}
             </div>
+            {(enemy.damageReduction ?? 0) > 0 && (
+              <div className="font-karla font-700 uppercase" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 3, marginBottom: 4,
+                fontSize: '0.52rem', letterSpacing: '0.06em', color: '#7dd3fc',
+                background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.3)',
+                borderRadius: 6, padding: '1px 5px',
+              }}>
+                <span aria-hidden style={{ fontSize: '0.62rem' }}>🛡️</span>
+                {enemy.abilityName ?? 'Armored'} −{Math.round((enemy.damageReduction ?? 0) * 100)}%
+              </div>
+            )}
             <HPBar current={enemyHp} max={enemy.hpBase} accent={ENEMY_COLOR} compact />
             <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small />
           </div>
