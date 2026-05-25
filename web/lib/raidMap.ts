@@ -28,20 +28,17 @@ export function isCombatNode(t: RaidNodeType): boolean {
 }
 
 // ── Rotate-to-connect puzzle (a "pipes" route lock) ──────────────────────────
-// Each tile holds route segments on some of its 4 edges; the player taps to
-// rotate it. The node is solved when an unbroken route connects the start edge
-// to the end edge. There is no hidden answer to leak — the tile shapes are
-// visible and the challenge is the manipulation — so the layout lives here and
-// the solve is checked client-side; the server just records completion + pays
-// the reward (same trust level as the "mark story read" nodes).
+// The component generates a random spanning-tree network of the given size and
+// scrambles the rotations; the player taps tiles to rotate them and must
+// reconnect the whole network (every drop + the mark back to the harbour).
+// There is no hidden answer to leak — the tile shapes are visible and the
+// challenge is the manipulation — so the solve is checked client-side and the
+// server just records completion + pays the reward (same trust level as the
+// "mark story read" nodes). Difficulty knob = grid size.
 export type PuzzleEdge = 'N' | 'E' | 'S' | 'W'
-export interface RaidPuzzleTile { edges: PuzzleEdge[] }
 export interface RaidPuzzle {
   cols: number
   rows: number
-  /** Row-major (length cols*rows). Each tile's edges are its SOLVED state;
-   *  the component scrambles rotations on open. */
-  tiles: RaidPuzzleTile[]
   start: { col: number; row: number; edge: PuzzleEdge }
   end: { col: number; row: number; edge: PuzzleEdge }
   rewardDoubloons: number
@@ -367,21 +364,15 @@ export const RAID_MAP: RaidNode[] = [
     requiresNode: 'finndicate_notice',
     // image: '/smugglers_chart.png',  // TODO: wire the custom node art once provided
     puzzle: {
-      cols: 4,
-      rows: 4,
-      // A smuggling NETWORK: the harbour (W of top-left) feeds a branching web
-      // of lanes that must all reconnect — every drop point (a dead-end cache,
-      // 1 edge) and the mark (S of bottom-left) linked back to the harbour. The
-      // win is "everything connects", so every junction (T, 3 edges) and stub
-      // must be oriented right. No decoys: each drop is a real destination.
-      tiles: [
-        { edges: ['W', 'E', 'S'] }, { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'S'] },
-        { edges: ['N', 'E', 'S'] }, { edges: ['W', 'E'] }, { edges: ['W'] },      { edges: ['N', 'S'] },
-        { edges: ['N', 'S'] },      { edges: ['E'] },      { edges: ['W', 'E'] }, { edges: ['N', 'W'] },
-        { edges: ['N', 'E', 'S'] }, { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W'] },
-      ],
+      // 5×5 smuggling network. The component generates a random spanning tree of
+      // this size, so the harbour (W of top-left) feeds a branching web of lanes
+      // with junctions and dead-end drops that must ALL reconnect, and the mark
+      // (S of bottom-right) linked back too. Bigger grid = more junctions to
+      // orient = harder. Guaranteed solvable (it is a tree).
+      cols: 5,
+      rows: 5,
       start: { col: 0, row: 0, edge: 'W' },
-      end: { col: 0, row: 3, edge: 'S' },
+      end: { col: 4, row: 4, edge: 'S' },
       rewardDoubloons: 2500,
     },
     detail: {

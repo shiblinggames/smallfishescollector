@@ -2,10 +2,11 @@
 
 // Rotate-to-connect route lock. Tap a chart piece to turn it 90°; the charted
 // sea-route (a dotted lane on water) lights gold as far as it connects from the
-// harbour. The chart branches — T-junctions and dead-end false trails — so you
-// have to find the real lane and link it, unbroken, from the harbour to the
-// mark. Win is pure connectivity (no hidden answer); checked here, recorded by
-// the parent.
+// harbour. The board is GENERATED — a random spanning-tree network at the
+// configured size — so every play is a fresh tangle of junctions and dead-end
+// drops. Win is pure connectivity: reconnect the whole web (every drop + the
+// mark) back to the harbour. No hidden answer (shapes are visible); checked
+// here, recorded by the parent.
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { RaidPuzzle, PuzzleEdge } from '@/lib/raidMap'
@@ -23,25 +24,81 @@ function rotateEdges(edges: PuzzleEdge[], r: number): PuzzleEdge[] {
 
 const PT: Record<PuzzleEdge, [number, number]> = { N: [50, 4], E: [96, 50], S: [50, 96], W: [4, 50] }
 
-// ── Pure helpers (so the useState initializer can scramble safely) ──────────
-function openEdgesOf(p: RaidPuzzle, rots: number[], i: number): PuzzleEdge[] {
-  return rotateEdges(p.tiles[i].edges, rots[i])
+// A concrete, generated board: the tile shapes plus the harbour/mark anchors.
+type Board = {
+  cols: number
+  rows: number
+  tiles: { edges: PuzzleEdge[] }[]
+  start: { col: number; row: number; edge: PuzzleEdge }
+  end: { col: number; row: number; edge: PuzzleEdge }
 }
-function reachableSet(p: RaidPuzzle, rots: number[]): Set<number> {
-  const { cols, rows, start } = p
+
+// ── Board generation (randomized Prim's spanning tree) ──────────────────────
+// A spanning tree connects every cell exactly once with no loops. Because it is
+// a tree, "every cell reachable" forces every edge to line up (no leaks), so the
+// all-connected win is always achievable. Prim's (frontier-random) branches a
+// lot — plenty of T-junctions and dead-end drops — which is what makes it a real
+// rotate-everything puzzle rather than a single corridor to trace.
+function generateBoard(p: RaidPuzzle): Board {
+  const { cols, rows, start, end } = p
+  const N = cols * rows
+  const at = (c: number, r: number) => r * cols + c
+  const inTree = new Array<boolean>(N).fill(false)
+  const sets = Array.from({ length: N }, () => new Set<PuzzleEdge>())
+
+  type Cand = { to: number; from: number; dir: PuzzleEdge; back: PuzzleEdge }
+  const candsOf = (idx: number): Cand[] => {
+    const c = idx % cols, r = (idx - (idx % cols)) / cols
+    const out: Cand[] = []
+    if (r > 0)        out.push({ from: idx, to: at(c, r - 1), dir: 'N', back: 'S' })
+    if (c < cols - 1) out.push({ from: idx, to: at(c + 1, r), dir: 'E', back: 'W' })
+    if (r < rows - 1) out.push({ from: idx, to: at(c, r + 1), dir: 'S', back: 'N' })
+    if (c > 0)        out.push({ from: idx, to: at(c - 1, r), dir: 'W', back: 'E' })
+    return out
+  }
+
+  const seed = Math.floor(Math.random() * N)
+  inTree[seed] = true
+  let frontier: Cand[] = candsOf(seed).filter(c => !inTree[c.to])
+  while (frontier.length) {
+    const k = Math.floor(Math.random() * frontier.length)
+    const cand = frontier[k]
+    frontier.splice(k, 1)
+    if (inTree[cand.to]) continue
+    inTree[cand.to] = true
+    sets[cand.from].add(cand.dir)
+    sets[cand.to].add(cand.back)
+    frontier = frontier.concat(candsOf(cand.to).filter(c => !inTree[c.to]))
+  }
+
+  // The harbour and the mark connect through the grid boundary, so stamp those
+  // two boundary stubs onto their tiles (they have no neighbour that way, so no
+  // conflict with the tree edges).
+  sets[at(start.col, start.row)].add(start.edge)
+  sets[at(end.col, end.row)].add(end.edge)
+
+  return { cols, rows, start, end, tiles: sets.map(s => ({ edges: [...s] })) }
+}
+
+// ── Pure helpers over a Board (so the useState initializer can scramble) ─────
+function openEdgesOf(b: Board, rots: number[], i: number): PuzzleEdge[] {
+  return rotateEdges(b.tiles[i].edges, rots[i])
+}
+function reachableSet(b: Board, rots: number[]): Set<number> {
+  const { cols, rows, start } = b
   const sIdx = start.row * cols + start.col
   const seen = new Set<number>()
-  if (!openEdgesOf(p, rots, sIdx).includes(start.edge)) return seen
+  if (!openEdgesOf(b, rots, sIdx).includes(start.edge)) return seen
   const stack = [sIdx]
   seen.add(sIdx)
   while (stack.length) {
     const cur = stack.pop()!
     const c = cur % cols, r = (cur - c) / cols
-    const oe = openEdgesOf(p, rots, cur)
+    const oe = openEdgesOf(b, rots, cur)
     const step = (cond: boolean, nc: number, nr: number, need: PuzzleEdge) => {
       if (!cond || nc < 0 || nc >= cols || nr < 0 || nr >= rows) return
       const nb = nr * cols + nc
-      if (!seen.has(nb) && openEdgesOf(p, rots, nb).includes(need)) { seen.add(nb); stack.push(nb) }
+      if (!seen.has(nb) && openEdgesOf(b, rots, nb).includes(need)) { seen.add(nb); stack.push(nb) }
     }
     step(oe.includes('E'), c + 1, r, 'W')
     step(oe.includes('W'), c - 1, r, 'E')
@@ -55,11 +112,17 @@ function reachableSet(p: RaidPuzzle, rots: number[]): Set<number> {
 // tree, so "all reachable" forces every edge to match (no leaks) and is always
 // achievable. Drops are real destinations, not decoys — nothing pointless to
 // wire up.
-function solvedOf(p: RaidPuzzle, rots: number[]): boolean {
-  const reached = reachableSet(p, rots)
-  if (reached.size !== p.tiles.length) return false
-  const eIdx = p.end.row * p.cols + p.end.col
-  return openEdgesOf(p, rots, eIdx).includes(p.end.edge)
+function solvedOf(b: Board, rots: number[]): boolean {
+  const reached = reachableSet(b, rots)
+  if (reached.size !== b.tiles.length) return false
+  const eIdx = b.end.row * b.cols + b.end.col
+  return openEdgesOf(b, rots, eIdx).includes(b.end.edge)
+}
+
+function scramble(b: Board): number[] {
+  let s = b.tiles.map(() => Math.floor(Math.random() * 4))
+  for (let a = 0; a < 60 && solvedOf(b, s); a++) s = b.tiles.map(() => Math.floor(Math.random() * 4))
+  return s
 }
 
 // SVG path for a tile's BASE edges. 2 opposite = a line, 2 adjacent = a curved
@@ -84,21 +147,18 @@ function markerPos(edge: PuzzleEdge): CSSProperties {
 }
 
 export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzzle; onSolved: () => void }) {
-  const { cols, tiles, start, end } = puzzle
+  // Generate a fresh tangled network once, then scramble it (never start on the
+  // solved board, or the win would fire on mount and lock out every tap).
+  const [board] = useState<Board>(() => generateBoard(puzzle))
+  const { cols, tiles, start, end } = board
   const startIdx = start.row * cols + start.col
   const endIdx = end.row * cols + end.col
 
-  // Scramble up-front (never start on the solved board, or the win would fire
-  // on mount and lock out every tap).
-  const [rotations, setRotations] = useState<number[]>(() => {
-    let s = tiles.map(() => Math.floor(Math.random() * 4))
-    for (let a = 0; a < 40 && solvedOf(puzzle, s); a++) s = tiles.map(() => Math.floor(Math.random() * 4))
-    return s
-  })
+  const [rotations, setRotations] = useState<number[]>(() => scramble(board))
   const firedRef = useRef(false)
 
-  const reached = useMemo(() => reachableSet(puzzle, rotations), [puzzle, rotations])
-  const solved = useMemo(() => solvedOf(puzzle, rotations), [puzzle, rotations])
+  const reached = useMemo(() => reachableSet(board, rotations), [board, rotations])
+  const solved = useMemo(() => solvedOf(board, rotations), [board, rotations])
 
   useEffect(() => {
     if (!solved || firedRef.current) return
@@ -120,7 +180,7 @@ export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
         position: 'relative',
         padding: '0 20px',
         display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 6,
-        maxWidth: cols >= 4 ? 340 : 300, margin: '0 auto',
+        maxWidth: cols >= 5 ? 360 : cols >= 4 ? 340 : 300, margin: '0 auto',
       }}>
         {tiles.map((tile, i) => {
           const lit = reached.has(i)
@@ -133,7 +193,7 @@ export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
               onClick={() => tap(i)}
               aria-label="Rotate chart piece"
               style={{
-                position: 'relative', width: '100%', aspectRatio: '1', minHeight: 56, padding: 0,
+                position: 'relative', width: '100%', aspectRatio: '1', minHeight: 48, padding: 0,
                 borderRadius: 9, cursor: firedRef.current ? 'default' : 'pointer',
                 background: lit
                   ? 'linear-gradient(160deg, rgba(232,200,121,0.12), rgba(20,30,44,0.5))'
