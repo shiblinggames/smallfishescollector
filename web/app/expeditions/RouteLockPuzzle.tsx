@@ -50,12 +50,16 @@ function reachableSet(p: RaidPuzzle, rots: number[]): Set<number> {
   }
   return seen
 }
-// Solved = the lane connects the harbour to the mark. The layout is one
-// continuous route through every tile, so reaching the mark means the whole
-// chain is correct — no "dead-end decoys" you're forced to wire up.
+// Solved = the WHOLE network reconnects: every piece links back to the harbour
+// (so every drop is supplied), and the mark is open. The layout is a spanning
+// tree, so "all reachable" forces every edge to match (no leaks) and is always
+// achievable. Drops are real destinations, not decoys — nothing pointless to
+// wire up.
 function solvedOf(p: RaidPuzzle, rots: number[]): boolean {
+  const reached = reachableSet(p, rots)
+  if (reached.size !== p.tiles.length) return false
   const eIdx = p.end.row * p.cols + p.end.col
-  return openEdgesOf(p, rots, eIdx).includes(p.end.edge) && reachableSet(p, rots).has(eIdx)
+  return openEdgesOf(p, rots, eIdx).includes(p.end.edge)
 }
 
 // SVG path for a tile's BASE edges. 2 opposite = a line, 2 adjacent = a curved
@@ -149,7 +153,15 @@ export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
                 <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', display: 'block' }}>
                   <path d={d} fill="none" stroke={lit ? `${GOLD}33` : 'rgba(120,150,180,0.14)'} strokeWidth={16} strokeLinecap="round" strokeLinejoin="round" />
                   <path d={d} fill="none" stroke={stroke} strokeWidth={5.5} strokeLinecap="round" strokeDasharray="0.5 11" />
-                  <circle cx={50} cy={50} r={4} fill={stroke} />
+                  {tile.edges.length === 1 ? (
+                    // a drop point (cache) — a ringed node you must supply
+                    <>
+                      <circle cx={50} cy={50} r={13} fill="none" stroke={stroke} strokeWidth={3} />
+                      <circle cx={50} cy={50} r={7} fill={stroke} />
+                    </>
+                  ) : (
+                    <circle cx={50} cy={50} r={4} fill={stroke} />
+                  )}
                 </svg>
               </div>
 
@@ -173,8 +185,8 @@ export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
         color: solved ? GOLD : '#7a7875', transition: 'color 0.3s',
       }}>
         {solved
-          ? 'The lane runs unbroken'
-          : `${reached.size} / ${tiles.length} charted · link the harbour to the mark`}
+          ? 'The network is whole'
+          : `${reached.size} / ${tiles.length} linked · connect every drop back to the harbour`}
       </p>
     </div>
   )

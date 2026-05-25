@@ -369,15 +369,16 @@ export const RAID_MAP: RaidNode[] = [
     puzzle: {
       cols: 4,
       rows: 4,
-      // ONE continuous winding lane through every tile: harbour (W of top-left)
-      // snaking through the whole chart to the mark (S of bottom-left). No
-      // branches or dead-ends — every piece is the route, so the lane only
-      // reaches the mark when all 16 are oriented right. Scrambled on open.
+      // A smuggling NETWORK: the harbour (W of top-left) feeds a branching web
+      // of lanes that must all reconnect — every drop point (a dead-end cache,
+      // 1 edge) and the mark (S of bottom-left) linked back to the harbour. The
+      // win is "everything connects", so every junction (T, 3 edges) and stub
+      // must be oriented right. No decoys: each drop is a real destination.
       tiles: [
-        { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'S'] },
-        { edges: ['E', 'S'] }, { edges: ['E', 'W'] }, { edges: ['E', 'W'] }, { edges: ['N', 'W'] },
-        { edges: ['N', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'S'] },
-        { edges: ['E', 'S'] }, { edges: ['E', 'W'] }, { edges: ['E', 'W'] }, { edges: ['N', 'W'] },
+        { edges: ['W', 'E', 'S'] }, { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'S'] },
+        { edges: ['N', 'E', 'S'] }, { edges: ['W', 'E'] }, { edges: ['W'] },      { edges: ['N', 'S'] },
+        { edges: ['N', 'S'] },      { edges: ['E'] },      { edges: ['W', 'E'] }, { edges: ['N', 'W'] },
+        { edges: ['N', 'E', 'S'] }, { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W'] },
       ],
       start: { col: 0, row: 0, edge: 'W' },
       end: { col: 0, row: 3, edge: 'S' },
@@ -385,7 +386,7 @@ export const RAID_MAP: RaidNode[] = [
     },
     detail: {
       description:
-        "Krust went down with a chart in his cabin, and it is the only thing aboard worth keeping. On it runs the Finndicate's priority lane, the route their danger-zone freight sails.\n\nThe trouble is the chart is in pieces, the lane scattered across it in broken segments. Turn each piece until the route runs unbroken from the harbour to the mark, and you will have the heading no one was ever meant to read.",
+        "Krust went down with a chart in his cabin, and it is the only thing aboard worth keeping. On it runs the Finndicate's priority network, every lane their danger-zone freight sails and every quiet drop it answers to.\n\nThe trouble is the chart is in pieces, the lanes scattered across it in broken segments. Turn each piece until the whole web reconnects, every drop linked back to the harbour and the mark, and you will have the headings no one was ever meant to read.",
       drops: [
         {
           emoji: '📜',
@@ -400,7 +401,7 @@ export const RAID_MAP: RaidNode[] = [
           rarity: 'uncommon',
         },
       ],
-      dropsNote: 'Rotate the chart pieces to reconnect the lane. One-time, no cost, no fight.',
+      dropsNote: 'Rotate the chart pieces to relink the network. Every drop and the mark must connect back to the harbour. One-time, no cost, no fight.',
     },
   },
 ]
