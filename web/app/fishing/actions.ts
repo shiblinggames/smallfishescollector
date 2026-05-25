@@ -255,10 +255,10 @@ export async function reelIn(
   result: 'perfect' | 'catch' | 'miss' | 'penalty',
   baitType: string,
   doubleCatch = false,
-  streakBonus = 0,
+  _streakBonus = 0, // deprecated: streak XP is now computed server-side (kept for call-site arity)
   jackpotMultiplier = 1,
 ): Promise<
-  | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; xpGained: number; newXP: number; dailyProgress: [number, number, number]; unlockedSkinId?: string }
+  | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; xpGained: number; newXP: number; dailyProgress: [number, number, number]; unlockedSkinId?: string; perfectStreak?: number; streakBonusXP?: number }
   | { caught: false }
   | { error: string }
 > {
@@ -289,11 +289,16 @@ export async function reelIn(
     await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_snags', n: 1 })
   }
 
-  if (!isCatch) return { caught: false }
+  if (!isCatch) {
+    // A missed / snagged cast breaks the perfect streak — server-authoritative
+    // (the client value is never trusted).
+    await admin.from('profiles').update({ current_perfect_streak: 0 }).eq('id', user.id)
+    return { caught: false }
+  }
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, fish_hold_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches, unlocked_character_colors, total_perfects').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, fish_hold_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -305,13 +310,22 @@ export async function reelIn(
     const isNewTrophy = !existing.includes(fishId)
     const xpGained = Math.round(catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') * 3)
     const newXP = (profile.fishing_xp ?? 0) + xpGained
-    const updates: Record<string, unknown> = { fishing_xp: newXP }
+    // Perfect streak counts in ancient too (it grants no streak XP bonus here,
+    // by design), tracked server-side so it can't be spoofed.
+    const aStreak = result === 'perfect' ? (profile.current_perfect_streak ?? 0) + 1 : 0
+    const updates: Record<string, unknown> = { fishing_xp: newXP, current_perfect_streak: aStreak }
     if (result === 'perfect') updates.total_perfects = (profile.total_perfects ?? 0) + 1
+    if (aStreak > (profile.highest_perfect_streak ?? 0)) {
+      updates.highest_perfect_streak = aStreak
+      updates.highest_streak_set_at = new Date().toISOString()
+      updates.best_streak_zone = 'ancient_deep'
+    }
     if (isNewTrophy) updates.trophy_catches = [...existing, fishId]
     const newTrophies = isNewTrophy ? [...existing, fishId] : existing
     if (newTrophies.length >= 6) await unlockBadge('ancient_ones')
+    if (aStreak >= 10) await unlockBadge('unbroken')
     await admin.from('profiles').update(updates).eq('id', user.id)
-    return { caught: true, fish: fish as FishSpecies, baitSaved: false, isNewSpecies: isNewTrophy, xpGained, newXP, dailyProgress: [0, 0, 0] }
+    return { caught: true, fish: fish as FishSpecies, baitSaved: false, isNewSpecies: isNewTrophy, xpGained, newXP, dailyProgress: [0, 0, 0], perfectStreak: aStreak, streakBonusXP: 0 }
   }
 
   // Perfect: 50% chance to return the bait used for this cast; Phantom Hook: additional 25% on any catch
@@ -384,12 +398,22 @@ export async function reelIn(
   // Perfect Rod doubles XP on perfect catches (incl. the streak bonus, so
   // it scales with streaks). Non-perfect catches are unaffected.
   const perfectXpMult = result === 'perfect' ? (getRod(profile.rod_tier ?? 0).perfectXpMult ?? 1) : 1
-  const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + (result === 'perfect' ? streakBonus : 0)) * prestigeXPMult * perfectXpMult)
+  // Perfect streak — server-authoritative. We compute the streak + its XP bonus
+  // ourselves from the stored value; the client-supplied number is ignored, so
+  // it can't be inflated to mint XP.
+  const newPerfectStreak = result === 'perfect' ? (profile.current_perfect_streak ?? 0) + 1 : 0
+  const serverStreakBonus = newPerfectStreak * newPerfectStreak * 3 // streak 1=+3, 2=+12, 3=+27, … (0 when not perfect)
+  const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + serverStreakBonus) * prestigeXPMult * perfectXpMult)
   const newXP = (profile.fishing_xp ?? 0) + xpGained
 
   // Fishing-level skin unlocks: Forest @ 50, Ice @ 75
-  const profileUpdates: Record<string, unknown> = { fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP }
+  const profileUpdates: Record<string, unknown> = { fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP, current_perfect_streak: newPerfectStreak }
   if (result === 'perfect') profileUpdates.total_perfects = (profile.total_perfects ?? 0) + 1
+  if (newPerfectStreak > (profile.highest_perfect_streak ?? 0)) {
+    profileUpdates.highest_perfect_streak = newPerfectStreak
+    profileUpdates.highest_streak_set_at = new Date().toISOString()
+    profileUpdates.best_streak_zone = fish.habitat
+  }
   let reelInUnlockedSkin: string | undefined
   const oldFishingLevel = getLevelFromXP(profile.fishing_xp ?? 0)
   const newFishingLevel = getLevelFromXP(newXP)
@@ -404,6 +428,7 @@ export async function reelIn(
     }
   }
   if (oldFishingLevel < 100 && newFishingLevel >= 100) await unlockBadge('master_angler')
+  if (newPerfectStreak >= 10) await unlockBadge('unbroken')
 
   const [, baitFetchResult] = await Promise.all([
     admin.from('profiles').update(profileUpdates).eq('id', user.id),
@@ -457,7 +482,7 @@ export async function reelIn(
     { onConflict: 'user_id,date' },
   )
 
-  return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, xpGained, newXP, dailyProgress: newP, unlockedSkinId: reelInUnlockedSkin }
+  return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, xpGained, newXP, dailyProgress: newP, unlockedSkinId: reelInUnlockedSkin, perfectStreak: newPerfectStreak, streakBonusXP: serverStreakBonus }
 }
 
 // Crate loot tables — doubloons and bait pool depend on crate tier, not zone.
@@ -671,31 +696,11 @@ export async function sellFish(
   return { earned, doubloons: newDoubloons }
 }
 
-// Persist a new highest perfect streak if it beats the stored value
-export async function saveHighestPerfectStreak(streak: number, zone: string): Promise<void> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
-  const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('highest_perfect_streak').eq('id', user.id).single()
-  if ((profile?.highest_perfect_streak ?? 0) < streak) {
-    await admin.from('profiles').update({ highest_perfect_streak: streak, highest_streak_set_at: new Date().toISOString(), best_streak_zone: zone }).eq('id', user.id)
-  }
-  if (streak >= 10) await unlockBadge('unbroken')
-}
-
-// Persist the player's CURRENT (live) perfect streak so it survives leaving the
-// fishing screen. Only a non-perfect catch resets it — navigating away no longer
-// silently nukes earned momentum. Fire-and-forget from the client.
-export async function saveCurrentPerfectStreak(streak: number): Promise<void> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
-  const safe = Number.isFinite(streak) ? Math.max(0, Math.floor(streak)) : 0
-  const admin = createAdminClient()
-  await admin.from('profiles').update({ current_perfect_streak: safe }).eq('id', user.id)
-}
-
+// Perfect streak is fully server-authoritative inside reelIn now (it tracks the
+// live streak in current_perfect_streak, computes the XP bonus, and updates the
+// highest_perfect_streak record + 'unbroken' badge). The old client-driven
+// saveHighestPerfectStreak / saveCurrentPerfectStreak actions were removed —
+// they trusted client numbers and could be used to spoof XP / the leaderboard.
 
 export async function markFishingTourSeen(): Promise<void> {
   const supabase = await createClient()

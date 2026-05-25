@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, saveHighestPerfectStreak, saveCurrentPerfectStreak, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
 import {
@@ -2118,14 +2118,9 @@ export default function FishingGame({
   } | null>(null)
   const [perfectStreak, setPerfectStreak] = useState(initialPerfectStreak)
   const [highestPerfectStreak, setHighestPerfectStreak] = useState(initialHighestPerfectStreak)
-  // Persist the live streak so leaving the screen no longer silently breaks it
-  // (only a non-perfect catch resets it). Skip the first run so the seeded
-  // value isn't re-written on mount. Fire-and-forget.
-  const perfectStreakInitRef = useRef(true)
-  useEffect(() => {
-    if (perfectStreakInitRef.current) { perfectStreakInitRef.current = false; return }
-    saveCurrentPerfectStreak(perfectStreak).catch(() => {})
-  }, [perfectStreak])
+  // The perfect streak is server-authoritative (reelIn tracks + persists it and
+  // returns the live value). The client mirrors it for display and reconciles
+  // from each catch's response — see the catch handler below.
   const [snapKey, setSnapKey] = useState(0)
   const [castRippleKey, setCastRippleKey] = useState(0)
   const [reelRippleKey, setReelRippleKey] = useState(0)
@@ -2904,9 +2899,11 @@ export default function FishingGame({
         return
       }
 
-      // Miss/penalty: streak resets. (Finn perfect challenge is unaffected
-      // by misses — it only fails on a non-perfect CATCH, not a missed cast.)
-      setPerfectStreak(0)
+      // Miss/penalty: streak resets — but only for real fish. reelIn resets it
+      // server-side for real misses; crate fumbles never hit reelIn, so we keep
+      // the client neutral on crates to avoid drift. (Finn perfect challenge is
+      // unaffected by misses — it only fails on a non-perfect CATCH.)
+      if (hookedFishRef.current!.fishId !== CRATE_FISH_ID) setPerfectStreak(0)
       setMissResult(effectiveZoneType)
       setCatchResult(null)
       await new Promise(r => setTimeout(r, 200))
@@ -2931,11 +2928,9 @@ export default function FishingGame({
       if ('vibrate' in navigator) navigator.vibrate([40, 60, 80])
     }
 
-    // Consecutive perfect streak
-    const newStreak = wasPerfect ? perfectStreak + 1 : 0
-    const streakBonusXP = wasPerfect ? (perfectStreak + 1) ** 2 * 3 : 0  // streak 1=+3, 2=+12, 3=+27, 5=+75, 10=+300
-
-    if (!wasPerfect) { setPerfectStreak(0) }
+    // Perfect streak is server-authoritative now (reelIn computes + returns it).
+    // Optimistically reset on a non-perfect REAL catch; crates are streak-neutral.
+    if (!wasPerfect && hookedFishRef.current!.fishId !== CRATE_FISH_ID) setPerfectStreak(0)
 
     // Finn challenge progression — replaces the old gem-challenge mechanic.
     // Perfect-streak: a non-perfect catch fails. Speed-catch: any catch
@@ -2991,7 +2986,7 @@ export default function FishingGame({
 
     startTransition(async () => {
       try {
-      const res = await reelIn(hookedFishRef.current!.fishId, zone.type as 'perfect' | 'catch', selectedBaitRef.current, doubleCatch, streakBonusXP, jackpotMultiplier)
+      const res = await reelIn(hookedFishRef.current!.fishId, zone.type as 'perfect' | 'catch', selectedBaitRef.current, doubleCatch, 0, jackpotMultiplier)
 
       if ('error' in res || !res.caught) {
         setMissResult('miss')
@@ -3008,15 +3003,15 @@ export default function FishingGame({
             return newDailyP
           })
         }
-        if (wasPerfect) {
-          setPerfectStreak(newStreak)
-          if (newStreak > highestPerfectStreak) {
-            setHighestPerfectStreak(newStreak)
-            setNewStreakRecord(newStreak)
-            startTransition(async () => {
-              await saveHighestPerfectStreak(newStreak, selectedZone)
-              window.dispatchEvent(new Event('badges-may-have-changed'))
-            })
+        // Reconcile the streak from the server (authoritative). reelIn already
+        // persisted current_perfect_streak, the highest-streak record, and the
+        // 'unbroken' badge — the client only mirrors it for display + celebration.
+        if (res.perfectStreak != null) {
+          setPerfectStreak(res.perfectStreak)
+          if (res.perfectStreak > highestPerfectStreak) {
+            setHighestPerfectStreak(res.perfectStreak)
+            setNewStreakRecord(res.perfectStreak)
+            window.dispatchEvent(new Event('badges-may-have-changed'))
             checkLeaderboardPosition('perfectStreak').then(r => {
               const cur = r?.position ?? null
               if (cur === 1 && podiumPositionsRef.current.perfectStreak !== 1) setPodiumNotif({ category: 'Perfect Streak', position: 1 })
@@ -3031,7 +3026,7 @@ export default function FishingGame({
         // it when the YOLO jackpot actually triggered. Double catches go
         // through the separate "Double Catch — ×2" banner; we don't want
         // Millionaire's / Twin-Strike showing the "Jackpot!" banner too.
-        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: false, perfectStreak: newStreak, streakBonusXP, jackpotMultiplier: jackpotHit && actualQty > 1 ? actualQty : undefined })
+        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: false, perfectStreak: res.perfectStreak ?? perfectStreak, streakBonusXP: res.streakBonusXP ?? 0, jackpotMultiplier: jackpotHit && actualQty > 1 ? actualQty : undefined })
         if (isNewSpecies) {
           if (fish.habitat === 'ancient_deep') {
             setTrophyCatches(prev => new Set([...prev, fish.id]))
