@@ -423,6 +423,9 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // without this. Keep in lockstep with setNavXP.
   const navXPRef                        = useRef(initialExpeditionXP)
   const [xpPopup, setXpPopup]           = useState<{ value: number; id: number } | null>(null)
+  // Full-raid-clear bonus XP, shown as its own callout on the loot stage so the
+  // player knows the extra came from finishing the whole raid.
+  const [bonusCallout, setBonusCallout] = useState<number | null>(null)
   const [levelUp, setLevelUp]           = useState<NavLevelUpInfo | null>(null)
   // Tap-to-continue gate shown after every kill (no level-up branch).
   // Lets the player sit on the log + XP totals as long as they want
@@ -998,12 +1001,13 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
             // celebration doesn't fight the chest reveal for attention.
             setTimeout(() => setLevelUp({ fromLevel: oldLevel, toLevel: killLevel }), 600)
           }
-          // Second beat: fill the bonus into the bar as its log line appears.
+          // Second beat: fill the bonus into the bar and pop its own callout, so
+          // the player sees the extra is for clearing the whole raid.
           if (bonus > 0) {
             setTimeout(() => {
               navXPRef.current = res.newExpeditionXP
               setNavXP(res.newExpeditionXP)
-              setXpPopup({ value: bonus, id: Date.now() })
+              setBonusCallout(bonus)
               const bonusLevel = getLevelFromXP(res.newExpeditionXP)
               if (bonusLevel > killLevel) {
                 setTimeout(() => setLevelUp({ fromLevel: killLevel, toLevel: bonusLevel }), 700)
@@ -1272,12 +1276,29 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         <div style={{ width: '100%', flexShrink: 0 }}>
           <NavLevelBar xp={navXP} />
         </div>
+        {bonusCallout != null && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            className="font-cinzel font-700 uppercase tracking-[0.08em]"
+            style={{
+              flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7,
+              fontSize: '0.64rem', color: '#a9c8f0',
+              background: 'rgba(112,144,192,0.16)', border: '1px solid rgba(138,176,224,0.5)',
+              borderRadius: 999, padding: '0.32rem 0.8rem',
+              boxShadow: '0 0 16px rgba(112,144,192,0.32)',
+            }}
+          >
+            <span aria-hidden style={{ fontSize: '0.8rem' }}>⚓</span>
+            Full Raid Clear · +{bonusCallout.toLocaleString()} Nav XP
+          </motion.div>
+        )}
         <div style={{ width: '100%', padding: '0 0.5rem', flexShrink: 0 }}>
           <RaidLootStage
             boss={bossEnemy}
             killGold={winGold}
             killXP={winXP}
-            completionBonusXp={raidCompletionBonusXp(config)}
             loot={config.loot}
             slotFinal={slotFinal}
             lootAmount={lootAmount}
