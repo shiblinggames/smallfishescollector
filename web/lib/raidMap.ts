@@ -124,7 +124,7 @@ export interface RaidNode {
  *  where the rarity actually matters to the player's chase decision. */
 function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
   const total = loot.reduce((s, l) => s + l.weight, 0)
-  return loot.map(l => {
+  const drops = loot.map(l => {
     const isDoubloons = l.id.startsWith('doubloons_')
     const drop: RaidNodeDrop = {
       label: l.label,
@@ -149,6 +149,32 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
     if (item) drop.sublabel = `Raid item. ${item.description}`
     return drop
   })
+  return combineGemDrops(drops)
+}
+
+// Gem payouts come in two tiers (a rare amount + an epic amount), which reads as
+// two near-identical pills on the node sheet. Fold them into one "X to Y Gems"
+// pill. The live crate still rolls each tier separately from config.loot.
+function combineGemDrops(drops: RaidNodeDrop[]): RaidNodeDrop[] {
+  const gems = drops.map((d, i) => ({ d, i })).filter(x => x.d.emoji === '💎')
+  if (gems.length < 2) return drops
+  const amounts = gems
+    .map(x => parseInt(x.d.label.replace(/[^0-9]/g, ''), 10))
+    .filter(n => !Number.isNaN(n))
+  const lo = Math.min(...amounts), hi = Math.max(...amounts)
+  const merged: RaidNodeDrop = {
+    label: `${lo.toLocaleString()} to ${hi.toLocaleString()} Gems`,
+    emoji: '💎',
+    rarity: 'epic',
+  }
+  const firstGem = gems[0].i
+  const gemSet = new Set(gems.map(x => x.i))
+  const out: RaidNodeDrop[] = []
+  drops.forEach((d, i) => {
+    if (i === firstGem) out.push(merged)
+    else if (!gemSet.has(i)) out.push(d)
+  })
+  return out
 }
 
 /** Total guaranteed doubloons + Nav XP for clearing every kill in a raid
