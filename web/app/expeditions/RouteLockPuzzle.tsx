@@ -1,10 +1,11 @@
 'use client'
 
 // Rotate-to-connect route lock. Tap a chart piece to turn it 90°; the charted
-// sea-route (a dotted lane on water, treasure-map style) lights gold as far as
-// it connects from the harbour. Solve it by linking an unbroken route from the
-// start edge to the mark. Win is pure connectivity (no hidden answer) — checked
-// here, recorded by the parent.
+// sea-route (a dotted lane on water) lights gold as far as it connects from the
+// harbour. The chart branches — T-junctions and dead-end false trails — so you
+// have to find the real lane and link it, unbroken, from the harbour to the
+// mark. Win is pure connectivity (no hidden answer); checked here, recorded by
+// the parent.
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { RaidPuzzle, PuzzleEdge } from '@/lib/raidMap'
@@ -20,21 +21,52 @@ function rotateEdges(edges: PuzzleEdge[], r: number): PuzzleEdge[] {
   return out
 }
 
-// Edge midpoints in the 0..100 tile viewBox.
 const PT: Record<PuzzleEdge, [number, number]> = { N: [50, 4], E: [96, 50], S: [50, 96], W: [4, 50] }
 
-// SVG path for a tile's BASE edges: a line for a straight, a curved turn for a
-// corner, a stub for a cap. (The tile is rotated as a whole, so we only ever
-// draw the base shape.)
-function tilePath(edges: PuzzleEdge[]): string {
-  if (edges.length < 2) { const [x, y] = PT[edges[0]]; return `M50 50 L${x} ${y}` }
-  const [a, b] = edges
-  const [x1, y1] = PT[a], [x2, y2] = PT[b]
-  const opposite = (a === 'N' && b === 'S') || (a === 'S' && b === 'N') || (a === 'E' && b === 'W') || (a === 'W' && b === 'E')
-  return opposite ? `M${x1} ${y1} L${x2} ${y2}` : `M${x1} ${y1} Q50 50 ${x2} ${y2}`
+// ── Pure helpers (so the useState initializer can scramble safely) ──────────
+function openEdgesOf(p: RaidPuzzle, rots: number[], i: number): PuzzleEdge[] {
+  return rotateEdges(p.tiles[i].edges, rots[i])
+}
+function reachableSet(p: RaidPuzzle, rots: number[]): Set<number> {
+  const { cols, rows, start } = p
+  const sIdx = start.row * cols + start.col
+  const seen = new Set<number>()
+  if (!openEdgesOf(p, rots, sIdx).includes(start.edge)) return seen
+  const stack = [sIdx]
+  seen.add(sIdx)
+  while (stack.length) {
+    const cur = stack.pop()!
+    const c = cur % cols, r = (cur - c) / cols
+    const oe = openEdgesOf(p, rots, cur)
+    const step = (cond: boolean, nc: number, nr: number, need: PuzzleEdge) => {
+      if (!cond || nc < 0 || nc >= cols || nr < 0 || nr >= rows) return
+      const nb = nr * cols + nc
+      if (!seen.has(nb) && openEdgesOf(p, rots, nb).includes(need)) { seen.add(nb); stack.push(nb) }
+    }
+    step(oe.includes('E'), c + 1, r, 'W')
+    step(oe.includes('W'), c - 1, r, 'E')
+    step(oe.includes('S'), c, r + 1, 'N')
+    step(oe.includes('N'), c, r - 1, 'S')
+  }
+  return seen
+}
+function solvedOf(p: RaidPuzzle, rots: number[]): boolean {
+  const eIdx = p.end.row * p.cols + p.end.col
+  return openEdgesOf(p, rots, eIdx).includes(p.end.edge) && reachableSet(p, rots).has(eIdx)
 }
 
-// Position a fixed marker just outside the given edge of a tile.
+// SVG path for a tile's BASE edges. 2 opposite = a line, 2 adjacent = a curved
+// turn, anything else (junction / dead-end) = spokes from the centre.
+function tilePath(edges: PuzzleEdge[]): string {
+  if (edges.length === 2) {
+    const [a, b] = edges
+    const [x1, y1] = PT[a], [x2, y2] = PT[b]
+    const opposite = (a === 'N' && b === 'S') || (a === 'S' && b === 'N') || (a === 'E' && b === 'W') || (a === 'W' && b === 'E')
+    return opposite ? `M${x1} ${y1} L${x2} ${y2}` : `M${x1} ${y1} Q50 50 ${x2} ${y2}`
+  }
+  return edges.map(e => { const [x, y] = PT[e]; return `M50 50 L${x} ${y}` }).join(' ')
+}
+
 function markerPos(edge: PuzzleEdge): CSSProperties {
   switch (edge) {
     case 'W': return { left: -17, top: '50%', transform: 'translateY(-50%)' }
@@ -45,49 +77,21 @@ function markerPos(edge: PuzzleEdge): CSSProperties {
 }
 
 export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzzle; onSolved: () => void }) {
-  const { cols, rows, tiles, start, end } = puzzle
-  const idx = (c: number, r: number) => r * cols + c
-  const startIdx = idx(start.col, start.row)
-  const endIdx = idx(end.col, end.row)
+  const { cols, tiles, start, end } = puzzle
+  const startIdx = start.row * cols + start.col
+  const endIdx = end.row * cols + end.col
 
-  const [rotations, setRotations] = useState<number[]>(() => tiles.map(() => 0))
+  // Scramble up-front (never start on the solved board, or the win would fire
+  // on mount and lock out every tap).
+  const [rotations, setRotations] = useState<number[]>(() => {
+    let s = tiles.map(() => Math.floor(Math.random() * 4))
+    for (let a = 0; a < 40 && solvedOf(puzzle, s); a++) s = tiles.map(() => Math.floor(Math.random() * 4))
+    return s
+  })
   const firedRef = useRef(false)
 
-  const openEdges = (i: number, rots: number[]) => rotateEdges(tiles[i].edges, rots[i])
-
-  function reachable(rots: number[]): Set<number> {
-    const seen = new Set<number>()
-    if (!openEdges(startIdx, rots).includes(start.edge)) return seen
-    const stack = [startIdx]
-    seen.add(startIdx)
-    while (stack.length) {
-      const cur = stack.pop()!
-      const c = cur % cols, r = Math.floor(cur / cols)
-      const oe = openEdges(cur, rots)
-      const step = (cond: boolean, nc: number, nr: number, need: PuzzleEdge) => {
-        if (!cond || nc < 0 || nc >= cols || nr < 0 || nr >= rows) return
-        const nb = idx(nc, nr)
-        if (!seen.has(nb) && openEdges(nb, rots).includes(need)) { seen.add(nb); stack.push(nb) }
-      }
-      step(oe.includes('E'), c + 1, r, 'W')
-      step(oe.includes('W'), c - 1, r, 'E')
-      step(oe.includes('S'), c, r + 1, 'N')
-      step(oe.includes('N'), c, r - 1, 'S')
-    }
-    return seen
-  }
-  const isSolved = (rots: number[]) =>
-    openEdges(endIdx, rots).includes(end.edge) && reachable(rots).has(endIdx)
-
-  useEffect(() => {
-    let scr: number[] = tiles.map(() => Math.floor(Math.random() * 4))
-    for (let a = 0; a < 30 && isSolved(scr); a++) scr = tiles.map(() => Math.floor(Math.random() * 4))
-    setRotations(scr)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const reached = useMemo(() => reachable(rotations), [rotations]) // eslint-disable-line react-hooks/exhaustive-deps
-  const solved = useMemo(() => isSolved(rotations), [rotations])   // eslint-disable-line react-hooks/exhaustive-deps
+  const reached = useMemo(() => reachableSet(puzzle, rotations), [puzzle, rotations])
+  const solved = useMemo(() => solvedOf(puzzle, rotations), [puzzle, rotations])
 
   useEffect(() => {
     if (!solved || firedRef.current) return
@@ -107,7 +111,7 @@ export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
     <div style={{ marginTop: '0.4rem' }}>
       <div style={{
         position: 'relative',
-        padding: '0 20px', // gutters for the harbour / mark badges
+        padding: '0 20px',
         display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 6,
         maxWidth: cols >= 4 ? 340 : 300, margin: '0 auto',
       }}>
@@ -124,7 +128,6 @@ export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
               style={{
                 position: 'relative', width: '100%', aspectRatio: '1', minHeight: 56, padding: 0,
                 borderRadius: 9, cursor: firedRef.current ? 'default' : 'pointer',
-                // a sliver of charted water
                 background: lit
                   ? 'linear-gradient(160deg, rgba(232,200,121,0.12), rgba(20,30,44,0.5))'
                   : 'linear-gradient(160deg, rgba(34,52,74,0.45), rgba(12,18,28,0.55))',
@@ -134,21 +137,19 @@ export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
                 touchAction: 'manipulation', overflow: 'visible',
               }}
             >
-              {/* The route art rotates; pointer-events off so taps hit the button. */}
+              {/* Route art rotates; pointer-events off so taps hit the button. */}
               <div style={{
                 position: 'absolute', inset: 0, pointerEvents: 'none',
                 transform: `rotate(${rotations[i] * 90}deg)`, transformOrigin: '50% 50%',
                 transition: 'transform 0.25s cubic-bezier(0.34,1.3,0.5,1)',
               }}>
                 <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', display: 'block' }}>
-                  {/* soft water channel under the dotted route */}
-                  <path d={d} fill="none" stroke={lit ? `${GOLD}33` : 'rgba(120,150,180,0.14)'} strokeWidth={16} strokeLinecap="round" />
-                  {/* the charted dotted lane */}
+                  <path d={d} fill="none" stroke={lit ? `${GOLD}33` : 'rgba(120,150,180,0.14)'} strokeWidth={16} strokeLinecap="round" strokeLinejoin="round" />
                   <path d={d} fill="none" stroke={stroke} strokeWidth={5.5} strokeLinecap="round" strokeDasharray="0.5 11" />
+                  <circle cx={50} cy={50} r={4} fill={stroke} />
                 </svg>
               </div>
 
-              {/* Harbour at the start edge (fixed) */}
               {i === startIdx && (
                 <span aria-hidden style={{ position: 'absolute', pointerEvents: 'none', ...markerPos(start.edge) }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={reached.has(startIdx) ? GOLD : DIM} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -156,7 +157,6 @@ export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
                   </svg>
                 </span>
               )}
-              {/* The mark at the end edge (fixed) */}
               {i === endIdx && (
                 <span aria-hidden className="font-cinzel font-700" style={{ position: 'absolute', pointerEvents: 'none', fontSize: '1rem', color: solved ? GOLD : DIM, ...markerPos(end.edge) }}>✕</span>
               )}

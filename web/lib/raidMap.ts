@@ -369,14 +369,15 @@ export const RAID_MAP: RaidNode[] = [
     puzzle: {
       cols: 4,
       rows: 4,
-      // A single winding lane that fills the whole chart: harbour (W of the
-      // top-left) winding down to the mark (S of the bottom-left). Straights +
-      // corners, scrambled on open. 16 pieces = a step up from a 3×3.
+      // A BRANCHING chart, not a single line: the real lane runs down the left
+      // (harbour at W of top-left → mark at S of bottom-left), but T-junctions
+      // throw off side-trails that dead-end as false leads. You have to find +
+      // link the true route. (T = 3 edges, dead-end = 1 edge.) Scrambled on open.
       tiles: [
-        { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'S'] },
-        { edges: ['E', 'S'] }, { edges: ['E', 'W'] }, { edges: ['E', 'W'] }, { edges: ['N', 'W'] },
-        { edges: ['N', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'S'] },
-        { edges: ['E', 'S'] }, { edges: ['E', 'W'] }, { edges: ['E', 'W'] }, { edges: ['N', 'W'] },
+        { edges: ['W', 'E', 'S'] }, { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'S'] },
+        { edges: ['N', 'E', 'S'] }, { edges: ['W', 'E'] }, { edges: ['W'] },      { edges: ['N', 'S'] },
+        { edges: ['N', 'S'] },      { edges: ['E'] },      { edges: ['W', 'E'] }, { edges: ['N', 'W'] },
+        { edges: ['N', 'E', 'S'] }, { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W'] },
       ],
       start: { col: 0, row: 0, edge: 'W' },
       end: { col: 0, row: 3, edge: 'S' },
