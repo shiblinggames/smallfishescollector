@@ -1,18 +1,23 @@
 'use client'
 
-// Rotate-to-connect route lock. Tap a chart piece to turn it 90°; the charted
-// sea-route (a dotted lane on water) lights gold as far as it connects from the
-// harbour. The board is GENERATED — a random spanning-tree network at the
-// configured size — so every play is a fresh tangle of junctions and dead-end
-// drops. Win is pure connectivity: reconnect the whole web (every drop + the
-// mark) back to the harbour. No hidden answer (shapes are visible); checked
-// here, recorded by the parent.
+// Rotate-to-connect route lock. Tap a chart piece to turn it 90°. The board is
+// GENERATED — a random spanning-tree network at the configured size — so every
+// play is a fresh tangle of junctions and dead-end drops.
+//
+// There is deliberately NO live "glow" showing how far you've connected from the
+// harbour: that progress signal let players hill-climb the answer by guessing.
+// Instead the only feedback is LOCAL and honest — every open lane-end that meets
+// a wall or a closed neighbour gets a red frayed cap. You win when no end is
+// left dangling (and the whole web connects). Fixing one fray often opens
+// another, so you have to actually read the pieces, not flail. Win is checked
+// here (no hidden answer to leak), recorded by the parent.
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { RaidPuzzle, PuzzleEdge } from '@/lib/raidMap'
 
-const GOLD = '#e8c879'   // a connected, charted lane
-const DIM = '#566374'    // an unconnected segment (faded ink)
+const GOLD = '#e8c879'   // the whole network, once it's whole
+const INK = '#7f93a8'    // a charted lane (neutral)
+const RED = '#d9685a'    // a frayed end (open to nothing)
 
 const CW: Record<PuzzleEdge, PuzzleEdge> = { N: 'E', E: 'S', S: 'W', W: 'N' }
 function rotateEdges(edges: PuzzleEdge[], r: number): PuzzleEdge[] {
@@ -23,6 +28,8 @@ function rotateEdges(edges: PuzzleEdge[], r: number): PuzzleEdge[] {
 }
 
 const PT: Record<PuzzleEdge, [number, number]> = { N: [50, 4], E: [96, 50], S: [50, 96], W: [4, 50] }
+const STEP: Record<PuzzleEdge, [number, number]> = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] }
+const OPP: Record<PuzzleEdge, PuzzleEdge> = { N: 'S', E: 'W', S: 'N', W: 'E' }
 
 // A concrete, generated board: the tile shapes plus the harbour/mark anchors.
 type Board = {
@@ -84,6 +91,35 @@ function generateBoard(p: RaidPuzzle): Board {
 function openEdgesOf(b: Board, rots: number[], i: number): PuzzleEdge[] {
   return rotateEdges(b.tiles[i].edges, rots[i])
 }
+
+// The two legal boundary openings (harbour + mark): an outward edge here is NOT
+// a leak. Everywhere else, an open edge must meet a neighbour.
+function isLegalOpening(b: Board, i: number, e: PuzzleEdge): boolean {
+  const startIdx = b.start.row * b.cols + b.start.col
+  const endIdx = b.end.row * b.cols + b.end.col
+  return (i === startIdx && e === b.start.edge) || (i === endIdx && e === b.end.edge)
+}
+
+// Frayed ends of one tile: open edges that hit a wall (not a legal opening) or a
+// neighbour whose facing edge is closed. This is the ONLY feedback the player
+// gets — local, honest, and free of any global "you're getting warmer" signal.
+function fraysOf(b: Board, rots: number[], i: number): PuzzleEdge[] {
+  const { cols, rows } = b
+  const c = i % cols, r = (i - c) / cols
+  const out: PuzzleEdge[] = []
+  for (const e of openEdgesOf(b, rots, i)) {
+    const [dc, dr] = STEP[e]
+    const nc = c + dc, nr = r + dr
+    if (nc < 0 || nc >= cols || nr < 0 || nr >= rows) {
+      if (!isLegalOpening(b, i, e)) out.push(e)        // dangles into open water
+    } else {
+      const nb = nr * cols + nc
+      if (!openEdgesOf(b, rots, nb).includes(OPP[e])) out.push(e) // meets a closed neighbour
+    }
+  }
+  return out
+}
+
 function reachableSet(b: Board, rots: number[]): Set<number> {
   const { cols, rows, start } = b
   const sIdx = start.row * cols + start.col
@@ -107,16 +143,12 @@ function reachableSet(b: Board, rots: number[]): Set<number> {
   }
   return seen
 }
-// Solved = the WHOLE network reconnects: every piece links back to the harbour
-// (so every drop is supplied), and the mark is open. The layout is a spanning
-// tree, so "all reachable" forces every edge to match (no leaks) and is always
-// achievable. Drops are real destinations, not decoys — nothing pointless to
-// wire up.
+// Solved = no frayed ends anywhere AND the whole network connects back to the
+// harbour (the layout is a tree, so a leak-free board is the unique solution;
+// the connectivity check is the rigorous gate that actually fires the win).
 function solvedOf(b: Board, rots: number[]): boolean {
-  const reached = reachableSet(b, rots)
-  if (reached.size !== b.tiles.length) return false
-  const eIdx = b.end.row * b.cols + b.end.col
-  return openEdgesOf(b, rots, eIdx).includes(b.end.edge)
+  for (let i = 0; i < b.tiles.length; i++) if (fraysOf(b, rots, i).length) return false
+  return reachableSet(b, rots).size === b.tiles.length
 }
 
 function scramble(b: Board): number[] {
@@ -157,7 +189,9 @@ export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   const [rotations, setRotations] = useState<number[]>(() => scramble(board))
   const firedRef = useRef(false)
 
-  const reached = useMemo(() => reachableSet(board, rotations), [board, rotations])
+  // Frayed ends per tile (drawn in the unrotated frame at the open-edge point)
+  // and the overall solved flag. No global reachability glow on purpose.
+  const frays = useMemo(() => tiles.map((_, i) => fraysOf(board, rotations, i)), [board, tiles, rotations])
   const solved = useMemo(() => solvedOf(board, rotations), [board, rotations])
 
   useEffect(() => {
@@ -183,9 +217,9 @@ export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
         maxWidth: cols >= 5 ? 360 : cols >= 4 ? 340 : 300, margin: '0 auto',
       }}>
         {tiles.map((tile, i) => {
-          const lit = reached.has(i)
-          const stroke = lit ? GOLD : DIM
+          const stroke = solved ? GOLD : INK
           const d = tilePath(tile.edges)
+          const tileFrays = frays[i]
           return (
             <button
               key={i}
@@ -195,12 +229,12 @@ export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
               style={{
                 position: 'relative', width: '100%', aspectRatio: '1', minHeight: 48, padding: 0,
                 borderRadius: 9, cursor: firedRef.current ? 'default' : 'pointer',
-                background: lit
+                background: solved
                   ? 'linear-gradient(160deg, rgba(232,200,121,0.12), rgba(20,30,44,0.5))'
                   : 'linear-gradient(160deg, rgba(34,52,74,0.45), rgba(12,18,28,0.55))',
-                border: `1px solid ${lit ? `${GOLD}66` : 'rgba(132,160,190,0.16)'}`,
-                boxShadow: solved && lit ? `0 0 12px ${GOLD}55` : 'none',
-                transition: 'background 0.2s, border-color 0.2s, box-shadow 0.3s',
+                border: `1px solid ${solved ? `${GOLD}66` : 'rgba(132,160,190,0.16)'}`,
+                boxShadow: solved ? `0 0 12px ${GOLD}55` : 'none',
+                transition: 'background 0.3s, border-color 0.3s, box-shadow 0.3s',
                 touchAction: 'manipulation', overflow: 'visible',
               }}
             >
@@ -211,7 +245,7 @@ export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
                 transition: 'transform 0.25s cubic-bezier(0.34,1.3,0.5,1)',
               }}>
                 <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', display: 'block' }}>
-                  <path d={d} fill="none" stroke={lit ? `${GOLD}33` : 'rgba(120,150,180,0.14)'} strokeWidth={16} strokeLinecap="round" strokeLinejoin="round" />
+                  <path d={d} fill="none" stroke={solved ? `${GOLD}33` : 'rgba(120,150,180,0.12)'} strokeWidth={16} strokeLinecap="round" strokeLinejoin="round" />
                   <path d={d} fill="none" stroke={stroke} strokeWidth={5.5} strokeLinecap="round" strokeDasharray="0.5 11" />
                   {tile.edges.length === 1 ? (
                     // a drop point (cache) — a ringed node you must supply
@@ -225,15 +259,32 @@ export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
                 </svg>
               </div>
 
+              {/* Frayed ends — drawn UNROTATED at the live open-edge points, so
+                  they sit on whichever way the lane actually dangles right now. */}
+              {tileFrays.length > 0 && (
+                <svg viewBox="0 0 100 100" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                  {tileFrays.map(e => {
+                    const [px, py] = PT[e]
+                    const sx = 50 + (px - 50) * 0.78, sy = 50 + (py - 50) * 0.78
+                    return (
+                      <g key={e} stroke={RED} strokeWidth={3.2} strokeLinecap="round">
+                        <line x1={sx - 4.5} y1={sy - 4.5} x2={sx + 4.5} y2={sy + 4.5} />
+                        <line x1={sx - 4.5} y1={sy + 4.5} x2={sx + 4.5} y2={sy - 4.5} />
+                      </g>
+                    )
+                  })}
+                </svg>
+              )}
+
               {i === startIdx && (
                 <span aria-hidden style={{ position: 'absolute', pointerEvents: 'none', ...markerPos(start.edge) }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={reached.has(startIdx) ? GOLD : DIM} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={solved ? GOLD : INK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="5" r="2.5" /><line x1="12" y1="22" x2="12" y2="7.5" /><path d="M5 12H2a10 10 0 0 0 20 0h-3" />
                   </svg>
                 </span>
               )}
               {i === endIdx && (
-                <span aria-hidden className="font-cinzel font-700" style={{ position: 'absolute', pointerEvents: 'none', fontSize: '1rem', color: solved ? GOLD : DIM, ...markerPos(end.edge) }}>✕</span>
+                <span aria-hidden className="font-cinzel font-700" style={{ position: 'absolute', pointerEvents: 'none', fontSize: '1rem', color: solved ? GOLD : INK, ...markerPos(end.edge) }}>✕</span>
               )}
             </button>
           )
@@ -246,7 +297,7 @@ export default function RouteLockPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
       }}>
         {solved
           ? 'The network is whole'
-          : `${reached.size} / ${tiles.length} linked · connect every drop back to the harbour`}
+          : 'Turn the pieces so no lane ends in open water'}
       </p>
     </div>
   )
