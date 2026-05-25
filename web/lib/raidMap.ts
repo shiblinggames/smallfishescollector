@@ -167,21 +167,21 @@ export const RAID_MAP: RaidNode[] = [
     id: 'intro',
     type: 'story',
     label: 'A Loose Thread',
-    flavor: "Barnacle Pete has bled the weak for years, and every coin of it sails off to someone bigger.",
-    bridge: "Every trail runs back to one reef, where Pete's little fish do his collecting.",
+    flavor: "Barnacle Pete plays the broke old fool, but he has robbed the small and the slow for years, and not a coin of it ever stays in his pocket.",
+    bridge: "Every thread you tug runs back to one reef, where Pete's little fish do his collecting.",
     image: '/raidlog.png',
     detail: {
       description:
-        "Pete is not some broke old chancer. He is good at what he does, and what he does is prey on the weak. Small crews, fishing folk, anyone too slight to fight back. Years of it, up and down this coast.\n\nThe strange part is the coin. Pete robs plenty and keeps almost none. He is a cash cow, milked by someone he answers to. Nobody can be bothered to ask who. You, clearly, have nothing better to do. Go give the loudest pirate on the water a good shake and see what falls out.",
+        "Pete is no broke old chancer. He is very good at one thing, and that thing is picking on anyone too small to swing back. Little crews, fishing folk, the odd unlucky angler. Years of it, all up and down this coast, and somehow he is no richer for any of it.\n\nThat is the funny part. Pete steals a fortune and keeps about a copper. The rest sails off to someone he would rather you never asked about, so of course nobody asks. You, on the other hand, have a boat, a free afternoon, and no manners worth mentioning. Go give the loudest pirate on the water a good shake and see what tumbles out of his coat.",
       drops: [
         {
           emoji: '📜',
           label: "Captain's Logbook, Fragment I",
-          sublabel: '"Pete don\'t spend his haul. He delivers it." Said once, by a man who would not say it twice.',
+          sublabel: "\"Pete don't spend his haul. He delivers it.\" Said once, by a man who knew better than to say it twice.",
           rarity: 'common',
         },
       ],
-      dropsNote: 'Pages pile up here as you go poking. Sooner or later they spell a name.',
+      dropsNote: 'Pages like this pile up the more you go poking. Sooner or later they spell out a name.',
       ctaLabel: 'Pull the Thread →',
     },
   },
@@ -189,14 +189,14 @@ export const RAID_MAP: RaidNode[] = [
     id: 'skirmish',
     type: 'skirmish',
     label: 'Reef Skirmish',
-    flavor: "Pete doesn't sail alone. The reef crawls with his Reef Raiders. Start thinning them out.",
-    bridge: "Thin his Raiders and you thin his nerve. Sink enough and the old corsair sails out himself.",
+    flavor: "Pete keeps his own hands clean and his Reef Raiders busy. Start putting them on the seabed.",
+    bridge: "Thin his Raiders and you thin his nerve. Sink enough of them and the old corsair rows out himself to see who has been counting.",
     requiresNode: 'intro',
     route: '/raids/practice',
     image: CORSAIRS_RECKONING.enemies.brute.portrait,
     detail: {
       description:
-        "Pete doesn't do his own dirty work. That's what the Reef Raiders are for. Sink one and there's usually another bobbing up to take its place.\n\nNo grand plan here. Pick them off one at a time and see who comes asking once enough of them stop coming home.",
+        "Pete is not the sort to do his own swinging. That is what the Reef Raiders are for, and the reef fairly crawls with them. Sink one and another bobs up grinning to take the empty seat.\n\nNo grand plan out here. Pick them off, one soggy thug at a time, and wait to see who comes asking once too many of them stop rowing home.",
       enemies: ['Reef Raider'],
       drops: [
         // Single combined-reward line — skirmish is "kill a raider, get
@@ -209,22 +209,22 @@ export const RAID_MAP: RaidNode[] = [
         },
       ],
       clearReward: { doubloons: CORSAIRS_RECKONING.killRewards.brute.gold, xp: CORSAIRS_RECKONING.killRewards.brute.xp },
-      dropsNote: "Pete never runs short of Raiders. Drop by and thin the numbers whenever it suits you.",
+      dropsNote: "Pete never runs short of Raiders. Swing by and trim the numbers whenever the mood takes you.",
     },
   },
   {
     id: 'pete',
     type: 'raid',
     label: "The Corsair's Reckoning",
-    flavor: 'Barnacle Pete and his fleet have been spotted off the coast. Bring him to justice, dead or alive.',
-    bridge: "Pete goes down hard, and his strongbox spills more than coin. Ledgers. A sealed letter. He was never the top of this. He was feeding someone bigger.",
+    flavor: 'Barnacle Pete and his fleet have surfaced off the coast. Go collect what is owed, dead or alive.',
+    bridge: "Pete goes down hard, and his strongbox spills more than coin. Ledgers. A sealed letter. The loudest pirate on the water turns out to be somebody else's errand boy.",
     requiresNode: 'skirmish',
     route: '/raids',
     raidId: CORSAIRS_RECKONING.raidId,
     image: CORSAIRS_RECKONING.enemies.pete.portrait,
     detail: {
       description:
-        "Pete's full campaign: six escalating ship battles with no breather, ending in the old corsair himself. Win the gauntlet to crack open his loot crate, the only place his contraband drops.",
+        "Pete's whole campaign in one sitting: six ship battles back to back, each one nastier than the last, not a moment to bail the bilge between them, and the old corsair himself waiting at the end. Win the gauntlet and his loot crate finally cracks. It is the only place his contraband ever sees the sun.",
       enemies: ['Reef Raider ×2', "Crow's Nest Marksman ×2", 'Saltwater Corsair ×2', 'Barnacle Pete'],
       drops: lootDrops(CORSAIRS_RECKONING.loot),
       clearReward: clearPayout(CORSAIRS_RECKONING),
@@ -235,28 +235,28 @@ export const RAID_MAP: RaidNode[] = [
     id: 'syndicate',
     type: 'story',
     label: 'A Bigger Fish',
-    flavor: "Pete's books name the Finndicate. One sealed letter names someone else, and points the way.",
-    bridge: "The letter's heading runs straight through the Bilge Strait. To follow C.K.'s cargo you have to get past the thugs who own that water.",
+    flavor: "Pete's books all point one way and name the Finndicate. One sealed letter points further still, at somebody else.",
+    bridge: "The letter's heading runs dead through the Bilge Strait. Chase C.K.'s cargo and you first have to slip past the thugs who own that water.",
     requiresNode: 'pete',
     image: '/raidlog.png',
     detail: {
       description:
-        "Pete's strongbox was not empty. It was full of someone else's bookkeeping: cut sheets, courier routes, a tally of years, and one word stamped on every page. The Finndicate. Pete was no kingpin. He was a cash cow, milked dry and bled like everyone he ever robbed. Stranger still, none of the coin stays put. Every haul on every page buys the same thing again and again, and not one ledger ever says what.\n\nUnder the ledgers sits a sealed shipment letter. No name on it, just two initials pressed into the wax: C.K. The manifest is heavy and the route is half burned away, but the heading survives. It runs out past the Bilge Strait, into the cold water beyond. Whoever C.K. is, the Finndicate trusts them with a great deal of cargo, and now you know which way it sails.",
+        "Pete's strongbox was not empty, only full of the wrong man's paperwork. Cut sheets, courier routes, years of neat little sums, and one word stamped on every page: the Finndicate. So much for the kingpin. Pete was a cash cow like all the rest, milked dry and bled the same as everyone he ever robbed. And the coin never sits still. Page after page, every haul buys the same thing over again, and not one line will say what.\n\nUnder the ledgers waits a sealed letter. No name on it, just two letters bitten into the wax: C.K. The manifest is heavy and the route mostly burned away, but the heading held. It runs out past the Bilge Strait, into the cold beyond. Whoever C.K. is, the Finndicate trusts them with cargo by the holdful, and now you know which way it sails.",
       drops: [
         {
           emoji: '📜',
           label: "Captain's Logbook, Fragment II",
-          sublabel: '"The Finndicate does not lose men. It loses ledgers." Scratched inside the strongbox lid.',
+          sublabel: "\"The Finndicate does not lose men. It loses ledgers.\" Scratched into the underside of the strongbox lid.",
           rarity: 'uncommon',
         },
         {
           emoji: '✉️',
           label: 'Sealed Shipment Letter',
-          sublabel: 'Addressed only to "C.K." A heavy manifest bound past the Bilge Strait.',
+          sublabel: "Addressed to \"C.K.\" and to no one else. A heavy manifest, bound past the Bilge Strait.",
           rarity: 'rare',
         },
       ],
-      dropsNote: 'A name (the Finndicate) and a lead (C.K., and the way the cargo sails). Both run through the Bilge Strait.',
+      dropsNote: 'A name to chase (the Finndicate) and a lead to follow (C.K., and the way the cargo runs). Both go straight through the Bilge Strait.',
       ctaLabel: 'Follow the Trail →',
     },
   },
@@ -264,17 +264,17 @@ export const RAID_MAP: RaidNode[] = [
     id: 'bilge_milestone',
     type: 'milestone',
     label: 'The Bilge Eels',
-    flavor: "Neutral thugs who own the Bilge Strait. No flag, no loyalty, just a toll. C.K.'s cargo sails right through their water.",
-    bridge: "Past the strait the water turns Finndicate. C.K. is moving cargo somewhere ahead, and a fence here already knows your name.",
+    flavor: "Neutral thugs who own the Bilge Strait. No flag, no loyalty, only a toll, and C.K.'s cargo sails right through their water.",
+    bridge: "Past the strait the water turns Finndicate. C.K. is shifting cargo somewhere ahead, and a fence up there already knows your name.",
     requiresNode: 'syndicate',
     requiresNavLevel: 10,
     milestone: { amount: 1000, spend: true },
     image: '/bilge_eel.jpeg',
     detail: {
       description:
-        "The letter never gave an address, only a heading: out past the Bilge Strait into the cold water. That is enough to follow, and it is exactly the stretch the Bilge Eels own.\n\nThey answer to no one. Not Finndicate, not you, just a knot of thugs charging toll on the only water that points where C.K.'s cargo went. There is no fighting through at your size. They treat only with captains who have sailed enough to be worth the breath (Navigation 10), and even then it costs. Slide them 1,000 ⟡ and they wave you through, onto C.K.'s trail. Refuse, and the trail goes cold.",
+        "The letter left no address, only a heading: out past the Bilge Strait, into the cold. That is enough to follow, and as luck would have it the whole stretch belongs to the Bilge Eels.\n\nThey bow to nobody. Not the Finndicate, not you, just a knot of thugs squatting on the only water that points where C.K.'s cargo went, charging good coin to cross it. There is no bulling through at your size. They will only deal with a captain who has logged enough sea to be worth the breath (Navigation 10), and even then they expect paying. Slip them 1,000 ⟡ and the way opens onto C.K.'s trail. Keep your purse shut and the trail goes cold as the water.",
       drops: [
-        { emoji: '🗺️', label: "The trail toward C.K.", sublabel: 'Passage through the Bilge Strait, following the shipment heading', rarity: 'uncommon' },
+        { emoji: '🗺️', label: "The trail toward C.K.", sublabel: "Passage through the strait, hard on C.K.'s heading.", rarity: 'uncommon' },
       ],
       dropsNote: 'A one-time bribe. The 1,000 ⟡ is spent for good, not held or refunded.',
     },
@@ -283,13 +283,13 @@ export const RAID_MAP: RaidNode[] = [
     id: 'quartermaster',
     type: 'shop',
     label: "Quartermaster's Cache",
-    flavor: 'Past the strait, a fence lays out two pieces of contraband. You may walk away with one.',
-    bridge: "The fence talks more than he sells. The cold water ahead belongs to one captain, and the wax on Pete's letter finally has a name to it.",
+    flavor: 'Past the strait, a fence lays out two pieces of contraband and lets you leave with exactly one.',
+    bridge: "The fence sells far less than he says. The cold water ahead answers to one captain, and the wax on Pete's letter finally has a name behind it.",
     requiresNode: 'bilge_milestone',
     choice: { items: ['quartermasters_anchor', 'navigators_compass'] },
     detail: {
       description:
-        "The fence on the far side of the Bilge Strait does not haggle. He sets two pieces of contraband on the barrel between you, the kind that does not come up twice, and tells you to choose. One, not both. The other goes back in the cache and you never see it again.\n\nWhatever you pick is yours for good, ready to equip in your raid loadout alongside the rest.",
+        "The fence on the far shore of the Bilge Strait does not haggle and does not repeat himself. He sets two pieces of contraband on the barrel between you, the sort that does not wash up twice, and tells you to choose. One. The other slides back into the cache and out of your life for good.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout alongside the rest of your kit.",
       dropsNote: 'Pick one. Permanent, equippable, and you cannot come back for the other.',
     },
   },
@@ -297,22 +297,22 @@ export const RAID_MAP: RaidNode[] = [
     id: 'krust_reveal',
     type: 'story',
     label: 'The Name on the Wax',
-    flavor: 'Two initials on a sealed letter. The fence on the cold side of the strait can read the rest.',
-    bridge: "Captain Krust. He runs the Finndicate's freight, and every hold he fills is a hold you can empty. His consignment is out there now.",
+    flavor: 'Two letters in a blot of wax. The fence on the cold side of the strait can read you the rest.',
+    bridge: "Captain Krust. He runs the Finndicate's freight, and every hold he fills is a hold you can empty. His consignment is out on the water as you read this.",
     requiresNode: 'quartermaster',
     image: '/raidlog.png',
     detail: {
       description:
-        "The wax on Pete's letter only ever gave you two letters: C.K. The fence past the strait gives you the rest, for the price of looking like he did you no favour.\n\nCaptain Krust. An old, hard hand the Finndicate trusts with its freight, the kind of captain who never asks whose name is on a manifest and has lasted a lifetime for exactly that. He does not raid the weak the way Pete did. He moves cargo, on schedule, in bulk, and the Finndicate counts on every crate of it. He is no kingpin either. He answers upward like all of them. But he is a long way above a barnacled chancer, and his consignment is sailing the cold water right now.",
+        "Pete's wax only ever coughed up two letters: C.K. The fence past the strait fills in the rest, on the strict condition you act like he did you no favour by it.\n\nCaptain Krust. An old, leathery hand the Finndicate trusts with its freight, the kind who has never once asked whose name rides a manifest and has stayed afloat a lifetime for exactly that reason. He is nothing like Pete. He does not rob the small. He moves cargo, on time, in bulk, and the Finndicate sets its clock by him. Still no kingpin, mind you. He answers upward like every other fish in this sea. But he sits a long way above a barnacled chancer, and his consignment is on the cold water right now.",
       drops: [
         {
           emoji: '📜',
           label: "Captain's Logbook, Fragment III",
-          sublabel: '"C.K. don\'t lose cargo. Lose his cargo and you find out why." Said by the fence, who would not be named either.',
+          sublabel: "\"C.K. don't lose cargo. Lose his cargo and you find out why.\" Said by the fence, who would not be named either.",
           rarity: 'rare',
         },
       ],
-      dropsNote: 'A name at last. The Finndicate has a face for its freight, and the freight has a heading.',
+      dropsNote: 'A name at last. The Finndicate\'s freight has a face, and the face keeps a schedule.',
       ctaLabel: 'Name the Devil →',
     },
   },
@@ -320,8 +320,8 @@ export const RAID_MAP: RaidNode[] = [
     id: 'krust',
     type: 'raid',
     label: "Krust's Consignment",
-    flavor: "Captain Krust's freight runs the cold water past the Bilge Strait. Sink the consignment and the Finndicate feels it.",
-    bridge: "Krust goes down and his manifest goes overboard with him. He was no kingpin either. He kept saying someone above him would want this back.",
+    flavor: "Captain Krust's freight runs the cold water past the Bilge Strait. Sink the consignment and the Finndicate feels every crate of it.",
+    bridge: "Krust goes down and his manifest goes over the side with him. No kingpin either, this one. Right to the end he kept muttering that someone above him would want it all back.",
     requiresNode: 'krust_reveal',
     requiresNavLevel: 20,
     route: '/raids/krust',
@@ -329,7 +329,7 @@ export const RAID_MAP: RaidNode[] = [
     image: CAPTAIN_KRUST.enemies.krust.portrait,
     detail: {
       description:
-        "Krust's full run: eight escalating ship battles through his consignment crew with no breather, ending in the old captain and his iron-sided carrack. Sink the gauntlet to crack his loot crate, the only place his contraband drops. Stiffer than anything Pete's reef ever threw at you.",
+        "Krust's full run in one go: eight ship battles through his consignment crew, each heavier than the last, no breather to be found anywhere in it, and the old captain waiting at the end aboard his iron-sided carrack. Sink the lot and his loot crate splits open, the only place his contraband ever drops. Nothing Pete's reef ever threw at you sailed half this hard.",
       enemies: ['Bilge Runner ×2', 'Brine Deckhand ×2', 'Hull Breaker ×2', 'Krust Overseer ×2', 'Captain Krust'],
       drops: lootDrops(CAPTAIN_KRUST.loot),
       clearReward: clearPayout(CAPTAIN_KRUST),
@@ -340,22 +340,22 @@ export const RAID_MAP: RaidNode[] = [
     id: 'finndicate_notice',
     type: 'story',
     label: 'The Finndicate Takes Notice',
-    flavor: "Krust is on the seabed, and for the first time the Finndicate feels the hole you have torn in it.",
-    bridge: "They run a special class of freight through waters they only call the danger zones. Whatever it is, it is worth the ships it costs them.",
+    flavor: "Krust is on the seabed, and for the first time the Finndicate feels the hole you have torn in its side.",
+    bridge: "They run a special class of freight through water they will only call the danger zones. Whatever it is, it is worth more to them than the ships it keeps eating.",
     requiresNode: 'krust',
     image: '/raidlog.png',
     detail: {
       description:
-        "Krust was no small cog. With him gone the Finndicate's ledgers have come up short, and for the first time someone well above the freight has looked up from the books and noticed the captain sinking their cargo.\n\nYou have their attention now, and a little of theirs has rubbed off on you. One scrap survived the wreck of Krust's run. The Finndicate moves a special class of cargo, priority freight routed through what their manifests only call the danger zones. Waters most captains sail into exactly once. Whatever they are hauling through there is worth every hull it costs them, and they would very much like you to stop pulling the thread.",
+        "Krust was no small cog, and the gap he leaves shows plain in the books. For the first time someone well above the freight desk has set down the ledgers and taken a long, cold look at the captain who keeps sinking their cargo. You have the Finndicate's full attention now, which is the one prize you cannot hand back.\n\nA single scrap rode out the wreck of Krust's run. The Finndicate moves a special class of cargo, priority freight steered through water its own manifests will only call the danger zones. Most captains sail in there exactly once. Whatever they are hauling through it is worth every hull it swallows, and they would dearly love you to set the thread down and walk away.",
       drops: [
         {
           emoji: '📜',
           label: "Captain's Logbook, Fragment IV",
-          sublabel: '"Danger-zone consignment. Priority freight. It will not open for him. Find the hands that it will." Stamped with a mark no clerk would explain.',
+          sublabel: "\"Danger-zone consignment. Priority freight. It will not open for him. Find the hands that it will.\" Stamped with a mark no clerk would explain.",
           rarity: 'common',
         },
       ],
-      dropsNote: 'A class of cargo worth losing ships over, and a heading into water that kills. The trail runs colder and deeper from here.',
+      dropsNote: 'A cargo worth losing ships over, and a heading into water that eats them. The trail runs colder and deeper from here.',
       ctaLabel: 'Follow the Freight →',
     },
   },
@@ -363,8 +363,8 @@ export const RAID_MAP: RaidNode[] = [
     id: 'smugglers_chart',
     type: 'puzzle',
     label: "The Smuggler's Chart",
-    flavor: "Krust ran freight for the Finndicate, and his cabin gave up the network map: a chain of signal beacons linking every drop to one another. Light the whole chain and it shows where the freight all ships to.",
-    bridge: "The beacons blaze as one and every lane bends to a single point, deep past the danger line. That is where the freight runs, and where you sail next.",
+    flavor: "Krust's cabin gave up the freight network map: every drop along the coast strung on a single chain of signal beacons. Light the whole chain and it shows where it all ships to.",
+    bridge: "The beacons catch as one, and every lane on the map bends to a single point far past the danger line. That is where the freight ends up, and where you are bound.",
     requiresNode: 'finndicate_notice',
     // image: '/smugglers_chart.png',  // TODO: wire the custom node art once provided
     puzzle: {
@@ -378,16 +378,16 @@ export const RAID_MAP: RaidNode[] = [
       scrambleTaps: 12,
       rewardNavXp: 500,
       reveal:
-        "The beacons hold their light, and the chain reads true at last. Every freight lane on the map runs to the same point, far past the danger line where the charts stop.\n\nYou have the heading now. That is where the Finndicate ships it all, and that is where you sail next.",
+        "The beacons hold, the whole chain steady at last, and the map gives up its secret. Every freight lane bends to one place, far past the danger line where the charts simply stop.\n\nYou have the heading now. That is where the Finndicate funnels all of it, and that is where you sail next.",
     },
     detail: {
       description:
-        "Krust was no kingpin, just a captain who ran freight, and the Finndicate kept its captains tied together. His cabin gave up the network map: a chain of signal beacons, every drop wired to the next, that burns the nights the freight sails.\n\nThe beacons are rigged against prying eyes. Light one and the lanterns beside it gutter or flare, so no single light ever gives the pattern away. Get the whole chain lit at once and the network shows itself, and the headings no one was ever meant to read.",
+        "Krust was no kingpin, only a captain who ran cargo, and the Finndicate keeps its captains roped to one another. His cabin gave up the network map: a chain of signal beacons, each drop wired to the next, lit only on the nights the freight runs.\n\nThe chain is rigged against prying eyes. Light one beacon and the lanterns either side of it flare or gutter, so no single light ever gives the shape away. Get them all burning at once and the network shows itself, headings and all, the kind no one was ever meant to read.",
       drops: [
         {
           emoji: '🧭',
           label: '500 Nav XP',
-          sublabel: 'Reading the network map sharpens your navigation. No coin, just the heading.',
+          sublabel: 'Reading the whole network sharpens your navigation. No coin in it, just the heading.',
           rarity: 'rare',
         },
       ],
