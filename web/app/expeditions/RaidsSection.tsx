@@ -710,7 +710,7 @@ function NodeDetailSheet({
                                   ? <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 4, background: d.swatch, filter: d.swatchFilter }} />
                                   : d.image
                                     // eslint-disable-next-line @next/next/no-img-element
-                                    ? <img src={d.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                    ? <img src={d.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: d.imageFilter }} />
                                     : <span>{d.emoji}</span>}
                               </span>
                               <span className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#e8e2d8', whiteSpace: 'nowrap' }}>{d.label}</span>
@@ -751,7 +751,7 @@ function NodeDetailSheet({
                           ? <div style={{ width: '100%', height: '100%', background: d.swatch, filter: d.swatchFilter }} />
                           : d.image
                             // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={d.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                            ? <img src={d.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: d.imageFilter }} />
                             : <span className={d.emoji === GEM_GLYPH ? 'font-cinzel' : undefined} style={d.emoji === GEM_GLYPH ? { color: GEM_COLOR } : undefined}>{d.emoji}</span>}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>

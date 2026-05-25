@@ -53,6 +53,8 @@ export interface RaidNodeDrop {
   label: string
   emoji: string
   image?: string | null
+  /** CSS filter applied to `image` (ship-skin previews recolour a ship sprite). */
+  imageFilter?: string
   rarity?: RaidLootItem['rarity']
   /** Human-readable odds, e.g. "49%", "Guaranteed", "Every kill". */
   chance?: string
@@ -116,6 +118,10 @@ export interface RaidNode {
   detail: RaidNodeDetail
 }
 
+// Ship-skin loot previews recolour this ship sprite (the tier-4 brigantine) so
+// players see the skin on an actual hull rather than a flat colour chip.
+const SHIP_SKIN_PREVIEW_IMG = '/models/brigantine.png'
+
 /** Derive a drop list (with rolled-once odds) from a boss raid's loot
  *  table so the node sheet and the live crate never drift apart.
  *  Doubloons entries skip the % chip — the % feels transactional for
@@ -133,15 +139,15 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
       rarity: l.rarity,
       ...(isDoubloons ? {} : { chance: `${Math.round((l.weight / total) * 100)}%` }),
     }
-    // Ship skin → show its effect swatch + say it's a cosmetic.
+    // Ship skin → preview the skin on a ship sprite (recoloured brigantine) so
+    // the player sees what it actually looks like, not just a flat colour.
     if (l.shipSkinId) {
       const skin = getShipSkin(l.shipSkinId)
       if (skin) {
         drop.label = skin.name
         drop.sublabel = 'Ship skin. A cosmetic new look for your ship.'
-        drop.swatch = skin.color
-        drop.swatchFilter = skin.filter
-        drop.image = null
+        drop.image = SHIP_SKIN_PREVIEW_IMG
+        drop.imageFilter = skin.filter
       }
     }
     // Raid item → surface its plain-English effect.
