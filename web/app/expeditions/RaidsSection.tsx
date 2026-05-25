@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { isCombatNode, type RaidNodeView } from '@/lib/raidMap'
-import { RARITY_COLOR } from '@/lib/bossRaids'
+import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
 import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice, solvePuzzleNode } from './raidMapActions'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
@@ -695,7 +695,7 @@ function NodeDetailSheet({
                                 : d.image
                                   // eslint-disable-next-line @next/next/no-img-element
                                   ? <img src={d.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                                  : <span>{d.emoji}</span>}
+                                  : <span className={d.emoji === GEM_GLYPH ? 'font-cinzel' : undefined} style={d.emoji === GEM_GLYPH ? { color: GEM_COLOR } : undefined}>{d.emoji}</span>}
                             </span>
                             <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#e8e2d8', whiteSpace: 'nowrap' }}>{d.label}</span>
                           </span>
@@ -730,7 +730,7 @@ function NodeDetailSheet({
                           : d.image
                             // eslint-disable-next-line @next/next/no-img-element
                             ? <img src={d.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                            : <span>{d.emoji}</span>}
+                            : <span className={d.emoji === GEM_GLYPH ? 'font-cinzel' : undefined} style={d.emoji === GEM_GLYPH ? { color: GEM_COLOR } : undefined}>{d.emoji}</span>}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.74rem', color: '#e8e2d8', whiteSpace: full ? 'normal' : 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.label}</span>

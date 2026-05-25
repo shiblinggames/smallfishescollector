@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { type BroadsideEnemy, type RaidLootItem, RARITY_COLOR } from '@/lib/bossRaids'
+import { type BroadsideEnemy, type RaidLootItem, RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getShipSkin } from '@/lib/shipSkins'
 
 interface Props {
@@ -252,11 +252,15 @@ export default function RaidLootStage(props: Props) {
                     }}
                   />
                 ) : (
-                  <span style={{
-                    fontSize: '3rem',
-                    filter: !showLandedItem ? 'blur(1.5px) brightness(0.6)' : 'none',
-                    transition: 'filter 0.15s',
-                  }}>
+                  <span
+                    className={slotItem.emoji === GEM_GLYPH ? 'font-cinzel font-700' : undefined}
+                    style={{
+                      fontSize: '3rem',
+                      color: slotItem.emoji === GEM_GLYPH ? GEM_COLOR : undefined,
+                      filter: !showLandedItem ? 'blur(1.5px) brightness(0.6)' : 'none',
+                      transition: 'filter 0.15s',
+                    }}
+                  >
                     {slotItem.emoji}
                   </span>
                 )}

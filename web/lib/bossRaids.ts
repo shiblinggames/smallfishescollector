@@ -65,6 +65,12 @@ export interface BossRaidConfig {
   preFightDialogue?: BossDialogueLine[]
 }
 
+// The one true gem look: the purple ◆ glyph from the Nav currency display.
+// Use these everywhere gems are shown (loot, drops, references) instead of a
+// 💎 emoji so the gem icon never drifts. Doubloons stay the gold ⟡.
+export const GEM_GLYPH = '◆'
+export const GEM_COLOR = '#a78bfa'
+
 export const RARITY_COLOR: Record<RaidLootItem['rarity'], string> = {
   common:    '#9ca3af',
   uncommon:  '#4ade80',
@@ -153,8 +159,8 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
   loot: [
     { id: 'doubloons_300',  label: '+300 ⟡',        image: '/smallpile.png',       emoji: '🪙', rarity: 'common',    weight: 50 },
     { id: 'doubloons_600',  label: '+600 ⟡',        image: '/dailybonus.png',      emoji: '💰', rarity: 'uncommon',  weight: 25 },
-    { id: 'gems_25',        label: '25 Gems',        image: null,                   emoji: '💎', rarity: 'rare',      weight: 15 },
-    { id: 'pack',           label: '100 Gems',       image: null,                   emoji: '💎', rarity: 'epic',      weight: 5  },
+    { id: 'gems_25',        label: '25 Gems',        image: null,                   emoji: GEM_GLYPH, rarity: 'rare',      weight: 15 },
+    { id: 'pack',           label: '100 Gems',       image: null,                   emoji: GEM_GLYPH, rarity: 'epic',      weight: 5  },
     { id: 'corsair_black',  label: 'Corsair Black',  image: null,                   emoji: '🚢', rarity: 'epic',      weight: 5,  shipSkinId: 'corsair_black' },
     { id: 'corsair_cannon', label: 'Corsair Cannon', image: '/corsaircannon.png',   emoji: '💣', rarity: 'legendary', weight: 3  },
   ],
@@ -259,8 +265,8 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
   loot: [
     { id: 'doubloons_600',   label: '+600 ⟡',         image: '/smallpile.png',     emoji: '🪙', rarity: 'common',    weight: 50 },
     { id: 'doubloons_1200',  label: '+1,200 ⟡',       image: '/dailybonus.png',    emoji: '💰', rarity: 'uncommon',  weight: 25 },
-    { id: 'gems_50',         label: '50 Gems',         image: null,                 emoji: '💎', rarity: 'rare',      weight: 15 },
-    { id: 'pack_2',          label: '200 Gems',        image: null,                 emoji: '💎', rarity: 'epic',      weight: 5  },
+    { id: 'gems_50',         label: '50 Gems',         image: null,                 emoji: GEM_GLYPH, rarity: 'rare',      weight: 15 },
+    { id: 'pack_2',          label: '200 Gems',        image: null,                 emoji: GEM_GLYPH, rarity: 'epic',      weight: 5  },
     { id: 'verdigris_hull',  label: 'Verdigris Hull',  image: null,                 emoji: '🚢', rarity: 'epic',      weight: 5,  shipSkinId: 'verdigris_hull' },
     { id: 'krusts_carapace', label: "Krust's Carapace", image: '/captainshull.png', emoji: '🛡️', rarity: 'legendary', weight: 3  },
   ],

@@ -58,7 +58,7 @@ function VoyageRow({ v }: { v: VoyageHistoryEntry }) {
             <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#c8a840' }}>+{v.total_doubloons} ⟡</span>
           )}
           {v.total_gems > 0 && (
-            <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#a78bfa' }}>+{v.total_gems}💎</span>
+            <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#a78bfa' }}>+{v.total_gems} ◆</span>
           )}
           {v.crew_lost.length > 0 && (
             <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#f87171', background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.20)', borderRadius: 4, padding: '0.1rem 0.3rem' }}>

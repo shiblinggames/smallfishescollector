@@ -10,7 +10,7 @@
 // gated by `requiresNode` (+ optional Nav level); a cleared combat node
 // stays farmable.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, GEM_GLYPH, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
@@ -156,7 +156,7 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
 // two near-identical pills on the node sheet. Fold them into one "X to Y Gems"
 // pill. The live crate still rolls each tier separately from config.loot.
 function combineGemDrops(drops: RaidNodeDrop[]): RaidNodeDrop[] {
-  const gems = drops.map((d, i) => ({ d, i })).filter(x => x.d.emoji === '💎')
+  const gems = drops.map((d, i) => ({ d, i })).filter(x => x.d.emoji === GEM_GLYPH)
   if (gems.length < 2) return drops
   const amounts = gems
     .map(x => parseInt(x.d.label.replace(/[^0-9]/g, ''), 10))
@@ -164,7 +164,7 @@ function combineGemDrops(drops: RaidNodeDrop[]): RaidNodeDrop[] {
   const lo = Math.min(...amounts), hi = Math.max(...amounts)
   const merged: RaidNodeDrop = {
     label: `${lo.toLocaleString()} to ${hi.toLocaleString()} Gems`,
-    emoji: '💎',
+    emoji: GEM_GLYPH,
     rarity: 'epic',
   }
   const firstGem = gems[0].i
