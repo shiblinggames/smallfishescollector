@@ -7,7 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { isCombatNode, type RaidNodeView } from '@/lib/raidMap'
 import { RARITY_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
-import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice } from './raidMapActions'
+import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice, solvePuzzleNode } from './raidMapActions'
+import RouteLockPuzzle from './RouteLockPuzzle'
 
 // Distinct border / glow colour per node type so the route reads at a
 // glance: cyan = practice, ember = boss raid, gold = collect goal,
@@ -18,6 +19,7 @@ const TYPE_ACCENT: Record<string, string> = {
   milestone: '#e0b358',
   shop:      '#b08bf0',
   story:     '#6fbf73',
+  puzzle:    '#7c9fd0',
 }
 
 // Default art per node type, used when a node has no own `image`. Lets
@@ -45,6 +47,7 @@ const TYPE_SIZE: Record<string, number> = {
   skirmish:  48,
   milestone: 56,
   shop:      56,
+  puzzle:    56,
   raid:      66,
 }
 
@@ -65,6 +68,8 @@ function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; si
   if (type === 'shop') return <svg {...common}><path d="M3 9l1.5-5h15L21 9M4 9v10a1 1 0 001 1h14a1 1 0 001-1V9M4 9h16M9 13h6" /></svg>
   // story: open book
   if (type === 'story') return <svg {...common}><path d="M12 6.5C10.5 5 8 4.5 4 5v13c4-.5 6.5 0 8 1.5 1.5-1.5 4-2 8-1.5V5c-4-.5-6.5 0-8 1.5zM12 6.5V19" /></svg>
+  // puzzle: compass rose (a chart / route lock)
+  if (type === 'puzzle') return <svg {...common}><path d="M12 2l2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6z" /><circle cx="12" cy="12" r="1.8" fill={color} stroke="none" /></svg>
   // milestone (default): treasure star
   return <svg {...common}><path d="M12 2l2.4 6.9H22l-6 4.5 2.3 7L12 16.9 5.7 20.4 8 13.4 2 8.9h7.6z" /></svg>
 }
@@ -323,6 +328,17 @@ function NodeDetailSheet({
     })
   }
 
+  function solvePuzzle() {
+    setErr(null)
+    startTransition(async () => {
+      const res = await solvePuzzleNode(node.id)
+      if ('error' in res) { setErr(res.error); return }
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+      router.refresh()
+      onClose()
+    })
+  }
+
   function enter() {
     if (node.route) router.push(node.route)
   }
@@ -402,6 +418,14 @@ function NodeDetailSheet({
           {pending ? '…' : (detail.ctaLabel ?? 'Continue the Story →')}
         </button>
       )
+    }
+  } else if (node.type === 'puzzle') {
+    // available → the puzzle itself is rendered in the body (auto-solves);
+    // cleared/locked just show a status banner here.
+    if (cleared) {
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Route Charted ✓</div>
+    } else if (locked) {
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
     }
   }
 
@@ -515,6 +539,13 @@ function NodeDetailSheet({
           <div style={{ marginTop: '0.9rem', display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
             <LockGlyph size={15} />
             <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a9690' }}>{lockReason}</span>
+          </div>
+        )}
+
+        {/* Puzzle: the rotate-to-connect route lock, live when available */}
+        {node.type === 'puzzle' && node.puzzle && status === 'available' && (
+          <div style={{ marginTop: '1.1rem' }}>
+            <RouteLockPuzzle puzzle={node.puzzle} onSolved={solvePuzzle} />
           </div>
         )}
 

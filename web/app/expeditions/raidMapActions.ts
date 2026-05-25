@@ -137,6 +137,55 @@ export async function markStoryNodeRead(
   return { ok: true }
 }
 
+// Puzzle nodes (rotate-to-connect route lock) are solved client-side; the
+// server just records completion and pays the reward. Same trust level as a
+// story node — there's no economy-breaking payout and the puzzle is a one-time
+// narrative gate. Gates (requiresNode / Nav level) are still enforced here.
+export async function solvePuzzleNode(
+  nodeId: string,
+): Promise<{ doubloons: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const node = RAID_MAP.find(n => n.id === nodeId)
+  if (!node || node.type !== 'puzzle' || !node.puzzle) return { error: 'Invalid node' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+
+  const doubloons = profile.doubloons ?? 0
+  const cleared = await buildClearedSet(admin, user.id, profile)
+  if (cleared.has(nodeId)) return { doubloons } // idempotent — already solved
+  if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
+  if (node.requiresNavLevel) {
+    const navLevel = getLevelFromXP((profile.expedition_xp as number | null) ?? 0)
+    if (navLevel < node.requiresNavLevel) return { error: 'Locked' }
+  }
+
+  const reward = node.puzzle.rewardDoubloons ?? 0
+  const newDoubloons = doubloons + reward
+  const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}
+  const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
+
+  await Promise.all([
+    admin.from('profiles').update({
+      doubloons: newDoubloons,
+      raid_node_progress: { ...prog, cleared: newCleared },
+    }).eq('id', user.id),
+    ...(reward > 0
+      ? [admin.from('doubloon_transactions').insert({ user_id: user.id, amount: reward, reason: `Solved ${node.label}` })]
+      : []),
+  ])
+
+  return { doubloons: newDoubloons }
+}
+
 // Quartermaster's Cache: a one-time pick-one. The chosen raid item is
 // added to raid_items permanently and the node is cleared so the other
 // option is gone for good.

@@ -20,11 +20,31 @@ import { getRaidItem } from '@/lib/raidItems'
 //  - milestone : a "collect / hold X" goal (no fight)
 //  - shop      : a contraband stall (future)
 //  - story     : an overarching-story beat (future)
-export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story'
+export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle'
 
 /** Routes into a combat screen + derives its clear from battle data. */
 export function isCombatNode(t: RaidNodeType): boolean {
   return t === 'skirmish' || t === 'raid'
+}
+
+// ── Rotate-to-connect puzzle (a "pipes" route lock) ──────────────────────────
+// Each tile holds route segments on some of its 4 edges; the player taps to
+// rotate it. The node is solved when an unbroken route connects the start edge
+// to the end edge. There is no hidden answer to leak — the tile shapes are
+// visible and the challenge is the manipulation — so the layout lives here and
+// the solve is checked client-side; the server just records completion + pays
+// the reward (same trust level as the "mark story read" nodes).
+export type PuzzleEdge = 'N' | 'E' | 'S' | 'W'
+export interface RaidPuzzleTile { edges: PuzzleEdge[] }
+export interface RaidPuzzle {
+  cols: number
+  rows: number
+  /** Row-major (length cols*rows). Each tile's edges are its SOLVED state;
+   *  the component scrambles rotations on open. */
+  tiles: RaidPuzzleTile[]
+  start: { col: number; row: number; edge: PuzzleEdge }
+  end: { col: number; row: number; edge: PuzzleEdge }
+  rewardDoubloons: number
 }
 
 /** One row in a node's "possible drops" panel. */
@@ -89,6 +109,8 @@ export interface RaidNode {
    *  raid-item ids (lib/raidItems). Choosing one adds it to the
    *  player's raid_items permanently and clears the node. */
   choice?: { items: string[] }
+  /** puzzle: the rotate-to-connect route lock. Solving clears the node. */
+  puzzle?: RaidPuzzle
   /** Rich detail surfaced in the tap-to-open sheet. */
   detail: RaidNodeDetail
 }
@@ -334,6 +356,49 @@ export const RAID_MAP: RaidNode[] = [
       ],
       dropsNote: 'A class of cargo worth losing ships over, and a heading into water that kills. The trail runs colder and deeper from here.',
       ctaLabel: 'Follow the Freight →',
+    },
+  },
+  {
+    id: 'smugglers_chart',
+    type: 'puzzle',
+    label: "The Smuggler's Chart",
+    flavor: "Krust's wreck gave up a chart, but the priority lane is broken across it. Piece the route together and it points where the danger-zone freight runs.",
+    bridge: "The lane joins up and runs cold and deep, into the danger zones the Finndicate only whispers about. Whatever they haul through there, it is close now.",
+    requiresNode: 'finndicate_notice',
+    requiresNavLevel: 30,
+    image: '/raidlog.png',
+    puzzle: {
+      cols: 3,
+      rows: 3,
+      // A single winding lane from the harbour (W of top-left) to the mark
+      // (E of bottom-right). Straights + corners, scrambled on open.
+      tiles: [
+        { edges: ['W', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'S'] },
+        { edges: ['E', 'S'] }, { edges: ['W', 'E'] }, { edges: ['N', 'W'] },
+        { edges: ['N', 'E'] }, { edges: ['W', 'E'] }, { edges: ['W', 'E'] },
+      ],
+      start: { col: 0, row: 0, edge: 'W' },
+      end: { col: 2, row: 2, edge: 'E' },
+      rewardDoubloons: 2500,
+    },
+    detail: {
+      description:
+        "Krust went down with a chart in his cabin, and it is the only thing aboard worth keeping. On it runs the Finndicate's priority lane, the route their danger-zone freight sails.\n\nThe trouble is the chart is in pieces, the lane scattered across it in broken segments. Turn each piece until the route runs unbroken from the harbour to the mark, and you will have the heading no one was ever meant to read.",
+      drops: [
+        {
+          emoji: '📜',
+          label: "Captain's Logbook, Fragment V",
+          sublabel: 'The priority lane, charted at last. It runs straight into the danger zones.',
+          rarity: 'rare',
+        },
+        {
+          emoji: '⟡',
+          label: '2,500 ⟡',
+          sublabel: 'Salvage from Krust\'s cabin, yours for reading the chart.',
+          rarity: 'uncommon',
+        },
+      ],
+      dropsNote: 'Rotate the chart pieces to reconnect the lane. One-time, no cost, no fight.',
     },
   },
 ]
