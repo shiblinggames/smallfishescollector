@@ -553,6 +553,47 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     return () => { if (autoStartRafRef.current) cancelAnimationFrame(autoStartRafRef.current) }
   }, [startGame])
 
+  // ── Mid-battle exit guard ─────────────────────────────────────────────────
+  // Any attempt to leave a live raid (tab bar, nav link, browser Back) is
+  // intercepted and routed through the flee gamble in <RaidCombat /> instead
+  // of being a free escape. beforeunload covers a hard refresh / tab close
+  // with the browser's native prompt (the gamble can't run on a real unload).
+  // Active only while phase === 'playing' (which spans all rounds — only the
+  // boss kill / defeat leaves it), so the Back sentinel is pushed just once.
+  const fleeNavRef = useRef<(() => void) | null>(null)
+  const [fleeTick, setFleeTick] = useState(0)
+  useEffect(() => {
+    if (phase !== 'playing') return
+    window.history.pushState(null, '', window.location.href) // Back sentinel
+    const signal = (nav: () => void) => { fleeNavRef.current = nav; setFleeTick(t => t + 1) }
+    const onClickCapture = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      const a = (e.target as HTMLElement | null)?.closest('a')
+      if (!a) return
+      const tgt = a.getAttribute('target')
+      if (tgt && tgt !== '_self') return
+      const href = a.getAttribute('href')
+      if (!href || !href.startsWith('/')) return                 // same-app routes only
+      if (href.split(/[?#]/)[0] === window.location.pathname) return // same page
+      e.preventDefault()
+      e.stopPropagation()
+      signal(() => router.push(href))
+    }
+    const onPop = () => {
+      window.history.pushState(null, '', window.location.href)   // re-arm; stay put
+      signal(() => router.push('/expeditions'))
+    }
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    document.addEventListener('click', onClickCapture, true)
+    window.addEventListener('popstate', onPop)
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => {
+      document.removeEventListener('click', onClickCapture, true)
+      window.removeEventListener('popstate', onPop)
+      window.removeEventListener('beforeunload', onBeforeUnload)
+    }
+  }, [phase, router])
+
   // Ship sank in this real raid: owe the tier-scaled repair fee. Fires
   // once; the player pays it from /expeditions before raiding again.
   const sinkReportedRef = useRef(false)
@@ -1134,6 +1175,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 onAnchorSave={() => { anchorSavesLeftRef.current = Math.max(0, anchorSavesLeftRef.current - 1) }}
                 onLeave={() => router.push('/expeditions')}
                 riskyFlee
+                fleeSignal={fleeTick}
+                fleeNav={fleeNavRef.current}
                 raidMods={raidMods}
               />
             )

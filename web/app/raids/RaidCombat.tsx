@@ -175,6 +175,11 @@ export interface RaidCombatProps {
    *  then rolls — a failed escape lets the enemy land a parting shot. When
    *  false/omitted (practice + preview sandboxes), ← leaves instantly. */
   riskyFlee?: boolean
+  /** Bridge from RaidGame's mid-battle exit guard: when fleeSignal changes,
+   *  open the flee prompt. fleeNav is where to go on a clean getaway (the tab
+   *  the player tried to open). */
+  fleeSignal?: number
+  fleeNav?: (() => void) | null
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -191,7 +196,7 @@ export default function RaidCombat({
   killReward,
   onEnemyDefeated, onPlayerDefeated, onLeave, onPlayerHit,
   anchorSaveAvailable = false, onAnchorSave,
-  raidMods, riskyFlee = false,
+  raidMods, riskyFlee = false, fleeSignal, fleeNav,
 }: RaidCombatProps) {
   // Net crew raid effects; no-op default so the practice skirmish is unaffected.
   const mods: RaidMods = raidMods ?? { damagePct: 0, damageTakenPct: 0, critPct: 0, firstStrike: false }
@@ -297,12 +302,24 @@ export default function RaidCombat({
   const enemyHpRef  = useRef(enemy.hpBase)
   useEffect(() => { playerHpRef.current = playerHp }, [playerHp])
 
-  // Flee — leaving a real raid is a gamble, not a free exit. A failed escape
-  // lets the enemy land a parting shot (Bulwark still mitigates); bosses are
-  // harder to slip. Only resolvable on the player's turn (gated at the button).
+  // ── Flee — leaving a real raid is a gamble, not a free exit ───────────────
+  // A failed escape lets the enemy land a parting shot (Bulwark still
+  // mitigates); bosses are harder to slip. The same prompt handles BOTH the ←
+  // button and any attempt to navigate away mid-battle (RaidGame intercepts
+  // those and signals via fleeSignal). pendingFleeNavRef holds where to go on
+  // a clean getaway so success honours where the player was trying to head.
   const FLEE_CHANCE = isBoss ? 0.45 : 0.65
+  const pendingFleeNavRef = useRef<(() => void) | null>(null)
+  function promptFlee(nav: () => void) {
+    pendingFleeNavRef.current = nav
+    setFleeResult(null)
+    setFleeOpen(true)
+  }
   function attemptFlee() {
-    if (Math.random() < FLEE_CHANCE) { onLeave?.(); return }
+    if (Math.random() < FLEE_CHANCE) {
+      (pendingFleeNavRef.current ?? (() => onLeave?.()))()
+      return
+    }
     const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
     const dmg = Math.max(1, Math.round(base * (1 - (mods.damageTakenPct ?? 0) / 100)))
     const next = Math.max(0, playerHpRef.current - dmg)
@@ -317,6 +334,15 @@ export default function RaidCombat({
     setFleeOpen(false)
     if (defeated) { setSubPhase('done'); onPlayerDefeated() }
   }
+  // Bridge: RaidGame bumps fleeSignal when it intercepts a navigation away
+  // mid-battle. lastFleeSignalRef avoids a spurious prompt on mount/remount.
+  const lastFleeSignalRef = useRef(fleeSignal ?? 0)
+  useEffect(() => {
+    if (fleeSignal == null || fleeSignal === lastFleeSignalRef.current) return
+    lastFleeSignalRef.current = fleeSignal
+    promptFlee(fleeNav ?? (() => onLeave?.()))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fleeSignal])
   useEffect(() => { enemyHpRef.current = enemyHp }, [enemyHp])
 
   // Reset when enemy changes (parent unmounts/remounts on encounter switch).
@@ -948,7 +974,7 @@ export default function RaidCombat({
         {onLeave && (!riskyFlee || subPhase === 'await_input') && (
           <button
             type="button"
-            onClick={riskyFlee ? () => { setFleeResult(null); setFleeOpen(true) } : onLeave}
+            onClick={riskyFlee ? () => promptFlee(() => onLeave?.()) : onLeave}
             aria-label={riskyFlee ? 'Flee raid' : 'Leave raid'}
             style={{
               position: 'absolute', top: 10, right: 10, zIndex: 5,
