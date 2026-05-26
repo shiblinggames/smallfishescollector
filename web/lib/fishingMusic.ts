@@ -48,9 +48,16 @@ let handoffCoarseTimer: ReturnType<typeof setTimeout> | null = null
 let handoffPreRollDone = false
 let handoffResetTimer: ReturnType<typeof setTimeout> | null = null
 const PRE_ROLL_LEAD_MS = 200
+// fishingsoundtrack.ogg is the SHALLOWS track — it was the first one
+// written, and back when Shallows was the only fishing zone it was the
+// whole soundtrack, so it doubles as the fallback for any zone we
+// haven't given its own track yet. If we ever decouple Shallows from
+// "the default," move it to ZONE_TRACKS like Open Waters / Deep.
 const DEFAULT_TRACK = '/fishingsoundtrack.ogg'
 
-// Per-zone soundtracks. A zone not listed here falls back to DEFAULT_TRACK.
+// Per-zone soundtracks. A zone not listed here falls back to
+// DEFAULT_TRACK (today: Shallows + Abyss; Shallows by design, Abyss
+// until it gets its own track).
 const ZONE_TRACKS: Record<string, string> = {
   open_waters: '/fishingsoundtrackopen.ogg',
   deep:        '/fishingsoundtrackdeep.ogg',
