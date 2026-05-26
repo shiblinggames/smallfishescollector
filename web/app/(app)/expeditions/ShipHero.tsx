@@ -1562,7 +1562,8 @@ function NavBonusGrid({ currentLevel, currentBonus, nextLevel, nextBonus }: {
       background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
       borderRadius: 10, padding: '0.6rem 0.75rem', fontSize: '0.74rem',
     }}>
-      {/* Column headers */}
+      {/* Column headers — current is absolute, next is the delta only so the
+          rows that don't change at the next level stay quiet. */}
       <span />
       <span className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.14em', color: '#7a8696', textAlign: 'right' }}>
         Lv {currentLevel}
@@ -1575,18 +1576,17 @@ function NavBonusGrid({ currentLevel, currentBonus, nextLevel, nextBonus }: {
 
       {/* Rows */}
       {rows.map(({ label, cur, next, color }) => {
-        const grew = next !== undefined && next > cur
+        const delta = next !== undefined ? next - cur : null
         return (
           <Fragment key={label}>
             <span className="font-karla font-600" style={{ color: '#9a9690' }}>{label}</span>
             <span className="font-cinzel font-700" style={{ color, textAlign: 'right' }}>+{cur}</span>
             {hasNext && (
               <span className="font-cinzel font-700" style={{
-                color: grew ? '#4ade80' : color,
-                opacity: grew ? 1 : 0.55,
+                color: delta && delta > 0 ? '#4ade80' : delta && delta < 0 ? '#f87171' : 'transparent',
                 textAlign: 'right',
               }}>
-                +{next}
+                {delta && delta > 0 ? `+${delta}` : delta && delta < 0 ? String(delta) : ''}
               </span>
             )}
           </Fragment>
