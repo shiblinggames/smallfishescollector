@@ -92,11 +92,16 @@ export const ALL_AFFIX_IDS: AffixId[] = Object.keys(AFFIXES) as AffixId[]
 
 /** Elite multipliers on top of whatever the challenge-mode scaling already
  *  applied. So a Reef Raider in challenge mode has 1.3 × base HP; an
- *  ELITE Reef Raider has 1.3 × base × 2.0 HP. Damage multiplies the same
- *  way. Tuned so that two elites per run feel like real fights, not just
- *  beefier mobs. */
-export const ELITE_HP_MULT  = 2.0
-export const ELITE_DMG_MULT = 1.5
+ *  ELITE Reef Raider has 1.3 × base × 1.5 HP. Damage multiplies the same
+ *  way. The affix is the headline twist for an elite; these multipliers
+ *  just nudge the bulk so the elite reads as harder, not as a brand-new
+ *  enemy class. Dialed back from 2.0 / 1.5 → 1.5 / 1.25 on 2026-05-26
+ *  after the stack on top of challenge-mode scaling was punishing
+ *  (Reef Raider was hitting ~66 HP / 3-9 dmg, before the affix even
+ *  fired). New combined ceiling for non-bosses in challenge: ~1.95× HP,
+ *  ~1.44× dmg + affix. */
+export const ELITE_HP_MULT  = 1.5
+export const ELITE_DMG_MULT = 1.25
 
 /** Pick a random affix from the pool. */
 export function rollAffix(): AffixId {
