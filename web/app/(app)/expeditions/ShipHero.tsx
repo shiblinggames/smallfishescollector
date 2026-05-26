@@ -1519,23 +1519,20 @@ function NavLevelInfoPanel({
         </p>
       </div>
 
-      {/* Current captain bonuses */}
-      <div style={{ marginBottom: nextBonus ? '0.85rem' : '0.5rem' }}>
+      {/* Captain bonuses — one grid, with a "Lv N+1" column folded in when
+          there's a next level so the player sees the carrot without a second
+          table. */}
+      <div style={{ marginBottom: '0.6rem' }}>
         <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: '#7a7875', marginBottom: 6 }}>
-          Captain bonuses at Lv {level}
+          Captain bonuses
         </p>
-        <NavBonusGrid bonus={currentBonus} />
+        <NavBonusGrid
+          currentLevel={level}
+          currentBonus={currentBonus}
+          nextLevel={atMax ? undefined : level + 1}
+          nextBonus={nextBonus ?? undefined}
+        />
       </div>
-
-      {/* Next-level preview */}
-      {nextBonus && (
-        <div style={{ marginBottom: '0.6rem' }}>
-          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: '#7a7875', marginBottom: 6 }}>
-            At Lv {level + 1}
-          </p>
-          <NavBonusGrid bonus={nextBonus} compareTo={currentBonus} />
-        </div>
-      )}
 
       <p className="font-karla" style={{ fontSize: '0.66rem', color: '#6a6764', lineHeight: 1.55, marginTop: '0.85rem' }}>
         Navigation XP comes from raids, voyages, and other expedition rewards. Every level adds +1 HP to your ship in raids, and every 5 levels adds +1 Power, +1 Navigation, and +1 Fortune on top of your crew totals.
@@ -1544,28 +1541,54 @@ function NavLevelInfoPanel({
   )
 }
 
-function NavBonusGrid({ bonus, compareTo }: { bonus: ReturnType<typeof navLevelBonuses>; compareTo?: ReturnType<typeof navLevelBonuses> }) {
-  const rows: { label: string; val: number; prev: number | undefined; color: string }[] = [
-    { label: 'Ship HP',    val: bonus.hp,         prev: compareTo?.hp,         color: '#86efac' },
-    { label: 'Power',      val: bonus.power,      prev: compareTo?.power,      color: '#f87171' },
-    { label: 'Navigation', val: bonus.navigation, prev: compareTo?.navigation, color: '#60a5fa' },
-    { label: 'Fortune',    val: bonus.fortune,    prev: compareTo?.fortune,    color: '#f0c040' },
+function NavBonusGrid({ currentLevel, currentBonus, nextLevel, nextBonus }: {
+  currentLevel: number
+  currentBonus: ReturnType<typeof navLevelBonuses>
+  nextLevel?: number
+  nextBonus?: ReturnType<typeof navLevelBonuses>
+}) {
+  const rows: { label: string; cur: number; next: number | undefined; color: string }[] = [
+    { label: 'Ship HP',    cur: currentBonus.hp,         next: nextBonus?.hp,         color: '#86efac' },
+    { label: 'Power',      cur: currentBonus.power,      next: nextBonus?.power,      color: '#f87171' },
+    { label: 'Navigation', cur: currentBonus.navigation, next: nextBonus?.navigation, color: '#60a5fa' },
+    { label: 'Fortune',    cur: currentBonus.fortune,    next: nextBonus?.fortune,    color: '#f0c040' },
   ]
+  const hasNext = nextBonus !== undefined && nextLevel !== undefined
   return (
     <div style={{
-      display: 'grid', gridTemplateColumns: '1fr auto auto', columnGap: 10, rowGap: 6,
+      display: 'grid',
+      gridTemplateColumns: hasNext ? '1fr auto auto' : '1fr auto',
+      columnGap: 16, rowGap: 6,
       background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
       borderRadius: 10, padding: '0.6rem 0.75rem', fontSize: '0.74rem',
     }}>
-      {rows.map(({ label, val, prev, color }) => {
-        const delta = prev !== undefined ? val - prev : null
+      {/* Column headers */}
+      <span />
+      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.14em', color: '#7a8696', textAlign: 'right' }}>
+        Lv {currentLevel}
+      </span>
+      {hasNext && (
+        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.14em', color: '#90c0ff', textAlign: 'right' }}>
+          Lv {nextLevel}
+        </span>
+      )}
+
+      {/* Rows */}
+      {rows.map(({ label, cur, next, color }) => {
+        const grew = next !== undefined && next > cur
         return (
           <Fragment key={label}>
             <span className="font-karla font-600" style={{ color: '#9a9690' }}>{label}</span>
-            <span className="font-cinzel font-700" style={{ color, textAlign: 'right' }}>+{val}</span>
-            <span className="font-karla font-600" style={{ color: delta && delta > 0 ? '#4ade80' : '#6a6764', textAlign: 'right', minWidth: 28 }}>
-              {delta === null ? '' : delta > 0 ? `+${delta}` : '—'}
-            </span>
+            <span className="font-cinzel font-700" style={{ color, textAlign: 'right' }}>+{cur}</span>
+            {hasNext && (
+              <span className="font-cinzel font-700" style={{
+                color: grew ? '#4ade80' : color,
+                opacity: grew ? 1 : 0.55,
+                textAlign: 'right',
+              }}>
+                +{next}
+              </span>
+            )}
           </Fragment>
         )
       })}
