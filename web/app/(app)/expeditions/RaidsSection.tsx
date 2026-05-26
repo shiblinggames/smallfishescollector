@@ -257,23 +257,12 @@ function RaidMap({
         const raidBlocked = repairOwed > 0 && isCombatNode(node.type)
         const interactive = !locked && !raidBlocked
         const isCurrent = i === currentIdx
-        const statusWord = cleared ? (isCombatNode(node.type) ? 'Cleared' : 'Done') : locked ? 'Locked' : raidBlocked ? 'Repair ship' : 'Available'
-        // Labels live next to ONLY the current available main-chain node
-        // ("you are here / next up"). Cleared, locked, and future-locked
-        // nodes hide their text — the glyph + portrait tells you what
-        // they are, and tapping any non-locked node opens the modal with
-        // the full name + story. Drops ~80% of on-map text and lets the
-        // route read as a clean chain of icons.
+        // Labels live UNDER the token now (was beside) — map-pin style.
+        // Only the current available main-chain node ("you are here / next
+        // up") shows its label. The glyph + portrait carries every other
+        // node's identity; tapping any non-locked node opens the modal
+        // for the full name + story.
         const showLabel = isCurrent && interactive
-        // Put the title plate on whichever side has the most room: a
-        // node on the left half gets its label to the right, and vice
-        // versa. The plate's dark background hides the route behind it.
-        const labelRight = cx(i) < 50
-        // When the current node has a side-branch child (challenge raid)
-        // sitting in the row, the branch eats into the label's normal
-        // territory — shrink the label so it never extends past the branch.
-        const hasSideBranchChild = views.some(other => other.node.sideBranch?.parentId === node.id)
-        const labelMaxWidth = hasSideBranchChild ? 78 : 124
         return (
           <div
             key={node.id}
@@ -371,33 +360,29 @@ function RaidMap({
               })()}
             </motion.button>
 
-            {/* Title beside the token — surfaces ONLY for the current
-                available main-chain node ("you are here / next up").
-                Every other node hides its label so the route stays a
-                clean chain of icons; tap any non-locked node to open
-                the detail modal for the full name + story. */}
+            {/* Title BELOW the token — map-pin caption. Surfaces only on
+                the current available main-chain node ("you are here / next
+                up"); every other node is icon-only and opens the detail
+                modal on tap. The chip backing hugs the text on each line
+                (box-decoration-break: clone) so wrapped labels read as
+                one caption, not as loose floating boxes. */}
             {showLabel && !isSide && (
               <div
                 style={{
                   position: 'absolute',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
+                  top: '100%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  marginTop: 8,
                   width: 'max-content',
-                  maxWidth: labelMaxWidth,
+                  maxWidth: 140,
+                  textAlign: 'center',
                   pointerEvents: 'none',
-                  ...(labelRight
-                    ? { left: '100%', marginLeft: 12, textAlign: 'left' as const }
-                    : { right: '100%', marginRight: 12, textAlign: 'right' as const }),
                 }}
               >
-                <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', lineHeight: 1.5, color: locked ? 'rgba(240,237,232,0.45)' : '#f5f2ec', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
-                  <span style={{ background: 'rgba(6,5,4,0.5)', borderRadius: 6, padding: '1px 6px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', lineHeight: 1.5, color: '#f5f2ec', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
+                  <span style={{ background: 'rgba(6,5,4,0.55)', borderRadius: 6, padding: '1px 7px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
                     {node.label}
-                  </span>
-                </p>
-                <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', marginTop: 3, color: cleared ? '#4ade80' : locked ? '#6a6764' : raidBlocked ? '#f0734a' : accent, textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
-                  <span style={{ background: 'rgba(6,5,4,0.5)', borderRadius: 5, padding: '1px 5px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
-                    {statusWord}
                   </span>
                 </p>
               </div>
