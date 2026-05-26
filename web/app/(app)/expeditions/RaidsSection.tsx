@@ -125,9 +125,14 @@ function RaidMap({
       if (v.node.sideBranch) {
         const parentRow = rowOf[v.node.sideBranch.parentId] ?? 0
         const parentCol = COLS[parentRow % COLS.length]
-        // Side-branch sits opposite the parent: parent on the right (col > 50)
-        // → branch on the far left, and vice versa. Keeps both readable.
-        const sideCol = parentCol < 50 ? 88 : 12
+        // Side-branch sits just OUTSIDE its parent on the same side: parent
+        // on the left half (col < 50) → branch further left, and vice
+        // versa. Reads as a satellite of the parent without crossing the
+        // map; the connector line stays short. The 14/86 columns sit
+        // outboard of the main chain (which runs between 32 and 68), so
+        // the side branch never collides with the route line going to
+        // the next main-chain node.
+        const sideCol = parentCol < 50 ? 14 : 86
         out.push({ row: parentRow, col: sideCol, isSide: true })
       } else {
         out.push({ row: nextRow, col: COLS[nextRow % COLS.length], isSide: false })
