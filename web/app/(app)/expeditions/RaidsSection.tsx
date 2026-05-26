@@ -315,11 +315,20 @@ function RaidMap({
               {img ? (
                 <span style={{
                   position: 'absolute', inset: 3, borderRadius: '50%', overflow: 'hidden',
-                  // Cleared portraits desaturate so finished beats read as
-                  // weathered history; the available node keeps full color.
+                  // Filter stack tells the player what state the node is in:
+                  //   locked   → desaturated + dimmed ("walled off")
+                  //   cleared  → softly desaturated + dimmed ("history")
+                  //   side branch (challenge) → noir-red wash + harder
+                  //     shadows + bumped saturation + small warm hue
+                  //     rotate. Same boss portrait, darker timeline. The
+                  //     red ring + red drop-shadow halo on the token
+                  //     already signal "danger version"; the filter
+                  //     carries that into the image itself.
+                  //   default → full color.
                   filter:
                     locked  ? 'grayscale(1) brightness(0.5)'
                     : cleared ? 'grayscale(0.55) brightness(0.78)'
+                    : isSide  ? 'brightness(0.76) contrast(1.22) saturate(1.5) hue-rotate(-12deg)'
                     : undefined,
                 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
