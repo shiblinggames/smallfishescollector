@@ -1109,21 +1109,21 @@ export default function RaidCombat({
               <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff', lineHeight: 1, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {enemy.name}
               </p>
+              {/* Has-ability tell — small inline indicator instead of a full
+                  row pill. The full ability details live in the enemy stats
+                  popup (tap the nameplate to open it). */}
+              {(enemy.damageReduction ?? 0) > 0 && (
+                <span
+                  aria-label={`Has ability: ${enemy.abilityName ?? 'special defense'}`}
+                  style={{ fontSize: '0.72rem', lineHeight: 1, flexShrink: 0, filter: 'drop-shadow(0 0 4px rgba(125,211,252,0.55))' }}
+                >
+                  🛡️
+                </span>
+              )}
               {isBoss && (
                 <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#fbbf24', letterSpacing: '0.1em' }}>BOSS</span>
               )}
             </div>
-            {(enemy.damageReduction ?? 0) > 0 && (
-              <div className="font-karla font-700 uppercase" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 3, marginBottom: 4,
-                fontSize: '0.52rem', letterSpacing: '0.06em', color: '#7dd3fc',
-                background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.3)',
-                borderRadius: 6, padding: '1px 5px',
-              }}>
-                <span aria-hidden style={{ fontSize: '0.62rem' }}>🛡️</span>
-                {enemy.abilityName ?? 'Armored'} −{Math.round((enemy.damageReduction ?? 0) * 100)}%
-              </div>
-            )}
             <HPBar current={enemyHp} max={enemy.hpBase} accent={ENEMY_COLOR} compact />
             <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small />
           </div>
