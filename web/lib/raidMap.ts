@@ -288,9 +288,11 @@ export const RAID_MAP: RaidNode[] = [
     route: '/raids/challenge',
     raidId: CORSAIRS_RECKONING_CHALLENGE.raidId,
     sideBranch: { parentId: 'pete' },
-    // No `image` — side-branch challenge nodes render with the dedicated
-    // crossed-cutlasses challenge glyph (see NodeGlyph in RaidsSection)
-    // so they don't get mistaken for the parent raid at a glance.
+    // Same boss portrait as the parent raid — the side-branch token paints
+    // it with a red border + red glow to signal "harder version of the
+    // same fight" rather than a different enemy. See SIDE_BRANCH_ACCENT
+    // in RaidsSection.tsx.
+    image: CORSAIRS_RECKONING.enemies.pete.portrait,
     detail: {
       description:
         "The same six ship battles, the same old corsair at the end, but every hull he has put back on the water is a step harder than the one before it. The Raiders hit cleaner, the Marksman aims truer, and Pete himself fights like a man who has finally noticed you are still here. Crack his crate this time and the contraband runs richer for it.",
@@ -418,8 +420,8 @@ export const RAID_MAP: RaidNode[] = [
     route: '/raids/krust/challenge',
     raidId: CAPTAIN_KRUST_CHALLENGE.raidId,
     sideBranch: { parentId: 'krust' },
-    // Side-branch challenge glyph instead of the boss portrait — see
-    // pete_challenge for the design notes.
+    // Same boss portrait as the parent raid. See pete_challenge for design.
+    image: CAPTAIN_KRUST.enemies.krust.portrait,
     detail: {
       description:
         "Krust's full consignment again, harder for the loss. The Carapace runs thicker, the volleys land cleaner, and every hand on his deck has had a long, cold look at the captain who sank them once already. Crack the crate this run and the contraband rolls deeper than any of his first manifests ever paid.",

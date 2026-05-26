@@ -63,15 +63,15 @@ const TYPE_SIZE: Record<string, number> = {
 }
 
 // Side-branch tokens (e.g. challenge-mode raids) are smaller than their
-// parent so the parent raid stays the visual focus of its row.
+// parent so the parent raid stays the visual focus of its row. Red accent
+// signals "harder version of the same fight" — the portrait inside is the
+// SAME as the parent's, so a red ring + red pulsing glow does the work of
+// telling the player "danger version" without changing the image.
 const SIDE_BRANCH_SIZE = 40
-const SIDE_BRANCH_ACCENT = '#a78bfa' // matches the elite/affix violet
+const SIDE_BRANCH_ACCENT = '#ef4444'
 
 function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; size?: number }) {
   const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
-  // Inlined here so RaidsSection has no extra import; not part of the
-  // type-keyed branch because sideBranch is the discriminator on the call
-  // site, not the node.type. See ChallengeGlyph below.
   // skirmish: crossed cutlasses (a single duel)
   if (type === 'skirmish') return <svg {...common}><path d="M3 17l6-6M14.5 6.5L21 13M6 21l-3-3M9 3l12 12-3 3L6 6z" /></svg>
   // raid: skull (the boss campaign)
@@ -91,19 +91,6 @@ function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; si
   if (type === 'puzzle') return <svg {...common}><path d="M12 2c1.6 3 5 4.6 5 9a5 5 0 0 1-10 0c0-2 .8-3.2 2-4.2.2 1.2 1 1.9 1.9 2.1C11.8 6.6 11 4.1 12 2z" /></svg>
   // milestone (default): treasure star
   return <svg {...common}><path d="M12 2l2.4 6.9H22l-6 4.5 2.3 7L12 16.9 5.7 20.4 8 13.4 2 8.9h7.6z" /></svg>
-}
-
-/** Crossed cutlasses for challenge-mode side-branch nodes. Distinct from the
- *  skirmish single-blade glyph (which also uses cutlasses but stylised
- *  differently) and from the raid skull (the parent token). Drawn at a
- *  small size since side-branch tokens themselves are smaller. */
-function ChallengeGlyph({ color, size = 22 }: { color: string; size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 4l11 11M9 4l11 11" />
-      <path d="M3 17l4 4M17 3l4 4M5 19l2-2M19 5l-2 2" />
-    </svg>
-  )
 }
 
 function LockGlyph({ size = 16 }: { size?: number }) {
@@ -214,7 +201,9 @@ function RaidMap({
               key={`branch-${views[i].node.id}`}
               d={`M ${x1} ${y1} Q ${(x1 + x2) / 2} ${y1 - bow}, ${x2} ${y2}`}
               fill="none"
-              stroke={branchClear ? 'rgba(167,139,250,0.85)' : 'rgba(167,139,250,0.4)'}
+              // Red branch matches the challenge token treatment so the
+              // connector reads as part of the same "danger version" sign.
+              stroke={branchClear ? 'rgba(239,68,68,0.85)' : 'rgba(239,68,68,0.45)'}
               strokeWidth={2}
               strokeDasharray={branchClear ? undefined : '3 4'}
               strokeLinecap="round"
@@ -290,18 +279,15 @@ function RaidMap({
                 touchAction: 'manipulation',
               }}
             >
-              {isSide
-                ? (locked ? <LockGlyph size={glyph} /> : <ChallengeGlyph color={accent} size={glyph} />)
-                : img ? (
-                    <span style={{
-                      position: 'absolute', inset: 3, borderRadius: '50%', overflow: 'hidden',
-                      filter: locked ? 'grayscale(1) brightness(0.5)' : undefined,
-                    }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </span>
-                  )
-                : locked ? <LockGlyph size={glyph} /> : <NodeGlyph type={node.type} color={accent} size={glyph} />}
+              {img ? (
+                <span style={{
+                  position: 'absolute', inset: 3, borderRadius: '50%', overflow: 'hidden',
+                  filter: locked ? 'grayscale(1) brightness(0.5)' : undefined,
+                }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </span>
+              ) : locked ? <LockGlyph size={glyph} /> : <NodeGlyph type={node.type} color={accent} size={glyph} />}
 
               {locked && img && (
                 <span
@@ -330,35 +316,39 @@ function RaidMap({
               )}
             </motion.button>
 
-            {/* Title beside the token (open side), vertically centred
-                so it adds no height to the node. */}
-            {/* Backing sits on the text itself (box-decoration-break: clone)
-                so each line's plate hugs its words exactly — no loose empty
-                space when a long label wraps. */}
-            <div
-              style={{
-                position: 'absolute',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: 'max-content',
-                maxWidth: 124,
-                pointerEvents: 'none',
-                ...(labelRight
-                  ? { left: '100%', marginLeft: 12, textAlign: 'left' as const }
-                  : { right: '100%', marginRight: 12, textAlign: 'right' as const }),
-              }}
-            >
-              <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', lineHeight: 1.5, color: locked ? 'rgba(240,237,232,0.45)' : '#f5f2ec', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
-                <span style={{ background: 'rgba(6,5,4,0.5)', borderRadius: 6, padding: '1px 6px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
-                  {node.label}
-                </span>
-              </p>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', marginTop: 3, color: cleared ? '#4ade80' : locked ? '#6a6764' : raidBlocked ? '#f0734a' : accent, textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
-                <span style={{ background: 'rgba(6,5,4,0.5)', borderRadius: 5, padding: '1px 5px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
-                  {statusWord}
-                </span>
-              </p>
-            </div>
+            {/* Title beside the token (open side), vertically centred so it
+                adds no height to the node. Backing sits on the text itself
+                (box-decoration-break: clone) so each line's plate hugs its
+                words exactly — no loose empty space when a long label
+                wraps. Skipped on side-branch nodes (challenge raids): the
+                red ring + the parent's own label do the work, and adding
+                "Challenge: …" next to the parent's row crowds the map. */}
+            {!isSide && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: 'max-content',
+                  maxWidth: 124,
+                  pointerEvents: 'none',
+                  ...(labelRight
+                    ? { left: '100%', marginLeft: 12, textAlign: 'left' as const }
+                    : { right: '100%', marginRight: 12, textAlign: 'right' as const }),
+                }}
+              >
+                <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', lineHeight: 1.5, color: locked ? 'rgba(240,237,232,0.45)' : '#f5f2ec', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
+                  <span style={{ background: 'rgba(6,5,4,0.5)', borderRadius: 6, padding: '1px 6px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
+                    {node.label}
+                  </span>
+                </p>
+                <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', marginTop: 3, color: cleared ? '#4ade80' : locked ? '#6a6764' : raidBlocked ? '#f0734a' : accent, textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
+                  <span style={{ background: 'rgba(6,5,4,0.5)', borderRadius: 5, padding: '1px 5px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
+                    {statusWord}
+                  </span>
+                </p>
+              </div>
+            )}
           </div>
         )
       })}
