@@ -3,7 +3,7 @@
 // (mirrors ZONE_MIN_LEVEL). The chosen id is stored in profiles.profile_bg;
 // null = no background (plain page). Validated server-side in updateProfileBg.
 
-import { ZONE_MIN_LEVEL } from '@/app/fishing/zoneData'
+import { ZONE_MIN_LEVEL } from '@/app/(app)/fishing/zoneData'
 
 export interface ProfileBackground {
   /** Zone id — also the value stored in profiles.profile_bg. */

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getTodaysFishPuzzle } from '@/app/tavern/fish-of-the-day/generate'
-import { getTodaysQuiz } from '@/app/tavern/daily-quiz/generate'
+import { getTodaysFishPuzzle } from '@/app/(app)/tavern/fish-of-the-day/generate'
+import { getTodaysQuiz } from '@/app/(app)/tavern/daily-quiz/generate'
 
 export const maxDuration = 60
 

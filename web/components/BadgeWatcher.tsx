@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { getUnlockedBadges } from '@/app/achievements/badgeActions'
+import { getUnlockedBadges } from '@/app/(app)/achievements/badgeActions'
 import BadgeUnlockedCelebration from './BadgeUnlockedCelebration'
 
 const TRIGGER_EVENTS = [

@@ -1,0 +1,586 @@
+'use client'
+
+import { useState, useEffect, useTransition, useRef } from 'react'
+import { CrewPortrait, type ShowcaseCrew } from '@/components/CrewShowcase'
+import { addCrewMember, removeCrewMember } from '@/app/(app)/social/actions'
+import { getLevelFromXP } from '@/lib/fishingLevel'
+import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
+import { getHook, hookGlowClass } from '@/lib/hooks'
+import { getRod, rodGlowClass } from '@/lib/rods'
+import { getReel } from '@/lib/reels'
+import { getShip } from '@/lib/ships'
+import { getShipSkin } from '@/lib/shipSkins'
+import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
+import { getCharacterSprites } from '@/lib/characters'
+import { getBoat, boatGlowClass } from '@/lib/boats'
+import { getHat } from '@/lib/hats'
+import { SPECIAL_ITEMS } from '@/lib/specialItems'
+import { BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
+import CharacterAvatar from '@/components/CharacterAvatar'
+import { DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avatarColors'
+import { getProfileBackground } from '@/lib/profileBackgrounds'
+import AncientBgEffect from '@/components/AncientBgEffect'
+import { StatTile } from '@/components/ProfileStats'
+import type { CareerStats } from '@/lib/careerStats'
+
+export interface VoyageEntry {
+  id: number
+  route: string
+  status: 'revealed'
+  total_doubloons: number
+  total_gems: number
+  crew_lost: number[]
+  created_at: string
+  captains_log: string | null
+}
+
+interface Stats {
+  uniqueSpecies: number
+  fishingXP: number
+  expeditionXP: number
+  highestPerfectStreak: number
+}
+
+interface Gear {
+  hookTier: number
+  rodTier: number
+  reelTier: number
+  lineTier: number
+  shipTier: number
+  shipName: string | null
+  equippedShipSkin?: string | null
+}
+
+interface Props {
+  username: string
+  showcaseCrew: ShowcaseCrew[]
+  stats: Stats
+  gear: Gear
+  rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
+  equippedBoat?: string | null
+  equippedHat?: string | null
+  ownedSpecialIds?: string[]
+  raidItemIds?: string[]
+  equippedShipSkin?: string | null
+  voyages?: VoyageEntry[]
+  isPremium?: boolean
+  isOwnProfile?: boolean
+  isInCrew?: boolean
+  characterColor?: string
+  equippedSpecialId?: string | null
+  equippedBadges?: string[]
+  /** Saved portrait colors — match the avatar on /profile. */
+  avatarBg?: string | null
+  avatarBorder?: string | null
+  /** Saved page background (zone id) — matches /profile. */
+  profileBg?: string | null
+  career: CareerStats
+}
+
+function fishImageUrl(name: string) {
+  return `/fish/${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.png`
+}
+
+const RARITY_COLOR: Record<number, string> = {
+  1: '#94a3b8', 2: '#4ade80', 3: '#60a5fa', 4: '#c084fc', 5: '#f59e0b',
+}
+const RARITY_LABEL: Record<number, string> = {
+  1: 'Common', 2: 'Uncommon', 3: 'Rare', 4: 'Epic', 5: 'Legendary',
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.78rem', color: '#ccc7c0', marginBottom: 14 }}>
+      {children}
+    </p>
+  )
+}
+
+export default function ProfileClient({ username, showcaseCrew, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
+  const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
+  const [crewPending, startCrewTransition] = useTransition()
+  const [expandedVoyage, setExpandedVoyage] = useState<number | null>(null)
+  const [showAllVoyages, setShowAllVoyages] = useState(false)
+  const [profileTab, setProfileTab] = useState<'fishing' | 'navigation'>('fishing')
+
+  const fishingLevel = getLevelFromXP(stats.fishingXP)
+  const expLevel = getExpeditionLevel(stats.expeditionXP)
+  const expTitle = getNavigatorTitle(expLevel)
+
+  const rod  = getRod(gear.rodTier)
+  const reel = getReel(gear.reelTier)
+  const hook = getHook(gear.hookTier)
+  const ship = getShip(gear.shipTier)
+  const shipSkin = equippedShipSkin ? getShipSkin(equippedShipSkin) : null
+  const charSprites = getCharacterSprites(characterColor)
+  const equippedSpecial = equippedSpecialId ? SPECIAL_ITEMS.find(s => s.id === equippedSpecialId) ?? null : null
+
+  // Page background — the profile owner's saved zone painting (read-only here).
+  // Same render as /profile: fixed image + scrim, focal point pans with scroll
+  // via a rAF-throttled ref write (no per-scroll React re-render).
+  const activeBg = getProfileBackground(profileBg)
+  const bgImgRef = useRef<HTMLImageElement | null>(null)
+  useEffect(() => {
+    if (!activeBg) return
+    let raf = 0
+    const onScroll = () => {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        const el = bgImgRef.current
+        if (!el) return
+        const max = document.documentElement.scrollHeight - window.innerHeight
+        const p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0
+        el.style.objectPosition = `center ${p * 100}%`
+      })
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => { window.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf) }
+  }, [activeBg])
+
+  function toggleCrew() {
+    startCrewTransition(async () => {
+      if (inCrew) { await removeCrewMember(username); setInCrew(false) }
+      else         { await addCrewMember(username);    setInCrew(true)  }
+    })
+  }
+
+  const visibleVoyages = showAllVoyages ? (voyages ?? []) : (voyages ?? []).slice(0, 1)
+  const hiddenCount = (voyages?.length ?? 0) - 1
+
+  return (
+    <>
+      {/* Page background — owner's saved zone painting, shown to visitors too.
+          Mirrors ClientBackground: fixed full-screen image + scrim. */}
+      {activeBg && (
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img ref={bgImgRef} src={activeBg.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
+          <div style={{ position: 'absolute', inset: 0, background: activeBg.scrim }} />
+          {activeBg.id === 'ancient_deep' && <AncientBgEffect />}
+        </div>
+      )}
+    <div className="flex flex-col max-w-4xl mx-auto px-5" style={{ gap: 0, paddingBottom: 48, position: 'relative', zIndex: 1 }}>
+
+      {/* ── Header ── */}
+      <div className="flex flex-col items-center gap-3 pt-2 pb-8">
+        {/* Portrait — same composite (character + hat + bg + border) used on
+            /profile and in the desktop Nav avatar, so the player's visual
+            identity stays consistent everywhere. */}
+        <CharacterAvatar
+          characterColor={characterColor}
+          equippedHat={equippedHat}
+          size={132}
+          bgColor={avatarBg ?? DEFAULT_AVATAR_BG_COLOR}
+          ringColor={avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR}
+        />
+        <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem', marginTop: 6 }}>{username}</p>
+
+        <div className="flex items-center gap-2 flex-wrap justify-center">
+          {isPremium && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.28)' }}>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#f0c040' }}>Member</span>
+            </div>
+          )}
+          {!isOwnProfile && (
+            <button
+              onClick={toggleCrew}
+              disabled={crewPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-karla font-700 uppercase tracking-[0.12em] transition-all disabled:opacity-40"
+              style={{
+                fontSize: '0.65rem',
+                background: inCrew ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.08)',
+                border: `1px solid ${inCrew ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.18)'}`,
+                color: inCrew ? '#4ade80' : '#c0bdb8',
+              }}
+            >
+              {crewPending ? '…' : inCrew ? '✓ Friends' : '+ Add Friend'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Fishing / Navigation tabs ── */}
+      <div style={{ display: 'flex', gap: 4, padding: 4, margin: '0 auto 22px', maxWidth: 540, width: '100%', background: 'rgba(8,14,24,0.55)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14 }}>
+        {([['fishing', 'Fishing'], ['navigation', 'Navigation']] as const).map(([id, label]) => {
+          const on = profileTab === id
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setProfileTab(id)}
+              className="font-karla font-700 uppercase tracking-[0.12em]"
+              style={{
+                flex: 1, padding: '0.6rem 0', borderRadius: 10,
+                fontSize: '0.7rem', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none',
+                border: on ? '1px solid rgba(96,165,250,0.5)' : '1px solid transparent',
+                background: on ? 'rgba(96,165,250,0.16)' : 'transparent',
+                color: on ? '#cfe2ff' : 'rgba(240,237,232,0.5)',
+              }}
+            >
+              {label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* ── Fishing tab ── */}
+      {profileTab === 'fishing' && (
+        <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
+
+          {/* Headline career stats */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
+            <StatTile label="Perfects" value={career.perfects.toLocaleString()} color="#fde68a" />
+            <StatTile label="Fish Sold" value={`${career.fishSold.toLocaleString()} ⟡`} color="#4ade80" />
+          </div>
+
+          {/* Character Loadout */}
+          <div style={{
+            background: 'radial-gradient(ellipse at 50% 90%, rgba(20,50,100,0.22) 0%, transparent 70%)',
+            border: '1px solid rgba(80,120,200,0.18)',
+            borderRadius: 20,
+            overflow: 'hidden',
+            paddingBottom: 14,
+          }}>
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              height: 160, marginTop: 8,
+              filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))',
+            }}>
+              <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '72%', maxWidth: 260 }}>
+                <img src={charSprites.rest} alt="" style={{ width: '100%', display: 'block' }} />
+                {(() => {
+                  const hd = getHat(equippedHat)
+                  if (!hd) return null
+                  const hp = hd.positions.rest
+                  return (
+                    <img src={hd.restImageUrl} alt="" style={{
+                      position: 'absolute', top: `${hp.top}%`, left: `${hp.left}%`,
+                      width: `${hp.width}%`,
+                      transform: `rotate(${hp.rotate}deg)`,
+                      transformOrigin: 'center center',
+                      pointerEvents: 'none',
+                    }} />
+                  )
+                })()}
+                {(() => {
+                  const bd = getBoat(equippedBoat)
+                  if (!bd) return null
+                  const bp = bd.positions.rest
+                  return (
+                    <div style={{
+                      position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
+                      width: `${bp.width}%`,
+                      // Match the iOS rest-frame nudge applied in FishingGame
+                      transform: `rotate(${bp.rotate}deg) translateX(-2px)`,
+                      transformOrigin: 'center center',
+                      pointerEvents: 'none',
+                    }}>
+                      <img src={bd.restImageUrl} alt="" className={boatGlowClass(bd)} style={{ width: '100%', display: 'block' }} />
+                    </div>
+                  )
+                })()}
+                {/* Rod — 3-pose rest sprite. Coords mirror CHAR_ROD_OVERLAY.rest
+                    in FishingGame so the static silhouette matches the live game. */}
+                {rod.slug ? (
+                  <img src={`/${rod.slug}_rest.png`} alt="" className={rodGlowClass(rod)} style={{
+                    position: 'absolute', top: '37%', left: '-12%', width: '107.5%',
+                    transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                    maxWidth: 'none',
+                    ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
+                  } as React.CSSProperties} />
+                ) : rod.imageUrl && (
+                  <img src={rod.imageUrl} alt="" className={rodGlowClass(rod)} style={{
+                    position: 'absolute', top: '33%', left: '12%', width: '51%',
+                    transform: 'rotate(-1deg)', transformOrigin: 'bottom right',
+                    pointerEvents: 'none',
+                    ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
+                  } as React.CSSProperties} />
+                )}
+                {/* Reel — mirrors CHAR_REEL_OVERLAY.rest. */}
+                {reel.imageUrl && (
+                  <img src={reel.imageUrl} alt="" style={{
+                    position: 'absolute', top: '15%', left: '-10.3%', width: '222%',
+                    transform: 'rotate(-18deg)', transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                    maxWidth: 'none',
+                  }} />
+                )}
+                {/* Hook — mirrors CHAR_HOOK_OVERLAY.rest from FishingGame. */}
+                {hook.imageUrl && (
+                  <img src={hook.imageUrl} alt="" className={hookGlowClass(hook)} style={{
+                    position: 'absolute', top: '39.5%', left: '-10.5%', width: '204.5%',
+                    transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                    maxWidth: 'none',
+                    ...(hook.glow ? { ['--rod-glow-color' as string]: hook.color } : {}),
+                  } as React.CSSProperties} />
+                )}
+                {equippedBadges.map((badgeId, slot) => {
+                  if (!badgeId) return null
+                  const badge = BADGE_MAP[badgeId]
+                  const bp = BADGE_SLOT_POSITIONS[slot]?.['rest' as BadgeFrame]
+                  if (!badge || !bp) return null
+                  return (
+                    <img key={slot} src={badge.imageUrl} alt={badge.name} style={{
+                      position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
+                      width: `${bp.width}%`, transform: `rotate(${bp.rotate}deg)`,
+                      transformOrigin: 'center center', pointerEvents: 'none',
+                    }} />
+                  )
+                })}
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 0, padding: '8px 20px 0' }}>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: rod.color + 'aa', marginBottom: 3 }}>Rod</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d8d5d0', lineHeight: 1.2 }}>{rod.name}</p>
+              </div>
+              <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(96,165,250,0.95)', marginBottom: 3 }}>Fishing Level</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#60a5fa', lineHeight: 1.2 }}>{fishingLevel}</p>
+              </div>
+              <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 8px', alignSelf: 'stretch' }} />
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: hook.color + 'aa', marginBottom: 3 }}>Hook</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#d8d5d0', lineHeight: 1.2 }}>{hook.name}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Equipped Special */}
+          {equippedSpecial && (
+            <div style={{
+              display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', gap: 8,
+              padding: '0.4rem 0.75rem 0.4rem 0.5rem', borderRadius: 20,
+              background: `${equippedSpecial.color}10`, border: `1px solid ${equippedSpecial.color}30`,
+            }}>
+              {equippedSpecial.image
+                ? <img src={equippedSpecial.image} alt={equippedSpecial.name} style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 0 6px ${equippedSpecial.color}66)` }} />
+                : <div style={{ width: 26, height: 26, borderRadius: 6, background: equippedSpecial.color + '22', flexShrink: 0 }} />
+              }
+              <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: equippedSpecial.color }}>{equippedSpecial.name}</span>
+            </div>
+          )}
+
+          {/* Rarest Catches */}
+          {rarestFish.length > 0 && (
+            <div>
+              <SectionLabel>Rarest Catches</SectionLabel>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rarestFish.length}, 1fr)`, gap: 8 }}>
+                {rarestFish.map(fish => {
+                  const c = RARITY_COLOR[fish.bite_rarity]
+                  const label = RARITY_LABEL[fish.bite_rarity] ?? 'Unknown'
+                  return (
+                    <div key={fish.id} style={{
+                      background: `${c}0a`, border: `1px solid ${c}38`,
+                      borderRadius: 12, padding: '0.85rem 0.6rem',
+                      textAlign: 'center', boxShadow: `0 0 18px ${c}18`,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                    }}>
+                      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img
+                          src={fishImageUrl(fish.name)}
+                          alt={fish.name}
+                          style={{ maxWidth: 52, maxHeight: 52, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${c}55)` }}
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                        />
+                      </div>
+                      <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#f0ede8', lineHeight: 1.2 }}>{fish.name}</p>
+                      <span style={{
+                        fontSize: '0.6rem', padding: '0.15rem 0.45rem', borderRadius: '2rem',
+                        background: `${c}14`, border: `1px solid ${c}38`, color: c,
+                        fontFamily: 'var(--font-karla)', fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: '0.1em',
+                      }}>
+                        {label}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* ── Navigation tab ── */}
+      {profileTab === 'navigation' && (
+        <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
+
+          {/* Headline career stats */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
+            <StatTile label="Voyage Loot" value={`${career.voyageLoot.toLocaleString()} ⟡`} color="#f0c040" />
+            <StatTile label="Biggest Hit" value={career.highestRaidDamage.toLocaleString()} color="#fb923c" />
+          </div>
+
+          {/* Ship Hero */}
+          <div style={{
+            background: `radial-gradient(ellipse at 50% 65%, ${ship.color}1c 0%, transparent 68%)`,
+            border: `1px solid ${ship.color}20`,
+            borderRadius: 20,
+            padding: '24px 16px 16px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+          }}>
+            <img
+              src={ship.imageUrl}
+              alt={ship.name}
+              style={{
+                width: 200, height: 155,
+                objectFit: 'contain',
+                filter: shipSkin
+                  ? shipSkin.filter
+                  : `drop-shadow(0 4px 28px ${ship.color}60)`,
+              }}
+            />
+            <div style={{ textAlign: 'center' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: ship.color, lineHeight: 1.2 }}>
+                {gear.shipName ?? ship.name}
+              </p>
+              <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: ship.color + '70', marginTop: 5 }}>
+                {ship.name}
+              </p>
+              {expLevel > 0 && (
+                <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: '#60a5fa', marginTop: 5 }}>
+                  {expTitle} · Lv {expLevel}
+                </p>
+              )}
+              {shipSkin && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.25rem 0.65rem', borderRadius: '2rem', background: shipSkin.color + '18', border: `1px solid ${shipSkin.color}40` }}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill={shipSkin.color} stroke="none">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                  <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: shipSkin.color }}>
+                    {shipSkin.name}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Crew — the player-picked showcase */}
+          {showcaseCrew.length > 0 && (
+            <div>
+              <SectionLabel>Crew</SectionLabel>
+              <div style={{ display: 'flex', gap: '0.6rem', overflowX: 'auto', paddingBottom: '0.4rem' }}>
+                {showcaseCrew.map(c => <CrewPortrait key={c.id} crew={c} />)}
+              </div>
+            </div>
+          )}
+
+          {/* Voyages */}
+          {voyages && voyages.length > 0 && (
+            <div>
+              <SectionLabel>Voyages</SectionLabel>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {visibleVoyages.map(v => {
+                  const routeConfig = ROUTE_CONFIGS[v.route as keyof typeof ROUTE_CONFIGS]
+                  const crewLostCount = (v.crew_lost ?? []).length
+                  const date = new Date(v.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                  const preview = v.captains_log
+                    ? (v.captains_log.split(/(?<=[.!?])\s/)[0] ?? v.captains_log)
+                    : null
+                  const isExpanded = expandedVoyage === v.id
+
+                  return (
+                    <div
+                      key={v.id}
+                      style={{
+                        background: 'rgba(4,10,20,0.7)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 12, overflow: 'hidden',
+                      }}
+                    >
+                      <button
+                        onClick={() => setExpandedVoyage(isExpanded ? null : v.id)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '0.95rem 1rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#f0ede8' }}>
+                              {routeConfig?.name ?? v.route}
+                            </p>
+                            {crewLostCount > 0 && (
+                              <span style={{
+                                fontSize: '0.6rem', padding: '0.15rem 0.45rem', borderRadius: '2rem',
+                                background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)',
+                                color: '#f87171', fontFamily: 'var(--font-karla)', fontWeight: 700,
+                                textTransform: 'uppercase' as const, letterSpacing: '0.1em',
+                              }}>
+                                {crewLostCount} lost
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#c4bfb7', marginTop: 4 }}>
+                            {date}
+                            {v.total_doubloons > 0 ? ` · +${v.total_doubloons.toLocaleString()} ⟡` : ''}
+                            {v.total_gems > 0 ? ` · +${v.total_gems} gems` : ''}
+                          </p>
+                          {preview && !isExpanded && (
+                            <p className="font-karla" style={{ fontSize: '0.7rem', fontStyle: 'italic', color: 'rgba(255,255,255,0.6)', marginTop: 5, lineHeight: 1.55 }}>
+                              {preview}
+                            </p>
+                          )}
+                        </div>
+                        <svg
+                          width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6a6764" strokeWidth="2.5" strokeLinecap="round"
+                          style={{ flexShrink: 0, transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+                        >
+                          <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                      </button>
+
+                      {isExpanded && v.captains_log && (
+                        <div style={{ padding: '0 1rem 1rem', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+                          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: 'rgba(214,162,74,0.92)', marginBottom: '0.5rem', paddingTop: '0.75rem' }}>
+                            Captain&apos;s Log
+                          </p>
+                          <p className="font-karla" style={{ fontSize: '0.75rem', lineHeight: 1.75, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
+                            {v.captains_log}
+                          </p>
+                        </div>
+                      )}
+
+                      {isExpanded && !v.captains_log && (
+                        <div style={{ padding: '0.5rem 1rem 1rem', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+                          <p className="font-karla" style={{ fontSize: '0.7rem', fontStyle: 'italic', color: '#bbb5ad' }}>Log not yet written.</p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {hiddenCount > 0 && (
+                  <button
+                    onClick={() => setShowAllVoyages(v => !v)}
+                    style={{
+                      background: 'none', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10,
+                      padding: '0.7rem', cursor: 'pointer', width: '100%',
+                      color: '#c4bfb7', fontFamily: 'var(--font-karla)', fontWeight: 700,
+                      fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em',
+                    }}
+                  >
+                    {showAllVoyages ? 'Show less' : `Show ${hiddenCount} more voyage${hiddenCount !== 1 ? 's' : ''}`}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+        </div>
+      )}
+
+    </div>
+    </>
+  )
+}

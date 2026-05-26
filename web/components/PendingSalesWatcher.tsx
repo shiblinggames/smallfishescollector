@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getPendingSales, type PendingSale } from '@/app/tavern/market/actions'
+import { getPendingSales, type PendingSale } from '@/app/(app)/tavern/market/actions'
 import PendingSaleSettledToast from './PendingSaleSettledToast'
 
 export default function PendingSalesWatcher() {

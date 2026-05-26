@@ -7,8 +7,8 @@
 import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LeaderboardSection, BOARD_META, type BoardKey } from '@/app/leaderboard/boardUI'
-import { getLeaderboardBoards, type LeaderboardBoardsResult } from '@/app/leaderboard/actions'
+import { LeaderboardSection, BOARD_META, type BoardKey } from '@/app/(app)/leaderboard/boardUI'
+import { getLeaderboardBoards, type LeaderboardBoardsResult } from '@/app/(app)/leaderboard/actions'
 
 export default function LeaderboardModal({
   boards,
