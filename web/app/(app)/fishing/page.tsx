@@ -33,6 +33,7 @@ export default async function FishingPage() {
     { data: allSpecies },
     { data: collectionRows },
     { data: marketRows },
+    { data: pbRows },
   ] = await Promise.all([
     getActiveChallengeSession(),
     getDailyChallenge(),
@@ -58,6 +59,12 @@ export default async function FishingPage() {
       .eq('user_id', user.id),
     admin.from('fish_market')
       .select('fish_id, multiplier'),
+    // Personal-best lengths per species — read-only seed for the collection
+    // drawer. New PBs during the session are updated client-side in state so
+    // the drawer reflects them without a page refresh.
+    admin.from('fish_personal_bests')
+      .select('fish_id, best_length_in')
+      .eq('user_id', user.id),
   ])
 
   const marketMultipliers: Record<number, number> = {}
@@ -89,6 +96,12 @@ export default async function FishingPage() {
   const ownedRods = (rodRows ?? []).map((r: { rod_tier: number }) => r.rod_tier)
   const caughtFishIds = (collectionRows ?? []).map((r: { fish_id: number }) => r.fish_id)
   const fishHoldTier = profile?.fish_hold_tier ?? 0
+  // Flat fish_id → inches lookup for the collection drawer. Numeric coercion
+  // because Supabase returns NUMERIC columns as strings.
+  const personalBests: Record<number, number> = {}
+  for (const r of (pbRows ?? []) as { fish_id: number; best_length_in: number | string }[]) {
+    personalBests[r.fish_id] = Number(r.best_length_in)
+  }
 
   const todayStr = new Date().toISOString().split('T')[0]
   const hasTideTurner = profile?.has_tide_turner ?? false
@@ -152,6 +165,7 @@ export default async function FishingPage() {
           ownedRods={ownedRods}
           allFishSpecies={(allSpecies ?? []) as { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }[]}
           caughtFishIds={caughtFishIds}
+          initialPersonalBests={personalBests}
           initialHighestPerfectStreak={profile?.highest_perfect_streak ?? 0}
           initialPerfectStreak={profile?.catch_pending ? 0 : (profile?.current_perfect_streak ?? 0)}
           hasSeenFishingTour={profile?.has_seen_fishing_tour ?? false}

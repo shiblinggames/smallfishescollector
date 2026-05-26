@@ -2038,6 +2038,7 @@ export default function FishingGame({
   fishHoldTier: initialFishHoldTier,
   ownedRods: initialOwnedRods,
   allFishSpecies, initialCaughtFishIds,
+  initialPersonalBests,
   initialHighestPerfectStreak, initialPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
@@ -2062,6 +2063,9 @@ export default function FishingGame({
   ownedRods: number[]
   allFishSpecies: FishSpeciesBasic[]
   initialCaughtFishIds: number[]
+  /** fish_id → best length in inches. Seeded from fish_personal_bests on
+   *  page load; updated in state when a new PB lands during the session. */
+  initialPersonalBests: Record<number, number>
   initialHighestPerfectStreak: number
   initialPerfectStreak: number
   hasSeenFishingTour: boolean
@@ -2121,6 +2125,10 @@ export default function FishingGame({
   const [reelTier, setReelTier] = useState(initialReelTier)
   const [hookTier, setHookTier] = useState(initialHookTier)
   const [caughtFishIds, setCaughtFishIds] = useState(() => new Set(initialCaughtFishIds))
+  // Live PB lookup for the collection drawer. Seeded server-side; bumped in
+  // state when a new PB lands so the drawer reflects it without a page
+  // refresh.
+  const [personalBests, setPersonalBests] = useState<Record<number, number>>(initialPersonalBests)
   const rod  = getRod(equippedRodTier)
   const reel = getReel(reelTier)
   const hook = getHook(hookTier)
@@ -3283,6 +3291,12 @@ export default function FishingGame({
           isPB: res.isPB,
           previousBest: res.previousBest,
         })
+        // Bump the live PB lookup so the collection drawer reflects the new
+        // record without needing a page refresh. Server is authoritative —
+        // we only mirror what reelIn already persisted.
+        if (res.isPB && res.sizeIn > 0) {
+          setPersonalBests(prev => ({ ...prev, [fish.id]: res.sizeIn }))
+        }
         if (isNewSpecies) {
           if (fish.habitat === 'ancient_deep') {
             setTrophyCatches(prev => new Set([...prev, fish.id]))
@@ -5659,14 +5673,21 @@ export default function FishingGame({
                                 <div className="px-3 pt-2 pb-3 mx-0.5 rounded-b-xl"
                                   style={{ background: `${rarityColor}0a`, border: `1px solid ${rarityColor}25`, borderTop: 'none' }}>
                                   <FishImg name={f.name} style={{ width: '100%', height: 110, objectFit: 'contain', marginBottom: '0.5rem' }} />
-                                  <p className="font-karla font-300 italic mb-2"
-                                    style={{ fontSize: '0.82rem', color: rarityColor + 'cc' }}>{f.scientific_name}</p>
+                                  {/* Scientific name dropped 2026-05-26 — same
+                                      reason as the result card. */}
                                   <p className="font-karla font-400 mb-3"
                                     style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.55 }}>
                                     &ldquo;{f.fun_fact}&rdquo;
                                   </p>
-                                  <p className="font-cinzel font-700"
-                                    style={{ fontSize: '0.82rem', color: '#f0c040' }}>{f.sell_value.toLocaleString()} ⟡</p>
+                                  <div className="flex items-center justify-between" style={{ gap: 12 }}>
+                                    <p className="font-cinzel font-700"
+                                      style={{ fontSize: '0.82rem', color: '#f0c040' }}>{f.sell_value.toLocaleString()} ⟡</p>
+                                    {personalBests[f.id] != null && (
+                                      <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#9a8870', letterSpacing: '0.04em' }}>
+                                        Largest you&apos;ve caught: <span className="font-cinzel font-700" style={{ color: '#e6dcc8' }}>{formatFishLength(personalBests[f.id])}</span>
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
                               </motion.div>
                             )}
