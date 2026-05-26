@@ -1255,27 +1255,14 @@ export default function RaidCombat({
           }}
         >
           <motion.div animate={enemyShakeCtrl} style={{ position: 'relative' }}>
-            {/* Elite aura — a soft pulsing violet radial behind the ship
-                sprite so an elite enemy reads as "this one is different"
-                from the moment it slides on screen. Combined with the
-                nameplate chrome (violet border + ELITE badge + affix
-                name) this is the only OTHER tell on the battle area; the
-                earlier floating pill duplicated the nameplate text and
-                cluttered the middle of the screen. Skipped on the boss
-                (the boss has its own gold treatment and a Phase 3
-                multi-phase visual). */}
-            {isElite && !isBoss && (
-              <motion.div
-                aria-hidden
-                animate={{ opacity: [0.7, 1, 0.7], scale: [0.96, 1.06, 0.96] }}
-                transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-                style={{
-                  position: 'absolute', inset: '-30%',
-                  background: 'radial-gradient(circle at 50% 55%, rgba(167,139,250,0.7) 0%, rgba(167,139,250,0.28) 40%, transparent 72%)',
-                  pointerEvents: 'none', zIndex: 0,
-                }}
-              />
-            )}
+            {/* Elite halo — STACKED drop-shadows on the ship sprite itself
+                so the glow follows the PNG alpha silhouette rather than a
+                rectangular container behind it. An earlier radial-gradient
+                box read as a literal box-shaped backdrop ("not actually
+                glowing around the ship"); dropping the radial and layering
+                three drop-shadows produces a tight inner halo + a wider
+                soft bloom that hugs the hull shape. Skipped on the boss
+                (boss has its own gold treatment + Phase 3 multi-phase). */}
             <motion.img
               src={enemy.image}
               alt={enemy.name}
@@ -1284,10 +1271,19 @@ export default function RaidCombat({
               style={{
                 width: '100%', display: 'block', position: 'relative', zIndex: 1,
                 transform: 'scaleX(-1)',  // face the player
-                // Elites pick up a violet drop-shadow halo on the sprite
-                // itself so the silhouette reads as "lit up" even outside
-                // the aura. Layered on top of the existing dark shadow.
-                filter: `drop-shadow(0 3px 6px rgba(0,0,0,0.35))${isElite && !isBoss ? ' drop-shadow(0 0 16px rgba(167,139,250,0.95))' : ''} ${isBoss ? 'hue-rotate(20deg) brightness(0.95)' : 'hue-rotate(180deg) brightness(0.85)'}`,
+                filter: [
+                  'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
+                  // Three-layer violet halo for elites: a punchy inner
+                  // glow at the hull edge, a mid-radius bloom, and a soft
+                  // outer wash. Each drop-shadow respects the PNG alpha
+                  // so the whole stack reads as light coming OFF the ship.
+                  ...(isElite && !isBoss ? [
+                    'drop-shadow(0 0 6px rgba(167,139,250,1))',
+                    'drop-shadow(0 0 16px rgba(167,139,250,0.75))',
+                    'drop-shadow(0 0 32px rgba(167,139,250,0.4))',
+                  ] : []),
+                  isBoss ? 'hue-rotate(20deg) brightness(0.95)' : 'hue-rotate(180deg) brightness(0.85)',
+                ].join(' '),
                 pointerEvents: 'none',
               }}
             />
