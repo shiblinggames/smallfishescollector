@@ -30,17 +30,20 @@ export interface BroadsideEnemy {
    *  Krust's crew = crustacean "Carapace" defense. */
   damageReduction?: number
   abilityName?: string
-  /** Optional two-phase boss config. When set, the enemy transitions to
-   *  phase 2 the moment its HP drops below `hpThreshold` (fraction of
-   *  maxHP). In phase 2, action choice reads from `pattern` instead of
-   *  the base pattern, every enemy damage roll multiplies by
-   *  `damageMult`, and `dialogueLine` is pushed into the action log
-   *  paired with a brief red screen flash. Bosses without phase2 set
-   *  fight as a single phase. Currently only the challenge-mode Pete
-   *  carries this; the boss config goes here so future challenge bosses
-   *  (Krust etc.) can adopt the same shape. */
+  /** Optional two-phase boss config. The phase 2 trigger is a "false
+   *  defeat" — the boss appears to sink, then rises back at `revivePct`
+   *  of their max HP with the alternate pattern, damage mult, and (if
+   *  set) chance-gated mitigation. The transition lands a quoted
+   *  dialogue line in the action log, a red screen wash, and a big
+   *  center-screen "PHASE 2" callout so the moment reads as a real
+   *  beat. While in phase 2 the nameplate + ship sprite paint with a
+   *  persistent crimson treatment so the player can never lose track
+   *  of which phase they're in. Bosses without phase2 set fight as a
+   *  single phase. */
   phase2?: {
-    hpThreshold: number       // 0.5 = 50% of maxHP
+    /** Fraction of max HP the boss returns with after the false defeat
+     *  (e.g. 0.5 = comes back at 50% of `hpBase`). Floored to at least 1. */
+    revivePct: number
     damageMult: number        // 1.25 = +25% damage on enemy fire/volley rolls
     pattern: EnemyAction[]    // alternate behavior cycle used from phase 2 onward
     dialogueLine: string      // shown in the action log on transition, as a quoted boss line

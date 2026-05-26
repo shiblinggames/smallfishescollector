@@ -294,12 +294,14 @@ export default function RaidCombat({
   const rafRef       = useRef(0)
 
   const enemyPatternIdxRef = useRef(0)
-  // Boss phase tracking — challenge-mode Pete (and any future multi-phase
-  // boss) flips to phase 2 when crossing enemy.phase2.hpThreshold. While
-  // phase===2 we read enemy.phase2.pattern instead of enemy.pattern and
-  // multiply enemy outgoing damage by enemy.phase2.damageMult. Phase 1
-  // single-phase enemies never touch this — the ref stays at 1 forever.
+  // Boss phase tracking. The ref drives combat reads (pickEnemyAction,
+  // damage rolls, mitigation checks) without re-renders; the state
+  // mirror drives the persistent visual treatment (crimson nameplate +
+  // PHASE 2 badge + red ship halo) so the player can never lose track
+  // of which phase they're in. Phase 1 enemies never flip — both stay
+  // at 1 for the whole fight.
   const enemyPhaseRef      = useRef<1 | 2>(1)
+  const [enemyPhase, setEnemyPhase] = useState<1 | 2>(1)
   const turnRef            = useRef(1)
   const [turn, setTurn]    = useState(1)
   const critFreezeRef      = useRef(false)
@@ -428,6 +430,7 @@ export default function RaidCombat({
     setPHitsplat(null); setEHitsplat(null)
     enemyPatternIdxRef.current = 0
     enemyPhaseRef.current = 1
+    setEnemyPhase(1)
     turnRef.current = 1; setTurn(1)
     return () => clearTimeout(promptTimer)
   }, [enemy.id, enemy.name, enemy.hpBase, isBoss])
@@ -681,10 +684,6 @@ export default function RaidCombat({
       let splatText = ''
       let splatColor = '#ef4444'
       let enemyCrit = false
-      // True for the single step that ticks the boss across its phase-2
-      // HP threshold. Hoisted out of the player-attack branch so the
-      // post-loop steps.push() can read it on the same step.
-      let didPhaseTransition = false
       const stepLines: string[] = []
 
       // Resilient affix: 33% chance to regen at the top of each enemy
@@ -844,24 +843,6 @@ export default function RaidCombat({
         if (isAttackerPlayer) {
           eHp = Math.max(0, eHp - dmg)
           if (dmg > 0) onPlayerHit?.(dmg)
-          // Boss phase 2 transition — challenge-mode Pete flips behavior
-          // when this hit drops him under the threshold while still alive.
-          // Bump the ref, reset the pattern index so the new pattern reads
-          // from the start, push the dialogue line into this step's log,
-          // and mark the step so playStep can fire the red flash. Skipped
-          // for phase-1 enemies (no phase2 config) and never re-fires
-          // (guarded by enemyPhaseRef.current === 1).
-          if (
-            enemy.phase2
-            && enemyPhaseRef.current === 1
-            && eHp > 0
-            && eHp <= enemy.hpBase * enemy.phase2.hpThreshold
-          ) {
-            enemyPhaseRef.current = 2
-            enemyPatternIdxRef.current = 0
-            stepLines.push(`${enemy.name}: "${enemy.phase2.dialogueLine}"`)
-            didPhaseTransition = true
-          }
           // Reflective affix: 50% chance to bounce a slice of the damage
           // back to the player on landing. Fires only when actual damage
           // landed (partial-dodge included; missed shots aren't reflected).
@@ -952,8 +933,44 @@ export default function RaidCombat({
         who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor,
         big: (who === 'player' && lockedAimResult === 'critical') || (who === 'enemy' && enemyCrit),
         logLines: stepLines,
-        phaseTransition: didPhaseTransition,
       })
+
+      // Phase 2 revival — when the player's killing blow drops the boss
+      // to 0 AND they carry a phase2 config, push a synthetic revival
+      // step right after the kill step. The kill step shows the lethal
+      // hit landing + HP bar going to 0 (the player thinks it's over);
+      // the revival step then surfaces the dialogue line, the screen
+      // flash, the big PHASE 2 callout, and refills HP to revivePct of
+      // max. We break the loop after — neither side acts again this
+      // turn; phase 2 begins fresh next turn. Guard with
+      // enemyPhaseRef.current === 1 so phase 2 deaths trigger the real
+      // end of fight (no infinite resurrection).
+      if (
+        eHp <= 0
+        && who === 'player'
+        && (action === 'fire' || action === 'volley')
+        && enemy.phase2
+        && enemyPhaseRef.current === 1
+      ) {
+        enemyPhaseRef.current = 2
+        enemyPatternIdxRef.current = 0
+        const revivedHp = Math.max(1, Math.floor(enemy.hpBase * enemy.phase2.revivePct))
+        eHp = revivedHp
+        steps.push({
+          who: 'enemy',
+          // Reload as the "stays in place" cosmetic action — no projectile,
+          // no splat. playStep's catch-all branch syncs HP for these steps,
+          // which is exactly what we need (HP refills from 0 to revivePct).
+          action: 'reload',
+          pHp, eHp, pCharges, eCharges,
+          splatTarget: null,
+          splatText: '',
+          splatColor: '#ef4444',
+          logLines: [`${enemy.name}: "${enemy.phase2.dialogueLine}"`],
+          phaseTransition: true,
+        })
+        break
+      }
 
       // Frenzied affix: when this enemy fires or volleys, it has a chance
       // to fire AGAIN on the same turn. Implemented as an extra step
@@ -1068,13 +1085,17 @@ export default function RaidCombat({
       const isAttack  = step.action === 'fire' || step.action === 'volley'
       const isDodged  = isAttack && step.splatText === 'Dodged'
 
-      // Phase 2 transition — fire the red wash the moment this step starts
-      // animating, so the dialogue line, the projectile/splat, and the
-      // flash all land as one "the gloves are off" beat. Cleaned up after
-      // ~520ms (matches the rc-phase-flash keyframes below).
+      // Phase 2 transition — this is the dramatic revival beat. The ref
+      // is already flipped (in resolveTurn) so combat reads phase 2 on
+      // the next turn; here we flip the visual state so the nameplate,
+      // PHASE 2 badge, and ship halo all paint immediately. The screen
+      // flash + center-screen PHASE 2 overlay carry the moment, held
+      // for ~1.1s so the player has time to read "PHASE 2" before the
+      // action menu re-enables. Paired with a longer step gap below.
       if (step.phaseTransition) {
+        setEnemyPhase(2)
         setPhaseFlash(true)
-        setTimeout(() => setPhaseFlash(false), 520)
+        setTimeout(() => setPhaseFlash(false), 1100)
       }
 
       // Stream this step's log lines into the visible log as the step plays.
@@ -1167,7 +1188,11 @@ export default function RaidCombat({
         }, PROJECTILE_FLIGHT_MS)
       }
 
-      setTimeout(() => playStep(i + 1), STEP_GAP_MS)
+      // Phase-2 revival deserves a longer beat — the player needs time
+      // to read "PHASE 2", see the HP refill, and absorb that the fight
+      // isn't over. Bumps the gap from the standard ~1s to ~1.6s.
+      const gapMs = step.phaseTransition ? 1600 : STEP_GAP_MS
+      setTimeout(() => playStep(i + 1), gapMs)
     }
 
     setTimeout(() => playStep(0), SPEED_LINE_HOLD_MS)
@@ -1340,13 +1365,25 @@ export default function RaidCombat({
           type="button"
           onClick={() => setShowEnemyStats(true)}
           aria-label={`${enemy.name} — view stats`}
+          className={enemyPhase === 2 ? 'rc-phase2-pulse' : undefined}
           style={{
             position: 'absolute', top: 10, left: 10, zIndex: 4,
             padding: '0.45rem 0.6rem 0.5rem 0.45rem',
             background: 'rgba(6,12,20,0.9)',
-            border: `1px solid ${isBoss ? '#fbbf24' : isElite ? '#a78bfa' : '#2a3548'}`,
+            // Phase 2 overrides the normal boss-gold (or elite-violet)
+            // accent with crimson — same intensity as elite, deeper red so
+            // it reads as "wounded and dangerous" not just "boss".
+            border: `1px solid ${
+              enemyPhase === 2 ? '#ef4444'
+              : isBoss ? '#fbbf24'
+              : isElite ? '#a78bfa'
+              : '#2a3548'
+            }`,
             borderRadius: 12,
-            boxShadow: isElite ? '0 0 14px rgba(167,139,250,0.32)' : undefined,
+            boxShadow:
+              enemyPhase === 2 ? '0 0 18px rgba(239,68,68,0.5)'
+              : isElite ? '0 0 14px rgba(167,139,250,0.32)'
+              : undefined,
             display: 'flex', alignItems: 'center', gap: 8,
             minWidth: 160,
             textAlign: 'left',
@@ -1357,9 +1394,19 @@ export default function RaidCombat({
           {enemy.portrait && (
             <div style={{
               flexShrink: 0, width: 54, height: 54, borderRadius: '50%',
-              border: `2px solid ${isBoss ? '#fbbf24' : isElite ? '#a78bfa' : ENEMY_COLOR}`,
+              border: `2px solid ${
+                enemyPhase === 2 ? '#ef4444'
+                : isBoss ? '#fbbf24'
+                : isElite ? '#a78bfa'
+                : ENEMY_COLOR
+              }`,
               overflow: 'hidden',
-              boxShadow: `0 0 10px ${isBoss ? 'rgba(251,191,36,0.45)' : isElite ? 'rgba(167,139,250,0.55)' : 'rgba(239,68,68,0.4)'}`,
+              boxShadow: `0 0 ${enemyPhase === 2 ? 14 : 10}px ${
+                enemyPhase === 2 ? 'rgba(239,68,68,0.6)'
+                : isBoss ? 'rgba(251,191,36,0.45)'
+                : isElite ? 'rgba(167,139,250,0.55)'
+                : 'rgba(239,68,68,0.4)'
+              }`,
               background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.08) 0%, rgba(20,40,60,0.85) 70%)',
             }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1382,11 +1429,23 @@ export default function RaidCombat({
                   🛡️
                 </span>
               )}
-              {isBoss && (
+              {isBoss && enemyPhase !== 2 && (
                 <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#fbbf24', letterSpacing: '0.1em' }}>BOSS</span>
               )}
               {isElite && !isBoss && (
                 <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#c4b5fd', letterSpacing: '0.1em' }}>ELITE</span>
+              )}
+              {/* Phase 2 takes over the BOSS tag — same slot, crimson
+                  accent, slightly larger letter-spacing so it reads as
+                  the new defining label for this enemy. The fight has
+                  visibly escalated; the badge says so. */}
+              {enemyPhase === 2 && (
+                <span
+                  className="font-karla font-700 uppercase rc-phase2-badge"
+                  style={{ fontSize: '0.58rem', color: '#fca5a5', letterSpacing: '0.14em', textShadow: '0 0 6px rgba(239,68,68,0.7)' }}
+                >
+                  PHASE 2
+                </span>
               )}
             </div>
             {/* Affix label sits under the name when elite — players see at
@@ -1440,6 +1499,15 @@ export default function RaidCombat({
                     'drop-shadow(0 0 6px rgba(167,139,250,1))',
                     'drop-shadow(0 0 16px rgba(167,139,250,0.75))',
                     'drop-shadow(0 0 32px rgba(167,139,250,0.4))',
+                  ] : []),
+                  // Same three-layer treatment in crimson for phase-2
+                  // bosses — the persistent "wounded and dangerous"
+                  // halo. Overrides the boss's normal warm tint below
+                  // because the red is the new headline visual.
+                  ...(enemyPhase === 2 ? [
+                    'drop-shadow(0 0 7px rgba(239,68,68,1))',
+                    'drop-shadow(0 0 18px rgba(239,68,68,0.8))',
+                    'drop-shadow(0 0 36px rgba(239,68,68,0.45))',
                   ] : []),
                   isBoss ? 'hue-rotate(20deg) brightness(0.95)' : 'hue-rotate(180deg) brightness(0.85)',
                 ].join(' '),
@@ -1562,6 +1630,68 @@ export default function RaidCombat({
                     textShadow: '0 0 18px #fff, 0 0 40px rgba(245,158,11,1), 0 0 80px rgba(245,158,11,0.75), 0 0 140px rgba(245,158,11,0.35)',
                   }}>
                   Critical!
+                </p>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* PHASE 2 revival callout — the player just landed what they
+              thought was the kill shot, the boss "dies"... then this
+              fires. Big centered text + double red expanding ring +
+              radial wash, mirroring the Critical! treatment but red and
+              with bigger letter-spacing for "this is a different kind
+              of moment" weight. Lasts the full phaseFlash window so
+              the player has time to register it. */}
+          {phaseFlash && (
+            <motion.div
+              key="phase2-burst"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{
+                position: 'absolute', inset: 0, zIndex: 12,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                pointerEvents: 'none',
+                background: 'radial-gradient(ellipse 90% 60% at 50% 50%, rgba(239,68,68,0.34) 0%, transparent 70%)',
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.2, opacity: 0.9 }}
+                animate={{ scale: 3.6, opacity: 0 }}
+                transition={{ duration: 0.85, ease: 'easeOut' }}
+                style={{
+                  position: 'absolute',
+                  width: 160, height: 160, borderRadius: '50%',
+                  border: '2px solid rgba(239,68,68,0.7)',
+                  left: '50%', top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              />
+              <motion.div
+                initial={{ scale: 0.2, opacity: 0.55 }}
+                animate={{ scale: 2.8, opacity: 0 }}
+                transition={{ duration: 0.8, ease: 'easeOut', delay: 0.12 }}
+                style={{
+                  position: 'absolute',
+                  width: 160, height: 160, borderRadius: '50%',
+                  border: '1px solid rgba(252,165,165,0.55)',
+                  left: '50%', top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              />
+              <motion.div
+                initial={{ scale: 0.55, y: 10, opacity: 0 }}
+                animate={{ scale: 1, y: 0, opacity: 1 }}
+                transition={{ duration: 0.25, ease: 'easeOut', delay: 0.05 }}
+                style={{ textAlign: 'center', position: 'relative' }}
+              >
+                <p className="font-cinzel font-700 uppercase tracking-[0.3em]"
+                  style={{
+                    fontSize: '2.1rem', color: '#fff',
+                    textShadow: '0 0 18px #fff, 0 0 40px rgba(239,68,68,1), 0 0 80px rgba(239,68,68,0.75), 0 0 140px rgba(239,68,68,0.35)',
+                  }}>
+                  Phase 2
                 </p>
               </motion.div>
             </motion.div>
@@ -1743,16 +1873,15 @@ export default function RaidCombat({
         }} />
       )}
 
-      {/* Phase-2 transition flash — same shape as crit flash but red and
-          slightly longer-held, so the moment Pete (challenge-mode) flips
-          to phase 2 reads as a real shift, not a quiet pattern swap.
-          Sits one z-index above crit so a crit landing on the threshold
-          hit still gets to play underneath. */}
+      {/* Phase-2 transition flash — red full-screen wash that holds for
+          ~1s alongside the centered PHASE 2 callout (rendered inside the
+          battle stage above). Sits one z-index above the crit flash so a
+          crit landing on the killing hit can still play under it. */}
       {phaseFlash && (
         <div style={{
           position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 91,
-          background: 'radial-gradient(ellipse at center, rgba(239,68,68,0.42) 0%, rgba(239,68,68,0.12) 60%, transparent 100%)',
-          animation: 'rc-phase-flash 0.5s ease forwards',
+          background: 'radial-gradient(ellipse at center, rgba(239,68,68,0.45) 0%, rgba(239,68,68,0.14) 60%, transparent 100%)',
+          animation: 'rc-phase-flash 1s ease forwards',
         }} />
       )}
 
@@ -1815,8 +1944,23 @@ export default function RaidCombat({
         }
         @keyframes rc-phase-flash {
           0%   { opacity: 0; }
-          25%  { opacity: 1; }
+          15%  { opacity: 1; }
+          60%  { opacity: 0.75; }
           100% { opacity: 0; }
+        }
+        @keyframes rc-phase2-pulse {
+          0%, 100% { box-shadow: 0 0 18px rgba(239,68,68,0.45); }
+          50%      { box-shadow: 0 0 28px rgba(239,68,68,0.85); }
+        }
+        .rc-phase2-pulse {
+          animation: rc-phase2-pulse 1.8s ease-in-out infinite;
+        }
+        @keyframes rc-phase2-badge-pulse {
+          0%, 100% { text-shadow: 0 0 6px rgba(239,68,68,0.7);  opacity: 1; }
+          50%      { text-shadow: 0 0 12px rgba(239,68,68,1);   opacity: 0.88; }
+        }
+        .rc-phase2-badge {
+          animation: rc-phase2-badge-pulse 1.8s ease-in-out infinite;
         }
       `}</style>
     </div>

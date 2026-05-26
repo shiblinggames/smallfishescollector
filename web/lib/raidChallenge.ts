@@ -146,38 +146,38 @@ function withBossPhase2(
   }
 }
 
-// Pete's phase 2 — triggers at 50% HP. Phase 2 pattern drops the dodge-
-// camping rhythm of phase 1 and runs straight aggression: more fires, an
-// earlier volley setup, fewer dodges. Combined with the +25% damage mult,
-// phase 2 hits ~1.7-2x harder per turn than phase 1.
+// Pete's phase 2 — kicks in the moment the player lands the killing blow.
+// Pete drops, the player thinks the fight's over, then he hauls himself
+// back up at 50% of his max HP with a meaner streak: dodge-camping is
+// gone, more volleys, +25% damage on every roll. Combined with the HP
+// reset, phase 2 effectively doubles the run-length of the fight while
+// trading lighter (phase 1) damage for heavier (phase 2) damage.
 const PETE_PHASE2: NonNullable<BroadsideEnemy['phase2']> = {
-  hpThreshold: 0.5,
-  damageMult:  1.25,
+  revivePct:  0.5,
+  damageMult: 1.25,
   // 10-turn loop with 2 volleys + 2 fires + 1 dodge. Compare to phase 1's
   // 13-turn rhythm-trap that mostly threatens via dodge-camping. Charges:
   // 0→1→0→1→0→1→2→3→0→1→0. Note T6 volley fires only if charges are >=3,
   // which the prior three reloads cover. Falls through to reload if not.
   pattern: ['reload', 'fire', 'reload', 'fire', 'reload', 'reload', 'reload', 'volley', 'reload', 'volley'],
-  dialogueLine: "Right then. No more dancing.",
+  dialogueLine: "On your feet, old man. We're not done yet.",
 }
 
-// Krust's phase 2 — triggers at 50% HP. Where Pete goes aggressive, Krust
-// goes the other way: he hunkers behind his carapace. The pattern drops
-// the dodge-camping of phase 1 (he stops dancing) and becomes a patient
-// reload-fire-reload-fire-volley trade, no dodges. Outgoing damage stays
-// flat (1.0 mult) — the new threat is purely defensive.
-//
-// On top of his existing 15% flat Carapace soak, phase 2 adds a 50% /
-// -30% chance-gated mitigation that fires only on non-volley shots. The
-// dialogue line is also the player's hint at the answer: heavy volleys
-// punch through, every other shot might get soaked.
+// Krust's phase 2 — same revival shape as Pete, opposite character. Where
+// Pete rises angrier and faster, Krust rises defiant and turtled. The
+// pattern drops every dodge in phase 1 (the carapace IS the defense in
+// phase 2), outgoing damage stays flat (1.0 mult), and on top of his
+// existing 15% flat Carapace soak, phase 2 adds a 50% / -30% chance-
+// gated mitigation that fires only on non-volley shots. The dialogue
+// line doubles as the player's hint at the answer: heavy volleys punch
+// through, every other shot might get soaked.
 const KRUST_PHASE2: NonNullable<BroadsideEnemy['phase2']> = {
-  hpThreshold: 0.5,
-  damageMult:  1.0,
+  revivePct:  0.5,
+  damageMult: 1.0,
   // 8-turn loop: 4 reloads + 2 fires + 1 volley + 1 reload at cap. Charges:
   // 0→1→2→1→2→3→2→3→0. No dodges (the carapace IS the defense in phase 2).
   pattern: ['reload', 'reload', 'fire', 'reload', 'reload', 'fire', 'reload', 'volley'],
-  dialogueLine: "Plate holds. Now hammer it.",
+  dialogueLine: "Down? Plate's still warm. Try again.",
   damageTakenChance:        0.5,
   damageTakenMult:          0.7,
   damageTakenVolleyBypass:  true,
