@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { RARITY_TIERS } from '@/lib/variants'
-import { applyVariantBoosts } from '@/lib/expeditions'
+import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
 
 // ── Crew picker ───────────────────────────────────────────────────────────────
 
@@ -114,9 +114,13 @@ export async function saveEquippedRaidItems(itemIds: string[]): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('raid_items').eq('id', user.id).single()
+  // Pull ship_tier so the slot cap scales with hull size (see
+  // raidItemSlotsForTier in lib/expeditions). A Rowboat captain gets 1
+  // slot; a Man-o-War captain gets 4.
+  const { data: profile } = await admin.from('profiles').select('raid_items, ship_tier').eq('id', user.id).single()
   const owned = (profile?.raid_items as string[] | null) ?? []
-  const valid = itemIds.filter(id => owned.includes(id)).slice(0, 3)
+  const slots = raidItemSlotsForTier((profile?.ship_tier as number | null) ?? 0)
+  const valid = itemIds.filter(id => owned.includes(id)).slice(0, slots)
   await admin.from('profiles').update({ equipped_raid_items: valid }).eq('id', user.id)
 }
 

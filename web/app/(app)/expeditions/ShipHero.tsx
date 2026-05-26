@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { repairShip } from '@/app/(app)/raids/actions'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ShipStats } from '@/lib/expeditions'
-import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS, getRankTitle } from '@/lib/expeditions'
+import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS, getRankTitle, raidItemSlotsForTier } from '@/lib/expeditions'
 import { SHIPS } from '@/lib/ships'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange } from '@/lib/repairKits'
@@ -227,8 +227,13 @@ export default function ShipHero({
   // Skin state
   const [equippedSkin, setEquippedSkin] = useState(initialEquippedSkin)
 
-  // Raid item state
+  // Raid item state. The slot count scales with ship tier — bigger hulls
+  // hold more kit. Derive the tier from the ship name match against SHIPS
+  // (same trick the upgrade panel uses lower down) so we don't need to
+  // thread a separate prop in.
   const [equippedItems, setEquippedItems] = useState<string[]>(initialEquippedRaidItems)
+  const shipTierForSlots = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
+  const raidItemSlots = raidItemSlotsForTier(shipTierForSlots)
 
   // Loadout drawer section tab. Items first/default — it's the most
   // important loadout decision; cosmetics (skins) live last.
@@ -362,7 +367,7 @@ export default function ShipHero({
   // Raid item equip/unequip
   function handleEquipRaidItem(itemId: string) {
     if (equippedItems.includes(itemId)) return
-    if (equippedItems.length >= 3) return
+    if (equippedItems.length >= raidItemSlots) return
     const next = [...equippedItems, itemId]
     setEquippedItems(next)
     startTransition(async () => { await saveEquippedRaidItems(next) })
@@ -922,14 +927,14 @@ export default function ShipHero({
               {/* ── Raid Items ── */}
               <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>Raid Items</p>
               <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.8rem', lineHeight: 1.45 }}>
-                Equip up to 3. Their effects only apply in raids, not voyages.
+                Equip up to {raidItemSlots}. Bigger ships hold more. Effects only apply in raids, not voyages.
               </p>
               <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, overflow: 'hidden', marginBottom: '1.5rem' }}>
                 {/* Equip slots */}
                 <div style={{ padding: '1rem', borderBottom: ownedRaidItems.length > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.62rem', color: '#8a8480', marginBottom: '0.7rem' }}>Equipped · {equippedItems.length}/3</p>
+                  <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.62rem', color: '#8a8480', marginBottom: '0.7rem' }}>Equipped · {equippedItems.length}/{raidItemSlots}</p>
                   <div style={{ display: 'flex', gap: '0.7rem' }}>
-                    {[0, 1, 2].map(i => {
+                    {Array.from({ length: raidItemSlots }, (_, i) => i).map(i => {
                       const itemId  = equippedItems[i]
                       const itemDef = itemId ? getRaidItem(itemId) : null
                       const color   = itemDef ? RARITY_ITEM_COLOR[itemDef.rarity] : null
@@ -975,7 +980,7 @@ export default function ShipHero({
                       if (!def) return null
                       const color    = RARITY_ITEM_COLOR[def.rarity]
                       const equipped = equippedItems.includes(itemId)
-                      const full     = equippedItems.length >= 3 && !equipped
+                      const full     = equippedItems.length >= raidItemSlots && !equipped
                       return (
                         <button
                           key={itemId}

@@ -57,6 +57,23 @@ export const EXPEDITION_SHIP_STATS: Record<number, ShipStats> = Object.fromEntri
   SHIPS.map(s => [s.tier, { name: s.name, image: s.imageUrl ?? '', ...EXPEDITION_COMBAT_STATS[s.tier] }])
 )
 
+// ── Raid item slot cap by ship tier ──────────────────────────────────────────
+// How many raid items the captain can equip at once. Scales with the ship —
+// bigger hulls have the deck space + the crew to keep more kit ready in a
+// fight. Hand-tuned curve mirrors crew slots but caps lower so an endgame
+// loadout can't stack every Epic + Legendary effect at once:
+//   tier 0/1 Rowboat / Dinghy →   1
+//   tier 2/3 Sloop / Schooner →   2
+//   tier 4   Brigantine        →   3   (the previous global default)
+//   tier 5/6 Galleon / Man-o-War → 4
+const RAID_ITEM_SLOTS: Record<number, number> = {
+  0: 1, 1: 1, 2: 2, 3: 2, 4: 3, 5: 4, 6: 4,
+}
+
+export function raidItemSlotsForTier(tier: number): number {
+  return RAID_ITEM_SLOTS[Math.max(0, Math.min(tier, 6))] ?? 3
+}
+
 // ── Raid sink penalty ─────────────────────────────────────────────────────────
 // If your ship sinks in a real raid you owe a repair fee before you can raid
 // again. Scales by ship tier (a bigger boat costs more to patch up). Moderate

@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { EXPEDITION_SHIP_STATS, raidRepairCost, type RaidMods } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS, raidRepairCost, raidItemSlotsForTier, type RaidMods } from '@/lib/expeditions'
 import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
@@ -81,7 +81,15 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   // Reinforced Hull etc. — raid items can scale max HP at raid start.
   // Multiplies after the ship + nav HP are summed so it applies to the
   // full pool. Multiple max_hp_mult items stack multiplicatively.
-  const equippedItems = (profile?.equipped_raid_items as string[] | null) ?? []
+  //
+  // Truncate equipped_raid_items to the ship-tier slot cap before reading
+  // effects — a player who downgrades ships (or had stale rows from when
+  // the cap was a flat 3) shouldn't get free effects past their hull's
+  // capacity. The UI also caps at the same number when the loadout
+  // drawer opens, so the next save will write the truncated list back.
+  const rawEquipped = (profile?.equipped_raid_items as string[] | null) ?? []
+  const slotCap     = raidItemSlotsForTier((profile?.ship_tier as number | null) ?? 0)
+  const equippedItems = rawEquipped.slice(0, slotCap)
   const hpMaxMult = getActiveEffects(equippedItems)
     .filter(e => e.type === 'max_hp_mult')
     .reduce((a, e) => a * e.value, 1)
@@ -104,7 +112,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     crewMembers,
     equippedShipSkin:     (profile?.equipped_ship_skin as string | null) ?? null,
     shipSkins:            (profile?.ship_skins as string[] | null) ?? [],
-    equippedRaidItems:    (profile?.equipped_raid_items as string[] | null) ?? [],
+    equippedRaidItems:    equippedItems,
     equippedRepairKit:    (profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit',
     hasSeenRaidTutorial:  (profile?.has_seen_raid_tutorial as boolean | null) ?? false,
     raidMods:             resolved.raid,
