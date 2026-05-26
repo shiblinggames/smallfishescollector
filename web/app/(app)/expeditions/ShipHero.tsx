@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation'
 import { repairShip } from '@/app/(app)/raids/actions'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ShipStats } from '@/lib/expeditions'
-import { computeCombatRating, computeVoyageScore } from '@/lib/expeditions'
+import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
+import { SHIPS } from '@/lib/ships'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange } from '@/lib/repairKits'
 import { equipShipSkin, saveEquippedRaidItems } from './actions'
@@ -16,7 +17,7 @@ import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
 import { RAID_ITEMS, getRaidItem } from '@/lib/raidItems'
-import { renameShip } from '@/app/shipyard/actions'
+import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, getNavigatorTitle, navLevelBonuses } from '@/lib/expeditionLevel'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
@@ -239,6 +240,12 @@ export default function ShipHero({
   // Modal state
   const [loadoutOpen, setLoadoutOpen] = useState(false)
   const [breakdownScore, setBreakdownScore] = useState<'voyage' | 'raid' | null>(null)
+  // Inline ship-upgrade modal — replaces the old "go to shipyard" link with a
+  // one-tap upgrade for the next available tier, with a fall-through link to
+  // the full shipyard if the player wants to browse skins/lower tiers.
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [upgradeBusy, setUpgradeBusy] = useState(false)
+  const [upgradeError, setUpgradeError] = useState<string | null>(null)
 
   // Loadout inner state
   const [pickerSlot, setPickerSlot] = useState<number | null>(null)
@@ -705,23 +712,25 @@ export default function ShipHero({
                 )}
               </div>
 
-              {/* Upgrade ship — moved off the hero; lives with the other
-                  ship-level actions here. */}
-              <Link
-                href="/marketplace/shipyard"
+              {/* Upgrade ship — opens an inline modal with the NEXT tier's
+                  preview, stats, and cost. The full shipyard page is still
+                  reachable from inside that modal as a secondary link. */}
+              <button
+                type="button"
+                onClick={() => { setUpgradeError(null); setUpgradeOpen(true) }}
                 className="font-karla font-700 uppercase tracking-[0.08em]"
                 style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%',
                   padding: '0.7rem', borderRadius: 10, marginBottom: '1.4rem',
                   background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)',
-                  color: '#dfe3e8', fontSize: '0.74rem', textDecoration: 'none',
+                  color: '#dfe3e8', fontSize: '0.74rem', cursor: 'pointer',
                 }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}>
                   <path d="M12 19V5M5 12l7-7 7 7"/>
                 </svg>
                 Upgrade Ship
-              </Link>
+              </button>
 
               {/* ── Section tabs ── Items first (the key loadout call),
                   cosmetics (Skins) last. Subtle styling, no loud fill. */}
@@ -1194,6 +1203,205 @@ export default function ShipHero({
           )}
         </motion.div>
       </PopupShell>
+
+      {/* Ship upgrade modal — preview the next available tier with stats vs
+          the current ship, plus a one-tap buy. The full shipyard is still
+          reachable via the secondary link, for browsing skins / re-checking
+          everything. */}
+      <PopupShell open={upgradeOpen} onClose={() => { setUpgradeOpen(false); setUpgradeError(null) }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 4 }}
+          transition={{ duration: 0.18 }}
+          style={{
+            margin: 'auto', width: '100%', maxWidth: 380,
+            background: 'rgba(8,14,24,0.98)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 18,
+            padding: '1.1rem 1rem 1.25rem',
+          }}
+        >
+          <UpgradeShipPanel
+            shipStats={shipStats}
+            doubloons={doubloons}
+            busy={upgradeBusy}
+            error={upgradeError}
+            onBuy={async () => {
+              setUpgradeBusy(true)
+              setUpgradeError(null)
+              try {
+                const res = await buyShip()
+                if ('error' in res) {
+                  setUpgradeError(res.error)
+                } else {
+                  window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+                  setUpgradeOpen(false)
+                  router.refresh()
+                }
+              } finally {
+                setUpgradeBusy(false)
+              }
+            }}
+            onClose={() => { setUpgradeOpen(false); setUpgradeError(null) }}
+          />
+        </motion.div>
+      </PopupShell>
+    </>
+  )
+}
+
+// ── Upgrade ship panel ──────────────────────────────────────────────────────
+// Inner content for the upgrade modal. Pulled out so the parent stays
+// readable; lives in the same file because it shares the ShipStats shape and
+// is only used here. Shows the next ship's hull image, the cost (with
+// affordability state), a side-by-side stat delta vs the current ship, and a
+// secondary link to the full shipyard for browsing/skins/lower tiers.
+function UpgradeShipPanel({
+  shipStats, doubloons, busy, error, onBuy, onClose,
+}: {
+  shipStats: ShipStats
+  doubloons: number
+  busy: boolean
+  error: string | null
+  onBuy: () => void
+  onClose: () => void
+}) {
+  const currentTier = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
+  const nextTier = currentTier + 1
+  const atMax = nextTier >= SHIPS.length
+  const nextShip = atMax ? null : SHIPS[nextTier]
+  const nextCombat = atMax ? null : EXPEDITION_SHIP_STATS[nextTier]
+  const currentShip = SHIPS[currentTier]
+  const canAfford = !!nextShip && doubloons >= nextShip.cost
+
+  return (
+    <>
+      <div className="flex items-center justify-between" style={{ marginBottom: '0.85rem' }}>
+        <p className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>
+          Upgrade Ship
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          style={{
+            width: 30, height: 30, borderRadius: 8, padding: 0,
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+            color: '#cbd2da', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      {atMax ? (
+        // Top tier — nothing left to buy. Skin browsing still useful via shipyard.
+        <>
+          <div style={{ padding: '1.5rem 0.5rem', textAlign: 'center' }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: currentShip.color, marginBottom: 4 }}>
+              You sail the {currentShip.name}
+            </p>
+            <p className="font-karla font-400" style={{ fontSize: '0.78rem', color: '#9a9690' }}>
+              That is the largest hull on the water. There is no greater ship to upgrade to.
+            </p>
+          </div>
+          <Link href="/marketplace/shipyard"
+            className="font-karla font-600"
+            style={{
+              display: 'block', textAlign: 'center', fontSize: '0.72rem',
+              color: '#8aa9c8', textDecoration: 'underline', textUnderlineOffset: 3, padding: '0.5rem 0',
+            }}
+          >
+            Browse the shipyard →
+          </Link>
+        </>
+      ) : nextShip && nextCombat ? (
+        <>
+          {/* Ship hull preview */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 110, marginBottom: '0.6rem' }}>
+            {nextShip.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={nextShip.imageUrl} alt={nextShip.name} style={{ maxHeight: 110, maxWidth: '75%', objectFit: 'contain', filter: `drop-shadow(0 6px 14px ${nextShip.color}55)` }} />
+            )}
+          </div>
+
+          <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: nextShip.color, textAlign: 'center', lineHeight: 1, marginBottom: 4 }}>
+            {nextShip.name}
+          </p>
+          <p className="font-karla font-300 italic" style={{ fontSize: '0.72rem', color: '#8a8784', textAlign: 'center', marginBottom: '0.95rem' }}>
+            {nextShip.description}
+          </p>
+
+          {/* Stats — current → next, with delta */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', columnGap: 8, rowGap: 4,
+            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 10, padding: '0.6rem 0.7rem', marginBottom: '0.9rem',
+            fontSize: '0.72rem',
+          }}>
+            <StatDelta label="Hold"       cur={currentShip.holdCapacity}    next={nextShip.holdCapacity}    />
+            <StatDelta label="Durability" cur={shipStats.durability}        next={nextCombat.durability}    />
+            <StatDelta label="Speed"      cur={shipStats.speed}             next={nextCombat.speed}         />
+            <StatDelta label="Crew Slots" cur={shipStats.crewSlots}         next={nextCombat.crewSlots}     />
+            <StatDelta label="Min Damage" cur={shipStats.minDamage}         next={nextCombat.minDamage}     />
+          </div>
+
+          {error && (
+            <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#f08a8a', marginBottom: '0.55rem', textAlign: 'center' }}>{error}</p>
+          )}
+
+          {/* Buy button */}
+          <button
+            type="button"
+            onClick={onBuy}
+            disabled={busy || !canAfford}
+            className="font-karla font-700 uppercase tracking-[0.08em]"
+            style={{
+              width: '100%', padding: '0.85rem', borderRadius: 12, marginBottom: '0.55rem',
+              fontSize: '0.82rem', cursor: busy ? 'wait' : canAfford ? 'pointer' : 'not-allowed',
+              background: canAfford ? 'rgba(240,192,64,0.18)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${canAfford ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.12)'}`,
+              color: canAfford ? '#f0c040' : '#6a6764',
+              opacity: busy ? 0.7 : 1,
+            }}
+          >
+            {busy
+              ? 'Buying…'
+              : canAfford
+                ? <>Upgrade for {nextShip.cost.toLocaleString()} ⟡</>
+                : <>Need {(nextShip.cost - doubloons).toLocaleString()} more ⟡</>}
+          </button>
+
+          {/* Secondary: full shipyard (browsing skins, lower tiers, etc.) */}
+          <Link href="/marketplace/shipyard"
+            className="font-karla font-600"
+            style={{
+              display: 'block', textAlign: 'center', fontSize: '0.7rem',
+              color: '#8aa9c8', textDecoration: 'underline', textUnderlineOffset: 3, padding: '0.35rem 0',
+            }}
+          >
+            Browse the full shipyard →
+          </Link>
+        </>
+      ) : null}
+    </>
+  )
+}
+
+function StatDelta({ label, cur, next }: { label: string; cur: number; next: number }) {
+  const diff = next - cur
+  const sign = diff > 0 ? '+' : ''
+  return (
+    <>
+      <span className="font-karla font-600" style={{ color: '#9a9690' }}>{label}</span>
+      <span className="font-cinzel font-700" style={{ color: '#cbd2da', textAlign: 'right' }}>{cur}</span>
+      <span className="font-karla" style={{ color: '#4a4845' }}>→</span>
+      <span className="font-cinzel font-700" style={{ color: '#f0ede8', textAlign: 'right' }}>{next}</span>
+      <span className="font-karla font-600" style={{ color: diff > 0 ? '#4ade80' : diff < 0 ? '#f87171' : '#6a6764', textAlign: 'right', minWidth: 32 }}>
+        {diff === 0 ? '—' : `${sign}${diff}`}
+      </span>
     </>
   )
 }
