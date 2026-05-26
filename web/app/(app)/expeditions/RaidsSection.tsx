@@ -235,12 +235,15 @@ function RaidMap({
         // Put the title plate on whichever side has the most room: a
         // node on the left half gets its label to the right, and vice
         // versa. The plate's dark background hides the route behind it.
-        // EXCEPTION: when this node has a side-branch child (challenge
-        // raid attached), the branch already occupies the "opposite"
-        // side — so flip the label to the parent's OWN side so the two
-        // don't overlap.
+        const labelRight = cx(i) < 50
+        // When this node has a side-branch child (challenge raid)
+        // sitting in the row, the branch eats into the label's normal
+        // territory — shrink the label maxWidth so it never extends
+        // past the branch token. Long labels wrap to extra lines
+        // (each line gets its own clipped plate via box-decoration-break)
+        // which is fine; running across the branch is not.
         const hasSideBranchChild = views.some(other => other.node.sideBranch?.parentId === node.id)
-        const labelRight = hasSideBranchChild ? cx(i) >= 50 : cx(i) < 50
+        const labelMaxWidth = hasSideBranchChild ? 78 : 124
         return (
           <div
             key={node.id}
@@ -337,7 +340,7 @@ function RaidMap({
                   top: '50%',
                   transform: 'translateY(-50%)',
                   width: 'max-content',
-                  maxWidth: 124,
+                  maxWidth: labelMaxWidth,
                   pointerEvents: 'none',
                   ...(labelRight
                     ? { left: '100%', marginLeft: 12, textAlign: 'left' as const }
