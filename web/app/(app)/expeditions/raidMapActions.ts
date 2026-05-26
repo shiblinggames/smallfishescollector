@@ -37,10 +37,85 @@ async function buildClearedSet(
   return cleared
 }
 
-export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number }> {
+/** Per-raid social records surfaced in the raid node sheet so players see
+ *  the fastest clear, their own personal best, and how many other captains
+ *  have cleared it. Admins are excluded from the fastest + total tallies
+ *  (their times don't represent a real player run); the player's own best
+ *  always shows even if they're admin. */
+export interface RaidRecords {
+  fastestUsername: string
+  fastestMs: number
+  yourBestMs: number | null
+  totalClearers: number
+}
+
+async function loadRaidRecords(
+  admin: Admin,
+  userId: string,
+): Promise<Record<string, RaidRecords>> {
+  // No FK between raid_completions.user_id and profiles, so PostgREST can't
+  // auto-resolve the join. Two queries + a JS join. Table is tiny (<100 rows
+  // expected for the lifetime of the game), so the extra round-trip is fine.
+  const { data: allRows } = await admin
+    .from('raid_completions')
+    .select('raid_id, user_id, elapsed_ms')
+    .order('elapsed_ms', { ascending: true })
+  const rows = (allRows ?? []) as { raid_id: string; user_id: string; elapsed_ms: number }[]
+
+  const userIds = Array.from(new Set(rows.map(r => r.user_id)))
+  const { data: profileRows } = userIds.length > 0
+    ? await admin.from('profiles').select('id, username, is_admin').in('id', userIds)
+    : { data: [] as { id: string; username: string; is_admin: boolean | null }[] }
+  const profileMap = new Map<string, { username: string; is_admin: boolean | null }>()
+  for (const p of (profileRows ?? []) as { id: string; username: string; is_admin: boolean | null }[]) {
+    profileMap.set(p.id, { username: p.username, is_admin: p.is_admin })
+  }
+
+  const result: Record<string, RaidRecords> = {}
+  const seenClearers = new Map<string, Set<string>>() // raid_id → set of user_ids
+  for (const r of rows) {
+    const pr = profileMap.get(r.user_id)
+    if (!pr || pr.is_admin) continue
+    if (!result[r.raid_id]) {
+      // First non-admin row per raid_id is the fastest (we ordered ASC).
+      result[r.raid_id] = {
+        fastestUsername: pr.username,
+        fastestMs: r.elapsed_ms,
+        yourBestMs: null,
+        totalClearers: 0,
+      }
+    }
+    const set = seenClearers.get(r.raid_id) ?? new Set<string>()
+    set.add(r.user_id)
+    seenClearers.set(r.raid_id, set)
+  }
+  for (const [raidId, set] of seenClearers) {
+    if (result[raidId]) result[raidId].totalClearers = set.size
+  }
+
+  // Player's own best — folded in even if the player is admin, so a
+  // dev/owner running through it for QA still sees their own time.
+  for (const r of rows) {
+    if (r.user_id !== userId) continue
+    if (!result[r.raid_id]) {
+      // Edge case: only this player (admin) has cleared. No public fastest.
+      result[r.raid_id] = {
+        fastestUsername: '—',
+        fastestMs: 0,
+        yourBestMs: r.elapsed_ms,
+        totalClearers: 0,
+      }
+    } else if (result[r.raid_id].yourBestMs == null || r.elapsed_ms < (result[r.raid_id].yourBestMs ?? Infinity)) {
+      result[r.raid_id].yourBestMs = r.elapsed_ms
+    }
+  }
+  return result
+}
+
+export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords> }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { views: [], doubloons: 0 }
+  if (!user) return { views: [], doubloons: 0, raidRecords: {} }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
@@ -51,8 +126,11 @@ export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloo
 
   const doubloons = profile?.doubloons ?? 0
   const navLevel = getLevelFromXP(profile?.expedition_xp ?? 0)
-  const cleared = await buildClearedSet(admin, user.id, profile ?? {})
-  return { views: computeRaidMap(cleared, doubloons, navLevel), doubloons }
+  const [cleared, raidRecords] = await Promise.all([
+    buildClearedSet(admin, user.id, profile ?? {}),
+    loadRaidRecords(admin, user.id),
+  ])
+  return { views: computeRaidMap(cleared, doubloons, navLevel), doubloons, raidRecords }
 }
 
 export async function claimMilestoneNode(

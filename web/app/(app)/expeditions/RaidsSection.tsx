@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { isCombatNode, type RaidNodeView } from '@/lib/raidMap'
+import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
 import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice, solvePuzzleNode } from './raidMapActions'
@@ -27,6 +28,15 @@ const TYPE_ACCENT: Record<string, string> = {
 const TYPE_IMAGE: Record<string, string | undefined> = {
   shop:   '/raidshop.jpeg',
   puzzle: '/puzzle.png',
+}
+
+/** elapsed_ms → "M:SS" for the Boss Records block. */
+function formatRaidMs(ms: number): string {
+  if (!ms || ms < 0) return '—'
+  const total = Math.round(ms / 1000)
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
 }
 
 // Winding sea-chart zig-zag (% of width, cycled top→bottom). Map is
@@ -275,11 +285,13 @@ function NodeDetailSheet({
   view,
   doubloons,
   ownedRaidItems,
+  raidRecords,
   onClose,
 }: {
   view: RaidNodeView
   doubloons: number
   ownedRaidItems: string[]
+  raidRecords: RaidRecords | null
   onClose: () => void
 }) {
   const router = useRouter()
@@ -657,6 +669,55 @@ function NodeDetailSheet({
           </div>
         )}
 
+        {/* Boss records — fastest non-admin clear + the player's own best +
+            community count. Lives above Drops so the player sees "X people
+            have cleared this, fastest was Y" right before they decide
+            whether to run it again. Only renders on raid-type nodes with
+            at least one community record. Admins are excluded from
+            fastest/total (their dev runs don't represent a player time). */}
+        {node.type === 'raid' && raidRecords && (raidRecords.fastestMs > 0 || raidRecords.yourBestMs != null) && (
+          <div style={{ marginTop: '1.1rem' }}>
+            <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>Boss Records</p>
+            <div style={{
+              padding: '0.65rem 0.85rem', borderRadius: 10,
+              background: 'rgba(200,168,64,0.05)',
+              border: '1px solid rgba(200,168,64,0.2)',
+              display: 'flex', flexDirection: 'column', gap: '0.4rem',
+            }}>
+              {raidRecords.fastestMs > 0 && (
+                <div className="flex items-baseline justify-between" style={{ gap: 10 }}>
+                  <div className="flex items-baseline" style={{ gap: 6, minWidth: 0 }}>
+                    <span aria-hidden style={{ fontSize: '0.78rem' }}>🥇</span>
+                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#c8a840', letterSpacing: '0.12em' }}>Fastest</span>
+                    <span className="font-karla font-600 truncate" style={{ fontSize: '0.78rem', color: '#e6d49a', minWidth: 0 }}>{raidRecords.fastestUsername}</span>
+                  </div>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0c040', textShadow: '0 0 10px rgba(240,192,64,0.35)', fontFeatureSettings: '"tnum"', flexShrink: 0 }}>
+                    {formatRaidMs(raidRecords.fastestMs)}
+                  </span>
+                </div>
+              )}
+              {raidRecords.yourBestMs != null && (
+                <div className="flex items-baseline justify-between" style={{ gap: 10 }}>
+                  <div className="flex items-baseline" style={{ gap: 6 }}>
+                    <span aria-hidden style={{ fontSize: '0.78rem' }}>⚓</span>
+                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#7da0d8', letterSpacing: '0.12em' }}>Your best</span>
+                  </div>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#cbd6e6', fontFeatureSettings: '"tnum"' }}>
+                    {formatRaidMs(raidRecords.yourBestMs)}
+                  </span>
+                </div>
+              )}
+              {raidRecords.totalClearers > 0 && (
+                <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.45, marginTop: 2 }}>
+                  {raidRecords.totalClearers === 1
+                    ? '1 captain has cleared this raid.'
+                    : `${raidRecords.totalClearers} captains have cleared this raid.`}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Drops / rewards. Raids/skirmishes show compact chips (icon + name)
             to stay scannable — no descriptions, odds, or notes. Story/milestone
             nodes keep the detailed rows so their fragment quotes / notes read. */}
@@ -791,7 +852,7 @@ function NodeDetailSheet({
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
-export default function RaidsSection({ views, doubloons, repairOwed, ownedRaidItems }: { views: RaidNodeView[]; doubloons: number; repairOwed: number; ownedRaidItems: string[] }) {
+export default function RaidsSection({ views, doubloons, raidRecords, repairOwed, ownedRaidItems }: { views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[] }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   const clearedCount = views.filter(v => v.status === 'cleared').length
@@ -905,6 +966,7 @@ export default function RaidsSection({ views, doubloons, repairOwed, ownedRaidIt
             view={selected}
             doubloons={doubloons}
             ownedRaidItems={ownedRaidItems}
+            raidRecords={selected.node.type === 'raid' && selected.node.raidId ? raidRecords[selected.node.raidId] ?? null : null}
             onClose={() => setSelected(null)}
           />
         )}
