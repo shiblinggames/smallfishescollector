@@ -321,19 +321,31 @@ Shrink the red snag zones via `penaltyMultiplier`. Lines **auto-unlock** based o
 
 ### Ships (7 tiers, 0–6)
 
-Ships expand fish hold capacity. Bigger hold = less frequent sell trips.
+Ships are your hull for expeditions and voyages — combat stats (durability, speed, crew slots, min damage) live in `EXPEDITION_SHIP_STATS` in `lib/expeditions.ts`. Fish hold is its **own** upgrade ladder now (`lib/fishHold.ts`), not tied to ship tier.
 
-| Tier | Ship | Hold Capacity | Cost |
+| Tier | Ship | Cost |
+|---|---|---|
+| 0 | Rowboat | Free |
+| 1 | Dinghy | 500 ⟡ |
+| 2 | Sloop | 1,500 ⟡ |
+| 3 | Schooner | 5,000 ⟡ |
+| 4 | Brigantine | 22,000 ⟡ |
+| 5 | Galleon | 80,000 ⟡ |
+| 6 | Man-o-War | 200,000 ⟡ |
+
+### Fish Hold (7 tiers, 0–6)
+
+Independent from ships — bought from the shop on the fishing screen. Bigger hold = less frequent sell trips.
+
+| Tier | Hold | Capacity | Cost |
 |---|---|---|---|
-| 0 | Rowboat | 15 | Free |
-| 1 | Dinghy | 25 | 500 ⟡ |
-| 2 | Sloop | 40 | 1,500 ⟡ |
-| 3 | Schooner | 70 | 5,000 ⟡ |
-| 4 | Brigantine | 120 | 22,000 ⟡ |
-| 5 | Galleon | 180 | 80,000 ⟡ |
-| 6 | Man-o-War | 250 | 200,000 ⟡ |
-
-Ships are also used in expeditions and voyages with separate combat stats (`EXPEDITION_SHIP_STATS` in `lib/expeditions.ts`).
+| 0 | Small Crate | 15 | Free |
+| 1 | Medium Crate | 25 | 500 ⟡ |
+| 2 | Large Crate | 40 | 2,000 ⟡ |
+| 3 | Cargo Hold | 70 | 8,000 ⟡ |
+| 4 | Deep Hold | 120 | 20,000 ⟡ |
+| 5 | Grand Hold | 180 | 50,000 ⟡ |
+| 6 | Titan Hold | 250 | 100,000 ⟡ |
 
 ### Bait (7 types)
 
@@ -387,7 +399,7 @@ See section 4. Client-only, no DB involvement.
 
 ### Fish Hold
 
-Every caught fish goes into `fish_inventory`. The server enforces the hold cap (ship's `holdCapacity`) on every `reelIn` — if the hold is full, the catch is rejected. The client shows a warning and disables casting when full.
+Every caught fish goes into `fish_inventory`. The server enforces the hold cap (the player's fish-hold tier from `lib/fishHold.ts`, stored in `profiles.fish_hold_tier`) on every `reelIn` — if the hold is full, the catch is rejected. The client shows a warning and disables casting when full.
 
 ### Selling options
 
@@ -737,7 +749,7 @@ FISHING (core loop)
     │       │                      │          Wider catch zone
     │       │               Gear upgrades     Faster bites
     │       │               Bait purchases
-    │       │               Ship upgrades (bigger hold)
+    │       │               Fish hold upgrades (more cargo room)
     │       │
     │   Prestige ─────────────── +5% sell bonus per prestige point
     │
