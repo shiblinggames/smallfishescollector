@@ -222,10 +222,13 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
     },
     { href: '/marketplace', label: 'Market', badge: null,
       icon: (
+        // Market stall: striped awning trapezoid + two posts + counter
+        // line. The old hook/curl shape didn't read as a market at all.
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2v10"/>
-          <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
-          <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
+          <path d="M2 8 L5 4 L19 4 L22 8 Z"/>
+          <path d="M8 4 L6 8 M12 4 L12 8 M16 4 L18 8"/>
+          <path d="M4 8 L4 20 M20 8 L20 20"/>
+          <path d="M4 14 L20 14"/>
         </svg>
       )
     },
@@ -272,10 +275,13 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
     },
     { href: '/marketplace', label: 'Market', badge: false,
       icon: (
+        // Same market-stall glyph as the top-bar/tab-bar instances; the
+        // 1.7 strokeWidth keeps the smaller 16px size legible.
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2v10"/>
-          <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
-          <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
+          <path d="M2 8 L5 4 L19 4 L22 8 Z"/>
+          <path d="M8 4 L6 8 M12 4 L12 8 M16 4 L18 8"/>
+          <path d="M4 8 L4 20 M20 8 L20 20"/>
+          <path d="M4 14 L20 14"/>
         </svg>
       )
     },
@@ -359,10 +365,14 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
     },
     { href: '/marketplace', label: 'Market', badge: null,
       icon: (
+        // Same market-stall glyph as the mobile tab-bar + hamburger
+        // entries — keeps the three Market chips consistent across all
+        // three nav surfaces.
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2v10"/>
-          <path d="M12 12c0 4-3 6-5 4s-1-5 2-5"/>
-          <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
+          <path d="M2 8 L5 4 L19 4 L22 8 Z"/>
+          <path d="M8 4 L6 8 M12 4 L12 8 M16 4 L18 8"/>
+          <path d="M4 8 L4 20 M20 8 L20 20"/>
+          <path d="M4 14 L20 14"/>
         </svg>
       )
     },
