@@ -40,6 +40,29 @@ const ENEMY_COLOR  = '#ef4444'
 
 const d20 = () => Math.floor(Math.random() * 20) + 1
 
+// One-line BEHAVIORAL HINT for the enemy stats popup. Deliberately fuzzy: it
+// nudges the player toward what to watch for (volley-prone, slippery,
+// aggressive, etc.) without spelling out the per-turn pattern, which is the
+// "read the rhythm" puzzle they're supposed to discover in combat. Tuned by
+// looking at the actual enemy patterns in lib/bossRaids.ts; reorder the
+// branches if a new pattern shape needs its own tell.
+function enemyBehaviorHint(pattern: EnemyAction[]): string {
+  const n = pattern.length || 1
+  const c = { reload: 0, fire: 0, volley: 0, dodge: 0, repair: 0 }
+  for (const a of pattern) c[a]++
+  const aggR    = (c.fire + c.volley) / n
+  const dodgeR  = c.dodge / n
+  const reloadR = c.reload / n
+
+  if (c.volley >= 2)                          return 'Loves a heavy volley. More than one per cycle.'
+  if (c.volley === 1 && reloadR >= 0.5)       return 'Patient. Winds up long, then lands a heavy volley.'
+  if (dodgeR >= 0.25 && c.volley >= 1)        return 'Slippery and dangerous. Tends to dodge, then strike heavy.'
+  if (dodgeR >= 0.25)                         return 'Slippery. Tends to dodge your shots.'
+  if (aggR >= 0.55)                           return 'Aggressive. Trades shots constantly.'
+  if (reloadR >= 0.6)                         return 'Methodical. Long reloads before each strike.'
+  return 'Steady rhythm. Trades shot for shot.'
+}
+
 function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: number, damagePct = 0): number {
   if (res === 'miss') return 0
   // Single source of truth (lib/expeditions.raidDamageProfile) so combat, the
@@ -1684,12 +1707,11 @@ function EnemyStatsPopup({
     { label: 'Crit Chance', value: `${critPct}%`,                      hint: `${minCrit}–${maxCrit} on crit`,  color: '#fbbf24' },
   ]
 
-  const ACTION_META: Record<string, { label: string; color: string }> = {
-    reload: { label: 'Reload', color: '#9aa4b2' },
-    fire:   { label: 'Fire',   color: '#f87171' },
-    volley: { label: 'Volley', color: '#fb923c' },
-    dodge:  { label: 'Dodge',  color: '#7dd3fc' },
-  }
+  // Behavioral HINT only — deliberately fuzzy. The full pattern cycle is intel
+  // the player is meant to learn by playing; spelling it out trivialises the
+  // "read the rhythm" puzzle. The hint nudges them toward what to watch for
+  // (volleys, dodges, aggression) without giving away turn-by-turn timing.
+  const behaviorHint = enemyBehaviorHint(enemy.pattern)
 
   return (
     <motion.div
@@ -1800,32 +1822,15 @@ function EnemyStatsPopup({
           </div>
         )}
 
-        {/* Action pattern — full cycle as chips so the rhythm is legible */}
+        {/* Behavior — a single fuzzy tell, not a turn-by-turn pattern reveal.
+            Players still have to read the rhythm in combat; this just tips
+            them off to what to watch for. */}
         <div style={{ marginBottom: 14 }}>
           <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', color: '#9a9690', letterSpacing: '0.16em', marginBottom: 6 }}>
-            Pattern · {enemy.pattern.length}-turn cycle
+            Behavior
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {enemy.pattern.map((act, i) => {
-              const meta = ACTION_META[act] ?? { label: act, color: '#9a9690' }
-              return (
-                <span key={i} className="font-karla font-700 uppercase" style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  fontSize: '0.56rem', letterSpacing: '0.08em',
-                  color: meta.color,
-                  background: `${meta.color}1c`,
-                  border: `1px solid ${meta.color}45`,
-                  borderRadius: 5,
-                  padding: '0.2rem 0.4rem',
-                }}>
-                  <span style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: 0 }}>{i + 1}</span>
-                  {meta.label}
-                </span>
-              )
-            })}
-          </div>
-          <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(240,237,232,0.45)', lineHeight: 1.4, marginTop: 7 }}>
-            Repeats from turn 1 once the cycle ends. Read the rhythm to time your dodges and volleys.
+          <p className="font-karla font-500 italic" style={{ fontSize: '0.82rem', color: '#cbd2da', lineHeight: 1.4 }}>
+            {behaviorHint}
           </p>
         </div>
 
