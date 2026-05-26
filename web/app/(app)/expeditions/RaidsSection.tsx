@@ -148,8 +148,10 @@ function RaidMap({
     .map((p, i) => p.isSide ? -1 : i)
     .filter(i => i >= 0)
 
-  // The "current" node = first non-cleared, non-locked node. Gets a gentle pulse.
-  const currentIdx = views.findIndex(v => v.status === 'available')
+  // The "current" node = first non-cleared, non-locked node ON THE MAIN
+  // CHAIN. Side-branch challenge raids are optional detours — pulsing one
+  // of them as "current" would mislead a player about the main story path.
+  const currentIdx = views.findIndex(v => v.status === 'available' && !v.node.sideBranch)
 
   return (
     <div style={{ position: 'relative', width: '100%', height }}>
@@ -954,7 +956,10 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
               + unlock reason), or all-cleared (a short note). Respects the same
               repair block as the map so it can't bypass a sunk ship. */}
           {(() => {
-            const next = views.find(v => v.status !== 'cleared')
+            // Surface only main-chain progress here. Side-branch (challenge)
+            // raids are OPTIONAL detours, not "what to do next" — including
+            // them would derail a player who's mid-story toward the boss.
+            const next = views.find(v => v.status !== 'cleared' && !v.node.sideBranch)
 
             // Everything cleared — celebratory note so the card isn't empty.
             if (!next) {
