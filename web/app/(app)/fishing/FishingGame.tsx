@@ -1415,7 +1415,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
 
         {/* Header band — just the rarity tag + "New Species" if applicable.
             Zone label dropped (player already knows what zone they're in). */}
-        <div className="px-4 py-2.5 flex items-center justify-center gap-2"
+        <div className="px-4 py-2 flex items-center justify-center gap-2"
           style={{ position: 'relative', zIndex: 2, background: `${r.color}28`, borderBottom: `1px solid ${r.color}45` }}>
           <span className="font-karla font-700 uppercase tracking-[0.18em]"
             style={{
@@ -1437,14 +1437,16 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           )}
         </div>
 
-        {/* Body — fish is the hero. Big image, name, and the price (or
-            trophy badge) get the visual weight; fun fact sits below as
-            flavor, not as the focus. */}
-        <div style={{ position: 'relative', zIndex: 2, padding: '1rem 1rem 1.1rem' }}>
-          {/* Big fish image — entrance bounce so it FEELS like a reveal.
+        {/* Body — fish is the hero, but the card has to fit on screen
+            without scrolling. Tight top/bottom padding + a shrunken image
+            keep the whole result block in view even with the Ancient
+            banner + 4 pills above on a small phone. */}
+        <div style={{ position: 'relative', zIndex: 2, padding: '0.55rem 1rem 0.7rem' }}>
+          {/* Fish image — entrance bounce so it FEELS like a reveal.
               Wrapped in a position:relative so the transient PB ribbon can
               overlay directly on top of the fish (auto-dismisses ~2.6s
-              after the catch). */}
+              after the catch). Height intentionally compact so the card
+              fits a tall result phase without scrolling. */}
           <motion.div
             initial={{ scale: 0.6, opacity: 0, rotate: -8 }}
             animate={{ scale: 1, opacity: 1, rotate: 0 }}
@@ -1452,14 +1454,14 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             style={{
               position: 'relative',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginBottom: '0.55rem',
+              marginBottom: '0.25rem',
             }}
           >
             <FishImg
               name={fish.name}
               style={{
-                width: '78%', maxWidth: 220, height: 124, objectFit: 'contain',
-                filter: `drop-shadow(0 8px 20px ${r.color}55)${isEpicPlus ? ` drop-shadow(0 0 28px ${r.color}40)` : ''}`,
+                width: '62%', maxWidth: 170, height: 92, objectFit: 'contain',
+                filter: `drop-shadow(0 6px 14px ${r.color}55)${isEpicPlus ? ` drop-shadow(0 0 22px ${r.color}40)` : ''}`,
               }}
             />
 
@@ -1502,7 +1504,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
 
           {/* Name. Scientific name dropped 2026-05-26 — players don't read
               Latin and the card needs to feel less informational. */}
-          <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.35rem', color: r.color, lineHeight: 1.1, marginBottom: hasSize ? '0.55rem' : '0.7rem' }}>
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.25rem', color: r.color, lineHeight: 1.1, marginBottom: hasSize ? '0.35rem' : '0.55rem' }}>
             {fish.name}
           </p>
 
@@ -1517,12 +1519,12 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.18 }}
-              style={{ textAlign: 'center', marginBottom: '0.7rem' }}
+              style={{ textAlign: 'center', marginBottom: '0.5rem' }}
             >
               <span
                 className="font-cinzel font-700"
                 style={{
-                  fontSize: '2.15rem', lineHeight: 1,
+                  fontSize: '1.85rem', lineHeight: 1,
                   color: sizeTier === 'trophy' ? '#fbbf24' : sizeTier === 'large' ? '#93c5fd' : '#f0ede8',
                   textShadow: sizeTier === 'trophy'
                     ? '0 0 22px rgba(251,191,36,0.7), 0 0 44px rgba(251,191,36,0.35)'
@@ -1606,7 +1608,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               transition={{ duration: 0.28, delay: 0.32 }}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-                marginBottom: '0.7rem',
+                marginBottom: '0.45rem',
               }}
             >
               <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 10px rgba(240,192,64,0.32)' }}>
@@ -1646,7 +1648,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           )}
 
           {/* Flavor — the fun fact, demoted to caption status. */}
-          <p className="font-karla font-400 text-center" style={{ fontSize: '0.72rem', color: '#7a7670', lineHeight: 1.5 }}>
+          <p className="font-karla font-400 text-center" style={{ fontSize: '0.7rem', color: '#7a7670', lineHeight: 1.4 }}>
             {fish.fun_fact}
           </p>
         </div>
