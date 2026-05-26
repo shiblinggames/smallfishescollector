@@ -24,6 +24,12 @@ const CHARGE: Record<number, number> = { 1: 430, 2: 540, 3: 760, 4: 1180 }
 const FIRST_DELAY = 340
 const GAP = 240
 const CLIMAX_LEAD = 280  // a beat of calm before the finale (rarest) card charges
+// Post-flip settle on the FINAL card before the board resets and the reroll
+// button reactivates. Scales with the climax rarity: commons/rares only have
+// a brief landing ring (~600ms), so any longer is dead air. Epic earns time
+// for its shock rings + particles + banner (1.6s); Legendary needs the full
+// 2.4s banner + grander effects to land as a climax.
+const FINAL_SETTLE: Record<number, number> = { 1: 700, 2: 900, 3: 2200, 4: 3400 }
 
 type Flash = { cls: string; key: number } | null
 type Banner = { name: string; rarity: number; color: string; key: number } | null
@@ -64,7 +70,8 @@ export function useReveal() {
     setPhases(init)
 
     const order = [...board].sort((a, b) => a.rarity - b.rarity) // rarest last
-    setClimaxId(order.length ? order[order.length - 1].id : null)
+    const climax = order.length ? order[order.length - 1] : null
+    setClimaxId(climax?.id ?? null)
     let t = FIRST_DELAY
     order.forEach((c, pos) => {
       const isLast = pos === order.length - 1
@@ -74,8 +81,11 @@ export function useReveal() {
       timers.current.push(setTimeout(() => flip(c), t + charge))
       t += charge + GAP
     })
-    // Return the board to plain panels once every effect has finished.
-    timers.current.push(setTimeout(() => { setPhases({}); setClimaxId(null) }, t + 3400))
+    // Return the board to plain panels once the final card has settled. The
+    // settle scales with the climax rarity so a common-only board doesn't sit
+    // on dead air after its tiny landing ring finishes.
+    const settle = climax ? (FINAL_SETTLE[climax.rarity] ?? 1200) : 1200
+    timers.current.push(setTimeout(() => { setPhases({}); setClimaxId(null) }, t + settle))
   }, [flip])
 
   // True from the moment a reroll reveal begins until every card has finished
