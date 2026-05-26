@@ -1390,7 +1390,6 @@ function UpgradeShipPanel({
             borderRadius: 10, padding: '0.6rem 0.7rem', marginBottom: '0.9rem',
             fontSize: '0.72rem',
           }}>
-            <StatDelta label="Hold"       cur={currentShip.holdCapacity}    next={nextShip.holdCapacity}    />
             <StatDelta label="Durability" cur={shipStats.durability}        next={nextCombat.durability}    />
             <StatDelta label="Speed"      cur={shipStats.speed}             next={nextCombat.speed}         />
             <StatDelta label="Crew Slots" cur={shipStats.crewSlots}         next={nextCombat.crewSlots}     />
