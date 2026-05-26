@@ -116,8 +116,8 @@ export default async function AchievementsPage() {
         badgeGoal('navigator', 'Navigator', 'Reach Navigation Level 50', navLevel, 50, '/expeditions'),
         progressGoal('nav_100', 'Master Navigator', 'Reach Navigation Level 100', navLevel, 100, '/expeditions'),
         badgeGoal('fleet_admiral', 'Fleet Admiral', 'Complete 100 voyages', voyagesDone, 100, '/expeditions'),
-        badgeGoal('corsairs_bane', "Corsair's Bane", 'Defeat Barnacle Pete in under 2 minutes', 0, 1, '/raids', { binary: true }),
-        badgeGoal('ghost_ship', 'Ghost Ship', 'Defeat Barnacle Pete without taking damage', 0, 1, '/raids', { binary: true }),
+        badgeGoal('corsairs_bane', "Corsair's Bane", 'Defeat Barnacle Pete in challenge mode', 0, 1, '/raids', { binary: true }),
+        badgeGoal('ghost_ship', "Krust's Crutch", 'Defeat Captain Krust in challenge mode', 0, 1, '/raids', { binary: true }),
       ],
     },
     {

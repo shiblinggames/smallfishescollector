@@ -16,8 +16,12 @@ export const BADGES: Badge[] = [
 
   // Expedition & combat
   { id: 'davy_jones',     name: "Davy Jones' Victor", description: "Complete Davy Jones' Locker",                     imageUrl: '/badges/davy_jones.png'     },
-  { id: 'corsairs_bane',  name: "Corsair's Bane",     description: 'Defeat Barnacle Pete in under 2 minutes',         imageUrl: '/badges/corsairs_bane.png'  },
-  { id: 'ghost_ship',     name: 'Ghost Ship',         description: 'Defeat Barnacle Pete without taking any damage',  imageUrl: '/badges/ghost_ship.png'     },
+  // Challenge-mode boss clears. Badge IDs stay stable (corsairs_bane,
+  // ghost_ship) so existing DB unlocks aren't invalidated; the labels +
+  // descriptions repoint at the challenge fights — these are the new
+  // "you beat the hard version" trophies.
+  { id: 'corsairs_bane',  name: "Corsair's Bane",     description: 'Defeat Barnacle Pete in challenge mode',          imageUrl: '/badges/corsairs_bane.png'  },
+  { id: 'ghost_ship',     name: "Krust's Crutch",     description: 'Defeat Captain Krust in challenge mode',          imageUrl: '/badges/ghost_ship.png'     },
 
   // Economy & navigation
   { id: 'fleet_admiral',  name: 'Fleet Admiral',      description: 'Complete 100 voyages',                            imageUrl: '/badges/fleet_admiral.png'  },

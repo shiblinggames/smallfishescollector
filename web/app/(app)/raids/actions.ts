@@ -214,12 +214,15 @@ export async function claimRaidLoot(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
-  // corsairs_bane / ghost_ship are Barnacle Pete feats — only the
-  // Corsair's Reckoning clear can earn them, never other raids.
-  if (raidId === 'corsairs_reckoning') {
-    if (elapsedMs <= 120_000) await unlockBadge('corsairs_bane')
-    if (damageTaken === 0) await unlockBadge('ghost_ship')
-  }
+  // Challenge-mode boss trophies. Any clear of a challenge raid awards
+  // the corresponding badge — no time/damage gating, the challenge fight
+  // itself is the bar. corsairs_bane = Pete challenge; ghost_ship (now
+  // labelled "Krust's Crutch") = Krust challenge. Normal-mode clears
+  // never grant either, so the badges read as "you beat the hard
+  // version". elapsedMs + damageTaken are still passed through for
+  // cumulative stats tracking elsewhere.
+  if (raidId === 'corsairs_reckoning_challenge') await unlockBadge('corsairs_bane')
+  if (raidId === 'captain_krust_challenge')      await unlockBadge('ghost_ship')
 
   const admin = createAdminClient()
   const { data: profile } = await admin

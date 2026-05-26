@@ -144,8 +144,9 @@ function NavLevelBar({ xp }: { xp: number }) {
 
 // (Removed: fmtTime + getTimeTier — Barnacle Pete no longer has a time limit
 //  or speed-tier multipliers on loot. Every successful raid clear grants the
-//  base loot roll. raidStartTimeRef is still tracked for the corsairs_bane
-//  speedrun badge, but it doesn't gate or scale rewards.)
+//  base loot roll. raidStartTimeRef is still wired through to claimRaidLoot
+//  for cumulative-stats tracking, but no longer drives any badge gate —
+//  corsairs_bane is now awarded for clearing Pete's challenge variant.)
 
 // ── Zone geometry ─────────────────────────────────────────────────────────────
 
