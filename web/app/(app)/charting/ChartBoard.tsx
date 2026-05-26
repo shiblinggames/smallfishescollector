@@ -185,9 +185,13 @@ export default function ChartBoard({
         </div>
       )}
 
-      {/* Grid */}
-      <div style={{ width: '100%', perspective: '700px' }}>
-        <div style={{ transform: 'rotateX(12deg) scaleX(0.88)', transformOrigin: 'top center' }}>
+      {/* Grid. Used to wrap this in perspective + rotateX(12deg) scaleX(0.88)
+          for a "map on a table" tilt, but CSS transforms don't update layout
+          flow — the tilted bottom rows paint over the finishers leaderboard
+          below. Flat is correct (Destination ↑ / Start ↓ labels already
+          orient the chart) and lets the leaderboard sit cleanly beneath. */}
+      <div style={{ width: '100%' }}>
+        <div>
         <p className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{
           fontSize: '0.62rem', color: '#c8a840', textAlign: 'center', marginBottom: 4,
         }}>⚓ Destination</p>
