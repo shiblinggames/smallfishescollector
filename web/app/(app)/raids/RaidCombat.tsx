@@ -2286,18 +2286,22 @@ function ActionMenu({ canFire, canVolley, canDodge, onSelect, disabled = false, 
 
 function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
   // Pokemon-style "battle text" box. Always visible, just current turn's events.
-  // Reserved height fits ~5 lines (typical max for a turn) so appending a new
-  // line doesn't grow the box and shift the rest of the layout — each line
-  // just fades in, no container reflow.
+  // Height is LOCKED to fit exactly 4 lines + the Turn header — older lines
+  // are clipped by `slice(-4)` so the box never grows and pushes the rest of
+  // the layout (most visible during the post-kill XP/doubloons cascade, which
+  // used to add 3-4 lines in quick succession and shove the action buttons
+  // down). The most recent 4 lines are always visible.
   const isEmpty = lines.length === 0
-  const visible = isEmpty ? ['What will you do?'] : lines
+  const visible = isEmpty ? ['What will you do?'] : lines.slice(-4)
   return (
     <div style={{
       background: '#04080e',
       border: '1px solid #1f2e42',
       borderRadius: 12,
       padding: '0.65rem 0.85rem',
-      minHeight: 138,
+      minHeight: 130,
+      maxHeight: 130,
+      overflow: 'hidden',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
         <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: '#5a7a9a' }}>
