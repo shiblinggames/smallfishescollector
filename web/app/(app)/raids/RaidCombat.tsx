@@ -26,6 +26,7 @@ import { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { getActiveEffects, getRaidItem } from '@/lib/raidItems'
 import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKits'
+import { type AffixDef } from '@/lib/raidAffixes'
 import CharacterAvatar from '@/components/CharacterAvatar'
 
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical'
@@ -139,6 +140,15 @@ function getShotResult(pos: number, zoneCenter: number): ShotResult {
 
 export interface RaidCombatProps {
   enemy: BroadsideEnemy
+  /** Challenge-mode elite affix for this encounter. When set, the enemy
+   *  arrives with the affix's behavior wired into the combat hooks
+   *  (damage reduction, lifesteal, reflect, on-death burn, etc.) and the
+   *  nameplate paints with the elite treatment. */
+  affix?: AffixDef
+  /** True for any encounter where `affix` is set. Used purely for visual
+   *  treatment (elite border + badge); the combat math reads from
+   *  `affix` directly so the two never disagree. */
+  isElite?: boolean
   isBoss: boolean
   shipImageUrl: string
   /** Optional CSS filter to recolor the ship sprite when a skin is equipped.
@@ -208,7 +218,8 @@ export interface RaidCombatProps {
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function RaidCombat({
-  enemy, isBoss, shipImageUrl, shipFilter, shipName, playerLabel,
+  enemy, affix, isElite = false,
+  isBoss, shipImageUrl, shipFilter, shipName, playerLabel,
   playerCharacterColor, playerEquippedHat,
   playerAvatarBg, playerAvatarBorder,
   playerHpMax, playerHp: initialPlayerHp,
@@ -581,7 +592,13 @@ export default function RaidCombat({
     const pSpeedRoll = rollSpeed(shipSpeed, totalNavigation) + Math.floor(totalNavigation * compassNavPct)
     const eSpeedRoll = rollSpeed(enemy.shipSpeed, 0)
     // First Strike crew effect: the player always acts first.
-    const first: Actor = mods.firstStrike ? 'player' : (pSpeedRoll >= eSpeedRoll ? 'player' : 'enemy')
+    // Fleet affix on the enemy: the enemy always acts first. First Strike
+    // beats Fleet in the rare case both are active (player effect wins).
+    const first: Actor = mods.firstStrike
+      ? 'player'
+      : affix?.alwaysFastest
+        ? 'enemy'
+        : (pSpeedRoll >= eSpeedRoll ? 'player' : 'enemy')
     setFirstActor(first)
     setSubPhase('revealing')
 
@@ -643,6 +660,18 @@ export default function RaidCombat({
       let enemyCrit = false
       const stepLines: string[] = []
 
+      // Resilient affix: heals at the start of every enemy turn. Fires
+      // BEFORE the action animates so the player sees the heal land first,
+      // then the enemy's attack/dodge. Skipped at 0 HP since dead enemies
+      // can't regenerate.
+      if (who === 'enemy' && affix?.turnStartHeal && eHp > 0 && eHp < enemy.hpBase) {
+        const healed = Math.min(affix.turnStartHeal, enemy.hpBase - eHp)
+        if (healed > 0) {
+          eHp += healed
+          stepLines.push(`${enemy.name} patches up ${healed} HP.`)
+        }
+      }
+
       if (action === 'reload') {
         if (who === 'player') { pCharges = Math.min(MAX_CHARGES, pCharges + 1); stepLines.push(`You load a cannonball. (${pCharges}/${MAX_CHARGES})`) }
         else                  { eCharges = Math.min(MAX_CHARGES, eCharges + 1); stepLines.push(`Enemy loads a cannonball. (${eCharges}/${MAX_CHARGES})`) }
@@ -685,13 +714,21 @@ export default function RaidCombat({
           // the hitsplat + log show the real number that gets through.
           const dr = enemy.damageReduction ?? 0
           if (dr > 0 && dmg > 0) dmg = Math.max(1, Math.round(dmg * (1 - dr)))
+          // Ironclad affix: extra flat % mitigation on top of any themed
+          // defense. Stacks multiplicatively, never floors below 1.
+          if (affix?.damageTakenMult && dmg > 0) {
+            dmg = Math.max(1, Math.round(dmg * affix.damageTakenMult))
+          }
         } else {
           const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
           dmg = base * (action === 'volley' ? 2 : 1)
           // Enemy crit — flat chance per enemy, applied after the volley
           // multiplier. Players crit through aim-bar skill; enemies don't
           // have that, so the same outcome happens via RNG.
-          if (Math.random() < (enemy.critChance ?? 0)) {
+          // Marksman affix multiplies the crit chance.
+          const baseCrit = enemy.critChance ?? 0
+          const effCrit  = affix?.critMult ? Math.min(1, baseCrit * affix.critMult) : baseCrit
+          if (Math.random() < effCrit) {
             enemyCrit = true
             dmg = Math.floor(dmg * 1.5)
           }
@@ -722,6 +759,22 @@ export default function RaidCombat({
         if (isAttackerPlayer) {
           eHp = Math.max(0, eHp - dmg)
           if (dmg > 0) onPlayerHit?.(dmg)
+          // Reflective affix: bounce a slice of the damage back to the
+          // player on landing. Fires only when actual damage landed
+          // (partial-dodge included; missed shots aren't reflected).
+          if (affix?.reflectPct && dmg > 0) {
+            const reflected = Math.max(1, Math.round(dmg * affix.reflectPct))
+            pHp = Math.max(0, pHp - reflected)
+            stepLines.push(`${enemy.name}'s plating reflects ${reflected} back at you.`)
+          }
+          // Volatile affix: if this shot just killed the enemy, the wreck
+          // explodes for a % of its hull. Fires inline so it lands in the
+          // same animation step as the killing blow.
+          if (eHp === 0 && affix?.deathBurnPct) {
+            const burn = Math.max(1, Math.round(enemy.hpBase * affix.deathBurnPct))
+            pHp = Math.max(0, pHp - burn)
+            stepLines.push(`The wreck goes up in flame, scorching you for ${burn}.`)
+          }
           if (partialDodge) {
             stepLines.push(action === 'volley'
               ? `Enemy partially dodges your volley — grazed for ${dmg}.`
@@ -747,6 +800,16 @@ export default function RaidCombat({
           const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100)
           if (takenMult !== 1 && dmg > 0) dmg = Math.max(1, Math.floor(dmg * takenMult))
           pHp = Math.max(0, pHp - dmg)
+          // Vampiric affix: enemy heals a fraction of dealt damage. Capped
+          // at its maxHP. Fires after the damage lands so the heal feels
+          // like a follow-up, not a pre-emptive negation.
+          if (affix?.lifestealPct && dmg > 0 && eHp > 0 && eHp < enemy.hpBase) {
+            const stolen = Math.min(enemy.hpBase - eHp, Math.max(1, Math.round(dmg * affix.lifestealPct)))
+            if (stolen > 0) {
+              eHp += stolen
+              stepLines.push(`${enemy.name} drinks back ${stolen} HP from the hit.`)
+            }
+          }
           if (partialDodge) {
             stepLines.push(action === 'volley'
               ? `You partially dodge the volley — grazed for ${dmg}.`
@@ -774,6 +837,42 @@ export default function RaidCombat({
         big: (who === 'player' && lockedAimResult === 'critical') || (who === 'enemy' && enemyCrit),
         logLines: stepLines,
       })
+
+      // Frenzied affix: when this enemy fires or volleys, it has a chance
+      // to fire AGAIN on the same turn. Implemented as an extra step
+      // appended right after the original so the animation reads as one
+      // beat → a second beat. Only fires if the enemy is still alive and
+      // the player is still alive (no kicking corpses).
+      if (
+        who === 'enemy'
+        && affix?.doubleFireChance
+        && (action === 'fire' || action === 'volley')
+        && pHp > 0 && eHp > 0
+        && Math.random() < affix.doubleFireChance
+      ) {
+        const base2 = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
+        let dmg2 = base2 // frenzy follow-up is always a single shot (not volley)
+        const baseCrit2 = enemy.critChance ?? 0
+        const effCrit2  = affix?.critMult ? Math.min(1, baseCrit2 * affix.critMult) : baseCrit2
+        let frenziedCrit = false
+        if (Math.random() < effCrit2) { frenziedCrit = true; dmg2 = Math.floor(dmg2 * 1.5) }
+        const takenMult2 = incomingDmgMult * (1 + mods.damageTakenPct / 100)
+        if (takenMult2 !== 1 && dmg2 > 0) dmg2 = Math.max(1, Math.floor(dmg2 * takenMult2))
+        pHp = Math.max(0, pHp - dmg2)
+        if (dmg2 > 0 && eHp > 0 && eHp < enemy.hpBase && affix.lifestealPct) {
+          const stolen2 = Math.min(enemy.hpBase - eHp, Math.max(1, Math.round(dmg2 * affix.lifestealPct)))
+          eHp += stolen2
+        }
+        steps.push({
+          who: 'enemy', action: 'fire',
+          pHp, eHp, pCharges, eCharges,
+          splatTarget: 'player',
+          splatText: `-${dmg2}`,
+          splatColor: frenziedCrit ? '#fbbf24' : '#ef4444',
+          big: frenziedCrit,
+          logLines: [`Frenzied! ${enemy.name} fires again for ${dmg2}${frenziedCrit ? ' (critical!)' : ''}.`],
+        })
+      }
     }
 
     // Animate the pre-computed steps sequentially. Each step:
@@ -1074,7 +1173,10 @@ export default function RaidCombat({
           </div>
         )}
 
-        {/* Enemy HP nameplate — top-left, with circular portrait badge */}
+        {/* Enemy HP nameplate — top-left, with circular portrait badge.
+            Elite encounters paint with a purple-violet accent (border,
+            portrait ring, glow) so they read as "this one is different"
+            from the moment they appear. */}
         <button
           type="button"
           onClick={() => setShowEnemyStats(true)}
@@ -1083,8 +1185,9 @@ export default function RaidCombat({
             position: 'absolute', top: 10, left: 10, zIndex: 4,
             padding: '0.45rem 0.6rem 0.5rem 0.45rem',
             background: 'rgba(6,12,20,0.9)',
-            border: `1px solid ${isBoss ? '#fbbf24' : '#2a3548'}`,
+            border: `1px solid ${isBoss ? '#fbbf24' : isElite ? '#a78bfa' : '#2a3548'}`,
             borderRadius: 12,
+            boxShadow: isElite ? '0 0 14px rgba(167,139,250,0.32)' : undefined,
             display: 'flex', alignItems: 'center', gap: 8,
             minWidth: 160,
             textAlign: 'left',
@@ -1095,9 +1198,9 @@ export default function RaidCombat({
           {enemy.portrait && (
             <div style={{
               flexShrink: 0, width: 54, height: 54, borderRadius: '50%',
-              border: `2px solid ${isBoss ? '#fbbf24' : ENEMY_COLOR}`,
+              border: `2px solid ${isBoss ? '#fbbf24' : isElite ? '#a78bfa' : ENEMY_COLOR}`,
               overflow: 'hidden',
-              boxShadow: `0 0 10px ${isBoss ? 'rgba(251,191,36,0.45)' : 'rgba(239,68,68,0.4)'}`,
+              boxShadow: `0 0 10px ${isBoss ? 'rgba(251,191,36,0.45)' : isElite ? 'rgba(167,139,250,0.55)' : 'rgba(239,68,68,0.4)'}`,
               background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.08) 0%, rgba(20,40,60,0.85) 70%)',
             }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1123,7 +1226,18 @@ export default function RaidCombat({
               {isBoss && (
                 <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#fbbf24', letterSpacing: '0.1em' }}>BOSS</span>
               )}
+              {isElite && !isBoss && (
+                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#c4b5fd', letterSpacing: '0.1em' }}>ELITE</span>
+              )}
             </div>
+            {/* Affix label sits under the name when elite — players see at
+                a glance what twist this elite has, and can tap into the
+                stats popup for the full description. */}
+            {isElite && affix && (
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', color: '#a78bfa', letterSpacing: '0.14em', marginBottom: 3 }}>
+                {affix.name}
+              </p>
+            )}
             <HPBar current={enemyHp} max={enemy.hpBase} accent={ENEMY_COLOR} compact />
             <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small />
           </div>
@@ -1482,6 +1596,8 @@ export default function RaidCombat({
             enemy={enemy}
             currentHp={enemyHp}
             isBoss={isBoss}
+            isElite={isElite}
+            affix={affix}
             onClose={() => setShowEnemyStats(false)}
           />
         )}
@@ -1683,11 +1799,13 @@ function PlayerStatsPopup({
 // speed, the themed ability if any, and the full behavior pattern as chips so
 // the cycle is legible. Tapping the backdrop or Close dismisses.
 function EnemyStatsPopup({
-  enemy, currentHp, isBoss, onClose,
+  enemy, currentHp, isBoss, isElite, affix, onClose,
 }: {
   enemy: BroadsideEnemy
   currentHp: number
   isBoss: boolean
+  isElite?: boolean
+  affix?: AffixDef
   onClose: () => void
 }) {
   const minVolley = enemy.minDmg * 2
@@ -1787,6 +1905,43 @@ function EnemyStatsPopup({
             </div>
           ))}
         </div>
+
+        {/* Elite affix card — appears above the themed-ability card so the
+            twist for THIS specific elite reads first. Uses the same shape
+            as the ability card with a violet palette so the two feel
+            sibling but distinct. */}
+        {isElite && affix && (
+          <div style={{ marginBottom: 14 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', color: '#a78bfa', letterSpacing: '0.16em', marginBottom: 6 }}>
+              Elite Affix
+            </p>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '0.65rem 0.75rem',
+              background: 'rgba(167,139,250,0.07)',
+              border: '1px solid rgba(167,139,250,0.32)',
+              borderRadius: 12,
+            }}>
+              <div style={{
+                width: 36, height: 36, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(167,139,250,0.12)',
+                border: '1px solid rgba(167,139,250,0.4)',
+                borderRadius: 9,
+              }}>
+                <span style={{ fontSize: '1.05rem' }} aria-hidden>✦</span>
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#c4b5fd', lineHeight: 1.15, marginBottom: 2 }}>
+                  {affix.name}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
+                  {affix.description}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Themed ability — Carapace / etc., if the enemy has one */}
         {dr > 0 && abilityName && (

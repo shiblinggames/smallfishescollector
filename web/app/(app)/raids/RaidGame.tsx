@@ -12,6 +12,8 @@ import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import {
   BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR, raidCompletionBonusXp,
 } from '@/lib/bossRaids'
+import { isChallengeRaidId } from '@/lib/raidChallenge'
+import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollEliteSlots, type AffixDef, type AffixId } from '@/lib/raidAffixes'
 import RaidCombat from './RaidCombat'
 import RaidLootStage from './RaidLootStage'
 import BossDialogueModal from './BossDialogueModal'
@@ -38,6 +40,32 @@ function getEnemyForRound(round: number, config: BossRaidConfig): BroadsideEnemy
   const cycleLen = config.sequence.length + 1
   if (isBossRound(round, config.sequence.length)) return config.enemies[config.bossId]
   return config.enemies[config.sequence[round % cycleLen]]
+}
+
+/** Returns the affix for the current round if this slot was rolled elite at
+ *  run start. Boss rounds are excluded by the caller; we only check the
+ *  challenge-mode elite map. */
+function getEliteAffixForRound(
+  round: number,
+  config: BossRaidConfig,
+  eliteAffixes: Record<number, AffixId>,
+): AffixDef | undefined {
+  if (isBossRound(round, config.sequence.length)) return undefined
+  const slot = round % (config.sequence.length + 1)
+  const id = eliteAffixes[slot]
+  return id ? AFFIXES[id] : undefined
+}
+
+/** Scale a BroadsideEnemy into its elite form (×2 HP, ×1.5 dmg on top of
+ *  whatever challenge-mode scaling already applied to the base). Stat-only
+ *  transform; the affix behavior is wired separately in RaidCombat. */
+function buildEliteEnemy(base: BroadsideEnemy): BroadsideEnemy {
+  return {
+    ...base,
+    hpBase: Math.round(base.hpBase * ELITE_HP_MULT),
+    minDmg: Math.max(1, Math.round(base.minDmg * ELITE_DMG_MULT)),
+    maxDmg: Math.max(1, Math.round(base.maxDmg * ELITE_DMG_MULT)),
+  }
 }
 function getEnemyHP(round: number, config: BossRaidConfig): number {
   return getEnemyForRound(round, config).hpBase
@@ -357,6 +385,17 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     getActiveEffects(equippedItems)
       .filter(e => e.type === 'lethal_save')
       .reduce((a, e) => a + e.value, 0),
+  )
+
+  // Challenge-mode elite roll. Runs once at mount: pick N non-boss slots
+  // (currently 2) and roll a random affix for each. Persists across
+  // encounter remounts so each elite slot gets the same affix throughout
+  // a run, but a fresh run rerolls. Boss slot is never elite — bosses
+  // get phases (Phase 3 work), not affixes.
+  const eliteAffixesRef = useRef<Record<number, AffixId>>(
+    isChallengeRaidId(config.raidId)
+      ? Object.fromEntries(rollEliteSlots(config.sequence.length, 2).map(slot => [slot, rollAffix()]))
+      : {},
   )
 
   const [phase, setPhase]               = useState<GamePhase>('idle')
@@ -1166,10 +1205,18 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           {(() => {
             const currentEnemyId = getEnemyForRound(roundRef.current, config).id
             const reward = config.killRewards[currentEnemyId]
+            // Challenge-mode elite check. Resolved per round so each
+            // encounter remount picks up the right scaled enemy + affix.
+            const eliteAffix = getEliteAffixForRound(roundRef.current, config, eliteAffixesRef.current)
+            const enemyForCombat = eliteAffix
+              ? buildEliteEnemy(getEnemyForRound(roundRef.current, config))
+              : getEnemyForRound(roundRef.current, config)
             return (
               <RaidCombat
                 key={`combat-r${roundDisplay}`}
-                enemy={getEnemyForRound(roundRef.current, config)}
+                enemy={enemyForCombat}
+                affix={eliteAffix}
+                isElite={!!eliteAffix}
                 isBoss={isBoss}
                 shipImageUrl={shipImageUrl}
                 shipFilter={shipFilter}
