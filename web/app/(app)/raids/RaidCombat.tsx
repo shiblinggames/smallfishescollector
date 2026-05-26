@@ -719,7 +719,15 @@ export default function RaidCombat({
           const bossMult = isBoss
             ? getActiveEffects(equippedRaidItems).filter(e => e.type === 'boss_damage_mult').reduce((a, e) => a * e.value, 1)
             : 1
-          const mult = (action === 'volley' ? 2 : 1) * bossMult
+          // Crit / non-crit damage mults from raid items (Gunner's Sight).
+          // Only ONE branch applies per shot — crit shots multiply by the
+          // crit mult; hit + graze multiply by the non-crit mult. Skipped
+          // entirely on a miss (rollShotDamage already returns 0).
+          const isCritShot = lockedAimResult === 'critical'
+          const aimItemMult = isCritShot
+            ? getActiveEffects(equippedRaidItems).filter(e => e.type === 'crit_damage_mult').reduce((a, e) => a * e.value, 1)
+            : getActiveEffects(equippedRaidItems).filter(e => e.type === 'noncrit_damage_mult').reduce((a, e) => a * e.value, 1)
+          const mult = (action === 'volley' ? 2 : 1) * bossMult * aimItemMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           // Enemy themed defense: crustacean carapace soaks a flat % off every
           // hit the player lands (Krust's crew). Applied to the rolled damage so

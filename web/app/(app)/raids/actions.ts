@@ -6,6 +6,7 @@ import { EXPEDITION_SHIP_STATS, raidRepairCost, type RaidMods } from '@/lib/expe
 import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
+import { getActiveEffects } from '@/lib/raidItems'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
@@ -77,8 +78,16 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   const navLevel = getLevelFromXP((profile?.expedition_xp as number | null) ?? 0)
   const navBonus = navLevelBonuses(navLevel)
 
+  // Reinforced Hull etc. — raid items can scale max HP at raid start.
+  // Multiplies after the ship + nav HP are summed so it applies to the
+  // full pool. Multiple max_hp_mult items stack multiplicatively.
+  const equippedItems = (profile?.equipped_raid_items as string[] | null) ?? []
+  const hpMaxMult = getActiveEffects(equippedItems)
+    .filter(e => e.type === 'max_hp_mult')
+    .reduce((a, e) => a * e.value, 1)
+
   return {
-    playerHPMax:      ship.durability + navBonus.hp,
+    playerHPMax:      Math.round((ship.durability + navBonus.hp) * hpMaxMult),
     shipMinDamage:    ship.minDamage,
     shipSpeed:        ship.speed,
     totalPower:       totalPower   + navBonus.power,
