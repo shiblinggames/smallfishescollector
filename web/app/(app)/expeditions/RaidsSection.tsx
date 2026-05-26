@@ -669,12 +669,12 @@ function NodeDetailSheet({
           </div>
         )}
 
-        {/* Boss records — fastest non-admin clear + the player's own best +
-            community count. Lives above Drops so the player sees "X people
-            have cleared this, fastest was Y" right before they decide
-            whether to run it again. Only renders on raid-type nodes with
-            at least one community record. Admins are excluded from
-            fastest/total (their dev runs don't represent a player time). */}
+        {/* Boss records — fastest non-admin clear + the player's own best.
+            Lives above Drops so the player sees the target time + their own
+            best right before they decide whether to run it again. Only
+            renders on raid-type nodes with at least one populated record.
+            Admins are excluded from "Fastest" so dev runs don't claim the
+            top slot; "Your best" still shows for admins on their own sheet. */}
         {node.type === 'raid' && raidRecords && (raidRecords.fastestMs > 0 || raidRecords.yourBestMs != null) && (
           <div style={{ marginTop: '1.1rem' }}>
             <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>Boss Records</p>
@@ -686,9 +686,8 @@ function NodeDetailSheet({
             }}>
               {raidRecords.fastestMs > 0 && (
                 <div className="flex items-baseline justify-between" style={{ gap: 10 }}>
-                  <div className="flex items-baseline" style={{ gap: 6, minWidth: 0 }}>
-                    <span aria-hidden style={{ fontSize: '0.78rem' }}>🥇</span>
-                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#c8a840', letterSpacing: '0.12em' }}>Fastest</span>
+                  <div className="flex items-baseline" style={{ gap: 8, minWidth: 0 }}>
+                    <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#c8a840' }}>Fastest</span>
                     <span className="font-karla font-600 truncate" style={{ fontSize: '0.78rem', color: '#e6d49a', minWidth: 0 }}>{raidRecords.fastestUsername}</span>
                   </div>
                   <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0c040', textShadow: '0 0 10px rgba(240,192,64,0.35)', fontFeatureSettings: '"tnum"', flexShrink: 0 }}>
@@ -698,21 +697,11 @@ function NodeDetailSheet({
               )}
               {raidRecords.yourBestMs != null && (
                 <div className="flex items-baseline justify-between" style={{ gap: 10 }}>
-                  <div className="flex items-baseline" style={{ gap: 6 }}>
-                    <span aria-hidden style={{ fontSize: '0.78rem' }}>⚓</span>
-                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#7da0d8', letterSpacing: '0.12em' }}>Your best</span>
-                  </div>
+                  <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#7da0d8' }}>Your best</span>
                   <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#cbd6e6', fontFeatureSettings: '"tnum"' }}>
                     {formatRaidMs(raidRecords.yourBestMs)}
                   </span>
                 </div>
-              )}
-              {raidRecords.totalClearers > 0 && (
-                <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.45, marginTop: 2 }}>
-                  {raidRecords.totalClearers === 1
-                    ? '1 captain has cleared this raid.'
-                    : `${raidRecords.totalClearers} captains have cleared this raid.`}
-                </p>
               )}
             </div>
           </div>
