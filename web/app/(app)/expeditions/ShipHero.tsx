@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { repairShip } from '@/app/(app)/raids/actions'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ShipStats } from '@/lib/expeditions'
-import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS, getRankTitle, RAID_SCORE_TARGET } from '@/lib/expeditions'
+import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS, getRankTitle } from '@/lib/expeditions'
 import { SHIPS } from '@/lib/ships'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange } from '@/lib/repairKits'
@@ -1697,7 +1697,7 @@ function RaidScoreBreakdown({
   crewPower: number; crewDodge: number; crewFortune: number
   navLevel: number; navBonusPower: number; navBonusDodge: number; navBonusFortune: number; navBonusHp: number
   shipName: string; shipDurability: number; shipMin: number
-  rating: { offense: number; defense: number; total: number; score: number }
+  rating: { offense: number; defense: number; offenseScore: number; defenseScore: number; score: number }
   onClose: () => void
 }) {
   const stats = [
@@ -1728,24 +1728,39 @@ function RaidScoreBreakdown({
         harder you hit and the longer you survive in a fight.
       </p>
 
-      {/* Offense */}
+      {/* Offense — 0-100 sub-score against an endgame benchmark, with the
+          raw damage-per-shot shown as fine print so the headline is
+          directly comparable to Defense. */}
       <div style={{ padding: '0.85rem 0.95rem', background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.24)', borderRadius: 12, marginBottom: '0.6rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
           <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.8rem', color: '#f87171' }}>Offense</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>{rating.offense}</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>
+            {rating.offenseScore}<span style={{ color: '#9a5454', fontSize: '0.78rem' }}>/100</span>
+          </p>
+        </div>
+        <div style={{ height: 5, background: 'rgba(248,113,113,0.12)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+          <div style={{ height: '100%', width: `${rating.offenseScore}%`, background: '#f87171', borderRadius: 3 }} />
         </div>
         <p className="font-karla" style={{ fontSize: '0.84rem', color: '#cbb4ad', lineHeight: 1.5 }}>
           The damage you deal. Grows with your crew&apos;s{' '}
           <span style={{ color: '#f0ede8', fontWeight: 600 }}>Power</span>, plus crit
           from raid traits like Keen Cutlass.
         </p>
+        <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a6a60', marginTop: 6 }}>
+          Avg <span style={{ color: '#cbb4ad', fontWeight: 600 }}>{rating.offense}</span> damage per shot.
+        </p>
       </div>
 
-      {/* Defense */}
-      <div style={{ padding: '0.85rem 0.95rem', background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.24)', borderRadius: 12, marginBottom: '0.6rem' }}>
+      {/* Defense — same shape, same scale. */}
+      <div style={{ padding: '0.85rem 0.95rem', background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.24)', borderRadius: 12, marginBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
           <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.8rem', color: '#60a5fa' }}>Defense</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>{rating.defense}</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>
+            {rating.defenseScore}<span style={{ color: '#4a6e9a', fontSize: '0.78rem' }}>/100</span>
+          </p>
+        </div>
+        <div style={{ height: 5, background: 'rgba(96,165,250,0.12)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+          <div style={{ height: '100%', width: `${rating.defenseScore}%`, background: '#60a5fa', borderRadius: 3 }} />
         </div>
         <p className="font-karla" style={{ fontSize: '0.84rem', color: '#aebfd4', lineHeight: 1.5 }}>
           How much of a beating you can take. Grows with your ship&apos;s{' '}
@@ -1753,13 +1768,13 @@ function RaidScoreBreakdown({
           <span style={{ color: '#f0ede8', fontWeight: 600 }}>Agility</span> (dodge incoming hits),
           with a little sustain from <span style={{ color: '#f0ede8', fontWeight: 600 }}>Fortune</span> (repair kits).
         </p>
+        <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a6a60', marginTop: 6 }}>
+          <span style={{ color: '#aebfd4', fontWeight: 600 }}>{rating.defense}</span> effective HP buffer.
+        </p>
       </div>
 
-      {/* Raw total — shown as a small footnote so hardcore players still see
-          the underlying Offense + ½ Defense number, while the headline 0-100
-          score lives in the banner up top. */}
       <p className="font-karla" style={{ fontSize: '0.7rem', color: '#7a6a60', lineHeight: 1.45, textAlign: 'center', marginBottom: '1rem' }}>
-        Raw total <span style={{ color: '#cbb4ad', fontWeight: 600 }}>{rating.total}</span> = Offense + ½ Defense, scaled to {RAID_SCORE_TARGET} for the /100 score.
+        Raid Score is the average of Offense and Defense — both matter equally.
       </p>
 
       {/* How to raise it */}

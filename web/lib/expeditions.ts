@@ -158,18 +158,25 @@ export function computeVoyageScore(power: number, dodge: number, fortune: number
 // effective HP. Input values should already include nav-level bonuses.
 
 export interface CombatRating {
+  /** Raw average damage per shot (after crit). Kept for the breakdown's
+   *  fine-print line so math-curious players see the underlying number. */
   offense: number
+  /** Raw effective HP (HP × dodge boost × bulwark + fortune sustain). Same
+   *  story — surfaced as fine print in the breakdown. */
   defense: number
-  total: number
-  /** 0–100 readiness on the shared nautical ladder (see RANK_TITLES). */
+  /** 0–100 sub-score: Offense vs OFFENSE_BENCHMARK. */
+  offenseScore: number
+  /** 0–100 sub-score: Defense vs DEFENSE_BENCHMARK. */
+  defenseScore: number
+  /** 0–100 overall Raid Score on the shared nautical ladder (see RANK_TITLES).
+   *  Average of the two sub-scores — both axes matter equally in a raid. */
   score: number
 }
 
 // ── Shared rank ladder ───────────────────────────────────────────────────────
-// One vocabulary for both scores: Voyage Score (0–100) and Raid Score (0–100,
-// derived from CombatRating.total via RAID_SCORE_TARGET). Reuses the seven
-// nautical titles that used to live on nav level — there's only one set of
-// titles in the game so players don't juggle two ladders.
+// One vocabulary for both scores: Voyage Score (0–100) and Raid Score (0–100).
+// Reuses the seven nautical titles that used to live on nav level — there's
+// only one set of titles in the game so players don't juggle two ladders.
 
 export const RANK_TITLES: { min: number; title: string }[] = [
   { min: 90, title: 'Legendary Seafarer' },
@@ -185,15 +192,21 @@ export function getRankTitle(score: number): string {
   return RANK_TITLES.find(t => score >= t.min)?.title ?? 'Deckhand'
 }
 
-// Raw raid totals (offense + defense/2) top out around 220 for a no-compromises
-// endgame loadout (tier-6 ship + Nav 100 + 5 maxed Legendaries with Bulwark +
-// Keen Cutlass). Used to normalise the raw total onto the shared 0–100 ladder
-// so Voyage Score and Raid Score read on the same scale. Revisit only when new
-// CONTENT raises the ceiling: a new ship tier, a new crew rarity above
-// Legendary, the Nav cap above 100, or new high-pct crew effects. Boss
-// difficulty does NOT change this — the score is your setup's strength, not
-// the difficulty of the fight in front of you.
-export const RAID_SCORE_TARGET = 220
+// Per-axis benchmarks for a no-compromises endgame loadout (tier-6 ship + Nav
+// 100 + 5 maxed Legendaries + Bulwark + Keen Cutlass):
+//
+//   avgHit ≈ 31 × 1.30 crit = 40           → OFFENSE_BENCHMARK
+//   shipHP 190 × 1.5 dodge × 1.25 bulwark
+//     + 65/4 fortune sustain ≈ 372         → DEFENSE_BENCHMARK
+//
+// Each axis is shown as a 0-100 sub-score in the breakdown so Offense and
+// Defense are directly comparable — different stats but same scale — and the
+// overall Raid Score is just the average of the two. Revisit only when new
+// CONTENT raises a ceiling: new ship tier, new rarity above Legendary, Nav
+// cap > 100, or new high-pct crew effects. Boss difficulty doesn't change
+// this — the score is your setup's strength, not the fight in front of you.
+export const OFFENSE_BENCHMARK = 40
+export const DEFENSE_BENCHMARK = 370
 
 // Net raid combat modifiers from crew effects (Stage 2b). Aggregated by
 // resolveDeployedCrew; passed into the damage profile + rating + live combat.
@@ -241,12 +254,17 @@ export function computeCombatRating(
   const takenMult  = Math.max(0.1, 1 - (raidMods?.damageTakenPct ?? 0) / 100)
   const defense    = Math.round(shipDurability * (1 + dodgeBoost) * takenMult) + Math.round(totalFortune * 0.25)
 
-  const total = offense + Math.round(defense * 0.5)
+  const offenseScore = Math.min(100, Math.round((offense / OFFENSE_BENCHMARK) * 100))
+  const defenseScore = Math.min(100, Math.round((defense / DEFENSE_BENCHMARK) * 100))
   return {
     offense,
     defense,
-    total,
-    score: Math.min(100, Math.round((total / RAID_SCORE_TARGET) * 100)),
+    offenseScore,
+    defenseScore,
+    // Average of the two — both axes matter equally in a raid. Living through
+    // a boss without dealing damage just stalls; one-shotting yourself dead
+    // doesn't clear the fight either.
+    score: Math.round((offenseScore + defenseScore) / 2),
   }
 }
 
