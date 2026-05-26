@@ -63,9 +63,11 @@ export interface AffixDef {
   reflectPct?:         number  // 0.15
   reflectChance?:      number  // 0.5
 
-  // ── Resilient — 33% chance to regen 5% of maxHP at turn start ───────
-  turnStartHealMaxPct?: number // 0.05
-  turnStartHealChance?: number // 0.33
+  // ── Resilient — 33% chance to regen at turn start, floored at the base
+  //    heal value with the % scaling kicking in on bigger-hull enemies ─
+  turnStartHealBase?:   number  // 5 — minimum HP healed when the affix fires
+  turnStartHealMaxPct?: number  // 0.05 — heals up to this fraction of maxHP if it exceeds the base
+  turnStartHealChance?: number  // 0.33
 
   // ── Marksman — always-on crit chance multiplier ─────────────────────
   critMult?:           number  // 2 = doubles base crit chance
@@ -74,46 +76,47 @@ export interface AffixDef {
 export const AFFIXES: Record<AffixId, AffixDef> = {
   ironclad: {
     id: 'ironclad', name: 'Ironclad',
-    description: 'Half the time, plated hull soaks 30% off the shot you land.',
+    description: '50% chance to soak 30% off your shot.',
     damageTakenMult: 0.7,
     damageTakenChance: 0.5,
   },
   vampiric: {
     id: 'vampiric', name: 'Vampiric',
-    description: 'Half the time, drinks back a fifth of the damage it deals you.',
+    description: '50% chance to repair 20% of the damage it deals you.',
     lifestealPct: 0.20,
     lifestealChance: 0.5,
   },
   volatile: {
     id: 'volatile', name: 'Volatile',
-    description: 'Goes up like a powder magazine on death, scorching you for a tenth of your remaining hull.',
+    description: 'Wreck explodes on sinking for 10% of your current HP.',
     deathBurnRemainingPct: 0.10,
   },
   fleet: {
     id: 'fleet', name: 'Fleet',
-    description: 'Catches the wind first. Much better odds of acting before you on every turn.',
+    description: 'Heavy speed bonus. Usually acts before you each turn.',
     speedBonus: 5,
   },
   frenzied: {
     id: 'frenzied', name: 'Frenzied',
-    description: 'When it pulls the trigger, one in three turns it fires again on the same breath.',
+    description: '33% chance to fire twice in one turn.',
     doubleFireChance: 0.33,
   },
   reflective: {
     id: 'reflective', name: 'Reflective',
-    description: 'Half the time, polished plating bounces 15% of your damage right back into your hull.',
+    description: '50% chance to reflect 15% of your damage back.',
     reflectPct: 0.15,
     reflectChance: 0.5,
   },
   resilient: {
     id: 'resilient', name: 'Resilient',
-    description: 'One in three of its turns, patches up 5% of its hull at the top.',
+    description: '33% chance to repair 5 HP at the start of its turn.',
+    turnStartHealBase: 5,
     turnStartHealMaxPct: 0.05,
     turnStartHealChance: 0.33,
   },
   marksman: {
     id: 'marksman', name: 'Marksman',
-    description: 'Doubles its odds of landing a crit on you.',
+    description: 'Doubles its crit chance against you.',
     critMult: 2,
   },
 }

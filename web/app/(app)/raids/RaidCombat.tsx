@@ -365,6 +365,11 @@ export default function RaidCombat({
     setPlayerHp(next)
     setPHitsplat({ key: Date.now(), text: `-${dmg}`, color: '#ef4444' })
     setPlayerShakeKey(k => k + 1)
+    // Clear the splat after the standard hold (matches the in-combat
+    // SPLAT_HOLD_MS in resolveTurn). The flee path used to forget this
+    // cleanup, leaving the "-N" number stuck on the ship until the next
+    // turn's splat clobbered it.
+    setTimeout(() => setPHitsplat(null), 480)
     setResolveLog(prev => [...prev, next <= 0
       ? `You break for it, but ${enemy.name} runs you down for ${dmg}!`
       : `You try to flee, but ${enemy.name} lands a parting shot for ${dmg}.`])
@@ -659,17 +664,19 @@ export default function RaidCombat({
       let enemyCrit = false
       const stepLines: string[] = []
 
-      // Resilient affix: 33% chance to regen 5% of maxHP at the top of
-      // each enemy turn. Scales with the enemy's hull instead of a flat
-      // amount, so it stays relevant on bigger ships. Skipped at 0 HP
-      // (dead enemies don't regenerate) and at full HP (no point).
+      // Resilient affix: 33% chance to regen at the top of each enemy
+      // turn. Heals max(base, % of maxHP) so small ships get a flat 5
+      // minimum and bigger ones scale up via the percentage. Skipped at
+      // 0 HP (dead enemies don't regen) and at full HP (no point).
       if (
         who === 'enemy'
-        && affix?.turnStartHealMaxPct
+        && (affix?.turnStartHealBase || affix?.turnStartHealMaxPct)
         && eHp > 0 && eHp < enemy.hpBase
         && Math.random() < (affix.turnStartHealChance ?? 1)
       ) {
-        const healAmount = Math.max(1, Math.round(enemy.hpBase * affix.turnStartHealMaxPct))
+        const flat = affix.turnStartHealBase ?? 0
+        const pct  = affix.turnStartHealMaxPct ? Math.round(enemy.hpBase * affix.turnStartHealMaxPct) : 0
+        const healAmount = Math.max(1, flat, pct)
         const healed = Math.min(healAmount, enemy.hpBase - eHp)
         if (healed > 0) {
           eHp += healed
