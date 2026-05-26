@@ -10,6 +10,7 @@ import { computeCombatRating, computeVoyageScore } from '@/lib/expeditions'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange } from '@/lib/repairKits'
 import { equipShipSkin, saveEquippedRaidItems } from './actions'
+import PopupShell from '@/components/PopupShell'
 import { assignCrew } from '@/app/dev/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
@@ -1146,86 +1147,53 @@ export default function ShipHero({
 
       {/* Score breakdown modal — opens when the player taps a score on the
           hero strip. Shows the actual formula with the player's numbers
-          plugged in so they can see WHY their score is what it is. */}
-      <AnimatePresence>
-        {breakdownScore && (
-          <>
-            <motion.div
-              key="breakdown-backdrop"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 110, pointerEvents: 'none' }}
+          plugged in so they can see WHY their score is what it is. Uses the
+          shared <PopupShell>, which handles the safe-area padding so the
+          modal's top isn't hidden under the Nav header and the bottom isn't
+          clipped behind the MobileTabBar. */}
+      <PopupShell open={!!breakdownScore} onClose={() => setBreakdownScore(null)}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 4 }}
+          transition={{ duration: 0.18 }}
+          style={{
+            margin: 'auto',
+            width: '100%',
+            maxWidth: 420,
+            background: 'rgba(8,14,24,0.98)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 18,
+            padding: '1.1rem 1rem 1.25rem',
+          }}
+        >
+          {breakdownScore === 'voyage' ? (
+            <VoyageScoreBreakdown
+              power={totalPower}
+              dodge={totalDodge}
+              fortune={totalFortune}
+              total={voyageScore}
+              onClose={() => setBreakdownScore(null)}
             />
-            {/* Full-screen scroll wrapper. The modal can be taller than the
-                viewport, so the *wrapper* scrolls (not a nested box) — that
-                keeps the top reachable. `margin: auto` on the modal centers
-                it when it's short and top-anchors it (still fully
-                scrollable) when it's tall. Tapping the empty area closes. */}
-            <div
-              onClick={e => { if (e.target === e.currentTarget) setBreakdownScore(null) }}
-              style={{
-                position: 'fixed', inset: 0, zIndex: 111,
-                display: 'flex',
-                // Clear the fixed Nav header (44px mobile, 60px desktop) + iOS
-                // safe-area-top so the modal's top isn't hidden under it when
-                // scrolled.
-                paddingTop: 'calc(env(safe-area-inset-top, 0px) + 76px)',
-                paddingLeft: '1rem',
-                paddingRight: '1rem',
-                // Clear the 60px MobileTabBar + iOS safe-area + a little breathing
-                // room, so a tall breakdown modal isn't clipped by the bottom nav
-                // when scrolled to its end.
-                paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
-                overflowY: 'auto',
-                WebkitOverflowScrolling: 'touch',
-                overscrollBehavior: 'contain',
-              }}
-            >
-              <motion.div
-                key="breakdown-modal"
-                initial={{ opacity: 0, scale: 0.96, y: 8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: 4 }}
-                transition={{ duration: 0.18 }}
-                style={{
-                  margin: 'auto',
-                  width: '100%',
-                  maxWidth: 420,
-                  background: 'rgba(8,14,24,0.98)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: 18,
-                  padding: '1.1rem 1rem 1.25rem',
-                }}
-              >
-                {breakdownScore === 'voyage' ? (
-                  <VoyageScoreBreakdown
-                    power={totalPower}
-                    dodge={totalDodge}
-                    fortune={totalFortune}
-                    total={voyageScore}
-                    onClose={() => setBreakdownScore(null)}
-                  />
-                ) : (
-                  <RaidScoreBreakdown
-                    crewPower={totalPower}
-                    crewDodge={totalDodge}
-                    crewFortune={totalFortune}
-                    navLevel={xpProgress.level}
-                    navBonusPower={navBonus.power}
-                    navBonusDodge={navBonus.navigation}
-                    navBonusFortune={navBonus.fortune}
-                    navBonusHp={navBonus.hp}
-                    shipName={shipStats.name}
-                    shipDurability={shipStats.durability}
-                    shipMin={shipStats.minDamage}
-                    rating={raidRating}
-                    onClose={() => setBreakdownScore(null)}
-                  />
-                )}
-              </motion.div>
-            </div>
-          </>
-        )}
-      </AnimatePresence>
+          ) : (
+            <RaidScoreBreakdown
+              crewPower={totalPower}
+              crewDodge={totalDodge}
+              crewFortune={totalFortune}
+              navLevel={xpProgress.level}
+              navBonusPower={navBonus.power}
+              navBonusDodge={navBonus.navigation}
+              navBonusFortune={navBonus.fortune}
+              navBonusHp={navBonus.hp}
+              shipName={shipStats.name}
+              shipDurability={shipStats.durability}
+              shipMin={shipStats.minDamage}
+              rating={raidRating}
+              onClose={() => setBreakdownScore(null)}
+            />
+          )}
+        </motion.div>
+      </PopupShell>
     </>
   )
 }
