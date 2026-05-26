@@ -1623,24 +1623,48 @@ function BreakdownHeader({ title, color, onClose }: { title: string; color: stri
 function VoyageScoreBreakdown({ power, dodge, fortune, total, onClose }: {
   power: number; dodge: number; fortune: number; total: number; onClose: () => void
 }) {
+  // Each stat governs one event type and rolls 0-1; convert to a 0-100
+  // sub-score so the three tiles match the Raid Score tile shape (label +
+  // sub-score, bar, description, fine-print raw value).
   const powerRate   = Math.min(power   / 55, 0.80)
-  const fortuneRate = Math.min(fortune / 45, 1)
   const dodgeRate   = Math.min(dodge   / 28, 1)
-  const rows = [
-    { label: 'Power',   value: power,   rate: powerRate,   cap: 55, color: '#f87171', max: 0.80 },
-    { label: 'Agility', value: dodge,   rate: dodgeRate,   cap: 28, color: '#60a5fa', max: 1.00 },
-    { label: 'Fortune', value: fortune, rate: fortuneRate, cap: 45, color: '#f0c040', max: 1.00 },
+  const fortuneRate = Math.min(fortune / 45, 1)
+  const tiles = [
+    {
+      label: 'Power',
+      sub: Math.round((powerRate / 0.80) * 100),
+      bg: 'rgba(248,113,113,0.07)', border: 'rgba(248,113,113,0.24)', bar: '#f87171',
+      labelColor: '#f87171', subLabelColor: '#9a5454', textColor: '#cbb4ad',
+      copy: <>The damage you bring to a fight. Drives <span style={{ color: '#f0ede8', fontWeight: 600 }}>encounter</span> events, where a power roll clears the threat.</>,
+      fine: <>{power} raw power, caps at <span style={{ color: '#cbb4ad', fontWeight: 600 }}>55</span> (max 80%).</>,
+    },
+    {
+      label: 'Agility',
+      sub: Math.round(dodgeRate * 100),
+      bg: 'rgba(96,165,250,0.07)', border: 'rgba(96,165,250,0.24)', bar: '#60a5fa',
+      labelColor: '#60a5fa', subLabelColor: '#4a6e9a', textColor: '#aebfd4',
+      copy: <>Avoids trouble outright. Drives <span style={{ color: '#f0ede8', fontWeight: 600 }}>danger</span> events; a clean dodge skips the loss entirely.</>,
+      fine: <>{dodge} raw agility, caps at <span style={{ color: '#aebfd4', fontWeight: 600 }}>28</span>.</>,
+    },
+    {
+      label: 'Fortune',
+      sub: Math.round(fortuneRate * 100),
+      bg: 'rgba(240,192,64,0.07)', border: 'rgba(240,192,64,0.24)', bar: '#f0c040',
+      labelColor: '#f0c040', subLabelColor: '#8a6e30', textColor: '#dccaa4',
+      copy: <>Finds the good stuff. Drives <span style={{ color: '#f0ede8', fontWeight: 600 }}>discovery</span> events and scales every payout you bring home.</>,
+      fine: <>{fortune} raw fortune, caps at <span style={{ color: '#dccaa4', fontWeight: 600 }}>45</span>.</>,
+    },
   ]
+
   return (
     <>
       <BreakdownHeader title="Voyage Score" color="#7090c0" onClose={onClose} />
 
-      {/* Rank banner — shared nautical ladder, same shape as the Raid Score
-          banner so both readouts feel like one system. */}
+      {/* Rank banner — same shape as the Raid Score banner. */}
       <div style={{
         display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.75rem',
         padding: '0.75rem 0.9rem', marginBottom: '0.85rem',
-        background: 'rgba(112,144,192,0.1)', border: '1px solid rgba(112,144,192,0.3)', borderRadius: 12,
+        background: 'rgba(112,144,192,0.11)', border: '1px solid rgba(112,144,192,0.36)', borderRadius: 12,
       }}>
         <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#9ab4dc', fontStyle: 'italic' }}>{getRankTitle(total)}</p>
         <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', fontFeatureSettings: '"tnum"' }}>
@@ -1648,41 +1672,32 @@ function VoyageScoreBreakdown({ power, dodge, fortune, total, onClose }: {
         </p>
       </div>
 
-      <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#9a9488', lineHeight: 1.5, marginBottom: '0.85rem' }}>
-        Predicts your crew&apos;s odds of clearing hard daily-voyage events.
+      <p className="font-karla" style={{ fontSize: '0.88rem', color: '#c4bfb6', lineHeight: 1.55, marginBottom: '1rem' }}>
+        How ready your crew is for a daily voyage. The higher each stat
+        climbs, the more events go your way.
       </p>
 
-      {/* What contributes */}
-      <div style={{
-        padding: '0.55rem 0.75rem', marginBottom: '1rem',
-        background: 'rgba(112,144,192,0.06)', border: '1px solid rgba(112,144,192,0.18)', borderRadius: 8,
-      }}>
-        <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#7090c0', marginBottom: 4 }}>What counts</p>
-        <p className="font-karla" style={{ fontSize: '0.62rem', color: '#a8b8cc', lineHeight: 1.45 }}>
-          <span style={{ color: '#f0ede8' }}>Crew stats only.</span> Nav level and ship don&apos;t affect daily-voyage event rolls.
-        </p>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', marginBottom: '0.95rem' }}>
-        {rows.map(r => (
-          <div key={r.label}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: r.color, width: 58, flexShrink: 0 }}>{r.label}</p>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#e0ddd8', width: 36, flexShrink: 0 }}>{r.value}</p>
-              <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${(r.rate / r.max) * 100}%`, background: r.color, borderRadius: 3 }} />
-              </div>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#e0ddd8', width: 44, flexShrink: 0, textAlign: 'right' }}>{Math.round(r.rate * 100)}%</p>
-            </div>
-            <p className="font-karla" style={{ fontSize: '0.5rem', color: '#5a5856', marginLeft: 62, marginTop: 1 }}>
-              caps at {r.cap}{r.max < 1 ? ` (max ${Math.round(r.max * 100)}%)` : ''}
+      {/* Three stat tiles — same shape as Offense/Defense in the Raid
+          breakdown: label + sub-score, progress bar, description, fine
+          print with the raw stat + cap. */}
+      {tiles.map(t => (
+        <div key={t.label} style={{ padding: '0.85rem 0.95rem', background: t.bg, border: `1px solid ${t.border}`, borderRadius: 12, marginBottom: '0.6rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.8rem', color: t.labelColor }}>{t.label}</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>
+              {t.sub}<span style={{ color: t.subLabelColor, fontSize: '0.78rem' }}>/100</span>
             </p>
           </div>
-        ))}
-      </div>
+          <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+            <div style={{ height: '100%', width: `${t.sub}%`, background: t.bar, borderRadius: 3 }} />
+          </div>
+          <p className="font-karla" style={{ fontSize: '0.84rem', color: t.textColor, lineHeight: 1.5 }}>{t.copy}</p>
+          <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a6a60', marginTop: 6 }}>{t.fine}</p>
+        </div>
+      ))}
 
-      <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.45, textAlign: 'center' }}>
-        Score is the average success rate across the three event types, scaled to 100.
+      <p className="font-karla" style={{ fontSize: '0.7rem', color: '#7a6a60', lineHeight: 1.45, textAlign: 'center', marginTop: '0.4rem' }}>
+        Voyage Score is the average of all three — a strong, balanced crew clears events from every angle.
       </p>
     </>
   )
