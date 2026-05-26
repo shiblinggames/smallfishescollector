@@ -1132,10 +1132,13 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           accent chrome as before, just at ~32px tall instead of ~80px.
           Size-tier pills (Trophy / Large) and the PB pill render first so
           they catch the eye on the dopamine moments. */}
-      {(isPerfect || (jackpotMultiplier && jackpotMultiplier > 1) || doubleCatch || gemEarned || showTrophyPill || showPBPill) && (
+      {(isPerfect || (jackpotMultiplier && jackpotMultiplier > 1) || doubleCatch || gemEarned || showTrophyPill) && (
         <div className="mb-2 flex flex-wrap items-center justify-center gap-1.5">
           {/* Trophy / Large pill — top size tiers. Trophy = gold sparkle,
-              Large = cool blue, same gradient + top-accent chrome shape. */}
+              Large = cool blue, same gradient + top-accent chrome shape.
+              (PB used to live here too; moved onto the size hero on the
+              card itself so the celebration sits next to the number it's
+              celebrating, and uses plain-English copy instead of "PB".) */}
           {showTrophyPill && (() => {
             const trophy = sizeTier === 'trophy'
             const accent = trophy ? '#fbbf24' : '#60a5fa'
@@ -1164,36 +1167,6 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               </motion.div>
             )
           })()}
-
-          {/* Personal Best pill — independent of size tier. Beating your own
-              previous record on a species, even with a small fish, lands as
-              a teal/green moment so it reads distinct from Trophy gold. */}
-          {showPBPill && (
-            <motion.div
-              initial={{ opacity: 0, y: -6, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 360, damping: 18, delay: 0.06 }}
-              className="font-karla font-700 uppercase"
-              style={{
-                background: 'linear-gradient(180deg, rgba(45,212,191,0.24) 0%, rgba(45,212,191,0.06) 100%), #04141a',
-                border: '1px solid rgba(45,212,191,0.55)',
-                borderTop: '1px solid rgba(45,212,191,0.85)',
-                borderRadius: 999,
-                boxShadow: '0 0 14px rgba(45,212,191,0.32)',
-                padding: '0.36rem 0.72rem',
-                fontSize: '0.62rem',
-                letterSpacing: '0.14em',
-                color: '#5eead4',
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <span>⭐</span>
-              <span>New PB</span>
-              {previousBest != null && (
-                <span style={{ color: '#99f6e4', letterSpacing: 0 }}>+{(sizeIn - previousBest).toFixed(1)} in</span>
-              )}
-            </motion.div>
-          )}
 
           {isPerfect && (() => {
             const isOnFire = perfectStreak >= 3
@@ -1475,12 +1448,10 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             />
           </motion.div>
 
-          {/* Name */}
-          <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.35rem', color: r.color, lineHeight: 1.1, marginBottom: 2 }}>
+          {/* Name. Scientific name dropped 2026-05-26 — players don't read
+              Latin and the card needs to feel less informational. */}
+          <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.35rem', color: r.color, lineHeight: 1.1, marginBottom: hasSize ? '0.55rem' : '0.7rem' }}>
             {fish.name}
-          </p>
-          <p className="font-karla font-300 italic text-center" style={{ fontSize: '0.68rem', color: '#6a6764', marginBottom: hasSize ? '0.55rem' : '0.7rem' }}>
-            {fish.scientific_name}
           </p>
 
           {/* ── Size readout — the new hero of the card ──
@@ -1500,8 +1471,10 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                 className="font-cinzel font-700"
                 style={{
                   fontSize: '2.15rem', lineHeight: 1,
-                  color: sizeTier === 'trophy' ? '#fbbf24' : sizeTier === 'large' ? '#93c5fd' : '#f0ede8',
-                  textShadow: sizeTier === 'trophy'
+                  color: showPBPill ? '#5eead4' : sizeTier === 'trophy' ? '#fbbf24' : sizeTier === 'large' ? '#93c5fd' : '#f0ede8',
+                  textShadow: showPBPill
+                    ? '0 0 22px rgba(94,234,212,0.65), 0 0 44px rgba(94,234,212,0.3)'
+                    : sizeTier === 'trophy'
                     ? '0 0 22px rgba(251,191,36,0.7), 0 0 44px rgba(251,191,36,0.35)'
                     : sizeTier === 'large'
                     ? '0 0 18px rgba(96,165,250,0.55)'
@@ -1512,6 +1485,35 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               >
                 {formatFishLength(displaySize)}
               </span>
+
+              {/* PB celebration — sits IN the size hero, not as a pill in the
+                  notification row. Plain-English ("Your biggest yet!") so
+                  newcomers don't have to know what "PB" means. Springs in
+                  after the count-up settles so the number lands first, then
+                  the celebration arrives. */}
+              {showPBPill && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4, scale: 0.92 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 360, damping: 18, delay: 0.55 }}
+                  className="font-karla font-700 uppercase"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    marginTop: 6, padding: '0.22rem 0.6rem', borderRadius: 999,
+                    fontSize: '0.6rem', letterSpacing: '0.14em',
+                    color: '#5eead4',
+                    background: 'linear-gradient(180deg, rgba(45,212,191,0.22) 0%, rgba(45,212,191,0.05) 100%), #04141a',
+                    border: '1px solid rgba(45,212,191,0.5)',
+                    boxShadow: '0 0 14px rgba(45,212,191,0.28)',
+                  }}
+                >
+                  <span aria-hidden style={{ fontSize: '0.72rem' }}>🏆</span>
+                  <span>Your biggest yet!</span>
+                  {previousBest != null && (
+                    <span style={{ color: '#99f6e4', letterSpacing: 0 }}>+{(sizeIn - previousBest).toFixed(1)} in</span>
+                  )}
+                </motion.div>
+              )}
 
               {/* Range bar — only when there's a real range. Slim track with
                   a glowing needle at the catch's percentile. Labels at the
@@ -1560,13 +1562,14 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                 </div>
               )}
 
-              {/* Previous PB line — shown when this catch DIDN'T beat the
-                  record, so the player sees what they're chasing. Skipped on
-                  PB (the green pill already celebrates it) and on first-
-                  catch (nothing to compare against yet). */}
+              {/* Previous-record line — shown when this catch DIDN'T beat
+                  the record, so the player sees what they're chasing.
+                  Plain "Largest you've caught" copy so it reads to anyone.
+                  Skipped on PB (the in-card celebration above covers it)
+                  and on first-catch (nothing to compare against yet). */}
               {!isAncient && !isPB && previousBest != null && (
                 <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5856', marginTop: 6, letterSpacing: '0.06em' }}>
-                  Your best: <span style={{ color: '#9a8870' }}>{formatFishLength(previousBest)}</span>
+                  Largest you&apos;ve caught: <span style={{ color: '#9a8870' }}>{formatFishLength(previousBest)}</span>
                 </p>
               )}
             </motion.div>
