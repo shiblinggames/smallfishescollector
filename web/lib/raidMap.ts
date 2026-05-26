@@ -203,6 +203,63 @@ function clearPayout(config: BossRaidConfig): { doubloons: number; xp: number } 
   return { doubloons, xp: xp + raidCompletionBonusXp(config) }
 }
 
+/** A named arc of the raid map. Players read the chain as discrete
+ *  chapters, not an infinite scroll: every new raid arc gets its own
+ *  RAID_CHAPTERS entry + extends RAID_MAP under that chapter's
+ *  boundary. The boundary is given by lastNodeId — walking RAID_MAP
+ *  in order, any node up to and including that id belongs to this
+ *  chapter; the next chapter begins at the next node. Order in
+ *  RAID_CHAPTERS must match the linear order of RAID_MAP. */
+export interface RaidChapter {
+  id: string
+  number: number
+  romanNumeral: string
+  title: string
+  /** One-line evocative blurb shown under the title. */
+  subtitle: string
+  /** Last node id (inclusive) that belongs to this chapter. The next
+   *  chapter starts at the next RAID_MAP entry after this one. */
+  lastNodeId: string
+}
+
+export const RAID_CHAPTERS: RaidChapter[] = [
+  {
+    id:         'thread',
+    number:     1,
+    romanNumeral: 'I',
+    title:      'The Loose Thread',
+    subtitle:   'A coastline of pirates, and a thread that runs to somewhere bigger.',
+    // Pete's arc + Krust's arc, including both challenge variants. Krust
+    // challenge is the last beat of Chapter I.
+    lastNodeId: 'krust_challenge',
+  },
+  {
+    id:         'sunken_hand',
+    number:     2,
+    romanNumeral: 'II',
+    title:      'The Sunken Hand',
+    subtitle:   'The shadow you have been pulling at finally has a name.',
+    // Current chapter II content is the post-Krust setup arc. New raids
+    // for chapter II append before this boundary; chapter III starts
+    // after a new RAID_CHAPTERS entry is added.
+    lastNodeId: 'last_cache',
+  },
+]
+
+/** Which chapter does this node belong to? Walks RAID_CHAPTERS in
+ *  order and returns the first one whose lastNodeId comes at or after
+ *  this node in RAID_MAP. Falls back to the last chapter if the node
+ *  somehow sits past every boundary (defensive — should never happen
+ *  if RAID_CHAPTERS is kept in sync with RAID_MAP). */
+export function chapterForNode(nodeId: string): RaidChapter {
+  const nodeIdx = RAID_MAP.findIndex(n => n.id === nodeId)
+  for (const c of RAID_CHAPTERS) {
+    const lastIdx = RAID_MAP.findIndex(n => n.id === c.lastNodeId)
+    if (nodeIdx >= 0 && nodeIdx <= lastIdx) return c
+  }
+  return RAID_CHAPTERS[RAID_CHAPTERS.length - 1]
+}
+
 export const RAID_MAP: RaidNode[] = [
   {
     id: 'intro',

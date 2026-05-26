@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { isCombatNode, type RaidNodeView } from '@/lib/raidMap'
+import { isCombatNode, chapterForNode, RAID_CHAPTERS, type RaidChapter, type RaidNodeView } from '@/lib/raidMap'
 import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
@@ -153,7 +153,28 @@ function RaidMap({
   const currentIdx = views.findIndex(v => v.status === 'available' && !v.node.sideBranch)
 
   return (
-    <div style={{ position: 'relative', width: '100%', height }}>
+    <div
+      style={{
+        position: 'relative', width: '100%', height,
+        // Parchment / sea-chart backdrop: warm sepia base, a soft cream
+        // top-down lift in the centre, and a subtle vignette at the
+        // edges so the chart reads as a thing you're holding rather
+        // than a panel floating on a black page. Tuned to stay dark
+        // enough that the parchment-gold tokens + lit route still
+        // pop against it (the dark wrapper sits around this).
+        background: [
+          'radial-gradient(ellipse 80% 60% at 50% 38%, rgba(196,169,106,0.10) 0%, transparent 70%)',
+          'radial-gradient(ellipse 120% 90% at 50% 50%, transparent 55%, rgba(6,5,4,0.45) 100%)',
+          'linear-gradient(180deg, rgba(48,36,18,0.35) 0%, rgba(28,20,10,0.55) 100%)',
+        ].join(', '),
+        border: '1px solid rgba(196,169,106,0.22)',
+        borderRadius: 12,
+        padding: '8px 0',
+        // Inset shadow gives the parchment a faintly weathered depth at
+        // the corners without darkening the chart's reading area.
+        boxShadow: 'inset 0 0 24px rgba(0,0,0,0.45)',
+      }}
+    >
       {/* Route lines behind the tokens. preserveAspectRatio=none lets x map
           to the fluid width while y stays 1:1; non-scaling-stroke keeps the
           line weight constant regardless of the horizontal stretch. */}
@@ -163,7 +184,11 @@ function RaidMap({
         style={{ position: 'absolute', inset: 0, width: '100%', height, pointerEvents: 'none' }}
       >
         {/* Main chain line — connects consecutive non-side nodes in row
-            order, skipping side branches so the route stays straight. */}
+            order, skipping side branches so the route stays straight.
+            Lit (cleared → cleared) gets a parchment-gold stroke with a
+            soft drop-shadow glow so the cleared portion of the route
+            feels lit up; pending uses a sparser rope-like dash so
+            "path ahead" reads as un-traveled, not just under-emphasized. */}
         {chainIdx.slice(0, -1).map((idxA, j) => {
           const idxB = chainIdx[j + 1]
           const v = views[idxA]
@@ -175,11 +200,12 @@ function RaidMap({
               key={`chain-${v.node.id}`}
               d={`M ${x1} ${y1} C ${x1} ${ym}, ${x2} ${ym}, ${x2} ${y2}`}
               fill="none"
-              stroke={lit ? 'rgba(196,169,106,0.85)' : 'rgba(255,255,255,0.12)'}
-              strokeWidth={lit ? 3.5 : 2.5}
-              strokeDasharray={lit ? undefined : '2 5'}
+              stroke={lit ? 'rgba(196,169,106,0.9)' : 'rgba(255,255,255,0.14)'}
+              strokeWidth={lit ? 3 : 2}
+              strokeDasharray={lit ? undefined : '1 7'}
               strokeLinecap="round"
               vectorEffect="non-scaling-stroke"
+              filter={lit ? 'drop-shadow(0 0 3px rgba(196,169,106,0.55))' : undefined}
             />
           )
         })}
@@ -279,15 +305,19 @@ function RaidMap({
                 background: locked
                   ? 'radial-gradient(circle at 35% 30%, #14110d, #0a0907)'
                   : cleared
-                    ? `radial-gradient(circle at 35% 30%, ${accent}33, ${accent}14)`
+                    ? `radial-gradient(circle at 35% 30%, ${accent}22, ${accent}0a)`
                     : `radial-gradient(circle at 35% 30%, ${accent}26, #0c0a08)`,
-                border: `2px solid ${locked ? 'rgba(255,255,255,0.08)' : cleared ? `${accent}aa` : accent}`,
+                border: `2px solid ${locked ? 'rgba(255,255,255,0.08)' : cleared ? `${accent}66` : accent}`,
                 boxShadow: locked
                   ? 'none'
                   : cleared
-                    ? `0 0 0 4px ${accent}10`
+                    ? `0 0 0 3px ${accent}08`
                     : `0 0 14px ${accent}40, 0 0 0 4px ${accent}12`,
-                opacity: locked || raidBlocked ? 0.6 : 1,
+                // Cleared nodes fade so the available "next up" node clearly
+                // owns the route. Locked / repair-blocked stay at the old
+                // 0.6; cleared sits a notch above that (0.62) so it still
+                // reads as history-you-can-tap, not pure dead state.
+                opacity: locked || raidBlocked ? 0.6 : cleared ? 0.62 : 1,
                 // The pulse animation drives box-shadow; let it own the prop.
                 ...(isCurrent && interactive ? { boxShadow: undefined } : {}),
                 touchAction: 'manipulation',
@@ -296,7 +326,12 @@ function RaidMap({
               {img ? (
                 <span style={{
                   position: 'absolute', inset: 3, borderRadius: '50%', overflow: 'hidden',
-                  filter: locked ? 'grayscale(1) brightness(0.5)' : undefined,
+                  // Cleared portraits desaturate so finished beats read as
+                  // weathered history; the available node keeps full color.
+                  filter:
+                    locked  ? 'grayscale(1) brightness(0.5)'
+                    : cleared ? 'grayscale(0.55) brightness(0.78)'
+                    : undefined,
                 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -316,18 +351,24 @@ function RaidMap({
                 </span>
               )}
 
-              {cleared && (
-                <span
-                  style={{
-                    position: 'absolute', right: -3, bottom: -3,
-                    width: badge, height: badge, borderRadius: '50%',
-                    background: '#1b3a24', border: '2px solid #0a0907',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                >
-                  <svg width={Math.round(badge * 0.55)} height={Math.round(badge * 0.55)} viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-                </span>
-              )}
+              {cleared && (() => {
+                // Cleared check is smaller than the lock badge — cleared
+                // is the calm "done" state and shouldn't compete with
+                // the available node for attention.
+                const checkBadge = Math.max(13, Math.round(size * 0.26))
+                return (
+                  <span
+                    style={{
+                      position: 'absolute', right: -2, bottom: -2,
+                      width: checkBadge, height: checkBadge, borderRadius: '50%',
+                      background: '#1b3a24', border: '1.5px solid #0a0907',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    <svg width={Math.round(checkBadge * 0.6)} height={Math.round(checkBadge * 0.6)} viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                  </span>
+                )
+              })()}
             </motion.button>
 
             {/* Title beside the token — surfaces ONLY for the current
@@ -1038,7 +1079,55 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
             )
           })()}
 
-          <RaidMap views={views} doubloons={doubloons} onSelect={setSelected} repairOwed={repairOwed} />
+          {/* Chapters render as separate, titled sections instead of one
+              continuous scroll. Each chapter is bound by RAID_CHAPTERS;
+              the views are partitioned in declaration order so a new
+              raid arc is just an RAID_MAP append + an RAID_CHAPTERS
+              boundary update. Cleared status is shown next to the
+              header so the player can see at a glance which chapters
+              they've finished. */}
+          {(() => {
+            const groups = new Map<string, { chapter: RaidChapter; views: RaidNodeView[] }>()
+            for (const v of views) {
+              const c = chapterForNode(v.node.id)
+              const bucket = groups.get(c.id) ?? { chapter: c, views: [] }
+              bucket.views.push(v)
+              groups.set(c.id, bucket)
+            }
+            // Iterate in the canonical RAID_CHAPTERS order, not the Map
+            // insertion order — guards against a partial dataset showing
+            // chapter II before chapter I.
+            return RAID_CHAPTERS.map(c => {
+              const bucket = groups.get(c.id)
+              if (!bucket || bucket.views.length === 0) return null
+              const mainViews = bucket.views.filter(v => !v.node.sideBranch)
+              const chapterCleared = mainViews.length > 0 && mainViews.every(v => v.status === 'cleared')
+              const chapterStarted = bucket.views.some(v => v.status !== 'locked')
+              return (
+                <div key={c.id} style={{ marginBottom: '1.1rem' }}>
+                  <div style={{ marginBottom: '0.65rem', paddingBottom: '0.55rem', borderBottom: '1px solid rgba(196,169,106,0.18)' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                      <span className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.58rem', color: chapterStarted ? MAIN_ACCENT : '#6a6764' }}>
+                        Chapter {c.romanNumeral}
+                      </span>
+                      {chapterCleared && (
+                        <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: '#4ade80' }}>
+                          ✓ Cleared
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: chapterStarted ? '#f5f2ec' : 'rgba(245,242,236,0.55)', lineHeight: 1.2, marginTop: 2 }}>
+                      {c.title}
+                    </p>
+                    <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.55)', marginTop: 3, lineHeight: 1.4, fontStyle: 'italic' }}>
+                      {c.subtitle}
+                    </p>
+                  </div>
+                  <RaidMap views={bucket.views} doubloons={doubloons} onSelect={setSelected} repairOwed={repairOwed} />
+                </div>
+              )
+            })
+          })()}
         </div>
       )}
 
