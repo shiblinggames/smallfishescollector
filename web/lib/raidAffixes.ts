@@ -1,11 +1,18 @@
 // Elite affix pool for challenge-mode raids. Each non-boss enemy slot in a
 // challenge run has a chance to roll "elite" — same enemy art and base
-// pattern, but with 2× HP, 1.5× damage, and ONE random affix from this
+// pattern, but with 1.5× HP, 1.25× damage, and ONE random affix from this
 // pool. Affixes are naval-themed combat modifiers — Diablo-flavor in
 // turn-based ship combat.
 //
 // Affixes are PURELY client-side per-run rolls (combat is client-driven).
 // They don't persist; each fresh challenge attempt rolls fresh elites.
+//
+// Most affixes have a PER-EVENT CHANCE so the elite doesn't dominate every
+// single turn. The Frenzied 33%-double-fire was the model and the rest
+// (Ironclad / Vampiric / Reflective / Resilient) were retuned to match.
+// Marksman is "always-on" because it's already a soft modifier (crit
+// chance multiplier on an already-low base), and Volatile fires once
+// per encounter (on death), so neither needs a per-event roll.
 //
 // Trigger points (each affix attaches to one) — match these names to the
 // hook calls in RaidCombat.tsx:
@@ -13,7 +20,7 @@
 //   onThisEnemyDamagedPlayer  → Vampiric
 //   onThisEnemyTurnStart      → Resilient
 //   onThisEnemyDeath          → Volatile
-//   onSpeedRoll               → Fleet
+//   onSpeedRoll               → Fleet  (speed bonus, not a guarantee)
 //   onThisEnemyFire           → Frenzied
 //   onCritRoll                → Marksman
 
@@ -33,38 +40,59 @@ export interface AffixDef {
   /** One-line description shown on the enemy stats popup. Pirate voice,
    *  no em-dashes (project copy voice rule). */
   description: string
-  /** Numeric payload the combat engine reads. Each affix attaches the
-   *  right key; the others are absent. */
-  damageTakenMult?: number    // ironclad   (0.7 = takes 30% less)
-  lifestealPct?:    number    // vampiric   (0.20 = heals 20% of dmg dealt)
-  deathBurnPct?:    number    // volatile   (0.15 = 15% of maxHP back to player on death)
-  alwaysFastest?:   boolean   // fleet
-  doubleFireChance?:number    // frenzied   (0.33 = 33% chance to fire twice)
-  reflectPct?:      number    // reflective (0.15 = reflects 15% of dmg taken)
-  turnStartHeal?:   number    // resilient  (4 HP per turn)
-  critMult?:        number    // marksman   (2 = double crit chance)
+
+  // ── Ironclad — 50% chance to soak 30% off a player hit ──────────────
+  damageTakenMult?:    number  // 0.7 = takes 30% less
+  damageTakenChance?:  number  // 0.5 = 50% per hit
+
+  // ── Vampiric — 50% chance to lifesteal 20% of dealt damage ──────────
+  lifestealPct?:       number  // 0.20
+  lifestealChance?:    number  // 0.5
+
+  // ── Volatile — wreck dishes 10% of YOUR remaining HP on death ───────
+  // Scales to the player's current HP, capped so it can never kill.
+  deathBurnRemainingPct?: number  // 0.10
+
+  // ── Fleet — flat speed roll bonus (not a guaranteed first) ──────────
+  speedBonus?:         number  // +N added to enemy's d20 + shipSpeed roll
+
+  // ── Frenzied — 33% chance to fire again after a fire/volley ─────────
+  doubleFireChance?:   number  // 0.33
+
+  // ── Reflective — 50% chance to reflect 15% of player damage ─────────
+  reflectPct?:         number  // 0.15
+  reflectChance?:      number  // 0.5
+
+  // ── Resilient — 33% chance to regen 5% of maxHP at turn start ───────
+  turnStartHealMaxPct?: number // 0.05
+  turnStartHealChance?: number // 0.33
+
+  // ── Marksman — always-on crit chance multiplier ─────────────────────
+  critMult?:           number  // 2 = doubles base crit chance
 }
 
 export const AFFIXES: Record<AffixId, AffixDef> = {
   ironclad: {
     id: 'ironclad', name: 'Ironclad',
-    description: 'Plated hull soaks 30% off every shot you land.',
+    description: 'Half the time, plated hull soaks 30% off the shot you land.',
     damageTakenMult: 0.7,
+    damageTakenChance: 0.5,
   },
   vampiric: {
     id: 'vampiric', name: 'Vampiric',
-    description: 'Heals for a fifth of every hit it lands on you.',
+    description: 'Half the time, drinks back a fifth of the damage it deals you.',
     lifestealPct: 0.20,
+    lifestealChance: 0.5,
   },
   volatile: {
     id: 'volatile', name: 'Volatile',
-    description: 'Goes up like a powder magazine on death, splashing you for 15% of its hull.',
-    deathBurnPct: 0.15,
+    description: 'Goes up like a powder magazine on death, scorching you for a tenth of your remaining hull.',
+    deathBurnRemainingPct: 0.10,
   },
   fleet: {
     id: 'fleet', name: 'Fleet',
-    description: 'Always wins the wind. Acts before you on every turn.',
-    alwaysFastest: true,
+    description: 'Catches the wind first. Much better odds of acting before you on every turn.',
+    speedBonus: 5,
   },
   frenzied: {
     id: 'frenzied', name: 'Frenzied',
@@ -73,13 +101,15 @@ export const AFFIXES: Record<AffixId, AffixDef> = {
   },
   reflective: {
     id: 'reflective', name: 'Reflective',
-    description: 'Polished plating bounces 15% of your damage right back into your hull.',
+    description: 'Half the time, polished plating bounces 15% of your damage right back into your hull.',
     reflectPct: 0.15,
+    reflectChance: 0.5,
   },
   resilient: {
     id: 'resilient', name: 'Resilient',
-    description: 'Patches 4 HP at the top of every one of its turns.',
-    turnStartHeal: 4,
+    description: 'One in three of its turns, patches up 5% of its hull at the top.',
+    turnStartHealMaxPct: 0.05,
+    turnStartHealChance: 0.33,
   },
   marksman: {
     id: 'marksman', name: 'Marksman',
@@ -91,15 +121,10 @@ export const AFFIXES: Record<AffixId, AffixDef> = {
 export const ALL_AFFIX_IDS: AffixId[] = Object.keys(AFFIXES) as AffixId[]
 
 /** Elite multipliers on top of whatever the challenge-mode scaling already
- *  applied. So a Reef Raider in challenge mode has 1.3 × base HP; an
- *  ELITE Reef Raider has 1.3 × base × 1.5 HP. Damage multiplies the same
- *  way. The affix is the headline twist for an elite; these multipliers
+ *  applied. The affix is the headline twist for an elite; these multipliers
  *  just nudge the bulk so the elite reads as harder, not as a brand-new
- *  enemy class. Dialed back from 2.0 / 1.5 → 1.5 / 1.25 on 2026-05-26
- *  after the stack on top of challenge-mode scaling was punishing
- *  (Reef Raider was hitting ~66 HP / 3-9 dmg, before the affix even
- *  fired). New combined ceiling for non-bosses in challenge: ~1.95× HP,
- *  ~1.44× dmg + affix. */
+ *  enemy class. Combined non-boss ceiling in challenge mode: ~1.95× HP,
+ *  ~1.44× dmg + the affix. */
 export const ELITE_HP_MULT  = 1.5
 export const ELITE_DMG_MULT = 1.25
 

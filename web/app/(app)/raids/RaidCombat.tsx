@@ -590,15 +590,14 @@ export default function RaidCombat({
       .filter(e => e.type === 'speed_roll_nav_pct')
       .reduce((a, e) => a + e.value, 0)
     const pSpeedRoll = rollSpeed(shipSpeed, totalNavigation) + Math.floor(totalNavigation * compassNavPct)
-    const eSpeedRoll = rollSpeed(enemy.shipSpeed, 0)
-    // First Strike crew effect: the player always acts first.
-    // Fleet affix on the enemy: the enemy always acts first. First Strike
-    // beats Fleet in the rare case both are active (player effect wins).
+    // Fleet affix on the enemy: flat bonus to its speed roll. Not a
+    // guarantee like before — just much better odds of going first.
+    const eSpeedRoll = rollSpeed(enemy.shipSpeed, 0) + (affix?.speedBonus ?? 0)
+    // First Strike crew effect always wins (player effect overrides any
+    // enemy speed bonus, no matter how high).
     const first: Actor = mods.firstStrike
       ? 'player'
-      : affix?.alwaysFastest
-        ? 'enemy'
-        : (pSpeedRoll >= eSpeedRoll ? 'player' : 'enemy')
+      : (pSpeedRoll >= eSpeedRoll ? 'player' : 'enemy')
     setFirstActor(first)
     setSubPhase('revealing')
 
@@ -660,12 +659,18 @@ export default function RaidCombat({
       let enemyCrit = false
       const stepLines: string[] = []
 
-      // Resilient affix: heals at the start of every enemy turn. Fires
-      // BEFORE the action animates so the player sees the heal land first,
-      // then the enemy's attack/dodge. Skipped at 0 HP since dead enemies
-      // can't regenerate.
-      if (who === 'enemy' && affix?.turnStartHeal && eHp > 0 && eHp < enemy.hpBase) {
-        const healed = Math.min(affix.turnStartHeal, enemy.hpBase - eHp)
+      // Resilient affix: 33% chance to regen 5% of maxHP at the top of
+      // each enemy turn. Scales with the enemy's hull instead of a flat
+      // amount, so it stays relevant on bigger ships. Skipped at 0 HP
+      // (dead enemies don't regenerate) and at full HP (no point).
+      if (
+        who === 'enemy'
+        && affix?.turnStartHealMaxPct
+        && eHp > 0 && eHp < enemy.hpBase
+        && Math.random() < (affix.turnStartHealChance ?? 1)
+      ) {
+        const healAmount = Math.max(1, Math.round(enemy.hpBase * affix.turnStartHealMaxPct))
+        const healed = Math.min(healAmount, enemy.hpBase - eHp)
         if (healed > 0) {
           eHp += healed
           stepLines.push(`${enemy.name} patches up ${healed} HP.`)
@@ -714,10 +719,18 @@ export default function RaidCombat({
           // the hitsplat + log show the real number that gets through.
           const dr = enemy.damageReduction ?? 0
           if (dr > 0 && dmg > 0) dmg = Math.max(1, Math.round(dmg * (1 - dr)))
-          // Ironclad affix: extra flat % mitigation on top of any themed
-          // defense. Stacks multiplicatively, never floors below 1.
-          if (affix?.damageTakenMult && dmg > 0) {
+          // Ironclad affix: 50% chance to soak 30% off the hit on top of
+          // any themed defense. Stacks multiplicatively, never floors
+          // below 1. Push a log line when it triggers so the player
+          // sees the mitigation roll, not just a smaller-looking number.
+          if (
+            affix?.damageTakenMult
+            && dmg > 0
+            && Math.random() < (affix.damageTakenChance ?? 1)
+          ) {
+            const before = dmg
             dmg = Math.max(1, Math.round(dmg * affix.damageTakenMult))
+            stepLines.push(`Ironclad! ${enemy.name}'s plating soaks the blow (${before} → ${dmg}).`)
           }
         } else {
           const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
@@ -759,21 +772,29 @@ export default function RaidCombat({
         if (isAttackerPlayer) {
           eHp = Math.max(0, eHp - dmg)
           if (dmg > 0) onPlayerHit?.(dmg)
-          // Reflective affix: bounce a slice of the damage back to the
-          // player on landing. Fires only when actual damage landed
-          // (partial-dodge included; missed shots aren't reflected).
-          if (affix?.reflectPct && dmg > 0) {
+          // Reflective affix: 50% chance to bounce a slice of the damage
+          // back to the player on landing. Fires only when actual damage
+          // landed (partial-dodge included; missed shots aren't reflected).
+          if (
+            affix?.reflectPct
+            && dmg > 0
+            && Math.random() < (affix.reflectChance ?? 1)
+          ) {
             const reflected = Math.max(1, Math.round(dmg * affix.reflectPct))
             pHp = Math.max(0, pHp - reflected)
             stepLines.push(`${enemy.name}'s plating reflects ${reflected} back at you.`)
           }
           // Volatile affix: if this shot just killed the enemy, the wreck
-          // explodes for a % of its hull. Fires inline so it lands in the
-          // same animation step as the killing blow.
-          if (eHp === 0 && affix?.deathBurnPct) {
-            const burn = Math.max(1, Math.round(enemy.hpBase * affix.deathBurnPct))
-            pHp = Math.max(0, pHp - burn)
-            stepLines.push(`The wreck goes up in flame, scorching you for ${burn}.`)
+          // explodes for 10% of the PLAYER'S REMAINING HP. Scales to how
+          // healthy you are (more dangerous when full, less when low) and
+          // is clamped so it can never sink you — leaves at least 1 HP.
+          if (eHp === 0 && affix?.deathBurnRemainingPct && pHp > 1) {
+            const raw  = Math.max(1, Math.round(pHp * affix.deathBurnRemainingPct))
+            const burn = Math.min(raw, pHp - 1)
+            if (burn > 0) {
+              pHp = Math.max(1, pHp - burn)
+              stepLines.push(`The wreck goes up in flame, scorching you for ${burn}.`)
+            }
           }
           if (partialDodge) {
             stepLines.push(action === 'volley'
@@ -800,10 +821,15 @@ export default function RaidCombat({
           const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100)
           if (takenMult !== 1 && dmg > 0) dmg = Math.max(1, Math.floor(dmg * takenMult))
           pHp = Math.max(0, pHp - dmg)
-          // Vampiric affix: enemy heals a fraction of dealt damage. Capped
-          // at its maxHP. Fires after the damage lands so the heal feels
-          // like a follow-up, not a pre-emptive negation.
-          if (affix?.lifestealPct && dmg > 0 && eHp > 0 && eHp < enemy.hpBase) {
+          // Vampiric affix: 50% chance to heal a fraction of dealt
+          // damage. Capped at its maxHP. Fires after the damage lands so
+          // the heal feels like a follow-up, not a pre-emptive negation.
+          if (
+            affix?.lifestealPct
+            && dmg > 0
+            && eHp > 0 && eHp < enemy.hpBase
+            && Math.random() < (affix.lifestealChance ?? 1)
+          ) {
             const stolen = Math.min(enemy.hpBase - eHp, Math.max(1, Math.round(dmg * affix.lifestealPct)))
             if (stolen > 0) {
               eHp += stolen
@@ -859,7 +885,15 @@ export default function RaidCombat({
         const takenMult2 = incomingDmgMult * (1 + mods.damageTakenPct / 100)
         if (takenMult2 !== 1 && dmg2 > 0) dmg2 = Math.max(1, Math.floor(dmg2 * takenMult2))
         pHp = Math.max(0, pHp - dmg2)
-        if (dmg2 > 0 && eHp > 0 && eHp < enemy.hpBase && affix.lifestealPct) {
+        // Vampiric carry-through on the Frenzied second shot — same chance
+        // gate as the primary fire so an enemy with Frenzied + Vampiric
+        // can occasionally lifesteal from the bonus shot too.
+        if (
+          dmg2 > 0
+          && eHp > 0 && eHp < enemy.hpBase
+          && affix.lifestealPct
+          && Math.random() < (affix.lifestealChance ?? 1)
+        ) {
           const stolen2 = Math.min(enemy.hpBase - eHp, Math.max(1, Math.round(dmg2 * affix.lifestealPct)))
           eHp += stolen2
         }
@@ -961,6 +995,12 @@ export default function RaidCombat({
 
         setTimeout(() => {
           setEnemyHp(step.eHp)
+          // ALSO push the player HP — Reflective and Volatile affix damage
+          // lives in step.pHp on a player-attacks step. Without this sync,
+          // the log says "reflects N back" / "wreck scorches for N" but
+          // the actual HP bar never moves until the next enemy-fires step
+          // catches up.
+          setPlayerHp(step.pHp)
           if (step.splatTarget === 'enemy') {
             setEHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: step.big })
             if (!isDodged) {
@@ -988,6 +1028,9 @@ export default function RaidCombat({
         // Enemy firing at player — brief beat, then splat + shake + HP update.
         setTimeout(() => {
           setPlayerHp(step.pHp)
+          // ALSO sync enemy HP — Vampiric lifesteal lands in step.eHp on
+          // an enemy-attacks step, so the heal needs a separate push.
+          setEnemyHp(step.eHp)
           if (step.splatTarget === 'player') {
             setPHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: step.big })
             if (!isDodged) setPlayerShakeKey(k => k + 1)
@@ -1005,8 +1048,18 @@ export default function RaidCombat({
             setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
           }
         }, PROJECTILE_FLIGHT_MS)
+      } else {
+        // Reload / dodge step. No splat or projectile, but a Resilient
+        // affix can heal the enemy at the start of its turn — that HP
+        // change lives in step.eHp and needs a sync, else the log says
+        // "patches up N HP" while the bar stays flat. Same beat as the
+        // log line being streamed in, so the heal feels concurrent with
+        // its narration.
+        setTimeout(() => {
+          setPlayerHp(step.pHp)
+          setEnemyHp(step.eHp)
+        }, PROJECTILE_FLIGHT_MS)
       }
-      // reload / dodge: state already updated via charges above. No splat.
 
       setTimeout(() => playStep(i + 1), STEP_GAP_MS)
     }
