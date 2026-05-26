@@ -11,17 +11,16 @@ import { getRaidItem } from '@/lib/raidItems'
 import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice, solvePuzzleNode } from './raidMapActions'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
 
-// Distinct border / glow colour per node type so the route reads at a
-// glance: cyan = practice, ember = boss raid, gold = collect goal,
-// violet = shop, sage = story.
-const TYPE_ACCENT: Record<string, string> = {
-  skirmish:  '#46c3d6',
-  raid:      '#f0743a',
-  milestone: '#e0b358',
-  shop:      '#b08bf0',
-  story:     '#6fbf73',
-  puzzle:    '#7c9fd0',
-}
+// Single parchment-gold accent for every main-chain node. Earlier this
+// was a six-color per-type palette (cyan/ember/gold/violet/sage/blue),
+// which left the map reading as visually loud — the player's eye got
+// pulled in six directions and the route never felt cohesive. With one
+// accent, TYPE is communicated by the GLYPH (cutlasses vs skull vs
+// market stall vs book vs beacon vs star) and the node's own portrait
+// image, not by hue. Status (cleared/locked/repair-blocked) and side-
+// branch challenges still get their own colors below — those are
+// signal, not flavor.
+const MAIN_ACCENT = '#c4a96a'
 
 // Default art per node type, used when a node has no own `image`. Lets
 // every shop (and any future shops) share one icon without per-node data.
@@ -39,27 +38,27 @@ function formatRaidMs(ms: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-// Winding sea-chart zig-zag (% of width, cycled top→bottom). Map is
-// pure icon-nodes (label + story live in the tap modal), so they pack
-// very tight. ROW floor is set by the cleared/lock badge overhang so
-// it doesn't collide with the next token. Repeats as map grows.
-// No dead-centre (50) column: a centred node has no room for its label on
-// either side, so a long single word (e.g. "Consignment") overflows the card.
-const COLS = [66, 73, 27, 62, 38, 70, 30]
+// Two-column gentle S-curve (% of width, cycled top→bottom). Earlier this
+// was a seven-column zig-zag that swung from 27 to 73; combined with the
+// per-type tokens it made the route read as sharp and uneven. Two columns
+// at 36/64 (and a slight 32/68 nudge every fourth row for rhythm) give a
+// calm, readable lean without losing the "sea chart" feel.
+const COLS = [36, 64, 32, 68]
 const ROW = 84           // vertical pitch between node centres
 const TOKEN = 72         // layout/max token diameter (drives spacing + viewBox)
 const PAD_TOP = 18
 const PAD_BOTTOM = 14
 
-// Visual token size by type: bigger node = bigger fight. A story beat
-// is the smallest, a skirmish small, a full raid the biggest.
-const TYPE_SIZE: Record<string, number> = {
-  story:     40,
-  skirmish:  48,
-  milestone: 56,
-  shop:      56,
-  puzzle:    56,
-  raid:      66,
+// Uniform node size for every main-chain token — the chain reads as a
+// steady rhythm of beats. The boss raid still gets a subtle bump so the
+// headline of the run is visually heavier, but the difference is small
+// enough that it doesn't break the rhythm. Side-branch challenge nodes
+// stay smaller (SIDE_BRANCH_SIZE below) because they're optional detours.
+const NODE_SIZE = 56
+const BOSS_NODE_SIZE = 62
+
+function nodeSizeFor(type: string): number {
+  return type === 'raid' ? BOSS_NODE_SIZE : NODE_SIZE
 }
 
 // Side-branch tokens (e.g. challenge-mode raids) are smaller than their
@@ -218,11 +217,12 @@ function RaidMap({
       {views.map((v, i) => {
         const { node, status } = v
         const isSide = !!node.sideBranch
-        // Side-branch tokens get the violet challenge palette + a smaller
-        // diameter so the parent raid stays the visual focus of its row.
-        const accent = isSide ? SIDE_BRANCH_ACCENT : (TYPE_ACCENT[node.type] ?? '#c4a96a')
+        // Single parchment-gold accent for every main-chain node — type is
+        // communicated by the glyph + portrait, not by color. Side branches
+        // still use the crimson challenge accent.
+        const accent = isSide ? SIDE_BRANCH_ACCENT : MAIN_ACCENT
         const img = node.image ?? TYPE_IMAGE[node.type]
-        const size = isSide ? SIDE_BRANCH_SIZE : (TYPE_SIZE[node.type] ?? 52)
+        const size = isSide ? SIDE_BRANCH_SIZE : nodeSizeFor(node.type)
         const glyph = Math.round(size * 0.42)
         const badge = Math.max(15, Math.round(size * 0.34))
         const locked = status === 'locked'
@@ -232,16 +232,20 @@ function RaidMap({
         const interactive = !locked && !raidBlocked
         const isCurrent = i === currentIdx
         const statusWord = cleared ? (isCombatNode(node.type) ? 'Cleared' : 'Done') : locked ? 'Locked' : raidBlocked ? 'Repair ship' : 'Available'
+        // Labels live next to ONLY the current available main-chain node
+        // ("you are here / next up"). Cleared, locked, and future-locked
+        // nodes hide their text — the glyph + portrait tells you what
+        // they are, and tapping any non-locked node opens the modal with
+        // the full name + story. Drops ~80% of on-map text and lets the
+        // route read as a clean chain of icons.
+        const showLabel = isCurrent && interactive
         // Put the title plate on whichever side has the most room: a
         // node on the left half gets its label to the right, and vice
         // versa. The plate's dark background hides the route behind it.
         const labelRight = cx(i) < 50
-        // When this node has a side-branch child (challenge raid)
+        // When the current node has a side-branch child (challenge raid)
         // sitting in the row, the branch eats into the label's normal
-        // territory — shrink the label maxWidth so it never extends
-        // past the branch token. Long labels wrap to extra lines
-        // (each line gets its own clipped plate via box-decoration-break)
-        // which is fine; running across the branch is not.
+        // territory — shrink the label so it never extends past the branch.
         const hasSideBranchChild = views.some(other => other.node.sideBranch?.parentId === node.id)
         const labelMaxWidth = hasSideBranchChild ? 78 : 124
         return (
@@ -326,14 +330,12 @@ function RaidMap({
               )}
             </motion.button>
 
-            {/* Title beside the token (open side), vertically centred so it
-                adds no height to the node. Backing sits on the text itself
-                (box-decoration-break: clone) so each line's plate hugs its
-                words exactly — no loose empty space when a long label
-                wraps. Skipped on side-branch nodes (challenge raids): the
-                red ring + the parent's own label do the work, and adding
-                "Challenge: …" next to the parent's row crowds the map. */}
-            {!isSide && (
+            {/* Title beside the token — surfaces ONLY for the current
+                available main-chain node ("you are here / next up").
+                Every other node hides its label so the route stays a
+                clean chain of icons; tap any non-locked node to open
+                the detail modal for the full name + story. */}
+            {showLabel && !isSide && (
               <div
                 style={{
                   position: 'absolute',
@@ -386,7 +388,8 @@ function NodeDetailSheet({
   const [err, setErr] = useState<string | null>(null)
   const [revealed, setRevealed] = useState(false) // puzzle solved → show the destination
   const { node, status, claimable, lockReason } = view
-  const accent = TYPE_ACCENT[node.type] ?? '#c4a96a'
+  // Single accent now: matches the unified map palette.
+  const accent = MAIN_ACCENT
   const img = node.image ?? TYPE_IMAGE[node.type]
   const locked = status === 'locked'
   const cleared = status === 'cleared'
@@ -989,7 +992,8 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
               )
             }
 
-            const accent = TYPE_ACCENT[next.node.type] ?? '#c4a96a'
+            // Same unified accent used on the map below.
+            const accent = MAIN_ACCENT
             const img = next.node.image ?? TYPE_IMAGE[next.node.type]
             const isLocked = next.status === 'locked'
             const blocked = !isLocked && repairOwed > 0 && isCombatNode(next.node.type)
