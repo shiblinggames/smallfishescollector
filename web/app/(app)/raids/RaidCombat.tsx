@@ -2464,12 +2464,17 @@ function ActionMenu({ canFire, canVolley, canDodge, onSelect, disabled = false, 
 }
 
 function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
-  // Pokemon-style "battle text" box. Always visible, just current turn's events.
-  // Height is LOCKED to fit exactly 4 lines + the Turn header — older lines
-  // are clipped by `slice(-4)` so the box never grows and pushes the rest of
-  // the layout (most visible during the post-kill XP/doubloons cascade, which
-  // used to add 3-4 lines in quick succession and shove the action buttons
-  // down). The most recent 4 lines are always visible.
+  // Pokemon-style "battle text" box. Always visible, just current turn's
+  // events. Height is LOCKED at 130px so the action buttons below never get
+  // shoved off-screen during the post-kill XP/doubloons cascade.
+  //
+  // Older lines fall off the TOP, not the bottom: the lines area uses a
+  // flex column with `justify-content: flex-end` + `overflow: hidden`, so
+  // entries pile against the bottom and any overflow (a long wrapping
+  // line, or all four entries) gets clipped from the TOP. That preserves
+  // the newest, most actionable info — the original slice(-4) cap kept 4
+  // entries, but a wrapping line could blow the height budget and the
+  // bottom (= newest, with the damage numbers) was getting cut off.
   const isEmpty = lines.length === 0
   const visible = isEmpty ? ['What will you do?'] : lines.slice(-4)
   return (
@@ -2481,31 +2486,42 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
       minHeight: 130,
       maxHeight: 130,
       overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4, flexShrink: 0 }}>
         <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: '#5a7a9a' }}>
           Turn {turn}
         </p>
       </div>
-      {visible.map((line, i) => (
-        <motion.p
-          // Key on index + content only — DON'T include `turn`. When a turn
-          // ends, `turn` increments but the log still shows the last turn's
-          // lines until the next resolveTurn() clears it. Including `turn` in
-          // the key re-mounted every existing line on turn-over, causing the
-          // whole log to flicker fade-in at the start of every player input.
-          // Line content is unique enough within a turn (and across turns the
-          // log is replaced wholesale by setResolveLog([speedLine]) anyway).
-          key={`${i}-${line}`}
-          initial={isEmpty ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.22, ease: 'easeOut' }}
-          className="font-karla"
-          style={{ fontSize: '0.86rem', color: '#c8d4e0', lineHeight: 1.55 }}
-        >
-          {line}
-        </motion.p>
-      ))}
+      <div style={{
+        flex: 1,
+        minHeight: 0,
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'flex-end',
+      }}>
+        {visible.map((line, i) => (
+          <motion.p
+            // Key on index + content only — DON'T include `turn`. When a turn
+            // ends, `turn` increments but the log still shows the last turn's
+            // lines until the next resolveTurn() clears it. Including `turn` in
+            // the key re-mounted every existing line on turn-over, causing the
+            // whole log to flicker fade-in at the start of every player input.
+            // Line content is unique enough within a turn (and across turns the
+            // log is replaced wholesale by setResolveLog([speedLine]) anyway).
+            key={`${i}-${line}`}
+            initial={isEmpty ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            className="font-karla"
+            style={{ fontSize: '0.86rem', color: '#c8d4e0', lineHeight: 1.5, flexShrink: 0 }}
+          >
+            {line}
+          </motion.p>
+        ))}
+      </div>
     </div>
   )
 }
