@@ -703,7 +703,17 @@ export default function RaidCombat({
           splatColor = '#4ade80'
         }
       } else if (action === 'dodge') {
-        stepLines.push(who === 'player' ? `You brace, ready to dodge.` : `Enemy braces, ready to dodge.`)
+        // Skip the brace line when the dodger went SECOND in the order and
+        // the other actor is firing this turn — the dodge outcome is
+        // already narrated inside the attacker's fire step ("you weave
+        // aside — dodged!"). Without this gate the log reads backwards:
+        // outcome first ("dodged!") then setup ("brace, ready to dodge").
+        const otherAction = who === 'player' ? eAction : pAction
+        const otherIsAttacking = otherAction === 'fire' || otherAction === 'volley'
+        const dodgerWentSecond = first !== who
+        if (!(otherIsAttacking && dodgerWentSecond)) {
+          stepLines.push(who === 'player' ? `You brace, ready to dodge.` : `Enemy braces, ready to dodge.`)
+        }
       } else if (action === 'fire' || action === 'volley') {
         if (who === 'player') pCharges -= (action === 'volley' ? MAX_CHARGES : 1)
         else                  eCharges -= (action === 'volley' ? MAX_CHARGES : 1)
